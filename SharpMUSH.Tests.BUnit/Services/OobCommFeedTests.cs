@@ -248,4 +248,81 @@ public class OobCommFeedTests
 		await Assert.That(feed.Channels.Single(c => c.Name == "Public").Unread).IsEqualTo(4);
 		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(0);
 	}
+
+	/// <summary>A count of 0 from the game is an answer too: the player read the channel elsewhere.</summary>
+	[Test]
+	public async Task A_server_unread_count_of_zero_replaces_the_feeds_own()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public", "OOC"));
+		store.Set(CommPayloadParser.MessagePackage, Line("Public", "Wren", "#12:1", "one"));
+		store.Set(CommPayloadParser.MessagePackage, Line("OOC", "Wren", "#12:1", "two"));
+
+		store.Set(CommPayloadParser.ChannelsPackage,
+			"""{"v":2,"channels":[{"name":"Public","unread":0},{"name":"OOC"}]}""");
+
+		await Assert.That(feed.Channels.Single(c => c.Name == "Public").Unread).IsEqualTo(0);
+		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(1)
+			.Because("a row with no count keeps the feed's own");
+	}
+
+	[Test]
+	public async Task A_channel_dropped_from_the_list_takes_its_history_and_count_with_it()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public", "OOC"));
+		store.Set(CommPayloadParser.MessagePackage, Line("OOC", "Wren", "#12:1", "bye"));
+		store.Set(CommPayloadParser.MessagePackage, Page("Tomas", "#7:2", [("Ilsa", "#5:1")], "psst"));
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public", "OOC"));
+
+		await Assert.That(feed.Messages("OOC")).IsEmpty();
+		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(0);
+		var conversation = feed.Conversations.Single();
+		await Assert.That(conversation.Unread).IsEqualTo(1).Because("a list of channels says nothing about pages");
+		await Assert.That(feed.Messages(conversation.Key).Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Clearing_the_store_forgets_what_was_being_viewed()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		feed.Viewing = "Public";
+
+		store.Clear();
+
+		await Assert.That(feed.Viewing).IsNull();
+	}
+
+	[Test]
+	public async Task Conversations_are_bounded_dropping_the_least_recent()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+
+		for (var i = 0; i < OobCommFeed.ConversationLimit + 3; i++)
+			store.Set(CommPayloadParser.MessagePackage, Page($"P{i}", $"#{100 + i}:1", [("Ilsa", "#5:1")], $"hi {i}", 1000 + i));
+
+		await Assert.That(feed.Conversations.Count).IsEqualTo(OobCommFeed.ConversationLimit);
+		await Assert.That(feed.Conversations.Any(c => c.With.Contains("P0"))).IsFalse();
+		await Assert.That(feed.Conversations.Any(c => c.With.Contains("P3"))).IsTrue();
+		await Assert.That(feed.Messages("page #100:1 #5:1")).IsEmpty()
+			.Because("a dropped conversation takes its history with it");
+	}
+
+	[Test]
+	public async Task Viewing_is_part_of_the_interface()
+	{
+		var (store, concrete) = Create();
+		ICommFeed feed = concrete;
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+
+		feed.Viewing = "Public";
+		store.Set(CommPayloadParser.MessagePackage, Line("Public", "Wren", "#12:1", "seen"));
+
+		await Assert.That(feed.Viewing).IsEqualTo("Public");
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(0);
+	}
 }

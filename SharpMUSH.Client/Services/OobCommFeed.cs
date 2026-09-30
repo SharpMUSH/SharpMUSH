@@ -12,21 +12,26 @@ namespace SharpMUSH.Client.Services;
 /// someone else arriving for a key that is not <see cref="Viewing"/> is unread until
 /// <see cref="MarkRead"/>. The viewer is who the latest <c>comm.channels</c> says it was built for, or else
 /// the <c>room.contents</c> row marked <c>you</c>. A list that does carry a count for a channel (a game
-/// that tracks it) replaces the feed's own.</para>
+/// that tracks it), 0 included, replaces the feed's own. A channel a new list no longer carries is
+/// forgotten, history and count.</para>
 /// <para><b>Conversations.</b> A page's key is its participants — the pager and every recipient, the
 /// viewer included — by objid where the payload has one and by name otherwise, sorted, so every page
 /// among the same people is one conversation whoever sent it. It starts <c>page </c>, and a channel name
-/// cannot hold a space, so the two kinds of key never meet.</para>
+/// cannot hold a space, so the two kinds of key never meet. The <see cref="ConversationLimit"/> most
+/// recent are kept.</para>
 /// <para><b>Clearing.</b> The store raises <see cref="IOobChannelStore.ChannelUpdated"/> for each package
 /// it drops, with nothing left to read (a new connection, or a character switch through
-/// <see cref="OobChannelStoreProxy"/>), and the feed drops everything with it and raises
-/// <see cref="Changed"/> once.</para>
+/// <see cref="OobChannelStoreProxy"/>), and the feed drops everything with it, <see cref="Viewing"/>
+/// included, and raises <see cref="Changed"/> once.</para>
 /// <para>It assumes, as the store does, a single-threaded dispatcher (Blazor WASM).</para>
 /// </remarks>
 public sealed class OobCommFeed : ICommFeed, IDisposable
 {
 	/// <summary>How many lines are kept per channel or conversation; older ones are dropped.</summary>
 	public const int HistoryLimit = 200;
+
+	/// <summary>How many page conversations are kept; the least recent are dropped, history and all.</summary>
+	public const int ConversationLimit = 100;
 
 	private const string ConversationKeyPrefix = "page ";
 
@@ -59,10 +64,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			.OrderByDescending(conversation => conversation.LastAt)
 			.ToArray();
 
-	/// <summary>
-	/// The key the viewer is looking at, or null. Setting it marks that key read, and lines arriving for it
-	/// are not counted.
-	/// </summary>
+	/// <inheritdoc/>
 	public string? Viewing
 	{
 		get => _viewing;
@@ -105,10 +107,21 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	{
 		if (CommPayloadParser.ParseChannels(json) is not { } list) return false;
 
+		var listed = list.Channels.Select(channel => channel.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var key in _history.Keys.Concat(_unread.Keys).Where(key => !IsConversationKey(key) && !listed.Contains(key))
+			.ToArray())
+		{
+			_history.Remove(key);
+			_unread.Remove(key);
+		}
+
 		_channels = list.Channels;
 		_viewer = list.Viewer ?? _viewer;
-		foreach (var channel in list.Channels.Where(channel => channel.Unread > 0))
-			_unread[channel.Name] = channel.Unread;
+		foreach (var (name, unread) in list.ServerUnread)
+		{
+			if (unread > 0) _unread[name] = unread;
+			else _unread.Remove(name);
+		}
 
 		return true;
 	}
@@ -129,6 +142,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (!fromViewer && !string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase))
 			_unread[key] = UnreadFor(key) + 1;
 
+		if (message.Channel is null) DropLeastRecentConversations();
 		return true;
 	}
 
@@ -154,6 +168,21 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		return key;
 	}
 
+	private void DropLeastRecentConversations()
+	{
+		var excess = _conversations.Count - ConversationLimit;
+		if (excess <= 0) return;
+
+		foreach (var key in _conversations.OrderBy(pair => pair.Value.LastAt).Take(excess).Select(pair => pair.Key).ToArray())
+		{
+			_conversations.Remove(key);
+			_history.Remove(key);
+			_unread.Remove(key);
+		}
+	}
+
+	private static bool IsConversationKey(string key) => key.StartsWith(ConversationKeyPrefix, StringComparison.Ordinal);
+
 	private CommParticipant? Viewer() =>
 		_viewer
 		?? _store.Room.Occupants.FirstOrDefault(occupant => occupant.You) switch
@@ -174,11 +203,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private void Clear()
 	{
 		if (_channels.Count == 0 && _history.Count == 0 && _unread.Count == 0 && _conversations.Count == 0
-			&& _viewer is null)
+			&& _viewer is null && _viewing is null)
 			return;
 
 		_channels = [];
 		_viewer = null;
+		_viewing = null;
 		_history.Clear();
 		_unread.Clear();
 		_conversations.Clear();

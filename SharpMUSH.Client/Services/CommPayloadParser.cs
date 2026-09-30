@@ -44,12 +44,17 @@ public static class CommPayloadParser
 				return null;
 
 			var channels = new List<CommChannel>();
+			var serverUnread = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 			foreach (var row in rows.EnumerateArray())
 			{
-				if (ReadChannel(row) is { } channel) channels.Add(channel);
+				if (ReadChannel(row) is not { } channel) continue;
+
+				channels.Add(channel);
+				if (row.ValueKind == JsonValueKind.Object && Count(row, "unread") is { } unread)
+					serverUnread[channel.Name] = unread;
 			}
 
-			return new CommChannelList(Participant(root, "viewer"), channels);
+			return new CommChannelList(Participant(root, "viewer"), channels, serverUnread);
 		}
 	}
 

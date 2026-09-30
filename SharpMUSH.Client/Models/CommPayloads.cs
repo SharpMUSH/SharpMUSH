@@ -13,7 +13,12 @@ public sealed record CommParticipant(string Name, string? ObjId);
 /// <param name="Viewer">The player the list is for, or null when the payload does not say.</param>
 /// <param name="Channels">The channels, in the order sent. <see cref="CommChannel.Unread"/> is what the
 /// game sent, 0 when it sent none (the bundled package never does).</param>
-public sealed record CommChannelList(CommParticipant? Viewer, IReadOnlyList<CommChannel> Channels);
+/// <param name="ServerUnread">The counts the game did send, by channel name — so a 0 it sent can be told
+/// apart from a row that carried none.</param>
+public sealed record CommChannelList(
+	CommParticipant? Viewer,
+	IReadOnlyList<CommChannel> Channels,
+	IReadOnlyDictionary<string, int> ServerUnread);
 
 /// <summary>A <c>comm.message</c> push.</summary>
 /// <param name="Message">The line, as the feed files it.</param>
