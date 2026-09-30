@@ -234,38 +234,85 @@ public class AccountAuthService(
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
+		var token = AccountSessionToken;
+		if (await LoadSessionAuthorityAsync(token) == SessionAuthorityLoad.Failed)
+		{
+			// The credential stays usable, but with no role or grant the tab is a Guest until the server
+			// answers. InitAsync is cached for the life of the tab, so without this one timed-out refresh
+			// — a server restarting, a dropped request — would leave it that way until a reload.
+			_ = RetrySessionAuthorityAsync(token);
+		}
+	}
+
+	private enum SessionAuthorityLoad { Loaded, SignedOut, Failed, Superseded }
+
+	/// <summary>How long to wait between attempts after the session's authority could not be loaded.
+	/// The last delay repeats until <see cref="SessionAuthorityRetryLimit"/>. Settable for tests.</summary>
+	public IReadOnlyList<TimeSpan> SessionAuthorityRetryDelays { get; set; } =
+		[TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30)];
+
+	/// <summary>How long to keep retrying before leaving the tab as it is.</summary>
+	public TimeSpan SessionAuthorityRetryLimit { get; set; } = TimeSpan.FromMinutes(10);
+
+	/// <summary>Loads the current role, grants and name for <paramref name="token"/> from the server.</summary>
+	private async Task<SessionAuthorityLoad> LoadSessionAuthorityAsync(string? token)
+	{
 		try
 		{
-			// Authentication-state queries share this bootstrap task; a stalled refresh must not
-			// hold public rendering for the named client's much longer default timeout.
+			// Authentication-state queries share the bootstrap task; a stalled refresh must not hold
+			// public rendering for the named client's much longer default timeout.
 			using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-			var token = AccountSessionToken;
 			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
 			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
 			// recursively waiting on this same initialization task.
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 			using var response = await httpClientFactory.CreateClient("api")
 				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
-			if (AccountSessionToken != token) return;
+			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
 			if (response.StatusCode == HttpStatusCode.Unauthorized)
 			{
 				ClearSessionState();
-				return;
+				return SessionAuthorityLoad.SignedOut;
 			}
-			if (!response.IsSuccessStatusCode) return;
+			if (!response.IsSuccessStatusCode) return SessionAuthorityLoad.Failed;
 			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
 			refresh.Token.ThrowIfCancellationRequested();
-			if (current is null || AccountSessionToken != token) return;
+			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
+			if (current is null) return SessionAuthorityLoad.Failed;
 			Username = current.Username;
 			MustChangePassword = current.MustChangePassword;
 			Role = current.Role;
 			Permissions = current.Permissions ?? [];
+			return SessionAuthorityLoad.Loaded;
 		}
 		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
 		{
-			// The credential remains usable even when current display authority could not be loaded.
 			// No stored role or grant has been restored, so permission-gated controls stay closed.
 			logger.LogWarning(ex, "Could not refresh account session permissions");
+			return SessionAuthorityLoad.Failed;
+		}
+	}
+
+	/// <summary>
+	/// Asks again, backing off, until the server answers for <paramref name="token"/> or the tab moves
+	/// on (a sign-in, a sign-out, a switch), then tells the portal so gated controls reappear.
+	/// </summary>
+	private async Task RetrySessionAuthorityAsync(string? token)
+	{
+		var deadline = DateTimeOffset.UtcNow + SessionAuthorityRetryLimit;
+		for (var attempt = 0; DateTimeOffset.UtcNow < deadline; attempt++)
+		{
+			await Task.Delay(SessionAuthorityRetryDelays[Math.Min(attempt, SessionAuthorityRetryDelays.Count - 1)]);
+			if (AccountSessionToken != token) return;
+
+			switch (await LoadSessionAuthorityAsync(token))
+			{
+				case SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut:
+					RaiseAuthStateChanged();
+					return;
+				case SessionAuthorityLoad.Superseded:
+					return;
+			}
 		}
 	}
 
