@@ -5,6 +5,11 @@
 	min-width: 0;
 }
 
+/* a main card leaves its body's padding to the content; a schema section's fields sit 16px in */
+.schema-view ::deep .schema-section .kit-card-body {
+	padding: 14px 16px 16px;
+}
+
 .schema-title {
 	margin: 0;
 	font-size: 20px;

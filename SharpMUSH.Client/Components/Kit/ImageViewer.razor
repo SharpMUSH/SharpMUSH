@@ -10,7 +10,7 @@
 {
     var item = Current;
     @* MudOverlay owns the fixed, scroll-locking layer: scoped CSS may not position anything fixed. *@
-    <MudOverlay Visible="true" DarkBackground="true" LockScroll="true" OnClick="CloseAsync" Class="kit-viewer-overlay">
+    <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-viewer-overlay" Style="@ScrimStyle">
     <div class="kit-viewer" role="dialog" aria-modal="true" aria-label="@(Label ?? Loc["NavViewerLabel"])" tabindex="-1"
          @onkeydown="OnKeyDownAsync" @onkeydown:preventDefault="_swallowKey" @onclick:stopPropagation="true">
         <div class="kit-viewer-frame">
@@ -73,6 +73,10 @@
     private CapsuleButton? _closeButton;
 
     private Item Current => Items[Math.Clamp(_index, 0, Items.Count - 1)];
+
+    /// <summary>The scrim: MudOverlay's own dark background is too light to read a portrait against,
+    /// and scoped CSS cannot reach a child component's root, so the overlay takes it as a style.</summary>
+    private const string ScrimStyle = "background: rgba(8, 9, 10, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);";
 
     protected override void OnParametersSet()
     {

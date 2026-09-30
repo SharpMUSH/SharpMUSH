@@ -4050,4 +4050,7 @@
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Joue souvent avec</value>
   </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Ajouter une image</value>
+  </data>
 </root>

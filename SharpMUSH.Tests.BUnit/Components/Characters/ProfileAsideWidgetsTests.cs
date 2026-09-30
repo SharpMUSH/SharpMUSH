@@ -68,7 +68,7 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 
 		var cut = InProfile<CharacterGalleryWidget>(canEdit: true);
 		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".gallery-upload").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".gallery-upload button.gallery-add").Count).IsEqualTo(1).Because("a kit capsule, not MudBlazor's default upload button");
 		cut.Find("button.gallery-view-all").Click();
 		cut.Find("button.kit-viewer-next").Click();
 		cut.Find("button.kit-viewer-next").Click();

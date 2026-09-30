@@ -66,7 +66,11 @@
             @if (EffectiveCanEdit && _error is null && !_loading)
             {
                 <div class="gallery-upload">
-                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" />
+                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes">
+                        <CustomContent>
+                            <CapsuleButton Class="gallery-add" Icon="@Icons.Material.Outlined.AddPhotoAlternate" Disabled="_busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavGalleryAdd"]</CapsuleButton>
+                        </CustomContent>
+                    </MudFileUpload>
                 </div>
             }
         </ChildContent>

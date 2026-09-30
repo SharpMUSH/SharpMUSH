@@ -4797,4 +4797,7 @@
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Gyakran játszik vele</value>
   </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Kép hozzáadása</value>
+  </data>
 </root>

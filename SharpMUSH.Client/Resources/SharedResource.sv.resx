@@ -4797,4 +4797,7 @@
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spelar ofta med</value>
   </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Lägg till bild</value>
+  </data>
 </root>
