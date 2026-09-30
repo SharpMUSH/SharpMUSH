@@ -78,7 +78,9 @@ public static class PortalStaticFiles
 		endpoints.MapFallbackToFile("index.html", new StaticFileOptions
 		{
 			OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = IndexCacheControl,
-		});
+		})
+			// Held back by PortalStartupPage until the server is first ready.
+			.WithMetadata(new PortalStartupPage.PortalShellEndpoint());
 
 		return endpoints;
 	}

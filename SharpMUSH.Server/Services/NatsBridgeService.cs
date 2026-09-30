@@ -44,6 +44,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly ILogger<NatsBridgeService> _logger;
 	private readonly PluginCatalog _pluginCatalog;
 	private readonly IRoomEventDispatcher _roomDispatcher;
+	private readonly ServerReadiness _readiness;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
@@ -51,7 +52,8 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		NatsOptions natsOptions,
 		PluginCatalog pluginCatalog,
 		ILogger<NatsBridgeService> logger,
-		IRoomEventDispatcher roomDispatcher)
+		IRoomEventDispatcher roomDispatcher,
+		ServerReadiness readiness)
 	{
 		_hubContext = hubContext;
 		_pluginHubContext = pluginHubContext;
@@ -59,6 +61,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		_pluginCatalog = pluginCatalog;
 		_logger = logger;
 		_roomDispatcher = roomDispatcher;
+		_readiness = readiness;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -76,6 +79,9 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
 				await nats.ConnectAsync();
+				// Core-NATS subscriptions below are registered as each enumerator starts, a moment after this.
+				var connection = nats;
+				_readiness.SetBridgeConnection(() => connection.ConnectionState == NatsConnectionState.Open);
 				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.* (game.scene.* is now a plugin bridge leg)");
 				delay = 2;
 
@@ -116,6 +122,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			}
 			finally
 			{
+				_readiness.SetBridgeConnection(null);
 				if (nats is not null)
 					await nats.DisposeAsync();
 			}

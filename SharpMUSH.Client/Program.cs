@@ -125,10 +125,6 @@ builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<Conn
 builder.Services.AddTransient<AccountSessionBearerHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress)
 	.AddHttpMessageHandler<AccountSessionBearerHandler>();
-// The same API without the bearer handler, for the requests that never carry a session. The handler
-// holds every request until this tab's stored session is restored (a sessionStorage round trip plus
-// a GET api/account/session), which ServerStartupGate's health probe has no reason to wait for.
-builder.Services.AddHttpClient(ApiClients.Anonymous, c => c.BaseAddress = apiBaseAddress);
 
 if (builder.HostEnvironment.IsDevelopment())
 {
@@ -161,9 +157,10 @@ catch (CultureNotFoundException)
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
 
-// Restore this tab's account session now, alongside ServerStartupGate's health probe, rather than
-// when the first authenticated request asks for it after the gate opens. InitAsync caches its task,
-// so every later caller awaits this same run.
+// Restore this tab's account session now, while the runtime renders, rather than when the first
+// authenticated request asks for it. InitAsync caches its task, so every later caller awaits this
+// same run. (No readiness check here: the server hands out the portal only once the game is ready —
+// see PortalStartupPage in SharpMUSH.Server.)
 _ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
 
 // The stored theme preset, read before the first render so ThemeProvider renders the right theme once

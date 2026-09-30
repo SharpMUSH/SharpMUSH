@@ -17,6 +17,7 @@ using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Logging;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server;
 
@@ -122,6 +123,10 @@ public class Program
 			app.Logger.LogWarning("The portal in {WebRoot} is being served without {Manifest} in {ContentRoot}; "
 				+ "copy it from the client's publish output.", env.WebRootPath, PortalStaticFiles.ManifestFileName, env.ContentRootPath);
 		}
+		// Until the game is first ready, a browser asking for the portal gets the startup page instead —
+		// the one place the portal's readiness is checked. Before the bot middleware, so a crawler is told
+		// 503 + Retry-After too rather than handed a prerender of a server that cannot serve it.
+		app.UsePortalStartupPage();
 		app.UsePortalStaticFiles(portalManifest);
 
 		app.UseMiddleware<BotDetectionMiddleware>();
@@ -173,15 +178,18 @@ public class Program
 			}
 		}
 
+		// Liveness: the process answers. Readiness: it can play the game right now — see ServerReadiness for
+		// what comes up after Kestrel is already listening (the input consumers and the output bridge).
+		// Unauthenticated and unlimited: orchestrators and the portal's startup page poll them.
 		app.MapGet("/health", () => "healthy");
-		app.MapGet("/ready", () => "ready");
-
-		// Polled by the client's ServerStartupGate before it lets the app render: hosted services
-		// (incl. BootstrapService/migrations) all complete before Kestrel accepts traffic, so mere
-		// reachability of this endpoint is sufficient readiness. Dependency-free and unauthenticated
-		// on purpose — it must answer even before the DB/bootstrap has finished, and it is polled
-		// every few seconds so it carries no rate limit.
-		app.MapGet("/api/health", () => Results.Ok(new { status = "ready" }));
+		app.MapGet("/ready", (ServerReadiness readiness) => readiness.IsReady
+			? Results.Text("ready")
+			: Results.Text("not ready", statusCode: StatusCodes.Status503ServiceUnavailable));
+		app.MapGet("/api/health", (ServerReadiness readiness) => readiness.IsReady
+			? Results.Ok(new { status = "ready" })
+			: Results.Json(
+				new { status = readiness.HasBeenReady ? "degraded" : "starting", pending = readiness.Pending() },
+				statusCode: StatusCodes.Status503ServiceUnavailable));
 
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it

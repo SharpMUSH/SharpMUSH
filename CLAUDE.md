@@ -151,6 +151,12 @@ Startup is on the critical path of every visit: `Program.cs` awaits nothing on t
 first render, and a request the first render needs goes out alongside the others rather than after
 them.
 
+Readiness is the server's business, not the portal's: until `ServerReadiness` is first true (host
+started, every NATS input consumer consuming, the output bridge connected — the parts that come up
+after Kestrel is already listening), a request for the SPA shell gets `PortalStartupPage` (503 +
+`Retry-After`), so a portal that loaded is talking to a server that can play the game. `/api/health`
+and `/ready` report the live state (503 while the broker is out); `/health` is liveness only.
+
 **Key services registered at startup:**
 
 - `IWidgetRegistry` / `ILayoutService` — widget system; widgets registered at startup in `Program.cs`
