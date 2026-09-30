@@ -177,7 +177,8 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		_ => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{
-				[WidgetZone.TopBar] = [new WidgetPlacement("QuickLinks", 0, null)],
+				// README §10 Q1: no top bar in D1; the zone draws a strip only once an admin fills it.
+				[WidgetZone.TopBar] = [],
 				[WidgetZone.LeftSidebar] = [],
 				[WidgetZone.RightSidebar] = [],
 				[WidgetZone.MainContent] = [],

@@ -456,7 +456,8 @@
 	color: var(--text-dim);
 }
 
-@container page (max-width: 64rem) {
+/* README §3: main and aside stay side by side at the medium tier; only narrow stacks them */
+@container page (max-width: 48rem) {
 	.config-section {
 		grid-template-columns: minmax(0, 1fr);
 	}
