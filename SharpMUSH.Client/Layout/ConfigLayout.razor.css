@@ -26,6 +26,13 @@
 	padding: var(--main-pad);
 }
 
+/* The hand-built section pages (Banned names, Import, Restrictions, Sitelock) put the kit's plain
+   header straight into a .config-section-page block with no gap; the header carries no margin of
+   its own, so the space under it is set here once for all of them. */
+.config-section-body ::deep .config-section-page > .kit-page-head {
+	margin-bottom: 1.25rem;
+}
+
 @container page (max-width: 64rem) {
 	.config-shell {
 		grid-template-columns: minmax(0, 1fr);
