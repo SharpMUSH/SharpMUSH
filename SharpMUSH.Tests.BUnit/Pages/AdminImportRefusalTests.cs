@@ -116,8 +116,8 @@ public class AdminImportRefusalTests : TrackingBunitContext
 
 		var cut = Render<ImportConfig>();
 		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("mud_nmae Test\n", "mush.cnf"));
-		cut.WaitForAssertion(() => cut.Find(".config-primary-btn"), TimeSpan.FromSeconds(5));
-		cut.Find(".config-primary-btn").Click();
+		cut.WaitForAssertion(() => cut.Find("button.kit-capsule--primary"), TimeSpan.FromSeconds(5));
+		cut.Find("button.kit-capsule--primary").Click();
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"ConfigImportFailed({refused})");
