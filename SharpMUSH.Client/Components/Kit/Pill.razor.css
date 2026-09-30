@@ -1,0 +1,23 @@
+.kit-pill {
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 13px;
+	background: var(--glass-pill-bg);
+	backdrop-filter: var(--glass-filter);
+	-webkit-backdrop-filter: var(--glass-filter);
+	box-shadow: var(--glass-edge);
+	color: var(--text);
+	font-size: 12px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+	box-sizing: border-box;
+}
+
+.kit-pill-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
