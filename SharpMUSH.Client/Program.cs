@@ -38,7 +38,6 @@ builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
 builder.Services.AddScoped<CharacterProfileService>();
 builder.Services.AddScoped<SidebarCollapseService>();
-builder.Services.AddSingleton<ICommFeed, EmptyCommFeed>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
@@ -61,6 +60,9 @@ builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
 builder.Services.AddTerminalServices();
+// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
+// package pushes to every connection a player has, and only the play connection is the one to count.
+builder.Services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<IPlayTerminalService>().OobChannels));
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddSingleton<ObjectApiService>();
 builder.Services.AddHttpClient("help", c =>

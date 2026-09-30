@@ -345,9 +345,9 @@ network, no configured remote. Two different decisions live there:
 - **Shipped**: the package is in the image and can be installed from the
   catalogue at any time.
 - **Installed at first boot**: a new game gets it without being asked.
-  `http-handler`, `profile-handler`, `room-contents`, `common-functions` and
-  `scene` are; `wiki-reader` ships available and unenabled, because it puts a
-  `+wiki` object in the master room.
+  `http-handler`, `profile-handler`, `room-contents`, `comm-feed`,
+  `common-functions`, `plus-help` and `scene` are; `wiki-reader` ships
+  available and unenabled, because it puts a `+wiki` object in the master room.
 
 Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding
 a package to the catalogue also means adding its `EmbeddedResource` to

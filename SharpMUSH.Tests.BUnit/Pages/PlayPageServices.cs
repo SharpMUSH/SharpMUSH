@@ -19,7 +19,7 @@ internal static class PlayPageServices
 	{
 		var hub = new FakeSceneHub();
 		services
-			.AddSingleton(comms ?? new EmptyCommFeed())
+			.AddSingleton(comms ?? new TestCommFeed())
 			.AddSingleton<SidebarCollapseService>()
 			.AddSingleton<IConnectionStateService>(hub)
 			.AddSingleton<ISceneHubControl>(hub)

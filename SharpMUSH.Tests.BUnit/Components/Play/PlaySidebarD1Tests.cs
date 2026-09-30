@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// </summary>
 public class PlaySidebarD1Tests : TrackingBunitContext
 {
-	private readonly FakeCommFeed _feed = new();
+	private readonly TestCommFeed _feed = new();
 
 	public PlaySidebarD1Tests()
 	{
@@ -155,24 +155,5 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(_feed.Listeners).IsEqualTo(1);
 		cut.Instance.Dispose();
 		await Assert.That(_feed.Listeners).IsEqualTo(0);
-	}
-
-	private sealed class FakeCommFeed : ICommFeed
-	{
-		private Action? _changed;
-		public IReadOnlyList<CommChannel> ChannelList { get; set; } = [];
-		public IReadOnlyList<CommConversation> ConversationList { get; set; } = [];
-		public IReadOnlyList<CommChannel> Channels => ChannelList;
-		public IReadOnlyList<CommConversation> Conversations => ConversationList;
-		public int Listeners => _changed?.GetInvocationList().Length ?? 0;
-		public IReadOnlyList<CommMessage> Messages(string key) => [];
-		public void MarkRead(string key) { }
-		public void Raise() => _changed?.Invoke();
-
-		public event Action? Changed
-		{
-			add => _changed += value;
-			remove => _changed -= value;
-		}
 	}
 }

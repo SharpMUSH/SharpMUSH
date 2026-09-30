@@ -514,6 +514,11 @@ The proposal needs Harry's call (Q4): two OOB packages following §7.1's rules.
 Until then, build the sidebar against an interface with an empty implementation. Terminal stays the full
 stream.
 
+The proposal is built, pending Q4: the bundled `comm-feed` package on engine events that name who received
+each line (``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS``), and `OobCommFeed` behind
+`ICommFeed`. `docs/softcode/comm-feed-handler.md` has the shapes as sent and where they differ from the
+above (no server-side unread counts; `viewer`, `style` and `toObjids` added).
+
 ### 7.4 Play as a layout scope (board `13`)
 - Add `LayoutScopes.Play` (`"play"`, zones: RightSidebar) to `LayoutScopes.All` and `GetDefaultLayout`, with
   new **Here** and **Exits** widgets (they don't exist yet). Register them per `CLAUDE.md`'s widget steps.

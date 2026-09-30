@@ -19,5 +19,12 @@ public interface ICommFeed
 	IReadOnlyList<CommConversation> Conversations { get; }
 	IReadOnlyList<CommMessage> Messages(string key);
 	void MarkRead(string key);
+
+	/// <summary>
+	/// The key the viewer is looking at, or null. Its lines don't count as unread; setting it marks the
+	/// key read.
+	/// </summary>
+	string? Viewing { get; set; }
+
 	event Action? Changed;
 }
