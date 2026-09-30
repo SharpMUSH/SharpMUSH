@@ -249,6 +249,8 @@ RegisteredApplication {
   allowedRoles[],     // Guest|Player|Royalty|Wizard|God (architectural-decisions.md:77-100)
   navPlacement?,      // where the nav entry appears (Page kind)
   zones[]?,           // allowed widget zones (Widget kind)
+  scope?,             // layout scope the widget belongs to, e.g. "play" (package key `scope`)
+  oobPackage?,        // OOB package whose latest push is the data, in place of dataUrl (package key `oob_package`)
   order
 }
 ```

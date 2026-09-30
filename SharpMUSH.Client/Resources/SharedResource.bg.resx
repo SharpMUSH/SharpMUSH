@@ -4962,4 +4962,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Няма никой друг тук.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Обхват на оформлението</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Обхват на оформлението (по избор)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Страницата, към която принадлежи уиджетът, напр. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB пакет</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB пакет (по избор)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Данни на живо от играта, напр. weather.now; заменя URL адреса за данни</value>
+  </data>
 </root>

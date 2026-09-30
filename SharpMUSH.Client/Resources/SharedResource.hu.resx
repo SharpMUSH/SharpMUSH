@@ -4962,4 +4962,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Rajtad kívül senki sincs itt.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Elrendezési hatókör</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Elrendezési hatókör (nem kötelező)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Az oldal, amelyhez a widget tartozik, pl. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-csomag</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-csomag (nem kötelező)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>A játék által küldött élő adatok, pl. weather.now; az adat-URL helyett</value>
+  </data>
 </root>

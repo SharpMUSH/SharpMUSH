@@ -26,6 +26,18 @@ public sealed class ApplicationCatalog
 		=> _bySlug.Values.Where(a => a.KindEnum == ApplicationKind.Widget).ToList();
 
 	/// <summary>
+	/// The applications registered for a layout scope (e.g. <c>"play"</c>), matched case-insensitively and
+	/// listed by <see cref="PortalApplication.Order"/> then slug: the game's own panels a page composes into
+	/// its zones and sidebar.
+	/// </summary>
+	public IReadOnlyList<PortalApplication> ForScope(string scope)
+		=> _bySlug.Values
+			.Where(a => string.Equals(a.Scope, scope, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(a => a.Order)
+			.ThenBy(a => a.Slug, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
+	/// <summary>
 	/// Loads the application registry once at startup. Uses a bare client with a short timeout so a
 	/// slow/unreachable API degrades to an empty catalog instead of hanging boot. The GET is anonymous.
 	/// </summary>

@@ -4307,4 +4307,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Nobody else is here.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layout scope</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layout scope (optional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>The page this widget belongs to, e.g. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB package</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB package (optional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live data pushed by the game, e.g. weather.now; replaces the data URL</value>
+  </data>
 </root>

@@ -4962,4 +4962,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Больше здесь никого нет.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Область макета</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Область макета (необязательно)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Страница, к которой относится виджет, например play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-пакет</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-пакет (необязательно)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Данные в реальном времени от игры, например weather.now; заменяет URL данных</value>
+  </data>
 </root>

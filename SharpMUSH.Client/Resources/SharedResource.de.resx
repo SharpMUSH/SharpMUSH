@@ -4962,4 +4962,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Sonst ist niemand hier.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layout-Bereich</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layout-Bereich (optional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Die Seite, zu der das Widget gehört, z. B. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-Paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-Paket (optional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live-Daten, die das Spiel sendet, z. B. weather.now; ersetzt die Daten-URL</value>
+  </data>
 </root>

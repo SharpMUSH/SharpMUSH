@@ -62,6 +62,45 @@ public class ApplicationPackageManifestTests
 	}
 
 	[Test]
+	public async Task ApplicationWithoutScopeOrOobPackage_LeavesThemUnset()
+	{
+		var app = _service.ParseManifest(ValidApplication).Expect<ParsedPackageManifest>().Manifest.Application!;
+
+		await Assert.That(app.Scope).IsNull();
+		await Assert.That(app.OobPackage).IsNull();
+	}
+
+	[Test]
+	public async Task ApplicationScopeAndOobPackage_Parse()
+	{
+		var result = _service.ParseManifest(
+			"""
+			format: 1.1
+			package: weather-app
+			version: 1.0.0
+			kind: application
+			depends:
+			  - weather: ">=1.0"
+			application:
+			  slug: weather
+			  display_name: Weather
+			  type: widget
+			  scope: play
+			  zones: [RightSidebar]
+			  schema_url: http/weather/schema
+			  oob_package: weather.now
+			  minimum_role: player
+			  order: 30
+			""");
+
+		var (manifest, warnings) = result.Expect<ParsedPackageManifest>();
+
+		await Assert.That(warnings.Count).IsEqualTo(0);
+		await Assert.That(manifest.Application!.Scope).IsEqualTo("play");
+		await Assert.That(manifest.Application!.OobPackage).IsEqualTo("weather.now");
+	}
+
+	[Test]
 	public async Task SoftcodeIsTheDefaultKind()
 	{
 		var result = _service.ParseManifest(

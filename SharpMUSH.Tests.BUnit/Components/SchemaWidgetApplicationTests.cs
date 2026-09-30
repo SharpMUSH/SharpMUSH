@@ -77,6 +77,7 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(new ApplicationCatalog([characterHeaderApp]))
+			.AddSingleton(Substitute.For<IPlayTerminalService>())
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
@@ -123,6 +124,7 @@ public class SchemaWidgetLazyFetchTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(new ApplicationCatalog([]))   // empty — forces the lazy fetch path
+			.AddSingleton(Substitute.For<IPlayTerminalService>())
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))

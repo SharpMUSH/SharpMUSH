@@ -306,11 +306,21 @@ application:                      # required for kind: application; forbidden ot
   minimum_role: "{{?access}}"     # guest|player|builder|royalty|wizard|god, or a {{?configure}} ref
   nav_placement: main             # optional nav section (page apps)
   zones: [MainContent]            # optional layout zones (widget apps)
+  scope: play                     # optional layout scope the widget belongs to (e.g. play)
+  oob_package: chargen.status     # optional OOB package whose latest push is the widget's data
   order: 50                       # optional sort order
 ```
 
+`scope` names the page a widget belongs to: the Play page lists the `play`
+apps for its right-hand zone and its sidebar. `oob_package` replaces
+`data_url` for live data: the widget still loads its schema from
+`schema_url`, but renders the latest payload the game pushed under that OOB
+package (a `{ "fields": { … } }` data document) and re-renders on every new
+push. A missing or malformed payload shows the widget's empty state.
+
 The string fields (`display_name`, `icon`, `schema_url`, `data_url`,
-`submit_route`, `minimum_role`, `nav_placement`, `zones`) accept the same
+`submit_route`, `minimum_role`, `nav_placement`, `scope`, `oob_package`,
+`zones`) accept the same
 `{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
 values, resolved at apply — so one published application package adapts its
 role, placement, and endpoints to each game it is installed on. Applying the

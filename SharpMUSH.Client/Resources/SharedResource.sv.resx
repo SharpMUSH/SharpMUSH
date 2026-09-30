@@ -4962,4 +4962,22 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Ingen annan är här.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layoutområde</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layoutområde (valfritt)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Sidan som widgeten hör till, t.ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-paket (valfritt)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Livedata som spelet skickar, t.ex. weather.now; ersätter data-URL:en</value>
+  </data>
 </root>
