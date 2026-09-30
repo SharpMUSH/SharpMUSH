@@ -18,9 +18,10 @@ on:
     # stack is covered the day it is cut instead of after someone remembers to
     # edit this file. Every link is verified while it is still reviewable, not
     # after it has already been approved on trust. GRA-** covers agent branches
-    # cut from Paperclip issues (GRA-12-malias-...); ** rather than * so a slash
+    # cut from Paperclip issues (GRA-12-malias-...), worktree-** the branches Claude Code
+    # worktrees are cut on (worktree-d1-...); ** rather than * so a slash
     # in the name cannot quietly drop a stack out of CI.
-    branches: [ "main", "codex/**", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**", "lane/**", "parity/**", "GRA-**" ]
+    branches: [ "main", "codex/**", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**", "lane/**", "parity/**", "GRA-**", "worktree-**" ]
 
 jobs:
   build-and-test:
