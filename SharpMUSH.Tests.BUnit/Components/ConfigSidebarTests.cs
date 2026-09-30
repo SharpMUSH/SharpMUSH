@@ -78,6 +78,24 @@ public class ConfigSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ClickingASummary_TogglesItsGroup_AndAriaExpanded()
+	{
+		_nav.NavigateTo("/admin/config/chat");
+		var cut = Render<ConfigSidebar>();
+		var content = cut.FindAll("details.config-side-group").Single(d => d.QuerySelector("a[href='/admin/config/chat']") is not null);
+		await Assert.That(content.QuerySelector("summary")!.GetAttribute("aria-expanded")).IsEqualTo("true");
+
+		content.QuerySelector("summary")!.Click();
+		content = cut.FindAll("details.config-side-group").Single(d => d.QuerySelector("a[href='/admin/config/chat']") is not null);
+		await Assert.That(content.HasAttribute("open")).IsFalse();
+		await Assert.That(content.QuerySelector("summary")!.GetAttribute("aria-expanded")).IsEqualTo("false");
+
+		content.QuerySelector("summary")!.Click();
+		content = cut.FindAll("details.config-side-group").Single(d => d.QuerySelector("a[href='/admin/config/chat']") is not null);
+		await Assert.That(content.HasAttribute("open")).IsTrue();
+	}
+
+	[Test]
 	public async Task SectionCounts_RenderAsDimCounts()
 	{
 		_nav.NavigateTo("/admin/config/chat");

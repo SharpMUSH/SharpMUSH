@@ -30,8 +30,10 @@
             }
             else
             {
-                <details class="config-side-group" open="@_open.Contains(g.Key)" @ontoggle="@(() => Toggle(g.Key))">
-                    <summary class="config-side-summary" aria-label="@string.Format(Loc["AdmConfigGroupToggle"], Loc[g.TitleKey])">
+                @* open is owned by Blazor: the summary's native toggle is prevented, because a browser also
+                   fires toggle for a <details> created open, which would close the current group on load. *@
+                <details class="config-side-group" open="@_open.Contains(g.Key)">
+                    <summary class="config-side-summary" aria-label="@string.Format(Loc["AdmConfigGroupToggle"], Loc[g.TitleKey])" aria-expanded="@(_open.Contains(g.Key) ? "true" : "false")" @onclick="@(() => Toggle(g.Key))" @onclick:preventDefault>
                         <span class="config-side-icon" aria-hidden="true"><MudIcon Icon="@g.Icon" Size="Size.Small" /></span>
                         <span class="config-side-label">@Loc[g.TitleKey]</span>
                         <span class="config-side-chevron" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></span>
