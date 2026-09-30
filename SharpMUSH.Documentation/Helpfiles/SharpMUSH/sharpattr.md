@@ -200,8 +200,9 @@ All four are seeded `no_command`, `visual`, `prefixmatch` and `public`, so the o
 
 There are no width or height attributes: every portal surface that shows a picture is a fixed-size box the picture is cropped into, so dimensions never affect layout. Only site-relative (`/...`) and `https:` URLs are rendered; anything else falls back to the no-image tile.
 
-For players the portal's gallery keeps `IMAGE`, `IMAGE\`BANNER` and `IMAGE\`ALT` in step with the icon and banner entries, so a hand-set value on a player is overwritten by the next gallery change. Rooms, things and exits are only ever set by hand.
+For players the portal's gallery will keep `IMAGE`, `IMAGE\`BANNER` and `IMAGE\`ALT` in step with its icon and banner entries, so a hand-set value on a player will be overwritten by the next gallery change. Rooms, things and exits are only ever set by hand.
+
+The default flags apply when an attribute is created. An `IMAGE` a game set before these entries existed keeps the flags it was created with -- clear it and set it again to pick up `visual` and `public`.
 
 **See Also:**
-- [image()]
 - [ATTRIBUTE FLAGS2]
