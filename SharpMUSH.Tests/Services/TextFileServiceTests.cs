@@ -98,6 +98,37 @@ public class TextFileServiceTests
 		}
 	}
 
+	/// <summary>
+	/// A file reference is a category and a file name joined under the text-files directory. Neither may
+	/// climb out of it with <c>..</c>, nor replace it by being rooted: the file sits beside the directory,
+	/// readable to the process, and must stay unreachable.
+	/// </summary>
+	[Test]
+	public async Task AReferenceOutsideTheTextFilesDirectory_IsNotFound()
+	{
+		var (service, root) = BuildServiceOverTempFiles(categories: 1, entriesPerCategory: 1);
+		var secretName = $"sharpmush-outside-{Guid.NewGuid():N}.txt";
+		var secret = Path.Join(Path.GetDirectoryName(root)!, secretName);
+		await File.WriteAllTextAsync(secret, "outside the text files");
+		try
+		{
+			await Assert.That(await service.GetFileContentAsync("cat0/entries.md")).IsNotNull()
+				.Because("a name inside the directory still resolves");
+
+			await Assert.That(await service.GetFileContentAsync($"../{secretName}")).IsNull();
+			await Assert.That(await service.GetFileContentAsync($"cat0/../../{secretName}")).IsNull();
+			await Assert.That(await service.GetFileContentAsync($"cat0/{secret}")).IsNull()
+				.Because("a rooted file name would replace the directory outright");
+			await Assert.That(await service.ListFilesAsync("..")).DoesNotContain(secretName);
+			await Assert.That(await service.ListFilesAsync(Path.GetDirectoryName(root)!)).DoesNotContain(secretName);
+		}
+		finally
+		{
+			File.Delete(secret);
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
 	[Test]
 	public async Task StripConsecutiveHeaders_SingleHeader_ReturnsUnchanged()
 	{

@@ -139,8 +139,7 @@ public class TextFileService : ITextFileService
 
 		if (category != null)
 		{
-			var categoryPath = Path.Combine(baseDir, category);
-			if (!Directory.Exists(categoryPath))
+			if (PathInside(baseDir, category) is not { } categoryPath || !Directory.Exists(categoryPath))
 			{
 				return Task.FromResult(Enumerable.Empty<string>());
 			}
@@ -286,10 +285,7 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
-		var baseDir = BaseDirectory;
-		var categoryPath = Path.Combine(baseDir, category);
-
-		if (!Directory.Exists(categoryPath))
+		if (PathInside(BaseDirectory, category) is not { } categoryPath || !Directory.Exists(categoryPath))
 		{
 			return null;
 		}
@@ -456,21 +452,40 @@ public class TextFileService : ITextFileService
 
 		if (category != null)
 		{
-			var categoryPath = Path.Combine(baseDir, category);
-			var filePath = Path.Combine(categoryPath, fileName);
-			return File.Exists(filePath) ? filePath : null;
+			return PathInside(baseDir, category, fileName) is { } filePath && File.Exists(filePath) ? filePath : null;
 		}
 
 		var categories = Directory.GetDirectories(baseDir);
 		foreach (var cat in categories)
 		{
-			var filePath = Path.Combine(cat, fileName);
-			if (File.Exists(filePath))
+			if (PathInside(baseDir, Path.GetFileName(cat), fileName) is { } filePath && File.Exists(filePath))
 			{
 				return filePath;
 			}
 		}
 
 		return null;
+	}
+
+	/// <summary>
+	/// <paramref name="names"/> joined under <paramref name="baseDir"/>, or null when the result is not strictly
+	/// inside it. The names come from a caller's file reference (<c>textfile()</c>, help), so a <c>..</c> or a
+	/// rooted name must not reach a file beside the text-files directory. <see cref="Path.Combine(string[])"/>
+	/// would let a rooted name replace the directory outright, hence the rooted check before joining.
+	/// </summary>
+	internal static string? PathInside(string baseDir, params ReadOnlySpan<string> names)
+	{
+		foreach (var name in names)
+		{
+			if (Path.IsPathRooted(name))
+			{
+				return null;
+			}
+		}
+
+		var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(baseDir)) + Path.DirectorySeparatorChar;
+		var full = Path.GetFullPath(Path.Join(root, string.Join(Path.DirectorySeparatorChar, names)));
+		var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+		return full.Length > root.Length && full.StartsWith(root, comparison) ? full : null;
 	}
 }
