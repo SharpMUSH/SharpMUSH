@@ -110,6 +110,27 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task Mine_ASlowAnswerForThePreviousCharacter_DoesNotReplaceTheCurrentOnes()
+	{
+		var gate = new TaskCompletionSource();
+		_api.Extra[SceneJson.Participant(314)] = SceneJson.List(SceneJson.Scene("S2", "Lamplighters' Vigil"));
+		_api.OnRequest = request => request.RequestUri!.PathAndQuery == SceneJson.Participant(313) ? gate.Task : Task.CompletedTask;
+		var auth = await CharactersApiFake.SignedInAsync(this,
+			new AccountCharacter(313, 1, "Ilsa Varn", "PLAYER", IsActing: true),
+			new AccountCharacter(314, 1, "Wren Halloway", "PLAYER"));
+
+		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes?mine=1", auth);
+		auth.SetActiveCharacter(auth.Characters.Single(c => c.Name == "Wren Halloway"));
+		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
+		gate.SetResult();
+		await Task.Delay(100);
+
+		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(Titles(cut)).IsEquivalentTo(new[] { "Lamplighters' Vigil" })
+			.Because("Ilsa's scenes answered last, but the page now acts as Wren");
+	}
+
+	[Test]
 	public async Task Mine_WithoutACharacter_SaysHowToGetOne_AndAsksTheServerNothing()
 	{
 		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes?mine=1", CharactersApiFake.Anonymous(this));

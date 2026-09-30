@@ -93,6 +93,9 @@
     private IReadOnlyList<SceneSummary>? _scenes;
     private string? _error;
 
+    /// <summary>Bumped by every load; only the newest load's answer is shown.</summary>
+    private int _loadGeneration;
+
     /// <summary>The character this tab acts as: whose scenes "Your scenes" lists, and who can join a live one.</summary>
     private AccountAuthService.CharacterSummary? _acting;
 
@@ -160,6 +163,7 @@
     private async Task LoadAsync()
     {
         _loading = true;
+        var generation = ++_loadGeneration;
         var filter = _filter;
         (var scenes, var error) = filter switch
         {
@@ -169,8 +173,9 @@
             _ => Listed(await SceneService.GetRecentScenesAsync(ScenesFilter.PageSize)),
         };
 
-        // A slower answer for a filter the reader has already left must not overwrite the one they are on.
-        if (filter != _filter) return;
+        // A slower answer must not overwrite a newer one: the reader may have left the filter, or — on
+        // "Your scenes", where the filter stays the same — switched the character it lists.
+        if (generation != _loadGeneration) return;
         (_scenes, _error) = (scenes, error);
         _loading = false;
     }

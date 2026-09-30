@@ -76,6 +76,7 @@
     private AccountAuthService.CharacterSummary? _acting;
     private string _path = "/scenes";
     private string _filter = ScenesFilter.All;
+    private int _mineGeneration;
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,12 +93,16 @@
     /// <summary>"Your scenes" belongs to the character this tab acts as; with none there is no row at all.</summary>
     private async Task LoadMineAsync()
     {
+        // A switch of character while the previous one's list is in flight: only the newest answer counts.
+        var generation = ++_mineGeneration;
         await AccountAuth.InitAsync();
-        _acting = AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
-        _mine = _acting is { } acting
-            && await Scenes.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize) is IReadOnlyList<SceneSummary> mine
-                ? mine
+        var acting = AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
+        var mine = acting is not null
+            && await Scenes.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize) is IReadOnlyList<SceneSummary> scenes
+                ? scenes
                 : null;
+        if (generation != _mineGeneration) return;
+        (_acting, _mine) = (acting, mine);
     }
 
     private bool IsFilter(string filter) => _path == "/scenes" && _filter == filter;

@@ -50,10 +50,42 @@ public class MailService(IHttpClientFactory httpClientFactory)
 	/// </summary>
 	public async Task<ApiResult<MailMessage>> ReadAsync(string folder, int number, bool? wasUnread = null)
 	{
+		// A row clicked again before its first read answers sends a second read that also says "unread".
+		// One message changes state, so only the first read to succeed reports it; a read that fails
+		// leaves the report to the next one.
+		var key = (folder, number);
+		if (wasUnread is true)
+		{
+			lock (_unreadInFlight) _unreadInFlight.Add(key);
+		}
+
 		var result = await Client.GetApiAsync<MailMessage>(
 			$"api/mail/{Uri.EscapeDataString(folder)}/{number}", "The server returned no message.");
-		if (result is MailMessage && wasUnread is not false) Changed?.Invoke(new MailChange(folder, MarkedRead: wasUnread is true));
+		if (result is MailMessage)
+		{
+			switch (wasUnread)
+			{
+				case null:
+					Changed?.Invoke(new MailChange(folder, MarkedRead: false));
+					break;
+				case true when Claim(key):
+					Changed?.Invoke(new MailChange(folder, MarkedRead: true));
+					break;
+			}
+		}
+
 		return result;
+	}
+
+	/// <summary>
+	/// Unread messages being read and not yet reported read. Locked: WASM runs on one thread, but the
+	/// service does not assume it.
+	/// </summary>
+	private readonly HashSet<(string Folder, int Number)> _unreadInFlight = [];
+
+	private bool Claim((string, int) key)
+	{
+		lock (_unreadInFlight) return _unreadInFlight.Remove(key);
 	}
 
 	private readonly Dictionary<string, string> _drafts = new(StringComparer.Ordinal);

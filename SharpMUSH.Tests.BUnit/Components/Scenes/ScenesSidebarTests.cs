@@ -45,6 +45,29 @@ public class ScenesSidebarTests : TrackingBunitContext
 		CharactersApiFake.SignedInAsync(ctx, new AccountCharacter(313, 1, "Ilsa Varn", "PLAYER", IsActing: true));
 
 	[Test]
+	public async Task YourScenes_ASlowCountForThePreviousCharacter_IsNotKept()
+	{
+		var gate = new TaskCompletionSource();
+		_api.Extra[SceneJson.Participant(314)] = SceneJson.List(
+			SceneJson.Scene("S1", "Salt Market at Dusk"), SceneJson.Scene("S2", "Lamplighters' Vigil"));
+		_api.OnRequest = request => request.RequestUri!.PathAndQuery == SceneJson.Participant(313) ? gate.Task : Task.CompletedTask;
+		var auth = await CharactersApiFake.SignedInAsync(this,
+			new AccountCharacter(313, 1, "Ilsa Varn", "PLAYER", IsActing: true),
+			new AccountCharacter(314, 1, "Wren Halloway", "PLAYER"));
+		Services.AddSingleton(auth);
+		Nav.NavigateTo("/scenes");
+
+		var cut = Render<ScenesSidebar>();
+		auth.SetActiveCharacter(auth.Characters.Single(c => c.Name == "Wren Halloway"));
+		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/scenes?mine=1'] .kit-row-count"), TimeSpan.FromSeconds(5));
+		gate.SetResult();
+		await Task.Delay(100);
+
+		await Assert.That(cut.Find("a.kit-row[href='/scenes?mine=1'] .kit-row-count").TextContent).IsEqualTo("2")
+			.Because("Wren has two scenes; Ilsa's one answered last");
+	}
+
+	[Test]
 	public async Task Header_CountsLiveAndRecent()
 	{
 		var cut = RenderAt("/scenes", CharactersApiFake.Anonymous(this));
