@@ -1,5 +1,7 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
 @using SharpMUSH.Client.Components.Widgets
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Widgets
 
 @if (_placements.Count > 0)
 {
@@ -53,9 +55,11 @@
 
     [Inject] private IWidgetRegistry? Registry { get; set; }
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     private IReadOnlyList<WidgetPlacement> _placements = [];
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (Layout is null)
         {
@@ -63,8 +67,15 @@
             return;
         }
 
+        // A layout is one arrangement for everyone, so an application widget placed in it is gated here, where
+        // it renders: below its minimum role it is left out (the server still gates its data routes).
+        var role = AuthState is null
+            ? SharpMUSH.Library.Authorization.PortalRole.Guest
+            : PortalRoleHelper.CurrentRole((await AuthState).User);
         _placements = Layout.Zones.TryGetValue(Zone, out var list)
-            ? list.OrderBy(p => p.Order).ToList().AsReadOnly()
+            ? list.OrderBy(p => p.Order)
+                .Where(p => Registry?.GetWidget(p.WidgetName) is not ApplicationPortalWidget app || role >= app.MinimumRole)
+                .ToList().AsReadOnly()
             : (IReadOnlyList<WidgetPlacement>)[];
     }
 
