@@ -296,6 +296,9 @@
     <value>Suprascrie atributele standard {0} și {1} cu valorile implicite integrate. Atributele personalizate adăugate de dumneavoastră rămân neatinse.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Resetarea handlerului îi rescrie softcode-ul, deci necesită permisiunea packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Resetare finalizată: {0} atribute scrise.</value>
     <comment>MT</comment>

@@ -2602,6 +2602,9 @@
   <data name="AdmProfilesResetCaption" xml:space="preserve">
     <value>Overwrites the stock {0} and {1} attributes with the built-in defaults. Custom attributes you added are left untouched.</value>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Resetting the handler rewrites its softcode, so it needs the packages.admin permission.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Reset complete: {0} attributes written.</value>
   </data>

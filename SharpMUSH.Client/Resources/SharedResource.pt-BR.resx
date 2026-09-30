@@ -296,6 +296,9 @@
     <value>Sobrescreve os atributos padrão {0} e {1} com os valores internos. Os atributos personalizados que você adicionou não são alterados.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Redefinir o manipulador reescreve o softcode dele, então requer a permissão packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Redefinição concluída: {0} atributos gravados.</value>
     <comment>MT</comment>

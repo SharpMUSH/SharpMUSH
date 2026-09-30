@@ -70,17 +70,26 @@
                 }
             </div>
 
-            <MudButton Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Filled.RestartAlt"
-                       OnClick="ResetAsync" Disabled="_resetting"
-                       Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
-                @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
-            </MudButton>
-            <p class="ph-caption">
-                @((MarkupString)Loc["AdmProfilesResetCaption",
-                    "<code>GET`*</code>",
-                    "<code>FN`*</code>"].Value)
-            </p>
+            @* The reset rewrites the handler's wizard softcode; the server takes packages.admin for it,
+               so a moderator who can read the status is not offered a button that can only 403. *@
+            <AuthorizeView Policy="packages.admin">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.RestartAlt"
+                               OnClick="ResetAsync" Disabled="_resetting"
+                               Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
+                        @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
+                    </MudButton>
+                    <p class="ph-caption">
+                        @((MarkupString)Loc["AdmProfilesResetCaption",
+                            "<code>GET`*</code>",
+                            "<code>FN`*</code>"].Value)
+                    </p>
+                </Authorized>
+                <NotAuthorized>
+                    <p class="ph-caption">@Loc["AdmProfilesResetNeedsPackagesAdmin"]</p>
+                </NotAuthorized>
+            </AuthorizeView>
         }
     }
 </div>

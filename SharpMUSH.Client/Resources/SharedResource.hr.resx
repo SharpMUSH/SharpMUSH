@@ -296,6 +296,9 @@
     <value>Prepisuje standardne atribute {0} i {1} ugrađenim zadanim vrijednostima. Prilagođeni atributi koje ste dodali ostaju nepromijenjeni.</value>
     <comment>MT — {0} and {1} are attribute names, placed after the noun "atribute" so they stay uninflected</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Vraćanje rukovatelja prepisuje njegov softcode, pa zahtijeva dopuštenje packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Resetiranje dovršeno. Broj zapisanih atributa: {0}.</value>
     <comment>MT — restructured as "Broj zapisanih atributa: {0}" because Croatian noun agreement with an unknown count is impossible in a non-plural string</comment>

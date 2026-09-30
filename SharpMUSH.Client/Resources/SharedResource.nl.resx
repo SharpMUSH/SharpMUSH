@@ -296,6 +296,9 @@
     <value>Overschrijft de standaardattributen {0} en {1} met de ingebouwde standaardwaarden. Attributen die je zelf hebt toegevoegd blijven ongemoeid.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Het resetten van de handler herschrijft zijn softcode, dus hiervoor is de machtiging packages.admin nodig.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Herstel voltooid: {0} attributen geschreven.</value>
     <comment>MT</comment>

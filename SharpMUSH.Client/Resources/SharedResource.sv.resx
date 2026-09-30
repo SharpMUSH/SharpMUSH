@@ -296,6 +296,9 @@
     <value>Skriver över standardattributen {0} och {1} med de inbyggda standardvärdena. Egna attribut som du lagt till lämnas orörda.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Att återställa hanteraren skriver om dess softcode, så det kräver behörigheten packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Återställningen är klar: {0} attribut skrevs.</value>
     <comment>MT</comment>

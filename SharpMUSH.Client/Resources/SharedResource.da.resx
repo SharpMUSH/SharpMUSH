@@ -296,6 +296,9 @@
     <value>Overskriver standardattributterne {0} og {1} med de indbyggede standardværdier. Egne attributter, du har tilføjet, røres ikke.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Nulstilling af handleren omskriver dens softcode, så det kræver tilladelsen packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Nulstilling fuldført: {0} attributter skrevet.</value>
     <comment>MT</comment>
