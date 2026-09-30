@@ -199,6 +199,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # HTTP/3 is QUIC over UDP. Caddy serves it by default and advertises it with Alt-Svc, but
+      # without the UDP mapping the browser's attempt never arrives and it stays on HTTP/2.
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

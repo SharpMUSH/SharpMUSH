@@ -61,6 +61,7 @@ public class LayoutEditorTests : TrackingBunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton<IWidgetRegistry>(registry)
+			.AddSingleton(new ApplicationCatalog([]))
 			.AddSingleton(_layout)
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
