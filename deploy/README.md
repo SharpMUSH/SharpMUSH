@@ -120,7 +120,7 @@ local development only — over HTTPS a browser will refuse a plaintext `ws://` 
 
 | Port | Service | Exposed to internet? |
 |------|---------|----------------------|
-| 80 / 443 | Caddy (web portal, SignalR, and `/ws` → connection server) | yes |
+| 80 / 443 (TCP), 443 (UDP) | Caddy (web portal, SignalR, and `/ws` → connection server); UDP 443 is HTTP/3 (QUIC) | yes — open UDP 443 on the host firewall too, or browsers stay on HTTP/2 |
 | 4201 | Telnet — **plaintext** | yes |
 | 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
