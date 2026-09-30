@@ -1,0 +1,47 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
+   a LIVE tag while it runs, "room · N poses · when", Read, and — for a running scene — the live view
+   as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. *@
+<article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
+    <div class="scene-card-main">
+        <div class="scene-card-top">
+            <h3 class="scene-card-title">@Loc.Title(Scene)</h3>
+            @if (Scene.IsLive)
+            {
+                <Pill Tag="true" Dot="var(--accent)" Class="scene-card-live">@Loc["RolLiveBadge"]</Pill>
+            }
+            @if (!Scene.IsPublic)
+            {
+                <Pill Tag="true" Class="scene-card-private">@Loc["NavScenePrivate"]</Pill>
+            }
+        </div>
+        <div class="scene-card-meta">
+            <span>@Scene.RoomName</span>
+            <span aria-hidden="true">·</span>
+            <span>@Loc.Plural("RolPoseCount", "count", Scene.PoseCount)</span>
+            <span aria-hidden="true">·</span>
+            <span>@When</span>
+        </div>
+    </div>
+    <div class="scene-card-actions">
+        <CapsuleButton Href="@($"/scenes/{Uri.EscapeDataString(Scene.Id)}")">@Loc["ResRead"]</CapsuleButton>
+        @if (Scene.IsLive)
+        {
+            <CapsuleButton Primary="true" Href="@($"/scenes/{Uri.EscapeDataString(Scene.Id)}/live")">@(CanJoin ? Loc["ResJoin"] : Loc["RolWatchLive"])</CapsuleButton>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public required SceneSummary Scene { get; set; }
+
+    /// <summary>The viewer acts as a character, so the live view is somewhere to pose, not only to watch.</summary>
+    [Parameter] public bool CanJoin { get; set; }
+
+    /// <summary>When a scene not yet running is due; otherwise how long since anything happened in it.</summary>
+    private string When =>
+        !Scene.IsLive && Scene.ScheduledForUtc is { } due && due > DateTimeOffset.UtcNow
+            ? string.Format(Loc["NavSceneScheduledFor"], due.ToLocalTime().ToString("MMM d, HH:mm"))
+            : Loc.Format(Scene.LastActivityAtUtc);
+}

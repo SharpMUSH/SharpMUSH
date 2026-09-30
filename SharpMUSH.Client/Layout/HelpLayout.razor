@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Help
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Help pages (/help, a topic, an admin topic): the page sidebar beside the page body. The sidebar
+   renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="help" Class="help-shell" NavLabel="@Loc["Help"]">
+    <Nav Context="collapsed"><HelpSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

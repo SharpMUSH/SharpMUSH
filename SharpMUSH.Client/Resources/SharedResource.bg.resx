@@ -4880,4 +4880,100 @@
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# намерен} other {# намерени}}</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Разглеждане</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Всички сцени</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>На живо сега</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Вашите сцени</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Насрочени</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Завършени</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# на живо} other {# на живо}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# скорошна} other {# скорошни}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Архив на сцените</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Сцените, в които {0} е участвал(а).</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Сцени, планирани за по-късно, най-близките първо.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Сцени, които собствениците им са завършили.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Влезте и изберете персонаж, за да видите сцените, в които сте участвали.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>лична</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Насрочена за {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Филтриране на позите по етикет</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Започната</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Последна активност</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Започната от</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Дължина</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Участници · #} other {Участници · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# тема} other {# теми}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Търсене в помощта</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Разглеждане</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Указател на помощта</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Първи стъпки</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Нови в MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Теми</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Няма съвпадения} one {# съвпадение} other {# съвпадения}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Помощ за администратори</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Администраторски указател</value>
+  </data>
 </root>

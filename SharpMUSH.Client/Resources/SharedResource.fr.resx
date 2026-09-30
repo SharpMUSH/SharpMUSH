@@ -4134,4 +4134,100 @@
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# trouvé} other {# trouvés}}</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Toutes les scènes</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>En direct</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Vos scènes</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Planifiées</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Terminées</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# en direct} other {# en direct}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# récente} other {# récentes}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Archive des scènes</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Les scènes auxquelles {0} a pris part.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scènes prévues pour plus tard, les plus proches d'abord.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scènes que leurs propriétaires ont terminées.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Connectez-vous et incarnez un personnage pour voir les scènes auxquelles vous avez pris part.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privée</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Prévue le {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrer les poses par étiquette</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Commencée</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Dernière activité</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Lancée par</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Longueur</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Distribution · #} other {Distribution · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# sujet} other {# sujets}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Rechercher dans l'aide</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Index de l'aide</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Premiers pas</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Nouveau sur un MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Sujets</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Aide d'administration</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Index d'administration</value>
+  </data>
 </root>

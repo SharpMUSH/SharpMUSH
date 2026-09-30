@@ -4880,4 +4880,100 @@
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# funnet} other {# funnet}}</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Alle scener</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Direkte nå</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Dine scener</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Planlagte</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Avsluttede</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# direkte} other {# direkte}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# nylig} other {# nylige}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Scenearkiv</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scenene {0} har vært med i.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scener planlagt til senere, de nærmeste først.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scener eierne har avsluttet.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Logg inn og spill som en karakter for å se scenene du har vært med i.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privat</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Planlagt til {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrer poser etter merke</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Startet</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Siste aktivitet</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Startet av</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Lengde</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Medvirkende · #} other {Medvirkende · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# emne} other {# emner}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Søk i hjelpen</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Hjelpeoversikt</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Kom i gang</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Ny i MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Emner</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Ingen treff} one {# treff} other {# treff}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Administratorhjelp</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Administratoroversikt</value>
+  </data>
 </root>

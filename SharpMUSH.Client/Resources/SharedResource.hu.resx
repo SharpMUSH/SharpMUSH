@@ -4880,4 +4880,100 @@
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# találat} other {# találat}}</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Összes jelenet</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Most élőben</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Saját jelenetek</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Ütemezett</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Befejezett</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# élő} other {# élő}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# friss} other {# friss}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Jelenetarchívum</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Azok a jelenetek, amelyekben {0} részt vett.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Későbbre tervezett jelenetek, a legközelebbi elöl.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Jelenetek, amelyeket a tulajdonosuk lezárt.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Jelentkezz be, és válassz karaktert, hogy lásd a jeleneteket, amelyekben részt vettél.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privát</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Ütemezve: {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Pózok szűrése címke szerint</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Részletek</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Kezdés</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Utolsó aktivitás</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Indította</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Hossz</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Szereplők · #} other {Szereplők · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# téma} other {# téma}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Keresés a súgóban</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Súgó tartalomjegyzéke</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Első lépések</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Új a MUSH-ban</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Témák</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Nincs találat} one {# találat} other {# találat}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Adminisztrátori súgó</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Adminisztrátori tartalomjegyzék</value>
+  </data>
 </root>
