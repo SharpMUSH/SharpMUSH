@@ -106,7 +106,7 @@ public static class OobEntryParser
 	private static bool IsV2(JsonElement root) =>
 		root.TryGetProperty("v", out var v)
 		&& v.ValueKind == JsonValueKind.Number
-		&& v.TryGetInt32(out var version)
+		&& v.TryGetDouble(out var version)
 		&& version >= 2;
 
 	private static RoomOccupant? ReadOccupant(JsonElement item, bool v2)

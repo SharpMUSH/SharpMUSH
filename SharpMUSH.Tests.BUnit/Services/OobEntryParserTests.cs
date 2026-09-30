@@ -86,10 +86,25 @@ public class OobEntryParserTests
 		await Assert.That(row.You).IsFalse();
 	}
 
+	/// <summary><c>json(number,2.0)</c> keeps the <c>.0</c>; a version is a number, not an integer.</summary>
+	[Test]
+	[Arguments("2")]
+	[Arguments("2.0")]
+	[Arguments("3")]
+	public async Task A_v_of_2_or_more_reads_as_v2(string v)
+	{
+		var json = $$"""{ "v": {{v}}, "who": [ { "dbref": "#5", "name": "Bob", "objid": "#5:1" } ] }""";
+
+		var row = OobEntryParser.ParseOccupants(json)[0];
+
+		await Assert.That(row.ObjId).IsEqualTo("#5:1");
+	}
+
 	[Test]
 	[Arguments("\"2\"")]
 	[Arguments("null")]
 	[Arguments("1")]
+	[Arguments("1.5")]
 	public async Task A_v_that_is_not_2_or_more_reads_as_v1(string v)
 	{
 		var json = $$"""{ "v": {{v}}, "who": [ { "dbref": "#5", "name": "Bob", "objid": "#5:1" } ] }""";
