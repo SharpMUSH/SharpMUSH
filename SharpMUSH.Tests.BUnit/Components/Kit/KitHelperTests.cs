@@ -48,4 +48,16 @@ public class KitHelperTests
 	[Arguments("élodie varn", "ÉV")]
 	public async Task Initials_TakeTheFirstTwoWords(string? name, string expected)
 		=> await Assert.That(Initials.From(name)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments("#5aa9ff", "#5aa9ff")]
+	[Arguments("#ABCDEF", "#ABCDEF")]
+	[Arguments("#fff", null)]
+	[Arguments("#5aa9ff;x:y", null)]
+	[Arguments("red", null)]
+	[Arguments("#gggggg", null)]
+	[Arguments("", null)]
+	[Arguments(null, null)]
+	public async Task NameColor_AcceptsOnlySixDigitHex(string? color, string? expected)
+		=> await Assert.That(NameColor.Safe(color)).IsEqualTo(expected);
 }

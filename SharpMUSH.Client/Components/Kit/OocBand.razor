@@ -9,7 +9,7 @@
     </div>
     <div class="kit-ooc-body">
         <div class="kit-ooc-head">
-            <span class="kit-ooc-name" style="@(Color is null ? null : $"color:{Color};")">@Name</span>
+            <span class="kit-ooc-name" style="@(NameColor.Safe(Color) is { } color ? $"color:{color};" : null)">@Name</span>
             @if (Time is not null)
             {
                 <span class="kit-ooc-time">@Time</span>
@@ -21,6 +21,7 @@
 
 @code {
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    /// <summary>The author's softcode name colour; only <c>#rrggbb</c> is written (<see cref="NameColor"/>).</summary>
     [Parameter] public string? Color { get; set; }
     [Parameter] public string? Time { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }

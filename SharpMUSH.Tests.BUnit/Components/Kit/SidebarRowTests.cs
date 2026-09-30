@@ -74,6 +74,26 @@ public class SidebarRowTests : BunitContext
 	}
 
 	[Test]
+	public async Task GroupAvatar_WithoutASecondImage_ShowsTheSecondPersonsInitials()
+	{
+		// Board 01's "Tomas, Dace": Dace has no picture, so the stacked second avatar is "DK".
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Tomas, Dace").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar)
+			.Add(x => x.ImageUrl, "/t.jpg").Add(x => x.Name, "Tomas Reyes").Add(x => x.Name2, "Dace Kellan"));
+		await Assert.That(cut.Find(".kit-row-lead").ClassList).Contains("kit-row-lead--group");
+		await Assert.That(cut.Find(".kit-row-avatar--second").TextContent).IsEqualTo("DK");
+	}
+
+	[Test]
+	public async Task GroupAvatar_WithARejectedSecondImage_StillStacksAFallback()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Tomas, Dace").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar)
+			.Add(x => x.ImageUrl, "/t.jpg").Add(x => x.ImageUrl2, "javascript:1"));
+		await Assert.That(cut.Find(".kit-row-lead").ClassList).Contains("kit-row-lead--group");
+		await Assert.That(cut.FindAll("img.kit-row-avatar--second").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-row-avatar--second.kit-row-fallback").TextContent).IsEqualTo("?");
+	}
+
+	[Test]
 	public async Task Unread_RendersAPill_AndBoldsTheRow()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 3));
