@@ -36,14 +36,6 @@
 	z-index: 5;
 }
 
-.phosphor-topbar-title {
-	font-size: 1rem;
-	font-weight: 600;
-	color: var(--text);
-	letter-spacing: 0.01em;
-	white-space: nowrap;
-}
-
 /* ── Topbar icon buttons (menu, terminal, close) ── */
 .phosphor-icon-btn {
 	width: 38px;
@@ -67,56 +59,6 @@
 .phosphor-icon-btn--active:hover {
 	color: var(--accent);
 	background: rgba(var(--glow), 0.12);
-}
-
-/* ── Topbar search box ── */
-.phosphor-search {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	width: 220px;
-	height: 34px;
-	padding: 0 0.625rem;
-	background: var(--surface-2);
-	border: 1px solid var(--border-soft);
-	border-radius: var(--radius);
-	color: var(--text-faint);
-	flex-shrink: 0;
-	transition: border-color 0.14s;
-}
-.phosphor-search:focus-within {
-	border-color: var(--accent);
-}
-.phosphor-search-icon {
-	font-size: 0.9375rem;
-	line-height: 1;
-	flex-shrink: 0;
-}
-.phosphor-search input {
-	flex: 1;
-	min-width: 0;
-	background: transparent;
-	border: none;
-	outline: none;
-	color: var(--text);
-	font-size: 0.78125rem;
-	font-family: inherit;
-}
-.phosphor-search input::placeholder {
-	color: var(--text-faint);
-}
-.phosphor-search input::-webkit-search-cancel-button {
-	display: none;
-}
-.phosphor-search-kbd {
-	margin-left: auto;
-	font-family: var(--font-mono);
-	font-size: 0.65625rem;
-	color: var(--text-faint);
-	border: 1px solid var(--border);
-	border-radius: 3px;
-	padding: 0 0.25rem;
-	flex-shrink: 0;
 }
 
 /* ── The global TopBar zone (Q1): a slim strip above main, rendered only when it has widgets ── */
@@ -1275,18 +1217,8 @@
    (the readability win) — only their chrome goes touch-friendly (next block). ══ */
 @media (max-width: 760px) {
 
-	/* Condense the topbar: drop the search box, kbd hint, and language picker.
-	   Tablets (>760px) keep them — they have the room. */
+	/* A condensed header: the search is an icon, and the language stays (a phone has no other). */
 	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
-	.phosphor-search,
-	.phosphor-search-kbd,
-	.phosphor-lang { display: none; }
-	.phosphor-topbar-title {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		font-size: 0.9375rem;
-	}
 }
 
 /* ══ TOUCH CHROME: the nav becomes an off-canvas drawer + a bottom tab bar. Applies to

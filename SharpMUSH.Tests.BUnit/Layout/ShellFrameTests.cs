@@ -68,4 +68,13 @@ public class ShellFrameTests
 	[Test]
 	public async Task TheSectionButton_ShowsOnlyWhereThereIsASectionSidebar()
 		=> await Assert.That(Shell()).Contains(".phosphor-shell:not(:has(.kit-pagebar)) .phosphor-pagebar-btn");
+
+	[Test]
+	public async Task ThePhoneHeader_KeepsTheLanguage()
+	{
+		// The rail's language picker is desktop chrome; on a phone the header's is the only one.
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, @"\.phosphor-lang[^{]*\{[^}]*display:\s*none")).IsFalse();
+		await Assert.That(Layout()).Contains("<span class=\"phosphor-lang\"><LanguagePicker />");
+	}
 }
