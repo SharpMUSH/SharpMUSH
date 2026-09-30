@@ -24,7 +24,7 @@
 .phosphor-topbar {
 	height: var(--topbar-h);
 	flex-shrink: 0;
-	display: flex;
+	display: none; /* touch chrome only (README §10 Q1: no desktop top bar) */
 	align-items: center;
 	gap: 0.625rem;
 	padding: 0 1rem;
@@ -91,11 +91,12 @@
 	min-height: 100%;
 }
 
-.phosphor-page:has(> .full-bleed) {
+/* descendants, not children: a section page sits inside SectionShell's .kit-section-body */
+.phosphor-page:has(.full-bleed) {
 	max-width: none;
 }
 
-.phosphor-page:has(> .full-height) {
+.phosphor-page:has(.full-height) {
 	height: 100%;
 }
 
@@ -302,7 +303,7 @@
 	width: 232px;
 	flex-shrink: 0;
 	height: 100%;
-	display: flex;
+	display: none; /* touch chrome only: a desktop has the rail */
 	flex-direction: column;
 	overflow: hidden;
 	background: var(--surface-3);
@@ -1199,14 +1200,6 @@
 	color: var(--accent);
 }
 
-/* ══ DESKTOP (a fine pointer, wider than a phone): the D1 frame. The rail replaces the grouped
-   sidebar, and there is no top bar (Q1): search, the terminal and the language live in the rail.
-   The drawer (NavMenu) and the header exist only for touch chrome, below. ══ */
-@media (min-width: 761px) and (pointer: fine) {
-	.phosphor-sidebar { display: none; }
-	.phosphor-topbar { display: none; }
-}
-
 /* The section button in the touch header only where the page has a section sidebar to open. */
 .phosphor-shell:not(:has(.kit-pagebar)) .phosphor-pagebar-btn {
 	display: none;
@@ -1227,8 +1220,14 @@
    while a mouse/trackpad desktop (pointer: fine + wide) keeps the sidebar. Keep this
    media condition in sync with sharpmushLayout.isTouchChrome() in layout.js. ══ */
 @media (max-width: 760px), (pointer: coarse) {
-	/* The rail is desktop chrome; touch chrome has the drawer and the bottom tab bar. */
+	/* The rail is desktop chrome; touch chrome has the drawer, the header and the bottom tab bar.
+	   Anything that is not touch chrome (a fine pointer, or none at all) gets the rail alone. */
 	.phosphor-rail { display: none; }
+	.phosphor-sidebar { display: flex; }
+	.phosphor-topbar { display: flex; }
+
+	/* The section panel is always the full sidebar here (SectionShell ignores a desktop collapse). */
+	.phosphor-shell .phosphor-pagebar .kit-pagebar-toggle { display: none; }
 
 	/* The sidebar leaves the flex flow and slides in over the content, full-width. */
 	.phosphor-sidebar {

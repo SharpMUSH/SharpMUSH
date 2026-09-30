@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Services
 @inject SidebarCollapseService CollapseMemory
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 @implements IDisposable
 
 @* D1 §3 page sidebar. A section's layout wraps its pages in this: the sidebar goes into the shell's
@@ -9,14 +10,14 @@
    the body stays in the page. The collapse button sits at the sidebar's top right (36×36, radius
    10); collapsed, the sidebar renders its 62px strip. The state is remembered per section (Q3). *@
 <SectionContent SectionName="@PageSidebarSlot.Name">
-    <div class="kit-pagebar @(_collapsed ? "kit-pagebar--collapsed" : null) @Class" data-section="@Key">
-        <button type="button" class="kit-pagebar-toggle" aria-expanded="@(_collapsed ? "false" : "true")"
-                aria-label="@string.Format(Loc[_collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
-                title="@string.Format(Loc[_collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
+    <div class="kit-pagebar @(Collapsed ? "kit-pagebar--collapsed" : null) @Class" data-section="@Key">
+        <button type="button" class="kit-pagebar-toggle" aria-expanded="@(Collapsed ? "false" : "true")"
+                aria-label="@string.Format(Loc[Collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
+                title="@string.Format(Loc[Collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
                 @onclick="ToggleAsync">
-            <MudIcon Icon="@(_collapsed ? Icons.Material.Outlined.KeyboardDoubleArrowRight : Icons.Material.Outlined.KeyboardDoubleArrowLeft)" Size="Size.Small" />
+            <MudIcon Icon="@(Collapsed ? Icons.Material.Outlined.KeyboardDoubleArrowRight : Icons.Material.Outlined.KeyboardDoubleArrowLeft)" Size="Size.Small" />
         </button>
-        @Nav?.Invoke(_collapsed)
+        @Nav?.Invoke(Collapsed)
     </div>
 </SectionContent>
 <div class="kit-section-body @(PadBody ? null : "kit-section-body--flush") @Class">
@@ -42,6 +43,25 @@
     [Parameter] public bool PadBody { get; set; } = true;
 
     private bool _collapsed;
+
+    /// <summary>On touch chrome the sidebar is an off-canvas panel with no room for a strip.</summary>
+    private bool _touch;
+
+    private bool Collapsed => _collapsed && !_touch;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _touch = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        }
+        catch (JSException)
+        {
+            return;
+        }
+        if (_touch && _collapsed) StateHasChanged();
+    }
 
     protected override async Task OnParametersSetAsync()
     {

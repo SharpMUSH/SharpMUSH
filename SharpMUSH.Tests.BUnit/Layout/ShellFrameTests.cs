@@ -49,16 +49,6 @@ public class ShellFrameTests
 	}
 
 	[Test]
-	public async Task ADesktop_ShowsTheRail_AndHidesTheDrawerAndHeader()
-	{
-		var shell = Shell();
-		var desktop = MediaBlock(shell, "(min-width: 761px) and (pointer: fine)");
-		await Assert.That(desktop).Contains(".phosphor-sidebar");
-		await Assert.That(desktop).Contains(".phosphor-topbar");
-		await Assert.That(Regex.IsMatch(desktop, @"\.phosphor-topbar\s*\{[^}]*display:\s*none")).IsTrue();
-	}
-
-	[Test]
 	public async Task TouchChrome_HidesTheRail()
 	{
 		var touch = MediaBlock(Shell(), "(max-width: 760px), (pointer: coarse)");
@@ -76,5 +66,25 @@ public class ShellFrameTests
 		var shell = Shell();
 		await Assert.That(Regex.IsMatch(shell, @"\.phosphor-lang[^{]*\{[^}]*display:\s*none")).IsFalse();
 		await Assert.That(Layout()).Contains("<span class=\"phosphor-lang\"><LanguagePicker />");
+	}
+
+	[Test]
+	public async Task TheDrawerAndHeader_AreTouchChromeOnly_WhateverThePointer()
+	{
+		// A wide window with no pointer at all (keyboard-only, some kiosks) matches neither "fine" nor
+		// "coarse"; it must still get one navigation, the rail, not the rail plus an in-flow drawer.
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, @"(?m)^\.phosphor-sidebar\s*\{[^}]*display:\s*none")).IsTrue();
+		await Assert.That(Regex.IsMatch(shell, @"(?m)^\.phosphor-topbar\s*\{[^}]*display:\s*none")).IsTrue();
+		var touch = MediaBlock(shell, "(max-width: 760px), (pointer: coarse)");
+		await Assert.That(Regex.IsMatch(touch, @"\.phosphor-sidebar\s*\{[^}]*display:\s*flex")).IsTrue();
+		await Assert.That(Regex.IsMatch(touch, @"\.phosphor-topbar\s*\{[^}]*display:\s*flex")).IsTrue();
+	}
+
+	[Test]
+	public async Task TheTouchSectionPanel_HasNoCollapseToggle()
+	{
+		var touch = MediaBlock(Shell(), "(max-width: 760px), (pointer: coarse)");
+		await Assert.That(Regex.IsMatch(touch, @"\.kit-pagebar-toggle\s*\{[^}]*display:\s*none")).IsTrue();
 	}
 }

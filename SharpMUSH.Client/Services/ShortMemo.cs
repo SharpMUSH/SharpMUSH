@@ -29,6 +29,13 @@ internal sealed class ShortMemo<T>(TimeSpan lifetime, Func<T, bool> keep)
 		return _inFlight = RunAsync(fetch);
 	}
 
+	/// <summary>Drops what is kept, so the next caller reads again (after a write that changes it).</summary>
+	public void Forget()
+	{
+		_kept = null;
+		_inFlight = null;
+	}
+
 	private async Task<T> RunAsync(Func<Task<T>> fetch)
 	{
 		var value = await fetch();

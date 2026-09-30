@@ -74,6 +74,26 @@ public class CommandPaletteTests : BunitContext
 	}
 
 	[Test]
+	public async Task AnArrowKey_NeverPreventsTheNextKeysDefault()
+	{
+		// preventDefault is decided when the dialog renders, so a flag set by ArrowDown would swallow
+		// the next letter typed into the field.
+		var cut = RenderOpen();
+		cut.Find("[role='dialog']").KeyDown("ArrowDown");
+		await Assert.That(cut.Find("[role='dialog']").OuterHtml.ToLowerInvariant()).DoesNotContain("preventdefault");
+	}
+
+	[Test]
+	public async Task Open_TrapsFocus_AndCloseHandsItBack()
+	{
+		var cut = RenderOpen();
+		await Assert.That(cut.FindComponents<MudBlazor.MudFocusTrap>().Count).IsEqualTo(1);
+		JSInterop.VerifyInvoke("sharpmushLayout.rememberFocus");
+		cut.Find("[role='dialog']").KeyDown("Escape");
+		JSInterop.VerifyInvoke("sharpmushLayout.restoreFocus");
+	}
+
+	[Test]
 	public async Task Escape_Closes()
 	{
 		bool? open = null;

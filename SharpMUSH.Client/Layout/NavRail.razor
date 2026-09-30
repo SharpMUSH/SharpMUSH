@@ -46,11 +46,11 @@
     @Item("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"], IsUnder("/scenes"))
     @Item("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"], IsUnder("/wiki"))
     @Item("/characters", Icons.Material.Outlined.Groups, Loc["Characters"], IsUnder("/characters") || IsUnder("/character"))
-    @Item("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"], IsUnder("/help"))
     @if (_characterActive)
     {
         @Item("/mail", Icons.Material.Outlined.MailOutline, Loc["Mail"], IsUnder("/mail"))
     }
+    @Item("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"], IsUnder("/help"))
     @foreach (var section in _novelSections)
     {
         var s = section;
@@ -134,8 +134,15 @@
         Locate();
     }
 
+    private Task<AuthenticationState>? _gatesFor;
+    private bool _gatesKnown;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The gates depend only on who is signed in; a parent re-render (a terminal toggle, a palette
+        // opening) passes new callbacks and would otherwise re-ask every policy.
+        if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
+        (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
     }

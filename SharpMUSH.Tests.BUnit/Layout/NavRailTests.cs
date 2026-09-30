@@ -99,7 +99,10 @@ public class NavRailTests : TrackingBunitContext
 		await Assert.That(RenderAt("/").FindAll("a[href='/mail']").Count).IsEqualTo(0);
 
 		_terminal.IsConnected.Returns(true);
-		await Assert.That(RenderAt("/").FindAll("a[href='/mail']").Count).IsEqualTo(1);
+		var cut = RenderAt("/");
+		await Assert.That(cut.FindAll("a[href='/mail']").Count).IsEqualTo(1);
+		var order = cut.FindAll("a.phosphor-rail-item").Select(a => a.GetAttribute("href")).ToList();
+		await Assert.That(order.IndexOf("/mail")).IsLessThan(order.IndexOf("/help")).Because("README §3: Home, Play, Scenes, Wiki, Characters, Mail; Help follows");
 	}
 
 	[Test]

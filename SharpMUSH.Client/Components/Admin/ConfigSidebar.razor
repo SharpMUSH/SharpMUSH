@@ -73,8 +73,15 @@
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
+    private Task<AuthenticationState>? _gatesFor;
+    private bool _gatesKnown;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The gates depend only on who is signed in; a parent re-render (a terminal toggle, a palette
+        // opening) passes new callbacks and would otherwise re-ask every policy.
+        if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
+        (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _back = (await SharpMUSH.Client.Layout.BuildNavCatalog.VisibleAsync(Authorization, user))
             .FirstOrDefault(e => e.Href != "/admin/config")?.Href;

@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inherits LayoutComponentBase
-@implements IDisposable
+@implements IAsyncDisposable
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject TerminalServiceHost Terminal
@@ -409,8 +409,14 @@
 
     private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.unregisterPaletteHotkey");
+        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
         _selfRef?.Dispose();
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;

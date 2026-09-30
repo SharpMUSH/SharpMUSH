@@ -68,3 +68,35 @@ test('registering twice keeps one listener', () => {
     assert.equal(first.length + second.length, 1);
     assert.equal(second.length, 1, 'the latest registration answers');
 });
+
+test('AltGr+K and Ctrl+Shift+K belong to the keyboard layout and the browser', () => {
+    const { layout, listeners } = boot();
+    const calls = [];
+    layout.registerPaletteHotkey({ invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    for (const init of [{ ctrlKey: true, altKey: true }, { ctrlKey: true, shiftKey: true, key: 'K' }]) {
+        const press = key(body, init);
+        listeners.get('keydown')(press.event);
+        assert.equal(press.prevented(), false);
+    }
+    assert.deepEqual(calls, []);
+});
+
+test('after unregistering, the chord does nothing and is not swallowed', () => {
+    const { layout, listeners } = boot();
+    const calls = [];
+    layout.registerPaletteHotkey({ invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    layout.unregisterPaletteHotkey();
+    const press = key(body, { ctrlKey: true });
+    listeners.get('keydown')(press.event);
+    assert.deepEqual(calls, []);
+    assert.equal(press.prevented(), false);
+});
+
+test('a disposed .NET object does not surface as an unhandled rejection', async () => {
+    const { layout, listeners } = boot();
+    let caught = false;
+    const rejected = { then: () => rejected, catch: handler => { caught = true; handler(new Error('no tracked object')); return rejected; } };
+    layout.registerPaletteHotkey({ invokeMethodAsync: () => rejected });
+    listeners.get('keydown')(key(body, { ctrlKey: true }).event);
+    assert.ok(caught, 'the invoke must carry a catch');
+});

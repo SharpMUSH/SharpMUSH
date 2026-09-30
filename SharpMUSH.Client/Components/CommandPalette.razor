@@ -3,6 +3,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
 @inject IAuthorizationService Authorization
+@inject IJSRuntime JS
 
 @* README §10 Q1: the rail's search opens a command palette (⌘K / Ctrl+K anywhere but a text field).
    Typing filters the destinations the viewer can use; the last two rows search the wiki and the
@@ -12,7 +13,8 @@
 {
     <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Style="@Scrim">
         <div class="kit-palette" role="dialog" aria-modal="true" aria-label="@Loc["NavSearchOpen"]"
-             @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync" @onkeydown:preventDefault="_swallow">
+             @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync">
+            <MudFocusTrap DefaultFocus="DefaultFocus.None">
             <div class="kit-palette-field">
                 <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
                 <input @ref="_input" type="text" role="combobox" aria-expanded="true" aria-controls="kit-palette-list"
@@ -38,6 +40,7 @@
                     </li>
                 }
             </ul>
+            </MudFocusTrap>
         </div>
     </MudOverlay>
 }
@@ -56,13 +59,28 @@
     private ElementReference _input;
     private string _query = string.Empty;
     private int _active;
-    private bool _swallow;
+    private bool _rememberFocus;
+    private string? _itemsFor;
+    private IReadOnlyList<Item> _items = [];
     private bool _wasOpen;
     private IReadOnlyList<Item> _destinations = [];
 
+    /// <summary>The rows for the current query, rebuilt only when the query changes.</summary>
     private IReadOnlyList<Item> Items
     {
         get
+        {
+            if (_itemsFor != _query)
+            {
+                _items = Build();
+                _itemsFor = _query;
+            }
+            return _items;
+        }
+    }
+
+    private IReadOnlyList<Item> Build()
+    {
         {
             var term = _query.Trim();
             var matches = term.Length == 0
@@ -97,12 +115,21 @@
                 new("/settings", Icons.Material.Outlined.Settings, Loc["Settings"]),
                 .. build.Select(b => new Item(b.Href, b.Icon, Loc[b.LabelKey], Loc["NavBuildManage"])),
             ];
+            _itemsFor = null;
+            _rememberFocus = true;
         }
         _wasOpen = Open;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Remember what opened the palette before focus moves into it, so closing hands it back.
+        if (_rememberFocus)
+        {
+            _rememberFocus = false;
+            await RunFocusAsync("sharpmushLayout.rememberFocus");
+        }
+
         if (Open)
         {
             try { await _input.FocusAsync(); }
@@ -110,9 +137,10 @@
         }
     }
 
+    // No preventDefault: it is decided when the dialog renders, so it would act on the key after this
+    // one (a letter lost from the field). Enter and Escape have no default in a field outside a form.
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
-        _swallow = e.Key is "ArrowDown" or "ArrowUp" or "Enter" or "Escape";
         var count = Items.Count;
         switch (e.Key)
         {
@@ -133,5 +161,14 @@
     {
         _wasOpen = false;
         await OpenChanged.InvokeAsync(false);
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
+
+    /// <summary>Focus hand-off through layout.js; skipped where it is not loaded.</summary>
+    private async Task RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
     }
 }

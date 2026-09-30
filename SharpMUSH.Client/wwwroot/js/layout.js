@@ -35,14 +35,24 @@ window.sharpmushLayout = {
 		document.addEventListener('keydown', event => {
 			if (event.key !== 'k' && event.key !== 'K') return;
 			if (!event.ctrlKey && !event.metaKey) return;
+			// AltGr+K (ctrl+alt on Windows layouts) types a character; Ctrl+Shift+K is a browser's console.
+			if (event.altKey || event.shiftKey) return;
+			if (!this._paletteRef) return;
 			const target = event.target;
 			const tag = target && target.tagName;
 			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return;
 			event.preventDefault();
-			if (this._paletteRef) {
-				this._paletteRef.invokeMethodAsync('OpenPaletteFromHotkey');
+			const pending = this._paletteRef.invokeMethodAsync('OpenPaletteFromHotkey');
+			if (pending && typeof pending.catch === 'function') {
+				// The shell was disposed between the key and the call (a page on another layout).
+				pending.catch(() => { });
 			}
 		});
+	},
+
+	// The shell that registered is going away (the login and setup pages use another layout).
+	unregisterPaletteHotkey: function () {
+		this._paletteRef = null;
 	},
 
 	// Back-compat alias.

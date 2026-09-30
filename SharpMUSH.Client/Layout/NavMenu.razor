@@ -198,10 +198,6 @@
     private bool IsOnPlay()
         => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
 
-    // NavMenu is a sibling of MainLayout, not a child: no parameter flow reaches it, so it must
-    // subscribe. This is the notification path whose absence left the card stale.
-    private void OnActiveCharacterChanged()
-        => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
