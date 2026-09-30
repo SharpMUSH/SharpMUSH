@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject IStringLocalizer<SharedResource> Loc
+@inject IAuthorizationService Authorization
+
+@* One group of the drawer's Build & manage destinations, from BuildNavCatalog: the gates are the same
+   ones the rail and the section sidebar read. *@
+@foreach (var entry in _entries.Where(e => e.Group == Group))
+{
+    <NavLink class="phosphor-nav-link" href="@entry.Href" Match="@(entry.ExactMatch ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+        <MudIcon Icon="@entry.Icon" Class="phosphor-nav-icon" />
+        @if (!IsCollapsed)
+        {
+            <span class="phosphor-nav-text">@Loc[entry.LabelKey]</span>
+        }
+    </NavLink>
+}
+
+@code {
+    [Parameter, EditorRequired] public BuildNavCatalog.Group Group { get; set; }
+    [Parameter] public bool IsCollapsed { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<BuildNavCatalog.Entry> _entries = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
+    }
+}

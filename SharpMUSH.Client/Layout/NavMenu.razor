@@ -77,58 +77,13 @@
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionBuild"]</div>
-            <AuthorizeView Policy="softcode.use">
-                <Authorized>@NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])</Authorized>
-            </AuthorizeView>
+            <BuildNavLinks Group="BuildNavCatalog.Group.Build" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
-            <AuthorizeView Policy="applications.admin">
-                <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, Loc["AdmApplicationsTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="layout.admin">
-                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, Loc["LayLayouts"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView>
-                <Authorized Context="snapshotAuth">
-                    @if (snapshotAuth.User.HasClaim("perm", "snapshots.capture") || snapshotAuth.User.HasClaim("perm", "snapshots.restore"))
-                    {
-                        @NavItem("/admin/snapshots", Icons.Material.Filled.History, Loc["SnapshotsTitle"])
-                    }
-                </Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="packages.admin">
-                <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, Loc["PkgPackages"])</Authorized>
-            </AuthorizeView>
         </div>
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionManage"]</div>
-            <AuthorizeView Policy="queue.inspect">
-                <Authorized>@NavItem("/admin/diagnostics", Icons.Material.Filled.QueryStats, Loc["DiagTitle"])</Authorized>
-                <NotAuthorized>
-                    <AuthorizeView Policy="queue.inspect.own" Context="ownInspection">
-                        <Authorized>@NavItem("/admin/diagnostics", Icons.Material.Filled.QueryStats, Loc["DiagTitle"])</Authorized>
-                    </AuthorizeView>
-                </NotAuthorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="players.view">
-                <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, Loc["AdmBreadcrumb"], NavLinkMatch.All)</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="jobs.manage.own">
-                <Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized>
-                <NotAuthorized><AuthorizeView Policy="jobs.manage" Context="jobAdmin"><Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized></AuthorizeView></NotAuthorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="roles.admin">
-                <Authorized>@NavItem("/admin/roles", Icons.Material.Filled.Shield, Loc["AdmRolesTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="wiki.admin">
-                <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, Loc["WikiAdmin"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="media.admin">
-                <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, Loc["AdmMediaTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="config.admin">
-                <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
-            </AuthorizeView>
+            <BuildNavLinks Group="BuildNavCatalog.Group.Manage" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
 
