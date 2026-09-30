@@ -50,9 +50,11 @@ internal static class WikiControllerTestHarness
 		var localization = new WikiLocalizationService(
 			storage, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
 		var cache = Substitute.For<IPrerenderCacheService>();
-		// No engine behind these tests: every editor resolves to no name, which the DTOs allow.
+		// No engine behind these tests: an editor's "name" is its dbref echoed back, so a test can tell
+		// whose name a DTO resolved; no dbref resolves to no name, which the DTOs allow.
 		var names = Substitute.For<IWikiNameResolver>();
-		names.NameOfAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<string?>(null));
+		names.NameOfAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+			.Returns(call => Task.FromResult(call.Arg<string?>() is { Length: > 0 } dbref ? $"name of {dbref}" : null));
 
 		var endpoints = new WikiEndpoints(
 			new WikiController(storage, localization, cache, names, NullLogger<WikiController>.Instance),

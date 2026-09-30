@@ -169,7 +169,9 @@ else
         if (generation != _generation) return;
         _gallery = galleryResult is List<GalleryEntry> entries ? entries : [];
         _online = onlineResult is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here
-            && here.Any(r => string.Equals(r.Name, DisplayName, StringComparison.OrdinalIgnoreCase));
+            && here.Any(r => _profile is { } shown
+                ? string.Equals(r.Objid, shown.Objid, StringComparison.Ordinal)
+                : string.Equals(r.Name, DisplayName, StringComparison.OrdinalIgnoreCase));
         _viewerItems = ViewerItems();
 
         if (_profile?.Dbref is { } dbref)

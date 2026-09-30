@@ -52,6 +52,20 @@ public class WikiControllerLocaleTests
 	}
 
 	[Test]
+	public async Task GetPage_LastEditedBy_IsTheServedTranslationsEditor()
+	{
+		var (wiki, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var french = OkDto(await wiki.Pages.GetPage("main", "general", "dragons", lang: "fr"));
+		var english = OkDto(await wiki.Pages.GetPage("main", "general", "dragons", lang: "en"));
+
+		await Assert.That(french.LastEditedBy).IsEqualTo("name of #2").Because("#2 wrote the French text shown");
+		await Assert.That(english.LastEditedBy).IsEqualTo("name of #1");
+	}
+
+	[Test]
 	public async Task GetPage_DraftTranslationDoesNotLeakToAnAnonymousReader()
 	{
 		var (wiki, storage) = BuildAnonymous();
