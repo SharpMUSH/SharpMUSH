@@ -47,11 +47,11 @@ looking:
 - the viewer's own row in `who` carries `"you": true`;
 - the `scene` block appears only for a viewer who may see the scene.
 
-`room.info` goes to the enactor alone when the enactor is in the room (the
-player who walked in or connected — the usual case), and to every connected
-occupant otherwise: `%#` is the object that *caused* the event, which for
-`@tel` is the wizard elsewhere and for a system move is God, so the mover is
-then unknown but in `lcon(%0)`. A client already holding the same `room.info`
+`room.info` goes to the enactor alone when the enactor is a viewer in the room
+(the player who walked in or connected — the usual case), and to every
+connected occupant otherwise: `%#` is the object that *caused* the event, which
+for `@tel` is the wizard elsewhere, for a system move is God, and may be a thing
+that moved itself in, so the mover is then unknown or receives nothing. A client already holding the same `room.info`
 can ignore a repeat.
 
 ## Cost
@@ -82,11 +82,18 @@ whose descriptions branch on the viewer blanks `` FN`DESC ``.
 ## Pictures
 
 Rows and `room.info` carry `image` as `{"url", "alt", "focal"}` read from the
-seeded `IMAGE` / `` IMAGE`ALT `` / `` IMAGE`FOCAL `` attributes (`help IMAGE`).
-`alt` falls back to the object's name, `focal` is present only when set to
-two numbers each 0–1 (anything else is dropped, never an error), and an object
-with no `IMAGE` carries **no `image` key** rather than a null one. Set them
-with `&IMAGE here=/assets/rooms/docks.jpg`.
+seeded `IMAGE` / `` IMAGE`BANNER `` / `` IMAGE`ALT `` / `` IMAGE`FOCAL ``
+attributes (`help IMAGE`). Rows and destination previews take `IMAGE`, the
+thumbnail; `room.info` is the Play page's banner and takes `` IMAGE`BANNER ``,
+falling back to `IMAGE`. `alt` falls back to the object's name, `focal` is
+present only when set to two numbers each 0–1 (anything else is dropped, never
+an error), and an object with no picture carries **no `image` key** rather than
+a null one. Set them with `&IMAGE here=/assets/rooms/docks.jpg`.
+
+Only a `visual` image attribute is published. The handler is a wizard and
+could read a private one; the seeded `visual` flag is a default for a new
+attribute, so an `IMAGE` set before the seed existed, or with `visual` cleared
+(`@set here/IMAGE=!visual`), stays off the page.
 
 ## Text the rows carry
 

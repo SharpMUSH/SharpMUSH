@@ -52,10 +52,10 @@ scene.
 
 **`%#` is not the mover.** The event's enactor is whoever caused the change:
 the player who walked or connected, but also the wizard who `@tel`'d someone
-else, or God (`#1`) for a system move such as a void rescue. The handler sends
-`room.info` to the enactor alone when the enactor is in the room (the usual
-case), and to every connected occupant otherwise; the mover is then unknown but
-in `lcon(%0)`, and a client already holding the same `room.info` can ignore a
+else, or God (`#1`) for a system move such as a void rescue, or a thing that
+moved itself. The handler sends `room.info` to the enactor alone when the
+enactor is a viewer in the room (the usual case), and to every connected
+occupant otherwise; the mover is then unknown or receives nothing, and a client already holding the same `room.info` can ignore a
 repeat. A ``ROOM`INFO`` engine event that would fire on a name, image or
 description edit is deferred; the engine has no attribute-change event, and a
 client that wants a fresh `room.info` outside these causes has no route to it
@@ -125,6 +125,12 @@ These were learned the hard way; the handler relies on all of them:
    base object plus a merge patch (RFC 7396): a `null` value in the patch
    **removes** the key. ``FN`IMAGE`` answers the word `null` for an object
    with no `IMAGE`, and the row comes out without an `image` key at all.
+
+   **Publish only a visual image attribute.** The handler is a wizard, so
+   `get()` reads an attribute its owner made private. The seeded `visual`
+   flag is a default for a *new* attribute: an `IMAGE` set before the seed
+   existed, or with `visual` cleared since, keeps its owner's choice.
+   ``FN`PICTURE`` reads an image attribute only when it is `visual`.
 
 8. **Validate before `json(number, …)`.** One malformed value — an
    `` IMAGE`FOCAL `` of `center` — made `json(number,…)` an error, the array
@@ -198,7 +204,10 @@ carries a comment per attribute; this is the map.
 | ``FN`STATUS`` (`%0` idle seconds) | `active` under 5 min, `idle` under 30, else `away` |
 | ``FN`AREA`` (`%0` room) | the name of the room's zone, else its parent, else nothing |
 | ``FN`COLOR`` (`%0` player) | `` PROFILE`COLOR `` as a JSON string when it is `#rrggbb`, else `null` |
-| ``FN`IMAGE`` (`%0` object) | `{"url","alt","focal"}` from `IMAGE`/``IMAGE`ALT``/``IMAGE`FOCAL``, or `null` |
+| ``FN`PICTURE`` (`%0` object, `%1` attribute) | the attribute's value when it is `visual`, else blank |
+| ``FN`IMAGEREF`` (`%0` object, `%1` URL) | `{"url","alt","focal"}` with alt/focal from ``IMAGE`ALT``/``IMAGE`FOCAL``, or `null` for a blank URL |
+| ``FN`IMAGE`` (`%0` object) | the thumbnail: ``FN`IMAGEREF`` of `IMAGE` |
+| ``FN`BANNER`` (`%0` room) | the banner: ``FN`IMAGEREF`` of ``IMAGE`BANNER``, falling back to `IMAGE` |
 | ``FN`DESC`` (`%0` room) | the room's `DESCRIBE`, evaluated as the room |
 | ``FN`SCENE`` (`%0` room, `%1` viewer) | `{"id","title","cast"}` for a scene the viewer may see, or `null` |
 | ``FN`EXITHINT`` (`%0` exit) | the exit's `@fail`, as stored — plain text, never evaluated |
@@ -212,7 +221,7 @@ carries a comment per attribute; this is the map.
 | ``FN`WHOBASE`` (`%0` occupant) | dbref, objid, type, name, cmd; for players image, color, status, idle, profile |
 | ``FN`EXITBASE`` (`%0` exit) | dbref, objid, name, aliases, cmd, confirm |
 | ``FN`EXITDEST`` (`%0` exit) | the ``FN`DEST`` of where it leads, or nothing |
-| ``FN`INFOBASE`` (`%0` room) | `room.info` without the scene block |
+| ``FN`INFOBASE`` (`%0` room) | `room.info` without the scene block; its image is ``FN`BANNER`` |
 | ``FN`PREPARE`` (`%0` room) | sets `mover`, `w<n>`, `x<n>`, `d<n>`, `info<n>` |
 
 **Rows and payloads, per viewer.**
@@ -229,7 +238,8 @@ carries a comment per attribute; this is the map.
 Reading the main handler:
 
 - ``u(me/FN`PREPARE, %0)`` — once: every base row and the room's info into
-  registers; `mover` = the enactor's dbref if the enactor is in the room.
+  registers; `mover` = the enactor's dbref if the enactor is a viewer
+  (``FN`VIEWER``) in the room.
 - ``filter(me/FN`VIEWER, lcon(%0))`` — the viewers: connected players in the room.
 - `iter(<viewers>, …)` — for each, with `%i0` the viewer:
   - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %0, %i0))`` — the who
@@ -309,7 +319,10 @@ block is tested against `@function` stand-ins for the plugin's answers
 (`#-1 NOT FOUND` for no scene; a real id, `public` and members for one). One
 test reads the registers ``FN`PREPARE`` fills; one runs the shipped handler
 itself, unmodified, for every cause, and checks `room.info` goes to the mover
-alone when the mover is the enactor.
+alone when the mover is the enactor, and to everyone when the enactor is a
+thing in the room. Two more check that `room.info` takes ``IMAGE`BANNER``
+(falling back to `IMAGE`) and that an image attribute without `visual` is
+not published.
 
 `SharpMUSH.Tests.Integration/Packages/RoomContentsPackageTests.cs` covers the
 delivery side: that the bundled `room-contents` package is installed at boot and
@@ -338,7 +351,7 @@ hostile colour and bad focal dropped:
   {"dbref":"#20","objid":"#20:1790741467927","type":"thing","name":"Oilcloth bundle f12d1d09","cmd":"look #20",
    "image":{"url":"/assets/obj/f12d1d09.jpg","alt":"Oilcloth bundle f12d1d09"}},
   {"dbref":"#21","objid":"#21:1790741467928","type":"thing","name":"Crate f12d1d09","cmd":"look #21"},
-  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, "quoted" (thing); $5 <tag>","cmd":"look #22"}]}
+  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, \"quoted\" (thing); $5 <tag>","cmd":"look #22"}]}
 ```
 
 For the mortal — the DARK wizard and the DARK crate are not there:
@@ -349,12 +362,12 @@ For the mortal — the DARK wizard and the DARK crate are not there:
    "image":{"url":"/assets/chars/f12d1d09.jpg","alt":"RcMortal_AZovdJr3wSw_2"},"status":"active","idle":1,"profile":true,"you":true},
   {"dbref":"#20","objid":"#20:1790741467927","type":"thing","name":"Oilcloth bundle f12d1d09","cmd":"look #20",
    "image":{"url":"/assets/obj/f12d1d09.jpg","alt":"Oilcloth bundle f12d1d09"}},
-  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, "quoted" (thing); $5 <tag>","cmd":"look #22"}]}
+  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, \"quoted\" (thing); $5 <tag>","cmd":"look #22"}]}
 ```
 
 `you` appears on one row per payload; `actions` never on your own row; the
 player-only keys (`status`, `idle`, `profile`, `actions`, `color`) never on a
-thing; `image` only where `IMAGE` is set; `color` only when it is `#rrggbb`.
+thing; `image` only where `IMAGE` is set and `visual`; `color` only when it is `#rrggbb`.
 
 ### `room.exits`
 
@@ -413,8 +426,9 @@ plugin — a public scene:
 - `desc.format` is `text`: the description is the evaluated `DESCRIBE`, with
   markup stripped by `oob()`; the `%r` became a newline and the `%N` the
   enactor's name. Nothing produces markdown here.
-- `area` appears once the room has a zone or a parent; `image` once it has an
-  `IMAGE`; `scene` (`{"id","title","cast"}`, `id` a string) once a scene the
+- `area` appears once the room has a zone or a parent; `image` once it has a
+  visual ``IMAGE`BANNER`` or `IMAGE` — the banner is the wide art, and `url`
+  is the banner when both are set; `scene` (`{"id","title","cast"}`, `id` a string) once a scene the
   viewer may see runs in the room. Otherwise the key is absent.
 - There are no `width`/`height` on an image: every portal surface is a
   fixed-size box the picture is cropped into.
