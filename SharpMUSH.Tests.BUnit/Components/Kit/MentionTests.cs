@@ -81,4 +81,23 @@ public class MentionTests : BunitContext
 		await Assert.That(cut.Find(".kit-ooc-name").HasAttribute("style")).IsFalse();
 		await Assert.That(cut.FindAll(".kit-ooc-time").Count).IsEqualTo(0);
 	}
+
+	[Test]
+	[Arguments("red;position:fixed;inset:0;background:black")]
+	[Arguments("#5aa9ff;position:fixed")]
+	[Arguments("url(https://evil.example/x.png)")]
+	public async Task OocBand_DropsANameColourThatIsNotHex(string color)
+	{
+		var cut = Render<OocBand>(p => p.Add(x => x.Name, "Wren").Add(x => x.Color, color).AddChildContent("x"));
+		await Assert.That(cut.Find(".kit-ooc-name").HasAttribute("style")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("red;position:fixed;inset:0;background:black")]
+	[Arguments("#5aa9ff;position:fixed")]
+	public async Task Mention_DropsANameColourThatIsNotHex(string color)
+	{
+		var cut = Render<Mention>(p => p.Add(x => x.Name, "Wren").Add(x => x.Color, color));
+		await Assert.That(cut.Find("a.mention").HasAttribute("style")).IsFalse();
+	}
 }

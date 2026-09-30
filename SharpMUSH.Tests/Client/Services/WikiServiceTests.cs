@@ -285,4 +285,56 @@ public class WikiServiceTests : TrackingTestContext
 		await Assert.That(root.GetProperty("markdown").GetString()).IsEqualTo("# Content");
 		await Assert.That(root.GetProperty("namespace").GetString()).IsEqualTo("Character");
 	}
+
+	/// <summary>A body that records whether the response carrying it was disposed.</summary>
+	private sealed class DisposalTrackingContent() : StringContent("refused", Encoding.UTF8, "text/plain")
+	{
+		public bool Disposed { get; private set; }
+
+		protected override void Dispose(bool disposing)
+		{
+			Disposed = true;
+			base.Dispose(disposing);
+		}
+	}
+
+	/// <summary>Answers every request with a fresh 500 and keeps the body it sent.</summary>
+	private sealed class RefusingTrackingHandler : HttpMessageHandler
+	{
+		public List<DisposalTrackingContent> Sent { get; } = [];
+
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var content = new DisposalTrackingContent();
+			Sent.Add(content);
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = content });
+		}
+	}
+
+	/// <summary>
+	/// The handler hands each response to the service, which owns it from then on: every call that
+	/// reads a raw <see cref="HttpResponseMessage"/> disposes it, on the failure path as well.
+	/// </summary>
+	[Test]
+	public async Task EveryRawResponseIsDisposed()
+	{
+		var handler = new RefusingTrackingHandler();
+		var service = BuildService(handler, out _);
+		string[] refs = ["main/general/home"];
+
+		await service.GetAllPagesAsync();
+		await service.UpsertTranslationAsync("home", "fr", "Accueil", "# Accueil", true, 1);
+		await service.DeleteTranslationAsync("home", "fr");
+		await service.CreatePageAsync("Home", "# Home");
+		await service.UpdatePageAsync("home", "# Home");
+		await service.SetMetadataAsync("home", null, [], true);
+		await service.RollbackAsync("home", 1);
+		await service.CheckExistsAsync(refs);
+		await service.BatchProtectAsync(refs, true);
+		await service.BatchDeleteAsync(refs);
+		await service.DeletePageAsync("home");
+
+		await Assert.That(handler.Sent.Count).IsEqualTo(11);
+		await Assert.That(handler.Sent.Count(c => !c.Disposed)).IsEqualTo(0);
+	}
 }
