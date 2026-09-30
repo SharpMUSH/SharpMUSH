@@ -27,12 +27,12 @@ file sealed class PageAsideHandler : HttpMessageHandler
 		{
 			"/api/wiki/exists" => """{"character/general/tomas_reyes":true,"character/general/magister_oake":true,"main/theme/tidewater_chapel":false}""",
 			"/http/characters" => """[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":"","image":"/api/wiki-assets/t/tomas.jpg"},{"name":"Magister Oake","objid":"#316:1","created":1,"category":""}]""",
-			"/api/wiki/category/theme" => "[" + string.Join(",",
+			"/api/wiki/category/theme" => WikiApiFake.Paged(request, [
 				WikiApiFake.Page("1", "harbour_ward", "Harbour Ward", "theme", "/api/wiki-assets/h/ward.jpg", "Ilsa Varn"),
 				WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren"),
 				WikiApiFake.Page("3", "tone_and_content", "Tone and Content", "theme", null, "Wren"),
 				WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace"),
-				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")) + "]",
+				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")]),
 			_ => null,
 		};
 		return Task.FromResult(body is null
@@ -219,6 +219,23 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 			.Add(c => c.Article, article).Add(c => c.ActivateEditMode, () => Task.CompletedTask));
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".wiki-article-card").Count).IsEqualTo(0).Because("nothing is left to show under the banner");
+	}
+
+	[Test]
+	public async Task ADirectiveOnlyPage_KeepsItsBodyCard()
+	{
+		// "::: recent 10" alone renders to nothing but the placeholder the body hydrates; stripping
+		// tags leaves no text, yet the listing it stands for is the page's whole content.
+		var article = new WikiArticle("Latest changes", "::: recent 10", null,
+			"<div class=\"wiki-directive\" data-directive=\"recent\" data-arg=\"10\"></div>")
+		{
+			Id = "10", Slug = "latest_changes", Category = "theme", Locale = "en", RequestedLocale = "en", AvailableLocales = ["en"],
+		};
+		var cut = Render<WikiDisplay>(p => p
+			.Add(c => c.Slug, "latest_changes").Add(c => c.Namespace, "main").Add(c => c.Category, "theme")
+			.Add(c => c.Article, article).Add(c => c.ActivateEditMode, () => Task.CompletedTask));
+		await Assert.That(cut.FindAll(".wiki-article-card").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".wiki-article-card .wiki-directive-block").Count).IsEqualTo(1);
 	}
 
 	[Test]
