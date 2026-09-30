@@ -44,8 +44,8 @@
 	--glass-filter: blur(16px) saturate(180%);
 	--glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 	--on-image-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
-	--scrim: linear-gradient(to top, rgba(10, 11, 13, 0.52) 0%, rgba(10, 11, 13, 0.34) 26%, rgba(10, 11, 13, 0.08) 48%, rgba(10, 11, 13, 0) 60%);
-	--scrim-open: linear-gradient(to top, rgba(10, 11, 13, 0.66) 0%, rgba(10, 11, 13, 0.46) 40%, rgba(10, 11, 13, 0.12) 62%, rgba(10, 11, 13, 0) 76%);
+	--scrim: linear-gradient(to top, rgba(10, 11, 13, 0.72) 0%, rgba(10, 11, 13, 0.64) 30%, rgba(10, 11, 13, 0.58) 50%, rgba(10, 11, 13, 0.2) 64%, rgba(10, 11, 13, 0) 74%);
+	--scrim-open: linear-gradient(to top, rgba(10, 11, 13, 0.8) 0%, rgba(10, 11, 13, 0.68) 40%, rgba(10, 11, 13, 0.58) 72%, rgba(10, 11, 13, 0.2) 84%, rgba(10, 11, 13, 0) 92%);
 	--blur-mask-soft: linear-gradient(to top, black 0%, black 35%, transparent 60%);   /* with blur(2px)  */
 	--blur-mask-mid: linear-gradient(to top, black 0%, black 20%, transparent 45%);    /* with blur(6px)  */
 	--blur-mask-deep: linear-gradient(to top, black 0%, transparent 30%);              /* with blur(12px) */
