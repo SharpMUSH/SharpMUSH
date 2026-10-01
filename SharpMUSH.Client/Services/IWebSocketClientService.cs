@@ -35,9 +35,17 @@ public interface IWebSocketClientService : IAsyncDisposable
 	bool Resumed { get; }
 
 	/// <summary>
+	/// Where this connection keeps its resume point and screen, or null when it keeps none (no
+	/// identity). The terminal keeps its lines here and restores the stored screen on a resume.
+	/// </summary>
+	TerminalResumeSlot? ResumeSlot { get; }
+
+	/// <summary>
 	/// Connect to the WebSocket server. With an <paramref name="identity"/>, the session's resume point is
 	/// kept in sessionStorage under it, and a reloaded page connecting as the same identity resumes the
 	/// session; the call then returns once the server has answered the resume (see <see cref="Resumed"/>).
+	/// A socket that goes before the answer is not an answer: the resume is tried again with the same
+	/// token, and if it never is answered the call throws, so a caller never logs in over the session.
 	/// </summary>
 	/// <param name="serverUri">WebSocket server URI (e.g., ws://localhost:4202/ws)</param>
 	/// <param name="identity">Who the connection logs in as, or null to keep nothing (a guest).</param>

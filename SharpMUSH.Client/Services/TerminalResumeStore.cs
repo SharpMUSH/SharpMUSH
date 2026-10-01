@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
@@ -31,6 +32,10 @@ public readonly record struct TerminalResumePoint(string Token, long LastSeq);
 /// <para>A token is written at once; a frame number is staged, and the script writes it on a short timer
 /// and when the page is hidden or unloaded. A point that lags is harmless: the server replays from it,
 /// and a reloaded page has shown none of those frames.</para>
+/// <para>The terminal's screen is kept beside the point (<see cref="LinesKeyFor"/>, see
+/// <see cref="TerminalScrollback"/> for what of it), on the same timer. A reload that resumes shows it
+/// before the frames it missed. A refused resume does not: that screen belongs to a session the server
+/// ended, and the fresh login shows its own banner and room.</para>
 /// <para>A browser that refuses storage keeps nothing, and every reload is a fresh login, as before.</para>
 /// </remarks>
 public sealed class TerminalResumeStore(IJSRuntime js)
@@ -44,12 +49,20 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 	public static string KeyFor(string presenceClass, TerminalIdentity identity) =>
 		$"{KeyPrefix}{presenceClass}.{identity.Account}/{identity.Character}";
 
+	/// <summary>Where the terminal's scrollback (<see cref="TerminalScrollback"/>) is kept, beside its point.</summary>
+	public static string LinesKeyFor(string presenceClass, TerminalIdentity identity) =>
+		KeyFor(presenceClass, identity) + "#lines";
+
 	/// <summary>The slot one connection keeps its point in, with what a reloaded page left there.</summary>
 	public async ValueTask<TerminalResumeSlot> OpenAsync(string presenceClass, TerminalIdentity identity)
 	{
 		var key = KeyFor(presenceClass, identity);
+		var linesKey = LinesKeyFor(presenceClass, identity);
 		var stored = Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", key));
-		return new TerminalResumeSlot(this, key, _generation, stored);
+		var scrollback = stored is TerminalResumePoint
+			? TerminalScrollback.Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", linesKey))
+			: [];
+		return new TerminalResumeSlot(this, key, linesKey, _generation, stored, scrollback);
 	}
 
 	/// <summary>
@@ -76,7 +89,15 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 
 	internal async ValueTask ClearAsync(TerminalResumeSlot slot)
 	{
-		if (IsCurrent(slot)) await CallVoidAsync("SharpMUSH.Resume.remove", slot.Key);
+		if (!IsCurrent(slot)) return;
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.Key);
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LinesKey);
+	}
+
+	internal async ValueTask AppendLineAsync(TerminalResumeSlot slot, string line)
+	{
+		if (IsCurrent(slot))
+			await CallVoidAsync("SharpMUSH.Resume.appendLine", slot.LinesKey, line, TerminalScrollback.MaxLines, TerminalScrollback.MaxChars);
 	}
 
 	private static string Serialize(TerminalResumePoint point) =>
@@ -130,15 +151,21 @@ public sealed class TerminalResumeSlot
 {
 	private readonly TerminalResumeStore _store;
 
-	internal TerminalResumeSlot(TerminalResumeStore store, string key, int generation, Found<TerminalResumePoint> stored)
+	private IReadOnlyList<TerminalLine> _scrollback;
+
+	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, int generation,
+		Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback)
 	{
 		_store = store;
 		Key = key;
+		LinesKey = linesKey;
 		Generation = generation;
 		Stored = stored;
+		_scrollback = scrollback;
 	}
 
 	public string Key { get; }
+	public string LinesKey { get; }
 	internal int Generation { get; }
 
 	/// <summary>The point a reloaded page left for this terminal and identity.</summary>
@@ -153,5 +180,21 @@ public sealed class TerminalResumeSlot
 	/// <summary>Leaves the write to the page's timer: a new frame number.</summary>
 	public ValueTask StageAsync(TerminalResumePoint point) => _store.StageAsync(this, point);
 
+	/// <summary>Forgets the point and the scrollback: the session they belonged to is over.</summary>
 	public ValueTask ClearAsync() => _store.ClearAsync(this);
+
+	/// <summary>
+	/// The screen a reloaded page left beside its point, handed out once: a resumed session shows it
+	/// before the frames it missed, and a later reconnect in the same page already shows it.
+	/// </summary>
+	public IReadOnlyList<TerminalLine> TakeScrollback()
+	{
+		var lines = _scrollback;
+		_scrollback = [];
+		return lines;
+	}
+
+	/// <summary>Keeps one line of the screen, when it is one to keep (see <see cref="TerminalScrollback"/>).</summary>
+	public ValueTask AppendLineAsync(TerminalLine line) =>
+		TerminalScrollback.Serialize(line) is string stored ? _store.AppendLineAsync(this, stored) : ValueTask.CompletedTask;
 }

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -74,6 +75,15 @@ internal sealed class FakeResumeJs : IJSRuntime
 				case "SharpMUSH.Resume.stage":
 					_staged[key] = (string)args[1]!;
 					break;
+				case "SharpMUSH.Resume.appendLine":
+					{
+						// Carries on from what is stored (or staged), as the script's buffer does.
+						var lines = JsonNode.Parse(_staged.GetValueOrDefault(key) ?? _stored.GetValueOrDefault(key) ?? "[]")!.AsArray();
+						lines.Add(JsonNode.Parse((string)args[1]!));
+						while (lines.Count > Convert.ToInt32(args[2])) lines.RemoveAt(0);
+						_staged[key] = lines.ToJsonString();
+						break;
+					}
 				case "SharpMUSH.Resume.remove":
 					_staged.Remove(key);
 					_stored.Remove(key);
@@ -123,8 +133,16 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 			: throw new TimeoutException("The client sent no first frame");
 	}
 
-	public static async Task<ScriptedTerminalServer> StartAsync(Func<string, IReadOnlyList<string>> reply)
+	public static Task<ScriptedTerminalServer> StartAsync(Func<string, IReadOnlyList<string>> reply) =>
+		StartAsync((first, _) => reply(first));
+
+	/// <summary>
+	/// <paramref name="reply"/> is given the first frame and the connection's number (1 for the first);
+	/// null drops that connection without answering, as a network failure would.
+	/// </summary>
+	public static async Task<ScriptedTerminalServer> StartAsync(Func<string, int, IReadOnlyList<string>?> reply)
 	{
+		var connections = 0;
 		var builder = WebApplication.CreateSlimBuilder();
 		builder.Logging.ClearProviders();
 		builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -144,7 +162,12 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 			var first = await ReceiveAsync(socket, context.RequestAborted);
 			if (first is null) return;
 			server!.FirstFrames.Enqueue(first);
-			foreach (var frame in reply(first))
+			if (reply(first, Interlocked.Increment(ref connections)) is not { } frames)
+			{
+				socket.Abort();
+				return;
+			}
+			foreach (var frame in frames)
 				await socket.SendAsync(Encoding.UTF8.GetBytes(frame), WebSocketMessageType.Text, true, context.RequestAborted);
 
 			while (await ReceiveAsync(socket, context.RequestAborted) is { } later)

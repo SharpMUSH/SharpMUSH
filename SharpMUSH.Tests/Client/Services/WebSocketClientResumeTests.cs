@@ -163,6 +163,155 @@ public class WebSocketClientResumeTests
 		await client.DisposeAsync();
 	}
 
+	private static readonly string AliceLinesKey = TerminalResumeStore.LinesKeyFor("play", Alice);
+
+	private static string StoredLines(params string[] texts) =>
+		"[" + string.Join(",", texts.Select(t => JsonSerializer.Serialize(new { t, h = t, at = 0L }))) + "]";
+
+	private static string[] ServerTexts(TerminalService terminal) =>
+		terminal.Lines.Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.Server).Select(l => l.Text).ToArray();
+
+	private static TerminalService NewTerminal(FakeResumeJs js) => new(
+		new WebSocketClientService(NullLogger<WebSocketClientService>.Instance, new TerminalResumeStore(js)),
+		NullLogger<TerminalService>.Instance);
+
+	private static string[] StoredTexts(FakeResumeJs js) =>
+		js.StoredValue(AliceLinesKey) is { } stored
+			? JsonDocument.Parse(stored).RootElement.EnumerateArray().Select(l => l.GetProperty("t").GetString()!).ToArray()
+			: [];
+
+	/// <summary>
+	/// The terminal keeps a line just after it shows it, on the receive thread, so a test that saw the line
+	/// waits for the stored screen to catch up (flushing the page timer each time).
+	/// </summary>
+	private static Task<bool> StoredTextsBecomeAsync(FakeResumeJs js, params string[] expected) =>
+		Eventually.TrueAsync(() =>
+		{
+			js.Flush();
+			return StoredTexts(js).SequenceEqual(expected);
+		});
+
+	/// <summary>
+	/// A reload that resumes shows the screen it had, then the frames it missed: the stored lines come
+	/// back before the replay, and new lines carry on after them in storage.
+	/// </summary>
+	[Test]
+	public async Task A_resumed_reload_restores_the_screen_before_the_replayed_frames()
+	{
+		var js = new FakeResumeJs();
+		js.Seed(AliceKey, Point("tok-1", 5));
+		js.Seed(AliceLinesKey, StoredLines("old one", "old two"));
+		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Reattached, Seq(6, "six"), Token("tok-2")]);
+		var terminal = NewTerminal(js);
+
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+
+		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("six"))).IsTrue();
+		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "old two", "six"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var lines = terminal.Lines.Select(l => l.Text).ToList();
+		await Assert.That(lines.IndexOf("old two")).IsLessThan(lines.FindIndex(l => l.StartsWith("Session resumed", StringComparison.Ordinal)));
+
+		await Assert.That(await StoredTextsBecomeAsync(js, "old one", "old two", "six")).IsTrue();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// A refused resume is a new session: the old screen belongs to one the server ended, so it is not
+	/// shown, and it is gone from storage before the new session's first line.
+	/// </summary>
+	[Test]
+	public async Task A_refused_resume_does_not_restore_the_old_screen()
+	{
+		var js = new FakeResumeJs();
+		js.Seed(AliceKey, Point("expired", 40));
+		js.Seed(AliceLinesKey, StoredLines("old one"));
+		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Seq(1, "banner"), Token("tok-new")]);
+		var terminal = NewTerminal(js);
+
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+
+		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("banner"))).IsTrue();
+		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["banner"]);
+		await Assert.That(await StoredTextsBecomeAsync(js, "banner")).IsTrue();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>A fresh session on a page that was not reloaded does not carry a stale screen forward.</summary>
+	[Test]
+	public async Task A_fresh_session_starts_its_stored_screen_empty()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		js.Seed(AliceLinesKey, StoredLines("stale"));
+		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Token("tok-1"), Seq(1, "welcome")]);
+		var terminal = NewTerminal(js);
+
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+
+		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("welcome"))).IsTrue();
+		await Assert.That(await StoredTextsBecomeAsync(js, "welcome")).IsTrue();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// An OOB frame is data, not screen: it never becomes a stored line, so restoring the screen cannot
+	/// run it again. Its package reaches the store only when the server sends it.
+	/// </summary>
+	[Test]
+	public async Task Out_of_band_frames_are_never_stored_as_scrollback()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var oob = JsonSerializer.Serialize(new { type = "oob", package = "room.info", data = new { name = "Quay" } });
+		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Token("tok-1"), Seq(1, oob), Seq(2, "text")]);
+		var terminal = NewTerminal(js);
+
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+
+		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("text"))).IsTrue();
+		await Assert.That(terminal.OobChannels.Get("room.info")).IsNotNull();
+		await Assert.That(await StoredTextsBecomeAsync(js, "text")).IsTrue();
+		await Assert.That(js.StoredValue(AliceLinesKey)).DoesNotContain("room.info");
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// A socket that drops before the server answers the resume says nothing about the session: it may
+	/// still be there to rebind. The client resumes again with the same token and lastSeq, and the login
+	/// token is never sent, so it can never reach the session as a command (PR #1488 review).
+	/// </summary>
+	[Test]
+	public async Task An_interrupted_resume_is_retried_with_the_same_point_and_never_sends_the_login()
+	{
+		var js = new FakeResumeJs();
+		js.Seed(AliceKey, Point("tok-1", 5));
+		js.Seed(AliceLinesKey, StoredLines("old one"));
+		await using var server = await ScriptedTerminalServer.StartAsync((_, connection) => connection == 1
+			? null
+			: [Reattached, Seq(6, "six"), Token("tok-2")]);
+		var terminal = NewTerminal(js);
+
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+		await terminal.SendAsync("marker");
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("marker"))).IsTrue();
+		var firsts = server.FirstFrames.ToArray();
+		await Assert.That(firsts.Length).IsEqualTo(2);
+		foreach (var first in firsts)
+		{
+			using var frame = JsonDocument.Parse(first);
+			await Assert.That(frame.RootElement.GetProperty("token").GetString()).IsEqualTo("tok-1");
+			await Assert.That(frame.RootElement.GetProperty("lastSeq").GetInt64()).IsEqualTo(5L);
+		}
+		await Assert.That(server.LaterFrames.Any(f => f.StartsWith("connect token", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "six"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await Eventually.TrueAsync(() => js.StoredValue(AliceKey) == Point("tok-2", 6))).IsTrue();
+
+		await terminal.DisposeAsync();
+	}
+
 	/// <summary>
 	/// The terminal sends its login token only when the server started a fresh session. Sent to a
 	/// resumed one, still logged in, it would run as a command.

@@ -6,11 +6,16 @@
 // as do pagehide and the page being hidden: those are the last moments a page is sure to run. A new
 // token is written at once by write(). A stored point that lags the real one is harmless: the server
 // replays from it, and a reloaded page has shown none of those frames.
+//
+// The terminal's screen is kept the same way: appendLine() adds one rendered line to a bounded list in
+// memory, and the same timer writes it. A resumed reload shows it before the frames it missed.
 (function () {
     "use strict";
     window.SharpMUSH = window.SharpMUSH || {};
 
     var pending = {};
+    // Scrollback, per key: the line JSON strings kept, their total length, and whether storage lags them.
+    var buffers = {};
     var timer = null;
     var listening = false;
 
@@ -40,6 +45,33 @@
         for (var key in staged) {
             if (Object.prototype.hasOwnProperty.call(staged, key)) put(key, staged[key]);
         }
+        for (var lines in buffers) {
+            if (Object.prototype.hasOwnProperty.call(buffers, lines) && buffers[lines].dirty) {
+                buffers[lines].dirty = false;
+                put(lines, '[' + buffers[lines].items.join(',') + ']');
+            }
+        }
+    }
+
+    function schedule() {
+        listen();
+        if (timer === null) timer = window.setTimeout(flush, window.SharpMUSH.Resume.delayMs);
+    }
+
+    // The lines a page found stored are where appending carries on from: after a resumed reload they
+    // are the screen it restored, and a fresh session cleared them before its first line.
+    function buffer(key) {
+        if (buffers[key]) return buffers[key];
+        var items = [];
+        var store = storage();
+        try {
+            var stored = store ? JSON.parse(store.getItem(key) || '[]') : [];
+            if (Array.isArray(stored)) items = stored.map(function (line) { return JSON.stringify(line); });
+        } catch (e) { /* unreadable: start empty */ }
+        var chars = 2;
+        items.forEach(function (line) { chars += line.length + 1; });
+        buffers[key] = { items: items, chars: chars, dirty: false };
+        return buffers[key];
     }
 
     function listen() {
@@ -83,19 +115,35 @@
         // Keeps the value in memory until the timer fires or the page goes away.
         stage: function (key, value) {
             pending[key] = value;
-            listen();
-            if (timer === null) timer = window.setTimeout(flush, this.delayMs);
+            schedule();
+        },
+
+        // Adds one scrollback line (a JSON object) to key's list, dropping the oldest lines past
+        // maxLines or once the stored array would pass maxChars, and writes it on the same timer.
+        appendLine: function (key, line, maxLines, maxChars) {
+            var kept = buffer(key);
+            kept.items.push(line);
+            kept.chars += line.length + 1;
+            while (kept.items.length > 0 && (kept.items.length > maxLines || kept.chars > maxChars)) {
+                kept.chars -= kept.items.shift().length + 1;
+            }
+            kept.dirty = true;
+            schedule();
         },
 
         remove: function (key) {
             delete pending[key];
+            delete buffers[key];
             drop(key);
         },
 
-        // Every key starting with prefix, stored or staged.
+        // Every key starting with prefix, stored, staged or buffered.
         removeAll: function (prefix) {
             for (var staged in pending) {
                 if (staged.indexOf(prefix) === 0) delete pending[staged];
+            }
+            for (var lines in buffers) {
+                if (lines.indexOf(prefix) === 0) delete buffers[lines];
             }
             var store = storage();
             if (!store) return;

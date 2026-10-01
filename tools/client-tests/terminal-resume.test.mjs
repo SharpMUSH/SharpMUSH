@@ -109,6 +109,49 @@ test('remove and removeAll drop stored and staged values', () => {
     assert.deepEqual([...storage.items.keys()], ['sharpmush.account.sessionToken']);
 });
 
+// Scrollback: each line is one interop call; the buffer is written on the same timer as the frame number.
+test('appended lines are buffered, written on the timer, and bounded by count and size', () => {
+    const { resume, storage, runTimers } = boot();
+    for (let i = 1; i <= 7; i++) resume.appendLine('k#lines', JSON.stringify({ t: `line ${i}` }), 5, 1000);
+
+    assert.equal(storage.writes(), 0, 'appending must not touch sessionStorage per line');
+    runTimers();
+    assert.deepEqual(JSON.parse(storage.getItem('k#lines')).map(l => l.t), ['line 3', 'line 4', 'line 5', 'line 6', 'line 7']);
+
+    const long = JSON.stringify({ t: 'x'.repeat(300) });
+    resume.appendLine('k#lines', long, 500, 700);
+    resume.appendLine('k#lines', long, 500, 700);
+    resume.appendLine('k#lines', long, 500, 700);
+    runTimers();
+    const kept = JSON.parse(storage.getItem('k#lines'));
+    assert.equal(kept.length, 2, 'the oldest lines go first once the size cap is passed');
+    assert.ok(storage.getItem('k#lines').length <= 700);
+});
+
+test('appending continues from the lines a resumed page found stored', () => {
+    const storage = fakeStorage();
+    storage.setItem('k#lines', JSON.stringify([{ t: 'before reload' }]));
+    const { resume, runTimers } = boot({ storage });
+    resume.appendLine('k#lines', JSON.stringify({ t: 'after reload' }), 500, 100000);
+    runTimers();
+    assert.deepEqual(JSON.parse(storage.getItem('k#lines')).map(l => l.t), ['before reload', 'after reload']);
+});
+
+test('remove and removeAll drop a line buffer too, so a later append starts empty', () => {
+    const { resume, storage, runTimers } = boot();
+    resume.appendLine('sharpmush.resume.play.a#lines', '{"t":"old"}', 500, 100000);
+    runTimers();
+    resume.remove('sharpmush.resume.play.a#lines');
+    resume.appendLine('sharpmush.resume.play.a#lines', '{"t":"new"}', 500, 100000);
+    runTimers();
+    assert.deepEqual(JSON.parse(storage.getItem('sharpmush.resume.play.a#lines')).map(l => l.t), ['new']);
+
+    resume.appendLine('sharpmush.resume.portal.b#lines', '{"t":"staged"}', 500, 100000);
+    resume.removeAll('sharpmush.resume.');
+    runTimers();
+    assert.equal(storage.length, 0);
+});
+
 test('a browser that refuses storage is a store with nothing in it', () => {
     const refusing = {
         get length() { throw new Error('denied'); },
@@ -121,6 +164,7 @@ test('a browser that refuses storage is a store with nothing in it', () => {
     assert.equal(resume.resumable('k'), null);
     assert.equal(resume.write('k', 'v'), false);
     resume.stage('k', 'v');
+    resume.appendLine('k#lines', '{"t":"x"}', 500, 1000);
     runTimers();
     resume.remove('k');
     resume.removeAll('sharpmush.resume.');

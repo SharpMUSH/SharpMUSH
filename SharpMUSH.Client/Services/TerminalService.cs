@@ -297,6 +297,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// </summary>
 	private void HandleReattached(object? sender, EventArgs e)
 	{
+		// A reload: the screen it had comes back first, then the frames it missed, so it reads as one.
+		// The lines are already stored, so they are not kept a second time.
+		if (wsService.ResumeSlot is { } slot)
+		{
+			foreach (var line in slot.TakeScrollback())
+				AddLine(line, keep: false);
+		}
+
 		AddSystemLine("Session resumed — reconnected without re-login.");
 	}
 
@@ -314,7 +322,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddLine(line);
 	}
 
-	private void AddLine(TerminalLine line)
+	private void AddLine(TerminalLine line, bool keep = true)
 	{
 		lock (_lines)
 		{
@@ -322,6 +330,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				_lines.RemoveAt(0);
 			_lines.Add(line);
 		}
+		// Kept for a reload (TerminalScrollback decides which lines, and what of them). The slot's
+		// script call completes at once in the browser; a refused one only costs the stored screen.
+		if (keep && wsService.ResumeSlot is { } slot)
+			_ = slot.AppendLineAsync(line).AsTask();
 		LineReceived?.Invoke(line);
 	}
 

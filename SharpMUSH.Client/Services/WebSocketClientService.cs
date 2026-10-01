@@ -37,11 +37,35 @@ public class WebSocketClientService : IWebSocketClientService
 	private TerminalIdentity? _identity;
 	private TerminalResumeSlot? _slot;
 
-	// Pending while a resume frame awaits the server's answer: reattached (true), or a fresh session (false).
-	private TaskCompletionSource<bool>? _verdict;
+	/// <summary>The server's answer to a resume frame, or that the socket went before it gave one.</summary>
+	private enum ResumeVerdict
+	{
+		/// <summary><c>reattached</c>: the session continues, still logged in.</summary>
+		Resumed,
 
-	/// <summary>How long a connect waits for the server to answer a resume before treating it as refused.</summary>
+		/// <summary>A fresh session's token or frame came first: the server refused the resume.</summary>
+		Fresh,
+
+		/// <summary>
+		/// No answer: the socket dropped, or the server was silent too long. The session may still be there
+		/// to rebind, so the resume is tried again with the same token and lastSeq, and nothing that assumes
+		/// a fresh session (a login) may be sent meanwhile.
+		/// </summary>
+		Interrupted,
+	}
+
+	// Pending while a resume frame awaits the server's answer.
+	private TaskCompletionSource<ResumeVerdict>? _verdict;
+
+	/// <summary>How long a connect waits for the server to answer a resume before abandoning that socket.</summary>
 	private static readonly TimeSpan VerdictTimeout = TimeSpan.FromSeconds(30);
+
+	/// <summary>
+	/// The waits between tries of a resume whose answer never came, inside the server's 120 s grace
+	/// period. After the last, <see cref="ConnectAsync"/> fails rather than log in over the session.
+	/// </summary>
+	private static readonly TimeSpan[] ResumeRetryDelays =
+		[TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(16)];
 
 	/// <summary>Maximum number of messages to buffer while disconnected.</summary>
 	private const int MaxBufferedMessages = 500;
@@ -68,6 +92,9 @@ public class WebSocketClientService : IWebSocketClientService
 
 	/// <inheritdoc/>
 	public bool Resumed { get; private set; }
+
+	/// <inheritdoc/>
+	public TerminalResumeSlot? ResumeSlot => _slot;
 
 	/// <summary>
 	/// The presence class declared on this connection's first frame: "play" for a real interactive game
@@ -99,7 +126,16 @@ public class WebSocketClientService : IWebSocketClientService
 		_serverTerminated = false;
 
 		await AdoptIdentityAsync(identity);
-		await ConnectInternalAsync();
+
+		// A resume the server never answered is tried again, as it was: only the server's own answer
+		// says whether the session is there. Giving up throws, so a caller never logs in over it.
+		for (var retry = 0; await ConnectInternalAsync() == ResumeVerdict.Interrupted; retry++)
+		{
+			if (retry == ResumeRetryDelays.Length || _intentionalDisconnect)
+				throw new WebSocketException("The server did not answer the session resume.");
+			_logger.LogInformation("The resume was interrupted; trying it again in {Delay}s", ResumeRetryDelays[retry].TotalSeconds);
+			await Task.Delay(ResumeRetryDelays[retry]);
+		}
 	}
 
 	/// <summary>
@@ -126,9 +162,10 @@ public class WebSocketClientService : IWebSocketClientService
 		}
 	}
 
-	private async Task ConnectInternalAsync()
+	/// <summary>Opens a socket and sends the first frame; the server's answer when that was a resume.</summary>
+	private async Task<ResumeVerdict?> ConnectInternalAsync()
 	{
-		if (_serverUri is null) return;
+		if (_serverUri is null) return null;
 
 		try
 		{
@@ -153,11 +190,16 @@ public class WebSocketClientService : IWebSocketClientService
 			// uses this to rebind a reconnect to the existing session or register a fresh one.
 			Resumed = false;
 			var verdict = _resumeToken is not null
-				? new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)
+				? new TaskCompletionSource<ResumeVerdict>(TaskCreationOptions.RunContinuationsAsynchronously)
 				: null;
 			_verdict = verdict;
-			// A fresh session numbers its frames from 1.
-			if (verdict is null) _lastSeq = 0;
+			// A fresh session numbers its frames from 1, and whatever an earlier page stored for this
+			// identity (a screen above all) belongs to a session this one is not.
+			if (verdict is null)
+			{
+				_lastSeq = 0;
+				if (_slot is { } stale) await stale.ClearAsync();
+			}
 			var firstFrame = _resumeToken is not null
 				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass)
 				: ResumeFrameParser.Hello(PresenceClass);
@@ -167,12 +209,14 @@ public class WebSocketClientService : IWebSocketClientService
 
 			await FlushSendBufferAsync();
 
-			_receiveTask = ReceiveMessagesAsync(_cancellationTokenSource.Token);
+			_receiveTask = ReceiveMessagesAsync(verdict, _cancellationTokenSource.Token);
 
 			// Wait for the server's answer to a resume, so a caller knows whether the session is the one
 			// it left (still logged in) or a fresh one that needs a login.
-			if (verdict is not null)
-				Resumed = await AwaitVerdictAsync(verdict, _cancellationTokenSource.Token);
+			if (verdict is null) return null;
+			var answer = await AwaitVerdictAsync(verdict, _cancellationTokenSource.Token);
+			Resumed = answer == ResumeVerdict.Resumed;
+			return answer;
 		}
 		catch (Exception ex)
 		{
@@ -259,7 +303,7 @@ public class WebSocketClientService : IWebSocketClientService
 			_logger.LogDebug("Send buffer cleared ({Count} stale messages discarded)", count);
 	}
 
-	private async Task<bool> AwaitVerdictAsync(TaskCompletionSource<bool> verdict, CancellationToken ct)
+	private async Task<ResumeVerdict> AwaitVerdictAsync(TaskCompletionSource<ResumeVerdict> verdict, CancellationToken ct)
 	{
 		try
 		{
@@ -267,9 +311,14 @@ public class WebSocketClientService : IWebSocketClientService
 		}
 		catch (TimeoutException)
 		{
-			_logger.LogWarning("The server did not answer the resume within {Timeout}s; treating the session as fresh",
+			// Silence is not a refusal: abandon this socket (its receive loop then leaves the retry to the
+			// caller) and try the resume again.
+			_logger.LogWarning("The server did not answer the resume within {Timeout}s; abandoning that socket",
 				VerdictTimeout.TotalSeconds);
-			return false;
+			verdict.TrySetResult(ResumeVerdict.Interrupted);
+			_cancellationTokenSource?.Cancel();
+			_webSocket?.Abort();
+			return ResumeVerdict.Interrupted;
 		}
 	}
 
@@ -289,7 +338,7 @@ public class WebSocketClientService : IWebSocketClientService
 			_serverTerminated = true;
 			_resumeToken = null;
 			_lastSeq = 0;
-			_verdict?.TrySetResult(false);
+			_verdict?.TrySetResult(ResumeVerdict.Fresh);
 			if (_slot is { } ended) await ended.ClearAsync();
 			return;
 		}
@@ -297,7 +346,7 @@ public class WebSocketClientService : IWebSocketClientService
 		if (ResumeFrameParser.IsReattached(message))
 		{
 			// The session continues, still logged in: no re-login needed.
-			_verdict?.TrySetResult(true);
+			_verdict?.TrySetResult(ResumeVerdict.Resumed);
 			Reattached?.Invoke(this, EventArgs.Empty);
 			return;
 		}
@@ -338,10 +387,11 @@ public class WebSocketClientService : IWebSocketClientService
 		_lastSeq = 0;
 		_resumeToken = null;
 		if (_slot is { } slot) await slot.ClearAsync();
-		verdict.TrySetResult(false);
+		verdict.TrySetResult(ResumeVerdict.Fresh);
 	}
 
-	private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
+	/// <param name="verdict">This socket's pending resume answer, or null for a hello.</param>
+	private async Task ReceiveMessagesAsync(TaskCompletionSource<ResumeVerdict>? verdict, CancellationToken cancellationToken)
 	{
 		var buffer = new byte[1024 * 4];
 		using var messageBuffer = new MemoryStream();
@@ -395,12 +445,15 @@ public class WebSocketClientService : IWebSocketClientService
 			ConnectionStateChanged?.Invoke(this, WebSocketState.Aborted);
 		}
 
-		// The socket went before the server answered a resume.
-		_verdict?.TrySetResult(false);
+		// The socket went before the server answered its resume. Whoever is waiting for that answer (a
+		// connect, or the reconnect loop) tries the resume again; reconnecting from here as well would race
+		// it with a second socket.
+		var unanswered = verdict is not null
+			&& (verdict.TrySetResult(ResumeVerdict.Interrupted) || verdict.Task.Result == ResumeVerdict.Interrupted);
 
 		// Attempt automatic reconnection if the disconnect was neither client-intentional nor an
 		// engine-initiated logout (the server's {"type":"bye"}).
-		if (!_intentionalDisconnect && !_serverTerminated && _serverUri is not null)
+		if (!unanswered && !_intentionalDisconnect && !_serverTerminated && _serverUri is not null)
 		{
 			_ = Task.Run(async () =>
 			{
@@ -435,9 +488,8 @@ public class WebSocketClientService : IWebSocketClientService
 
 			try
 			{
-				await ConnectInternalAsync();
-
-				if (_webSocket?.State == WebSocketState.Open)
+				// An unanswered resume is a failed attempt: the next one resumes again, as it was.
+				if (await ConnectInternalAsync() != ResumeVerdict.Interrupted && _webSocket?.State == WebSocketState.Open)
 				{
 					_logger.LogInformation("Reconnected successfully after {Attempt} attempt(s).", attempt);
 					return;
