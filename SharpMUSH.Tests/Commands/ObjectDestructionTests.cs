@@ -33,12 +33,10 @@ namespace SharpMUSH.Tests.Commands;
 /// Caveat worth knowing before adding to this file: the <c>@purge</c> tests are globally
 /// destructive by nature. PennMUSH's purge walks the whole database, so these free every
 /// GOING_TWICE object in the shared session database, not just their own — including fixtures
-/// another test created, destroyed and has not finished asserting on. The window is small and six
-/// consecutive full-suite runs were clean, but a test that leaves an
-/// object GOING and then reads it back is racing this.
+/// another test created, destroyed and has not finished asserting on. They run alone for that
+/// reason, as do the tests that move God or hook the global OBJECT`DESTROY event.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class ObjectDestructionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -151,6 +149,7 @@ public class ObjectDestructionTests
 	/// of its source room, so this is <c>empty_contents()</c>'s "if holding exits, destroy it" branch.
 	/// </summary>
 	[Test]
+	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Destroy_Room_DestroysTheExitsItSources()
 	{
 		var room = await DigRoomAsync("DestroySourceRoom");
@@ -182,6 +181,7 @@ public class ObjectDestructionTests
 	/// room (so that the exit can't be stolen)."
 	/// </summary>
 	[Test]
+	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Destroy_Room_RelinksTheExitsThatLedThere()
 	{
 		var doomed = await DigRoomAsync("DestroyEntranceTarget");
@@ -231,6 +231,7 @@ public class ObjectDestructionTests
 	/// zone, enactor always #-1 — while nothing ever fired it.
 	/// </summary>
 	[Test]
+	[NotInParallel] // hooks OBJECT`DESTROY, which every test's destroy fires
 	public async Task Destroy_Twice_FiresTheObjectDestroyEvent()
 	{
 		// event_handler = 9 (the seeded Event Handler) in the test config.
@@ -318,6 +319,7 @@ public class ObjectDestructionTests
 	/// object that no longer exists. A fresh probate judge makes that stray edge countable.
 	/// </summary>
 	[Test]
+	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Nuke_Twice_SkipsPossessionsAnEarlierFreeAlreadyTook()
 	{
 		var judge = await TestIsolationHelpers.CreateTestPlayerAsync(
@@ -361,6 +363,7 @@ public class ObjectDestructionTests
 	/// <c>@destroy</c>, which is what leaves room for <c>@undestroy</c>.
 	/// </summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_TakesTwoPasses_AdvancingThenFreeing()
 	{
 		var thing = await CreateThingAsync("PurgeTwoPass");
@@ -380,6 +383,7 @@ public class ObjectDestructionTests
 
 	/// <summary>An object that was never <c>@destroy</c>ed is untouched by a purge.</summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_LeavesObjectsThatWereNeverDestroyedAlone()
 	{
 		var bystander = await CreateThingAsync("PurgeBystander");
@@ -396,6 +400,7 @@ public class ObjectDestructionTests
 	/// reason PennMUSH spreads destruction over two passes.
 	/// </summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_AfterUndestroy_SparesTheObject()
 	{
 		var thing = await CreateThingAsync("PurgeUndestroy");
