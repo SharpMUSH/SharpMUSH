@@ -10,6 +10,8 @@ public class RegexHelpExamplesTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
+	[Arguments(@"regmatch(j,lit(\A[\p{L}\p{Nd}]\z))", "1")]
+	[Arguments(@"regmatch(+,lit(\A[\p{L}\p{Nd}]\z))", "0")]
 	[Arguments(@"regmatch(foo_bar,lit(\A\w+\z))", "1")]
 	[Arguments(@"regmatch(foo bar,lit(\A\w+\z))", "0")]
 	[Arguments(@"regmatch(café,lit(\A\p{L}+\z))", "1")]

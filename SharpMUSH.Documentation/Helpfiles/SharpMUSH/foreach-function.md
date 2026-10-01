@@ -46,7 +46,7 @@ You say, "quiet quiet SHOUT quiet"
 ```
 
 ```sharp
-> &is_alphanum me=regmatch(%0, \[\[:alnum:\]\])%b
+> &is_alphanum me=regmatch(%0,lit(\A[\p{L}\p{Nd}]\z))%b
 > say foreach(is_alphanum,jt1o+)
 You say, "1 1 1 1 0 "
 ```
