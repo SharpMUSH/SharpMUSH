@@ -265,6 +265,50 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".md-from").TextContent).Contains("Mara Quill");
 	}
 
+	/// <summary>
+	/// While the new character's message is being read, the previous one's is not on screen to act on.
+	/// The page kept it — subject, Reply and Delete — until the read answered, and Delete there would
+	/// have removed the new character's message of the same number.
+	/// </summary>
+	[Test]
+	public async Task Detail_SwitchingCharacter_PutsThePreviousMessageAwayAtOnce()
+	{
+		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/1");
+		var cut = Render<SharpMUSH.Client.Pages.MailDetail>(p => p.Add(x => x.Id, 1));
+		cut.WaitForAssertion(() => cut.Find("button.md-delete"), TimeSpan.FromSeconds(5));
+		fake.HoldReads = new TaskCompletionSource();
+
+		fake.SwitchCharacter();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll("button.md-delete").Count > 0) throw new InvalidOperationException("the previous character's Delete is still on screen");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.md-reply").Count).IsEqualTo(0);
+		await Assert.That(cut.Markup).DoesNotContain("The ledger");
+		fake.HoldReads.SetResult();
+		cut.WaitForAssertion(() => cut.Find("button.md-delete"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>The Mail page puts the previous character's open message away at once too.</summary>
+	[Test]
+	public async Task SwitchingCharacter_PutsThePreviousMessageAwayAtOnce()
+	{
+		var cut = RenderAt("/mail");
+		Select(cut, 0);
+		_mail.HoldLists = new TaskCompletionSource();
+
+		_mail.SwitchCharacter();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mail-reading-actions").Count > 0) throw new InvalidOperationException("the previous character's message is still open");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).DoesNotContain(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body);
+		_mail.HoldLists.SetResult();
+	}
+
 	[Test]
 	public async Task Detail_Delete_ReturnsToTheFolderTheMessageWasIn()
 	{

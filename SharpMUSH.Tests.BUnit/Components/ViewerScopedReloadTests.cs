@@ -167,6 +167,28 @@ public class ViewerScopedReloadTests : TrackingBunitContext
 		await Assert.That(cut.Find(".char-profile-pill--scene").TextContent).Contains(WrensPrivateScene);
 	}
 
+	/// <summary>A private scene's log goes from the screen at the switch, not when the new character's read answers.</summary>
+	[Test]
+	public async Task SceneLog_SwitchingCharacter_PutsThePreviousLogAwayAtOnce()
+	{
+		await SignInAsync();
+		_api.Extra["/api/scenes/S5"] = SceneJson.Scene("S5", WrensPrivateScene, isPublic: false);
+		_api.Extra["/api/scenes/S5/poses"] = "[]";
+		var cut = Render<SceneDetail>(p => p.Add(c => c.Id, "S5"));
+		WaitFor(cut, WrensPrivateScene);
+		var gate = new TaskCompletionSource();
+		_api.OnRequest = request => request.RequestUri!.AbsolutePath == "/api/scenes/S5" ? gate.Task : Task.CompletedTask;
+
+		SwitchToWren();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains(WrensPrivateScene, StringComparison.Ordinal)) throw new InvalidOperationException("the previous character's log is still on screen");
+		}, TimeSpan.FromSeconds(5));
+		gate.SetResult();
+		WaitFor(cut, WrensPrivateScene);
+	}
+
 	[Test]
 	public async Task SceneLog_SwitchingToACharacterWhoMayNotSeeIt_SaysItIsNotFound()
 	{

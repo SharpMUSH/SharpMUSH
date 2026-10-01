@@ -147,7 +147,15 @@
     /// </summary>
     private readonly ViewerScopedReload _reload = new();
 
-    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }));
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () =>
+    {
+        // LoadAsync clears the scene before its first await; rendering then takes the previous
+        // character's log off the screen at the switch rather than when the new read answers.
+        var load = LoadAsync();
+        StateHasChanged();
+        await load;
+        StateHasChanged();
+    }));
 
     protected override Task OnParametersSetAsync() => LoadAsync();
 

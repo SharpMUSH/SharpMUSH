@@ -45,6 +45,9 @@ public sealed class MailApiFake : HttpMessageHandler
 	/// </summary>
 	public TaskCompletionSource? HoldReads { get; set; }
 
+	/// <summary>When set, a folder list is answered only once this completes.</summary>
+	public TaskCompletionSource? HoldLists { get; set; }
+
 	public MailApiFake() => Auth.ActiveCharacter.Returns(First);
 
 	/// <summary>
@@ -71,6 +74,7 @@ public sealed class MailApiFake : HttpMessageHandler
 		// Answered now, held after: a held read is the previous mailbox's, whatever happens meanwhile.
 		var (response, isRead) = Answer(request);
 		if (isRead && HoldReads is { } hold) await hold.Task;
+		if (request.RequestUri!.AbsolutePath == "/api/mail" && request.Method == HttpMethod.Get && HoldLists is { } lists) await lists.Task;
 		return response;
 	}
 

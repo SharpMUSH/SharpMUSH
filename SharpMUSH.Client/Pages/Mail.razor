@@ -254,6 +254,11 @@ else
         => InvokeAsync(async () =>
         {
             if (!_characterActive) return;
+            // The open message and the list are the previous character's: they go before the new
+            // character's folder is asked for, not when it answers.
+            (_messages, _selected, _body) = ([], null, null);
+            _loading = true;
+            StateHasChanged();
             await LoadFolderAsync(_folder);
             StateHasChanged();
         });

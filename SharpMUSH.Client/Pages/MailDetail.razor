@@ -71,7 +71,16 @@
     /// </summary>
     private readonly ViewerScopedReload _reload = new();
 
-    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }));
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () =>
+    {
+        // The message on screen is the previous character's, and its Delete would now act on the new
+        // character's message of the same number: it goes before the new one is asked for.
+        (_message, _error) = (null, null);
+        _loading = true;
+        StateHasChanged();
+        await LoadAsync();
+        StateHasChanged();
+    }));
 
     protected override Task OnParametersSetAsync() => LoadAsync();
 
@@ -94,6 +103,7 @@
 
     private async Task DeleteAsync()
     {
+        if (_message is null) return;
         switch (await Mail.DeleteAsync(FolderName, Id))
         {
             case Success:
