@@ -19,7 +19,6 @@ namespace SharpMUSH.Tests.Plugins;
 /// loader-discovery check (the proxy for "loads on next boot", since rebooting a
 /// second server to prove load is heavy) are asserted directly.
 /// </summary>
-[NotInParallel]
 public class ManagedPackageInstallerTests
 {
 	private static string CommandOnlyDllPath =>

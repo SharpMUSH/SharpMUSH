@@ -21,7 +21,6 @@ namespace SharpMUSH.Tests.Services;
 /// These tests exercise the real QueryCachingBehavior, StreamQueryCachingBehavior,
 /// and CacheInvalidationBehavior using the fully wired DI container.
 /// </summary>
-[NotInParallel]
 public class CachingBehaviorTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -78,8 +77,16 @@ public class CachingBehaviorTests
 
 		// Verify cache key exists. GetObjectNodeQuery delegates the cached load to the number-keyed
 		// GetObjectNodeByNumberQuery, so the entry lives under the number-only CacheKeys.Object key.
+		// Retries guard against the whole-tag sweeps other tests' commands carry, as in the contents
+		// test below.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Object(dbRef);
 		var cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
+		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
+		{
+			result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
+			cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
+		}
+
 		await Assert.That(cached.HasValue).IsTrue();
 
 		var result2 = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -254,6 +261,8 @@ public class CachingBehaviorTests
 	/// player ever had a power when found by name or listed - <c>connect guest</c> found no guests.
 	/// </summary>
 	[Test]
+	// Streams every player, which races suites creating them.
+	[NotInParallel]
 	public async Task APowerSetOnAPlayerIsSeenThroughLookupByNameAndTheAllPlayersStream()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
@@ -435,6 +444,8 @@ public class CachingBehaviorTests
 	/// been the same on every step of movement.
 	/// </remarks>
 	[Test]
+	// Asserts entries are still resident, which other tests' tag sweeps and cache compaction undo.
+	[NotInParallel]
 	public async Task CreatingAnObjectDoesNotInvalidateTheContentsOfUninvolvedRooms()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();

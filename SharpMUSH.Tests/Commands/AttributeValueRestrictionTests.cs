@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -14,16 +15,25 @@ namespace SharpMUSH.Tests.Commands;
 /// prefix, a prefix picks the first choice it starts, and what is stored is the choice as the enum
 /// spells it. <c>valid(attrvalue, …)</c> asks the same question (<c>src/funmisc.c:103</c>).
 /// </summary>
-[NotInParallel]
 public class AttributeValueRestrictionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
+
+	/// <summary>The wizard who runs the commands, so what they are told reaches nobody else.</summary>
+	private TestIsolationHelpers.TestPlayer _wizard = null!;
+
+	[Before(Test)]
+	public async Task CreateWizard()
+	{
+		_wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "AttrRestrict");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {_wizard.DbRef}=WIZARD"));
+	}
 
 	/// <summary>A fresh attribute-table entry. Penn's /limit and /enum refuse an attribute that is not in the table.</summary>
 	private async Task<string> TableAttributeAsync(string prefix)
@@ -40,8 +50,9 @@ public class AttributeValueRestrictionTests
 		return name;
 	}
 
-	private bool Told(string key, string text) =>
-		TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService, key, text);
+	private bool Told(string text) => Told(_wizard.DbRef, text);
+
+	private bool Told(DBRef who, string text) => WebAppFactoryArg.Notifications.For(who).Contains(text);
 
 	[Test]
 	[Arguments("green", "Green")]
@@ -81,12 +92,7 @@ public class AttributeValueRestrictionTests
 		await CommandAsync($"&{attr} {thing}={typed}");
 
 		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("Red");
-		await NotifyService.Received().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<SharpMessage>(m =>
-				TestHelpers.MessagePlainTextEquals(m, $"Value for {attr} needs to be one of: Red Green Blue")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(Told($"Value for {attr} needs to be one of: Red Green Blue")).IsTrue();
 	}
 
 	[Test]
@@ -113,8 +119,7 @@ public class AttributeValueRestrictionTests
 		await CommandAsync($"&{attr} {thing}=ABC");
 		await CommandAsync($"&{attr} {thing}=abc1");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandRestrictionSetFormat),
-			$"{attr} -- Attribute limit set to: ^[a-z]+$")).IsTrue();
+		await Assert.That(Told($"{attr} -- Attribute limit set to: ^[a-z]+$")).IsTrue();
 		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("ABC");
 	}
 
@@ -125,7 +130,7 @@ public class AttributeValueRestrictionTests
 
 		await CommandAsync($"@attribute/limit {attr}=(unclosed");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandInvalidRegexp), "Invalid Regular Expression."))
+		await Assert.That(Told("Invalid Regular Expression."))
 			.IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,anything,{attr})")).IsEqualTo("1");
 	}
@@ -152,8 +157,7 @@ public class AttributeValueRestrictionTests
 
 		await CommandAsync($"@attribute/enum || {attr}=a||b");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDelimiterOneCharacter),
-			"Delimiter must be one character.")).IsTrue();
+		await Assert.That(Told("Delimiter must be one character.")).IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,zzz,{attr})")).IsEqualTo("1");
 	}
 
@@ -164,8 +168,7 @@ public class AttributeValueRestrictionTests
 
 		await CommandAsync($"@attribute/enum {attr}=");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandRestrictionUnsetFormat),
-			$"{attr} -- Attribute limit or enum unset.")).IsTrue();
+		await Assert.That(Told($"{attr} -- Attribute limit or enum unset.")).IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,purple,{attr})")).IsEqualTo("1");
 	}
 
@@ -176,8 +179,7 @@ public class AttributeValueRestrictionTests
 
 		await CommandAsync($"@attribute/enum {attr}=a b");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess),
-			"I don't know that attribute. Please use @attribute/access to create it, first.")).IsTrue();
+		await Assert.That(Told("I don't know that attribute. Please use @attribute/access to create it, first.")).IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,zzz,{attr})")).IsEqualTo("1");
 	}
 
@@ -215,12 +217,9 @@ public class AttributeValueRestrictionTests
 		await CommandAsync($"@attribute/decompile {stem}");
 		await CommandAsync($"@attribute/decompile {stem}?");
 
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat),
-			$"@attribute/decompile: 1 attributes match pattern '{stem}'")).IsTrue();
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat),
-			$"@attribute/decompile: 1 attributes match pattern '{stem}?'")).IsTrue();
-		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat),
-			$"@attribute/enum | {stem}X=a b|c")).IsTrue();
+		await Assert.That(Told($"@attribute/decompile: 1 attributes match pattern '{stem}'")).IsTrue();
+		await Assert.That(Told($"@attribute/decompile: 1 attributes match pattern '{stem}?'")).IsTrue();
+		await Assert.That(Told($"@attribute/enum | {stem}X=a b|c")).IsTrue();
 	}
 
 	// ---- As a mortal: God passes every permission check vacuously ----------------------------------
@@ -235,8 +234,8 @@ public class AttributeValueRestrictionTests
 		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/limit {attr}=^x$"));
 		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/enum {attr}=x"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
-			nameof(ErrorMessages.Notifications.PermissionDenied), mortal.DbRef)).IsTrue();
+		var permissionDenied = new LocalizationService().Format(nameof(ErrorMessages.Notifications.PermissionDenied), null);
+		await Assert.That(Told(mortal.DbRef, permissionDenied)).IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,anything,{attr})")).IsEqualTo("1");
 	}
 
@@ -257,7 +256,7 @@ public class AttributeValueRestrictionTests
 	}
 
 	private ValueTask<CallState> CommandAsync(string command) =>
-		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		CommandParser.CommandParse(_wizard.Handle, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<string> FunctionAsync(string expression) =>
 		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();

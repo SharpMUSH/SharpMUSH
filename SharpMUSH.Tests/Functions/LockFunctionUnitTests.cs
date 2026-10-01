@@ -17,6 +17,7 @@ public class LockFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// Swaps a command's lock in the session-wide command library.
 	[Test, NotInParallel]
 	[Arguments("@LOCK", "lock(me,#FALSE)")]
 	[Arguments("@LSET", "lset(me,visual)")]
@@ -227,7 +228,7 @@ public class LockFunctionUnitTests
 	/// boolexp — a lock that nothing in the engine ever writes, so it answered 0 always, and the
 	/// two-argument side-effect form did not exist. Its only test asserted IsNotNull.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task AtrlockReadsAndWritesTheAttributeLockFlag()
 	{
 		var thing = (await Parser.FunctionParse(MarkupText.Plain(
