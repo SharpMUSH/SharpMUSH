@@ -495,7 +495,7 @@ public class CommunicationCommandTests
 		var said = await NotifiedGodWhile($"addcom {alias}=Public");
 
 		await Assert.That(said.Any(message => message.StartsWith($"Alias '{alias}' added for channel ", StringComparison.OrdinalIgnoreCase)))
-			.IsTrue();
+			.IsTrue().Because($"God was told: {string.Join(" | ", said)}");
 	}
 
 	[Test]
@@ -586,7 +586,7 @@ public class CommunicationCommandTests
 
 		await Assert.That(said.Any(message =>
 				message.StartsWith($"Title set to '{title}' for alias '{alias}' (channel ", StringComparison.OrdinalIgnoreCase)))
-			.IsTrue();
+			.IsTrue().Because($"God was told: {string.Join(" | ", said)}");
 	}
 
 	[Test]
@@ -619,7 +619,7 @@ public class CommunicationCommandTests
 		// Note: Aliases are stored in uppercase but displayed in lowercase
 		await Assert.That(said.Count(message =>
 				message.Contains(first.ToLowerInvariant()) && message.Contains(second.ToLowerInvariant())))
-			.IsEqualTo(1);
+			.IsEqualTo(1).Because($"God was told: {string.Join(" | ", said)}");
 	}
 
 	[Test]

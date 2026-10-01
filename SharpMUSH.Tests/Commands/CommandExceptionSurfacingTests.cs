@@ -257,28 +257,32 @@ public class CommandExceptionSurfacingTests
 	private static string PayloadOf(string? notification)
 		=> notification!["#-1 EXCEPTION: ".Length..];
 
+	/// <summary>
+	/// A logger factory cannot remove a provider, and the host's factory is shared by the whole session,
+	/// so disposing this switches it off rather than leaving every later logger enabled at Error.
+	/// </summary>
 	private sealed class CapturingLoggerProvider(
 		ConcurrentQueue<(string Category, LogLevel Level, string Message, Exception? Exception)> sink)
 		: ILoggerProvider
 	{
-		public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, sink);
+		private readonly ConcurrentQueue<(string Category, LogLevel Level, string Message, Exception? Exception)> _sink = sink;
+		private volatile bool _disposed;
 
-		public void Dispose() { }
+		public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, this);
 
-		private sealed class CapturingLogger(
-			string category,
-			ConcurrentQueue<(string Category, LogLevel Level, string Message, Exception? Exception)> sink)
-			: ILogger
+		public void Dispose() => _disposed = true;
+
+		private sealed class CapturingLogger(string category, CapturingLoggerProvider provider) : ILogger
 		{
 			public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-			public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
+			public bool IsEnabled(LogLevel logLevel) => !provider._disposed && logLevel >= LogLevel.Error;
 
 			public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
 				Func<TState, Exception?, string> formatter)
 			{
 				if (!IsEnabled(logLevel)) return;
-				sink.Enqueue((category, logLevel, formatter(state, exception), exception));
+				provider._sink.Enqueue((category, logLevel, formatter(state, exception), exception));
 			}
 		}
 	}
