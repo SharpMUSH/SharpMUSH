@@ -107,8 +107,16 @@ public partial class LightningDatabase : IWikiStore
 		=> tx.Range(Tables.WikiPage, [])
 			.Select(entry => (Keys.ReadDbref(entry.Key), Codec.Deserialize<WikiPageRecord>(entry.Value)));
 
-	private static IEnumerable<WikiPage> AllWikiPagesMapped(ITx tx)
-		=> AllWikiPages(tx).Select(page => MapWikiPage(page.Key, page.Record));
+	/// <summary>
+	/// The pages <paramref name="visibility"/> admits, tested on the stored record before it is mapped.
+	/// There is no index on the published flag or the author to seek instead: every listing here is one
+	/// scan of the page table, and this keeps the rows it drops from being mapped at all.
+	/// </summary>
+	private static IEnumerable<WikiPage> VisibleWikiPagesMapped(ITx tx, WikiVisibility visibility)
+		=> AllWikiPages(tx)
+			// `Published ?? true`, as CountPagesAsync reads it: a row written before the field existed is published.
+			.Where(page => visibility.Admits(page.Record.Published ?? true, page.Record.AuthorDbref))
+			.Select(page => MapWikiPage(page.Key, page.Record));
 
 	private static WikiPage MapWikiPage(long key, WikiPageRecord r) => new(
 		Id: WikiPageId(key),
@@ -213,8 +221,8 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 			TryReadWikiPage(tx, id) is { } found ? MapWikiPage(found.Key, found.Record) : new NotFound()));
 
-	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
 			.OrderByDescending(p => p.UpdatedAt)
 			// Id descending as the tie-break so two pages written inside one timestamp tick still order
 			// newest-first rather than by whatever the key scan happened to yield.
@@ -222,8 +230,8 @@ public partial class LightningDatabase : IWikiStore
 			.Take(count)
 			.ToList()));
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
 			.Where(p => ns is null || p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(p => p.Namespace, StringComparer.Ordinal)
 			.ThenBy(p => p.Slug, StringComparer.Ordinal)
@@ -238,16 +246,16 @@ public partial class LightningDatabase : IWikiStore
 			.Count(p => (ns is null || p.Record.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
 				&& (includeDrafts || (p.Record.Published ?? true)))));
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
 			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList()));
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
 			.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
