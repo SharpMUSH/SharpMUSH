@@ -79,7 +79,7 @@ public record SharpMUSHOptions
 			MaxPlayerChannels: 0,
 			NoisyCEmit: false,
 			UseMuxComm: true,
-			PageLog: false,
+			PageLog: true,
 			PageLogRetentionDays: -1
 		),
 		Command = new CommandOptions(

@@ -58,7 +58,7 @@ The `/port` switch is admin-only, and will page a single port descriptor directl
 
 ## Page log
 
-PennMUSH keeps no record of pages, and neither does SharpMUSH unless the `page_log` @config option is on. It is a SharpMUSH extension, and it is off by default.
+PennMUSH keeps no record of pages. SharpMUSH keeps one while the `page_log` @config option is on, which it is by default: it is a SharpMUSH extension, and a game that wants no page log turns it off (`@config/set page_log=no`).
 
 While it is on, each page that is delivered is kept for the player who sent it and for each player it reached, as their own copy. A page refused by someone (HAVEN, a page lock, or not being connected) is not kept for them. A page to more than 32 other people is not kept at all. The web portal uses the copies to show a player their page conversations after a reload or on another device.
 
