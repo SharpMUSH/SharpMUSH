@@ -565,6 +565,8 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	// Swaps the process-wide Console.Out to capture ANTLR's trace.
+	[NotInParallel]
 	[Arguments("fn(add,1,2)")]
 	[Arguments("fn(fn,add,1,2)")]
 	[Arguments("fn_alias(add,1,2)")]
@@ -753,6 +755,8 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	// Swaps the process-wide Console.Out to capture ANTLR's trace.
+	[NotInParallel]
 	[Arguments("restrictedexpr(ucstr,ucstr(%0),private-input)")]
 	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input)")]
 	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input)")]
@@ -776,7 +780,7 @@ public class RestrictedExpressionTests
 				Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true, ParserPredictionMode = ParserPredictionMode.TwoStage }
 			})
 		};
-		// This nonparallel test captures ANTLR Trace output; restore TUnit's writer in finally.
+		// Restore TUnit's writer in finally.
 #pragma warning disable TUnit0055
 		var previous = Console.Out;
 		using var output = new StringWriter();
