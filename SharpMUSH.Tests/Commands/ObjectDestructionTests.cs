@@ -33,12 +33,10 @@ namespace SharpMUSH.Tests.Commands;
 /// Caveat worth knowing before adding to this file: the <c>@purge</c> tests are globally
 /// destructive by nature. PennMUSH's purge walks the whole database, so these free every
 /// GOING_TWICE object in the shared session database, not just their own — including fixtures
-/// another test created, destroyed and has not finished asserting on. The window is small and six
-/// consecutive full-suite runs were clean, but a test that leaves an
-/// object GOING and then reads it back is racing this.
+/// another test created, destroyed and has not finished asserting on. They run alone for that
+/// reason, as does the test that hooks the global OBJECT`DESTROY event.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class ObjectDestructionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -156,16 +154,13 @@ public class ObjectDestructionTests
 		var room = await DigRoomAsync("DestroySourceRoom");
 		var elsewhere = await DigRoomAsync("DestroyExitTarget");
 
-		await RunAsync($"@tel {elsewhere}");
 		var exitName = TestIsolationHelpers.GenerateUniqueName("DoomedExit");
-		var openResult = await RunAsync($"@open {exitName}={room}");
+		var openResult = await RunAsync($"@open {exitName}={room},,{elsewhere}");
 		var exit = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 
-		// Move the exit into the room that is about to die, so the room is its source.
-		await RunAsync($"@tel {room}");
-		var relocated = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("RoomExit")}={elsewhere}");
+		// An exit whose source is the room that is about to die.
+		var relocated = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("RoomExit")}={elsewhere},,{room}");
 		var roomExit = DBRef.Parse(relocated.Message!.ToPlainText().Trim());
-		await RunAsync($"@tel {elsewhere}");
 
 		await RunAsync($"@destroy {room}");
 		await RunAsync($"@destroy {room}");
@@ -187,10 +182,8 @@ public class ObjectDestructionTests
 		var doomed = await DigRoomAsync("DestroyEntranceTarget");
 		var source = await DigRoomAsync("DestroyEntranceSource");
 
-		await RunAsync($"@tel {source}");
-		var openResult = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("Entrance")}={doomed}");
+		var openResult = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("Entrance")}={doomed},,{source}");
 		var entrance = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
-		await RunAsync("@tel #0");
 
 		await RunAsync($"@destroy {doomed}");
 		await RunAsync($"@destroy {doomed}");
@@ -231,6 +224,7 @@ public class ObjectDestructionTests
 	/// zone, enactor always #-1 — while nothing ever fired it.
 	/// </summary>
 	[Test]
+	[NotInParallel] // hooks OBJECT`DESTROY, which every test's destroy fires
 	public async Task Destroy_Twice_FiresTheObjectDestroyEvent()
 	{
 		// event_handler = 9 (the seeded Event Handler) in the test config.
@@ -332,14 +326,12 @@ public class ObjectDestructionTests
 		var room = await DigRoomAsync("NukeCascadeRoom");
 
 		// The probate walks possessions in dbref order; the exit has to come after its room.
-		await RunAsync($"@tel {room}");
 		DBRef exit;
 		do
 		{
-			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}");
+			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}=,,{room}");
 			exit = DBRef.Parse(opened.Message!.ToPlainText().Trim());
 		} while (exit.Number < room.Number);
-		await RunAsync("@tel #0");
 
 		await RunAsync($"@chown {room}={player}");
 		await RunAsync($"@chown {exit}={player}");
@@ -361,6 +353,7 @@ public class ObjectDestructionTests
 	/// <c>@destroy</c>, which is what leaves room for <c>@undestroy</c>.
 	/// </summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_TakesTwoPasses_AdvancingThenFreeing()
 	{
 		var thing = await CreateThingAsync("PurgeTwoPass");
@@ -380,6 +373,7 @@ public class ObjectDestructionTests
 
 	/// <summary>An object that was never <c>@destroy</c>ed is untouched by a purge.</summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_LeavesObjectsThatWereNeverDestroyedAlone()
 	{
 		var bystander = await CreateThingAsync("PurgeBystander");
@@ -396,6 +390,7 @@ public class ObjectDestructionTests
 	/// reason PennMUSH spreads destruction over two passes.
 	/// </summary>
 	[Test]
+	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_AfterUndestroy_SparesTheObject()
 	{
 		var thing = await CreateThingAsync("PurgeUndestroy");

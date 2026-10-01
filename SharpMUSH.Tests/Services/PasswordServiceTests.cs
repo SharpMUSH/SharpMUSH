@@ -1,4 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
+using Mediator;
+using Microsoft.AspNetCore.Identity;
+using NSubstitute;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
@@ -7,11 +10,12 @@ namespace SharpMUSH.Tests.Services;
 
 public class PasswordServiceTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IPasswordService PasswordService =>
-		WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
+	/// <summary>
+	/// Hashing and verification never reach the mediator — only storing a password does — so it is a bare
+	/// substitute, and the hasher is the default one production registers.
+	/// </summary>
+	private static readonly IPasswordService PasswordService =
+		new PasswordService(Substitute.For<IMediator>(), new PasswordHasher<string>());
 
 	[Test]
 	public async ValueTask ModernPassword_ValidPassword_ReturnsTrue()

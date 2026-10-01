@@ -14,9 +14,7 @@ namespace SharpMUSH.Tests.Functions;
 /// </summary>
 public class ChannelMembershipDebugTests
 {
-	private const string DebugChannelName = "DebugChannel";
 	private const string DebugChannelPrivilege = "Open";
-	private const int TestPlayerDbRef = 1;
 
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -25,29 +23,31 @@ public class ChannelMembershipDebugTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	[NotInParallel]
 	public async Task DeepDebug_ChannelMembership_WithExplicitAddCommand()
 	{
 		TestDiagnostics.WriteLine("=== Starting Deep Debug Test (Using AddUserToChannelCommand) ===");
 
 		TestDiagnostics.WriteLine("\n--- Step 1: Getting test player ---");
-		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef))).Expect<SharpPlayer>();
-		TestDiagnostics.WriteLine($"Using player DBRef: {TestPlayerDbRef}");
+		// A player and channel of the test's own: membership read back must not include anyone else's.
+		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "ChanDebug");
+		var player = (await Database.GetObjectNodeAsync(playerDbRef)).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("DebugChannel");
+		TestDiagnostics.WriteLine($"Using player DBRef: {playerDbRef}");
 		TestDiagnostics.WriteLine($"Player ID: {player.Id}");
 		TestDiagnostics.WriteLine($"Player Object ID: {player.Id}");
 
 		// NOTE: CreateChannelCommand DOES automatically add the owner, so we'll track this
 		TestDiagnostics.WriteLine("\n--- Step 2: Creating channel ---");
 		await Mediator.Send(new CreateChannelCommand(
-		MarkupText.Plain(DebugChannelName),
+		MarkupText.Plain(channelName),
 		[DebugChannelPrivilege],
 		player
 		));
-		TestDiagnostics.WriteLine($"Created channel: {DebugChannelName}");
+		TestDiagnostics.WriteLine($"Created channel: {channelName}");
 		TestDiagnostics.WriteLine("NOTE: CreateChannelCommand automatically adds owner as member");
 
 		TestDiagnostics.WriteLine("\n--- Step 3: Inspecting initial channel membership ---");
-		var channel = await Mediator.Send(new GetChannelQuery(DebugChannelName));
+		var channel = await Mediator.Send(new GetChannelQuery(channelName));
 		await Assert.That(channel).IsNotNull();
 		TestDiagnostics.WriteLine($"Channel ID: {channel!.Id}");
 
@@ -75,7 +75,7 @@ public class ChannelMembershipDebugTests
 		TestDiagnostics.WriteLine("Remove command completed");
 
 		TestDiagnostics.WriteLine("\n--- Step 6: Re-fetching channel after removal ---");
-		var channelAfterRemove = await Mediator.Send(new GetChannelQuery(DebugChannelName));
+		var channelAfterRemove = await Mediator.Send(new GetChannelQuery(channelName));
 		await Assert.That(channelAfterRemove).IsNotNull();
 		TestDiagnostics.WriteLine($"Re-fetched channel ID: {channelAfterRemove!.Id}");
 		TestDiagnostics.WriteLine($"Same channel object? {ReferenceEquals(channel, channelAfterRemove)}");
@@ -103,7 +103,7 @@ public class ChannelMembershipDebugTests
 		TestDiagnostics.WriteLine("Add command completed");
 
 		TestDiagnostics.WriteLine("\n--- Step 9: Re-fetching channel after re-adding ---");
-		var channelAfterAdd = await Mediator.Send(new GetChannelQuery(DebugChannelName));
+		var channelAfterAdd = await Mediator.Send(new GetChannelQuery(channelName));
 		await Assert.That(channelAfterAdd).IsNotNull();
 
 		var membersAfterAdd = await channelAfterAdd!.Members.Value.ToListAsync();

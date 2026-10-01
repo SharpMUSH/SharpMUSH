@@ -23,7 +23,6 @@ namespace SharpMUSH.Tests.Database;
 /// enumerating the substitute's shared call list, so they stay correct under parallel execution.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class AttributeSyntaxFlagTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

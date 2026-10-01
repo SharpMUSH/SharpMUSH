@@ -20,11 +20,10 @@ namespace SharpMUSH.Tests.Commands;
 /// <para>
 /// Driven through mortal handles wherever permission is the subject: God controls everything, so a
 /// God-only test of these gates proves nothing. Every refusal also asserts the target was left
-/// unmarked. Not parallel with the other destruction classes, whose <c>@purge</c> frees any GOING
-/// object in the shared world.
+/// unmarked. Every test that runs <c>@purge</c>, which frees any GOING object in the shared world,
+/// is <c>[NotInParallel]</c>, so it never runs while these are reading their targets back.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class DestroyPermissionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

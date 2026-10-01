@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -13,35 +12,41 @@ namespace SharpMUSH.Tests.Commands;
 /// search, history, append, and the wizard-only protection rules. Pages are
 /// stored through the same IWikiService the web portal uses.
 /// </summary>
-[NotInParallel] // integration test over shared services + the session-shared Notify substitute
 public class WikiCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private async Task ExpectNotify(SharpMUSH.Library.Models.DBRef player, string contains)
-	{
-		// Sender carries PennMUSH "orator" semantics: command feedback is spoken by
-		// the executor of the command — here always the notified player themselves.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
-	}
+	/// <summary>
+	/// How many times <paramref name="player"/> was told something containing <paramref name="contains"/>
+	/// by themselves. Sender carries PennMUSH "orator" semantics: command feedback is spoken by the
+	/// executor of the command — here always the notified player themselves.
+	/// </summary>
+	private int SelfNotifications(SharpMUSH.Library.Models.DBRef player, string contains) =>
+		WebAppFactoryArg.Notifications.DeliveriesFor(player).Count(delivery =>
+			delivery.Sender == player
+			&& delivery.Type == INotifyService.NotificationType.Announce
+			&& delivery.Message.Contains(contains, StringComparison.Ordinal));
+
+	private async Task ExpectNotify(SharpMUSH.Library.Models.DBRef player, string contains) =>
+		await Assert.That(SelfNotifications(player, contains)).IsEqualTo(1);
 
 	/// <summary>The negative of <see cref="ExpectNotify"/>: this player was never told <paramref name="contains"/>.</summary>
-	private async Task ExpectNoNotify(SharpMUSH.Library.Models.DBRef player, string contains)
-	{
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
-	}
+	private async Task ExpectNoNotify(SharpMUSH.Library.Models.DBRef player, string contains) =>
+		await Assert.That(SelfNotifications(player, contains)).IsEqualTo(0);
+
+	/// <summary>
+	/// As <see cref="ExpectNotify"/>, for output whose sender is not the reader (the help command's own
+	/// notify path), so only the recipient and the content are asserted.
+	/// </summary>
+	private async Task ExpectNotifyFromAnySender(SharpMUSH.Library.Models.DBRef player, string contains) =>
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(player).Count(delivery =>
+			delivery.Type == INotifyService.NotificationType.Announce
+			&& delivery.Message.Contains(contains, StringComparison.Ordinal))).IsEqualTo(1);
 
 	[Test]
 	public async ValueTask WikiCreate_ThenView_ShowsRenderedPage()
@@ -194,7 +199,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@wiki/protect locked_page"));
-		await ExpectNotify(god, "now protected");
+		await ExpectNotify(god, "'Locked Page' is now protected");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/edit locked_page=replacement content"));
@@ -243,14 +248,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help @wiki"));
 
-		// help output is sent by the help command's own notify path (sender may differ),
-		// so only the recipient and content are asserted here.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "in-game interface to the shared wiki")),
-				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
-				INotifyService.NotificationType.Announce);
+		await ExpectNotifyFromAnySender(player.DbRef, "in-game interface to the shared wiki");
 	}
 
 	[Test]
@@ -261,12 +259,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help wiki()"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Returns information about a wiki page")),
-				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
-				INotifyService.NotificationType.Announce);
+		await ExpectNotifyFromAnySender(player.DbRef, "Returns information about a wiki page");
 	}
 
 	[Test]
@@ -754,7 +747,8 @@ public class WikiCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync("Wizard Draft Recent", "wizard recent body");
 
-		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@wiki/recent"));
+		// The widest window there is: pages other tests write meanwhile must not push this one out of it.
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@wiki/recent 50"));
 
 		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
@@ -1101,30 +1095,12 @@ public class WikiCommandTests
 
 	/// <summary>
 	/// The rendered notification, in a client format that can express a clickable command. Asserting on
-	/// <c>ToString()</c> as <see cref="ExpectNotify"/> does could never see this: the ANSI form of a
-	/// command link is plain underlined text, because OSC 8 can only navigate to a URL.
+	/// plain text as <see cref="ExpectNotify"/> does could never see this: the ANSI form of a command link
+	/// is plain underlined text, because OSC 8 can only navigate to a URL.
 	/// </summary>
-	private async Task ExpectNotifyRendered(SharpMUSH.Library.Models.DBRef player, MarkupFormat format, string contains)
-	{
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				RendersToContain(msg, format, contains)),
-				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
-	}
-
-	/// <summary>
-	/// As <see cref="ExpectNotify"/>, but on the text the player reads rather than the ANSI byte stream —
-	/// the two differ wherever markup lands mid-sentence, which is exactly where a link does.
-	/// </summary>
-	private async Task ExpectNotifyPlainText(SharpMUSH.Library.Models.DBRef player, string contains)
-	{
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, contains)),
-				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
-	}
+	private async Task ExpectNotifyRendered(SharpMUSH.Library.Models.DBRef player, MarkupFormat format, string contains) =>
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(player).Count(msg => RendersToContain(msg, format, contains)))
+			.IsEqualTo(1);
 
 	/// <summary>
 	/// A <c>[[Page Name]]</c> link in a page body is clickable when <c>@wiki</c> displays it: the target
@@ -1147,7 +1123,7 @@ public class WikiCommandTests
 		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Html, "xch_cmd=\"@wiki help:general:markdown_guide\"");
 		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Pueblo, "XCH_CMD=\"@wiki help:general:markdown_guide\"");
 		// The display text is the page title, never the raw target, and the brackets never leak.
-		await ExpectNotifyPlainText(player.DbRef, "See Markdown Guide for details.");
+		await ExpectNotify(player.DbRef, "See Markdown Guide for details.");
 	}
 
 	/// <summary>
@@ -1175,9 +1151,9 @@ public class WikiCommandTests
 			MarkupText.Plain($"@wiki/md {page.Slug}"));
 
 		// Every line intact and in order: nothing rendered, reflowed, re-indented or wrapped.
-		await ExpectNotifyPlainText(player.DbRef, RawSourceBody);
+		await ExpectNotify(player.DbRef, RawSourceBody);
 		// The header still identifies the page, so a raw body is not an anonymous blob of text.
-		await ExpectNotifyPlainText(player.DbRef, $"Wiki: {page.Title} [main]");
+		await ExpectNotify(player.DbRef, $"Wiki: {page.Title} [main]");
 	}
 
 	/// <summary>
@@ -1193,7 +1169,7 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/md {page.Slug}"));
 
-		await ExpectNotifyPlainText(player.DbRef, "Call [add(1,2)] with %0 and $foo.");
+		await ExpectNotify(player.DbRef, "Call [add(1,2)] with %0 and $foo.");
 		await ExpectNoNotify(player.DbRef, "Call 3 with");
 	}
 
@@ -1215,12 +1191,12 @@ public class WikiCommandTests
 		// Without /source the reader's own locale is served, still as raw markdown.
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/view/md {slug}"));
-		await ExpectNotifyPlainText(player.DbRef, "# Source francaise");
+		await ExpectNotify(player.DbRef, "# Source francaise");
 
 		// With it, the locale the page was written in.
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/view/source/md {slug}"));
-		await ExpectNotifyPlainText(player.DbRef, "# English source");
+		await ExpectNotify(player.DbRef, "# English source");
 	}
 
 	/// <summary>
@@ -1239,13 +1215,12 @@ public class WikiCommandTests
 			MarkupText.Plain($"@wiki/md {draft.Slug}"));
 
 		await ExpectNoNotify(player.DbRef, "plugh-md-marker");
-		await ExpectNotifyPlainText(player.DbRef, "WIKI: This is a draft; its body is not shown.");
+		await ExpectNotify(player.DbRef, "WIKI: This is a draft; its body is not shown.");
 	}
 
 	/// <summary>
 	/// True when the message went out as markup whose rendering in <paramref name="format"/> contains
-	/// <paramref name="contains"/>. A matcher lambda is an expression tree, which cannot hold the
-	/// declaration pattern this needs.
+	/// <paramref name="contains"/>.
 	/// </summary>
 	private static bool RendersToContain(SharpMessage msg, MarkupFormat format, string contains) =>
 		msg is MString markup && markup.Render(format).Contains(contains);

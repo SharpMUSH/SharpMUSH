@@ -143,7 +143,8 @@ public class BuildingCreationMessageParityTests
 	/// Only <c>@pcreate</c> fired it.
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	// Both rows install and wipe the one PLAYER`CREATE handler on the event handler object.
+	[NotInParallel("EventHandlerPlayerCreate")]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async ValueTask PcreateFiresPlayerCreate(bool throughTheFunction)

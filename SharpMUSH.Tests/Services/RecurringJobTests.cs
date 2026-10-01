@@ -18,7 +18,8 @@ using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
-[NotInParallel]
+// Every test rewrites the one recurring-job document in the shared world.
+[NotInParallel("RecurringJobDocument")]
 public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -259,6 +260,8 @@ public class RecurringJobTests
 	}
 
 	[Test]
+	// Reads the session queue's total, parks a blocker on it, and halts everything #1 has queued.
+	[NotInParallel]
 	public async Task RealQueueKeepsOneFiringAndRecoversAfterExternalHalt()
 	{
 		var context = await Setup();

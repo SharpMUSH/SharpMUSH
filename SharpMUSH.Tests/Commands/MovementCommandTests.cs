@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -11,17 +10,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-// Movement tests drive full command pipelines (@dig/@open/@link/@tel/walk) against the shared
-// PerTestSession database and assert on the resulting location and the shared NotifyService mock.
-// Run in parallel with the rest of the suite they race on that shared state — which surfaced as
-// test class here is [NotInParallel] for the same reason; this one was simply missing it.
-[NotInParallel]
+// Movement tests drive full command pipelines (@dig/@open/@link/@tel/walk) for a fresh player in
+// rooms of its own, and read what it was told from the notification recorder.
 public class MovementCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
@@ -48,14 +43,15 @@ public class MovementCommandTests
 	/// no creation stamp.
 	/// </remarks>
 	private bool ReceivedNotifyContaining(DBRef receiver, string expected, DBRef speaker) =>
-		NotifyService.ReceivedCalls()
-			.Any(c => c.GetMethodInfo().Name == "Notify"
-								&& c.GetArguments().Length >= 3
-								&& c.GetArguments()[0] is AnySharpObject who && who.Object().DBRef == receiver
-								&& c.GetArguments()[1] is SharpMessage msg
-								&& TestHelpers.MessagePlainTextContains(msg, expected)
-								&& c.GetArguments()[2] is AnySharpObject said
-								&& said.Object().DBRef.Number == speaker.Number);
+		WebAppFactoryArg.Notifications.DeliveriesFor(receiver)
+			.Any(delivery => delivery.Message.Contains(expected)
+				&& delivery.Sender is { } said
+				&& said.Number == speaker.Number);
+
+	/// <summary>Whether <paramref name="player"/> told themselves something satisfying <paramref name="matches"/>.</summary>
+	private bool ToldThemselves(DBRef player, Func<string, bool> matches) =>
+		WebAppFactoryArg.Notifications.DeliveriesFor(player)
+			.Any(delivery => delivery.Sender == player && matches(delivery.Message));
 
 	/// <summary>
 	/// PennMUSH <c>do_move</c> (<c>move.c:435</c>): when nothing matches as an exit the answer is
@@ -68,8 +64,7 @@ public class MovementCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("goto #0"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(ToldThemselves(player.DbRef, message => message == ErrorMessages.Notifications.CantGoThatWay)).IsTrue();
 	}
 
 	/// <summary>
@@ -314,12 +309,10 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("enter #1"));
+		var player = await CreateTestPlayerAsync("EnterCmd");
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("enter #1"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You can't enter that.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(ToldThemselves(player.DbRef, message => message == "You can't enter that.")).IsTrue();
 	}
 
 	[Test]
@@ -533,9 +526,8 @@ public class MovementCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat),
-			player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(ToldThemselves(player.DbRef, message =>
+			message.StartsWith("Variable exit destination #") && message.EndsWith(" is invalid or not permitted."))).IsTrue();
 	}
 
 	/// <summary>

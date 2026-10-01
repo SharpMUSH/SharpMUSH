@@ -38,13 +38,12 @@ public class StartupRegistrationTests
 		return services;
 	}
 
-	private static bool Registers<T>(IServiceCollection services) =>
-		services.Any(d => d.ServiceType == typeof(T));
-
 	[Test]
 	[Arguments(typeof(IConfigureOptions<ForwardedHeadersOptions>), "HTTP pipeline")]
 	[Arguments(typeof(SharpMUSH.Implementation.Services.PluginCatalog), "database")]
 	[Arguments(typeof(IPermissionService), "engine")]
+	[Arguments(typeof(ICommandDiscoveryService), "engine (command discovery)")]
+	[Arguments(typeof(Quartz.ISchedulerFactory), "engine (Quartz scheduling)")]
 	[Arguments(typeof(IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>), "options")]
 	[Arguments(typeof(SharpMUSH.Messaging.Abstractions.IMessageBus), "messaging")]
 	[Arguments(typeof(IAdministrativeCapabilityService), "auth")]

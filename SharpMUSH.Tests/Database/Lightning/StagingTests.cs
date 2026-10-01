@@ -198,7 +198,6 @@ public class StagingTests
 	/// while the gate stays held forever.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task ReadsIssuedDuringPromotionCompleteAfterIt()
 	{
 		var path = TempPath();

@@ -12,6 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+// Each test rewrites the shared world's reality configuration, which every other test would see.
 public class RealityFunctionProjectionTests
 {
 	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]

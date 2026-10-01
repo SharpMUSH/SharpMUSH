@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
@@ -10,7 +11,6 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class ControlFlowCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -20,29 +20,9 @@ public class ControlFlowCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
-	{
-		if (args.Length < 2)
-		{
-			return null;
-		}
-
-		if (args[0] is not AnySharpObject who || who.Object().DBRef != executor)
-		{
-			return null;
-		}
-
-		if (args[1] is not SharpMessage msg)
-		{
-			return null;
-		}
-
-		return msg switch
-		{
-			MString markup => markup.ToPlainText(),
-			string text => text
-		};
-	}
+	private Task<TestIsolationHelpers.TestPlayer> CreateWaiter(string prefix)
+		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService, prefix);
 
 	[Test]
 	public async ValueTask SelectCommand()
@@ -53,9 +33,7 @@ public class ControlFlowCommandTests
 		// No /inline, so the matched action is a new queue entry -- poll rather than race it.
 		await Assert.That(await WaitForMessage(executor, "SelectCommand_One")).IsTrue();
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SelectCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "SelectCommand_Other")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -67,9 +45,7 @@ public class ControlFlowCommandTests
 		// No /inline, so the matched action is a new queue entry -- poll rather than race it.
 		await Assert.That(await WaitForMessage(executor, "SwitchCommand_One")).IsTrue();
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SwitchCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "SwitchCommand_Other")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -117,13 +93,9 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@skip 0=@pemit #1=SkipCommand False; @pemit #1=SkipCommand Rest"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand False"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SkipCommand False", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand Rest"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SkipCommand Rest", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -145,9 +117,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ifelse 1=@pemit #1=IfElseCommand True,@pemit #1=IfElseCommand False"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("IfElseCommand True"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IfElseCommand True", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -163,10 +133,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include {objDbRef}/INCL_DOLLAR_TEST"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeDollarPrefix_Executed_71934", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -182,10 +149,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include {objDbRef}/INCL_CARET_TEST"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeCaretPrefix_Executed_82045", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -201,10 +165,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include {objDbRef}/INCL_NOPREFIX_TEST"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeNoPrefix_Executed_93156", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -220,15 +181,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandListParse(
 			MarkupText.Plain($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit #1=IncludeNobreak_After_14267"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeNobreak_Before_14267", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeNobreak_After_14267", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -244,28 +199,18 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include {objDbRef}/INCL_DOLLARARG_TEST=Hello"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "IncludeDollarArg_Hello_25378", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask Break_QueuedSwitch_BreaksCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var baselineNotificationCount = NotifyService.ReceivedCalls().Count();
+		var baseline = WebAppFactoryArg.Notifications.CountFor(executor);
 		await Parser.CommandListParse(
 			MarkupText.Plain("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 
-		var newCalls = NotifyService.ReceivedCalls().Skip(baselineNotificationCount).ToList();
-		var newMessages = newCalls
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(call => call.GetArguments())
-			.Select(args => ExtractMessageForExecutor(args, executor))
-			.Where(message => message is not null)
-			.Select(message => message!)
-			.ToList();
+		var newMessages = MessagesFor(executor).Skip(baseline).ToList();
 
 		await Assert.That(newMessages).Contains("BreakQueued_Before_36489");
 		await Assert.That(newMessages).DoesNotContain("BreakQueued_After_36489");
@@ -310,12 +255,8 @@ public class ControlFlowCommandTests
 			$"@select/regexp/inline {subject}=(a+)+$|z81244,@pemit #1=SelTimeout_A_81244,@pemit #1=SelTimeout_B_81244"));
 
 		await Assert.That(await WaitForMessage(executor, "SelTimeout_B_81244")).IsTrue();
-		var saidInvalid = NotifyService.ReceivedCalls().Any(call =>
-			call.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup"
-			&& call.GetArguments() is [_, string key, ..] arguments
-			&& key == nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat)
-			&& arguments.SelectMany(argument => argument as object?[] ?? [argument]).Any(argument => argument?.ToString()?.Contains("z81244") == true));
-		await Assert.That(saidInvalid).IsFalse();
+		// The only text naming the pattern would be the invalid-pattern notice; the two actions do not.
+		await Assert.That(MessagesFor(executor).Any(message => message.Contains("z81244"))).IsFalse();
 	}
 
 	[Test]
@@ -326,15 +267,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/first/inline 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwFirst_A_47592", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "SwFirst_B_47592")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -345,15 +280,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/all/inline 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwAll_A_58603", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwAll_B_58603", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -364,15 +293,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/regexp/inline hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwRegexp_Match_69714", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "SwRegexp_NoMatch_69714")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -383,15 +306,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/regexp/inline HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwRegexpCI_Match_70825", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "SwRegexpCI_NoMatch_70825")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -402,10 +319,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/inline hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwHashDollar_hello_81936", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -416,38 +330,33 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@switch/inline goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "SwHashDollarDef_goodbye_92047", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/notify: the action fires normally, and "@notify me" is queued after it,
-		// releasing a task parked on the executor's semaphore.
+		// releasing a task parked on the executor's semaphore. The executor is a player of its own,
+		// so no other test's @notify can release that task and no @drain is needed to clear one.
+		var waiter = await CreateWaiter("SwNotify");
+		var executor = waiter.DbRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@drain/all me"));
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit #1=SwNotify_Released_{id}"));
+		await Parser.CommandParse(waiter.Handle, ConnectionService,
+			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit me=SwNotify_Released_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SwNotify_Released_{id}", 500)).IsFalse()
 			.Because("the parked task must still be waiting before @switch/notify runs");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@switch/notify 1=1,@pemit #1=SwNotify_Match_{id},@pemit #1=SwNotify_Default_{id}"));
+		await Parser.CommandParse(waiter.Handle, ConnectionService,
+			MarkupText.Plain($"@switch/notify 1=1,@pemit me=SwNotify_Match_{id},@pemit me=SwNotify_Default_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SwNotify_Match_{id}")).IsTrue();
 		await Assert.That(await WaitForMessage(executor, $"SwNotify_Released_{id}")).IsTrue()
 			.Because("@switch/notify queues '@notify me', which releases the waiting semaphore task");
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"SwNotify_Default_{id}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(executor, $"SwNotify_Default_{id}")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -464,10 +373,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include/chain {obj}/STEP1 {obj}/STEP2 {obj}/STEP3"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainAll_abc_71204")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainAll_abc_71204", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -482,15 +388,9 @@ public class ControlFlowCommandTests
 		// Default (no /nobreak): the @break in S1 short-circuits the chain, so S2 never runs.
 		await Parser.CommandListParse(MarkupText.Plain($"@include/chain {obj}/S1 {obj}/S2"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S1_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainBrk_S1_55019", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S2_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, "ChainBrk_S2_55019")).IsEqualTo(0);
 	}
 
 	[Test]
@@ -506,15 +406,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include/chain {obj}/P1 {obj}/P2=HELLO"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P1_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainArg_P1_HELLO_88431", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P2_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainArg_P2_HELLO_88431", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -529,15 +423,9 @@ public class ControlFlowCommandTests
 		// /nobreak confines the @break to N1, so the chain carries on to N2.
 		await Parser.CommandListParse(MarkupText.Plain($"@include/chain/nobreak {obj}/N1 {obj}/N2"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N1_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainNB_N1_31776", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N2_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainNB_N2_31776", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -556,15 +444,9 @@ public class ControlFlowCommandTests
 		await Parser.CommandListParse(MarkupText.Plain($"@include/chain {obj}/S1 {obj}/S2"));
 
 		// S1 ran once (the chain executed) ...
-		await NotifyService.Received(1).Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S1_88011")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainRecSelf_S1_88011", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 		// ... and S2 genuinely recursed (its marker fired), yet the call returned — proving it was bounded.
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S2_88011")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainRecSelf_S2_88011", INotifyService.NotificationType.PrivateEmit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -583,10 +465,7 @@ public class ControlFlowCommandTests
 
 		// S1 fired (the chain ran, repeatedly) and the call returned — proving whole-chain recursion driven
 		// by a single link is bounded/caught, not infinite.
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecWhole_S1_43307")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Delivered(executor, "ChainRecWhole_S1_43307", INotifyService.NotificationType.PrivateEmit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	// ---- @select / @switch: PennMUSH parity (issue #958, sweep item #7) ----
@@ -603,16 +482,22 @@ public class ControlFlowCommandTests
 		"SelectQregistersLocalized", "SelectQregistersCleared", "SelectExecutionQueued", "SelectWillQueueNotify"
 	];
 
-	private List<string> MessagesFor(DBRef executor) =>
-		NotifyService.ReceivedCalls()
-			.ToList()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(call => ExtractMessageForExecutor(call.GetArguments(), executor))
-			.Where(message => message is not null)
-			.Select(message => message!)
-			.ToList();
+	private List<string> MessagesFor(DBRef recipient) => WebAppFactoryArg.Notifications.For(recipient);
 
-	/// <summary>Polls the notify mock until <paramref name="expected"/> has been delivered to the executor.</summary>
+	/// <summary>
+	/// How many times <paramref name="recipient"/> was sent exactly <paramref name="message"/> by
+	/// themselves as <paramref name="type"/>. Every message here carries a token no other test uses,
+	/// so an exact count still holds with the rest of the session writing to the same recipient.
+	/// </summary>
+	private int Delivered(DBRef recipient, string message, INotifyService.NotificationType type)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(recipient)
+			.Count(delivery => delivery.Message == message && delivery.Sender == recipient && delivery.Type == type);
+
+	/// <summary>How many times <paramref name="recipient"/> was sent exactly <paramref name="message"/>, by anyone, as anything.</summary>
+	private int Heard(DBRef recipient, string message)
+		=> MessagesFor(recipient).Count(heard => heard == message);
+
+	/// <summary>Polls the recorder until <paramref name="expected"/> has been delivered to the executor.</summary>
 	private async Task<bool> WaitForMessage(DBRef executor, string expected, int timeoutMs = 10000)
 	{
 		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
@@ -705,21 +590,20 @@ public class ControlFlowCommandTests
 	[Test]
 	public async ValueTask Select_NotifySwitch_ActuallyQueuesTheNotify()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		// A player of its own, so the single '@notify me' this queues can only release the task
+		// parked below.
+		var waiter = await CreateWaiter("SelNotify");
+		var executor = waiter.DbRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
 
-		// Clear any semaphore task another test parked on the executor, and reset the count, so the
-		// single '@notify me' this queues can only release the task parked below.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@drain/all me"));
-
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit #1=SelNotify_Released_{id}"));
+		await Parser.CommandParse(waiter.Handle, ConnectionService,
+			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit me=SelNotify_Released_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SelNotify_Released_{id}", 500)).IsFalse()
 			.Because("the parked task must still be waiting before @select/notify runs");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@select/notify 1=1,@pemit #1=SelNotify_Match_{id}"));
+		await Parser.CommandParse(waiter.Handle, ConnectionService,
+			MarkupText.Plain($"@select/notify 1=1,@pemit me=SelNotify_Match_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SelNotify_Released_{id}")).IsTrue()
 			.Because("@select/notify queues '@notify me', which releases the waiting semaphore task");

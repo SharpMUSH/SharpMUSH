@@ -62,7 +62,6 @@ public class FlagAliasTests
 	/// refused by the type restriction and would test nothing.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task HasFlagFunction_AnswersToTheBritishSpellingOfColour()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

@@ -18,7 +18,6 @@ namespace SharpMUSH.Tests.Commands;
 /// do differently here is a divergence from Penn by construction, so these tests assert the two
 /// against each other rather than against a hand-written expectation.
 /// </summary>
-[NotInParallel]
 public class SetDispatchTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -30,6 +29,18 @@ public class SetDispatchTests
 
 	private async Task<bool> HasFlag(DBRef who, string flag)
 		=> await (await Mediator.Send(new GetObjectNodeQuery(who))).Expect<AnySharpObject>().HasFlag(flag);
+
+	/// <summary>
+	/// A connected player standing in a room of its own, so what it hears is only what its own
+	/// commands produced and not another test's chatter in the shared start room.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> PlayerInOwnRoom(string prefix)
+	{
+		var room = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, DBRef.Parse(room.Message!.ToPlainText()));
+	}
 
 	/// <summary>
 	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran.
@@ -110,8 +121,7 @@ public class SetDispatchTests
 	[Test]
 	public async ValueTask SetFunction_NotifiesTheExecutorLikeSetCommand()
 	{
-		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetNotify");
+		var owner = await PlayerInOwnRoom("SetNotify");
 		var viaCommand = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetNotifyCmd");
 		var viaFunction = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetNotifyFn");
 
@@ -209,8 +219,7 @@ public class SetDispatchTests
 	[Test]
 	public async ValueTask QuietExecutor_HearsNoSetConfirmation()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetQuietExec");
+		var player = await PlayerInOwnRoom("SetQuietExec");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=QUIET"));
 
 		var said = await MessagesWhile(player.DbRef, async () =>
@@ -228,8 +237,7 @@ public class SetDispatchTests
 	[Test]
 	public async ValueTask TogglingQuietItself_StillReports()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetQuietToggle");
+		var player = await PlayerInOwnRoom("SetQuietToggle");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=QUIET"));
 
 		var said = await MessagesWhile(player.DbRef, async () =>
@@ -249,8 +257,7 @@ public class SetDispatchTests
 	[Test]
 	public async ValueTask SetFunction_ReturnsNothingWhenTheFlagDoesNotExist()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetNoSuchFlag");
+		var player = await PlayerInOwnRoom("SetNoSuchFlag");
 
 		var said = await MessagesWhile(player.DbRef, async () =>
 			await Parser.CommandParse(player.Handle, ConnectionService,

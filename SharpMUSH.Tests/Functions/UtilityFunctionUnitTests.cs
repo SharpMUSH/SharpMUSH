@@ -319,34 +319,39 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	// Replaces the world's suggestion data, which @suggest and every other suggest() reads.
 	[Test, NotInParallel]
 	public async Task SuggestFunction()
 	{
 		var dataService = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
-
-		var suggestionData = new Library.ExpandedObjectData.SuggestionData(new Dictionary<string, HashSet<string>>
+		var original = await dataService.GetExpandedServerDataAsync<Library.ExpandedObjectData.SuggestionData>();
+		try
 		{
-			["test"] = new HashSet<string> { "apple", "application", "apply", "appreciate", "apricot", "banana", "grape" }
-		});
+			var suggestionData = new Library.ExpandedObjectData.SuggestionData(new Dictionary<string, HashSet<string>>
+			{
+				["test"] = new HashSet<string> { "apple", "application", "apply", "appreciate", "apricot", "banana", "grape" }
+			});
 
-		await dataService.SetExpandedServerDataAsync(suggestionData);
+			await dataService.SetExpandedServerDataAsync(suggestionData);
 
-		// "aple" is a misspelling of apple
-		var result1 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple)")))?.Message?.ToString();
-		await Assert.That(result1).IsNotNull();
-		await Assert.That(result1).Contains("apple");
+			// "aple" is a misspelling of apple
+			var result1 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple)")))?.Message?.ToString();
+			await Assert.That(result1).IsNotNull();
+			await Assert.That(result1).Contains("apple");
 
-		var result2 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple,|)")))?.Message?.ToString();
-		await Assert.That(result2).IsNotNull();
-		await Assert.That(result2).Contains("|");
+			var result2 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple,|)")))?.Message?.ToString();
+			await Assert.That(result2).IsNotNull();
+			await Assert.That(result2).Contains("|");
 
-		var result3 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,app,|,2)")))?.Message?.ToString();
-		await Assert.That(result3).IsNotNull();
-		var suggestions = result3!.Split('|');
-		await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2);
+			var result3 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,app,|,2)")))?.Message?.ToString();
+			await Assert.That(result3).IsNotNull();
+			var suggestions = result3!.Split('|');
+			await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2);
 
-		var result4 = (await Parser.FunctionParse(MarkupText.Plain("suggest(nonexistent,word)")))?.Message?.ToString();
-		await Assert.That(result4).IsEqualTo(string.Empty);
+			var result4 = (await Parser.FunctionParse(MarkupText.Plain("suggest(nonexistent,word)")))?.Message?.ToString();
+			await Assert.That(result4).IsEqualTo(string.Empty);
+		}
+		finally { await dataService.SetExpandedServerDataAsync(original ?? new Library.ExpandedObjectData.SuggestionData()); }
 	}
 
 	[Test]

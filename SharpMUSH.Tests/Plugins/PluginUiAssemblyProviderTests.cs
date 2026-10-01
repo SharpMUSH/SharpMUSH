@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.Plugins;
 /// hash mismatch, or a path-traversal attempt. The controller layers the <c>allow_browser_code</c> gate on
 /// top; this proves the verification/serving core.
 /// </summary>
-[NotInParallel]
 public class PluginUiAssemblyProviderTests
 {
 	private const string PluginId = "ui-sample";

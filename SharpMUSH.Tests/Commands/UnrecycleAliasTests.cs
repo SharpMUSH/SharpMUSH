@@ -17,11 +17,10 @@ namespace SharpMUSH.Tests.Commands;
 /// placeholder here that took no arguments and only announced itself as unimplemented.
 /// <para>
 /// Permission is the subject of half of these, so they run through a mortal handle — God controls
-/// everything and would pass the gate vacuously. Not parallel with the destruction classes, whose
-/// <c>@purge</c> frees any GOING object in the shared world.
+/// everything and would pass the gate vacuously. A concurrent <c>@purge</c> cannot take these objects
+/// mid-test: freeing needs two passes after the <c>@destroy</c>, and the serialized purge tests run alone.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class UnrecycleAliasTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

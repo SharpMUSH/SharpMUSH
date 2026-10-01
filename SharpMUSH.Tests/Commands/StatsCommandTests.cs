@@ -156,11 +156,16 @@ public partial class StatsCommandTests
 	public async ValueTask Tables_ReportsEntryCountsFromTheOwningServices()
 	{
 		var mortal = await Mortal("StatsTables");
-		var flagCount = await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync();
-		var attributeCount = await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).CountAsync();
+		var flagsBefore = await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync();
+		var attributesBefore = await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).CountAsync();
 
 		var messages = await MessagesWhile(mortal.DbRef,
 			async () => await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@stats/tables")));
+
+		// Tests running alongside define and remove flags and attributes, so the table's figure is the count at
+		// some moment between these two reads.
+		var flagsAfter = await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync();
+		var attributesAfter = await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).CountAsync();
 
 		static int Row(List<string> lines, string table)
 			=> lines.Select(l => l.Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -168,8 +173,8 @@ public partial class StatsCommandTests
 				.Select(cells => int.Parse(cells[1]))
 				.DefaultIfEmpty(-1).First();
 
-		await Assert.That(Row(messages, "Flags")).IsEqualTo(flagCount);
-		await Assert.That(Row(messages, "Attributes")).IsEqualTo(attributeCount);
+		await Assert.That(Row(messages, "Flags")).IsBetween(Math.Min(flagsBefore, flagsAfter), Math.Max(flagsBefore, flagsAfter));
+		await Assert.That(Row(messages, "Attributes")).IsBetween(Math.Min(attributesBefore, attributesAfter), Math.Max(attributesBefore, attributesAfter));
 		await Assert.That(Row(messages, "Functions")).IsGreaterThan(100);
 		await Assert.That(Row(messages, "Commands")).IsGreaterThan(100);
 		await Assert.That(Row(messages, "@Functions")).IsGreaterThanOrEqualTo(0);

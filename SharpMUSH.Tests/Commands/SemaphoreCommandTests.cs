@@ -11,7 +11,6 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class SemaphoreCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -147,6 +146,8 @@ public class SemaphoreCommandTests
 		}
 	}
 
+	// Leaves a pending repair on the scheduler that every semaphore transaction in the run must pass.
+	[NotInParallel]
 	[Test]
 	[Arguments(0, "none")]
 	[Arguments(0, "flag")]
@@ -256,12 +257,13 @@ public class SemaphoreCommandTests
 		var sentinel = await Scheduler.AdmitWork(() => { completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "notice-sentinel", "test");
 		await Assert.That(sentinel.Accepted).IsTrue();
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.Object.DBRef),
-			TestHelpers.MatchingMessage($"Semaphore attribute must have a numeric or empty value. Current value: {value}"),
-			TestHelpers.MatchingObject(player.Object.DBRef));
+		await Assert.That(Heard(player.Object.DBRef, $"Semaphore attribute must have a numeric or empty value. Current value: {value}",
+			player.Object.DBRef)).IsEqualTo(1);
 		await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo(value);
 	}
 
+	// Asserts on the whole queue's pending total, which any concurrently queued work changes.
+	[NotInParallel]
 	[Test]
 	[Arguments(false, "invalid")]
 	[Arguments(true, "invalid")]
@@ -317,6 +319,8 @@ public class SemaphoreCommandTests
 		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).CountAsync()).IsEqualTo(0);
 	}
 
+	// Leaves a pending repair on the scheduler that every semaphore transaction in the run must pass.
+	[NotInParallel]
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -379,11 +383,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@notify {semObj}/{uniqueAttr}"));
 
-		await Task.Delay(2000);
-
-		await NotifyService.Received(1).Notify(
-			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage(testMessage), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, testMessage, executor, TimeSpan.FromSeconds(10));
+		await Assert.That(Heard(executor, testMessage, executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -397,9 +398,7 @@ public class SemaphoreCommandTests
 
 		// @dolist/inline a b c fires 3 iterations, each @pemit emits the same unique string.
 		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
-		await NotifyService.Received(3).Notify(
-			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage($"Inline{uniqueId}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard(executor, $"Inline{uniqueId}", executor, INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test, Skip("Needs a better way of testing. This is too timing sensitive.")]
@@ -423,22 +422,18 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Guards against CB.RSArgs interfering with comma parsing of qreg parameters.
-		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQParam");
-		var uniqueId = Guid.NewGuid().ToString("N");
-		var uniqueAttr = $"SEM_{uniqueId}";
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "SemSetQParam");
+		var uniqueAttr = $"SEM_{Guid.NewGuid():N}";
 
-		var result = await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@notify/setq me/{uniqueAttr}=0,TestValue"));
 
 		// The command should not generate a parsing error about pairs.
 		// It might say "no queue entry" but must NOT say the pairs-error message.
-		await NotifyService.DidNotReceive().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
+			.DoesNotContain("Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
 	}
 
 	[Test]
@@ -458,11 +453,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
 
-		await Task.Delay(2000);
-
-		await NotifyService.Received(1).Notify(
-			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage($"QRegValue:{testValue}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, $"QRegValue:{testValue}", executor, TimeSpan.FromSeconds(10));
+		await Assert.That(Heard(executor, $"QRegValue:{testValue}", executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -504,6 +496,8 @@ public class SemaphoreCommandTests
 		await Command($"@drain {target}/{attribute}");
 	}
 
+	// Blocks the scheduler's only reader, stalling every other test's queued work.
+	[NotInParallel]
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -539,6 +533,8 @@ public class SemaphoreCommandTests
 		await Assert.That(await Count()).IsEqualTo("");
 	}
 
+	// Blocks the scheduler's only reader, stalling every other test's queued work.
+	[NotInParallel]
 	[Test]
 	public async ValueTask NotifyCreditSurvivesAlreadyPublishedManagedTimeout()
 	{
@@ -624,9 +620,9 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
 
-		await Task.Delay(3000);
-
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, attrA);
+		await TestHelpers.WaitForAttribute(AttributeService, obj, attrB);
 
 		var attrResultA = (await AttributeService.GetAttributeAsync(obj, obj, attrA,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"First command in @wait callback should set {attrA}");
@@ -706,11 +702,10 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
 
-		await Task.Delay(2000);
-
 		// PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
 		// SharpMUSH currently stores the literal "[add(1,1)]" instead (the bug).
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, uniqueAttr);
 		var attr = (await AttributeService.GetAttributeAsync(obj, obj, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
@@ -738,9 +733,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"+waitstore_{uniqueId.ToLower()} {targetName}"));
 
-		await Task.Delay(3000);
-
 		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode, uniqueAttr);
 		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{uniqueAttr} should have been set by the @wait callback");
 
@@ -771,9 +765,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
 
-		await Task.Delay(3000);
-
 		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode, grpAttr);
 		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, grpAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{grpAttr} should have been set by the @wait callback's @switch non-#-1 branch");
 
@@ -830,6 +823,8 @@ public class SemaphoreCommandTests
 		await Assert.That(current.Last().Value.ToPlainText()).IsEqualTo("0");
 	}
 
+	// Asserts on the whole queue's pending total, which any concurrently queued work changes.
+	[NotInParallel]
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -855,6 +850,10 @@ public class SemaphoreCommandTests
 		await Assert.That(current.Last().Value.ToPlainText()).IsEqualTo("0");
 	}
 
+
+	private int Heard(DBRef who, string message, DBRef sender, INotifyService.NotificationType? type = null)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(who).Count(delivery => delivery.Message == message
+			&& delivery.Sender == sender && (type is null || delivery.Type == type));
 
 	private async Task<string> SemaphoreCountAsync(object semObj, string attr)
 		=> (await Parser.FunctionParse(MarkupText.Plain($"get({semObj}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
@@ -925,19 +924,12 @@ public class SemaphoreCommandTests
 			MarkupText.Plain($"@wait {semObj}/{attr}=think {token}"));
 		await Task.Delay(800);
 
-		await NotifyService.DidNotReceive().Notify(
-			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage(token), TestHelpers.MatchingObject(executor),
-			INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(executor, token, executor, INotifyService.NotificationType.Announce)).IsEqualTo(0);
 
 		// ...and still runs once released, so the test cannot pass by the task being lost.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {semObj}/{attr}"));
-		await Task.Delay(1200);
-
-		await NotifyService.Received(1).Notify(
-			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage(token), TestHelpers.MatchingObject(executor),
-			INotifyService.NotificationType.Announce);
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, token, executor, TimeSpan.FromSeconds(10));
+		await Assert.That(Heard(executor, token, executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>

@@ -146,7 +146,6 @@ public class WebFunctionUnitTests
 	/// forbidden tag refusing the whole fragment and a forbidden parameter dropping them all.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task WshtmlHoldsAMortalToTheTagwrapPolicy()
 	{
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
