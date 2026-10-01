@@ -130,7 +130,16 @@
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ResetResult>();
-                Snackbar.Add(Loc["AdmProfilesResetComplete", result?.Written ?? 0], Severity.Success);
+                // A 200 still names the attributes it could not write. The status reload below only
+                // shows presence, so a failed overwrite of an edited attribute would otherwise go unseen.
+                if (result?.Failed is { Count: > 0 } failed)
+                {
+                    Snackbar.Add(Loc["AdmProfilesResetFailedError", string.Join(", ", failed)], Severity.Error);
+                }
+                else
+                {
+                    Snackbar.Add(Loc["AdmProfilesResetComplete", result?.Written ?? 0], Severity.Success);
+                }
                 await LoadAsync();
             }
             else

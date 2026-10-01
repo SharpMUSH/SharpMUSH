@@ -176,4 +176,73 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 			await ResetAsync(http);
 		}
 	}
+
+	/// <summary>
+	/// A profile-handler installed from a remote or fork at the same version as this build's leaves the
+	/// version check satisfied, but its recorded source, commit and baselines describe that package.
+	/// Writing the bundled values over it would turn them into local drift against those baselines.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Reset_WhenInstalledFromAnotherSource_RefusesAndWritesNothing()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		var registry = factory.Services.GetRequiredService<IPackageRegistryService>();
+		var installed = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+		var marker = TestIsolationHelpers.GenerateUniqueName("PHFork");
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		await Mediator.Send(new SetAttributeCommand(Handler, Damaged.Split('`'), MarkupText.Plain(marker), owner));
+		await registry.UpsertInstalledPackageAsync(installed with
+		{
+			SourceRepo = "https://example.invalid/fork/profile-handler.git",
+			InstalledCommit = "0123456789abcdef"
+		});
+		try
+		{
+			using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+			await Assert.That(await ReadAsync(Damaged)).IsEqualTo(marker);
+		}
+		finally
+		{
+			await registry.UpsertInstalledPackageAsync(installed);
+			await ResetAsync(http);
+		}
+	}
+
+	/// <summary>
+	/// When <c>http_handler</c> is repointed after install, the plan targets the new handler while the
+	/// recorded baselines stay on the old one. Writing there would leave values the registry does not
+	/// track (uninstall leaves them behind, upgrade sees add/add conflicts). Simulated by moving one
+	/// baseline to another object, which is what the registry looks like after the repoint.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Reset_WhenTheBaselinesAreOnAnotherObject_RefusesAndWritesNothing()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		var registry = factory.Services.GetRequiredService<IPackageRegistryService>();
+		var baseline = (await registry.GetManagedAttributesAsync("profile-handler"))
+			.Single(a => a.Attribute.Equals(Damaged, StringComparison.OrdinalIgnoreCase));
+		var moved = baseline with { Objid = "#0:0" };
+		var marker = TestIsolationHelpers.GenerateUniqueName("PHMoved");
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		await Mediator.Send(new SetAttributeCommand(Handler, Damaged.Split('`'), MarkupText.Plain(marker), owner));
+		await registry.RemoveManagedAttributeAsync(baseline.PackageId, baseline.Objid, baseline.Attribute);
+		await registry.UpsertManagedAttributeAsync(moved);
+		try
+		{
+			using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+			await Assert.That(await ReadAsync(Damaged)).IsEqualTo(marker);
+		}
+		finally
+		{
+			await registry.RemoveManagedAttributeAsync(moved.PackageId, moved.Objid, moved.Attribute);
+			await registry.UpsertManagedAttributeAsync(baseline);
+			await ResetAsync(http);
+		}
+	}
 }

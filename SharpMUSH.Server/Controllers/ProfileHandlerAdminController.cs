@@ -31,7 +31,9 @@ namespace SharpMUSH.Server.Controllers;
 /// is the package value with its <c>{{$ref}}</c> placeholders resolved, and it equals the recorded
 /// baseline, so afterwards the package manager sees those attributes as unmodified. Attributes on
 /// the handler that the package does not manage are left alone. Reset refuses (409) unless the
-/// installed version is the one this build ships, since only then do those baselines match.</para>
+/// installed version is the one this build ships, from the bundled source, and every recorded
+/// baseline on the configured handler already holds this build's value; otherwise the write would land
+/// where the registry does not track it.</para>
 ///
 /// Routes:
 ///   GET  api/admin/profile-handler        — handler dbref/name + presence of each package attribute
@@ -122,6 +124,15 @@ public class ProfileHandlerAdminController(
 				"upgrade or reinstall it through the package manager."));
 		}
 
+		// The same version from a configured remote or a fork is someone else's package: bootstrap leaves
+		// it alone, and its record and baselines describe that package's softcode, not this build's.
+		if (!BundledPackages.IsCatalogueSource(installed.SourceRepo))
+		{
+			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
+				$"{PackageId} was installed from {installed.SourceRepo}, not from this server's bundled packages; " +
+				"reinstall it from the bundled source through the package manager."));
+		}
+
 		if (await PackageManagerAsync(ct) is not { } packageManager)
 		{
 			return StatusCode(StatusCodes.Status500InternalServerError,
@@ -133,6 +144,20 @@ public class ProfileHandlerAdminController(
 		{
 			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
 				$"{PackageId} is blocked by:{string.Join(", ", plan.DependencyIssues.Select(i => i.PackageId))}."));
+		}
+
+		// Reset leaves the registry as it is, so it may only write where the recorded baseline already is
+		// this build's value on this object. A baseline elsewhere (http_handler repointed since install) or
+		// holding other content would leave the written value untracked, or tracked as local drift.
+		var untracked = plan.Attributes
+			.Where(change => change.NewValue is not null && change.BaseValue != change.NewValue)
+			.Select(change => change.Attribute)
+			.ToList();
+		if (untracked.Count > 0)
+		{
+			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
+				$"The package registry's baselines for {PackageId} do not match this build on #{number} " +
+				$"({string.Join(", ", untracked)}); reinstall it through the package manager."));
 		}
 
 		var written = 0;
