@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Services
 @inject MailService MailApi
 @inject ITerminalService Terminal
+@inject IAccountAuthState AccountAuth
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
@@ -40,9 +41,8 @@
             <SectionLabel>@Loc["NavMailFolders"]</SectionLabel>
         }
         <nav class="mail-side-folders" aria-label="@Loc["NavMailFolders"]">
-            @foreach (var name in _folders)
+            @foreach (var folder in _folders)
             {
-                var folder = name;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@folder"
                             Href="@FolderHref(folder)" IsCurrent="@IsCurrent(folder)"
                             Unread="@(folder == Inbox ? _inboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
@@ -71,6 +71,7 @@
         Nav.LocationChanged += OnLocationChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         MailApi.Changed += OnMailChanged;
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
         Locate();
         _connected = Terminal.IsConnected;
         if (_connected) await RefreshAsync();
@@ -136,6 +137,17 @@
         StateHasChanged();
     });
 
+    /// <summary>
+    /// A character switch rebinds the REST session to the new character without reconnecting the
+    /// terminal, so the mailbox on screen is the previous character's until it is read again.
+    /// </summary>
+    private void OnActingChanged() => InvokeAsync(async () =>
+    {
+        if (!_connected) return;
+        await RefreshAsync();
+        StateHasChanged();
+    });
+
     private void OnMailChanged(MailService.MailChange change) => InvokeAsync(async () =>
     {
         if (!_connected) return;
@@ -161,5 +173,6 @@
         Nav.LocationChanged -= OnLocationChanged;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         MailApi.Changed -= OnMailChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActingChanged;
     }
 }

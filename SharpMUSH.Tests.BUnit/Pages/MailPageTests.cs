@@ -80,6 +80,7 @@ public class MailPageTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
+			.AddSingleton(Substitute.For<IAccountAuthState>())
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>()));
 
@@ -119,9 +120,11 @@ public class MailPageTests : TrackingBunitContext
 /// </summary>
 public class MailPageD1Tests : TrackingBunitContext
 {
+	private SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake _mail = default!;
+
 	private IRenderedComponent<SharpMUSH.Client.Pages.Mail> RenderAt(string path)
 	{
-		SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		_mail = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(path);
 		var cut = Render<SharpMUSH.Client.Pages.Mail>();
 		cut.WaitForAssertion(() =>
@@ -150,6 +153,27 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".mail-list.kit-card .kit-card-title").TextContent).IsEqualTo("INBOX");
 		await Assert.That(cut.FindAll(".mail-reading.kit-card").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".mail-folders").Count).IsEqualTo(0).Because("the folders live in the section sidebar now");
+	}
+
+	/// <summary>
+	/// Switching character on the Mail page lists the new character's messages, and the message that was
+	/// open — the previous character's — is put away. The page reloaded only when the terminal
+	/// reconnected, which a character switch does not do.
+	/// </summary>
+	[Test]
+	public async Task SwitchingCharacter_ListsTheNewCharactersMessages()
+	{
+		var cut = RenderAt("/mail");
+		Select(cut, 0);
+
+		_mail.SwitchCharacter();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mail-row").Count != 1) throw new InvalidOperationException("still the previous character's list");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mail-row").TextContent).Contains("Second bell");
+		await Assert.That(cut.Find(".mail-reading").TextContent).DoesNotContain(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body);
 	}
 
 	[Test]

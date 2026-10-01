@@ -5,6 +5,7 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
+@inject IAccountAuthState AccountAuth
 @inject MailService MailApi
 @inject NavigationManager Nav
 @implements IDisposable
@@ -149,6 +150,7 @@ else
     {
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -243,5 +245,22 @@ else
             StateHasChanged();
         });
 
-    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
+    /// <summary>
+    /// A character switch rebinds the REST session to the new character without reconnecting the
+    /// terminal: the list and the open message are the previous character's until the folder is read
+    /// again, which also puts the open message away.
+    /// </summary>
+    private void OnActingChanged()
+        => InvokeAsync(async () =>
+        {
+            if (!_characterActive) return;
+            await LoadFolderAsync(_folder);
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+    }
 }

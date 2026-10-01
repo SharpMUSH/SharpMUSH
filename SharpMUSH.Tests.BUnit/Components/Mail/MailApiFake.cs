@@ -16,17 +16,35 @@ namespace SharpMUSH.Tests.BUnit.Components.Mail;
 /// </summary>
 public sealed class MailApiFake : HttpMessageHandler
 {
-	private readonly List<MailService.MailSummary> _inbox =
+	private List<MailService.MailSummary> _inbox =
 	[
 		new(1, "Tomas Reyes", "The ledger", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX"),
 		new(2, "Wren Halloway", "Calendar of Feasts", DateTimeOffset.UnixEpoch, Read: false, Urgent: true, "INBOX"),
 		new(3, "Ilsa Varn", "Lanterns", DateTimeOffset.UnixEpoch, Read: true, Urgent: false, "INBOX"),
 	];
 
-	private readonly List<MailService.MailSummary> _sent =
+	private List<MailService.MailSummary> _sent =
 	[
 		new(1, "Ilsa Varn", "Re: The ledger", DateTimeOffset.UnixEpoch, Read: true, Urgent: false, "SENT"),
 	];
+
+	private string[] _folders = ["INBOX", "SENT"];
+
+	/// <summary>The account session the Mail section reads its acting character from.</summary>
+	public IAccountAuthState Auth { get; } = Substitute.For<IAccountAuthState>();
+
+	/// <summary>
+	/// The tab switches to another character. The server binds every later request to the new one, so
+	/// from here on it answers with that character's mailbox — folders INBOX and PLOTS, one unread
+	/// message — and the account session announces the change.
+	/// </summary>
+	public void SwitchCharacter()
+	{
+		_folders = ["INBOX", "PLOTS"];
+		_inbox = [new(1, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX")];
+		_sent = [];
+		Auth.ActiveCharacterChanged += Raise.Event<Action>();
+	}
 
 	public const string Body = "Meet me by the second bell.";
 
@@ -39,7 +57,7 @@ public sealed class MailApiFake : HttpMessageHandler
 		var query = request.RequestUri.Query;
 
 		if (request.Method == HttpMethod.Get && path is "api/mail/folders" or "api/mail") ListRequests++;
-		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return Task.FromResult(Json(new[] { "INBOX", "SENT" }));
+		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return Task.FromResult(Json(_folders));
 		if (request.Method == HttpMethod.Get && path == "api/mail") return Task.FromResult(Json(query.Contains("folder=SENT") ? _sent : _inbox));
 
 		var parts = path.Split('/');
@@ -79,6 +97,7 @@ public sealed class MailApiFake : HttpMessageHandler
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
+			.AddSingleton(fake.Auth)
 			.AddSingleton(new MailService(factory))
 			.AddSingleton<SidebarCollapseService>()
 			.AddEchoLocalizer();

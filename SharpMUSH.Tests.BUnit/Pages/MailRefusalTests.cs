@@ -40,6 +40,7 @@ public class MailRefusalTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
+			.AddSingleton(Substitute.For<IAccountAuthState>())
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>()));
 

@@ -99,6 +99,24 @@ public class MailSidebarTests : TrackingBunitContext
 		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("2");
 	}
 
+	/// <summary>
+	/// Switching character inside the Mail section lists the new character's mailbox. The switch rebinds
+	/// the REST session but leaves the terminal alone, and the sidebar listened only to the terminal, so
+	/// it went on showing the previous character's folders and unread count.
+	/// </summary>
+	[Test]
+	public async Task SwitchingCharacter_ListsTheNewCharactersMailbox()
+	{
+		var cut = RenderAt("/mail");
+
+		_fake.SwitchCharacter();
+
+		cut.WaitForAssertion(() => cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=PLOTS']"), TimeSpan.FromSeconds(5));
+		var folders = cut.FindAll(".mail-side-folders a.kit-row").Select(a => a.GetAttribute("href")).ToList();
+		await Assert.That(folders).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=PLOTS"]);
+		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("1");
+	}
+
 	[Test]
 	public async Task WithoutACharacter_ListsNoMailbox()
 	{
