@@ -26,23 +26,21 @@
 
 These commands are only meaningful if the Quota system is enabled (check the use_quota @config option).
 
-@quota shows the current quota for `<player>`, or for the executor if no `<player>` is given. You must control `<player>`, or have either the See_All or Quotas @power.
+@quota shows the current quota for `<player>`, or for the executor's owner if no `<player>` is given. You must control `<player>`, or have either the See_All or Quotas @power.
 
 ## Administrative quota changes
 
-`@squota <player>=[+|-]<amount>`<br>
-`@allquota[/quiet] [<limit>]`
+`@quota/set <player>=<amount>`<br>
+`@quota/all`<br>
+`@squota [<player>]`<br>
+`@allquota[/quiet] <amount>`
 
-@squota is a Wizard-only command which adjusts the quota of `<player>`. If `<amount>` is prefixed by + or -, their current quota will be incremented or decremented by `<amount>`, respectively. Otherwise, their total quota is set to `<amount>`.
+A Wizard can use `@quota/set` to set a player's total quota to an integer amount, or `@quota/all` to list all players' quotas. The amount is an absolute value: a leading + or - is parsed as a sign, not as a relative adjustment. The value is not clamped to the player's current owned-object count; setting it below current usage prevents further quota-limited building.
 
-@allquota can only be used by God. With no `<limit>` argument, it reports the quotas of all players. If a `<limit>` is given, the quotas of all players is reset to `<limit>`. The `/quiet` switch stops @allquota reporting the current quotas before changing them.
+`@squota` currently reports used and total quota, with the same visibility rules as `@quota`; it does not set quota. This differs from PennMUSH. Use `@quota/set` to change one player's quota.
 
-Players always have enough quota for the objects they currently own; if you attempt to set their quota to a lower number (with @squota or @allquota), it will be set to the number of objects they own instead.
-
-`@quota/set` and `@quota/all` are equivilent to @squota and @allquota, respectively.
-
+`@allquota` requires an integer amount and sets every player's total quota to that value. It is available to Wizards and holders of the Quota power. Normally each player is notified; `/quiet` suppresses those individual notifications. To list quotas without changing them, use `@quota/all`.
 
 **See Also:**
 - [QUOTAS]
-- [@power]
 - [@power]

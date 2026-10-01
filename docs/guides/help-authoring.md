@@ -166,7 +166,9 @@ fences, regex guidance distinguishes substring search from anchored validation, 
 TOC labels come from parsed heading content rather than raw Markdown. The regex guides
 now describe .NET syntax, Unicode/ASCII class choices, strict anchors, parser escaping,
 and the distinction between PennMUSH-compatible softcode captures and .NET replacements;
-the former PCRE manual attribution is retained. The IANA 2011n
+the former PCRE manual attribution is retained. Further review corrections cover Unicode
+accent display, escaped table pipes and lowercase thorn, the recycle command spelling,
+quota-only destruction accounting, supported quota command forms, and actual uptime output. The IANA 2011n
 catalog is retained as a complete, explicitly historical section.
 
 ## Validation

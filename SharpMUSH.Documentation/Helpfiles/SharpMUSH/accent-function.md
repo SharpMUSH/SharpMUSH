@@ -25,7 +25,7 @@
 
 The accent() function will return `<string>`, with characters in it possibly changed to accented ones according to `<template>`. Both arguments must be the same size.
 
-Whether or not the resulting string is actually displayed correctly is client-dependent. Some OSes uses different character sets than the one assumed (Unicode and ISO 8859-1), and some clients strip these 8-bit characters.
+SharpMUSH stores the resulting characters as Unicode text. Correct display depends on the client, its encoding settings, and its fonts. Legacy clients or connections restricted to ASCII may strip or replace accented characters.
 
 For each character in `<string>`, the corresponding character of `<template>` is checked according to the table in [accents], and a replacement done. If either the current `<string>` or `<template>` characters aren't in the table, the `<string>` character is passed through unchanged.
 
