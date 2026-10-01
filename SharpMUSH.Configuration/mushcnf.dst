@@ -42,7 +42,7 @@ http_handler 8
 # the setting is absent: the web portal serves its own character directory, online
 # list, profiles and Dynamic Application routes through this same surface, so the
 # quota is not spent only by outside callers. Raise it further if the portal is busy.
-http_per_second 30
+http_per_second 60
 
 # The port it's running on. See also ssl_port, later.
 port 4203
