@@ -91,7 +91,7 @@ public class ShellFrameTests
 	[Test]
 	public async Task PlayFocusMode_TakesTheShellChromeAway_TheTouchHeaderIncluded()
 	{
-		var rule = Regex.Match(Shell(), @"\.phosphor-shell:has\(\.play--focus\)\s*:is\((?<parts>[^)]*)\)\s*\{[^}]*display:\s*none");
+		var rule = Regex.Match(Shell(), @"\.phosphor-shell:has\(> \.phosphor-content-col > \.phosphor-main > \.phosphor-page > \.kit-section-body > \.play--focus\)\s*:is\((?<parts>[^)]*)\)\s*\{[^}]*display:\s*none");
 		await Assert.That(rule.Success).IsTrue();
 		foreach (var part in new[] { ".phosphor-rail", ".phosphor-topbar", ".phosphor-topzone", ".phosphor-footer", ".phosphor-widget-aside" })
 			await Assert.That(rule.Groups["parts"].Value).Contains(part);

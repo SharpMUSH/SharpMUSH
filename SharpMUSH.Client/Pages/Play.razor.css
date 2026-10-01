@@ -28,9 +28,11 @@
     overflow: hidden;
 }
 
+/* Focus hides the shell's touch header too (shell.css), so on a touch device in any orientation the
+   card is what meets the notch and the home indicator: the safe-area insets, 8px at least. */
 .play--focus {
     grid-template-columns: minmax(0, 1fr);
-    padding: 8px;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 }
 
 .play-main {
@@ -304,7 +306,7 @@
     }
     .play--focus {
         grid-template-columns: minmax(0, 1fr);
-        padding: 8px;
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     }
 }
 
