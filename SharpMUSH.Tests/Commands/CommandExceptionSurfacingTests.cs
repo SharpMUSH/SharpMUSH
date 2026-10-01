@@ -207,6 +207,7 @@ public class CommandExceptionSurfacingTests
 	}
 
 	[Test]
+	[NotInParallel("HostLoggerFactory")] // adds an Error-level provider to the host's shared logger factory
 	public async Task TheServerLogStillReceivesTheFullException()
 	{
 		// Startup calls ClearProviders() at registration time; adding a provider to the built

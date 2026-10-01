@@ -10,6 +10,7 @@ public class TestLoggingTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
+	[NotInParallel("HostLoggerFactory")] // CommandExceptionSurfacingTests adds a provider to the same factory
 	public async Task HostLoggerKeepsFatalErrorsAndGatesRoutineLogs()
 	{
 		var logger = Factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("SharpMUSH.TestLogging");
