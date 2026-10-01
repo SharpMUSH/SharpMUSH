@@ -14,7 +14,6 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class CommunicationCommandTests
 {
 	private const string TestChannelName = "Public";
@@ -30,10 +29,31 @@ public class CommunicationCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private SharpChannel? _testChannel;
+	private static readonly SemaphoreSlim ChannelGate = new(1, 1);
 
+	private static bool _channelReady;
+
+	/// <summary>
+	/// Creates the channel once for the session; tests starting together would otherwise race to
+	/// create it.
+	/// </summary>
 	[Before(Test)]
 	public async Task SetupTestChannel()
+	{
+		await ChannelGate.WaitAsync();
+		try
+		{
+			if (_channelReady) return;
+			await CreateTestChannelAsync();
+			_channelReady = true;
+		}
+		finally
+		{
+			ChannelGate.Release();
+		}
+	}
+
+	private async Task CreateTestChannelAsync()
 	{
 		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef)))
 			.Expect<SharpPlayer>($"test player #{TestPlayerDbRef} exists");
@@ -44,12 +64,11 @@ public class CommunicationCommandTests
 			player
 		));
 
-		var channelQuery = new GetChannelQuery(TestChannelName);
-		_testChannel = await Mediator.Send(channelQuery);
+		var channel = await Mediator.Send(new GetChannelQuery(TestChannelName));
 
-		if (_testChannel != null)
+		if (channel != null)
 		{
-			await Mediator.Send(new AddUserToChannelCommand(_testChannel, player));
+			await Mediator.Send(new AddUserToChannelCommand(channel, player));
 		}
 	}
 
@@ -75,14 +94,41 @@ public class CommunicationCommandTests
 		return [.. WebAppFactoryArg.Notifications.For(executor).Skip(before)];
 	}
 
+	/// <summary>Runs <paramref name="command"/> as <paramref name="player"/> and returns what they were told meanwhile.</summary>
+	private async Task<IReadOnlyList<string>> NotifiedWhile(TestIsolationHelpers.TestPlayer player, string command)
+	{
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+			.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		return [.. WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)];
+	}
+
+	/// <summary>
+	/// A fresh player is refused the test channel ("wrong type of thing"), so God is the member in the
+	/// alias tests, and each alias he adds is unique to the test adding it.
+	/// </summary>
+	private static string UniqueAlias(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..12]}";
+
+	private Task<TestIsolationHelpers.TestPlayer> CreatePlayerAsync(string prefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+
+	/// <summary>How many times God said exactly <paramref name="message"/> to himself as <paramref name="type"/>.</summary>
+	private int GodHeardFromGod(string message, INotifyService.NotificationType type)
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		return WebAppFactoryArg.Notifications.DeliveriesFor(god)
+			.Count(delivery => delivery.Sender == god && delivery.Type == type && delivery.Message == message);
+	}
+
 	[Test]
 	[Arguments("@pemit #1=Test message", "Test message")]
 	[Arguments("@pemit #1=Another test", "Another test")]
 	public async ValueTask PemitBasic(string command, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", command);
+		var unique = TestIsolationHelpers.GenerateUniqueName(expected);
 
-		await Assert.That(await NotifiedGodWhile(command)).Contains(expected);
+		await Assert.That(await NotifiedGodWhile(command.Replace(expected, unique))).Contains(unique);
 	}
 
 	/// <summary>
@@ -95,7 +141,11 @@ public class CommunicationCommandTests
 	[Arguments("@pemit #1=[add(1,2)]", "3")]
 	[Arguments("@pemit #1=[add(1,[mul(2,3)])]", "7")]
 	public async ValueTask PemitWithFunctionCallInArgument(string command, string expected)
-		=> await Assert.That(await NotifiedGodWhile(command)).Contains(expected);
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("Sum");
+
+		await Assert.That(await NotifiedGodWhile(command.Replace("#1=", $"#1={marker} "))).Contains($"{marker} {expected}");
+	}
 
 	/// <summary>
 	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
@@ -116,7 +166,8 @@ public class CommunicationCommandTests
 		// Missing the closing ')' on add(1,2 — matches the exact malformed input already proven
 		// to produce "#-1 PARSER FAILURE: Expected ) or , at end of expression" via FunctionParse
 		// (see SharpMUSH.Tests/Parser/ParserFailureTests.cs and FunctionUnitTests.cs).
-		var said = await NotifiedGodWhile("@pemit me=add(1,2");
+		var player = await CreatePlayerAsync("PemitUnclosed");
+		var said = await NotifiedWhile(player, "@pemit me=add(1,2");
 
 		await Assert.That(said.Any(message => message.StartsWith("#-1 PARSER FAILURE", StringComparison.Ordinal)))
 			.IsTrue()
@@ -128,52 +179,40 @@ public class CommunicationCommandTests
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName(expected);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace(expected, unique)));
 
 		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
 		// Notify(AnySharpObject, ..., NotificationType.Emit)
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.Emit)).IsEqualTo(1);
 	}
 
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName(expected);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace(expected, unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.Emit)).IsEqualTo(1);
 	}
 
-	[Test, Skip("Needs isolation")]
+	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName(expected);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace(expected, unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.Emit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask OemitBasic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: @oemit");
 
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
@@ -181,14 +220,10 @@ public class CommunicationCommandTests
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
 		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var expectedMsg = "Test omit emit";
+		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test omit emit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@oemit {excludeDbRef}={expectedMsg}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(GodHeardFromGod(expectedMsg, INotifyService.NotificationType.Emit)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -199,8 +234,6 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask OemitDoesNotNotifyTheExcludedObject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExcluded");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
 		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
@@ -209,17 +242,8 @@ public class CommunicationCommandTests
 		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test omit exclusion");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@oemit {excludeDbRef}={expectedMsg}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(
-				TestHelpers.MatchingObject(excludeDbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(GodHeardFromGod(expectedMsg, INotifyService.NotificationType.Emit)).IsEqualTo(1);
+		await Assert.That(WebAppFactoryArg.Notifications.For(excludeDbRef).Count(message => message == expectedMsg)).IsEqualTo(0);
 	}
 
 	[Test, Skip("Failing")]
@@ -255,54 +279,38 @@ public class CommunicationCommandTests
 	[Arguments("@nsemit Test nospoof emit")]
 	public async ValueTask NsemitBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName("Test nospoof emit");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace("Test nospoof emit", unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof emit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
 	public async ValueTask NslemitBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName("Test nospoof local");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace("Test nospoof local", unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof local")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 	}
 
 	[Test]
-	[Arguments("@nsremit #0=Test nospoof remote"), Skip("Needs isolation")]
+	[Arguments("@nsremit #0=Test nospoof remote")]
 	public async ValueTask NsremitBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName("Test nospoof remote");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace("Test nospoof remote", unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof remote")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask NsoemitBasic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: @nsoemit");
 
 		// The first argument is the exclusion list, so omit a freshly-created thing to leave the
@@ -311,15 +319,10 @@ public class CommunicationCommandTests
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
 		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var expectedMsg = "Test nospoof omit";
+		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test nospoof omit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nsoemit {excludeDbRef}={expectedMsg}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(GodHeardFromGod(expectedMsg, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -445,16 +448,11 @@ public class CommunicationCommandTests
 	[Arguments("@nspemit #1=Test nospoof pemit")]
 	public async ValueTask NspemitBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var unique = TestIsolationHelpers.GenerateUniqueName("Test nospoof pemit");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace("Test nospoof pemit", unique)));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSPrivateEmit);
+		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.NSPrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test, Skip("Failing")]
@@ -491,20 +489,21 @@ public class CommunicationCommandTests
 	[Arguments("addcom test_alias_ADDCOM2=Public")]
 	public async ValueTask AddComBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var alias = UniqueAlias(command.Split('=')[0].Split(' ')[1]);
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, executor)).IsTrue();
+		var said = await NotifiedGodWhile($"addcom {alias}=Public");
+
+		await Assert.That(said.Any(message => message.StartsWith($"Alias '{alias}' added for channel ", StringComparison.OrdinalIgnoreCase)))
+			.IsTrue();
 	}
 
 	[Test]
 	public async ValueTask AddComEmptyAlias()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom=Public"));
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor, executor)).IsTrue();
+		var player = await CreatePlayerAsync("AddComEmpty");
+
+		await Assert.That(await NotifiedWhile(player, "addcom=Public")).Contains("Alias name cannot be empty.");
 	}
 
 	/// <summary>
@@ -517,42 +516,43 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask AddComChannelNotFound()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "AddComChannelNotFound");
-		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
+		var testPlayer = await CreatePlayerAsync("AddComChannelNotFound");
 
-		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("addcom test_alias_ADDCOM3=NonExistentChannel"));
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), TestHelpers.MatchingMessage(ErrorMessages.Notifications.DontRecognizeThatChannel),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await NotifiedWhile(testPlayer, "addcom test_alias_ADDCOM3=NonExistentChannel");
+
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(testPlayer.DbRef).Count(delivery =>
+				delivery.Message == ErrorMessages.Notifications.DontRecognizeThatChannel
+				&& delivery.Sender == testPlayer.DbRef
+				&& delivery.Type == INotifyService.NotificationType.Announce))
+			.IsEqualTo(1);
 	}
 
 	[Test]
 	[Arguments("delcom test_alias_DELCOM1")]
 	public async ValueTask DelComBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		var alias = command.Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"addcom {alias}=Public"));
+		var alias = UniqueAlias(command.Split(' ')[1]);
+		await NotifiedGodWhile($"addcom {alias}=Public");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var said = await NotifiedGodWhile($"delcom {alias}");
 
-		// Check for the specific deletion message (not the addcom message from earlier)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, executor)).IsTrue();
+		await Assert.That(said.Any(message => message.Equals($"Alias '{alias}' deleted.", StringComparison.OrdinalIgnoreCase)))
+			.IsTrue();
 	}
 
 	[Test]
 	[Arguments("delcom nonexistent_alias_DELCOM")]
 	public async ValueTask DelComNotFound(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
+		var player = await CreatePlayerAsync("DelComNotFound");
 		var alias = command.Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
+		var said = await NotifiedWhile(player, command);
+
+		await Assert.That(said.Any(message => message.Equals($"Alias '{alias}' not found.", StringComparison.OrdinalIgnoreCase)))
+			.IsTrue();
 	}
 
 	[Test]
@@ -560,84 +560,76 @@ public class CommunicationCommandTests
 	[Arguments("@clist/full")]
 	public async ValueTask CListBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var player = await CreatePlayerAsync("CListBasic");
 
 		// @clist is @channel/list, which prints PennMUSH's column table (src/extchat.c:2622): the channel
 		// name in a 30-column field under a header naming the columns.
-		await NotifyService
-			.Received() // Weak check
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Public")
-				&& TestHelpers.MessagePlainTextContains(msg, "Chan Type")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var said = await NotifiedWhile(player, command);
+
+		await Assert.That(said.Any(message => message.Contains("Public") && message.Contains("Chan Type"))).IsTrue();
 	}
 
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
 	public async ValueTask ComTitleBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
-		var alias = parts[0].Split(' ')[1];
+		var alias = UniqueAlias(parts[0].Split(' ')[1]);
 		var title = parts[1];
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"addcom {alias}=Public"));
+		await NotifiedGodWhile($"addcom {alias}=Public");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		// This command sends TWO notifications - one from ChannelTitle.Handle and one naming the alias.
+		var said = await NotifiedGodWhile($"comtitle {alias}={title}");
 
-		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
-		// We check that at least one contains our custom message with alias information
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, executor)).IsTrue();
+		await Assert.That(said.Any(message =>
+				message.StartsWith($"Title set to '{title}' for alias '{alias}' (channel ", StringComparison.OrdinalIgnoreCase)))
+			.IsTrue();
 	}
 
 	[Test]
 	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
 	public async ValueTask ComTitleNotFound(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
+		var player = await CreatePlayerAsync("ComTitleNotFound");
 		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
+		var said = await NotifiedWhile(player, command);
+
+		await Assert.That(said.Any(message => message.Equals($"Alias '{alias}' not found.", StringComparison.OrdinalIgnoreCase)))
+			.IsTrue();
 	}
 
 	[Test]
 	[Arguments("comlist")]
 	public async ValueTask ComListBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST1=Public"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST2=Public"));
+		var first = UniqueAlias("test_alias_COMLIST1");
+		var second = UniqueAlias("test_alias_COMLIST2");
+		await NotifiedGodWhile($"addcom {first}=Public");
+		await NotifiedGodWhile($"addcom {second}=Public");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var said = await NotifiedGodWhile(command);
 
 		// The output is sent as a multi-line MString containing all aliases (in lowercase)
 		// Note: Aliases are stored in uppercase but displayed in lowercase
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "test_alias_comlist1") &&
-				TestHelpers.MessagePlainTextContains(msg, "test_alias_comlist2")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(said.Count(message =>
+				message.Contains(first.ToLowerInvariant()) && message.Contains(second.ToLowerInvariant())))
+			.IsEqualTo(1);
 	}
 
 	[Test]
 	[Arguments("comlist")]
 	public async ValueTask ComListEmpty(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		// Wipe all channel aliases for the executor to ensure an empty state
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wipe me/CHANALIAS*"));
+		var player = await CreatePlayerAsync("ComListEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor, executor)).IsTrue();
+		await Assert.That(await NotifiedWhile(player, command)).Contains("You have no channel aliases.");
 	}
 
 	/// <summary>
@@ -647,20 +639,18 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask PemitEchoesTheMessageBackToTheSender()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitEchoTarget");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit {targetName}=Hello there"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Hello there");
+		var said = await NotifiedGodWhile($"@pemit {targetName}={message}");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsTrue();
+		await Assert.That(said.Any(m => m.StartsWith($"You pemit \"{message}\" to "))).IsTrue();
 	}
 
 	[Test]
 	public async ValueTask PemitSilentSuppressesTheSenderEcho()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitSilentTarget");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
 		var targetDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
@@ -696,19 +686,16 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask PemitListEchoesTheRecipientCount()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var firstName = TestIsolationHelpers.GenerateUniqueName("PemitListA");
 		var secondName = TestIsolationHelpers.GenerateUniqueName("PemitListB");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {firstName}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {secondName}"));
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@pemit/list/noisy {firstName} {secondName}=Group message"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Group message");
+		var said = await NotifiedGodWhile($"@pemit/list/noisy {firstName} {secondName}={message}");
 
-		// The key alone would pass even if the command counted the recipients wrong.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
-			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
-			"You pemit \"Group message\" to 2 objects.", executor)).IsTrue();
+		// The whole rendering, not just the key: that would pass even if the recipients were counted wrong.
+		await Assert.That(said).Contains($"You pemit \"{message}\" to 2 objects.");
 	}
 
 	/// <summary>
@@ -717,7 +704,6 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask RemitToAnExitReportsThatNothingCanBeInIt()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitExitRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
@@ -725,10 +711,9 @@ public class CommunicationCommandTests
 		var exitName = TestIsolationHelpers.GenerateUniqueName("RemitExit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open {exitName}={roomDbRef}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {exitName}=Nobody hears this"));
+		var said = await NotifiedGodWhile($"@remit {exitName}=Nobody hears this");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor, executor)).IsTrue();
+		await Assert.That(said).Contains("There can't be anything in that!");
 	}
 
 	/// <summary>
@@ -738,21 +723,19 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask RemitEchoesToTheSenderWhenTheyAreElsewhere()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitEchoRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {roomDbRef}=Anyone there?"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Anyone there?");
+		var said = await NotifiedGodWhile($"@remit {roomDbRef}={message}");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsTrue();
+		await Assert.That(said.Any(m => m.StartsWith($"You remit, \"{message}\" in "))).IsTrue();
 	}
 
 	[Test]
 	public async ValueTask RemitSilentSuppressesTheSenderEcho()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitSilentRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
@@ -861,10 +844,9 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={boxName}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@lemit Anyone outside?"));
+		var said = await NotifiedWhile(player, "@lemit Anyone outside?");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouLemitFormat), player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(said).Contains("You lemit: \"Anyone outside?\"");
 	}
 
 	/// <summary>
@@ -880,10 +862,9 @@ public class CommunicationCommandTests
 		// branch from the Control-lock default that governs ordinary objects.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}=#0"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@zemit #1=Not mine"));
+		var said = await NotifiedWhile(player, "@zemit #1=Not mine");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.PermissionDenied), player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(said).Contains("Permission denied.");
 	}
 
 	/// <summary>
@@ -892,14 +873,13 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask ZemitEchoesToTheSender()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitEchoZMO");
 		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
 		var zmoDbRef = zmoResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@zemit {zmoDbRef}=Zone wide"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Zone wide");
+		var said = await NotifiedGodWhile($"@zemit {zmoDbRef}={message}");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouZemitInZoneFormat), executor, executor)).IsTrue();
+		await Assert.That(said.Any(m => m.StartsWith($"You zemit, \"{message}\" in zone "))).IsTrue();
 	}
 }
