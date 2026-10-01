@@ -13,6 +13,7 @@ namespace SharpMUSH.Tests.Packages;
 /// failure the apply can foresee is refused before the first write; one it cannot (here, a lock key
 /// the lock parser rejects) is undone from the state captured before the first write.
 /// </summary>
+// Each test reads every object in the world to find its own by name, which races suites creating objects.
 public class PackageApplyAtomicityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
