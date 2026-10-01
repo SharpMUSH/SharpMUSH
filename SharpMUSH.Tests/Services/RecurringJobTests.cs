@@ -260,6 +260,8 @@ public class RecurringJobTests
 	}
 
 	[Test]
+	// Reads the session queue's total, parks a blocker on it, and halts everything #1 has queued.
+	[NotInParallel]
 	public async Task RealQueueKeepsOneFiringAndRecoversAfterExternalHalt()
 	{
 		var context = await Setup();
