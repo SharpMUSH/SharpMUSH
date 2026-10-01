@@ -16,6 +16,7 @@ public sealed class TestCommFeed : ICommFeed
 	public IReadOnlyList<CommChannel> Channels => ChannelList;
 	public IReadOnlyList<CommConversation> Conversations => ConversationList;
 	public string? Viewing { get; set; }
+	public bool? PageLogging { get; set; }
 	public int Listeners => _changed?.GetInvocationList().Length ?? 0;
 
 	public IReadOnlyList<CommMessage> Messages(string key) => Lines.TryGetValue(key, out var lines) ? lines : [];

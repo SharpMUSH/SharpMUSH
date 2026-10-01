@@ -5178,6 +5178,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ovdje još nema ničega.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>Ova igra ne čuva povijest poruka, pa se prikazuju samo poruke iz ovog posjeta.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Natrag na scenu</value>
   </data>

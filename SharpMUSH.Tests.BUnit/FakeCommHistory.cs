@@ -20,6 +20,31 @@ public sealed class FakeCommHistory : ICommHistory
 
 	private bool Fails() => FailMarks-- > 0;
 
+	/// <summary>What the page log lists; null answers as an endpoint that refuses (no character).</summary>
+	public PageConversations? PageConversations { get; set; }
+
+	/// <summary>Each conversation's logged pages, by the others' objids, sorted and joined with spaces.</summary>
+	public Dictionary<string, List<PageRecallLine>> PageLog { get; } = new(StringComparer.Ordinal);
+
+	/// <summary>Whether the page log answers as a game that keeps one.</summary>
+	public bool PageLogging { get; set; } = true;
+
+	/// <summary>The conversations whose history was pulled, by the same key as <see cref="PageLog"/>.</summary>
+	public List<string> PageRecalled { get; } = [];
+
+	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
+		Task.FromResult<ApiResult<PageConversations>>(PageConversations is { } conversations
+			? conversations
+			: new ApiFailure(ApiFailureKind.Unauthenticated, "nobody"));
+
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with)
+	{
+		var key = string.Join(' ', with.Order(StringComparer.Ordinal));
+		PageRecalled.Add(key);
+		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging,
+			PageLogging && PageLog.TryGetValue(key, out var lines) ? lines.ToArray() : []));
+	}
+
 	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel)
 	{
 		Recalled.Add(channel);

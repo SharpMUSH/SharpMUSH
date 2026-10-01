@@ -78,7 +78,9 @@ public record SharpMUSHOptions
 			MaxChannels: 200,
 			MaxPlayerChannels: 0,
 			NoisyCEmit: false,
-			UseMuxComm: true
+			UseMuxComm: true,
+			PageLog: false,
+			PageLogRetentionDays: -1
 		),
 		Command = new CommandOptions(
 			DestroyPossessions: true,

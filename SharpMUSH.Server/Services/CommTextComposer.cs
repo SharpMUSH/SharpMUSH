@@ -10,8 +10,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// A recalled channel line's <c>text</c>, composed the way the <c>comm-feed</c> package composes the pushed
-/// <c>comm.message</c> for the same line: through <c>FN`COMM`TEXT</c> on the configured event handler.
+/// A recalled channel line's or logged page's <c>text</c>, composed the way the <c>comm-feed</c> package
+/// composes the pushed <c>comm.message</c> for the same line: through <c>FN`COMM`TEXT</c> on the configured
+/// event handler. A page's push runs <c>PAGE`MESSAGE</c> the same way, with the pager as enactor.
 /// </summary>
 /// <remarks>
 /// <para>The push runs <c>CHANNEL`MESSAGE</c> on the handler with the speaker as enactor
@@ -45,19 +46,30 @@ public sealed class CommTextComposer(
 	}
 
 	/// <summary>The text for <paramref name="line"/>: through <paramref name="handler"/>'s attribute when given.</summary>
-	public async ValueTask<string> ComposeAsync(AnySharpObject? handler, SharpChannelMessage line, CancellationToken ct)
+	public ValueTask<string> ComposeAsync(AnySharpObject? handler, SharpChannelMessage line, CancellationToken ct)
+		=> ComposeAsync(handler, line.Sender, line.Style, line.SpeakerName, line.MessageText, ct);
+
+	/// <summary>
+	/// The text for a logged page, as <c>PAGE`MESSAGE</c> composes the push for it: the pager is the enactor,
+	/// and the arguments are the style, the pager's name as the page named them, and the message.
+	/// </summary>
+	public ValueTask<string> ComposeAsync(AnySharpObject? handler, SharpPage page, CancellationToken ct)
+		=> ComposeAsync(handler, page.Sender, page.Style, page.SenderName, page.Message, ct);
+
+	private async ValueTask<string> ComposeAsync(AnySharpObject? handler, DBRef speaker, string style, string name,
+		string message, CancellationToken ct)
 	{
-		if (handler is null) return Default(line.Style, line.SpeakerName, line.MessageText);
+		if (handler is null) return Default(style, name, message);
 
 		var handlerRef = handler.Object().DBRef;
-		var enactor = await mediator.Send(new GetObjectNodeQuery(line.Sender), ct) is AnySharpObject
-			? line.Sender
+		var enactor = await mediator.Send(new GetObjectNodeQuery(speaker), ct) is AnySharpObject
+			? speaker
 			: new DBRef(1);
 		var args = new Dictionary<string, CallState>
 		{
-			["0"] = new(line.Style),
-			["1"] = new(line.SpeakerName),
-			["2"] = new(line.MessageText)
+			["0"] = new(style),
+			["1"] = new(name),
+			["2"] = new(message)
 		};
 
 		using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -85,7 +97,7 @@ public sealed class CommTextComposer(
 			logger.LogWarning(ex, "{Attribute} on {Handler} failed composing a recalled line", Attribute, handlerRef);
 		}
 
-		return Default(line.Style, line.SpeakerName, line.MessageText);
+		return Default(style, name, message);
 	}
 
 	/// <summary>The bundled <c>FN`COMM`TEXT</c>: <c>switch(%0,pose,%1 %2,semipose,%1%2,%2)</c>.</summary>

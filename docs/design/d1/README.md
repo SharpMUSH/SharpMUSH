@@ -525,7 +525,8 @@ each line (``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS``), and `Oob
 `ICommFeed`. `docs/softcode/comm-feed-handler.md` has the shapes as sent and where they differ from the
 above (no unread counts in `comm.channels`; `viewer`, `style`, `toObjids` and a channel line's `id`
 added). Unread counts come from per-character read markers on the server, and a channel's history from
-its recall buffer, both under `api/comm` (#1451).
+its recall buffer, both under `api/comm` (#1451). A page conversation's history comes from the page log
+when the game keeps one (`page_log`, off by default), under `api/comm/conversations`.
 
 ### 7.4 Play as a layout scope (board `13`)
 - Add `LayoutScopes.Play` (`"play"`, zones: RightSidebar) to `LayoutScopes.All` and `GetDefaultLayout`, with

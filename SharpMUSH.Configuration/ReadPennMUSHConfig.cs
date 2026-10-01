@@ -95,7 +95,9 @@ public static partial class ReadPennMushConfig
 				UnsignedInteger(Get(nameof(ChatOptions.MaxPlayerChannels)), d.Chat.MaxPlayerChannels),
 				UnsignedInteger(Get(nameof(ChatOptions.ChannelCost)), d.Chat.ChannelCost),
 				Boolean(Get(nameof(ChatOptions.NoisyCEmit)), d.Chat.NoisyCEmit),
-				UnsignedInteger(Get(nameof(ChatOptions.ChannelTitleLength)), d.Chat.ChannelTitleLength)
+				UnsignedInteger(Get(nameof(ChatOptions.ChannelTitleLength)), d.Chat.ChannelTitleLength),
+				Boolean(Get(nameof(ChatOptions.PageLog)), d.Chat.PageLog),
+				Integer(Get(nameof(ChatOptions.PageLogRetentionDays)), d.Chat.PageLogRetentionDays)
 			),
 			Command = new CommandOptions(
 				Boolean(Get(nameof(CommandOptions.NoisyWhisper)), d.Command.NoisyWhisper),

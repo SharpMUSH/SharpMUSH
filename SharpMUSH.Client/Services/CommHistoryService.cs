@@ -3,8 +3,8 @@ using SharpMUSH.Library.API;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// The server's side of the comm feed (<c>api/comm</c>): a channel's recall buffer, and the acting
-/// character's read markers. <see cref="OobCommFeed"/> reads both on load and writes markers as the viewer
+/// The server's side of the comm feed (<c>api/comm</c>): a channel's recall buffer, the acting character's
+/// page log, and their read markers. <see cref="OobCommFeed"/> reads both on load and writes markers as the viewer
 /// reads, so unread counts survive a reload and a change of device.
 /// </summary>
 public interface ICommHistory
@@ -20,6 +20,19 @@ public interface ICommHistory
 
 	/// <summary>Moves a conversation's marker on; the server keeps whichever is further.</summary>
 	Task<ApiResult<ConversationReadMarker>> MarkConversationAsync(ConversationReadMarkerUpdate update);
+
+	/// <summary>
+	/// The acting character's logged page conversations (the game's <c>page_log</c>), or none with
+	/// <see cref="PageConversations.Logging"/> false when the game keeps no page log.
+	/// </summary>
+	Task<ApiResult<PageConversations>> ConversationsAsync();
+
+	/// <summary>
+	/// A page conversation's logged history, oldest first, each page with the id its <c>comm.message</c>
+	/// carries. <paramref name="with"/> is the other people in it by objid (the character alone, for pages
+	/// to themselves).
+	/// </summary>
+	Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with);
 }
 
 /// <summary><see cref="ICommHistory"/> over the <c>"api"</c> client, which carries the account session.</summary>
@@ -41,4 +54,11 @@ public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : I
 	public Task<ApiResult<ConversationReadMarker>> MarkConversationAsync(ConversationReadMarkerUpdate update) =>
 		Client.PutApiAsync<ConversationReadMarkerUpdate, ConversationReadMarker>(
 			"api/comm/markers/conversations", update, "The server returned no read marker.");
+
+	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
+		Client.GetApiAsync<PageConversations>("api/comm/conversations", "The server returned no page conversations.");
+
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with) =>
+		Client.GetApiAsync<PageRecall>($"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall",
+			"The server returned no page history.");
 }

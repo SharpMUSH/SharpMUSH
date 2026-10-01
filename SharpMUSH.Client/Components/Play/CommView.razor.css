@@ -81,6 +81,12 @@
 	font-style: italic;
 }
 
+.comm-unlogged {
+	color: var(--text-faint);
+	font-size: 0.85em;
+	margin-bottom: 0.5rem;
+}
+
 .comm-day,
 .comm-new {
 	display: flex;

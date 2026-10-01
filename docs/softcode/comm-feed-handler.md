@@ -61,7 +61,7 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 | Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` | `%7` |
 |---|---|---|---|---|---|---|---|---|
 | ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms | line id |
-| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | | |
+| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | page id | |
 | ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
@@ -72,9 +72,11 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
   `@chatformat` changes only their terminal line.
 - Cause is `connect`, `join`, `leave`, `status`, `rename` or `delete`.
 - The line id is the id the channel's recall buffer holds the line under, which
-  the portal's recall endpoint returns too. Ids are one sequence for every
-  channel, taken from the clock in microseconds, so a later line has a larger
-  id, also across a restart.
+  the portal's recall endpoint returns too. The page id is the id the page log
+  keeps the page under (when `page_log` is on), which the portal's conversation
+  recall returns too. Ids are one sequence for every channel line and page,
+  taken from the clock in microseconds, so a later line has a larger id, also
+  across a restart.
 - `%#` is the speaker or pager. For ``PLAYER`CHANNELS`` it is the player on
   connect, and `#1` otherwise: the change is reported by the database write,
   which does not know who asked.
@@ -91,7 +93,7 @@ collide with `room-contents`' ``FN`*``.
 
 ```mushcode
 &CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7)))
-&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1)))
+&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
 &PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
 ```
 
@@ -165,7 +167,7 @@ A page (here a group pose-page):
 ```json
 {"v":2,"kind":"page","to":["Tomas Reyes","Dace Kellan"],"from":"Ilsa Varn","text":"Ilsa Varn nods",
  "style":"pose","ts":1790780182950,"fromObjid":"#19:1790780895139",
- "toObjids":["#20:1790780895201","#21:1790780895260"]}
+ "toObjids":["#20:1790780895201","#21:1790780895260"],"id":1790780182950977}
 ```
 
 - `kind` is `channel` or `page`; `channel` appears only on a channel line.
@@ -180,10 +182,12 @@ A page (here a group pose-page):
   page prefix: a pose carries the name (`Ilsa Varn nods`), because that is how
   a pose reads; `style` says which it was.
 - `ts` is milliseconds since 1970, taken when the line was sent.
-- `id` appears only on a channel line: the line's id, the one
-  `GET api/comm/channels/<channel>/recall` returns for the same line, so the
-  portal keeps one copy of a line it both pulled and was pushed. A page has
-  none; the engine keeps no page history to read it back from.
+- `id` is the line's id: for a channel line the one
+  `GET api/comm/channels/<channel>/recall` returns for the same line, and for a
+  page the one `GET api/comm/conversations/<objids>/recall` returns, so the
+  portal keeps one copy of a line it both pulled and was pushed. A page has an
+  id whether or not the game keeps a page log. (Before `comm-feed` 1.2.0 a page
+  had none.)
 
 ## What the portal does with them
 
@@ -215,9 +219,18 @@ of a missing `v` and of any malformed member):
   of device; one without a marker counts lines as they arrive. `MarkRead`, and
   a line arriving while `Viewing`, move the marker to the last line
   (`PUT api/comm/markers/channels/<channel>` with the line's id and time;
-  `PUT api/comm/markers/conversations` with the others' objids and the time).
-  A marker never moves back. The endpoints act as the session's acting
-  character, and a feed whose viewer is someone else uses none of it.
+  `PUT api/comm/markers/conversations` with the others' objids, the page's id
+  and its time). A marker never moves back. The endpoints act as the session's
+  acting character, and a feed whose viewer is someone else uses none of it.
+- When the game keeps a page log (the `page_log` option, a SharpMUSH
+  extension, off by default), the feed also lists the character's page
+  conversations from it (`GET api/comm/conversations`), so a reload keeps
+  them, and pulls those whose last page is past the conversation's marker, so
+  their unread counts survive too. Opening a conversation pulls its pages
+  (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
+  with spaces). Each character reads only their own copy; there is no staff
+  read. With `page_log` off both answer `"logging": false` and nothing else,
+  and the conversation view says the game keeps no page history.
 - The recall endpoint refuses what `@channel/recall` refuses: a channel the
   character may not see answers 404, as a missing one does, and one they are
   not on and could not join answers 403. A line only See_All members were sent
@@ -225,7 +238,8 @@ of a missing `v` and of any malformed member):
   ``FN`COMM`TEXT`` on the handler, with the handler as executor, the speaker as
   enactor and the same arguments as the push, so a game that redefines it gets
   the same text pulled as pushed. The bundled default is used only when the
-  attribute is absent.
+  attribute is absent. A logged page's `text` is composed the same way, with
+  the pager as enactor.
 
 ## Testing
 
@@ -240,12 +254,19 @@ member against a non-member, a gagged member, a hidden speaker, a pose,
 not to a member who muted the channel), a page
 to one and to several, a page lock and a HAVEN refusing it, a group page some
 recipients refuse, joining, gagging and leaving, a rename and a deletion, and
-connecting.
+connecting. It also checks that a pushed line's or page's `id` is the one the
+recall endpoints return, and that recalled text goes through the installed
+``FN`COMM`TEXT``.
 
 `SharpMUSH.Tests/Services/ChannelBroadcastServiceTests.cs` checks the
 ``CHANNEL`MESSAGE`` arguments and that an undelivered line raises nothing;
-`SharpMUSH.Tests.BUnit/Services/CommPayloadParserTests.cs` and
-`OobCommFeedTests.cs` cover the client.
+`SharpMUSH.Tests/Commands/PageLogCommandTests.cs` that a page is logged for its
+sender and the recipients it reached only while `page_log` is on;
+`SharpMUSH.Tests.Integration/Portal/PageLogApiTests.cs` the conversation
+endpoints, as mortals and as a wizard who still reads only their own;
+`SharpMUSH.Tests.BUnit/Services/CommPayloadParserTests.cs`,
+`OobCommFeedTests.cs`, `OobCommFeedHistoryTests.cs` and
+`OobCommFeedPageLogTests.cs` cover the client.
 
 ## Differences from §7.3
 

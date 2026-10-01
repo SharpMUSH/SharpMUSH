@@ -359,6 +359,18 @@ public partial class Commands
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
 
+			// The page's id, and its copies in the page log while page_log is on: for the pager and for the
+			// recipients it reached, never one who refused it. The id goes out with PAGE`MESSAGE, so the
+			// portal knows a pushed page and its logged copy for one.
+			var delivered = await PageLog.DeliveredAsync(executor, senderName, successfulRecipients,
+				pageType switch
+				{
+					PageMessageType.Pose => "pose",
+					PageMessageType.SemiPose => "semipose",
+					_ => "say"
+				},
+				message.ToPlainText());
+
 			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
 			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
 			await EventService.TriggerEventAsync(
@@ -367,15 +379,11 @@ public partial class Commands
 				executor.Object().DBRef,
 				executor.Object().DBRef.ToString(),
 				string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString())),
-				pageType switch
-				{
-					PageMessageType.Pose => "pose",
-					PageMessageType.SemiPose => "semipose",
-					_ => "say"
-				},
+				delivered.Style,
 				senderName,
-				message.ToPlainText(),
-				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+				delivered.Message,
+				delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
+				delivered.Id.ToString(CultureInfo.InvariantCulture));
 		}
 
 		return CallState.Empty;

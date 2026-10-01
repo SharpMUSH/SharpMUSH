@@ -1,0 +1,261 @@
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.API;
+
+namespace SharpMUSH.Tests.BUnit.Services;
+
+/// <summary>
+/// <see cref="OobCommFeed"/> over the server's page log (<c>api/comm/conversations</c>, the game's
+/// <c>page_log</c>): after a load the feed rebuilds its page conversations from the server, pulls a
+/// conversation's pages when it is opened, keeps one copy of a page known by its id however it arrived, and
+/// counts unread from the conversation's id-based read marker.
+/// </summary>
+public class OobCommFeedPageLogTests
+{
+	private const string Viewer = "#5:1";
+	private const string Tomas = "#7:2";
+	private const string Dace = "#9:3";
+	private static readonly DateTimeOffset T0 = DateTimeOffset.FromUnixTimeMilliseconds(1790780000000);
+
+	private static readonly string ChannelList =
+		$$"""{"v":2,"viewer":{"name":"Ilsa","objid":"{{Viewer}}"},"channels":[]}""";
+
+	private static string PageFromTomas(long id, string text, int second) =>
+		$$"""{"v":2,"id":{{id}},"kind":"page","to":["Ilsa"],"toObjids":["{{Viewer}}"],"from":"Tomas","fromObjid":"{{Tomas}}","text":"{{text}}","style":"say","ts":{{T0.AddSeconds(second).ToUnixTimeMilliseconds()}}}""";
+
+	private static PageRecallLine Logged(long id, string text, int second, string from = "Tomas", string fromObjid = Tomas) =>
+		new(id, fromObjid == Viewer ? ["Tomas"] : ["Ilsa"], fromObjid == Viewer ? [Tomas] : [Viewer], from, fromObjid, text,
+			"say", T0.AddSeconds(second).ToUnixTimeMilliseconds());
+
+	private static PageConversationSummary WithTomas(long lastId, int second) =>
+		new([Tomas], ["Tomas"], lastId, T0.AddSeconds(second));
+
+	private static CommReadMarkers Markers(long? tomasId = null, string character = Viewer) =>
+		new(character, [], tomasId is { } id ? [new ConversationReadMarker([Tomas], id, T0)] : []);
+
+	private static string TomasKey => "page " + string.Join(' ', new[] { Tomas, Viewer }.Order(StringComparer.Ordinal));
+
+	private static (OobChannelStore Store, OobCommFeed Feed, FakeCommHistory History) Create()
+	{
+		var store = new OobChannelStore();
+		var history = new FakeCommHistory { Markers = Markers() };
+		return (store, new OobCommFeed(store, history: history), history);
+	}
+
+	private static async Task LoadAsync(OobChannelStore store, OobCommFeed feed)
+	{
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList);
+		await feed.Synced;
+	}
+
+	/// <summary>A reload keeps the conversations: the feed lists them from the server once it knows its viewer.</summary>
+	[Test]
+	public async Task Conversations_are_rebuilt_from_the_server_after_a_load()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true,
+		[
+			WithTomas(20, 20),
+			new PageConversationSummary([Dace, Tomas], ["Dace", "Tomas"], 10, T0.AddSeconds(10))
+		]);
+
+		await LoadAsync(store, feed);
+
+		var conversations = feed.Conversations;
+		await Assert.That(conversations.Count).IsEqualTo(2);
+		await Assert.That(conversations[0].Key).IsEqualTo(TomasKey).Because("the latest first");
+		await Assert.That(conversations[0].With).IsEquivalentTo(new[] { "Tomas" });
+		await Assert.That(conversations[0].WithObjIds).IsEquivalentTo(new[] { Tomas });
+		await Assert.That(conversations[0].LastAt).IsEqualTo(T0.AddSeconds(20));
+		await Assert.That(conversations[1].With).IsEquivalentTo(new[] { "Dace", "Tomas" });
+		await Assert.That(feed.PageLogging).IsTrue();
+	}
+
+	/// <summary>A pushed page files under the same key the rebuilt conversation has.</summary>
+	[Test]
+	public async Task A_rebuilt_conversation_and_a_pushed_page_are_one_conversation()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		await LoadAsync(store, feed);
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(30, "live", 30));
+
+		await Assert.That(feed.Conversations.Count).IsEqualTo(1);
+		await Assert.That(feed.Conversations.Single().LastAt).IsEqualTo(T0.AddSeconds(30));
+	}
+
+	[Test]
+	public async Task Opening_a_conversation_pulls_its_pages()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(21, 21)]);
+		history.PageLog[Tomas] = [Logged(20, "hello", 20), Logged(21, "you there?", 21)];
+		await LoadAsync(store, feed);
+
+		await feed.LoadHistoryAsync(TomasKey);
+
+		var lines = feed.Messages(TomasKey);
+		await Assert.That(lines.Select(line => line.Text)).IsEquivalentTo(new[] { "hello", "you there?" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(lines[0].Kind).IsEqualTo(CommPayloadParser.PageKind);
+		await Assert.That(lines[0].Channel).IsNull();
+		await Assert.That(lines[0].To).IsEquivalentTo(new[] { "Ilsa" });
+		await Assert.That(lines[0].FromObjId).IsEqualTo(Tomas);
+		await Assert.That(lines[0].Id).IsEqualTo(20);
+		await Assert.That(history.PageRecalled).Contains(Tomas);
+	}
+
+	[Test]
+	public async Task A_pulled_page_pushed_again_is_kept_once()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		history.PageLog[Tomas] = [Logged(20, "hello", 20)];
+		await LoadAsync(store, feed);
+		await feed.LoadHistoryAsync(TomasKey);
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(20, "hello", 20));
+
+		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(1);
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(0).Because("a page already held is not news");
+	}
+
+	/// <summary>A resumed connection replays what it missed; a page the feed already has is not counted twice.</summary>
+	[Test]
+	public async Task A_pushed_page_pushed_again_is_kept_once()
+	{
+		var (store, feed, _) = Create();
+		await LoadAsync(store, feed);
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(20, "once", 20));
+		store.Set(CommPayloadParser.MessagePackage, "{}");
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(20, "once", 20));
+
+		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(1);
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Pulled_pages_join_pushed_ones_in_order()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(22, 22)]);
+		await LoadAsync(store, feed);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(22, "three", 22));
+		history.PageLog[Tomas] = [Logged(20, "one", 20), Logged(21, "two", 21), Logged(22, "three", 22)];
+
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).IsEquivalentTo(new[] { "one", "two", "three" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// A conversation whose last page is past the viewer's marker is pulled on load, so its unread count —
+	/// what came after the marker from someone else — survives a reload.
+	/// </summary>
+	[Test]
+	public async Task Unread_on_load_is_counted_from_the_conversations_marker()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 21);
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(24, 24)]);
+		history.PageLog[Tomas] =
+		[
+			Logged(20, "old", 20), Logged(21, "read", 21), Logged(22, "new", 22), Logged(23, "newer", 23),
+			Logged(24, "mine", 24, "Ilsa", Viewer)
+		];
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(5);
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(2).Because("22 and 23 are after the marker and Tomas's");
+	}
+
+	/// <summary>A conversation read up to its last page is not pulled until it is opened.</summary>
+	[Test]
+	public async Task A_conversation_read_to_its_end_is_not_pulled_on_load()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 24);
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(24, 24)]);
+		history.PageLog[Tomas] = [Logged(24, "read", 24)];
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(history.PageRecalled).IsEmpty();
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(0);
+	}
+
+	/// <summary>A page now has an id, and a conversation's marker moves by it.</summary>
+	[Test]
+	public async Task Reading_a_conversation_marks_it_by_the_last_pages_id()
+	{
+		var (store, feed, history) = Create();
+		await LoadAsync(store, feed);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(40, "psst", 3));
+
+		feed.MarkRead(TomasKey);
+
+		var mark = history.ConversationMarks.Single();
+		await Assert.That(mark.With).IsEquivalentTo(new[] { Tomas });
+		await Assert.That(mark.LastReadId).IsEqualTo(40);
+		await Assert.That(mark.LastReadAt).IsEqualTo(T0.AddSeconds(3));
+	}
+
+	/// <summary>A page behind an id marker is read, whatever its time: two pages can share a millisecond.</summary>
+	[Test]
+	public async Task A_live_page_behind_the_marker_is_not_unread()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 30);
+		await LoadAsync(store, feed);
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(29, "read elsewhere", 50));
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(31, "news", 50));
+
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(1);
+	}
+
+	/// <summary>With the game keeping no page log the feed lists nothing from it and says so.</summary>
+	[Test]
+	public async Task With_the_page_log_off_nothing_is_rebuilt_and_the_feed_says_so()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, false, []);
+		history.PageLogging = false;
+
+		await LoadAsync(store, feed);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(20, "live only", 20));
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.PageLogging).IsFalse();
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).IsEquivalentTo(new[] { "live only" });
+	}
+
+	/// <summary>A feed held for someone other than the session's character does not use their page log.</summary>
+	[Test]
+	public async Task Another_characters_conversations_are_not_used()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations("#99:1", true, [WithTomas(20, 20)]);
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations).IsEmpty();
+		await Assert.That(feed.PageLogging).IsNull();
+	}
+
+	[Test]
+	public async Task A_clear_forgets_the_rebuilt_conversations()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		await LoadAsync(store, feed);
+
+		store.Clear();
+
+		await Assert.That(feed.Conversations).IsEmpty();
+		await Assert.That(feed.PageLogging).IsNull();
+	}
+}

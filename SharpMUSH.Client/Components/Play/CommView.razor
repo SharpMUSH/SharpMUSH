@@ -9,7 +9,8 @@
    a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
    objid). While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
-   pulls its recent lines from the server; live lines then append, a line already held kept once. *@
+   pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
+   a line already held kept once. A game that keeps no page log (page_log off) is said so in a conversation. *@
 <section class="comm" aria-labelledby="comm-title">
     <header class="comm-head">
         <div class="comm-titles">
@@ -22,6 +23,10 @@
     </header>
     <div class="comm-scroll">
         <div class="comm-lines">
+            @if (IsConversation && Feed.PageLogging == false)
+            {
+                <div class="comm-unlogged" role="note">@Loc["NavPlayPageLogOff"]</div>
+            }
             @if (_lines.Count == 0)
             {
                 <div class="comm-empty">@Loc["NavPlayNothingYet"]</div>

@@ -29,8 +29,9 @@ public sealed record CommReadMarkers(
 public sealed record ChannelReadMarker(string Channel, long? LastReadId, DateTimeOffset LastReadAt);
 
 /// <summary>
-/// The last page of a conversation the character has read. Pages have no ids yet (there is no page
-/// history), so <see cref="LastReadId"/> is null and <see cref="LastReadAt"/> is what counts.
+/// The last page of a conversation the character has read: by the page's id (the one its
+/// <c>comm.message</c> carries), and its time. A marker written before pages had ids has a null
+/// <see cref="LastReadId"/>, and is compared by time until a marker with an id replaces it.
 /// </summary>
 /// <param name="With">The other people in it, by objid, sorted.</param>
 public sealed record ConversationReadMarker(IReadOnlyList<string> With, long? LastReadId, DateTimeOffset LastReadAt);
@@ -41,3 +42,53 @@ public sealed record ReadMarkerUpdate(long? LastReadId, DateTimeOffset LastReadA
 /// <summary>Moves a conversation's marker on. <see cref="With"/> is the other people by objid, in any order;
 /// the acting character's own objid among them is ignored.</summary>
 public sealed record ConversationReadMarkerUpdate(IReadOnlyList<string> With, long? LastReadId, DateTimeOffset LastReadAt);
+
+/// <summary>
+/// One logged page, in the shape of the <c>comm.message</c> push for the same page
+/// (docs/softcode/comm-feed-handler.md), so the portal files a pulled page exactly as a pushed one.
+/// </summary>
+/// <param name="Id">The page's id: the <c>id</c> its <c>comm.message</c> carried, from the sequence channel
+/// lines take theirs from.</param>
+/// <param name="To">The recipients' names, in the order paged.</param>
+/// <param name="ToObjids">The recipients' objids, lined up with <paramref name="To"/>.</param>
+/// <param name="From">The pager's name as the page named them.</param>
+/// <param name="FromObjid">The pager's objid.</param>
+/// <param name="Text">The page as the terminal reads it after the page prefix: a pose carries the name.</param>
+/// <param name="Style"><c>say</c>, <c>pose</c> or <c>semipose</c>.</param>
+/// <param name="Ts">Milliseconds since 1970.</param>
+public sealed record PageRecallLine(
+	long Id,
+	IReadOnlyList<string> To,
+	IReadOnlyList<string> ToObjids,
+	string From,
+	string FromObjid,
+	string Text,
+	string Style,
+	long Ts);
+
+/// <summary>
+/// A page conversation's logged history, as the acting character's own copy.
+/// </summary>
+/// <param name="Logging">Whether the game keeps a page log (<c>page_log</c>). When it does not, there are no
+/// lines, and the portal says so rather than showing an empty history as if nobody had paged.</param>
+/// <param name="Lines">The last lines asked for, oldest first.</param>
+public sealed record PageRecall(bool Logging, IReadOnlyList<PageRecallLine> Lines);
+
+/// <summary>One of the acting character's logged page conversations.</summary>
+/// <param name="With">The others in it, by objid, sorted (the character alone, for pages to themselves).
+/// Joined with spaces, this is the conversation's key in <c>api/comm/conversations/{key}/recall</c>.</param>
+/// <param name="Names">Their names as the latest page named them, lined up with <paramref name="With"/>.</param>
+/// <param name="LastId">The latest page's id.</param>
+/// <param name="LastAt">When the latest page was sent.</param>
+public sealed record PageConversationSummary(
+	IReadOnlyList<string> With,
+	IReadOnlyList<string> Names,
+	long LastId,
+	DateTimeOffset LastAt);
+
+/// <summary>The acting character's logged page conversations.</summary>
+/// <param name="Character">The objid of the character these are for. A client holding a different
+/// character's feed ignores them.</param>
+/// <param name="Logging">Whether the game keeps a page log (<c>page_log</c>); when it does not, the list is
+/// empty.</param>
+public sealed record PageConversations(string Character, bool Logging, IReadOnlyList<PageConversationSummary> Conversations);

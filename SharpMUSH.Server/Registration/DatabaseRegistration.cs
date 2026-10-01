@@ -150,6 +150,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IReadMarkerStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IPageLogStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiService, WikiStoreService>();
 

@@ -121,7 +121,24 @@ public partial class ScheduledTaskManagementService(
 			await _scheduler.ScheduleJob(purgeJob, purgeTrigger, cancellationToken);
 			logger.LogInformation("Scheduled purge time update job with interval: {Interval}", checkInterval);
 		}
+
+		// Always scheduled: page_log_retention_days is read on every run, so @config/set takes effect at the
+		// next one, and pages kept while page_log was on still expire after it is turned off.
+		var pageLogJob = JobBuilder.Create<PurgePageLogJob>()
+			.WithIdentity("PurgePageLog", "ScheduledTaskManagement")
+			.Build();
+		var pageLogTrigger = TriggerBuilder.Create()
+			.WithIdentity("PurgePageLogTrigger", "ScheduledTaskManagement")
+			.StartAt(DateTimeOffset.UtcNow.AddMinutes(1))
+			.WithSimpleSchedule(x => x
+				.WithInterval(PageLogPurgeInterval)
+				.RepeatForever())
+			.Build();
+		await _scheduler.ScheduleJob(pageLogJob, pageLogTrigger, cancellationToken);
 	}
+
+	/// <summary>How often logged pages past <c>page_log_retention_days</c> are deleted.</summary>
+	public static readonly TimeSpan PageLogPurgeInterval = TimeSpan.FromHours(1);
 
 	public async Task StopAsync(CancellationToken cancellationToken)
 	{
@@ -131,6 +148,30 @@ public partial class ScheduledTaskManagementService(
 			// Jobs will be cleaned up by Quartz shutdown
 		}
 		await Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// Quartz job that deletes logged pages older than <c>page_log_retention_days</c> (nothing at -1). See
+	/// <see cref="IPageLogService.PurgeExpiredAsync"/>.
+	/// </summary>
+	[DisallowConcurrentExecution]
+	public class PurgePageLogJob(IPageLogService pageLog, ILogger<PurgePageLogJob> logger) : IJob
+	{
+		public async Task Execute(IJobExecutionContext context)
+		{
+			try
+			{
+				var purged = await pageLog.PurgeExpiredAsync(context.CancellationToken);
+				if (purged > 0)
+				{
+					logger.LogInformation("Deleted {Count} logged page copies past page_log_retention_days", purged);
+				}
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				logger.LogError(ex, "Error purging the page log");
+			}
+		}
 	}
 
 	/// <summary>

@@ -27,9 +27,10 @@ public static class SharpEvents
 
 	/// <summary>
 	/// Fired once per page that reached at least one recipient. Args: (pager objid, recipient objids,
-	/// style, pager name, message, unix-ms). Only recipients who were paged are named: one who is not
-	/// connected, is HAVEN, or whose page lock refuses the pager is not. The style is <c>say</c>,
-	/// <c>pose</c> or <c>semipose</c>; the message is plain text.
+	/// style, pager name, message, unix-ms, page id). Only recipients who were paged are named: one who is
+	/// not connected, is HAVEN, or whose page lock refuses the pager is not. The style is <c>say</c>,
+	/// <c>pose</c> or <c>semipose</c>; the message is plain text. The id comes from the sequence channel
+	/// line ids come from, and is the one the page log (<c>page_log</c>) keeps the page under.
 	/// </summary>
 	public const string PageMessage = "PAGE`MESSAGE";
 

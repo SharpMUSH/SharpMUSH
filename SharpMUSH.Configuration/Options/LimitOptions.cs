@@ -50,7 +50,7 @@ public record LimitOptions(
 		Name = "max_guests",
 		Category = "Limit",
 		Description = "Maximum number of guest characters (-1 for unlimited)",
-		ValidationPattern = @"^-1|\d+$",
+		ValidationPattern = @"^(-1|\d+)$",
 		Group = "Connections",
 		Order = 2,
 		Min = -1,

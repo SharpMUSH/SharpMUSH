@@ -412,6 +412,17 @@ max_channels 200
 # This does not include ansi/markup.
 chan_title_len 80
 
+# SharpMUSH extension: PennMUSH keeps no page log. When this is on, every page
+# that is delivered is kept for its sender and for each recipient, as their own
+# copy, so the web portal can show a player their page history after a reload or
+# on another device. Each player can read only their own copy, through the
+# portal; wizards cannot read anyone else's. A player's copy is deleted when the
+# player is destroyed. Turning it off stops logging and hides what was kept.
+page_log no
+
+# How many days a logged page is kept before it is deleted. -1 never deletes.
+page_log_retention_days -1
+
 # How many channels can each non-admin create? Set this to some number
 # higher than zero to allow mortals to create channels.
 max_player_chans 0
