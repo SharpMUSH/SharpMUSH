@@ -50,7 +50,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	public IReadOnlyList<TerminalLine> Lines
 	{
-		get { lock (_lines) return _lines.AsReadOnly(); }
+		// A copy taken under the lock: a view of the live list would be enumerated outside it while the
+		// receive loop appends.
+		get { lock (_lines) return _lines.ToArray(); }
 	}
 
 	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null);
