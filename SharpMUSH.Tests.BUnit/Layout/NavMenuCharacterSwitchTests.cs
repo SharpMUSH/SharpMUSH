@@ -156,6 +156,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(auth);
 		_connection = Substitute.For<IConnectionStateService>();
 		Services.AddSingleton(_connection);
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		return auth;
 	}

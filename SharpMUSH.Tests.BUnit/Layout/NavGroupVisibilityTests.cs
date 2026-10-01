@@ -67,6 +67,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton<IPlayTerminalService>(playHost);
 
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 
 		// No applications registered: the data-driven half of every group contributes nothing, which

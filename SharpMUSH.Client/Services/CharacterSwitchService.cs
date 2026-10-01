@@ -10,7 +10,8 @@ namespace SharpMUSH.Client.Services;
 /// Does not touch the terminals — a terminal's character is fixed at connect time; open a new tab to
 /// play a different character.
 /// </summary>
-public class CharacterSwitchService(AccountAuthService accountAuth, IConnectionStateService connectionState)
+public class CharacterSwitchService(
+	AccountAuthService accountAuth, IConnectionStateService connectionState, TerminalResumeStore resumePoints)
 {
 	/// <summary>Returns false when the server refused the switch; the tab keeps its current identity.</summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
@@ -19,6 +20,9 @@ public class CharacterSwitchService(AccountAuthService accountAuth, IConnectionS
 		// switch took matters here.
 		if (await accountAuth.SwitchCharacterAsync(character) is null) return false;
 
+		// The terminals stay connected as the previous character; none of them may leave a resume point
+		// behind for a later reload, which connects as the character the tab acts as now.
+		await resumePoints.ClearAllAsync();
 		await connectionState.ReconnectAsync();
 		return true;
 	}

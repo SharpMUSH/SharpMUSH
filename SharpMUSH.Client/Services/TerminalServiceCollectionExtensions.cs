@@ -30,6 +30,8 @@ public static class TerminalServiceCollectionExtensions
 		// dependencies from the provider) without the container ever tracking the result, so recreated
 		// clients are free to be collected once the facade drops its reference. The one component that
 		// did inject the interface — the /websocket-test dev harness — is gone.
+		// Both clients keep their resume point here, so a reload resumes their sessions.
+		services.AddSingleton<TerminalResumeStore>();
 		services.AddSingleton(sp => new TerminalServiceHost(
 			() =>
 			{

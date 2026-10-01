@@ -44,11 +44,12 @@ public abstract class MudBlazorTestContext : BunitContext
 		// so stubs suffice; Username/Characters default to empty.
 		Services.AddSingleton(new AccountAuthService(
 			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance,
-			[new TerminalSessionTeardown(terminalHost, playTerminalHost)]));
+			[new TerminalSessionTeardown(terminalHost, playTerminalHost, new TerminalResumeStore(Substitute.For<IJSRuntime>()))]));
 		// NavMenu's account panel injects CharacterSwitchService. Render tests never invoke a switch,
 		// but it must be resolvable; it depends on the AccountAuthService above and the game-hub
 		// connection state (reconnected on a switch).
 		Services.AddSingleton(Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		// NavMenu (and other chrome) inject ServerInfoService to gate the guest "Play" affordance on
 		// the server's Net.Guests flag. The stub factory returns "[]" for its api/server-info fetch,

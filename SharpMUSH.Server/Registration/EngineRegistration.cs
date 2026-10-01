@@ -331,6 +331,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.ConnectionEstablishedConsumer, ConnectionEstablishedMessage>();
 				x.AddConsumer<Consumers.ConnectionClosedConsumer, ConnectionClosedMessage>();
 				x.AddConsumer<Consumers.SessionResumeConsumer, SessionResumeRequestMessage>();
+				x.AddConsumer<Consumers.SessionResumedConsumer, SessionResumedMessage>();
 				x.AddConsumer<Consumers.PuebloNegotiatedConsumer, PuebloNegotiatedMessage>();
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 				x.AddConsumer<Consumers.TerminalTypeNegotiatedConsumer, TerminalTypeNegotiatedMessage>();

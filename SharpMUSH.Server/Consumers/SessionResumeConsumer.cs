@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -110,5 +111,23 @@ public sealed class SessionResumeConsumer(
 		current.Metadata["SSL"] = request.IsSecure ? "1" : "0";
 		current.Metadata[ConnectionEstablishedMessage.OrderedPromptsMetadata] = request.OrderedPrompts ? "1" : "0";
 		return true;
+	}
+}
+
+/// <summary>
+/// The connection server rebound a socket to a session (<see cref="SessionResumedMessage"/>). When it is
+/// the incarnation this engine knows, logged in as a player, the connect-time state is sent again: see
+/// <see cref="ConnectionResumedNotification"/>.
+/// </summary>
+public sealed class SessionResumedConsumer(IConnectionService connections, IPublisher publisher)
+	: IMessageConsumer<SessionResumedMessage>
+{
+	public async Task HandleAsync(SessionResumedMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connections.Get(message.Handle) is not { State: IConnectionService.ConnectionState.LoggedIn, Ref: { } player } connection
+			|| connection.Metadata.GetValueOrDefault("SessionId") != message.SessionId)
+			return;
+
+		await publisher.Publish(new ConnectionResumedNotification(message.Handle, player), cancellationToken);
 	}
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
@@ -13,7 +14,7 @@ public class WebSocketClientServiceTests
 	public async Task IsConnected_InitiallyFalse()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await Assert.That(service.IsConnected).IsFalse();
 	}
@@ -22,7 +23,7 @@ public class WebSocketClientServiceTests
 	public async Task DisconnectAsync_WhenNotConnected_DoesNotThrow()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await service.DisconnectAsync();
 
@@ -33,7 +34,7 @@ public class WebSocketClientServiceTests
 	public async Task SendAsync_WhenNotConnected_BuffersMessage()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await service.SendAsync("test message");
 
@@ -44,7 +45,7 @@ public class WebSocketClientServiceTests
 	public async Task DisposeAsync_DisconnectsIfConnected()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await service.DisposeAsync();
 
@@ -55,7 +56,7 @@ public class WebSocketClientServiceTests
 	public async Task MessageReceived_EventCanBeSubscribed()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 		var eventTriggered = false;
 
 		service.MessageReceived += (sender, message) =>
@@ -70,7 +71,7 @@ public class WebSocketClientServiceTests
 	public async Task ConnectionStateChanged_EventCanBeSubscribed()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 		var eventTriggered = false;
 
 		service.ConnectionStateChanged += (sender, state) =>
@@ -86,7 +87,7 @@ public class WebSocketClientServiceTests
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
 
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await Assert.That(service).IsNotNull();
 		await Assert.That(service.IsConnected).IsFalse();
@@ -96,7 +97,7 @@ public class WebSocketClientServiceTests
 	public async Task MultipleDisposeAsync_DoesNotThrow()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await service.DisposeAsync();
 		await service.DisposeAsync();
@@ -109,7 +110,7 @@ public class WebSocketClientServiceTests
 	public async Task SendAsync_WithEmptyMessage_BuffersWhenDisconnected()
 	{
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
-		var service = new WebSocketClientService(logger);
+		var service = new WebSocketClientService(logger, new TerminalResumeStore(Substitute.For<IJSRuntime>()));
 
 		await service.SendAsync("");
 

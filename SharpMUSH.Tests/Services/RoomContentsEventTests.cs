@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Text;
@@ -226,5 +227,50 @@ public class RoomContentsEventTests
 		// Cleanup.
 		await Cmd("&ROOM`CONTENTS #9=");
 		await Cmd("&LAST_DISC_disconnect #9=");
+	}
+
+	/// <summary>
+	/// A resumed session gets the state a connect sends (docs/design/d1/README.md §7.1): a reloaded page
+	/// has none of it, and the connection server's replay covers only the frames after its lastSeq.
+	/// ROOM`CONTENTS and PLAYER`CHANNELS fire for the player with cause "resume".
+	/// </summary>
+	[Test]
+	public async ValueTask ResumeFiresTheConnectTimeSnapshotEvents()
+	{
+		// The bundled packages' handlers, put back afterwards for the rest of the session.
+		var roomHandler = await Eval("get(#9/ROOM`CONTENTS)");
+		var channelsHandler = await Eval("get(#9/PLAYER`CHANNELS)");
+		try
+		{
+			await Cmd("&ROOM`CONTENTS #9=&LAST_RESUME_ROOM_[secure(%1)] #9=%0 %#");
+			await Cmd("&PLAYER`CHANNELS #9=&LAST_RESUME_CHAN_[secure(%1)] #9=%0 %#");
+
+			var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+			var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			var godRoom = (await godNode.Expect<SharpPlayer>().Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
+
+			await WebAppFactoryArg.Services.GetRequiredService<IPublisher>()
+				.Publish(new ConnectionResumedNotification(9003, WebAppFactoryArg.ExecutorDBRef));
+
+			var room = string.Empty;
+			var channels = string.Empty;
+			for (var attempt = 0; attempt < 50 && (room.Length == 0 || channels.Length == 0); attempt++)
+			{
+				room = await Eval("get(#9/LAST_RESUME_ROOM_resume)");
+				channels = await Eval("get(#9/LAST_RESUME_CHAN_resume)");
+				if (room.Length == 0 || channels.Length == 0) await Task.Delay(20);
+			}
+
+			await Assert.That(room).IsEqualTo($"{godRoom} #1").Because("the player's room, with the player as enactor");
+			await Assert.That(await Eval("num(first(get(#9/LAST_RESUME_CHAN_resume)))")).IsEqualTo("#1");
+			await Assert.That(await Eval("last(get(#9/LAST_RESUME_CHAN_resume))")).IsEqualTo("#1");
+		}
+		finally
+		{
+			await Cmd($"&ROOM`CONTENTS #9={roomHandler}");
+			await Cmd($"&PLAYER`CHANNELS #9={channelsHandler}");
+			await Cmd("&LAST_RESUME_ROOM_resume #9=");
+			await Cmd("&LAST_RESUME_CHAN_resume #9=");
+		}
 	}
 }

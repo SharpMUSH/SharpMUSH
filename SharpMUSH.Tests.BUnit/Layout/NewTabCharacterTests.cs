@@ -174,6 +174,7 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 
 		Services.AddSingleton(auth);
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout resolves an application's own display name for the /apps/{slug} topbar title.

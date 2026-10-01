@@ -27,7 +27,12 @@ public interface ITerminalService : IAsyncDisposable
 	/// Connect to <paramref name="serverUri"/> and authenticate with an already-obtained OTT.
 	/// Used when the account session provided the token directly.
 	/// </summary>
-	Task ConnectWithOttAsync(string serverUri, string ott);
+	/// <param name="identity">
+	/// The account and character the OTT logs in as. The session's resume point is kept under it, so a
+	/// reload within the server's grace period resumes the session (still logged in, and the OTT unused)
+	/// instead of logging in again. Null keeps nothing.
+	/// </param>
+	Task ConnectWithOttAsync(string serverUri, string ott, TerminalIdentity? identity = null);
 
 	/// <summary>
 	/// Connect to <paramref name="serverUri"/> and log in as a temporary guest (<c>connect guest</c>).

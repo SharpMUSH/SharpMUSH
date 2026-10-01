@@ -3,7 +3,8 @@
 This document is part of the **WebSocket Support Package**. It describes the
 ``ROOM`CONTENTS`` event handler that fans out structured OOB pushes to a room's
 connected occupants whenever the room's population changes (player movement,
-connect, or disconnect) — the data source behind the portal's Play page.
+connect, or disconnect), and to a resumed session — the data source behind the
+portal's Play page.
 
 > **It ships installed.** The handler is the bundled **`room-contents`**
 > package (`examples/packages/room-contents/`), installed at first boot by
@@ -14,7 +15,7 @@ connect, or disconnect) — the data source behind the portal's Play page.
 > room-contents`, or edit the attributes directly (the package's three-way
 > merge keeps local edits on the next upgrade).
 
-Version 2.0 of the package speaks **OOB v2** (`docs/design/d1/README.md` §7.1,
+Version 2.x of the package speaks **OOB v2** (`docs/design/d1/README.md` §7.1,
 `docs/superpowers/specs/2026-09-29-image-attributes-and-oob-v2-design.md` §4).
 The v1 shapes are at the end; v2 only adds keys to them.
 
@@ -27,7 +28,7 @@ When ``ROOM`CONTENTS`` fires the handler receives:
 | Register | Value |
 |----------|-------|
 | `%0` | Dbref of the affected room |
-| `%1` | Cause: `move-in`, `move-out`, `connect`, or `disconnect` |
+| `%1` | Cause: `move-in`, `move-out`, `connect`, `disconnect`, or `resume` |
 | `%#` | The object that **caused** the event — see below |
 
 It does the viewer-independent work once (``FN`PREPARE``), then for **each**
@@ -39,7 +40,15 @@ their WebSocket (or GMCP) connection:
 - **`room.exits`** — `{"v": 2, "exits": [ … ]}`, one row per exit the viewer
   may see, with the `goto` command a client issues to traverse it.
 - **`room.info`** — `{"v": 2, …}`, the room itself: identity, area, picture,
-  description, scene. Sent on `move-in` and `connect` only.
+  description, scene. Sent on `move-in`, `connect` and `resume` only.
+
+**`resume`** is a web session the connection server rebound to its socket, still
+logged in — a page reload above all. The page holds none of the state pushed
+before, and the server's replay covers only the frames after its `lastSeq`, so
+the engine fires the event as on connect (`docs/design/d1/README.md` §7.1).
+Nothing in the room changed for anyone else: the viewers are the enactor alone
+(the resuming player, when they are a viewer in the room), and they get all
+three packages.
 
 What depends on who is looking, which is why one JSON for the whole room
 (what 1.0 did) is not enough: a DARK occupant or exit is omitted for a viewer
@@ -234,7 +243,7 @@ carries a comment per attribute; this is the map.
 &FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`INFO #9=json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
-&ROOM`CONTENTS #9=think null(u(me/FN`PREPARE,%0),iter(filter(me/FN`VIEWER,lcon(%0)),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
+&ROOM`CONTENTS #9=think null(u(me/FN`PREPARE,%0),iter(if(strmatch(%1,resume),%q<mover>,filter(me/FN`VIEWER,lcon(%0))),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
 ```
 
 Reading the main handler:
@@ -242,7 +251,8 @@ Reading the main handler:
 - ``u(me/FN`PREPARE, %0)`` — once: every base row and the room's info into
   registers; `mover` = the enactor's dbref if the enactor is a viewer
   (``FN`VIEWER``) in the room.
-- ``filter(me/FN`VIEWER, lcon(%0))`` — the viewers: connected players in the room.
+- ``filter(me/FN`VIEWER, lcon(%0))`` — the viewers: connected players in the room;
+  for `resume`, `%q<mover>` alone (the resuming player, or nobody).
 - `iter(<viewers>, …)` — for each, with `%i0` the viewer:
   - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %0, %i0))`` — the who
     list as this viewer sees it, to this viewer alone;

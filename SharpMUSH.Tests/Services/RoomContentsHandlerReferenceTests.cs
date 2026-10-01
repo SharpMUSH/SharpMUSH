@@ -811,6 +811,19 @@ public class RoomContentsHandlerReferenceTests
 				new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
 			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000 000")
 				.Because("a causer who is not a connected viewer must not swallow room.info for everyone");
+
+			// A resume re-sends one session's state, as connect does, and nothing changed for anyone
+			// else: the resuming player alone is sent room.contents, room.exits and room.info.
+			await Cmd("&LAST_PAYLOAD #9=unset");
+			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
+				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
+			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000")
+				.Because("a resume is sent to the resuming player alone, all three packages");
+
+			// A resuming player who is not a viewer in the room is sent nothing, and nobody else is either.
+			await Cmd("&LAST_PAYLOAD #9=unset");
+			await Trigger(f.Room, "resume");
+			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo(string.Empty);
 		}
 		finally
 		{

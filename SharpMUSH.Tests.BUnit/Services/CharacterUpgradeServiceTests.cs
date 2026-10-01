@@ -105,9 +105,9 @@ public class CharacterUpgradeServiceTests : TrackingBunitContext, IAsyncDisposab
 
 		// Both terminals recreated (old inner disposed) then reconnected on the fresh inner.
 		await rig.CommandFirst.Received(1).DisposeAsync();
-		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott");
+		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott", new TerminalIdentity("wiz", "#2:2"));
 		await rig.PlayFirst.Received(1).DisposeAsync();
-		await rig.PlaySecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott");
+		await rig.PlaySecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott", new TerminalIdentity("wiz", "#2:2"));
 
 		await rig.Connection.Received(1).ReconnectAsync();
 	}

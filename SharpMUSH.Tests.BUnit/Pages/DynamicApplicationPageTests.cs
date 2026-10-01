@@ -279,6 +279,7 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]));
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		Services.AddSingleton<TerminalLoginService>();
 
