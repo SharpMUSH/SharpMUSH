@@ -1,6 +1,5 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -12,20 +11,54 @@ using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class DebugVerboseTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	/// <summary>A $-command reached through @force is its own queue entry (#1132); wait for it to run.</summary>
-	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>What <paramref name="who"/> was told matching <paramref name="pattern"/>, by an object or by nobody.</summary>
+	private List<string> Heard(DBRef who, string pattern, bool fromObject = true) =>
+	[
+		.. WebAppFactoryArg.Notifications.DeliveriesFor(who)
+			.Where(delivery => delivery.Type == INotifyService.NotificationType.Announce
+				&& delivery.Sender is not null == fromObject
+				&& Regex.IsMatch(delivery.Message, pattern))
+			.Select(delivery => delivery.Message)
+	];
+
+	/// <summary>
+	/// A $-command reached through @force is its own queue entry (#1132), and @trigger queues too, so
+	/// this waits until every line has arrived before asking how often each did.
+	/// </summary>
+	private async Task ExpectHeardOnce(DBRef who, params string[] patterns) =>
+		await ExpectHeard(who, patterns, times: 1);
+
+	private async Task ExpectHeard(DBRef who, string pattern, bool fromObject = true) =>
+		await ExpectHeard(who, [pattern], times: null, fromObject);
+
+	private async Task ExpectHeard(DBRef who, string[] patterns, int? times, bool fromObject = true)
+	{
+		await Assert.That(() => patterns.All(pattern => Heard(who, pattern, fromObject).Count > 0))
+			.WaitsFor(all => all.IsTrue(), timeout: TimeSpan.FromSeconds(10), pollingInterval: TimeSpan.FromMilliseconds(20));
+		if (times is not { } expected) return;
+		foreach (var pattern in patterns)
+		{
+			await Assert.That(Heard(who, pattern, fromObject)).Count().IsEqualTo(expected).Because(pattern);
+		}
+	}
+
+	private async Task ExpectNotHeard(DBRef who, string pattern) =>
+		await Assert.That(Heard(who, pattern)).IsEmpty();
+
+	/// <summary>Waits for a @pemit the test's own code sends once the behaviour under test has run.</summary>
+	private async Task WaitForPemit(DBRef who, string text) =>
+		await WebAppFactoryArg.Notifications.WaitForAsync(who, text, TimeSpan.FromSeconds(10));
 
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
@@ -40,19 +73,9 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugEvalObj=test1command"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[add\(123,456\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[add\(123,456\)\] => 579$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[add\(123,456\)\] :$",
+			@"^#\d+! +\[add\(123,456\)\] => 579$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugEvalObj"));
 	}
@@ -69,26 +92,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestObj=test2command"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[mul\(add\(11,22\),3\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
 		// Inner function (has extra space for nesting indentation, matching PennMUSH)
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! {2,}add\(11,22\) :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[mul\(add\(11,22\),3\)\] :$",
+			@"^#\d+! {2,}add\(11,22\) :$",
+			@"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNestObj"));
 	}
@@ -103,11 +111,7 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseObj=@pemit me=UniqueTestMessage789"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+\] @pemit me=UniqueTestMessage789$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+\] @pemit me=UniqueTestMessage789$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseObj"));
 	}
@@ -122,17 +126,9 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseNoDupObj=think UniqueNoDup777"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+\] think UniqueNoDup777$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+\] think UniqueNoDup777$");
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "] think think")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("] think think"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseNoDupObj"));
 	}
@@ -147,17 +143,9 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseNoDupSwitchObj=@emit/noeval UniqueNoDupSwitch555"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+\] @emit/noeval UniqueNoDupSwitch555$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+\] @emit/noeval UniqueNoDupSwitch555$");
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "@emit/noeval @emit/noeval")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("@emit/noeval @emit/noeval"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseNoDupSwitchObj"));
 	}
@@ -208,11 +196,7 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[add\(88,77\)\] => 165$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+! +\[add\(88,77\)\] => 165$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy AttrDebugForceTest"));
 	}
@@ -225,17 +209,14 @@ public class DebugVerboseTests
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create AttrNoDebugSuppressTest"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set AttrNoDebugSuppressTest=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)];@pemit %#=NoDebugDone"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=no_debug"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
 
 		// NODEBUG takes precedence over object DEBUG
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! add(55,44)")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await WaitForPemit(testPlayer.DbRef, "NoDebugDone");
+		await ExpectNotHeard(testPlayer.DbRef, @"^#\d+! +\[?add\(55,44\)");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy AttrNoDebugSuppressTest"));
 	}
@@ -252,25 +233,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_noreg DebugNoRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][strlen(%qa)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNoRegObj=test3command"));
-		await DrainQueue();
+		await ExpectHeard(testPlayer.DbRef, @"^#\d+! +\[strlen\(%qa\)\] => 5$");
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "[Q-Registers:")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "[Registers:")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "[Iter-Registers:")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("[Q-Registers:"));
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("[Registers:"));
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("[Iter-Registers:"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNoRegObj"));
 	}
@@ -286,13 +253,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_pre DebugFmtPre=$dbgfmtprecmd:@pemit me=[add(7,8)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPre=dbgfmtprecmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[add\(7,8\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+! +\[add\(7,8\)\] :$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugFmtPre"));
 	}
@@ -308,13 +269,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_post DebugFmtPost=$dbgfmtpostcmd:@pemit me=[add(7,8)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPost=dbgfmtpostcmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[add\(7,8\)\] => 15$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+! +\[add\(7,8\)\] => 15$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugFmtPost"));
 	}
@@ -330,31 +285,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_nest_fmt DebugNestFmt=$dbgnestfmtcmd:@pemit me=[strlen(add(2,3))]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestFmt=dbgnestfmtcmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(add\(2,3\)\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! {2,}add\(2,3\) :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! {2,}add\(2,3\) => 5$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[strlen\(add\(2,3\)\)\] :$",
+			@"^#\d+! {2,}add\(2,3\) :$",
+			@"^#\d+! {2,}add\(2,3\) => 5$",
+			@"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNestFmt"));
 	}
@@ -369,11 +304,7 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseFmtObj=@pemit me=VerbFmtTest444"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+\] @pemit me=VerbFmtTest444$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+\] @pemit me=VerbFmtTest444$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseFmtObj"));
 	}
@@ -387,9 +318,7 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set me=PUPPET"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "Permission denied.", (AnySharpObject?)null, INotifyService.NotificationType.Announce);
+		await ExpectHeard(testPlayer.DbRef, ["^Permission denied\\.$"], times: 1, fromObject: false);
 	}
 
 	[Test]
@@ -402,12 +331,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@set {uniqueName}=PUPPET"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - PUPPET set.")),
-				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
+		await ExpectHeard(testPlayer.DbRef, [$"^{Regex.Escape(uniqueName)} - PUPPET set\\.$"], times: 1, fromObject: false);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@destroy {uniqueName}"));
 	}
@@ -417,30 +341,19 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgOwner");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugOwnerObj"));
+		var created = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugOwnerObj"));
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created.Message!.ToPlainText()))))
+			.Expect<AnySharpObject>().Object().DBRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=!no_command"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_owner DebugOwnerObj=$dbgownercmd:@pemit me=[add(1,1)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugOwnerObj=dbgownercmd"));
-		await DrainQueue();
 
-		var debugCalls = NotifyService.ReceivedCalls()
-			.Where(c =>
-			{
-				var args = c.GetArguments();
-				if (args.Length < 2) return false;
-				return args[1] is SharpMessage msg &&
-					TestHelpers.MessagePlainTextContains(msg, "! [add(1,1)]");
-			})
-			.ToList();
-
-		await Assert.That(debugCalls.Count).IsGreaterThan(0)
-			.Because("Debug output for add(1,1) should be sent");
-
-		var firstArg = debugCalls.First().GetArguments()[0] as AnySharpObject;
-		await Assert.That(firstArg).IsNotNull().Because("Debug should be sent to an object");
-		await Assert.That(firstArg!.Object().DBRef.Number).IsEqualTo(testPlayer.DbRef.Number)
+		// The object's own @pemit is the last thing the command does, so by then all its debug output is out.
+		await ExpectHeard(testPlayer.DbRef, Regex.Escape("! [add(1,1)]"));
+		await WaitForPemit(executor, "2");
+		await Assert.That(Heard(executor, Regex.Escape("! [add(1,1)]"))).IsEmpty()
 			.Because("Debug output should go to owner (testPlayer), not executor object");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugOwnerObj"));
@@ -459,19 +372,9 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctQ=pctqcmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(%qa\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(%qa\)\] => \d+$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[strlen\(%qa\)\] :$",
+			@"^#\d+! +\[strlen\(%qa\)\] => \d+$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPctQ"));
 	}
@@ -489,19 +392,9 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pct0_cmd DebugPct0=$pct0testcmd *:@pemit me=[strlen(%0)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPct0=pct0testcmd World"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(%0\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[strlen\(%0\)\] => 5$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[strlen\(%0\)\] :$",
+			@"^#\d+! +\[strlen\(%0\)\] => 5$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPct0"));
 	}
@@ -519,25 +412,10 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pctiter_cmd DebugPctIter=$pctitercmd:@pemit me=[iter(Hello,strlen(##))]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctIter=pctitercmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[iter\(Hello,strlen\(##\)\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +strlen\(%iL\) :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +strlen\(%iL\) => 5$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[iter\(Hello,strlen\(##\)\)\] :$",
+			@"^#\d+! +strlen\(%iL\) :$",
+			@"^#\d+! +strlen\(%iL\) => 5$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPctIter"));
 	}
@@ -555,19 +433,9 @@ public class DebugVerboseTests
 			MarkupText.Plain("&setq_cmd DebugSetq=$setqcmd:@pemit me=[setq(a,TestVal123)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSetq=setqcmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[setq\(a,TestVal123\)\] :$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! +\[setq\(a,TestVal123\)\] => $")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef,
+			@"^#\d+! +\[setq\(a,TestVal123\)\] :$",
+			@"^#\d+! +\[setq\(a,TestVal123\)\] => $");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugSetq"));
 	}
@@ -583,11 +451,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain("@force VerbosePctObj=think [add(10,20)]"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+\] think 30$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+\] think 30$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerbosePctObj"));
 	}
@@ -605,15 +469,9 @@ public class DebugVerboseTests
 			MarkupText.Plain("&subst_cmd DebugSubst=$substcmd:@pemit me=%# and %#"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSubst=substcmd"));
-		await DrainQueue();
-
 		// PennMUSH substitution-only debug format: "#dbref! %# and %# => #<dbref> and #<dbref>"
 		// Single line, no colon — fires when argument has substitutions but no function calls.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					Regex.IsMatch(PlainText(msg), @"^#\d+! %# and %# => #\d+ and #\d+$")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+! %# and %# => #\d+ and #\d+$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugSubst"));
 	}
@@ -644,19 +502,9 @@ public class DebugVerboseTests
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgFwdObj=dbgfwdcmd"));
-		await DrainQueue();
+		await ExpectHeard(forwardPlayer.DbRef, Regex.Escape("! [add(10,20)]"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(forwardPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [add(10,20)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [add(10,20)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeard(ownerPlayer.DbRef, Regex.Escape("! [add(10,20)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgFwdObj"));
 	}
@@ -689,19 +537,9 @@ public class DebugVerboseTests
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgMFwdObj=dbgmfwdcmd"));
-		await DrainQueue();
+		await ExpectHeard(target1.DbRef, Regex.Escape("! [mul(3,7)]"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(target1.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [mul(3,7)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(target2.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [mul(3,7)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeard(target2.DbRef, Regex.Escape("! [mul(3,7)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgMFwdObj"));
 	}
@@ -721,19 +559,9 @@ public class DebugVerboseTests
 			MarkupText.Plain("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgNoFwdObj=dbgnofwdcmd"));
-		await DrainQueue();
+		await ExpectHeard(ownerPlayer.DbRef, Regex.Escape("! [sub(9,4)]"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [sub(9,4)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(otherPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [sub(9,4)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard(otherPlayer.DbRef, Regex.Escape("! [sub(9,4)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgNoFwdObj"));
 	}
@@ -757,13 +585,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgBadFwdObj=dbgbadfwdcmd"));
-		await DrainQueue();
-
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "! [add(5,5)]")), Arg.Is<AnySharpObject?>(sender => sender != null), INotifyService.NotificationType.Announce);
+		await ExpectHeard(ownerPlayer.DbRef, Regex.Escape("! [add(5,5)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgBadFwdObj"));
 	}
