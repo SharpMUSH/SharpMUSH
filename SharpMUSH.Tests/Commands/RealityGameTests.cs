@@ -21,6 +21,8 @@ public class RealityGameServerFactory : ServerWebAppFactory
 	protected override IServiceProvider SharedWorldServices => Primary.Services;
 }
 
+// The NotInParallel tests switch reality on, or rewrite its configuration, for the whole shared
+// world, which every other test would see.
 public class RealityGameTests
 {
 	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
@@ -493,7 +495,7 @@ public class RealityGameTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task CorruptProfileProducesAnAdministrativeError()
 	{
 		var objects = Get<IObjectStore>();
