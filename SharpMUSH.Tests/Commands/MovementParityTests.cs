@@ -202,7 +202,7 @@ public class MovementParityTests
 		await Assert.That(arrival.Any(m => m.Contains("has arrived."))).IsFalse();
 		await Assert.That(departure.Any(m => m.Contains("has left."))).IsFalse();
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		var arrived = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ARRIVED)]"));
 		await Assert.That(arrived!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
 	}
@@ -220,7 +220,7 @@ public class MovementParityTests
 
 		// `moveit` gates MOVE/OMOVE/AMOVE on nomovemsgs alone, outside the Hearer branch.
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVED)]"));
 		await Assert.That(moved!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
@@ -278,7 +278,7 @@ public class MovementParityTests
 			MarkupText.Plain($"&AENTER {destination}=&ENTERENV me=%0/%1/"));
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {mover.DbRef}={destination}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERENV)]"));
 		var parts = seen!.Message!.ToPlainText().Trim().Split('/');
@@ -304,7 +304,7 @@ public class MovementParityTests
 			MarkupText.Plain($"&AMOVE {thing}=&MOVEENV me=%0/%1"));
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVEENV)]"));
 		var parts = seen!.Message!.ToPlainText().Trim().Split('/');
@@ -777,7 +777,7 @@ public class MovementParityTests
 
 		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
 			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await LocationOf(sticky.ToString()))
 			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
@@ -789,7 +789,7 @@ public class MovementParityTests
 		// have run. Move the item itself and the triad must set it.
 		await MoveService.EnterRoom(GodParser, (await Node(sticky.ToString())).AsContent,
 			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		var movedNow = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
 		await Assert.That(movedNow!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
@@ -948,7 +948,7 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {follower.DbRef}={from}"));
 		await GodParser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain($"follow {leader.Name}"));
 		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await LocationOf(follower.DbRef.ToString())).IsEqualTo(BareDbref(to));
 	}
@@ -971,7 +971,7 @@ public class MovementParityTests
 		await ConnectionService.Disconnect(follower.Handle);
 
 		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await LocationOf(follower.DbRef.ToString()))
 			.IsEqualTo(BareDbref(from))
@@ -995,7 +995,7 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {from}=DARK"));
 
 		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await LocationOf(follower.DbRef.ToString()))
 			.IsEqualTo(BareDbref(from))
@@ -1019,7 +1019,7 @@ public class MovementParityTests
 
 		await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@teleport/silent {mover.DbRef}={destination}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({mover.DbRef}/MOVED)]"));
 		var entered = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERED)]"));
@@ -2283,7 +2283,7 @@ public class MovementParityTests
 			.Because("the o-message is shown where the teleporter stands, not in the destination");
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		var refused = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/REFUSED)]"));
 		await Assert.That(refused!.Message!.ToPlainText().Trim()).IsEqualTo("yes")
 			.Because("fail_lock queues the action attribute rather than running it inline");

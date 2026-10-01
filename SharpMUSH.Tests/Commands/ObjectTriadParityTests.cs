@@ -75,26 +75,7 @@ public class ObjectTriadParityTests
 			return colon < 0 ? part : part[..colon];
 		}));
 
-	/// <summary>
-	/// Waits until the work this test has queued so far has run, without waiting for the rest of the
-	/// session's queue to go quiet. The queue's single reader runs entries one at a time in admission
-	/// order, so a sentinel admitted now finishes after every entry already queued; the extra rounds
-	/// cover an action that queues more work of its own.
-	/// </summary>
-	private async Task Settle()
-	{
-		for (var round = 0; round < 3; round++)
-		{
-			var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-			var admitted = await Scheduler.AdmitWork(() =>
-			{
-				ran.TrySetResult();
-				return ValueTask.FromResult<CallState?>(null);
-			}, "triad-settle", "test");
-			await Assert.That(admitted.Accepted).IsTrue();
-			await ran.Task.WaitAsync(TimeSpan.FromSeconds(10));
-		}
-	}
+	private Task Settle() => Scheduler.SettleForTestsAsync();
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{

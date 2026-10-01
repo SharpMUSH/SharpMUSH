@@ -15,7 +15,7 @@ public class UserDefinedCommandsTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	/// <summary>A $-command matched from an action list is its own queue entry (#1132); wait for it to run.</summary>
-	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+	private Task DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().SettleForTestsAsync();
 
 	/// <summary>
 	/// How many times God was told exactly <paramref name="message"/>, as <paramref name="type"/>, by

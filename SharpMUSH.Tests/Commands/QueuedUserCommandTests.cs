@@ -59,7 +59,7 @@ public class QueuedUserCommandTests : ServerTestBase
 			WebAppFactoryArg.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState,
 			new DbRefAttribute(_actor.DbRef, ["QUEUED_TEST"]),
 			-1));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 	}
 
 	private List<string> Heard() => Notifications.For(_actor.DbRef)
@@ -167,7 +167,7 @@ public class QueuedUserCommandTests : ServerTestBase
 		await Run($"&CMD {_commands}=${_token}:{string.Format(RegisterProbe, _token)}");
 
 		await Run($"teach {_token}[setq(0,typed)]");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardBodies()).IsEquivalentTo(
 			[$"{_token} body me=#{_commands.Number} enactor=#{_actor.DbRef.Number} caller=#{_actor.DbRef.Number} q0="]);
@@ -189,7 +189,7 @@ public class QueuedUserCommandTests : ServerTestBase
 		await Run($"&CMD {_commands}=${_token}:{string.Format(RegisterProbe, _token)}");
 
 		await Run($"with {_commands}={_token}[setq(0,typed)]");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardBodies()).IsEquivalentTo(
 			[$"{_token} body me=#{_commands.Number} enactor=#{_actor.DbRef.Number} caller=#{_actor.DbRef.Number} q0="]);
@@ -206,7 +206,7 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await Run($"with {_commands}={_token}");
 		await Run($"with {_commands}=@pemit me={_token} builtin");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(Heard()).IsEquivalentTo([$"{_token} body me=#{_commands.Number}"]);
 		await Assert.That(Notifications.For(_actor.DbRef)).Contains("No matching command.");
@@ -234,7 +234,7 @@ public class QueuedUserCommandTests : ServerTestBase
 		var start = Notifications.CountFor(_actor.DbRef);
 
 		await Run($"with {foreign}={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start)).IsEquivalentTo([$"{_token} body me=#{foreign.Number}"]);
 	}
@@ -263,9 +263,9 @@ public class QueuedUserCommandTests : ServerTestBase
 		// Drained between the lines: the first one's match is queued, so its body would otherwise race
 		// the second one's `No matching command.`
 		await Run($"with/room here={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		await Run($"with/room here={_token}nope");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start))
 			.IsEquivalentTo([$"{_token} body me=#{_commands.Number}", "No matching command."]);
@@ -288,7 +288,7 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await Run($"with/room here={_token}");
 		await Run($"with {exit}={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start))
 			.IsEquivalentTo(["No matching command.", $"{_token} body me=#{exit.Number}"], CollectionOrdering.Matching);
@@ -304,7 +304,7 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await Run($"with/room {_commands}={_token}");
 		await Run($"with/room me={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start)).IsEquivalentTo(["Make room! Make room!", "Make room! Make room!"]);
 	}
@@ -322,7 +322,7 @@ public class QueuedUserCommandTests : ServerTestBase
 		var start = Notifications.CountFor(_actor.DbRef);
 
 		await Run($"{command} {far}={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start)).IsEquivalentTo(["I don't see that here."]);
 	}
@@ -367,11 +367,11 @@ public class QueuedUserCommandTests : ServerTestBase
 		// Drained between the lines, as PennMUSH's queue is: the first line's match is queued rather than
 		// run in place, so without a drain its body races the next two lines' own output.
 		await Run($"with {carriedName}={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		await Run($"with/room {carriedName}={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		await Run($"with/room here={_token}");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(HeardSince(start)).IsEquivalentTo(
 			[$"{_token} body me=#{carried.Number}", "Make room! Make room!", "No matching command."],
@@ -433,7 +433,7 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await RunQueued($"@halt {_commands}");
 		var ticks = Heard();
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(ticks.Distinct()).IsEquivalentTo([$"{_token} tick 1"]);
 		await Assert.That(Heard().Count).IsEqualTo(ticks.Count);

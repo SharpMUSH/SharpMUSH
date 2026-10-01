@@ -48,7 +48,7 @@ public class CommandTextSubstitutionTests
 		await Mediator.Send(new AdmitCommandListRequest(MarkupText.Plain(list),
 			Factory.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState,
 			new DbRefAttribute(_actor.DbRef, ["CMDTEXT"]), -1));
-		await Factory.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+		await Factory.Services.GetRequiredService<ITaskScheduler>().SettleForTestsAsync();
 		return Factory.Notifications.For(_actor.DbRef).Skip(before).ToList();
 	}
 
