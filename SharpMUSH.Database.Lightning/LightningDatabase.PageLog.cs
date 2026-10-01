@@ -47,6 +47,7 @@ public partial class LightningDatabase
 			Id = page.Id,
 			Sender = page.Sender.ToString(),
 			SenderName = page.SenderName,
+			SenderPlainName = page.SenderPlainName,
 			Recipients = page.Recipients.Select(recipient => recipient.ToString()).ToArray(),
 			RecipientNames = page.RecipientNames.ToArray(),
 			Style = page.Style,
@@ -66,13 +67,20 @@ public partial class LightningDatabase
 				tx.Put(Tables.PageLog, key, Codec.Serialize(record with { CharacterCreationTime = creation }));
 				tx.Put(Tables.PageLogTime, PageLogTimeKey(record.TimestampMs, page.Id, owner.Number), key);
 
-				// The summary follows the latest page; one left by an earlier holder of the dbref is replaced.
+				// The summary follows the latest page and counts every one; one left by an earlier holder of the
+				// dbref is replaced. A summary written before conversations were counted is counted here, once.
 				var conversationKey = Keys.Composite(owner.Number, conversation);
 				PageConversationRecord? existing = tx.TryGet(Tables.PageConversation, conversationKey, out var bytes)
 					? Codec.Deserialize<PageConversationRecord>(bytes)
 					: null;
-				if (existing is not null && existing.CharacterCreationTime == creation && existing.LastId > page.Id)
+				var current = existing?.CharacterCreationTime == creation ? existing : null;
+				var pages = current?.Pages is { } counted
+					? counted + 1
+					: CountCopies(tx, Keys.Concat(conversationKey, Keys.Sep), creation);
+				if (current is not null && current.LastId > page.Id)
 				{
+					// An earlier page arriving late: counted, but the latest is still the latest.
+					tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(current with { Pages = pages }));
 					continue;
 				}
 
@@ -82,7 +90,8 @@ public partial class LightningDatabase
 					With = with.Select(other => other.ToString()).ToArray(),
 					Names = with.Select(page.NameOf).ToArray(),
 					LastId = page.Id,
-					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
+					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds(),
+					Pages = pages
 				});
 			}
 		}, cancellationToken);
@@ -94,7 +103,7 @@ public partial class LightningDatabase
 		var creation = OwnerCreation(character);
 		var others = with.Where(other => other != character).ToArray();
 		var conversation = PageConversation.Key(others.Length > 0 ? others : [character]);
-		var prefix = Keys.Concat(Keys.Dbref(character.Number), Keys.Sep, Keys.Str(conversation), Keys.Sep);
+		var prefix = ConversationPrefix(character.Number, conversation);
 
 		// Newest first, so only the lines asked for are read, however long the conversation has run.
 		var newest = Store.Read(tx => tx.RangeReverse(Tables.PageLog, prefix)
@@ -125,10 +134,47 @@ public partial class LightningDatabase
 				record.With.Select(DBRef.Parse).ToArray(),
 				record.Names,
 				record.LastId,
-				DateTimeOffset.FromUnixTimeMilliseconds(record.LastAtMs)))
+				DateTimeOffset.FromUnixTimeMilliseconds(record.LastAtMs),
+				record.Pages ?? CountCopies(tx, ConversationPrefix(character.Number, string.Join(' ', record.With)), creation)))
 			.ToList());
 		return ValueTask.FromResult(conversations);
 	}
+
+	public ValueTask<IReadOnlyList<SharpPage>> GetRecentPagesAsync(DBRef character, int lines,
+		CancellationToken cancellationToken = default)
+	{
+		var creation = OwnerCreation(character);
+		var take = lines > 0 ? lines : int.MaxValue;
+
+		// The newest pages overall are in the latest conversations: each of the first N conversations in the
+		// latest order has a page newer than any in a conversation after them, so N pages from N conversations
+		// are all that can be in the newest N. Each conversation is read newest first, and no further than N.
+		var newest = Store.Read(tx => tx
+			.RangeReverse(Tables.PageConversationLatest, Keys.Dbref(character.Number))
+			.Where(entry => tx.TryGet(Tables.PageConversation, entry.Value, out var bytes)
+				&& Codec.Deserialize<PageConversationRecord>(bytes).CharacterCreationTime == creation)
+			.Take(take)
+			.SelectMany(entry => tx.RangeReverse(Tables.PageLog, Keys.Concat(entry.Value, Keys.Sep))
+				.Select(page => Codec.Deserialize<PageLogRecord>(page.Value))
+				.Where(record => record.CharacterCreationTime == creation)
+				.Take(take))
+			.OrderByDescending(record => record.Id)
+			.Take(take)
+			.Select(ToPage)
+			.ToList());
+		newest.Reverse();
+		IReadOnlyList<SharpPage> pages = newest;
+		return ValueTask.FromResult(pages);
+	}
+
+	/// <summary>How many of the copies under <paramref name="prefix"/> (a conversation's) are the character's.</summary>
+	private static int CountCopies(ITx tx, byte[] prefix, long creation) =>
+		tx.Range(Tables.PageLog, prefix)
+			.Count(entry => Codec.Deserialize<PageLogRecord>(entry.Value).CharacterCreationTime == creation);
+
+	/// <summary>A conversation's copies' common key prefix: dbref + 0x00 + conversation + 0x00.</summary>
+	private static byte[] ConversationPrefix(long number, string conversation) =>
+		Keys.Concat(Keys.Dbref(number), Keys.Sep, Keys.Str(conversation), Keys.Sep);
 
 	public async ValueTask<int> PurgePageLogAsync(DateTimeOffset before, CancellationToken cancellationToken = default)
 	{
@@ -180,14 +226,20 @@ public partial class LightningDatabase
 			}
 
 			var page = ToPage(Codec.Deserialize<PageLogRecord>(newest));
+			var pages = CountCopies(tx, prefix, summary.CharacterCreationTime);
 			if (summary.LastId != page.Id)
 			{
 				PutConversation(tx, number, conversation, summary, summary with
 				{
 					Names = summary.With.Select(other => page.NameOf(DBRef.Parse(other))).ToArray(),
 					LastId = page.Id,
-					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
+					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds(),
+					Pages = pages
 				});
+			}
+			else
+			{
+				tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(summary with { Pages = pages }));
 			}
 		}
 
@@ -254,5 +306,6 @@ public partial class LightningDatabase
 		record.RecipientNames,
 		record.Style,
 		record.Message,
-		DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampMs));
+		DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampMs),
+		record.SenderPlainName);
 }

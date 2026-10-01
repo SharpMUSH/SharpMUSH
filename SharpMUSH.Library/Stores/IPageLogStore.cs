@@ -27,6 +27,14 @@ public interface IPageLogStore
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// The last <paramref name="lines"/> pages across all of <paramref name="character"/>'s conversations (0
+	/// for all), oldest first.
+	/// </summary>
+	/// <exception cref="ArgumentException"><paramref name="character"/> is not an objid.</exception>
+	ValueTask<IReadOnlyList<SharpPage>> GetRecentPagesAsync(DBRef character, int lines,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// <paramref name="character"/>'s logged conversations, the latest first (by their last page's id); at
 	/// most <paramref name="limit"/> of them, read without reading the rest, or all for 0.
 	/// </summary>

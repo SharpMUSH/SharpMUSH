@@ -74,10 +74,10 @@ public record ChatOptions(
 	[property: SharpConfig(
 		Name = "page_log",
 		Category = "Chat",
-		Description = "Keep each player's pages so the web portal can show their page history (SharpMUSH extension)",
+		Description = "Keep each player's pages so they can read their page history, in game (page/recall) and in the web portal (SharpMUSH extension)",
 		Group = "Page log",
 		Order = 1,
-		Tooltip = "Each player can read only their own copy, through the portal. Staff cannot read anyone else's.")]
+		Tooltip = "Each player can read only their own copy, in game or through the portal. Staff cannot read anyone else's.")]
 	bool PageLog,
 
 	[property: SharpConfig(

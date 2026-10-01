@@ -212,6 +212,8 @@ public static partial class ErrorMessages
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		public const string NoSuchPid = "#-1 NO SUCH PID";
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
+		/// <summary><c>pagerecall()</c> and <c>pageconversations()</c> while <c>page_log</c> is off.</summary>
+		public const string PageLoggingIsOff = "#-1 PAGE LOGGING IS OFF";
 		public const string PlayerNameInUse = "#-1 PLAYER NAME ALREADY IN USE";
 		public const string BadPlayerName = "#-1 BAD PLAYER NAME";
 		public const string BadPassword = "#-1 BAD PASSWORD";
@@ -713,6 +715,36 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>src/speech.c:981</c>: every name the scan could not page, space-separated.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnableToPage = "Unable to page: {0}";
+
+		// --- page/recall and page/conversations: the page log, a SharpMUSH extension (PennMUSH keeps none) ---
+		/// <summary><c>page/recall</c> or <c>page/conversations</c> while <c>page_log</c> is off.</summary>
+		public const string NoPageLog = "This game keeps no page log.";
+		/// <summary><c>page/recall</c>: the name matched no player, as <c>page</c> matches them.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CannotFindWhoYouPaged = "I can't find who you paged with: {0}";
+		/// <summary><c>page/recall</c>: the name fit more than one connected player.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotSureWhoYouPaged = "I'm not sure who you paged with: {0}";
+		/// <summary><c>page/recall</c>'s header for one conversation; {0} names the others in it.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PageRecallWith = "PAGE: Recall of your pages with {0}:";
+		/// <summary><c>page/recall</c>'s header for the latest pages across every conversation.</summary>
+		public const string PageRecallLatest = "PAGE: Recall of your pages:";
+		/// <summary><c>page/recall</c>'s footer.</summary>
+		public const string PageRecallEnd = "PAGE: End recall";
+		/// <summary><c>page/recall</c> of a conversation with nothing logged in it.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NoLoggedPagesWith = "You have no logged pages with {0}.";
+		/// <summary><c>page/recall</c> with nothing logged at all.</summary>
+		public const string NoLoggedPages = "You have no logged pages.";
+		/// <summary><c>page/conversations</c> with nothing logged.</summary>
+		public const string NoLoggedPageConversations = "You have no logged page conversations.";
+		/// <summary><c>page/conversations</c>' header.</summary>
+		public const string PageConversationsHeader = "PAGE: Your page conversations, latest first:";
+		/// <summary><c>page/conversations</c>' footer.</summary>
+		public const string PageConversationsEnd = "PAGE: End of list";
+		/// <summary><c>page/timestamps</c> without <c>/recall</c>.</summary>
+		public const string PageTimestampsNeedsRecall = "PAGE: /timestamps goes with /recall.";
 
 		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
 		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>

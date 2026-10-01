@@ -11,6 +11,10 @@ public sealed record PageLogRecord
 	public long Id { get; init; }
 	public string Sender { get; init; } = "";
 	public string SenderName { get; init; } = "";
+
+	/// <summary>The pager's own name, without the page alias; absent from a copy written before it was kept.</summary>
+	public string? SenderPlainName { get; init; }
+
 	public string[] Recipients { get; init; } = [];
 	public string[] RecipientNames { get; init; } = [];
 	public string Style { get; init; } = "";
@@ -29,4 +33,7 @@ public sealed record PageConversationRecord
 	public string[] Names { get; init; } = [];
 	public long LastId { get; init; }
 	public long LastAtMs { get; init; }
+
+	/// <summary>How many copies the conversation holds; absent from a summary written before it was counted.</summary>
+	public int? Pages { get; init; }
 }
