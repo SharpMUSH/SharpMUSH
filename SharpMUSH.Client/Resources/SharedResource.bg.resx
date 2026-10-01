@@ -3228,6 +3228,14 @@
     <value>Позволете на всеки да гледа</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Терминалът в този раздел играе като {0}, а не като {1}. Започнете сцената от раздел, който играе като {1}, или превключете обратно на {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Не можахме да потвърдим с кой герой играе терминалът в този раздел. Опитайте отново след малко.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Започнете сцена</value>
     <comment>MT</comment>

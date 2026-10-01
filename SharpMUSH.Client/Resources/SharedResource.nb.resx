@@ -3228,6 +3228,14 @@
     <value>La alle se på</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminalen i denne fanen spiller {0}, ikke {1}. Start scenen fra en fane som spiller {1}, eller bytt tilbake til {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Kunne ikke bekrefte hvilken karakter terminalen i denne fanen spiller. Prøv igjen om et øyeblikk.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Start en scene</value>
     <comment>MT</comment>

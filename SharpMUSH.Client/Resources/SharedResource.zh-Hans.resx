@@ -3228,6 +3228,14 @@
     <value>允许任何人观看</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>此标签页的终端正以 {0} 的身份游戏，而不是 {1}。请在以 {1} 游戏的标签页中开始场景，或切换回 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>无法确认此标签页的终端正以哪个角色游戏。请稍后再试。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>开始一个场景</value>
     <comment>MT</comment>

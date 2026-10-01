@@ -37,6 +37,10 @@
                               Variant="Variant.Outlined" Label="@Loc["RolSceneTitleLabel"]" />
                 <MudCheckBox T="bool" @bind-Value="_newPublic" Dense="true"
                              Class="scene-start-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
+                @if (_startError is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="scene-start-error">@_startError</MudAlert>
+                }
                 <div class="scene-start-buttons">
                     <CapsuleButton Primary="true" Class="scene-start-submit"
                                    Disabled="@(string.IsNullOrWhiteSpace(_newTitle) || _busy)"
@@ -84,6 +88,9 @@
     private bool _starting;
     private bool _busy;
     private string _newTitle = string.Empty;
+
+    /// <summary>Why the last Start did not go out, shown in the form.</summary>
+    private string? _startError;
 
     // Matches the engine's default. Here so the choice is visible when a scene is started, and so
     // the exception can be made without knowing a command.
@@ -186,8 +193,25 @@
         if (title.Length == 0) return;
 
         _busy = true;
+        _startError = null;
         try
         {
+            // +scene/create runs as whoever the terminal plays, and a switch of character rebinds the web
+            // session without reconnecting the terminal. Started from here after a switch, the scene would
+            // belong to the character the reader left — so the terminal is asked who it is, and a scene
+            // goes out only as the character the page acts as. Unknown when the query times out, which is
+            // refused too while a character is acting: it is the same question unanswered.
+            var self = await Terminal.SendCommandAsync("num(me)") is [var dbref, ..] && dbref.Trim().StartsWith('#')
+                ? dbref.Trim()
+                : null;
+            if (_acting is { } acting && self != $"#{acting.DbrefNumber}")
+            {
+                _startError = self is null
+                    ? Loc["RolSceneTerminalUnconfirmed"]
+                    : Loc["RolSceneTerminalIsAnotherCharacter", Terminal.ConnectedPlayerName ?? self, acting.Name];
+                return;
+            }
+
             // Ids, not a count: the list is capped, so on a game already at the cap a successful
             // create would not change its length and the scene would look like it had never happened.
             // Read now rather than trusted from when the page loaded: a scene somebody else started in
@@ -198,13 +222,8 @@
                 : null;
 
             // New is not enough: somebody else can start a scene between that read and the engine's
-            // answer to this one. The create makes the connection's character the owner, so a new
-            // scene is this one only if that character owns it — asked of the engine, because the
-            // connection is what +scene/create runs as. Unknown when the query times out, and then
-            // nothing is taken for this scene either.
-            var self = await Terminal.SendCommandAsync("num(me)") is [var dbref, ..] && dbref.Trim().StartsWith('#')
-                ? dbref.Trim()
-                : null;
+            // answer to this one. The create makes the connection's character (self, above) the owner,
+            // so a new scene is this one only if that character owns it.
             await Terminal.SendAsync($"+scene/create {title}");
 
             // The verb travels to the engine and back over NATS, so the scene is not in the API the

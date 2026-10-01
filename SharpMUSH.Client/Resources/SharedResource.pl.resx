@@ -3228,6 +3228,14 @@
     <value>Pozwól wszystkim oglądać</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminal w tej karcie gra jako {0}, a nie {1}. Rozpocznij scenę w karcie, która gra jako {1}, lub przełącz się z powrotem na {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nie udało się potwierdzić, jaką postacią gra terminal w tej karcie. Spróbuj ponownie za chwilę.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Rozpocznij scenę</value>
     <comment>MT</comment>

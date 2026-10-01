@@ -714,6 +714,75 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(reports).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// A scene is not started as a character other than the one the tab acts as. A switch of character
+	/// rebinds the web session but leaves the terminal playing the previous one, and +scene/create goes
+	/// down the terminal — so the form created, and could make private, a scene owned by the character
+	/// the reader had switched away from. It now asks the terminal who it is and refuses on a mismatch.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalPlaysAnotherCharacter_StartsNothingAndSaysSo()
+	{
+		_terminal.IsConnected.Returns(true);
+		_terminal.ConnectedPlayerName.Returns("Wizard");
+		_api.ASceneAppears = true;
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(314, 1, "Wren Halloway", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Not As Wren");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains("RolSceneTerminalIsAnotherCharacter(Wizard, Wren Halloway)");
+		await _terminal.DidNotReceive().SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/", StringComparison.Ordinal)));
+	}
+
+	/// <summary>A terminal that does not say who it is, while a character acts, is refused the same way.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalDoesNotSayWhoItIs_StartsNothingAndSaysSo()
+	{
+		_terminal.IsConnected.Returns(true);
+		_terminal.SendCommandAsync("num(me)", Arg.Any<int>()).Returns(Array.Empty<string>());
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(1, 1, "Wizard", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Unconfirmed");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains("RolSceneTerminalUnconfirmed");
+		await _terminal.DidNotReceive().SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/", StringComparison.Ordinal)));
+	}
+
+	/// <summary>The same character on both is the ordinary case: the scene starts.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalPlaysTheActingCharacter_StartsTheScene()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(1, 1, "Wizard", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("As Myself");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => _terminal.Received().SendAsync("+scene/create As Myself"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-start-error")).IsEmpty();
+	}
+
 	/// <summary>A create the engine refused changed no list, so nothing is reported.</summary>
 	[TUnit.Core.Test]
 	public async Task Scenes_ARefusedCreate_ReportsNothing()

@@ -3037,6 +3037,12 @@
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Let anyone watch</value>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>This tab's terminal is playing {0}, not {1}. Start the scene from a tab playing {1}, or switch back to {0}.</value>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Could not confirm which character this tab's terminal is playing. Try again in a moment.</value>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Start a scene</value>
   </data>

@@ -3228,6 +3228,14 @@
     <value>Deixar qualquer um assistir</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>O terminal desta aba está jogando como {0}, não como {1}. Inicie a cena em uma aba que jogue como {1} ou volte para {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Não foi possível confirmar com qual personagem o terminal desta aba está jogando. Tente novamente em instantes.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Iniciar uma cena</value>
     <comment>MT</comment>

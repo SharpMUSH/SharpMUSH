@@ -3228,6 +3228,14 @@
     <value>Bárki nézheti</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>A lap terminálja ezzel a karakterrel játszik: {0}, nem ezzel: {1}. Indítsd a jelenetet egy olyan lapról, amely ezzel játszik: {1}, vagy válts vissza erre: {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nem sikerült megállapítani, melyik karakterrel játszik a lap terminálja. Próbáld újra egy pillanat múlva.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Jelenet indítása</value>
     <comment>MT</comment>

@@ -3228,6 +3228,14 @@
     <value>Alle zusehen lassen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Das Terminal in diesem Tab spielt {0}, nicht {1}. Starte die Szene in einem Tab, der {1} spielt, oder wechsle zurück zu {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Es ließ sich nicht bestätigen, welchen Charakter das Terminal in diesem Tab spielt. Versuche es gleich noch einmal.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Szene starten</value>
     <comment>MT</comment>

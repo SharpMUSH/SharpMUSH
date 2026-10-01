@@ -3228,6 +3228,14 @@
     <value>Dopusti svima da gledaju</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminal u ovoj kartici igra kao {0}, a ne kao {1}. Pokrenite scenu iz kartice koja igra kao {1} ili se vratite na {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nije moguće potvrditi kojim likom igra terminal u ovoj kartici. Pokušajte ponovno za trenutak.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Pokreni scenu</value>
     <comment>MT</comment>
