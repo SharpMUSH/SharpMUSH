@@ -3,10 +3,13 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Services;
 
-[NotInParallel]
 public class LoggingConfigurationTests
 {
+	// The process environment variables IsRunningInKubernetes reads, which these tests rewrite.
+	private const string KubernetesEnvironment = "KubernetesEnvironment";
+
 	[Test]
+	[NotInParallel(KubernetesEnvironment)]
 	public async Task IsRunningInKubernetes_WithKubernetesServiceHost_ReturnsTrue()
 	{
 		var originalK8sValue = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
@@ -28,6 +31,7 @@ public class LoggingConfigurationTests
 	}
 
 	[Test]
+	[NotInParallel(KubernetesEnvironment)]
 	public async Task IsRunningInKubernetes_WithDotnetRunningInContainer_ReturnsTrue()
 	{
 		var originalDotnetValue = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
@@ -49,6 +53,7 @@ public class LoggingConfigurationTests
 	}
 
 	[Test]
+	[NotInParallel(KubernetesEnvironment)]
 	public async Task IsRunningInKubernetes_WithoutK8sVariables_ReturnsFalse()
 	{
 		var originalKubernetesValue = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
