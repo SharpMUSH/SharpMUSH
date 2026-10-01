@@ -155,7 +155,7 @@ jobs:
       - name: Validate help lookup and presentation consumers
         timeout-minutes: 5
         run: |
-          for help_suite in TextFileServiceTests CompatibilityProfileStructureTests TerminalFrameRendererTests RecursiveMarkdownRendererTests WikiSyntaxInGameRenderingTests MarkupOutputRendererTests HelpCommandTests TextFunctionUnitTests; do
+          for help_suite in RegexHelpExamplesTests TextFileServiceTests CompatibilityProfileStructureTests TerminalFrameRendererTests RecursiveMarkdownRendererTests WikiSyntaxInGameRenderingTests MarkupOutputRendererTests HelpCommandTests TextFunctionUnitTests; do
             dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/$help_suite/*"
           done
 

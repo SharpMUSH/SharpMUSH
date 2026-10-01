@@ -52,95 +52,96 @@
   }
 }
 -->
+
 # regexp syntax
 
-SharpMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
+SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, but POSIX bracket classes, Python-style named groups, and some advanced PCRE constructs need changes when porting code.
 
-(Note that in SharpMUSH, if the regular expression is in an eval'd context (like an argument to regmatch), you'll have to do a lot of escaping to make things work right. One way to escape an argument like %0 is: regeditall(%0,\\W,\\$0) or similar).
+The patterns in the reference below show what the regex engine receives. MUSHcode evaluates function arguments first: escape square brackets, backslashes, parentheses, braces, and commas as needed, or use `lit()` to keep a pattern literal. A backslash intended for the regex engine generally needs doubling in an evaluated argument. For example:
 
-Regular expression matching in SharpMUSH can be used on user-defined command or listen patterns. In this usage, regular expressions are matched case-insensitively unless the attribute has the CASE flag set. Regular expressions can also be matched in MUSHcode using `regmatch()`, `regrab()`, regedit, etc. function families, which usually come in case-sensitive and case-insensitive versions.
+```sharp
+> think regmatch(foo_bar,lit(\A\w+\z))
+1
+> think regmatch(foo bar,lit(\A\w+\z))
+0
+```
+
+Command and listen attributes with the REGEXP flag use regular expressions; their CASE flag controls case sensitivity. Functions such as `regmatch()`, `regrab()`, `regedit()`, and `reswitch()` are case-sensitive by default and have variants ending in `i` for case-insensitive matching. Matching searches for a substring unless the pattern supplies anchors. See [regexp] and [regmatch()].
+
+Historical attribution: the previous version of this guide excerpted the PCRE manual by Philip Hazel <ph10@cam.ac.uk>, Copyright (c) 1997-1999 University of Cambridge, England. This reference has been rewritten for SharpMUSH's .NET engine.
 
 ## Pattern characters
 
-A regular expression is a pattern that is matched against a subject string from left to right. Most characters stand for themselves in a pattern, and match the corresponding characters in the subject.
+Most characters match themselves. Outside character classes, these characters have special meanings:
 
-There are two different sets of meta-characters: those that are recognized anywhere in the pattern except within square brackets, and those that are recognized in square brackets.  Outside square brackets, the meta-characters are as follows:
+| Syntax | Meaning |
+| --- | --- |
+| `\` | Escape a metacharacter or introduce a regex escape. |
+| `.` | Any character except newline; `(?s)` includes newline. |
+| `^`, `$` | Start and end anchors; see Boundary assertions. |
+| `[abc]` | One character from a class. |
+| `a|b` | Either alternative. |
+| `(pattern)` | Capture a subexpression. |
+| `(?:pattern)` | Group without capturing. |
+| `*`, `+`, `?`, `{m,n}` | Repeat the preceding character or group. |
 
-       \      general escape character with several uses<br>
-       ^      assert start of subject<br>
-       $      assert end of subject<br>
-       .      match any character except newline<br>
-       [      start character class definition
-       |      start of alternative branch ("or")
-       (      start subpattern<br>
-       )      end subpattern<br>
-       ?      0 or 1 quantifier (after a unit to quantify) or, minimal match (after a quantifier) or, extends the meaning of ( after a (
-       *      0 or more quantifier
-       +      1 or more quantifier
+For a literal plus sign use `\+`; for a literal dot use `\.`. Escaping for the MUSH parser is an additional layer, not a change to regex syntax.
 
 ## Character classes
 
-Part of a pattern that is in square brackets is called a "character class". It matches any character listed in the class. In a character class, the only metacharacters are:
+`[abc]` matches a, b, or c; `[a-z]` matches a range; `[^abc]` excludes those characters. Escape a literal `]`, `-`, or backslash where its position would otherwise give it a special meaning.
 
-       \      general escape character<br>
-       ^      negate the class, if the first character in the class
-       -      indicates character range (e.g. A-Z, 0-4)
-`[:NAME:]`   A symbol for a group of characters that can vary according to the language the mush is using. See [regexp classes] for more information.<br>
-       ]      terminates the character class
+| Syntax | Meaning |
+| --- | --- |
+| `\d`, `\D` | Unicode decimal digit; its complement. |
+| `\s`, `\S` | Unicode whitespace; its complement. |
+| `\w`, `\W` | Unicode word character, including letters, decimal digits, combining marks, and connector punctuation; its complement. |
+| `\p{L}`, `\P{L}` | Unicode letter; its complement. |
+| `[0-9]` | ASCII decimal digit only. |
 
-A backslash will escape most metacharacters, and can turn some normal characters into generic character types:
-
-       \d     any decimal digit<br>
-       \D     any character that is not a decimal digit<br>
-       \s     any whitespace character<br>
-       \S     any character that is not a whitespace character<br>
-       \w     any "word" character (letter, digit, or underscore)<br>
-       \W     any "non-word" character
+.NET does not implement POSIX classes such as `[[:digit:]]` or `[[:alpha:]]`. Replace them with explicit ranges or Unicode categories, as described in [regexp classes]. They must not be used for validation: they do not mean the POSIX class in this engine.
 
 ## Boundary assertions
 
-A backlash can also be used for two useful assertions -- conditions that must be met at a particular point in a match:
+`\b` matches a word boundary and `\B` matches a position that is not a word boundary. Within a character class, `\b` means a backspace character instead.
 
-       \b     word boundary<br>
-       \B     not a word boundary
-
-A word boundary is a position in the subject string where the current character and the previous character do not both match \w or \W (i.e. one matches \w and  the  other  matches \W), or the start<br>
-or end of the string if the first or last character matches \w, respectively.
+`^` and `$` anchor the start and end of the string by default. `$` can also match before a final newline. `(?m)` makes these anchors apply to individual lines. For strict whole-string validation, use `\A` (absolute start) and `\z` (absolute end), which are unaffected by multiline mode. `\Z` also allows a final newline.
 
 ## Quantifiers
 
-Quantifiers specify repetition of characters. Four are available:
-       *    match 0 or more of whatever came before
-       +    match 1 or more of whatever came before<br>
-       ?    match 0 or 1 of whatever came before<br>
-	 {m,n}  match between 'm' and 'n' of whatever came before. if 'm' is omitted, it matches between 0 and 'n'. if 'n' is omitted, matches at least 'm'. Note the MUSH parser often requires escaping the braces and the comma.
+| Syntax | Repetitions |
+| --- | --- |
+| `*` | Zero or more. |
+| `+` | One or more. |
+| `?` | Zero or one. |
+| `{m}` | Exactly m. |
+| `{m,}` | At least m. |
+| `{m,n}` | Between m and n, inclusive. |
 
-Quantifiers are usually greedy -- they match as much as possible. Adding a ? after a quantifier causes it to match as little as possible instead.
+Use `{0,n}` for an upper bound with no lower bound; `{,n}` is not a .NET quantifier. Quantifiers are greedy by default. A following `?` makes them lazy, for example `.*?`. PCRE possessive quantifiers such as `*+` are unsupported; .NET offers atomic groups `(?>pattern)` when backtracking must be prevented. Braces and commas must also survive the MUSH parser.
 
 ## Back references
 
-Outside a character class, a backslash followed by a digit greater than 0 (and possibly further digits) is a back reference to a capturing subpattern earlier (i.e. to its left) in the pattern, provided there have been that many previous capturing left parentheses. A back reference matches whatever actually matched the capturing subpattern in the current subject string, rather than anything matching the subpattern itself. So the pattern
+A numeric backreference such as `\1` matches the text captured by a group in the pattern. For example, `(sens|respons)e and \1ibility` matches "sense and sensibility" or "response and responsibility".
 
-    (sens|respons)e and \1ibility
+Name a capture with `(?<name>pattern)` or `(?'name'pattern)`, and refer to it within the pattern with `\k<name>`. For example, `(?<word>sens|respons)e and \k<word>ibility`. PCRE's `(?P<name>pattern)` and `(?P=name)` forms are unsupported.
 
-matches "sense and sensibility" and "response and responsibility", but not "sense and responsibility".
+There are two numbering rules to distinguish. Within regex patterns, .NET numbers unnamed groups before named groups. SharpMUSH's softcode capture APIs preserve PennMUSH opening-parenthesis order for ordinary groups, named or unnamed. Complex patterns, including duplicate group names or explicitly numbered groups, can fall back to .NET numbering. Prefer named references when mixing group types.
 
-You can give names to subpatterns and refer to them that way instead of using numbers.
+In a REGEXP `$-command`, `%0` is the whole match and `%1` through `%9` are captures; named arguments are available with `r(<name>,args)`. `regmatch()` can copy captures into q-registers with its register-list argument. During a `regedit()` replacement or a matched `reswitch()` body, `$0` is the whole match, `$1` through `$9` are captures, and `$<name>` reads a named capture. `$10` means `$1` followed by a literal 0 in this softcode context. These substitutions are not .NET replacement syntax.
 
-(?P`<NAME>`subexpr) (Note: Literal <>'s) is a named capture, and (?P=NAME) refers back to it. The above pattern might be written:
-
-(?P`<word>`sens|respons)e and (?P=word)ibility
-
-In a `$-command`, the value of the named pattern can be accessed via the r(`<name>`, args). Softcode functions which work with regexps allow you to access the named subpatterns via $`<NAME>` (the <> are literal here).
+`regreplace()` uses .NET replacement syntax instead: `$1`, `${name}`, `$&` for the whole match, and `$$` for a literal dollar sign. Its numeric references follow .NET numbering, and its replacement argument is evaluated before replacement rather than once for each match.
 
 ## Lookaround assertions
 
-An assertion is a test on the characters following or preceding the current matching point that does not actually consume any characters. There are two kinds: those that look ahead of the current position in the subject string, and those that look behind it.
+Lookarounds test text without consuming it: `(?=pattern)` is positive lookahead, `(?!pattern)` negative lookahead, `(?<=pattern)` positive lookbehind, and `(?<!pattern)` negative lookbehind. For example, `\d+(?= coins)` matches the digits before " coins" without including that suffix.
 
-An assertion subpattern is matched in the normal way, except that it does not cause the current matching position to be changed. Lookahead assertions start with (?= for positive assertions and (?! for negative assertions. For example, Lookbehind assertions start with (?<= for positive assertions and (?<! for negative assertions.
-
-Assertion subpatterns are not capturing subpatterns, and may not be repeated, because it makes no sense to assert the same thing several times. If an assertion contains capturing subpatterns within it, these are always counted for the purposes of numbering the capturing subpatterns in the whole pattern.
+Lookaround groups themselves do not capture, although capturing groups inside them can. .NET supports variable-length lookbehind; its behavior should be tested when porting a PCRE pattern.
 
 ## Advanced syntax resources
 
-PCRE's engine can also do conditional subpattern matching, embedded comments in regexps, and a bunch of other things. See a regexp book for details.
+Inline options include `(?i)` for case-insensitive matching, `(?m)` for multiline anchors, `(?s)` for dot matching newline, `(?n)` for explicit captures only, and `(?x)` for ignoring pattern whitespace and enabling comments. Options can be scoped, for example `(?i:pattern)`, or disabled with `(?-i:pattern)`.
+
+.NET also supports conditionals, inline comments `(?#comment)`, atomic groups, and balancing groups. It does not support PCRE recursion/subroutine calls, branch-reset groups, backtracking control verbs, `\K`, or `\Q...\E` quoting. Rewrite and test these patterns rather than assuming compatibility.
+
+For the engine reference, see https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-language-quick-reference . This describes engine syntax; MUSH argument escaping and softcode capture substitutions still follow the rules above. Core softcode regex matching is time-bounded and reports `#-1 REGEXP TIMEOUT` when a match exceeds its budget. Invalid-pattern behavior depends on the calling function; see its help.
