@@ -196,17 +196,26 @@
             var before = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> running
                 ? running.Select(s => s.Id).ToHashSet()
                 : null;
+
+            // New is not enough: somebody else can start a scene between that read and the engine's
+            // answer to this one. The create makes the connection's character the owner, so a new
+            // scene is this one only if that character owns it — asked of the engine, because the
+            // connection is what +scene/create runs as. Unknown when the query times out, and then
+            // nothing is taken for this scene either.
+            var self = await Terminal.SendCommandAsync("num(me)") is [var dbref, ..] && dbref.Trim().StartsWith('#')
+                ? dbref.Trim()
+                : null;
             await Terminal.SendAsync($"+scene/create {title}");
 
             // The verb travels to the engine and back over NATS, so the scene is not in the API the
             // instant the send returns. Poll briefly for it rather than guessing at a sleep long
             // enough to cover the round trip: whichever happens first, the page stops waiting.
             var created = false;
-            for (var attempt = 0; attempt < 6 && !created && before is not null; attempt++)
+            for (var attempt = 0; attempt < 6 && !created && before is not null && self is not null; attempt++)
             {
                 await Task.Delay(250);
                 created = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> now
-                    && now.Any(s => !before.Contains(s.Id));
+                    && now.Any(s => !before.Contains(s.Id) && s.OwnerDbref == self);
             }
 
             // +scene/private acts on the focused scene, and creation is what focuses the new one, so

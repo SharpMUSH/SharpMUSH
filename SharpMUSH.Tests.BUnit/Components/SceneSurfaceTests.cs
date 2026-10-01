@@ -90,6 +90,13 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	public bool AnotherSceneStarted { get; set; }
 
 	/// <summary>
+	/// Somebody else starts a scene in the window between this player's create going out and the
+	/// engine answering it: absent from the roster read just before the create, present on every
+	/// read after it.
+	/// </summary>
+	public bool AnotherPlayerStartsASceneMeanwhile { get; set; }
+
+	/// <summary>
 	/// Paths the server fails with a 503 and an <c>{ "error": … }</c> body, as it does when the scene
 	/// store is unreachable. Settable mid-test, so a read can succeed and a later re-read fail.
 	/// </summary>
@@ -110,6 +117,19 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	   "startedAt":1700000600000,"lastActivityAt":1700000600000,"poseCount":0,
 	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
 	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"A Quiet Corner"}}
+	]
+	""";
+
+	private const string SceneListWithAnotherPlayersScene = """
+	[
+	  {"id":"S1","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000000000,"lastActivityAt":1700000500000,"poseCount":2,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"Barroom Brawl"}},
+	  {"id":"S3","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000700000,"lastActivityAt":1700000700000,"poseCount":0,
+	   "ownerDbref":"#42","ownerName":"Someone","starterDbref":"#42","starterName":"Someone",
+	   "roomDbref":"#8","roomName":"The Square","meta":{"title":"Market Day"}}
 	]
 	""";
 
@@ -134,6 +154,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			// be on the roster before they asked for it, and one somebody else made can be at any time.
 			"/api/scenes" when request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
 				&& (ASceneAppears && CreateSent || AnotherSceneStarted) => SceneListWithNewScene,
+			"/api/scenes" when request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
+				&& AnotherPlayerStartsASceneMeanwhile && CreateSent => SceneListWithAnotherPlayersScene,
 			"/api/scenes" => SceneList,
 			"/api/scenes/S1" => Scene,
 			"/api/scenes/S1/poses" => Poses,
@@ -262,6 +284,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		_terminal.When(t => t.SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/create", StringComparison.Ordinal))))
 			.Do(_ => _api.CreateSent = true);
+		// The terminal is connected as #1, the owner of the fixture's own new scene (S2).
+		_terminal.SendCommandAsync("num(me)", Arg.Any<int>()).Returns(["#1"]);
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -749,6 +773,40 @@ public class SceneSurfaceTests : TrackingBunitContext
 			TimeSpan.FromSeconds(5));
 
 		// Outlasts the roster poll, as in the test above.
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
+	}
+
+	/// <summary>
+	/// A scene another player starts while this player's create is in flight is not taken for theirs.
+	///
+	/// <para>The roster read just before the create shuts out scenes that already existed, but anything
+	/// new after it counted: a scene somebody else started in the moment the engine took to answer — or
+	/// to refuse — was "the new one", and +scene/private went out against whatever scene this player was
+	/// focused on. A new scene is now this player's only if this connection's character owns it.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AnotherPlayersSceneStartedDuringTheCreate_IsNotTakenForTheNewOne()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+		_api.AnotherPlayerStartsASceneMeanwhile = true;
+
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Refused Meanwhile");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Refused Meanwhile"),
+			TimeSpan.FromSeconds(5));
+
+		// Outlasts the roster poll, as in the tests above.
 		await Task.Delay(TimeSpan.FromSeconds(3));
 
 		await _terminal.DidNotReceive().SendAsync("+scene/private");
