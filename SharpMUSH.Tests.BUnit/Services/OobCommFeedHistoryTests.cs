@@ -208,11 +208,6 @@ public class OobCommFeedHistoryTests
 		await Assert.That(history.ConversationMarks.Count).IsEqualTo(2);
 	}
 
-	/// <summary>
-	/// A channel renamed while the viewer is connected: the server moved its marker to the new name, and
-	/// the new list names it. The feed reads the markers again, so the lines before the rename are still
-	/// counted from where the viewer had read to.
-	/// </summary>
 	/// <summary>Leaving a channel and joining it again pulls it again: what was said meanwhile is history to fetch.</summary>
 	[Test]
 	public async Task A_channel_left_and_rejoined_is_pulled_again()
@@ -274,6 +269,11 @@ public class OobCommFeedHistoryTests
 		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(500);
 	}
 
+	/// <summary>
+	/// A channel renamed while the viewer is connected: the server moved its marker to the new name, and
+	/// the new list names it. The feed reads the markers again, so the lines before the rename are still
+	/// counted from where the viewer had read to.
+	/// </summary>
 	[Test]
 	public async Task A_renamed_channel_keeps_its_marker()
 	{
