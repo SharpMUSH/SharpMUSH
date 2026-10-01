@@ -13,6 +13,9 @@ namespace SharpMUSH.Database.Lightning;
 /// rows), and a conversation's are a range under it in the order they were sent.</item>
 /// <item><see cref="Tables.PageConversation"/>: one row per character and conversation, keyed dbref + 0x00 +
 /// conversation, naming who it is with and its latest page, so listing them reads no pages.</item>
+/// <item><see cref="Tables.PageConversationLatest"/>: dbref + the conversation's last id + conversation →
+/// the summary's key, one entry per conversation, so the listing reads a character's latest conversations
+/// newest first and stops at the limit.</item>
 /// <item><see cref="Tables.PageLogTime"/>: when sent (ms) + id + dbref → the copy's key, so the retention
 /// purge reads only what it deletes, oldest first, and stops at the first page young enough to keep. It is
 /// keyed by the time sent, not the id alone: an id can run ahead of the clock (the id source reserves a block
@@ -65,22 +68,22 @@ public partial class LightningDatabase
 
 				// The summary follows the latest page; one left by an earlier holder of the dbref is replaced.
 				var conversationKey = Keys.Composite(owner.Number, conversation);
-				if (tx.TryGet(Tables.PageConversation, conversationKey, out var bytes)
-					&& Codec.Deserialize<PageConversationRecord>(bytes) is { } existing
-					&& existing.CharacterCreationTime == creation
-					&& existing.LastId > page.Id)
+				PageConversationRecord? existing = tx.TryGet(Tables.PageConversation, conversationKey, out var bytes)
+					? Codec.Deserialize<PageConversationRecord>(bytes)
+					: null;
+				if (existing is not null && existing.CharacterCreationTime == creation && existing.LastId > page.Id)
 				{
 					continue;
 				}
 
-				tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(new PageConversationRecord
+				PutConversation(tx, owner.Number, conversation, existing, new PageConversationRecord
 				{
 					CharacterCreationTime = creation,
 					With = with.Select(other => other.ToString()).ToArray(),
 					Names = with.Select(page.NameOf).ToArray(),
 					LastId = page.Id,
 					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
-				}));
+				});
 			}
 		}, cancellationToken);
 	}
@@ -105,14 +108,19 @@ public partial class LightningDatabase
 		return ValueTask.FromResult(pages);
 	}
 
-	public ValueTask<IReadOnlyList<SharpPageConversation>> GetPageConversationsAsync(DBRef character,
+	public ValueTask<IReadOnlyList<SharpPageConversation>> GetPageConversationsAsync(DBRef character, int limit = 0,
 		CancellationToken cancellationToken = default)
 	{
 		var creation = OwnerCreation(character);
+		// Latest first through the latest-order index, reading only the summaries listed.
 		IReadOnlyList<SharpPageConversation> conversations = Store.Read(tx => tx
-			.Range(Tables.PageConversation, Keys.Composite(character.Number, ""))
-			.Select(entry => Codec.Deserialize<PageConversationRecord>(entry.Value))
+			.RangeReverse(Tables.PageConversationLatest, Keys.Dbref(character.Number))
+			.Select(entry => tx.TryGet(Tables.PageConversation, entry.Value, out var bytes)
+				? Codec.Deserialize<PageConversationRecord>(bytes)
+				: null)
+			.OfType<PageConversationRecord>()
 			.Where(record => record.CharacterCreationTime == creation)
+			.Take(limit > 0 ? limit : int.MaxValue)
 			.Select(record => new SharpPageConversation(
 				record.With.Select(DBRef.Parse).ToArray(),
 				record.Names,
@@ -159,23 +167,27 @@ public partial class LightningDatabase
 		{
 			var conversationKey = prefix.AsSpan(0, prefix.Length - 1);
 			var newest = tx.RangeReverse(Tables.PageLog, prefix).Select(entry => entry.Value).FirstOrDefault();
+			if (!tx.TryGet(Tables.PageConversation, conversationKey, out var bytes)) continue;
+
+			var summary = Codec.Deserialize<PageConversationRecord>(bytes);
+			var number = Keys.ReadDbref(prefix);
+			var conversation = Keys.ReadStr(conversationKey[9..]);
 			if (newest is null)
 			{
 				tx.Delete(Tables.PageConversation, conversationKey);
+				tx.Delete(Tables.PageConversationLatest, PageConversationLatestKey(number, summary.LastId, conversation));
+				continue;
 			}
-			else if (tx.TryGet(Tables.PageConversation, conversationKey, out var bytes))
+
+			var page = ToPage(Codec.Deserialize<PageLogRecord>(newest));
+			if (summary.LastId != page.Id)
 			{
-				var summary = Codec.Deserialize<PageConversationRecord>(bytes);
-				var page = ToPage(Codec.Deserialize<PageLogRecord>(newest));
-				if (summary.LastId != page.Id)
+				PutConversation(tx, number, conversation, summary, summary with
 				{
-					tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(summary with
-					{
-						Names = summary.With.Select(other => page.NameOf(DBRef.Parse(other))).ToArray(),
-						LastId = page.Id,
-						LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
-					}));
-				}
+					Names = summary.With.Select(other => page.NameOf(DBRef.Parse(other))).ToArray(),
+					LastId = page.Id,
+					LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
+				});
 			}
 		}
 
@@ -197,7 +209,28 @@ public partial class LightningDatabase
 
 		tx.DeletePrefix(Tables.PageLog, prefix);
 		tx.DeletePrefix(Tables.PageConversation, prefix);
+		tx.DeletePrefix(Tables.PageConversationLatest, Keys.Dbref(number));
 	}
+
+	/// <summary>
+	/// Writes a conversation's summary and moves its latest-order entry from where <paramref name="previous"/>
+	/// (the summary it replaces, if any) put it.
+	/// </summary>
+	private static void PutConversation(ITx tx, long number, string conversation, PageConversationRecord? previous,
+		PageConversationRecord summary)
+	{
+		var conversationKey = Keys.Composite(number, conversation);
+		if (previous is not null)
+		{
+			tx.Delete(Tables.PageConversationLatest, PageConversationLatestKey(number, previous.LastId, conversation));
+		}
+
+		tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(summary));
+		tx.Put(Tables.PageConversationLatest, PageConversationLatestKey(number, summary.LastId, conversation), conversationKey);
+	}
+
+	private static byte[] PageConversationLatestKey(long number, long lastId, string conversation) =>
+		Keys.Concat(Keys.Dbref(number), Keys.Dbref(lastId), Keys.Str(conversation));
 
 	private static byte[] PageLogKey(long number, string conversation, long id) =>
 		Keys.Concat(Keys.Dbref(number), Keys.Sep, Keys.Str(conversation), Keys.Sep, Keys.Dbref(id));

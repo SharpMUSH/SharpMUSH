@@ -364,7 +364,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			|| !string.Equals(list.Character, viewer, StringComparison.Ordinal) || _viewer is not { } self)
 			return;
 
-		_conversationsListed = true;
+		// A listing while page_log is off lists nothing and is not done: the next list asks again, so turning
+		// logging on brings the kept conversations back without a reconnect.
+		_conversationsListed = list.Logging;
 		_pageLogging = list.Logging;
 		var behind = new List<string>();
 		foreach (var summary in list.Conversations)
@@ -375,10 +377,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				.Prepend(self)
 				.ToList();
 			var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Distinct().Order(StringComparer.Ordinal));
-			var lastAt = _conversations.TryGetValue(key, out var known) && known.LastAt > summary.LastAt
-				? known.LastAt
-				: summary.LastAt;
-			_conversations[key] = new Conversation(known?.Participants ?? participants, lastAt);
+			_conversations[key] = _conversations.GetValueOrDefault(key) is { } known
+				? known with { LastAt = known.LastAt > summary.LastAt ? known.LastAt : summary.LastAt }
+				: new Conversation(participants, summary.LastAt);
 
 			if (_markers.TryGetValue(key, out var marker) && marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
 				behind.Add(key);
@@ -413,9 +414,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (added.Count == 0) return false;
 
 		lines.AddRange(added);
-		// Stable: lines sent in the same millisecond keep the order of their ids, and those without one
-		// keep the order they arrived in.
-		var ordered = lines.OrderBy(line => line.Timestamp).ThenBy(line => line.Id ?? long.MaxValue).ToList();
+		// Stable: lines with the same key keep the order they arrived in.
+		var ordered = lines.OrderBy(OrderKey).ToList();
 		lines.Clear();
 		lines.AddRange(ordered.Skip(Math.Max(0, ordered.Count - HistoryLimit)));
 
@@ -423,6 +423,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)) AdvanceMarker(key);
 		return true;
 	}
+
+	/// <summary>
+	/// Where a line sorts: its id where it has one, since ids keep rising when the clock steps back; else the
+	/// microsecond it was sent, the scale ids are taken on, so a line without one falls among them by time.
+	/// </summary>
+	private static long OrderKey(CommMessage line) =>
+		line.Id ?? (line.Timestamp - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
 
 	/// <summary>
 	/// A key's unread count from its marker: the lines after it from someone else. A key without one keeps

@@ -5179,7 +5179,7 @@
     <value>Още няма нищо.</value>
   </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
-    <value>Тази игра не пази история на пейджовете, затова се показват само пейджовете от това посещение.</value>
+    <value>Тази игра не пази история на личните съобщения, затова се показват само съобщенията от това посещение.</value>
   </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Обратно към сцената</value>

@@ -5179,7 +5179,7 @@
     <value>Nog niets hier.</value>
   </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
-    <value>Dit spel bewaart geen pagegeschiedenis, dus alleen pages van dit bezoek worden getoond.</value>
+    <value>Dit spel bewaart geen geschiedenis van privéberichten, dus alleen berichten van dit bezoek worden getoond.</value>
   </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Terug naar de scène</value>

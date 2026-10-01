@@ -64,10 +64,17 @@ public class CommController(
 	/// <summary>The most logged pages one conversation recall returns, and what it returns when not asked for fewer.</summary>
 	public const int PageRecallLimit = 500;
 
+	/// <summary>
+	/// The most conversations the listing returns, the latest: as many as the portal's feed keeps
+	/// (<c>OobCommFeed.ConversationLimit</c>), read without reading the rest.
+	/// </summary>
+	public const int PageConversationListLimit = 100;
+
 	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
 
 	/// <summary>
-	/// The character's own logged page conversations, the latest first. Nobody else's: there is no way to
+	/// The character's own logged page conversations, the latest <see cref="PageConversationListLimit"/>, latest
+	/// first. Nobody else's: there is no way to
 	/// name another character's log here, and no staff variant of it.
 	/// </summary>
 	[HttpGet("conversations")]
@@ -78,9 +85,8 @@ public class CommController(
 		var character = player.Object.DBRef;
 		if (!PageLogOn) return new PageConversations(character.ToString(), false, []);
 
-		var conversations = await mediator.Send(new GetPageConversationsQuery(character), ct);
+		var conversations = await mediator.Send(new GetPageConversationsQuery(character, PageConversationListLimit), ct);
 		return new PageConversations(character.ToString(), true, conversations
-			.OrderByDescending(conversation => conversation.LastId)
 			.Select(conversation => new PageConversationSummary(
 				conversation.With.Select(other => other.ToString()).ToArray(),
 				conversation.Names,

@@ -5179,7 +5179,7 @@
     <value>Inget här än.</value>
   </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
-    <value>Det här spelet sparar ingen sidhistorik, så bara sidor från det här besöket visas.</value>
+    <value>Det här spelet sparar ingen historik över privata meddelanden, så bara meddelanden från det här besöket visas.</value>
   </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Tillbaka till scenen</value>

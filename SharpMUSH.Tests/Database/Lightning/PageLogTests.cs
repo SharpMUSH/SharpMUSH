@@ -23,7 +23,7 @@ public class PageLogTests
 	[Before(Test)]
 	public async Task Setup()
 	{
-		_path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		_db = Create(_path);
 		await _db.Migrate();
 	}
@@ -162,6 +162,35 @@ public class PageLogTests
 		await Assert.That(three.LastId).IsEqualTo(group.Id);
 	}
 
+	/// <summary>
+	/// The listing is the latest conversations first, and reads no more than the limit: a character with
+	/// years of conversations gets the newest, not all of them.
+	/// </summary>
+	[Test]
+	public async Task Conversations_AreListedLatestFirst_AndBoundedByTheLimit()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var others = new List<DBRef>();
+		for (var i = 0; i < 5; i++)
+		{
+			var other = await NewPlayer($"Other{i}");
+			others.Add(other);
+			await Send(Page(ilsa, "Ilsa", [other], [$"Other{i}"], $"to {i}", At.AddMinutes(i)));
+		}
+
+		// The oldest conversation speaks again, and is the latest now.
+		await Send(Page(others[0], "Other0", [ilsa], ["Ilsa"], "back again", At.AddHours(1)));
+
+		var latest = await _db.GetPageConversationsAsync(ilsa, 3);
+
+		await Assert.That(latest.Select(conversation => conversation.With.Single()))
+			.IsEquivalentTo(new[] { others[0], others[4], others[3] }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That((await _db.GetPageConversationsAsync(ilsa)).Count).IsEqualTo(5).Because("no limit lists them all");
+		await Assert.That(_db.Store.Read(tx => tx.Range(Tables.PageConversationLatest,
+				SharpMUSH.Library.Plugins.Storage.Lightning.Keys.Dbref(ilsa.Number)).Count())).IsEqualTo(5)
+			.Because("one latest-order entry per conversation of Ilsa's, the old one replaced when it spoke again");
+	}
+
 	/// <summary>A page to oneself is a conversation with oneself.</summary>
 	[Test]
 	public async Task APageToOneself_IsAConversationWithOneself()
@@ -206,6 +235,8 @@ public class PageLogTests
 		await Assert.That(logs).IsEqualTo(1).Because("Wren's copy stays");
 		await Assert.That(conversations).IsEqualTo(1);
 		await Assert.That(times).IsEqualTo(1).Because("the destroyed character's purge index goes with their copy");
+		await Assert.That(_db.Store.Read(tx => tx.Range(Tables.PageConversationLatest, []).Count())).IsEqualTo(1)
+			.Because("the destroyed character's latest-order entry goes with their conversation");
 		await Assert.That((await _db.GetPageLogAsync(wren, [ilsa], 0)).Single().Message).IsEqualTo("hello");
 	}
 
@@ -228,6 +259,8 @@ public class PageLogTests
 			.Because("the conversation with Tomas has nothing left in it");
 		await Assert.That(await _db.GetPageConversationsAsync(tomas)).IsEmpty();
 		await Assert.That(_db.Store.Read(tx => tx.Range(Tables.PageLogTime, []).Count())).IsEqualTo(2);
+		await Assert.That(_db.Store.Read(tx => tx.Range(Tables.PageConversationLatest, []).Count())).IsEqualTo(2)
+			.Because("an emptied conversation leaves the latest order too");
 	}
 
 	/// <summary>
@@ -267,6 +300,8 @@ public class PageLogTests
 		await Assert.That(summary.LastId).IsEqualTo(kept.Id);
 		await Assert.That(summary.LastAt).IsEqualTo(kept.Timestamp);
 		await Assert.That(summary.Names.Single()).IsEqualTo("Wren").Because("the names are the kept page's, not the purged one's");
+		await Assert.That((await _db.GetPageConversationsAsync(ilsa, 1)).Single().LastId).IsEqualTo(kept.Id)
+			.Because("the latest order follows the refreshed summary");
 	}
 
 	/// <summary>

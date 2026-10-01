@@ -225,7 +225,7 @@ of a missing `v` and of any malformed member):
   acting character, and a feed whose viewer is someone else uses none of it.
 - When the game keeps a page log (the `page_log` option, a SharpMUSH
   extension, off by default), the feed also lists the character's page
-  conversations from it (`GET api/comm/conversations`), so a reload keeps
+  conversations from it (`GET api/comm/conversations`, the latest 100), so a reload keeps
   them, and pulls those whose last page is past the conversation's marker, so
   their unread counts survive too. Opening a conversation pulls its pages
   (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
@@ -234,7 +234,9 @@ of a missing `v` and of any malformed member):
   and the conversation view says the game keeps no page history. Opening a
   conversation asks again, since the option can be turned on at any time. As
   for channels, a failed read of the markers lists and pulls no conversation,
-  and a failed listing is retried on the next `comm.channels`.
+  and a failed listing, or one answered while `page_log` was off, is retried
+  on the next `comm.channels`. Lines with ids are kept in id order, since ids
+  keep rising when the clock steps back.
 - The recall endpoint refuses what `@channel/recall` refuses: a channel the
   character may not see answers 404, as a missing one does, and one they are
   not on and could not join answers 403. A line only See_All members were sent

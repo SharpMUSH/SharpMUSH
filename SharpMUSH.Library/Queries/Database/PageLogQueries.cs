@@ -10,5 +10,8 @@ namespace SharpMUSH.Library.Queries.Database;
 /// </summary>
 public record GetPageLogQuery(DBRef Character, IReadOnlyList<DBRef> With, int Lines) : IQuery<IReadOnlyList<SharpPage>>;
 
-/// <summary><paramref name="Character"/>'s own logged page conversations. Not cached, as <see cref="GetPageLogQuery"/>.</summary>
-public record GetPageConversationsQuery(DBRef Character) : IQuery<IReadOnlyList<SharpPageConversation>>;
+/// <summary>
+/// <paramref name="Character"/>'s own logged page conversations, the latest first, at most
+/// <paramref name="Limit"/> (0 for all). Not cached, as <see cref="GetPageLogQuery"/>.
+/// </summary>
+public record GetPageConversationsQuery(DBRef Character, int Limit = 0) : IQuery<IReadOnlyList<SharpPageConversation>>;

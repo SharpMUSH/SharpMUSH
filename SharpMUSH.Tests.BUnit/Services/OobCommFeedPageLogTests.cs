@@ -320,6 +320,44 @@ public class OobCommFeedPageLogTests
 		await Assert.That(feed.PageLogging).IsTrue();
 	}
 
+	/// <summary>
+	/// A listing answered while <c>page_log</c> was off listed nothing, so it is not taken as done: once the
+	/// game turns logging on, the next list asks again and the kept conversations appear.
+	/// </summary>
+	[Test]
+	public async Task A_listing_while_logging_was_off_is_asked_again_on_the_next_list()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, false, []);
+		await LoadAsync(store, feed);
+
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(TomasKey);
+		await Assert.That(feed.PageLogging).IsTrue();
+	}
+
+	/// <summary>
+	/// Ids keep rising when the clock steps back, so a later page can carry an earlier time. Pages with ids
+	/// are kept in id order, and the marker follows the last of them.
+	/// </summary>
+	[Test]
+	public async Task Pages_with_ids_are_kept_in_id_order_when_the_clock_stepped_back()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(101, 0)]);
+		history.PageLog[Tomas] = [Logged(100, "first", 60), Logged(101, "second, clock stepped back", 0)];
+		await LoadAsync(store, feed);
+
+		feed.Viewing = TomasKey;
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Id)).IsEquivalentTo(new long?[] { 100, 101 },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(history.ConversationMarks.Last().LastReadId).IsEqualTo(101);
+	}
+
 	/// <summary>Once listed, a later list does not ask for the conversations again: pushes keep it current.</summary>
 	[Test]
 	public async Task The_conversations_are_listed_once_per_sync()

@@ -26,9 +26,12 @@ public interface IPageLogStore
 	ValueTask<IReadOnlyList<SharpPage>> GetPageLogAsync(DBRef character, IReadOnlyList<DBRef> with, int lines,
 		CancellationToken cancellationToken = default);
 
-	/// <summary><paramref name="character"/>'s logged conversations, in no particular order.</summary>
+	/// <summary>
+	/// <paramref name="character"/>'s logged conversations, the latest first (by their last page's id); at
+	/// most <paramref name="limit"/> of them, read without reading the rest, or all for 0.
+	/// </summary>
 	/// <exception cref="ArgumentException"><paramref name="character"/> is not an objid.</exception>
-	ValueTask<IReadOnlyList<SharpPageConversation>> GetPageConversationsAsync(DBRef character,
+	ValueTask<IReadOnlyList<SharpPageConversation>> GetPageConversationsAsync(DBRef character, int limit = 0,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>

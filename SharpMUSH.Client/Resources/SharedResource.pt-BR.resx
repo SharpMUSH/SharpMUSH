@@ -5179,7 +5179,7 @@
     <value>Nada aqui ainda.</value>
   </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
-    <value>Este jogo não guarda o histórico de pages, então só aparecem os desta visita.</value>
+    <value>Este jogo não guarda o histórico de mensagens privadas, então só aparecem as mensagens desta visita.</value>
   </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Voltar à cena</value>

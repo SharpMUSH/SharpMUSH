@@ -32,5 +32,5 @@ public class GetPageConversationsQueryHandler(IPageLogStore store)
 {
 	public ValueTask<IReadOnlyList<SharpPageConversation>> Handle(GetPageConversationsQuery query,
 		CancellationToken cancellationToken)
-		=> store.GetPageConversationsAsync(query.Character, cancellationToken);
+		=> store.GetPageConversationsAsync(query.Character, query.Limit, cancellationToken);
 }
