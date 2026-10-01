@@ -22,6 +22,7 @@ else if (_entry is not null && _entry.Topic is not null)
     @if (_entry.CanonicalHref is not null)
     {
         <HeadContent>
+            @* Every section route renders the complete article; its SEO canonical excludes the navigation fragment. *@
             <link rel="canonical" href="@Navigation.ToAbsoluteUri(_entry.CanonicalHref).GetLeftPart(UriPartial.Path)" />
         </HeadContent>
     }

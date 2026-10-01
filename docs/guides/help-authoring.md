@@ -93,6 +93,11 @@ system. Authored help links should use semantic canonical lookups such as
 `[align examples]`; portal rendering resolves them to article and section URLs.
 Use normal Markdown links for external URLs and wiki links for wiki content.
 
+The entry API's `canonicalHref` retains the matching section fragment for deep
+links. HTML `rel="canonical"` uses the article URL: every section route displays
+the same complete article. Crawlers receive that complete article with the same
+stable section IDs and TOC links.
+
 There is no separate public docs build system in this repository. An external
 generator can consume `GET /api/help/articles`: its article manifest is built
 from the same indexed records. `GET /api/help/admin/articles` has the existing

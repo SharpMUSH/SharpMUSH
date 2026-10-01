@@ -48,6 +48,7 @@ public class HelpArticleTests
 		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + topic, article);
 		await Assert.That(html).Contains("id=\"examples\"");
 		await Assert.That(html).Contains("href=\"#examples\"");
+		await Assert.That(html).Contains("aria-label=\"Article sections\"");
 		await Assert.That(html).Contains("Option details");
 		await Assert.That(html.Split("Example details").Length).IsEqualTo(2);
 		await Assert.That(html).DoesNotContain("help-article");
@@ -68,6 +69,18 @@ public class HelpArticleTests
 	{
 		var rendered = RecursiveMarkdownHelper.RenderMarkdown("Related: [object snapshots]", corpus: "ahelp");
 		await Assert.That(rendered.ToPlainText()).Contains("ahelp object snapshots");
+	}
+
+	[Test]
+	[Arguments("Type help [newbie].", "help", "Type help newbie.")]
+	[Arguments("Type `help` [newbie].", "help", "Type help newbie.")]
+	[Arguments("Type ahelp [object snapshots].", "ahelp", "Type ahelp object snapshots.")]
+	[Arguments("Type news [announcements].", "news", "Type news announcements.")]
+	[Arguments("Related: [newbie].", "help", "Related: help newbie.")]
+	[Arguments("Word somehelp [newbie].", "help", "Word somehelp help newbie.")]
+	public async Task TerminalCommandLabelsRespectAnAuthoredPrefix(string markdown, string corpus, string expected)
+	{
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown, corpus: corpus).ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]

@@ -58,6 +58,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 	{
 		public string? ArticleId { get; init; }
 		public string? SectionId { get; init; }
+		public string? CanonicalHref { get; init; }
 	}
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
@@ -77,6 +78,23 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var http = factory.CreateHttpClient();
 		http.BaseAddress = new Uri("https://localhost/");
 		return http;
+	}
+
+	[Test]
+	public async Task SectionDeepLinksKeepIdentityAndShareTheArticleSeoCanonical()
+	{
+		var http = CreateClient();
+		var entry = await http.GetFromJsonAsync<HelpEntryDto>("api/help/entry?topic=align%20examples");
+		await Assert.That(entry?.SectionId).IsEqualTo("examples");
+		await Assert.That(entry?.CanonicalHref).IsEqualTo("/help/align%28%29#examples");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "help/align%20examples");
+		request.Headers.UserAgent.ParseAdd("Googlebot/2.1 (+http://www.google.com/bot.html)");
+		var response = await http.SendAsync(request);
+		var html = await response.Content.ReadAsStringAsync();
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(html).Contains("<link rel=\"canonical\" href=\"https://localhost/help/align%28%29\"");
+		await Assert.That(html).Contains("id=\"examples\"");
+		await Assert.That(html).Contains("href=\"#examples\"");
 	}
 
 	[Test]

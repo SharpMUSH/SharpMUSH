@@ -8,11 +8,12 @@
     {
       "id": "literal-command-examples",
       "heading": "Literal command examples",
-      "lookup": "] literal command examples"
+      "lookup": "literal command examples",
+      "aliases": ["] literal command examples"]
     }
   ],
   "redirects": {
-    "]2": "] literal command examples"
+    "]2": "literal command examples"
   }
 }
 -->
@@ -42,7 +43,7 @@ You say, "[add(1,1)]"
 
 This can be used to pass unevaluated MUSHcode to softcoded commands without having to escape every special character, or to help objects set attributes to contain unevaluated code.
 
-See []2] for more examples.
+See [literal command examples] for more examples.
 
 
 **See Also:**

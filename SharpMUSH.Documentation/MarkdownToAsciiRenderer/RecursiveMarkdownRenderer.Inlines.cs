@@ -87,7 +87,10 @@ public partial class RecursiveMarkdownRenderer
 		var isCommand = link.GetData(HelpTopicInlineParser.CommandDataKey) is true;
 		if (isCommand)
 		{
-			contentText = url;
+			var separator = url.IndexOf(' ');
+			contentText = separator > 0 && HasCommandPrefix(link, url[..separator])
+				? url[(separator + 1)..]
+				: url;
 		}
 		var hint = string.IsNullOrWhiteSpace(link.Title) ? null : link.Title;
 		var linkMarkup = Ansi.Create(
@@ -95,6 +98,27 @@ public partial class RecursiveMarkdownRenderer
 			linkKind: isCommand ? LinkKind.Command : LinkKind.Url,
 			linkText: hint);
 		return MarkupText.Wrap(linkMarkup, contentText);
+	}
+
+	private static bool HasCommandPrefix(LinkInline link, string command)
+	{
+		if (link.PreviousSibling is not LiteralInline literal)
+		{
+			return false;
+		}
+		var text = literal.Content.ToString();
+		if (text.Length == 0 || !char.IsWhiteSpace(text[^1]))
+		{
+			return false;
+		}
+		text = text.TrimEnd();
+		if (text.Length == 0 && literal.PreviousSibling is CodeInline code)
+		{
+			text = code.Content;
+		}
+		var boundary = text.Length - command.Length;
+		return boundary >= 0 && text.EndsWith(command, StringComparison.OrdinalIgnoreCase)
+			&& (boundary == 0 || !char.IsLetterOrDigit(text[boundary - 1]) && text[boundary - 1] != '_');
 	}
 
 	/// <summary>

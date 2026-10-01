@@ -3556,9 +3556,10 @@
       "file": "literal-command.md",
       "corpus": "help",
       "names": [
+        "literal command examples",
         "] literal command examples"
       ],
-      "canonical": "] literal command examples",
+      "canonical": "literal command examples",
       "section": true
     },
     {
@@ -3567,7 +3568,7 @@
       "names": [
         "]2"
       ],
-      "canonical": "] literal command examples",
+      "canonical": "literal command examples",
       "redirect": true
     },
     {

@@ -16,7 +16,7 @@ If you would rather use a different object, point the config at it with `@config
 
 
 **See Also:**
-- [- [EVENT LIST]
+- [EVENT LIST]
 - [event examples]
 
 # EVENT LIST
