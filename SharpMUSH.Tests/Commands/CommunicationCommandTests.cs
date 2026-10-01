@@ -572,6 +572,36 @@ public class CommunicationCommandTests
 		});
 	}
 
+	/// <summary>
+	/// Deleting a player's last alias for a channel takes them off it; deleting one of two does not. This
+	/// is what made #1493: the alias tests once ran as God on one shared channel, and one test's delcom
+	/// took God off the channel the others were still adding aliases to.
+	/// </summary>
+	[Test]
+	public async ValueTask DelCom_OfTheLastAlias_LeavesTheChannel()
+	{
+		var first = UniqueAlias("LastAliasA");
+		var second = UniqueAlias("LastAliasB");
+
+		await WithOwnChannelAsync("DelComLeaves", async (player, channel) =>
+		{
+			var asPlayer = WebAppFactoryArg.FunctionParserFor(player.DbRef);
+			// cwho() lists bare dbrefs, as PennMUSH's does.
+			async Task<bool> OnChannel() => (await asPlayer.FunctionParse(MarkupText.Plain($"cwho({channel})")))!
+				.Message!.ToPlainText().Split(' ').Contains($"#{player.DbRef.Number}");
+
+			await NotifiedWhile(player, $"addcom {first}={channel}");
+			await NotifiedWhile(player, $"addcom {second}={channel}");
+
+			await Assert.That(await OnChannel()).IsTrue().Because("the owner is a member from the start");
+			await NotifiedWhile(player, $"delcom {first}");
+			await Assert.That(await OnChannel()).IsTrue().Because("another alias still names the channel");
+
+			await NotifiedWhile(player, $"delcom {second}");
+			await Assert.That(await OnChannel()).IsFalse().Because("that was the last alias for it");
+		});
+	}
+
 	[Test]
 	[Arguments("delcom nonexistent_alias_DELCOM")]
 	public async ValueTask DelComNotFound(string command)

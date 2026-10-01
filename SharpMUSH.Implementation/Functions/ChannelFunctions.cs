@@ -472,7 +472,8 @@ public partial class Functions
 					_ => x.ListedAsOn(privilegedWho)
 				})
 				.Where(x => !skipGagged || !x.Gagging)
-				.Select(x => x.Object.Object().DBRef.ToString());
+				// fun_cwho writes each member with safe_dbref (src/extchat.c:3079): a dbref, not an objid.
+				.Select(x => $"#{x.Object.Object().DBRef.Number}");
 
 			return new CallState(string.Join(" ", listed));
 		});
