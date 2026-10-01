@@ -21,6 +21,8 @@ public class RealityGameServerFactory : ServerWebAppFactory
 	protected override IServiceProvider SharedWorldServices => Primary.Services;
 }
 
+// The tests switch reality on, or rewrite its configuration, for the whole shared world, which every
+// other test would see.
 public class RealityGameTests
 {
 	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
@@ -493,6 +495,9 @@ public class RealityGameTests
 		}
 	}
 
+	// Serial though it touches only its own thing: whichever test first uses RealityGameServerFactory
+	// boots a second host over the shared world, and that boot runs every object's STARTUP. Keeping
+	// every user of the factory serial keeps the boot out of the parallel phase.
 	[Test, NotInParallel]
 	public async Task CorruptProfileProducesAnAdministrativeError()
 	{

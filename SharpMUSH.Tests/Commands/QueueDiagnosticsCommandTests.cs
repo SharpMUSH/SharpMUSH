@@ -18,7 +18,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class QueueDiagnosticsCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -89,6 +88,8 @@ public class QueueDiagnosticsCommandTests
 	}
 
 	[Test]
+	// Starts the profiler as God and reads the last ten entries of the session-wide queue history.
+	[NotInParallel]
 	public async Task GameAndServiceShareVisibleHistoryAndProfile()
 	{
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));

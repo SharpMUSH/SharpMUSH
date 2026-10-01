@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,7 +14,6 @@ namespace SharpMUSH.Tests.Commands;
 /// the descriptor-state commands answered "Huh?" once logged in and "no such command" before, even
 /// though the shipped helpfile documented them. These tests pin both halves of that contract.
 /// </summary>
-[NotInParallel]
 public class SocketCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -25,7 +22,6 @@ public class SocketCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService Notify => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	/// <summary>A registered but unbound handle — a client sitting on the connect screen.</summary>
 	private async ValueTask<long> AnonymousHandleAsync()

@@ -14,7 +14,6 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>Source-derived prefix cases; these are not captured PennMUSH telnet transcripts.</summary>
-[NotInParallel]
 public class PrefixRedispatchTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -100,7 +99,6 @@ public class PrefixRedispatchTests
 	public async Task PrefixKeepsOriginalMarkup(string prefix)
 	{
 		// Unique text, and selected by it rather than by being the only thing in the window (#1247):
-		// the actor shares a room, so another test's broadcast can land in this bucket too, and
 		// .Single() over everything that arrived throws rather than failing an assertion.
 		var marker = $"Red{Guid.NewGuid():N}"[..11];
 		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[ansi(r,{marker})]")))!.Message!;
@@ -140,8 +138,7 @@ public class PrefixRedispatchTests
 		var token = $"fresh_{Guid.NewGuid():N}";
 		await Factory.Services.GetRequiredService<IMediator>().Send(new AdmitCommandListRequest(
 			MarkupText.Plain($"~@emit {token}"), state, new DbRefAttribute(_actor.DbRef, ["PREFIX_TEST"]), -1));
-		await Factory.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
-		await Assert.That(Factory.Notifications.For(_actor.DbRef)).Contains(token);
+		await Factory.Notifications.WaitForAsync(_actor.DbRef, token);
 		await Assert.That(state.SnapshotForQueuedAction().CommandModifierDepth).IsEqualTo(0u);
 	}
 

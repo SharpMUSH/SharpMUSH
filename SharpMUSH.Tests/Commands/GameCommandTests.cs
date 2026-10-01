@@ -10,7 +10,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class GameCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -227,18 +226,21 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask EmptyCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestContainer"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestItem1"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestItem2"));
+		var container = TestIsolationHelpers.GenerateUniqueName("EmptyTestContainer");
+		var first = TestIsolationHelpers.GenerateUniqueName("EmptyTestItem");
+		var second = TestIsolationHelpers.GenerateUniqueName("EmptyTestItem");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {container}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {first}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {second}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set EmptyTestContainer=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {container}=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get EmptyTestContainer"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"get {container}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestContainer=EmptyTestItem1"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestContainer=EmptyTestItem2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"give {container}={first}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"give {container}={second}"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("empty EmptyTestContainer"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"empty {container}"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -246,16 +248,18 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask EmptyCommandSameLocation()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestBox"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestThing"));
+		var box = TestIsolationHelpers.GenerateUniqueName("EmptyTestBox");
+		var thing = TestIsolationHelpers.GenerateUniqueName("EmptyTestThing");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {box}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thing}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set EmptyTestBox=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestBox=EmptyTestThing"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"give {box}={thing}"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("drop EmptyTestBox"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"drop {box}"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("empty EmptyTestBox"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"empty {box}"));
 
 		await Assert.That(result).IsNotNull();
 	}

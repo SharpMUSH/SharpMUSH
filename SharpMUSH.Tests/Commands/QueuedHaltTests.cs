@@ -39,7 +39,6 @@ namespace SharpMUSH.Tests.Commands;
 /// — that the queue exempts players, so the entry is admitted and reaches execution rather than being
 /// dropped as an object's would be.</para>
 /// </summary>
-[NotInParallel]
 public class QueuedHaltTests : ServerTestBase
 {
 	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
@@ -62,7 +61,7 @@ public class QueuedHaltTests : ServerTestBase
 	private async Task Run(long pid)
 	{
 		await Scheduler.ReleaseScheduledWork(pid);
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 	}
 
 	[Test]
@@ -147,7 +146,7 @@ public class QueuedHaltTests : ServerTestBase
 		await Assert.That(job.Accepted).IsFalse();
 		await Assert.That(job.Reason).IsEqualTo(QueueRejectionReason.Halted);
 		await Assert.That(job.Pid).IsNull();
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 		await Assert.That(await Eval($"get({thing}/RAN)")).IsEqualTo("");
 	}
 

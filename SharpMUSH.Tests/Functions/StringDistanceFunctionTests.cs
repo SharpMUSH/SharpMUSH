@@ -33,6 +33,7 @@ public class StringDistanceFunctionTests
 		await Assert.That(result.Text).IsEqualTo(StringDistance.WorkLimitExceeded);
 	}
 
+	// Replaces the world's suggestion data, which @suggest and every other suggest() reads.
 	[Test, NotInParallel]
 	public async Task SuggestRetainsItsCaseFoldingAndCodeUnitRanking()
 	{

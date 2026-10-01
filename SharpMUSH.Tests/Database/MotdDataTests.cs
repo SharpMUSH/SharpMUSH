@@ -5,6 +5,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
+// Every test writes and reads back the one server-wide MOTD document.
+[NotInParallel("MotdData")]
 public class MotdDataTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -13,7 +15,7 @@ public class MotdDataTests
 	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IExpandedObjectDataService _dataService => WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SetAndGetMotdData()
 	{
 		var motdData = new MotdData(
@@ -34,7 +36,7 @@ public class MotdDataTests
 		await Assert.That(result.FullMotd).IsEqualTo("Server is full");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task UpdateMotdData()
 	{
 		var initialData = new MotdData(
@@ -60,7 +62,7 @@ public class MotdDataTests
 		await Assert.That(result.WizardMotd).IsEqualTo("New wizard message");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ClearMotdData()
 	{
 		var initialData = new MotdData(
@@ -88,7 +90,7 @@ public class MotdDataTests
 		await Assert.That(result.FullMotd).IsEqualTo("Full message");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GetMotdData_CanBeRetrieved()
 	{
 		var motdData = new MotdData(

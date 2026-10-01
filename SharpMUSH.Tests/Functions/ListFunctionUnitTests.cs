@@ -29,7 +29,7 @@ public class ListFunctionUnitTests
 		return dbRef.Number;
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(1 2 3,%i0)", "1 2 3")]
 	[Arguments("iter(1,%i1)", "#-1 REGISTER OUT OF RANGE")]
 	[Arguments("iter(1 2 3,add(%i0,1))", "2 3 4")]
@@ -53,7 +53,7 @@ public class ListFunctionUnitTests
 	// inner list 1..3 while %i1 holds the outer element. The old expectation ("2 2 2-4 4 4-6 6 6")
 	// was inum(0) returning the OUTERMOST iteration, which is what itext()/inum() did before they
 	// were corrected to index the register stack the same way %i<n> does.
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	public async Task IterationNumber(string function, string expected)
@@ -62,7 +62,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2-3-4")]
 	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak()]),|,-)", "2-3-4")]
@@ -77,7 +77,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SimpleAnsiTest()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(hr,test)")))?.Message!;
@@ -85,7 +85,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task IterationWithAnsiMarkup()
 	{
 		var expected = (await Parser.FunctionParse(
@@ -220,7 +220,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo($"#{objNum} #{objNum}");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(@"filter(#lambda/mod\(\%0\,2\),1 2 3 4 5 6)", "1 3 5")]
 	[Arguments(@"filter(#apply/isnum,1 foo 3 bar 5 6)", "1 3 5 6")]
 	public async Task FilterWithLambda(string function, string expected)
@@ -252,7 +252,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(@"map(#lambda/strlen\(\%0\),hello world foo)", "5 5 3")]
 	[Arguments(@"map(#lambda/strlen\(\%0\),hello;world;foo,;)", "5;5;3")]
 	[Arguments(@"map(#lambda/\%0,a b c)", "a b c")]
@@ -264,7 +264,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(@"map(#apply/strlen,hello world foo)", "5 5 3")]
 	[Arguments(@"map(#apply/strlen,hello;world;foo,;)", "5;5;3")]
 	public async Task MapWithApply(string function, string expected)
@@ -298,7 +298,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3)", "6")]
 	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3 4,0)", "10")]
 	[Arguments(@"fold(#apply2/add,1 2 3)", "6")]
@@ -308,7 +308,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Chain()
 	{
 		var objNum = await CreateObjectWithAttribute("chain_obj", "DOUBLE", "mul(%0,2)");
@@ -330,7 +330,7 @@ public class ListFunctionUnitTests
 		await Check($"chain(#{objNum}/WRAP #{objNum}/SHOUT, hello, *)", "*HELLO*!");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ChainWithIterationBreak()
 	{
 		var objNum = await CreateObjectWithAttribute("chainbrk_obj", "S1", "add(%0,1)");
@@ -685,7 +685,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
 	public async Task FilterBool(string function, string expected)
 	{

@@ -31,11 +31,11 @@ namespace SharpMUSH.Tests.Services;
 /// <c>Queue</c> power get the database size on top of it.
 /// </para>
 /// <para>
-/// <c>[NotInParallel]</c>: these tests deliberately park a full quota's worth of entries on the
-/// immediate queue, and <see cref="ServerWebAppFactory"/> makes that queue — and
-/// <c>DrainImmediateQueueForTests</c>, which waits on the whole of it — session-wide. A test that
-/// drains with the default five-second timeout while this backlog is being worked through times out
-/// and throws, so this class is serialised against the other <c>[NotInParallel]</c> classes.
+/// <c>[NotInParallel]</c>: these tests deliberately park the queue's single consumer and a full
+/// quota's worth of entries on the immediate queue, and <see cref="ServerWebAppFactory"/> makes that
+/// queue — and <c>DrainImmediateQueueForTests</c>, which waits on the whole of it — session-wide. Any
+/// other test's queued work stalls meanwhile, and one that drains with the default five-second
+/// timeout times out and throws, so this class runs with nothing else in flight.
 /// </para>
 /// </remarks>
 [NotInParallel]

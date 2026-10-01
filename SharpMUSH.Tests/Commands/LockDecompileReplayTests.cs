@@ -10,7 +10,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class LockDecompileReplayTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -26,6 +25,10 @@ public class LockDecompileReplayTests
 	private async Task<string> Read(string expression)
 		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
+	/// <summary>
+	/// What #1 was told while <paramref name="command"/> ran. #1 hears every other running test too,
+	/// so callers pick their own lines out of it by the object or prefix only they use.
+	/// </summary>
 	private async Task<string[]> Output(string command)
 	{
 		var recipient = Factory.ExecutorDBRef;
@@ -43,8 +46,10 @@ public class LockDecompileReplayTests
 		var invalid = new SharpLockData("=me");
 		await Factory.Services.GetRequiredService<ISharpDatabase>().SetLockAsync(target.Object(), "Basic", invalid);
 		target.Object().WithLock("Basic", invalid);
-		var output = await Output($"@decompile/db {reference}=PREFIX:");
-		await Assert.That(output).Contains("PREFIX:@@ Invalid Basic lock omitted; replace it explicitly before decompiling.");
+		var prefix = $"P{Guid.NewGuid():N}:";
+		var output = (await Output($"@decompile/db {reference}={prefix}"))
+			.Where(line => line.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+		await Assert.That(output).Contains($"{prefix}@@ Invalid Basic lock omitted; replace it explicitly before decompiling.");
 		await Assert.That(output.Any(line => line.Contains("@lock/", StringComparison.Ordinal))).IsFalse();
 	}
 
@@ -81,8 +86,9 @@ public class LockDecompileReplayTests
 		await Assert.That(await Read($"elock({lockTarget},#{reference.Number})")).IsEqualTo(targetPasses ? "1" : "0");
 
 		var output = await Output($"@decompile/db #{reference.Number}");
-		var commands = output.Where(line => line.StartsWith("@lock/", StringComparison.Ordinal)
-			|| line.StartsWith("@lset ", StringComparison.Ordinal)).ToArray();
+		var commands = output.Where(line =>
+			(line.StartsWith("@lock/", StringComparison.Ordinal) && line.Contains($" #{reference.Number}=", StringComparison.Ordinal))
+			|| line.StartsWith($"@lset #{reference.Number}/", StringComparison.Ordinal)).ToArray();
 		await Assert.That(commands.Any(line => line.StartsWith(lockName == "Basic" ? "@lock/Basic " : "@lock/user:REPLAY ", StringComparison.Ordinal))).IsTrue();
 		await Assert.That(commands.Any(line => line.StartsWith("@lset ", StringComparison.Ordinal))).IsTrue();
 		if (lockName == "Basic") await Assert.That(commands).Contains($"@lset #{reference.Number}/Basic=!no_inherit");

@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -12,16 +11,20 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for wildcard/partial flag matching in @set command
 /// </summary>
-[NotInParallel]
 public class FlagWildcardMatchingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>How many times <paramref name="who"/> was told exactly <paramref name="text"/> by nobody.</summary>
+	private int ToldBySystem(DBRef who, string text) =>
+		WebAppFactoryArg.Notifications.DeliveriesFor(who).Count(delivery => delivery.Sender is null
+			&& delivery.Type == INotifyService.NotificationType.Announce
+			&& delivery.Message == text);
 
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
@@ -58,12 +61,7 @@ public class FlagWildcardMatchingTests
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - NO_COMMAND reset." is globally unique due to the generated name.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - NO_COMMAND reset.")),
-				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
+		await Assert.That(ToldBySystem(executor, $"{uniqueName} - NO_COMMAND reset.")).IsEqualTo(1);
 	}
 
 	[Test]
@@ -100,12 +98,7 @@ public class FlagWildcardMatchingTests
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - VISUAL reset." is globally unique due to the generated name.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - VISUAL reset.")),
-				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
+		await Assert.That(ToldBySystem(executor, $"{uniqueName} - VISUAL reset.")).IsEqualTo(1);
 	}
 
 	[Test]

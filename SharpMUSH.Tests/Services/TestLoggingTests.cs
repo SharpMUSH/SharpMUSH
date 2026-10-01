@@ -10,6 +10,7 @@ public class TestLoggingTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
+	[NotInParallel("HostLoggerFactory")] // CommandExceptionSurfacingTests adds a provider to the same factory
 	public async Task HostLoggerKeepsFatalErrorsAndGatesRoutineLogs()
 	{
 		var logger = Factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("SharpMUSH.TestLogging");
@@ -17,7 +18,11 @@ public class TestLoggingTests
 		await Assert.That(logger.IsEnabled(LogLevel.Error)).IsEqualTo(TestDiagnostics.Enabled);
 		await Assert.That(logger.IsEnabled(LogLevel.Information)).IsEqualTo(TestDiagnostics.Enabled);
 	}
+}
 
+/// <summary>The same gate on the loggers <see cref="TestDiagnostics"/> builds itself, which need no host.</summary>
+public class TestDiagnosticsLoggingTests
+{
 	[Test]
 	public async Task DiagnosticLoggerKeepsFatalErrorsAndGatesRoutineLogs()
 	{
@@ -28,11 +33,11 @@ public class TestLoggingTests
 		await Assert.That(TestDiagnostics.ContainerLogger.IsEnabled(LogLevel.Critical)).IsTrue();
 		await Assert.That(TestDiagnostics.ContainerLogger.IsEnabled(LogLevel.Information)).IsEqualTo(TestDiagnostics.Enabled);
 	}
+
 	[Test]
 	[Arguments("{literal}")]
 	[Arguments("{0}")]
 	[Arguments("{{escaped}}")]
 	public void SingleStringDiagnosticsAcceptLiteralBraces(string message) =>
 		TestDiagnostics.WriteLine(message);
-
 }

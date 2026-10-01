@@ -92,7 +92,7 @@ public class InputUserCommandResultTests
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));
 			// The callback is an action list, so the $-command it matches is its own queue entry (#1132).
-			await Get<ITaskScheduler>().DrainImmediateQueueForTests();
+			await Get<ITaskScheduler>().SettleForTestsAsync();
 			TestDiagnostics.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, capture={sessions.GetCapturing(player.Handle)?.Id}");
 			await Assert.That(Factory.Notifications.For(host.Object().DBRef).Contains(marker)).IsEqualTo(scope != "unmatched");
 			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");

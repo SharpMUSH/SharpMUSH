@@ -17,7 +17,6 @@ using System.Text;
 
 namespace SharpMUSH.Tests.Services;
 
-[NotInParallel]
 public class EmitLocalizationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -39,6 +38,22 @@ public class EmitLocalizationTests
 	}
 	private async Task Command(string command) => await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain(command));
 	private async Task<AnySharpObject> Node(DBRef reference) => (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
+
+	/// <summary>
+	/// Polls <paramref name="thing"/>'s <paramref name="attribute"/> until it has a value, or ten seconds pass —
+	/// a wait for this test's own queued action, not for the session-wide queue to fall quiet.
+	/// </summary>
+	private async Task<string> AttributeOnceSet(DBRef thing, string attribute)
+	{
+		var deadline = DateTime.UtcNow.AddSeconds(10);
+		while (true)
+		{
+			var value = (await Factory.CommandParser.FunctionParse(MarkupText.Plain($"[get({thing}/{attribute})]")))!
+				.Message!.ToPlainText().Trim();
+			if (value.Length > 0 || DateTime.UtcNow >= deadline) return value;
+			await Task.Delay(20);
+		}
+	}
 
 	private async Task<(ICommunicationService Service, IMessageBus Bus, IDidItService DidIt)> Pipeline(DBRef actor, DBRef? observer = null)
 	{
@@ -132,9 +147,7 @@ public class EmitLocalizationTests
 			await service.EmitAsync(Factory.CommandParserFor(actor.DbRef, actor.Handle),
 				new EmitRequest(EmitScope.Private, MarkupText.Plain("blocked"), [target.DbRef.ToString()], Silent: true));
 		}
-		await Factory.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
-		var marked = await Factory.CommandParser.FunctionParse(MarkupText.Plain($"[get({target.DbRef}/MARKED)]"));
-		await Assert.That(marked!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+		await Assert.That(await AttributeOnceSet(target.DbRef, "MARKED")).IsEqualTo("yes");
 		await Assert.That(Messages(bus, 703)).Contains($"{(await Node(actor.DbRef)).Object().Name} is refused.");
 		var name = (await Node(target.DbRef)).Object().Name;
 		if (capture)

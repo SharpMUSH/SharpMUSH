@@ -65,14 +65,17 @@ public class CommandManagementTests
 
 	/// <summary>
 	/// Also waits for what the command queued: a non-<c>/inline</c> hook's matched <c>$</c>-command is its
-	/// own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>). The drain waits on the shared
-	/// queue, so a test using this is <c>[NotInParallel]</c> with the others that fill or drain it.
+	/// own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>). The immediate queue has one
+	/// consumer and is first in, first out, so once a <c>@wait 0</c> queued after the command is heard,
+	/// that entry has run — without waiting for the whole session's queue to go quiet.
 	/// </summary>
 	private Task<List<string>> AsQueued(TestIsolationHelpers.TestPlayer player, string command)
 		=> MessagesWhile(player.DbRef, async () =>
 		{
 			await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-			await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+			var barrier = TestIsolationHelpers.GenerateUniqueName("QueueBarrier");
+			await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wait 0=@pemit me={barrier}"));
+			await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, barrier);
 		});
 
 	/// <summary>
@@ -118,7 +121,7 @@ public class CommandManagementTests
 	/// <c>help @command3</c>'s first example: a /noparse command, overridden by a $-command, receives its
 	/// argument unevaluated.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Add_NoParseCommandHookedToADollarCommand_GetsItsArgumentUnevaluated()
 	{
 		var wizard = await Wizard();
@@ -144,7 +147,7 @@ public class CommandManagementTests
 	/// The second example: a command added without /noparse evaluates its arguments, and gets a /noeval
 	/// switch that turns that off.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Add_ParsedCommand_EvaluatesItsArgumentsUnlessNoeval()
 	{
 		var wizard = await Wizard();
@@ -556,7 +559,7 @@ public class CommandManagementTests
 	/// <c>do_command_delete</c> frees the command and its hooks with it (<c>src/command.c:2100-2104</c>),
 	/// so a command added under the same name again starts unhooked.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Delete_TakesTheCommandsHooksWithIt()
 	{
 		var wizard = await Wizard();
@@ -611,7 +614,7 @@ public class CommandManagementTests
 	/// an alias to the command it aliases and reports <c>cmd->name</c> back. That is why
 	/// <c>@hook/override say</c> also fires for <c>"</c>. See #1223.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Hook_SetOnACommand_FiresForItsAliasesToo()
 	{
 		var wizard = await Wizard();
@@ -639,7 +642,7 @@ public class CommandManagementTests
 	/// the name with <c>command_find</c> before touching <c>cmd->hooks</c>
 	/// (<c>src/command.c:2589</c>) — so the hook fires under the command's own name too.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Hook_SetThroughAnAlias_HooksTheCommandItself()
 	{
 		var wizard = await Wizard();
@@ -669,7 +672,7 @@ public class CommandManagementTests
 	/// without touching what it pointed at. Rewritten for #1223: it used to assert the opposite,
 	/// because the hook was keyed by the name as typed.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Delete_AnAlias_LeavesTheCommandsHooksAlone()
 	{
 		var wizard = await Wizard();

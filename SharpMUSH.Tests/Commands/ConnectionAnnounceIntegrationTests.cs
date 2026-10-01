@@ -24,12 +24,9 @@ namespace SharpMUSH.Tests.Commands;
 /// test, and reads back only that test's own witness's notification queue via
 /// <see cref="ServerWebAppFactory.Notifications"/> (windowed with a before/after count) — never
 /// NSubstitute's <c>ReceivedCalls()</c>/<c>Received()</c>, which is shared session-wide and, per
-/// <see cref="TestHelpers.NotificationRecorder"/>, is not safe to enumerate while other
-/// <c>[NotInParallel]</c>-exempt test classes may still be recording calls into the same
-/// substitute. <c>[NotInParallel]</c> here only serializes this class's own tests against each
-/// other; it does not pause the rest of the session.</para>
+/// <see cref="TestHelpers.NotificationRecorder"/>, is not safe to enumerate while other tests are
+/// still recording calls into the same substitute.</para>
 /// </summary>
-[NotInParallel]
 public class ConnectionAnnounceIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

@@ -3,10 +3,10 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Services;
 
-[NotInParallel]
 public class LoggingConfigurationTests
 {
 	[Test]
+	[NotInParallel] // rewrites process environment variables that a host booting in parallel reads
 	public async Task IsRunningInKubernetes_WithKubernetesServiceHost_ReturnsTrue()
 	{
 		var originalK8sValue = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
@@ -28,6 +28,7 @@ public class LoggingConfigurationTests
 	}
 
 	[Test]
+	[NotInParallel] // rewrites process environment variables that a host booting in parallel reads
 	public async Task IsRunningInKubernetes_WithDotnetRunningInContainer_ReturnsTrue()
 	{
 		var originalDotnetValue = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
@@ -49,6 +50,7 @@ public class LoggingConfigurationTests
 	}
 
 	[Test]
+	[NotInParallel] // rewrites process environment variables that a host booting in parallel reads
 	public async Task IsRunningInKubernetes_WithoutK8sVariables_ReturnsFalse()
 	{
 		var originalKubernetesValue = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");

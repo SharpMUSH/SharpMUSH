@@ -8,7 +8,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class UtilityCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -19,16 +18,34 @@ public class UtilityCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	/// <summary>What <paramref name="who"/> told themselves, as the commands here answer their enactor.</summary>
+	private List<string> Heard(DBRef who, Func<string, bool> match) =>
+	[
+		.. WebAppFactoryArg.Notifications.DeliveriesFor(who)
+			.Where(delivery => delivery.Sender == who
+				&& delivery.Type == INotifyService.NotificationType.Announce
+				&& match(delivery.Message))
+			.Select(delivery => delivery.Message)
+	];
+
+	/// <summary>A wizard of the test's own, so what examine prints reaches nobody else.</summary>
+	private async Task<TestIsolationHelpers.TestPlayer> CreateWizardAsync(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=WIZARD"));
+		return player;
+	}
+
+	private static string NameRow(TestIsolationHelpers.TestPlayer player) => $"{player.Name}(#{player.DbRef.Number}";
+
 	[Test]
 	public async ValueTask ThinkBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think ThinkBasic Test output"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(x
-				=> TestHelpers.MessagePlainTextEquals(x, "ThinkBasic Test output")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(executor, message => message == "ThinkBasic Test output")).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -37,11 +54,7 @@ public class UtilityCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think ThinkWithFunction [add(2,3)]"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(x
-					=> TestHelpers.MessagePlainTextEquals(x, "ThinkWithFunction 5")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(executor, message => message == "ThinkWithFunction 5")).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -51,10 +64,7 @@ public class UtilityCommandTests
 		var guid = Guid.NewGuid();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@@ This is a comment {guid}"));
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(x
-				=> TestHelpers.MessagePlainTextEquals(x, $"This is a comment {guid}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(executor, message => message == $"This is a comment {guid}")).IsEmpty();
 	}
 
 	[Test]
@@ -65,10 +75,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("Room Zero(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -80,12 +87,9 @@ public class UtilityCommandTests
 
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
 		// because name.Hilight() applies bold+bright-white (ansi("hw", …) → ESC[1;37m).
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") &&
-				RendersAnsiEscapes(msg)),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef)
+				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") && RendersAnsiEscapes(msg)))
+			.Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -95,125 +99,82 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookAtObj");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look #1"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("God(#1", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsNameAndDbref()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameDbref");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		var testPlayer = await CreateWizardAsync("ExamNameDbref");
 		// We use plain-text check because name.Hilight() inserts ANSI codes (bold+bright-white) around the name.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith(NameRow(testPlayer), StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_NameRowHasAnsiMarkup()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameAnsi");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		var testPlayer = await CreateWizardAsync("ExamNameAnsi");
 		// The name row output must be an MString where the ANSI render contains escape codes,
 		// because the object name is wrapped with Hilight() which applies bold+bright-white (ESC[1;37m).
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1") &&
-				RendersAnsiEscapes(msg)),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef)
+				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, NameRow(testPlayer)) && RendersAnsiEscapes(msg)))
+			.Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOwnerRow");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		var testPlayer = await CreateWizardAsync("ExamOwnerRow");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Owner: ", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamZonePowers");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		var testPlayer = await CreateWizardAsync("ExamZonePowers");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Powers: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Zone: *NOTHING*", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Powers: ", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamWarnings");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		var testPlayer = await CreateWizardAsync("ExamWarnings");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Warnings checked:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsLastModified()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamLastMod");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		var testPlayer = await CreateWizardAsync("ExamLastMod");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last modified:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExaminePlayer_HeaderContainsQuota()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamQuota");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
+		var testPlayer = await CreateWizardAsync("ExamQuota");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Quota:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Quota:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineRoom_ShowsExits()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamRoomExits");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		var testPlayer = await CreateWizardAsync("ExamRoomExits");
 		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
 		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain("@dig ExitTestSource=North;N,South;S"));
@@ -224,24 +185,16 @@ public class UtilityCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"examine {roomDbRef}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Exits:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("Exits:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefMod");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/brief #1"));
+		var testPlayer = await CreateWizardAsync("ExamBriefMod");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/brief me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageContains(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last modified:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -287,57 +240,41 @@ public class UtilityCommandTests
 			MarkupText.Plain($"examine/brief {objDbRef}"));
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageContains(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Owner: ", StringComparison.Ordinal))).Count().IsEqualTo(1);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("BriefShouldNotSeeThis", StringComparison.Ordinal))).IsEmpty();
 	}
 
 	[Test]
 	public async ValueTask ExamineObjectOpaqueSwitch()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOpaque");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/opaque #1"));
+		var testPlayer = await CreateWizardAsync("ExamOpaque");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/opaque me"));
 
-		// /opaque sends a combined multi-line output starting with "God(#1..."
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "God(#1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		// /opaque sends a combined multi-line output starting with the name row
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains(NameRow(testPlayer), StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineWithAttributePattern()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&examinewithattributepattern #1=jim"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("examine #1/exa*"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamPattern");
+		var created = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create ExamPatternObj"));
+		var thing = DBRef.Parse(created.Message!.ToPlainText());
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"&examinewithattributepattern {thing}=jim"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine {thing}/exa*"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "EXAMINEWITHATTRIBUTEPATTERN")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("EXAMINEWITHATTRIBUTEPATTERN", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask ExamineCurrentLocation()
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamCurLoc");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		var testPlayer = await CreateWizardAsync("ExamCurLoc");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Room Zero(#0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Room Zero(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -406,10 +343,7 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionCmd");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@version"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessageContains(s, SharpMUSH.Implementation.Generated.VersionInfo.Version)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains(SharpMUSH.Implementation.Generated.VersionInfo.Version, StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -506,13 +440,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask DecompileCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@decompile #1"));
+		var testPlayer = await CreateWizardAsync("Decompile");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@decompile #1"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "@pcreate God")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("@pcreate God", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]

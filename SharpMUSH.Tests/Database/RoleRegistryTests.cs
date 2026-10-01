@@ -34,67 +34,74 @@ public class RoleRegistryTests
 		UpdatedAt = 1_000_000
 	};
 
-	[Test, NotInParallel]
+	/// <summary>A role slug no other test uses, so listing by its prefix finds only this test's roles.</summary>
+	private static string UniqueSlug() => $"test-{Guid.NewGuid():N}";
+
+	[Test]
 	public async Task Roles_UpsertGetListRemove_WithPermissionRoundTrip()
 	{
-		await Registry.UpsertRoleAsync(Role("test-alpha", 25, new()
+		var prefix = UniqueSlug();
+		var alpha = $"{prefix}-alpha";
+		var beta = $"{prefix}-beta";
+		await Registry.UpsertRoleAsync(Role(alpha, 25, new()
 		{
 			[PortalPermission.WikiAdmin] = PermissionState.Allow,
 			[PortalPermission.ServerAdmin] = PermissionState.Deny
 		}));
-		await Registry.UpsertRoleAsync(Role("test-beta", 35));
+		await Registry.UpsertRoleAsync(Role(beta, 35));
 
-		var fetched = await Registry.GetRoleAsync("test-alpha");
+		var fetched = await Registry.GetRoleAsync(alpha);
 		var role = fetched.Expect<SharpRole>();
-		await Assert.That(role.Name).IsEqualTo("Role test-alpha");
+		await Assert.That(role.Name).IsEqualTo($"Role {alpha}");
 		await Assert.That(role.Priority).IsEqualTo(25);
 		await Assert.That(role.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
 		await Assert.That(role.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Deny);
 
-		await Registry.UpsertRoleAsync(Role("test-alpha", 99));
-		var upgraded = (await Registry.GetRoleAsync("test-alpha")).Expect<SharpRole>();
+		await Registry.UpsertRoleAsync(Role(alpha, 99));
+		var upgraded = (await Registry.GetRoleAsync(alpha)).Expect<SharpRole>();
 		await Assert.That(upgraded.Priority).IsEqualTo(99);
 		await Assert.That(upgraded.Permissions.Count).IsEqualTo(0);
 
-		var ours = (await Registry.GetRolesAsync()).Where(r => r.Slug.StartsWith("test-")).ToList();
+		var ours = (await Registry.GetRolesAsync()).Where(r => r.Slug.StartsWith(prefix)).ToList();
 		await Assert.That(ours.Count).IsEqualTo(2);
-		await Assert.That(ours[0].Slug).IsEqualTo("test-alpha");
+		await Assert.That(ours[0].Slug).IsEqualTo(alpha);
 
-		await Registry.RemoveRoleAsync("test-alpha");
-		await Registry.RemoveRoleAsync("test-beta");
-		await Assert.That((await Registry.GetRoleAsync("test-alpha")).Value).IsTypeOf<NotFound>();
+		await Registry.RemoveRoleAsync(alpha);
+		await Registry.RemoveRoleAsync(beta);
+		await Assert.That((await Registry.GetRoleAsync(alpha)).Value).IsTypeOf<NotFound>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Assignment_RoundTrip()
 	{
-		await Registry.UpsertRoleAsync(Role("test-assign", 20));
-		var account = await Db.CreateAccountAsync("rbac-test-user", null, "password-hash-123");
+		var slug = $"{UniqueSlug()}-assign";
+		await Registry.UpsertRoleAsync(Role(slug, 20));
+		var account = await Db.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("rbac-test-user"), null, "password-hash-123");
 
-		await Registry.AssignRoleToAccountAsync(account.Id!, "test-assign");
-		await Registry.AssignRoleToAccountAsync(account.Id!, "test-assign");
+		await Registry.AssignRoleToAccountAsync(account.Id!, slug);
+		await Registry.AssignRoleToAccountAsync(account.Id!, slug);
 
 		var roles = await Registry.GetRolesForAccountAsync(account.Id!);
-		await Assert.That(roles.Count(r => r.Slug == "test-assign")).IsEqualTo(1);
+		await Assert.That(roles.Count(r => r.Slug == slug)).IsEqualTo(1);
 
-		var accounts = await Registry.GetAccountIdsForRoleAsync("test-assign");
+		var accounts = await Registry.GetAccountIdsForRoleAsync(slug);
 		await Assert.That(accounts.Count).IsGreaterThanOrEqualTo(1);
 
-		await Registry.RemoveRoleFromAccountAsync(account.Id!, "test-assign");
+		await Registry.RemoveRoleFromAccountAsync(account.Id!, slug);
 		var after = await Registry.GetRolesForAccountAsync(account.Id!);
-		await Assert.That(after.Any(r => r.Slug == "test-assign")).IsFalse();
+		await Assert.That(after.Any(r => r.Slug == slug)).IsFalse();
 
-		await Registry.RemoveRoleAsync("test-assign");
+		await Registry.RemoveRoleAsync(slug);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GetRole_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetRoleAsync("does-not-exist-role");
 		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task BuiltInRoles_AreSeeded()
 	{
 		var god = (await Registry.GetRoleAsync("god")).Expect<SharpRole>();

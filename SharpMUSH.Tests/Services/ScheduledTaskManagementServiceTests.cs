@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Quartz;
@@ -232,15 +231,6 @@ public class ScheduledTaskManagementServiceTests
 		// Before the deadline, nothing is destroyed — this is the guard that keeps the frequent
 		// trigger from purging on every tick.
 		await destructionService.DidNotReceive().PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
-	}
-
-	[Test]
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public async Task Service_StartsWithValidConfiguration(ServerWebAppFactory factory)
-	{
-		var schedulerFactory = factory.Services.GetService<ISchedulerFactory>();
-
-		await Assert.That(schedulerFactory).IsNotNull();
 	}
 
 	/// <summary>

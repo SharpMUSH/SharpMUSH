@@ -29,7 +29,14 @@ public class PackageManagerFallbackTests
 		var player = node.Expect<SharpPlayer>();
 		await Assert.That(player.Object.Name).IsEqualTo("Package Manager");
 	}
+}
 
+/// <summary>
+/// The fallback rule itself, which needs no world: <see cref="PackageManagerFallbackTests"/> checks that,
+/// in the seeded world, the object it names is the Package Manager.
+/// </summary>
+public class PackageManagerFallbackRuleTests
+{
 	[Test]
 	public async Task AConfiguredPackageManager_IsUsedAsConfigured()
 	{

@@ -19,8 +19,6 @@ namespace SharpMUSH.Tests.Database;
 /// </remarks>
 public class ChannelMemberProjectionTests
 {
-	private const string ChannelName = "MemberProjection";
-
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -28,16 +26,30 @@ public class ChannelMemberProjectionTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	[NotInParallel]
 	public async Task EveryMemberArrivesWithItsOwnObjectAndItsOwnStatus()
 	{
 		var ownerNode = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var owner = ownerNode.Expect<SharpPlayer>();
 		var home = ownerNode.AsContainer;
-		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(ChannelName), ["Open"], owner));
+		var channelName = $"MemberProj{Guid.NewGuid():N}"[..20];
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], owner));
 
-		var channel = await Mediator.Send(new GetChannelQuery(ChannelName));
+		var channel = await Mediator.Send(new GetChannelQuery(channelName));
 		await Assert.That(channel).IsNotNull();
+
+		try
+		{
+			await AssertEveryMemberKeepsItsOwnObjectAndStatus(channel!, channelName, owner, home);
+		}
+		finally
+		{
+			await Mediator.Send(new DeleteChannelCommand(channel!));
+		}
+	}
+
+	private async Task AssertEveryMemberKeepsItsOwnObjectAndStatus(
+		SharpChannel channel, string channelName, SharpPlayer owner, AnySharpContainer home)
+	{
 
 		// Two more members, so the projection has to keep three edges and three objects in step.
 		var extras = new List<AnySharpObject>();
@@ -46,14 +58,14 @@ public class ChannelMemberProjectionTests
 			var created = await Mediator.Send(new CreateThingCommand(name, home, owner, home));
 			var thing = (await Mediator.Send(new GetObjectNodeQuery(created))).Expect<AnySharpObject>();
 			extras.Add(thing);
-			await Mediator.Send(new AddUserToChannelCommand(channel!, thing));
+			await Mediator.Send(new AddUserToChannelCommand(channel, thing));
 		}
 
 		// One of them gagged, so a status swapped between members would show.
-		await Mediator.Send(new UpdateChannelUserStatusCommand(channel!, extras[0],
+		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, extras[0],
 			new SharpChannelStatus(Combine: null, Gagged: true, Hide: null, Mute: null, Title: null)));
 
-		var reread = await Mediator.Send(new GetChannelQuery(ChannelName));
+		var reread = await Mediator.Send(new GetChannelQuery(channelName));
 		var members = await reread!.Members.Value.ToArrayAsync();
 
 		await Assert.That(members.Select(m => m.Member.Object().Name))

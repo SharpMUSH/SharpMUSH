@@ -12,16 +12,10 @@ namespace SharpMUSH.Tests.Commands;
 /// <remarks>
 /// <para>
 /// Action attributes go through <c>queue_attribute_base</c> now, so every assertion that reads one
-/// back is preceded by a drain. That is Penn's ordering: the action is a separate queue entry, not
-/// something the command runs before it returns.
-/// </para>
-/// <para>
-/// <c>[NotInParallel]</c> for the same reason <see cref="Services.DidItServiceTests"/> carries it —
-/// <c>DrainImmediateQueueForTests</c> waits on the whole session-shared immediate queue with a
-/// throwing timeout.
+/// back is preceded by <see cref="Settle"/>. That is Penn's ordering: the action is a separate queue
+/// entry, not something the command runs before it returns.
 /// </para>
 /// </remarks>
-[NotInParallel]
 public class ObjectTriadParityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -81,6 +75,8 @@ public class ObjectTriadParityTests
 			return colon < 0 ? part : part[..colon];
 		}));
 
+	private Task Settle() => Scheduler.SettleForTestsAsync();
+
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{
 		var recorder = WebAppFactoryArg.Notifications;
@@ -106,7 +102,7 @@ public class ObjectTriadParityTests
 		await God($"&ASUCCESS {item}=&TAKEN me=%#");
 
 		await GodParser.CommandParse(taker.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(item, "TAKEN")).IsEqualTo($"#{taker.DbRef.Number}")
 			.Because("ASUCCESS runs on the item with the taker as enactor");
@@ -138,7 +134,7 @@ public class ObjectTriadParityTests
 		await Assert.That(seen.Any(m => m == $"{taker.Name} pockets it.")).IsTrue()
 			.Because("loc is NOTHING, so ORECEIVE is broadcast into the taker's room");
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 		await Assert.That(BareDbrefs(await Read(taker.DbRef, "POCKETED"))).IsEqualTo($"#{item.Number}")
 			.Because("env0 is the taken object");
 	}
@@ -162,7 +158,7 @@ public class ObjectTriadParityTests
 		await God($"&TAKE_LOCK`AFAILURE {item}=&REFUSED me=wrong-object");
 
 		await GodParser.CommandParse(taker.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(room, "REFUSED")).IsEqualTo($"#{taker.DbRef.Number}")
 			.Because("fail_lock names oldloc, so the source room's take-failure action runs");
@@ -193,7 +189,7 @@ public class ObjectTriadParityTests
 
 		await GodParser.CommandParse(taker.Handle, ConnectionService,
 			MarkupText.Plain($"get {box}'s {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(item, "REFUSED")).IsEqualTo($"#{taker.DbRef.Number}")
 			.Because("the possessive else fires Basic_Lock's failure family on the item");
@@ -228,7 +224,7 @@ public class ObjectTriadParityTests
 		await Assert.That(seen.Any(m => m == $"{dropper.Name} lets go of it.")).IsTrue()
 			.Because("ODROP is name-prefixed and shown to the rest of the room");
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 		await Assert.That(await Read(item, "DROPPED")).IsEqualTo($"#{dropper.DbRef.Number}");
 	}
 
@@ -249,7 +245,7 @@ public class ObjectTriadParityTests
 		await God($"&DROP_LOCK`AFAILURE {item}=&STUCK me=%#");
 
 		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(item, "STUCK")).IsEqualTo($"#{dropper.DbRef.Number}");
 	}
@@ -273,7 +269,7 @@ public class ObjectTriadParityTests
 		await God($"&ADROP {item}=&DROPPED me=%#");
 
 		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(room, "BOUNCED")).IsEqualTo($"#{dropper.DbRef.Number}")
 			.Because("the drop-in lock is failed on the room");
@@ -305,7 +301,7 @@ public class ObjectTriadParityTests
 		await God($"&ADROP {item}=&DROPPED me=%#");
 
 		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(room, "BARRED")).IsEqualTo($"#{dropper.DbRef.Number}")
 			.Because("the room's own drop lock is evaluated after the thing's");
@@ -331,7 +327,7 @@ public class ObjectTriadParityTests
 		await God($"&DROPIN_LOCK`AFAILURE {room}=&BOUNCED me=%#");
 
 		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(room, "BOUNCED")).IsEmpty()
 			.Because("the lock names the dropper, and the dropper is who it is evaluated against");
@@ -367,7 +363,7 @@ public class ObjectTriadParityTests
 		await God($"@lock/dropin {room}=#{stranger.Number}");
 
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain("empty me"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		var refused = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
 		await Assert.That(BareDbrefs(refused!.Message!.ToPlainText().Trim()))
@@ -378,7 +374,7 @@ public class ObjectTriadParityTests
 		await God($"@lock/dropin {room}=#{emptier.DbRef.Number}");
 
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain("empty me"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
 		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
@@ -414,7 +410,7 @@ public class ObjectTriadParityTests
 		await God($"&ASUCCESS {item}=&TOOK me=%0");
 
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		// move.c:865-903 runs both halves: the get puts the item in the emptier's hands, and the
 		// drop that follows (thing_loc != player) puts it down where the container stands.
@@ -452,7 +448,7 @@ public class ObjectTriadParityTests
 		await God($"&AFAILURE {box}=&REFUSED me=yes");
 
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		var stayed = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
 		await Assert.That(BareDbrefs(stayed!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
@@ -484,7 +480,7 @@ public class ObjectTriadParityTests
 		await God($"@set {hidden}=DARK");
 
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		var hiddenAt = await GodParser.FunctionParse(MarkupText.Plain($"[loc({hidden})]"));
 		await Assert.That(BareDbrefs(hiddenAt!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
@@ -517,7 +513,7 @@ public class ObjectTriadParityTests
 
 		await GodParser.CommandParse(giver.Handle, ConnectionService,
 			MarkupText.Plain($"give {recipient}={gift}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(BareDbrefs(await Read(giver.DbRef, "GAVE")))
 			.IsEqualTo($"#{gift.Number}/#{recipient.Number}")
@@ -546,7 +542,7 @@ public class ObjectTriadParityTests
 
 		await GodParser.CommandParse(giver.Handle, ConnectionService,
 			MarkupText.Plain($"give {recipient}={gift}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(BareDbrefs(await Read(recipient, "GOT")))
 			.IsEqualTo($"#{gift.Number}/#{giver.DbRef.Number}")
@@ -575,7 +571,7 @@ public class ObjectTriadParityTests
 
 		await GodParser.CommandParse(giver.Handle, ConnectionService,
 			MarkupText.Plain($"give {recipient}={gift}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(gift, "KEPT")).IsEqualTo($"#{giver.DbRef.Number}");
 	}
@@ -694,7 +690,7 @@ public class ObjectTriadParityTests
 		await Assert.That(seen).Contains("Used.")
 			.Because("set.c:1416 passes T(\"Used.\") as the USE default");
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 		await Assert.That(await Read(gadget, "USED")).IsEqualTo($"#{user.DbRef.Number}");
 	}
 
@@ -716,14 +712,14 @@ public class ObjectTriadParityTests
 		await God($"&RUNOUT {gadget}=&RANOUT me=[add(0[get(me/RANOUT)],1)]");
 
 		await GodParser.CommandParse(user.Handle, ConnectionService, MarkupText.Plain($"use {gadget}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(gadget, "CHARGES")).IsEqualTo("0");
 		await Assert.That(await Read(gadget, "USES")).IsEqualTo("1");
 		await Assert.That(await Read(gadget, "RANOUT")).IsEqualTo(string.Empty);
 
 		await GodParser.CommandParse(user.Handle, ConnectionService, MarkupText.Plain($"use {gadget}"));
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 
 		await Assert.That(await Read(gadget, "CHARGES")).IsEqualTo("0");
 		await Assert.That(await Read(gadget, "USES")).IsEqualTo("1")
@@ -754,7 +750,7 @@ public class ObjectTriadParityTests
 		await Assert.That(seen.Any(m => m == $"It refuses {user.Name}.")).IsTrue()
 			.Because("UFAIL is evaluated as the object with the actor as %#");
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 		await Assert.That(await Read(gadget, "BLOCKED")).IsEqualTo($"#{user.DbRef.Number}");
 	}
 
@@ -785,7 +781,7 @@ public class ObjectTriadParityTests
 		await Assert.That(seen.Any(m => m == $"No pages from {pager.Name}.")).IsTrue()
 			.Because("the derived failure attribute is evaluated, not echoed raw");
 
-		await Scheduler.DrainImmediateQueueForTests();
+		await Settle();
 		await Assert.That(await Read(target.DbRef, "BOUNCED")).IsEqualTo($"#{pager.DbRef.Number}");
 	}
 
@@ -828,7 +824,7 @@ public class ObjectTriadParityTests
 			await Assert.That(seen.Any(m => m == $"{renamer.Name} repaints the sign.")).IsTrue()
 						.Because("ONAME is name-prefixed and shown to the renamer's room");
 
-			await Scheduler.DrainImmediateQueueForTests();
+			await Settle();
 			await Assert.That(await Read(sign, "RENAMED")).IsEqualTo($"{oldName}/{newName}");
 		}
 		finally
