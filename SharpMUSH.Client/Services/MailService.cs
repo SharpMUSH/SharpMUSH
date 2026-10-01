@@ -64,9 +64,10 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	{
 		// A row clicked again before its first read answers sends a second read that also says "unread".
 		// One message changes state, so only the first read to succeed reports it; a read that fails
-		// leaves the report to the next one.
-		var key = (folder, number);
+		// leaves the report to the next one. Folder and number name a message only within one character's
+		// mailbox, so the mailbox is part of what is claimed.
 		var mailbox = Mailbox;
+		var key = (mailbox, folder, number);
 		if (wasUnread is true)
 		{
 			lock (_unreadInFlight) _unreadInFlight.Add(key);
@@ -94,9 +95,9 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	/// Unread messages being read and not yet reported read. Locked: WASM runs on one thread, but the
 	/// service does not assume it.
 	/// </summary>
-	private readonly HashSet<(string Folder, int Number)> _unreadInFlight = [];
+	private readonly HashSet<((int, long)? Mailbox, string Folder, int Number)> _unreadInFlight = [];
 
-	private bool Claim((string, int) key)
+	private bool Claim(((int, long)?, string, int) key)
 	{
 		lock (_unreadInFlight) return _unreadInFlight.Remove(key);
 	}
