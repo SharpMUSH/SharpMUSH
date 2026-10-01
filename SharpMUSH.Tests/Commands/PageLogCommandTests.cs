@@ -140,6 +140,78 @@ public class PageLogCommandTests
 		}
 	}
 
+	/// <summary>
+	/// The page is delivered and <c>PAGE`MESSAGE</c> raised before the log is written, so a slow or failing
+	/// write cannot hold up or lose the push the portal shows. The page command here runs against a page log
+	/// that notes whether the event had fired when it was asked to write, and an event service that notes the
+	/// page events it was asked to raise.
+	/// </summary>
+	[Test]
+	public async ValueTask ThePageEvent_IsRaisedBeforeThePageIsLogged()
+	{
+		var sender = await CreatePlayerAsync("PageLogOrderSender");
+		var recipient = await CreatePlayerAsync("PageLogOrderRecipient");
+		try
+		{
+			var events = new RecordingEvents(WebAppFactoryArg.Services.GetRequiredService<IEventService>());
+			var pageLog = new OrderNotingPageLog(WebAppFactoryArg.Services.GetRequiredService<IPageLogService>(), events);
+			var commands = Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+				WebAppFactoryArg.Services, pageLog, (IEventService)events);
+			var parser = WebAppFactoryArg.CommandParserWith(
+				((ILibraryProvider<SharpMUSH.Library.Definitions.CommandDefinition>)commands).Get(),
+				sender.DbRef, sender.Handle);
+
+			using (PageLog(on: true))
+			{
+				using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+				using var scope = budget.Enter();
+				await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"page {recipient.Name}=in order"));
+			}
+
+			await Assert.That(pageLog.Recorded).IsEqualTo(1);
+			await Assert.That(pageLog.EventsBeforeRecord).IsEqualTo(1)
+				.Because("PAGE`MESSAGE has gone out by the time the log is written");
+		}
+		finally
+		{
+			await DisconnectAsync(sender, recipient);
+		}
+	}
+
+	private sealed class RecordingEvents(IEventService inner) : IEventService
+	{
+		public int PageEvents;
+
+		public ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
+		{
+			if (eventName == SharpMUSH.Library.Definitions.SharpEvents.PageMessage) Interlocked.Increment(ref PageEvents);
+			return inner.TriggerEventAsync(parser, eventName, enactor, args);
+		}
+	}
+
+	private sealed class OrderNotingPageLog(IPageLogService inner, RecordingEvents events) : IPageLogService
+	{
+		public int Recorded;
+		public int EventsBeforeRecord = -1;
+
+		public bool Enabled => inner.Enabled;
+
+		public ValueTask<SharpPage> PageAsync(AnySharpObject sender, string senderName, IReadOnlyList<AnySharpObject> recipients,
+			string style, string message, CancellationToken cancellationToken = default) =>
+			inner.PageAsync(sender, senderName, recipients, style, message, cancellationToken);
+
+		public ValueTask RecordAsync(SharpPage page, IReadOnlyList<AnySharpObject> participants,
+			CancellationToken cancellationToken = default)
+		{
+			Recorded++;
+			EventsBeforeRecord = events.PageEvents;
+			return inner.RecordAsync(page, participants, cancellationToken);
+		}
+
+		public ValueTask<int> PurgeExpiredAsync(CancellationToken cancellationToken = default) =>
+			inner.PurgeExpiredAsync(cancellationToken);
+	}
+
 	private async Task<IReadOnlyList<SharpPage>> Log(PagePlayer owner, params PagePlayer[] with) =>
 		await Mediator.Send(new GetPageLogQuery(owner.DbRef, with.Select(other => other.DbRef).ToArray(), 0));
 

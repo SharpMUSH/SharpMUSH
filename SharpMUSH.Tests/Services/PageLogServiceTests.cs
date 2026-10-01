@@ -28,7 +28,8 @@ public class PageLogServiceTests
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		var defaults = SharpMUSHOptions.Default();
 		options.CurrentValue.Returns(defaults with { Chat = defaults.Chat with { PageLogRetentionDays = retentionDays } });
-		return (new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options, new StoppedClock(Now)), mediator);
+		return (new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options,
+			Substitute.For<Microsoft.Extensions.Logging.ILogger<PageLogService>>(), new StoppedClock(Now)), mediator);
 	}
 
 	[Test]
@@ -66,15 +67,41 @@ public class PageLogServiceTests
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		var defaults = SharpMUSHOptions.Default();
 		options.CurrentValue.Returns(defaults with { Chat = defaults.Chat with { PageLog = true } });
-		var service = new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options, new StoppedClock(Now));
+		var service = new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options,
+			Substitute.For<Microsoft.Extensions.Logging.ILogger<PageLogService>>(), new StoppedClock(Now));
 		var objects = new TestObjectFactory();
 		var sender = objects.CreatePlayer(1000, "Pager");
 		var to = Enumerable.Range(1001, recipients).Select(n => objects.CreatePlayer(n, $"Paged{n}")).ToArray();
 
-		var page = await service.DeliveredAsync(sender, "Pager", to, "say", "hello all");
+		var page = await service.PageAsync(sender, "Pager", to, "say", "hello all");
+		await service.RecordAsync(page, [sender, .. to]);
 
 		await Assert.That(page.Recipients.Count).IsEqualTo(recipients);
 		await mediator.Received(logged ? 1 : 0).Send(Arg.Any<RecordPageCommand>(), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The page was delivered and pushed before it is logged, so a failed write (a full map, a disk error)
+	/// loses only the history: it is logged, and nothing is thrown back into the page command.
+	/// </summary>
+	[Test]
+	public async Task AFailedWrite_IsLoggedNotThrown()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<RecordPageCommand>(), Arg.Any<CancellationToken>())
+			.Returns<ValueTask<Mediator.Unit>>(_ => throw new IOException("MDB_MAP_FULL"));
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		var defaults = SharpMUSHOptions.Default();
+		options.CurrentValue.Returns(defaults with { Chat = defaults.Chat with { PageLog = true } });
+		var logger = Substitute.For<Microsoft.Extensions.Logging.ILogger<PageLogService>>();
+		var service = new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options, logger, new StoppedClock(Now));
+		var objects = new TestObjectFactory();
+		var sender = objects.CreatePlayer(2000, "Pager");
+		var recipient = objects.CreatePlayer(2001, "Paged");
+		var page = await service.PageAsync(sender, "Pager", [recipient], "say", "hello");
+
+		await Assert.That(async () => await service.RecordAsync(page, [sender, recipient])).ThrowsNothing();
+		logger.ReceivedWithAnyArgs(1).Log(Microsoft.Extensions.Logging.LogLevel.Error, default, default(object)!, default, default!);
 	}
 
 	[Test]

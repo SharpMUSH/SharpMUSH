@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -15,10 +16,12 @@ public sealed class PageLogService(
 	IMediator mediator,
 	IChannelMessageIdSource ids,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
+	ILogger<PageLogService> logger,
 	TimeProvider time) : IPageLogService
 {
-	public PageLogService(IMediator mediator, IChannelMessageIdSource ids, IOptionsWrapper<SharpMUSHOptions> configuration)
-		: this(mediator, ids, configuration, TimeProvider.System)
+	public PageLogService(IMediator mediator, IChannelMessageIdSource ids, IOptionsWrapper<SharpMUSHOptions> configuration,
+		ILogger<PageLogService> logger)
+		: this(mediator, ids, configuration, logger, TimeProvider.System)
 	{
 	}
 
@@ -27,10 +30,9 @@ public sealed class PageLogService(
 
 	public bool Enabled => configuration.CurrentValue.Chat.PageLog;
 
-	public async ValueTask<SharpPage> DeliveredAsync(AnySharpObject sender, string senderName,
+	public async ValueTask<SharpPage> PageAsync(AnySharpObject sender, string senderName,
 		IReadOnlyList<AnySharpObject> recipients, string style, string message, CancellationToken cancellationToken = default)
-	{
-		var page = new SharpPage(
+		=> new(
 			await ids.NextAsync(cancellationToken),
 			sender.Object().DBRef,
 			senderName,
@@ -40,21 +42,29 @@ public sealed class PageLogService(
 			message,
 			time.GetUtcNow());
 
+	public async ValueTask RecordAsync(SharpPage page, IReadOnlyList<AnySharpObject> participants,
+		CancellationToken cancellationToken = default)
+	{
 		// A page to more people than a conversation holds is not one: the portal could never open it.
-		if (!Enabled || page.Participants.Count - 1 > PageConversation.MaxOthers) return page;
+		if (!Enabled || page.Participants.Count - 1 > PageConversation.MaxOthers) return;
 
 		// A copy is for a character who can read it, through the portal: a player. An object may page.
-		var owners = recipients.Prepend(sender)
+		var owners = participants
 			.Where(participant => participant.IsPlayer)
 			.Select(participant => participant.Object().DBRef)
 			.Distinct()
 			.ToArray();
-		if (owners.Length > 0)
+		if (owners.Length == 0) return;
+
+		try
 		{
 			await mediator.Send(new RecordPageCommand(page, owners), cancellationToken);
 		}
-
-		return page;
+		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+		{
+			// The page was delivered and pushed already; a failed write loses only the history.
+			logger.LogError(ex, "Could not keep page {Id} from {Sender} in the page log", page.Id, page.Sender);
+		}
 	}
 
 	public async ValueTask<int> PurgeExpiredAsync(CancellationToken cancellationToken = default)

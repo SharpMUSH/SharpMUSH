@@ -359,10 +359,9 @@ public partial class Commands
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
 
-			// The page's id, and its copies in the page log while page_log is on: for the pager and for the
-			// recipients it reached, never one who refused it. The id goes out with PAGE`MESSAGE, so the
-			// portal knows a pushed page and its logged copy for one.
-			var delivered = await PageLog.DeliveredAsync(executor, senderName, successfulRecipients,
+			// The page's id. It goes out with PAGE`MESSAGE and is the id the page log keeps the page under,
+			// so the portal knows a pushed page and its logged copy for one.
+			var delivered = await PageLog.PageAsync(executor, senderName, successfulRecipients,
 				pageType switch
 				{
 					PageMessageType.Pose => "pose",
@@ -384,6 +383,11 @@ public partial class Commands
 				delivered.Message,
 				delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
 				delivered.Id.ToString(CultureInfo.InvariantCulture));
+
+			// Logged last, while page_log is on: for the pager and the recipients it reached, never one who
+			// refused it. The page is already delivered and pushed, so a slow or failed write holds up and
+			// loses nothing but its history; RecordAsync logs a failure rather than throwing it.
+			await PageLog.RecordAsync(delivered, [executor, .. successfulRecipients]);
 		}
 
 		return CallState.Empty;
