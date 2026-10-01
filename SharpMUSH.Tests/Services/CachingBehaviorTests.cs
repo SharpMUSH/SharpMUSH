@@ -388,6 +388,9 @@ public class CachingBehaviorTests
 	/// from the room for the entry's whole lifetime.
 	/// </remarks>
 	[Test]
+	// A stress test: it floods the single database writer, which on CI stalled every parallel test's
+	// writes for up to a minute, so it runs alone.
+	[NotInParallel]
 	public async Task ContentsCache_HoldsEveryObjectCreatedWhileItWasBeingRead()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
@@ -534,6 +537,9 @@ public class CachingBehaviorTests
 	/// caller that supplies <c>OldContainer</c> — is the normal movement route, so it lost movers.
 	/// </remarks>
 	[Test]
+	// A stress test: it floods the single database writer, which on CI stalled every parallel test's
+	// writes for up to a minute, so it runs alone.
+	[NotInParallel]
 	public async Task ContentsCache_HoldsEveryObjectMovedInWhileItWasBeingRead()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
