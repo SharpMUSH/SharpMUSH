@@ -54,28 +54,78 @@ public static class PageRecall
 	}
 
 	/// <summary>
-	/// Finds the people <paramref name="list"/> names, each as <c>page</c> finds a recipient. The first name
+	/// Finds the people <paramref name="list"/> names, for <paramref name="viewer"/>'s own log. The first name
 	/// that finds nobody, or more than one, is the answer.
 	/// </summary>
+	/// <remarks>
+	/// A name is matched first as <c>page</c> finds a recipient. A conversation can outlive its partner's
+	/// name, though: they were renamed, destroyed, their dbref went to someone new, or they were an object
+	/// (which <c>page</c> never finds). So a name that finds no one, or finds a player in none of the
+	/// viewer's conversations, is then looked for among the viewer's own conversation partners: a full
+	/// objid (<c>#dbref:ctime</c>, what <c>pageconversations()</c> returns) matches that partner exactly, and
+	/// a whole name matches the name the log gave a partner. A bare <c>#dbref</c> never matches a logged
+	/// partner, so a recycled dbref's new holder never reaches the old holder's pages. Only the viewer's own
+	/// conversations are searched, so this reveals nothing of anyone else's log.
+	/// </remarks>
 	public static async ValueTask<PagePartnerMatch> MatchAsync(IMediator mediator, IConnectionService connections,
-		string list)
+		DBRef viewer, string list)
 	{
-		var partners = new List<AnySharpObject>();
+		Dictionary<DBRef, string>? logged = null;
+		async ValueTask<Dictionary<DBRef, string>> LoggedPartners()
+			=> logged ??= (await mediator.Send(new GetPageConversationsQuery(viewer)))
+				.SelectMany(conversation => conversation.With.Zip(conversation.Names))
+				.DistinctBy(member => member.First)
+				.ToDictionary(member => member.First, member => member.Second);
+
+		var partners = new List<PagePartner>();
 		foreach (var name in PageRecipients.NextInList(list))
 		{
-			switch (await PageRecipients.ResolveAsync(mediator, connections, name))
+			var live = await PageRecipients.ResolveAsync(mediator, connections, name);
+			if (live is AnySharpObject found)
 			{
-				case AnySharpObject partner:
-					partners.Add(partner);
+				var objid = found.Object().DBRef;
+				var known = await LoggedPartners();
+				partners.Add(objid == viewer || known.ContainsKey(objid)
+					? new PagePartner(objid, found.Object().Name)
+					: InLog(known, name) is [var remembered]
+						? remembered
+						: new PagePartner(objid, found.Object().Name));
+				continue;
+			}
+
+			switch (InLog(await LoggedPartners(), name))
+			{
+				case [var remembered]:
+					partners.Add(remembered);
 					break;
-				case AmbiguousName:
-					return new UnmatchedPartner(name, Ambiguous: true);
+				case []:
+					return new UnmatchedPartner(name, Ambiguous: live is AmbiguousName);
 				default:
-					return new UnmatchedPartner(name, Ambiguous: false);
+					return new UnmatchedPartner(name, Ambiguous: true);
 			}
 		}
 
-		return new MatchedPartners([.. partners]);
+		return new MatchedPartners([.. partners.DistinctBy(partner => partner.Objid)]);
+	}
+
+	/// <summary>
+	/// The viewer's logged partners <paramref name="name"/> names: the one with that full objid, or every one
+	/// the log gave that whole name (case-insensitively).
+	/// </summary>
+	private static PagePartner[] InLog(Dictionary<DBRef, string> logged, string name)
+	{
+		if (name.StartsWith('#'))
+		{
+			return DBRef.TryParse(name, out var objid) && objid!.Value.CreationMilliseconds is not null
+					&& logged.TryGetValue(objid.Value, out var loggedName)
+				? [new PagePartner(objid.Value, loggedName)]
+				: [];
+		}
+
+		var lookup = name.StartsWith('*') ? name[1..] : name;
+		return [.. logged
+			.Where(member => member.Value.Equals(lookup, StringComparison.OrdinalIgnoreCase))
+			.Select(member => new PagePartner(member.Key, member.Value))];
 	}
 
 	/// <summary>
@@ -83,10 +133,10 @@ public static class PageRecall
 	/// <paramref name="partners"/>, or across all of their conversations when there are none; oldest first.
 	/// </summary>
 	public static async ValueTask<IReadOnlyList<SharpPage>> ReadAsync(IMediator mediator, DBRef viewer,
-		IReadOnlyList<AnySharpObject> partners, int lines)
+		IReadOnlyList<PagePartner> partners, int lines)
 		=> partners.Count == 0
 			? await mediator.Send(new GetRecentPagesQuery(viewer, lines))
-			: await mediator.Send(new GetPageLogQuery(viewer, [.. partners.Select(partner => partner.Object().DBRef)], lines));
+			: await mediator.Send(new GetPageLogQuery(viewer, [.. partners.Select(partner => partner.Objid)], lines));
 
 	/// <summary>
 	/// <paramref name="page"/> as <paramref name="viewer"/> was shown it: as the pager when they sent it,
@@ -112,8 +162,12 @@ public static class PageRecall
 		=> toSelf ? "yourself" : Library.Common.MessageFormatting.FormatWithOxfordComma(names);
 }
 
-/// <summary>The people a <c>page/recall</c> list named, each found.</summary>
-public readonly record struct MatchedPartners(AnySharpObject[] Partners);
+/// <summary>One person a <c>page/recall</c> list named: their objid, and the name to call them by.</summary>
+/// <param name="Name">Their name now when they were found live, or the name the log gave them.</param>
+public readonly record struct PagePartner(DBRef Objid, string Name);
+
+/// <summary>The people a <c>page/recall</c> list named, each found once.</summary>
+public readonly record struct MatchedPartners(PagePartner[] Partners);
 
 /// <summary>A name in a <c>page/recall</c> list that found nobody, or more than one connected player.</summary>
 public readonly record struct UnmatchedPartner(string Name, bool Ambiguous);

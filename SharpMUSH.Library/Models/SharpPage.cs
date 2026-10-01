@@ -43,10 +43,13 @@ public sealed record SharpPage(
 		return others.Length > 0 ? PageConversation.Normalize(others) : [owner];
 	}
 
-	/// <summary>The name the page gave <paramref name="participant"/>: the sender's, or a recipient's.</summary>
+	/// <summary>
+	/// The name the page gave <paramref name="participant"/>: a recipient's, or the sender's own name (without
+	/// the page alias, so a conversation lists and is found by the name, not the name and alias).
+	/// </summary>
 	public string NameOf(DBRef participant)
 	{
-		if (participant == Sender) return SenderName;
+		if (participant == Sender) return SenderPlainName ?? SenderName;
 
 		for (var i = 0; i < Recipients.Count && i < RecipientNames.Count; i++)
 		{

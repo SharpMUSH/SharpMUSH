@@ -409,7 +409,7 @@ public partial class Commands
 			return await Told(executor, ErrorMessages.Notifications.ChatHowManyLinesToRecall);
 		}
 
-		return await PageRecall.MatchAsync(Mediator, ConnectionService, players.ToPlainText()) switch
+		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, players.ToPlainText()) switch
 		{
 			MatchedPartners matched => await ShowRecalledPages(executor, matched.Partners, lines, timestamps),
 			UnmatchedPartner { Ambiguous: true } unmatched => await Told(executor,
@@ -419,15 +419,14 @@ public partial class Commands
 		};
 	}
 
-	private async ValueTask<CallState> ShowRecalledPages(AnySharpObject executor, AnySharpObject[] partners, int lines,
+	private async ValueTask<CallState> ShowRecalledPages(AnySharpObject executor, PagePartner[] partners, int lines,
 		bool timestamps)
 	{
 		var viewer = executor.Object().DBRef;
 		var pages = await PageRecall.ReadAsync(Mediator, viewer, partners, lines);
 
-		var others = partners.Where(partner => partner.Object().DBRef != viewer)
-			.Select(partner => partner.Object().Name)
-			.Distinct()
+		var others = partners.Where(partner => partner.Objid != viewer)
+			.Select(partner => partner.Name)
 			.ToArray();
 		var with = PageRecall.Describe(others, toSelf: others.Length == 0);
 

@@ -527,6 +527,240 @@ public class PageRecallCommandTests
 		}
 	}
 
+	/// <summary>
+	/// A partner who was destroyed is still in the caller's own log: found by the name the log gave them and
+	/// by their objid, which is what <c>pageconversations()</c> hands out.
+	/// </summary>
+	[Test]
+	public async ValueTask ADestroyedPartner_IsFoundByLoggedNameAndObjid()
+	{
+		var alice = await CreatePlayerAsync("PRGoneA");
+		var bob = await CreatePlayerAsync("PRGoneB");
+		var message = TestIsolationHelpers.GenerateUniqueName("gone");
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {bob.Name}={message}");
+				var line = LiveLine(alice, message);
+				await DestroyAsync(bob);
+
+				var byName = await RecallAsync(alice, $"page/recall {bob.Name}");
+				var byObjid = await RecallAsync(alice, $"page/recall {bob.DbRef}");
+
+				await Assert.That(byName).IsEquivalentTo([$"{Header} with {bob.Name}:", line, Footer],
+					TUnit.Assertions.Enums.CollectionOrdering.Matching);
+				await Assert.That(byObjid).IsEquivalentTo(byName, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.DbRef})")).IsEqualTo(line);
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.Name})")).IsEqualTo(line);
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice);
+		}
+	}
+
+	/// <summary>A group with one member destroyed is found by naming the living and the dead.</summary>
+	[Test]
+	public async ValueTask AGroupWithADestroyedMember_IsFoundByAllItsNames()
+	{
+		var alice = await CreatePlayerAsync("PRGoneGroupA");
+		var bob = await CreatePlayerAsync("PRGoneGroupB");
+		var carol = await CreatePlayerAsync("PRGoneGroupC");
+		var message = TestIsolationHelpers.GenerateUniqueName("gonegroup");
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {bob.Name} {carol.Name}={message}");
+				var line = LiveLine(alice, message);
+				await DestroyAsync(carol);
+
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.Name} {carol.Name})")).IsEqualTo(line);
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({carol.DbRef} {bob.Name})")).IsEqualTo(line);
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, bob);
+		}
+	}
+
+	/// <summary>A renamed partner is found by the new name (live) and by the name the log gave them.</summary>
+	[Test]
+	public async ValueTask ARenamedPartner_IsFoundByOldAndNewName()
+	{
+		var alice = await CreatePlayerAsync("PRRenameA");
+		var bob = await CreatePlayerAsync("PRRenameB");
+		var renamed = TestIsolationHelpers.GenerateUniqueName("PRRenamed");
+		var message = TestIsolationHelpers.GenerateUniqueName("renamed");
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {bob.Name}={message}");
+				var line = LiveLine(alice, message);
+				var bobObject = (await Mediator.Send(new GetObjectNodeQuery(bob.DbRef))).Expect<AnySharpObject>();
+				await Mediator.Send(new SetNameCommand(bobObject, MarkupText.Plain(renamed)));
+
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.Name})")).IsEqualTo(line);
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({renamed})")).IsEqualTo(line);
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, bob);
+		}
+	}
+
+	/// <summary>
+	/// A dbref recycled to a new player: <c>#dbref</c> alone is the new player, whose conversation with the
+	/// caller is their own; only the old objid (or the logged name) finds the old conversation.
+	/// </summary>
+	[Test]
+	public async ValueTask ARecycledDbref_IsTheNewPlayer_AndTheOldObjidIsTheOldConversation()
+	{
+		var alice = await CreatePlayerAsync("PRRecycleA");
+		var holder = await CreatePlayerAsync("PRRecycleNew");
+		var oldName = TestIsolationHelpers.GenerateUniqueName("PRRecycleOld");
+		var oldMessage = TestIsolationHelpers.GenerateUniqueName("oldholder");
+		var newMessage = TestIsolationHelpers.GenerateUniqueName("newholder");
+		var previous = new DBRef(holder.DbRef.Number, holder.DbRef.CreationMilliseconds - 86_400_000);
+		try
+		{
+			await Mediator.Send(new RecordPageCommand(new SharpPage(2, previous, oldName, [alice.DbRef], [alice.Name], "say",
+				oldMessage, DateTimeOffset.UtcNow.AddDays(-1), SenderPlainName: oldName), [alice.DbRef]));
+
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {holder.Name}={newMessage}");
+
+				var byDbref = await FunctionAsync(alice, $"pagerecall(#{holder.DbRef.Number})");
+				await Assert.That(byDbref).Contains(newMessage);
+				await Assert.That(byDbref).DoesNotContain(oldMessage);
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({previous})")).IsEqualTo($"{oldName} pages: {oldMessage}");
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({oldName})")).IsEqualTo($"{oldName} pages: {oldMessage}");
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, holder);
+		}
+	}
+
+	/// <summary>A name twice is one partner, and the caller naming themselves among others is ignored.</summary>
+	[Test]
+	public async ValueTask DuplicateNamesAndOneself_DoNotChangeTheConversation()
+	{
+		var alice = await CreatePlayerAsync("PRDupA");
+		var bob = await CreatePlayerAsync("PRDupB");
+		var toBob = TestIsolationHelpers.GenerateUniqueName("tobob");
+		var toSelf = TestIsolationHelpers.GenerateUniqueName("toself");
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {bob.Name}={toBob}");
+				await CommandAsync(alice, $"page {alice.Name}={toSelf}");
+
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.Name} {bob.Name})")).Contains(toBob);
+				var withSelf = await FunctionAsync(alice, $"pagerecall({alice.Name} {bob.Name})");
+				await Assert.That(withSelf).Contains(toBob);
+				await Assert.That(withSelf).DoesNotContain(toSelf);
+				var self = await FunctionAsync(alice, $"pagerecall({alice.Name})");
+				await Assert.That(self).Contains(toSelf);
+				await Assert.That(self).DoesNotContain(toBob);
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, bob);
+		}
+	}
+
+	/// <summary>Every list <c>pageconversations()</c> returns recalls its conversation, destroyed members included.</summary>
+	[Test]
+	public async ValueTask EveryConversationList_RoundTripsThroughPageRecall()
+	{
+		var alice = await CreatePlayerAsync("PRRoundA");
+		var bob = await CreatePlayerAsync("PRRoundB");
+		var carol = await CreatePlayerAsync("PRRoundC");
+		string[] messages =
+		[
+			TestIsolationHelpers.GenerateUniqueName("rt-self"),
+			TestIsolationHelpers.GenerateUniqueName("rt-bob"),
+			TestIsolationHelpers.GenerateUniqueName("rt-group")
+		];
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {alice.Name}={messages[0]}");
+				await CommandAsync(alice, $"page {bob.Name}={messages[1]}");
+				await CommandAsync(alice, $"page {bob.Name} {carol.Name}={messages[2]}");
+				await DestroyAsync(carol);
+
+				var lists = (await FunctionAsync(alice, "pageconversations()")).Split('|');
+				await Assert.That(lists.Length).IsEqualTo(3);
+				var recalled = new List<string>();
+				foreach (var list in lists)
+				{
+					recalled.Add(await FunctionAsync(alice, $"pagerecall({list})"));
+				}
+
+				// A page to oneself was shown twice live, sent and received; recall shows it once, as sent.
+				await Assert.That(recalled).IsEquivalentTo(
+				[
+					LiveLine(alice, messages[2]),
+					LiveLine(alice, messages[1]),
+					$"You paged {alice.Name} with '{messages[0]}'"
+				], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, bob);
+		}
+	}
+
+	/// <summary>
+	/// An object that paged the caller is a conversation partner <c>page</c> itself would never find; its
+	/// objid from <c>pageconversations()</c> and the name the log gave it still recall the conversation.
+	/// </summary>
+	[Test]
+	public async ValueTask AnObjectThatPaged_IsFoundByObjidAndLoggedName()
+	{
+		var alice = await CreatePlayerAsync("PRObjA");
+		var thingName = TestIsolationHelpers.GenerateUniqueName("PRObjThing");
+		var message = TestIsolationHelpers.GenerateUniqueName("fromthing");
+		try
+		{
+			var created = await FunctionAsync(new PagePlayer(new DBRef(1), 1, "God"), $"create({thingName})");
+			var thing = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created)))).Expect<AnySharpObject>().Object().DBRef;
+			await Mediator.Send(new RecordPageCommand(new SharpPage(3, thing, thingName, [alice.DbRef], [alice.Name], "say",
+				message, DateTimeOffset.UtcNow, SenderPlainName: thingName), [alice.DbRef]));
+
+			using (PageLog(on: true))
+			{
+				await Assert.That(await FunctionAsync(alice, "pageconversations()")).IsEqualTo(thing.ToString());
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({thing})")).IsEqualTo($"{thingName} pages: {message}");
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({thingName})")).IsEqualTo($"{thingName} pages: {message}");
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice);
+		}
+	}
+
+	/// <summary>Destroys <paramref name="player"/>, disconnected first.</summary>
+	private async Task DestroyAsync(PagePlayer player)
+	{
+		await ConnectionService.Disconnect(player.Handle);
+		await Mediator.Send(new DeleteObjectCommand(player.DbRef));
+	}
+
 	/// <summary>The line <paramref name="viewer"/> was shown, live, holding <paramref name="marker"/>.</summary>
 	private string LiveLine(PagePlayer viewer, string marker) =>
 		WebAppFactoryArg.Notifications.For(viewer.DbRef).Single(line => line.Contains(marker) && !line.Contains('\n'));

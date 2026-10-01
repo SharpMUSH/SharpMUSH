@@ -410,6 +410,8 @@ public class PageLogTests
 		var page = (await _db.GetPageLogAsync(wren, [ilsa], 0)).Single();
 		await Assert.That(page.SenderName).IsEqualTo("Ilsa (il)");
 		await Assert.That(page.SenderPlainName).IsEqualTo("Ilsa");
+		await Assert.That((await _db.GetPageConversationsAsync(wren)).Single().Names.Single()).IsEqualTo("Ilsa")
+			.Because("a conversation names its people by their names, not their names and page aliases");
 	}
 
 	[Test]

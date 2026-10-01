@@ -35,6 +35,10 @@ public class GetPageConversationsQueryHandler(IPageLogStore store)
 		=> store.GetPageConversationsAsync(query.Character, query.Limit, cancellationToken);
 }
 
+/// <summary>
+/// <see cref="GetRecentPagesQuery"/>: the character's latest pages across their conversations, from
+/// <see cref="IPageLogStore.GetRecentPagesAsync"/>.
+/// </summary>
 public class GetRecentPagesQueryHandler(IPageLogStore store) : IQueryHandler<GetRecentPagesQuery, IReadOnlyList<SharpPage>>
 {
 	public ValueTask<IReadOnlyList<SharpPage>> Handle(GetRecentPagesQuery query, CancellationToken cancellationToken)

@@ -39,7 +39,7 @@ public partial class Functions
 		var delimiter = arguments.TryGetValue("2", out var delimiterArgument) ? delimiterArgument.Message! : MarkupText.NewLine;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await PageRecall.MatchAsync(Mediator, ConnectionService, arguments["0"].Message!.ToPlainText()) switch
+		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, arguments["0"].Message!.ToPlainText()) switch
 		{
 			MatchedPartners matched => await RecalledPagesAsync(executor.Object().DBRef, matched.Partners, lines, delimiter),
 			UnmatchedPartner { Ambiguous: true } => new CallState(ErrorMessages.Returns.AmbiguousMatch),
@@ -47,7 +47,7 @@ public partial class Functions
 		};
 	}
 
-	private async ValueTask<CallState> RecalledPagesAsync(DBRef viewer, AnySharpObject[] partners, int lines,
+	private async ValueTask<CallState> RecalledPagesAsync(DBRef viewer, PagePartner[] partners, int lines,
 		MString delimiter)
 	{
 		var pages = await PageRecall.ReadAsync(Mediator, viewer, partners, lines);
