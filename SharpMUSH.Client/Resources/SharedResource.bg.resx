@@ -296,16 +296,15 @@
     <value>Презаписва стандартните атрибути {0} и {1} с вградените стойности по подразбиране. Добавените от вас персонализирани атрибути остават непроменени.</value>
     <comment>MT — {0} and {1} are attribute names, left uninflected after the noun they qualify</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Нулирането на обработчика презаписва неговия софткод, затова изисква правото packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Нулирането завърши. Записани атрибути: {0}.</value>
     <comment>MT — restructured so the number does not stand before «атрибут»: the masculine count form (бройна форма) would be wrong for 1 and this string has no plural rule</comment>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Нулирането е неуспешно: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Нулирането е неуспешно ({0}).</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">

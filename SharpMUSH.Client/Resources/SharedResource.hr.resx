@@ -296,6 +296,9 @@
     <value>Prepisuje standardne atribute {0} i {1} ugrađenim zadanim vrijednostima. Prilagođeni atributi koje ste dodali ostaju nepromijenjeni.</value>
     <comment>MT — {0} and {1} are attribute names, placed after the noun "atribute" so they stay uninflected</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Vraćanje rukovatelja prepisuje njegov softcode, pa zahtijeva dopuštenje packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Resetiranje dovršeno. Broj zapisanih atributa: {0}.</value>
     <comment>MT — restructured as "Broj zapisanih atributa: {0}" because Croatian noun agreement with an unknown count is impossible in a non-plural string</comment>
@@ -303,10 +306,6 @@
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Resetiranje nije uspjelo: {0}</value>
     <comment>MT — {0} follows a colon and needs no case agreement</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Resetiranje nije uspjelo ({0}).</value>
-    <comment>MT — {0} is an HTTP status code in parentheses</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Status rukovatelja nije moguće učitati.</value>

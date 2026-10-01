@@ -296,16 +296,15 @@
     <value>Sobrescribe los atributos estándar {0} y {1} con los valores predeterminados integrados. Los atributos personalizados que haya añadido no se modifican.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Restablecer el controlador reescribe su softcode, así que requiere el permiso packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Restablecimiento completado: {0} atributos escritos.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Error al restablecer: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Error al restablecer ({0}).</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">

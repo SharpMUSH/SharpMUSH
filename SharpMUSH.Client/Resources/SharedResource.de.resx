@@ -296,16 +296,15 @@
     <value>Überschreibt die Standard-Attribute {0} und {1} mit den integrierten Standardwerten. Eigene Attribute, die Sie hinzugefügt haben, bleiben unberührt.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Das Zurücksetzen des Handlers überschreibt seinen Softcode und erfordert daher die Berechtigung packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Zurücksetzen abgeschlossen: {0} Attribute geschrieben.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Zurücksetzen fehlgeschlagen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Zurücksetzen fehlgeschlagen ({0}).</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">

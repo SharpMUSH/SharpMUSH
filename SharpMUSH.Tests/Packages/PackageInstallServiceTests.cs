@@ -162,6 +162,51 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.UninstallAsync(manifest.Name)).Value).IsTypeOf<Success>();
 	}
 
+	/// <summary>
+	/// With <c>package_manager</c> unset, <c>{{$package_manager}}</c> names the same player the installer
+	/// writes as: the seeded Package Manager, #7. It resolved to #3, the Ancestor Room, so profile-handler's
+	/// <c>FN`CHARVIS</c> stopped filtering the real Package Manager out of the character directory.
+	/// </summary>
+	[Test]
+	public async Task AnUnsetPackageManager_ResolvesThePackageManagerRefToTheSeededPlayer()
+	{
+		var live = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var unset = new FixedOptions(live with { Database = live.Database with { PackageManager = null } });
+		var installer = new PackageInstallService(
+			Database,
+			Database,
+			Database,
+			Database,
+			Registry,
+			Applications,
+			WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),
+			unset,
+			WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
+			WebAppFactoryArg.Services.GetRequiredService<IManagedPackageInstaller>(),
+			WebAppFactoryArg.Services.GetRequiredService<IMediator>());
+		var manifest = Parse("""
+			package: unset-package-manager-ref
+			version: "1.0"
+			objects:
+			  - ref: core
+			    type: thing
+			    name: Unset Package Manager Probe
+			    attributes:
+			      FN_PM: "{{$package_manager}}"
+			""");
+
+		var plan = await installer.PlanAsync(manifest, new Dictionary<string, string>());
+
+		await Assert.That(plan.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").NewValue)
+			.IsEqualTo(await ObjidAsync((int)SharpMUSH.Configuration.Options.DatabaseOptions.SeededPackageManager));
+	}
+
+	private sealed class FixedOptions(SharpMUSH.Configuration.Options.SharpMUSHOptions value)
+		: IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>
+	{
+		public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue => value;
+	}
+
 	[Test, NotInParallel]
 	public async Task LegacyAttachedRefUpgrade_MigratesLocalValueAndRetainsSharedPath()
 	{

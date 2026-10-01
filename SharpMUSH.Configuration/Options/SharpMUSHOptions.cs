@@ -142,7 +142,7 @@ public record SharpMUSHOptions
 			// PennMUSH's exits_connect_rooms defaults to 0 (conf.c:1285).
 			ExitsConnectRooms: false,
 			HttpHandler: 8,
-			PackageManager: 7,
+			PackageManager: DatabaseOptions.SeededPackageManager,
 			HttpRequestsPerSecond: 60,
 			MasterRoom: 2,
 			PlayerStart: 0,

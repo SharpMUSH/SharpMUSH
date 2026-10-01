@@ -296,6 +296,9 @@
     <value>Nadpisuje standardowe atrybuty {0} i {1} wbudowanymi wartościami domyślnymi. Dodane przez Ciebie atrybuty niestandardowe pozostają nietknięte.</value>
     <comment>MT — {0} and {1} are attribute names placed in apposition after "atrybuty", so they stay uninflected</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Zresetowanie obsługi nadpisuje jej softcode, dlatego wymaga uprawnienia packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Reset zakończony. Zapisane atrybuty: {0}.</value>
     <comment>MT — restructured: "{0} atrybutów" would need plural agreement with a raw number, so the count moved after a colon</comment>
@@ -303,10 +306,6 @@
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Reset nie powiódł się: {0}</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Reset nie powiódł się ({0}).</value>
-    <comment>MT — {0} is an HTTP status, kept in parentheses</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Nie można wczytać statusu obsługi.</value>

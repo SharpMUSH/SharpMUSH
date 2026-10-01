@@ -296,16 +296,15 @@
     <value>Felülírja a gyári {0} és {1} attribútumot a beépített alapértelmezésekkel. A saját attribútumok érintetlenül maradnak.</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>A kezelő visszaállítása felülírja a softcode-ját, ezért a packages.admin jogosultság kell hozzá.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>A visszaállítás kész: {0} attribútum kiírva.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>A visszaállítás sikertelen: {0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>A visszaállítás sikertelen ({0}).</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">

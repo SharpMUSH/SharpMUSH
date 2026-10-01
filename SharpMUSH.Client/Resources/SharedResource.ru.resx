@@ -296,6 +296,9 @@
     <value>Перезаписывает стандартные атрибуты {0} и {1} встроенными значениями по умолчанию. добавленные вами атрибуты остаются без изменений.</value>
     <comment>MT — attribute names follow the head noun «атрибуты» as an uninflected code apposition.</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Сброс обработчика перезаписывает его софткод, поэтому требуется право packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Сброс завершён. записано атрибутов: {0}</value>
     <comment>MT — the count has no ICU plural, so the noun is inverted before a colon («записано атрибутов: N»), which is correct for every number.</comment>
@@ -303,10 +306,6 @@
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Не удалось выполнить сброс: {0}</value>
     <comment>MT — impersonal status message; error text after a colon.</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Не удалось выполнить сброс ({0}).</value>
-    <comment>MT — status code in parentheses, no agreement needed.</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить статус обработчика.</value>

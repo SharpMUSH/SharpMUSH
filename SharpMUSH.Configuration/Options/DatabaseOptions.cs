@@ -140,7 +140,7 @@ public record DatabaseOptions(
 		Group = "Handlers",
 		Order = 4,
 		Min = 0,
-		Tooltip = "Leave empty to disable the package manager")]
+		Tooltip = "Leave empty to use the seeded Package Manager, #7")]
 	uint? PackageManager,
 
 	[property: SharpConfig(
@@ -164,4 +164,17 @@ public record DatabaseOptions(
 		Order = 3,
 		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser; gives up client AOT/trimming.")]
 	bool AllowBrowserCode
-);
+)
+{
+	/// <summary>
+	/// The Package Manager player the seed creates (<c>Migration_CreateDatabase</c>, and the PennMUSH
+	/// converter's seed), and the <c>package_manager</c> default.
+	/// </summary>
+	public const uint SeededPackageManager = 7;
+
+	/// <summary>
+	/// The Package Manager to write as: <paramref name="configured"/>, else the seeded one. The package
+	/// installer and the profile-handler reset both resolve it here, so they cannot disagree.
+	/// </summary>
+	public static uint PackageManagerOrSeeded(uint? configured) => configured ?? SeededPackageManager;
+}

@@ -1593,11 +1593,11 @@
   <data name="AdmProfilesResetCaption" xml:space="preserve">
     <value>Écrase les attributs standard {0} et {1} avec les valeurs par défaut intégrées. Les attributs personnalisés que vous avez ajoutés restent intacts.</value>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>Réinitialiser le gestionnaire réécrit son softcode ; cela nécessite donc la permission packages.admin.</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Réinitialisation terminée : {0} attributs écrits.</value>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>La réinitialisation a échoué ({0}).</value>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>La réinitialisation a échoué : {0}</value>

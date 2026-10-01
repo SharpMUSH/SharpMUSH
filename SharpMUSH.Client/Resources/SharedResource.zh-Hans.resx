@@ -296,16 +296,15 @@
     <value>用内置默认值覆盖原厂的 {0} 和 {1} 属性。您自行添加的属性不会受到影响。</value>
     <comment>MT</comment>
   </data>
+  <data name="AdmProfilesResetNeedsPackagesAdmin" xml:space="preserve">
+    <value>重置处理器会改写其软代码，因此需要 packages.admin 权限。</value>
+  </data>
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>重置完成：已写入 {0} 个属性。</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>重置失败：{0}</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>重置失败（{0}）。</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">

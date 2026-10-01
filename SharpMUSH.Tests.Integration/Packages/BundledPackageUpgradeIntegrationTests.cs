@@ -102,8 +102,8 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 			// An admin edits the installed softcode in-game. The upgrade must not clobber it — that is
 			// the whole reason bootstrap answers every conflict with KeepMine.
 			var probe = ProbeDbref(await Registry.GetPackageObjectsAsync(PackageId));
-			var packageManager = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
-				.CurrentValue.Database.PackageManager ?? 7;
+			var packageManager = DatabaseOptions.PackageManagerOrSeeded(factory.Services
+				.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.PackageManager);
 			var owner = (await Database.GetObjectNodeAsync(new DBRef((int)packageManager)))
 				.Expect<SharpPlayer>();
 			await Database.SetAttributeAsync(probe, ["PROBE", "ORIGINAL"], MarkupText.Plain("admin-edit"), owner);
