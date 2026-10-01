@@ -49,10 +49,10 @@ An invalid `<regexp>` returns `#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION`. A 
 
 ## Capture examples
 
-Use explicit capture-to-register pairs and read the registers in the same evaluation:
+Use explicit capture-to-register pairs and read the registers in the same evaluation. Here `\\` delivers a regex backslash, `%(`/`%)` deliver grouping parentheses, and `\[`/`\]` protect the character class from MUSH evaluation:
 
 ```sharp
-> think [regmatch(cookies=30,lit(\A(.+)=([0-9]+)\z),1:food 2:amount)]|%q<food>|%q<amount>
+> think [regmatch(cookies=30,\\A%(.+%)=%(\[0-9\]+%)\\z,1:food 2:amount)]|%q<food>|%q<amount>
 1|cookies|30
 ```
 

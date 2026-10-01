@@ -57,7 +57,7 @@
 
 SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, but POSIX bracket classes, Python-style named groups, and some advanced PCRE constructs need changes when porting code.
 
-The patterns in the reference below show what the regex engine receives. MUSHcode evaluates function arguments first: escape square brackets, backslashes, parentheses, braces, and commas as needed, or use `lit()` to keep a pattern literal. A backslash intended for the regex engine generally needs doubling in an evaluated argument. For example:
+The patterns in the reference below show what the regex engine receives. MUSHcode evaluates function arguments first: escape square brackets, backslashes, parentheses, braces, and commas as needed. `lit()` preserves regex backslashes and square brackets, but grouping parentheses still need protection from the default function-argument parser. In an evaluated pattern argument, use `%(`/`%)` for literal grouping parentheses (unless `paren_groups` is enabled), `\[`/`\]` for class brackets, and doubled backslashes for regex escapes. For example:
 
 ```sharp
 > think regmatch(foo_bar,lit(\A\w+\z))
