@@ -18,11 +18,24 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 	/// </summary>
 	public event Action? Changed;
 
-	/// <summary>Tells every view of the scene lists that they have changed.</summary>
-	public void ReportChanged() => Changed?.Invoke();
+	/// <summary>
+	/// Tells every view of the scene lists that they have changed. Reads from here on start their own
+	/// requests: one already in flight may have been answered before the change.
+	/// </summary>
+	public void ReportChanged()
+	{
+		Interlocked.Increment(ref _changes);
+		Changed?.Invoke();
+	}
 
-	/// <summary>Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request.</summary>
-	private readonly SingleFlight<string, ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
+	/// <summary>How many changes have been reported; part of the key reads share a request under.</summary>
+	private long _changes;
+
+	/// <summary>
+	/// Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request —
+	/// when they fall on the same side of a reported change.
+	/// </summary>
+	private readonly SingleFlight<(long Changes, string Url), ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
 
 	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
@@ -69,7 +82,7 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
 	{
 		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
-		return _listFlight.RunAsync(url, () => FetchScenesAsync(url));
+		return _listFlight.RunAsync((Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
 	}
 
 	private async Task<ApiResult<IReadOnlyList<SceneSummary>>> FetchScenesAsync(string url)

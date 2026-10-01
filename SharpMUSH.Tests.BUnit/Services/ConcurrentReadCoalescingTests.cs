@@ -44,6 +44,27 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 		await Assert.That(handler.CallsTo("/api/scenes?filter=active&count=50")).IsEqualTo(2);
 	}
 
+	/// <summary>
+	/// A read asked for after a reported change does not join one that started before it. That earlier
+	/// request may have been answered before the change, so sharing it handed the sidebar's reload the
+	/// list without the scene that had just been started. Reads on the same side of a change still share.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneService_AReadAfterAReportedChange_DoesNotJoinOneFromBefore()
+	{
+		var handler = new GatedHttpHandler(_ => EmptyList());
+		var service = new SceneService(Factory(handler));
+
+		var before = service.GetActiveScenesAsync();
+		service.ReportChanged();
+		var after = service.GetActiveScenesAsync();
+		var alsoAfter = service.GetActiveScenesAsync();
+		handler.Release();
+		await Task.WhenAll(before, after, alsoAfter);
+
+		await Assert.That(handler.CallsTo("/api/scenes?filter=active&count=50")).IsEqualTo(2);
+	}
+
 	[TUnit.Core.Test]
 	public async Task SceneService_DifferentFilters_AreNotCoalesced()
 	{
