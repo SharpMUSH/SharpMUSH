@@ -1,0 +1,64 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject ApplicationRegistryClient Registry
+@inject NavigationManager Nav
+@implements IDisposable
+
+@* The sidebar of a section that exists only because applications name it (README §3: a novel
+   section gets a rail item and its apps are its sidebar). *@
+<div class="app-section-side @(Collapsed ? "app-section-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Section" />
+    }
+    <nav class="build-side-group" aria-label="@Section">
+        @foreach (var app in _apps)
+        {
+            var a = app;
+            var href = $"/apps/{a.Slug}";
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
+                        Label="@a.DisplayName" Href="@href" IsCurrent="@IsCurrent(href)" Collapsed="@Collapsed" />
+        }
+    </nav>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Section { get; set; } = string.Empty;
+    [Parameter] public bool Collapsed { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<PortalApplication> _apps = [];
+    private string _path = "/";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var role = AuthState is null ? PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, Section);
+    }
+
+    private bool IsCurrent(string href) =>
+        _path.Equals(href, StringComparison.OrdinalIgnoreCase) || _path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
+
+    private void Locate()
+    {
+        var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
+        _path = path.Length == 0 ? "/" : path;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        Locate();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

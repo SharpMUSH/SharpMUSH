@@ -72,6 +72,7 @@ public sealed class CharactersApiFake : HttpMessageHandler
 			.AddSingleton(sp => new CharacterProfileService(factory, sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton(new SceneService(factory))
 			.AddSingleton(new GalleryService(factory))
+			.AddSingleton<SidebarCollapseService>()
 			.AddLocalization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		var auth = ctx.AddAuthorization();

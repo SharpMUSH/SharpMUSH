@@ -7,9 +7,9 @@
 
 @* Every /admin/config page: the D1 page sidebar (ConfigSidebar) beside the page body. The sidebar
    gets per-section setting counts from the schema; when the schema cannot be read the tree still
-   renders, just without counts. Phase 1 moves the sidebar into the shell's page-sidebar slot. *@
-<SectionShell Class="config-shell" NavLabel="@Loc["Configuration"]">
-    <Nav><ConfigSidebar SectionCounts="@_counts" /></Nav>
+   renders, just without counts. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="config" Class="config-shell" NavLabel="@Loc["Configuration"]">
+    <Nav Context="collapsed"><ConfigSidebar SectionCounts="@_counts" Collapsed="@collapsed" /></Nav>
     <ChildContent>@Body</ChildContent>
 </SectionShell>
 

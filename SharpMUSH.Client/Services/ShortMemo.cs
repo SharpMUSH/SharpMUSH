@@ -11,6 +11,10 @@ internal sealed class ShortMemo<T>(TimeSpan lifetime, Func<T, bool> keep)
 	private Task<T>? _inFlight;
 	private (T Value, DateTimeOffset At)? _kept;
 
+	// Bumped by Forget: a read that started before it answers its own callers but is not kept, since
+	// what it saw predates the change that made the caller forget.
+	private int _generation;
+
 	public Task<T> GetAsync(Func<Task<T>> fetch)
 	{
 		if (_kept is { } kept && DateTimeOffset.UtcNow - kept.At < lifetime)
@@ -29,10 +33,26 @@ internal sealed class ShortMemo<T>(TimeSpan lifetime, Func<T, bool> keep)
 		return _inFlight = RunAsync(fetch);
 	}
 
+	/// <summary>
+	/// Drops what is kept, so the next caller reads again (after a write that changes it). A read still
+	/// running is not joined by later callers and is not kept when it finishes.
+	/// </summary>
+	public void Forget()
+	{
+		_kept = null;
+		_inFlight = null;
+		_generation++;
+	}
+
 	private async Task<T> RunAsync(Func<Task<T>> fetch)
 	{
+		var generation = _generation;
 		var value = await fetch();
-		_kept = keep(value) ? (value, DateTimeOffset.UtcNow) : null;
+		if (generation == _generation)
+		{
+			_kept = keep(value) ? (value, DateTimeOffset.UtcNow) : null;
+		}
+
 		return value;
 	}
 }

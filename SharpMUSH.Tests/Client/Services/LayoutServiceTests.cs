@@ -47,14 +47,17 @@ public class LayoutServiceTests : TrackingTestContext
 		=> new(HttpStatusCode.OK) { Content = JsonContent.Create(layout, options: LayoutSerialization.Options) };
 
 	[Test]
-	public async Task GetDefaultLayout_Global_HasChromeZonesAndQuickLinks()
+	public async Task GetDefaultLayout_Global_HasEveryZone_AndAnEmptyTopBar()
 	{
+		// README §10 Q1: the D1 frame has no top bar; the TopBar zone draws a strip above main only once
+		// an admin puts a widget in it, so the default leaves it empty. QuickLinks is still a built-in
+		// widget an admin can place there from the layout editor.
 		var svc = Build(new ScriptedHandler(_ => NotFound()));
 		var layout = svc.GetDefaultLayout(LayoutScopes.Global);
 
 		foreach (var zone in Enum.GetValues<WidgetZone>())
 			await Assert.That(layout.Zones.ContainsKey(zone)).IsTrue();
-		await Assert.That(layout.Zones[WidgetZone.TopBar][0].WidgetName).IsEqualTo("QuickLinks");
+		await Assert.That(layout.Zones[WidgetZone.TopBar]).IsEmpty();
 	}
 
 	/// <summary>

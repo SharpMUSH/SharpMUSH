@@ -4056,4 +4056,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Le profil de ce personnage est illisible pour le moment.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Réduire la barre latérale {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Développer la barre latérale {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Sections</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Construire et gérer</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Outils de construction et d'équipe</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Rechercher et aller à…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Compte : {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Menu de la section</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Aller à une page, ou rechercher…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Rechercher « {0} » dans le wiki</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Trouver un personnage nommé « {0} »</value>
+  </data>
 </root>

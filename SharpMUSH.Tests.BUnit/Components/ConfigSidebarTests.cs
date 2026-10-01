@@ -31,6 +31,7 @@ public class ConfigSidebarTests : TrackingBunitContext
 			.AddSingleton<AdminConfigService>()
 			.AddEchoLocalizer();
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		AddAuthorization();
 		_nav = Services.GetRequiredService<BunitNavigationManager>();
 	}
 

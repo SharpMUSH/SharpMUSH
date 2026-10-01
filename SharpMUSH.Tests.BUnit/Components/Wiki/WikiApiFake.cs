@@ -78,6 +78,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
+			.AddSingleton<SidebarCollapseService>()
 			.AddLocalization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		var auth = ctx.AddAuthorization();

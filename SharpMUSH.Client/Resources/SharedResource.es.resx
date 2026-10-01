@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Ahora mismo no se puede leer el perfil de este personaje.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Contraer la barra lateral de {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Expandir la barra lateral de {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Secciones</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Construir y gestionar</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Herramientas de construcción y de staff</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Buscar e ir a…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Cuenta: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplicaciones</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Idioma</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Menú de la sección</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ir a una página o buscar…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Buscar «{0}» en la wiki</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Buscar un personaje llamado «{0}»</value>
+  </data>
 </root>

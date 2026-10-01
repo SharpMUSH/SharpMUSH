@@ -11,6 +11,26 @@
 	padding: 12px 4px;
 }
 
+.config-side-back {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 32px;
+	padding: 0 8px;
+	margin-bottom: 6px;
+	border-radius: var(--radius-row);
+	font-size: 13px;
+	color: var(--text-dim);
+	text-decoration: none;
+}
+
+.config-side-back:hover,
+.config-side-back:focus-visible {
+	color: var(--text);
+	background: var(--surface-2);
+	outline: none;
+}
+
 .config-side-tree {
 	display: flex;
 	flex-direction: column;

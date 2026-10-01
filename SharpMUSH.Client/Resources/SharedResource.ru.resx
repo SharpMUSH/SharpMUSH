@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Профиль этого персонажа сейчас не удаётся прочитать.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Свернуть боковую панель «{0}»</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Развернуть боковую панель «{0}»</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Разделы</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Строительство и управление</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Инструменты строительства и персонала</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Поиск и переход…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Учётная запись: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Язык</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Меню раздела</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Перейти на страницу или искать…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Искать «{0}» в вики</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Найти персонажа по имени «{0}»</value>
+  </data>
 </root>

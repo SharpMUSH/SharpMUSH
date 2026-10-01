@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Das Profil dieses Charakters kann gerade nicht gelesen werden.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Seitenleiste „{0}“ einklappen</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Seitenleiste „{0}“ ausklappen</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Bereiche</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Bauen &amp; verwalten</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bau- und Staff-Werkzeuge</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Suchen und öffnen…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Konto: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Sprache</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Bereichsmenü</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Zu einer Seite springen oder suchen…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Im Wiki nach „{0}“ suchen</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Charakter namens „{0}“ suchen</value>
+  </data>
 </root>

@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Het profiel van dit personage kan nu niet worden gelezen.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Zijbalk {0} inklappen</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Zijbalk {0} uitklappen</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Onderdelen</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Bouwen &amp; beheren</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bouw- en staftools</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Zoeken en ga naar…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Account: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Taal</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Menu van dit onderdeel</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ga naar een pagina of zoek…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Zoek in de wiki naar ‘{0}’</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Zoek een personage met de naam ‘{0}’</value>
+  </data>
 </root>

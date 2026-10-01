@@ -22,6 +22,39 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// ⌘K / Ctrl+K opens the command palette (README §10 Q1) from anywhere except a place the reader is
+	// typing: the terminal input and every text field keep their keys. One listener for the page; a
+	// later registration (a re-rendered shell) replaces the one it answers to.
+	registerPaletteHotkey: function (dotnetRef) {
+		this._paletteRef = dotnetRef;
+		if (this._paletteListening) {
+			return;
+		}
+
+		this._paletteListening = true;
+		document.addEventListener('keydown', event => {
+			if (event.key !== 'k' && event.key !== 'K') return;
+			if (!event.ctrlKey && !event.metaKey) return;
+			// AltGr+K (ctrl+alt on Windows layouts) types a character; Ctrl+Shift+K is a browser's console.
+			if (event.altKey || event.shiftKey) return;
+			if (!this._paletteRef) return;
+			const target = event.target;
+			const tag = target && target.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return;
+			event.preventDefault();
+			const pending = this._paletteRef.invokeMethodAsync('OpenPaletteFromHotkey');
+			if (pending && typeof pending.catch === 'function') {
+				// The shell was disposed between the key and the call (a page on another layout).
+				pending.catch(() => { });
+			}
+		});
+	},
+
+	// The shell that registered is going away (the login and setup pages use another layout).
+	unregisterPaletteHotkey: function () {
+		this._paletteRef = null;
+	},
+
 	// Back-compat alias.
 	isNarrow: function () {
 		return this.isTouchChrome();

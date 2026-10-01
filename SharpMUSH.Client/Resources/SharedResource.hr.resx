@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Profil ovog lika trenutačno se ne može pročitati.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Sažmi bočnu traku {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Proširi bočnu traku {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Odjeljci</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Izgradnja i upravljanje</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Alati za izgradnju i osoblje</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Pretraži i idi na…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Račun: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplikacije</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Jezik</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Izbornik odjeljka</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Idi na stranicu ili pretraži…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Pretraži wiki za „{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Pronađi lika po imenu „{0}”</value>
+  </data>
 </root>

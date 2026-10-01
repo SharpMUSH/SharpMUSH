@@ -1,0 +1,103 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@inject ApplicationRegistryClient Registry
+@inject IAuthorizationService Authorization
+@implements IDisposable
+
+@* D1 §3 Build & manage page sidebar: the Build and Manage destinations the viewer may use (the same
+   gates as the rail and the drawer, from BuildNavCatalog) and, under Apps, the applications placed
+   in either section. Collapsed keeps each row's icon. *@
+<div class="build-side @(Collapsed ? "build-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["NavBuildManage"]">
+            <Sub>@Loc["NavBuildManageSub"]</Sub>
+        </SidebarHead>
+    }
+    @foreach (var group in _entries.GroupBy(e => e.Group))
+    {
+        var label = group.Key == BuildNavCatalog.Group.Build ? Loc["NavSectionBuild"] : Loc["NavSectionManage"];
+        @if (!Collapsed)
+        {
+            <SectionLabel>@label</SectionLabel>
+        }
+        <nav class="build-side-group" aria-label="@label">
+            @foreach (var entry in group)
+            {
+                var e = entry;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@e.Icon" Label="@Loc[e.LabelKey]" Href="@e.Href"
+                            IsCurrent="@IsCurrent(e.Href, e.ExactMatch)" Collapsed="@Collapsed" />
+            }
+        </nav>
+    }
+    @if (_apps.Count > 0)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavApps"]</SectionLabel>
+        }
+        <nav class="build-side-group" aria-label="@Loc["NavApps"]">
+            @foreach (var app in _apps)
+            {
+                var a = app;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
+                            Label="@a.DisplayName" Href="@($"/apps/{a.Slug}")" IsCurrent="@IsCurrent($"/apps/{a.Slug}", false)" Collapsed="@Collapsed" />
+            }
+        </nav>
+    }
+</div>
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<BuildNavCatalog.Entry> _entries = [];
+    private IReadOnlyList<PortalApplication> _apps = [];
+    private string _path = "/";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+    }
+
+    private Task<AuthenticationState>? _gatesFor;
+    private bool _gatesKnown;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // The gates depend only on who is signed in; a parent re-render (a terminal toggle, a palette
+        // opening) passes new callbacks and would otherwise re-ask every policy.
+        if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
+        (_gatesFor, _gatesKnown) = (AuthState, true);
+        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        var role = PortalRoleHelper.CurrentRole(user);
+        var all = await Registry.ListAsync();
+        _apps = [.. PortalNavSections.AppsForSection(all, role, "Build"), .. PortalNavSections.AppsForSection(all, role, "Manage")];
+    }
+
+    private bool IsCurrent(string href, bool exact) =>
+        _path.Equals(href, StringComparison.OrdinalIgnoreCase)
+        || (!exact && _path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase));
+
+    private void Locate()
+    {
+        var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
+        _path = path.Length == 0 ? "/" : path;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        Locate();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

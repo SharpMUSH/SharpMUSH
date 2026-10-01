@@ -286,26 +286,17 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 	}
 
 	[Test]
-	public async Task The_topbar_names_the_application_not_the_admin_page()
+	public async Task The_shell_hosts_the_rail_and_names_no_page_in_a_top_bar()
 	{
+		// README §10 Q1: the desktop top bar is gone; the page sidebar and banner name the page. (The
+		// topbar used to title /apps/{slug} with the application's name.)
 		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
 			.NavigateTo("/apps/character-header");
 
 		var cut = Render<SharpMUSH.Client.Layout.MainLayout>();
 
-		var title = cut.Find(".phosphor-topbar-title").TextContent.Trim();
-		await Assert.That(title).IsEqualTo("Character Header");
-		await Assert.That(title).IsNotEqualTo("LayApplications");
-	}
-
-	[Test]
-	public async Task An_application_missing_from_the_boot_snapshot_falls_back_to_its_slug()
-	{
-		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
-			.NavigateTo("/apps/some-other-app");
-
-		var cut = Render<SharpMUSH.Client.Layout.MainLayout>();
-
-		await Assert.That(cut.Find(".phosphor-topbar-title").TextContent.Trim()).IsEqualTo("Some other app");
+		await Assert.That(cut.FindAll("nav.phosphor-rail").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".phosphor-topbar-title").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("aside.phosphor-pagebar").Count).IsEqualTo(1);
 	}
 }

@@ -1,9 +1,10 @@
 @using SharpMUSH.Client.Components
+@using Microsoft.AspNetCore.Components.Sections
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inherits LayoutComponentBase
-@implements IDisposable
+@implements IAsyncDisposable
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject TerminalServiceHost Terminal
@@ -12,7 +13,6 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerInfoService ServerInfo
 @inject ILayoutService LayoutService
-@inject ApplicationCatalog Applications
 @inject IJSRuntime JS
 
 <MudPopoverProvider />
@@ -22,12 +22,21 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
+<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
-    @* Mobile-only: tapping the dimmed backdrop closes the off-canvas nav drawer. *@
-    <div class="phosphor-nav-backdrop" @onclick="CloseMobileNav"></div>
+    @* Touch chrome only: tapping the dimmed backdrop closes the off-canvas drawer or section panel. *@
+    <div class="phosphor-nav-backdrop" @onclick="CloseMobilePanels"></div>
 
-    <NavMenu IsCollapsed="@_sidebarCollapsed" />
+    @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. *@
+    <NavRail TerminalOpen="_terminalOpen" OnToggleTerminal="ToggleTerminal" OnSearch="OpenPalette" />
+    <NavMenu IsCollapsed="false" />
+
+    @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
+       while a sidebar is mounted (shell.css :has), 232px or the 62px strip; on touch chrome it is the
+       off-canvas section panel. *@
+    <aside class="phosphor-pagebar">
+        <SectionOutlet SectionName="@PageSidebarSlot.Name" />
+    </aside>
 
     @if (_layout is not null && _layout.Settings.LeftSidebarEnabled && !_isConfigRoute)
     {
@@ -38,37 +47,37 @@
 
     <div class="phosphor-content-col">
 
+        @* Touch chrome keeps a slim header: the drawer, this section's panel, search, the language and
+           the terminal. A desktop has no top bar in D1 (Q1): those live in the rail. *@
         <header class="phosphor-topbar">
-            <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="@Loc["NavToggleNavigation"]">
+            <button class="phosphor-icon-btn" @onclick="ToggleMobileNav" aria-expanded="@(_mobileNavOpen ? "true" : "false")"
+                    aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]">
                 <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:1.25rem;" />
             </button>
-            <div class="phosphor-topbar-title">@PageTitle()</div>
-
-            @if (_layout is not null)
-            {
-                <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
-            }
-
+            <button class="phosphor-icon-btn phosphor-pagebar-btn" @onclick="TogglePagebar" aria-expanded="@(_pagebarOpen ? "true" : "false")"
+                    aria-label="@Loc["NavSectionMenu"]" title="@Loc["NavSectionMenu"]">
+                <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:1.25rem;" />
+            </button>
             <div style="flex:1;"></div>
-
-            <div class="phosphor-search">
-                <span class="phosphor-search-icon">⌕</span>
-                <input type="search"
-                       placeholder="@Loc["NavSearchPlaceholder"]"
-                       @bind="_searchQuery"
-                       @bind:event="oninput"
-                       @onkeydown="HandleSearchKeyDown" />
-                <span class="phosphor-search-kbd">⌘K</span>
-            </div>
-
+            <button class="phosphor-icon-btn" @onclick="OpenPalette" aria-haspopup="dialog" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]">
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:1.25rem;" />
+            </button>
             <span class="phosphor-lang"><LanguagePicker /></span>
-
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
-                    @onclick="ToggleTerminal"
-                    title="@(_terminalOpen ? Loc["NavCloseTerminal"] : Loc["NavOpenTerminal"])">
+                    @onclick="ToggleTerminal" aria-pressed="@(_terminalOpen ? "true" : "false")"
+                    aria-label="@Loc["NavCommandTerminal"]" title="@(_terminalOpen ? Loc["NavCloseTerminal"] : Loc["NavOpenTerminal"])">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
         </header>
+
+        @* The global TopBar zone (QuickLinks by default) as a slim strip above main, only when an admin
+           has put something in it (Q1). *@
+        @if (_layout is not null && _layout.Zones.TryGetValue(WidgetZone.TopBar, out var topBar) && topBar.Count > 0)
+        {
+            <div class="phosphor-topzone">
+                <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
+            </div>
+        }
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
             <div class="phosphor-page">
@@ -125,6 +134,8 @@
         }
     </div>
 
+    <CommandPalette @bind-Open="_paletteOpen" />
+
     @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
     {
         <div class="phosphor-widget-aside phosphor-widget-aside--right" style="@($"width:{_layout.Settings.RightSidebarWidth};")">
@@ -134,8 +145,9 @@
 </div>
 
 @code {
-    private bool _sidebarCollapsed = false;
     private bool _mobileNavOpen = false;
+    private bool _pagebarOpen = false;
+    private bool _paletteOpen = false;
     private bool _isConfigRoute = false;
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
@@ -147,7 +159,6 @@
     private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
-    private string _searchQuery = string.Empty;
     private string? _pendingHintStrip;
 
     /// <summary>
@@ -156,6 +167,30 @@
     /// <see cref="ConsumeCharacterHintAsync"/>), and the first render happens before that method's
     /// awaits complete, so this deliberately does not gate on <c>firstRender</c>.
     /// </summary>
+    private DotNetObjectReference<MainLayout>? _selfRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _selfRef = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.registerPaletteHotkey", _selfRef);
+        }
+        catch (JSException)
+        {
+            // No layout.js (prerender, tests): the rail's search button still opens the palette.
+        }
+    }
+
+    /// <summary>⌘K / Ctrl+K from layout.js.</summary>
+    [JSInvokable]
+    public Task OpenPaletteFromHotkey() => InvokeAsync(() =>
+    {
+        _paletteOpen = true;
+        StateHasChanged();
+    });
+
     protected override void OnAfterRender(bool firstRender)
     {
         if (_pendingHintStrip is null) return;
@@ -212,16 +247,7 @@
             RestoreCharacterAsync(),
             EnsureAccountRoutingAsync(setupStatus),
             globalLayout,
-            guestLogins,
-            RetitleWhenCatalogLoadedAsync());
-    }
-
-    /// <summary>An /apps/{slug} page is titled from the application catalog, which loads alongside
-    /// the first render.</summary>
-    private async Task RetitleWhenCatalogLoadedAsync()
-    {
-        await Applications.Loaded;
-        StateHasChanged();
+            guestLogins);
     }
 
     /// <summary>The roster, then the <c>?as=</c> hint that picks a character from it.</summary>
@@ -306,6 +332,7 @@
         _ = InvokeAsync(async () =>
         {
             _mobileNavOpen = false;
+            _pagebarOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
             StateHasChanged();
@@ -335,7 +362,11 @@
             || path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void ToggleMobileNav() => _mobileNavOpen = !_mobileNavOpen;
+    private void ToggleMobileNav()
+    {
+        _mobileNavOpen = !_mobileNavOpen;
+        _pagebarOpen = false;
+    }
 
     private void OnCharacterConnectionChanged(bool connected)
         => InvokeAsync(() =>
@@ -343,54 +374,6 @@
             _characterActive = connected;
             StateHasChanged();
         });
-
-    private string PageTitle()
-    {
-        if (_isConfigRoute) return Loc["Configuration"];
-        var path = new Uri(NavigationManager.Uri).AbsolutePath.Trim('/');
-        if (string.IsNullOrEmpty(path)) return Loc["Home"];
-        var seg = path.Split('/');
-        return seg switch
-        {
-            ["play"] => Loc["Play"],
-            ["scenes", ..] => Loc["SceneArchive"],
-            ["characters", ..] => Loc["Characters"],
-            ["mail", ..] => Loc["Mail"],
-            ["wiki", ..] => Loc["Wiki"],
-            ["softcode", ..] => Loc["SoftcodeEditor"],
-            // An application's own display name, not the name of the ADMIN page that manages them —
-            // /apps/character-header used to put "Applications" in the topbar. The catalog is a boot
-            // snapshot, so an app registered since then falls back to its humanised slug, which is
-            // still the page you are looking at rather than a different page entirely.
-            ["apps", var slug, ..] => Applications.Get(slug)?.DisplayName ?? Capitalize(slug.Replace('-', ' ')),
-            ["account"] => Loc["MyAccount"],
-            ["settings"] => Loc["Settings"],
-            ["help", ..] => Loc["Help"],
-            ["admin", "packages", ..] => Loc["PkgPackages"],
-            ["admin", "wiki", ..] => Loc["WikiAdmin"],
-            ["admin", "media", ..] => Loc["AdmMediaTitle"],
-            ["admin", "applications", ..] => Loc["AdmApplicationsTitle"],
-            ["admin", "accounts", ..] => Loc["AdmAccountsTitle"],
-            ["admin", "characters", ..] => Loc["Characters"],
-            ["admin", "profiles", ..] => Loc["ProfileHandler"],
-            ["admin", "server", ..] => Loc["ServerSettings"],
-            ["admin", "roles", ..] => Loc["AdmRolesTitle"],
-            ["admin", "players", ..] => Loc["AdmPlayersTitle"],
-            ["admin", "moderation", ..] => Loc["AdmModerationTitle"],
-            ["admin", "layout", ..] => Loc["AdmLayoutTitle"],
-            ["admin", "suggestions", ..] => Loc["Suggestions"],
-            ["admin", "config", ..] => Loc["Configuration"],
-            ["admin", "bannednames", ..] => Loc["BannedNames"],
-            ["admin", "restrictions", ..] => Loc["Restrictions"],
-            ["admin", "sitelock", ..] => Loc["Sitelock"],
-            ["admin", "database", ..] => Loc["AdmDatabaseImportTitle"],
-            ["admin"] => Loc["AdmDashboardTitle"],
-            _ => Capitalize(seg[^1].Replace('-', ' ')),
-        };
-    }
-
-    private static string Capitalize(string s)
-        => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
 
     private bool? _needsSetup;
 
@@ -432,47 +415,32 @@
         }
     }
 
-    // One hamburger, two behaviors by viewport: on a phone it opens the off-canvas
-    // drawer; on desktop it toggles the icon rail (unchanged). matchMedia keeps the
-    // breakpoint decision in JS so it always matches the 760px CSS breakpoint.
-    private async Task ToggleSidebar()
+    /// <summary>The backdrop closes whichever touch-chrome panel is open.</summary>
+    private void CloseMobilePanels()
     {
-        bool narrow;
-        try
-        {
-            narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
-        }
-        catch (JSException)
-        {
-            // Unmeasurable viewport: the desktop rail toggle is the one that cannot strand the user.
-            narrow = false;
-        }
-
-        if (narrow)
-            _mobileNavOpen = !_mobileNavOpen;
-        else
-            _sidebarCollapsed = !_sidebarCollapsed;
+        _mobileNavOpen = false;
+        _pagebarOpen = false;
     }
 
-    private void CloseMobileNav()
+    private void TogglePagebar()
     {
-        if (_mobileNavOpen)
-            _mobileNavOpen = false;
+        _pagebarOpen = !_pagebarOpen;
+        _mobileNavOpen = false;
     }
+
+    private void OpenPalette() => _paletteOpen = true;
 
     private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
 
-    private void HandleSearchKeyDown(KeyboardEventArgs e)
+    public async ValueTask DisposeAsync()
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_searchQuery))
+        try
         {
-            NavigationManager.NavigateTo($"/wiki?q={Uri.EscapeDataString(_searchQuery.Trim())}");
-            _searchQuery = string.Empty;
+            await JS.InvokeVoidAsync("sharpmushLayout.unregisterPaletteHotkey");
         }
-    }
-
-    public void Dispose()
-    {
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+        _selfRef?.Dispose();
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
         Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;

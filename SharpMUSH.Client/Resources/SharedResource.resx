@@ -4148,4 +4148,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>This character's profile could not be read right now.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Collapse the {0} sidebar</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Expand the {0} sidebar</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Sections</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Build &amp; manage</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Building and staff tools</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Search and go to…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Account: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Section menu</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Go to a page, or search…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Search the wiki for “{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Find a character named “{0}”</value>
+  </data>
 </root>

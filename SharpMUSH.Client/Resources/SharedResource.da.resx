@@ -4803,4 +4803,43 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Figurens profil kunne ikke læses lige nu.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Skjul sidepanelet {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Udvid sidepanelet {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Sektioner</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Byg og administrer</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bygge- og staffværktøjer</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Søg og gå til…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Konto: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Sprog</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Sektionsmenu</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Gå til en side, eller søg…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Søg i wikien efter “{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Find en figur ved navn “{0}”</value>
+  </data>
 </root>

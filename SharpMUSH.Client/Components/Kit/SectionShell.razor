@@ -1,25 +1,86 @@
-@* D1 §3 page sidebar beside a section's body: the shape every section with sub-navigation uses
-   (Config, Wiki, Characters, and the §6.5 sections). The sidebar is sticky inside the scroll
-   container and stacks above the body at the medium tier. Phase 1 moves it into the shell's
-   page-sidebar slot; until then each section layout hosts one of these. *@
-<div class="kit-section @Class">
-    <aside class="kit-section-nav" aria-label="@NavLabel">
-        @Nav
-    </aside>
-    <div class="kit-section-body">
-        @ChildContent
+@using Microsoft.AspNetCore.Components.Sections
+@using SharpMUSH.Client.Services
+@inject SidebarCollapseService CollapseMemory
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* D1 §3 page sidebar. A section's layout wraps its pages in this: the sidebar goes into the shell's
+   page-sidebar slot (MainLayout's SectionOutlet), which the shell shows only while one is mounted;
+   the body stays in the page. The collapse button sits at the sidebar's top right (36×36, radius
+   10); collapsed, the sidebar renders its 62px strip. The state is remembered per section (Q3). *@
+<SectionContent SectionName="@PageSidebarSlot.Name">
+    <div class="kit-pagebar @(Collapsed ? "kit-pagebar--collapsed" : null) @Class" data-section="@Key">
+        <button type="button" class="kit-pagebar-toggle" aria-expanded="@(Collapsed ? "false" : "true")"
+                aria-label="@string.Format(Loc[Collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
+                title="@string.Format(Loc[Collapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], NavLabel)"
+                @onclick="ToggleAsync">
+            <MudIcon Icon="@(Collapsed ? Icons.Material.Outlined.KeyboardDoubleArrowRight : Icons.Material.Outlined.KeyboardDoubleArrowLeft)" Size="Size.Small" />
+        </button>
+        @Nav?.Invoke(Collapsed)
     </div>
+</SectionContent>
+<div class="kit-section-body @(PadBody ? null : "kit-section-body--flush") @Class">
+    @ChildContent
 </div>
 
 @code {
-    /// <summary>The section's sidebar.</summary>
-    [Parameter, EditorRequired] public RenderFragment? Nav { get; set; }
+    /// <summary>The section's name for collapse memory ("wiki", "config", "characters", ...).</summary>
+    [Parameter, EditorRequired] public string Key { get; set; } = string.Empty;
+
+    /// <summary>The section's sidebar, told whether it is collapsed.</summary>
+    [Parameter, EditorRequired] public RenderFragment<bool>? Nav { get; set; }
 
     /// <summary>The page body.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Names the sidebar landmark ("Characters", "Wiki", ...).</summary>
-    [Parameter] public string? NavLabel { get; set; }
+    /// <summary>Names the section in the collapse button's label ("Collapse the Wiki sidebar").</summary>
+    [Parameter] public string NavLabel { get; set; } = string.Empty;
 
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>False when the pages bring their own padding (Build &amp; manage's admin pages).</summary>
+    [Parameter] public bool PadBody { get; set; } = true;
+
+    private bool _collapsed;
+
+    /// <summary>On touch chrome the sidebar is an off-canvas panel with no room for a strip.</summary>
+    private bool _touch;
+
+    private bool Collapsed => _collapsed && !_touch;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _touch = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        }
+        catch (JSException)
+        {
+            return;
+        }
+        if (_touch && _collapsed) StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        CollapseMemory.Changed -= OnChanged;
+        CollapseMemory.Changed += OnChanged;
+        _collapsed = await CollapseMemory.IsCollapsedAsync(Key);
+    }
+
+    private async Task ToggleAsync() => await CollapseMemory.SetCollapsedAsync(Key, !_collapsed);
+
+    private void OnChanged(string section)
+    {
+        if (!string.Equals(section, Key, StringComparison.OrdinalIgnoreCase)) return;
+        _ = InvokeAsync(async () =>
+        {
+            _collapsed = await CollapseMemory.IsCollapsedAsync(Key);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => CollapseMemory.Changed -= OnChanged;
 }
