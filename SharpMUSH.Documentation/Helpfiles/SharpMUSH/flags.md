@@ -41,10 +41,8 @@ Note: The object type (player, thing, room, exit or garbage) is not actually a f
 - [examine]
 - [FLAGS()]
 - [HASFLAG()]
-- [ORFLAGS()]
-- [ANDFLAGS()]
-- [ORFLAGS()]
-- [ANDFLAGS()]
+- [ORFLAGS()] — `orflags()` tests flag letters; `orlflags()` tests full flag names.
+- [ANDFLAGS()] — `andflags()` tests flag letters; `andlflags()` tests full flag names.
 - [TYPES OF OBJECTS]
 - [TYPE()]
 - [HASTYPE()]
