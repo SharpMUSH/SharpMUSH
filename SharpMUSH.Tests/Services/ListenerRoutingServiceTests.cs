@@ -1,18 +1,41 @@
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Tests.Services;
 
+/// <summary>
+/// The guards at the top of <see cref="ListenerRoutingService.ProcessNotificationAsync"/>: a notification
+/// that cannot have a listener is dropped before anything is looked up. Every collaborator is a substitute,
+/// so "returns early" is checked as "touched none of them".
+/// </summary>
 public class ListenerRoutingServiceTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+	private readonly IMediator _mediator = Substitute.For<IMediator>();
+	private readonly IListenPatternMatcher _patternMatcher = Substitute.For<IListenPatternMatcher>();
+	private readonly IPermissionService _permissionService = Substitute.For<IPermissionService>();
+	private readonly ILockService _lockService = Substitute.For<ILockService>();
+	private readonly IConnectionService _connectionService = Substitute.For<IConnectionService>();
+	private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+	private readonly IMessageBus _messageBus = Substitute.For<IMessageBus>();
 
-	private IListenerRoutingService ListenerRoutingService =>
-		WebAppFactoryArg.Services.GetRequiredService<IListenerRoutingService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private ListenerRoutingService CreateService() =>
+		new(_mediator, _patternMatcher, _permissionService, _lockService, _connectionService, _serviceProvider, _messageBus);
+
+	private async Task AssertNothingWasConsulted()
+	{
+		object[] collaborators =
+			[_mediator, _patternMatcher, _permissionService, _lockService, _connectionService, _serviceProvider, _messageBus];
+
+		foreach (var collaborator in collaborators)
+		{
+			await Assert.That(collaborator.ReceivedCalls()).IsEmpty()
+				.Because($"{collaborator.GetType().Name} is behind the guard");
+		}
+	}
 
 	[Test]
 	public async ValueTask ProcessNotificationAsync_WithNullLocation_ReturnsEarly()
@@ -23,13 +46,13 @@ public class ListenerRoutingServiceTests
 			ExcludedObjects: []
 		);
 
-		await ListenerRoutingService.ProcessNotificationAsync(
+		await CreateService().ProcessNotificationAsync(
 			context,
 			"Test message",
 			null,
 			INotifyService.NotificationType.Say);
 
-		await ValueTask.CompletedTask;
+		await AssertNothingWasConsulted();
 	}
 
 	[Test]
@@ -41,51 +64,31 @@ public class ListenerRoutingServiceTests
 			ExcludedObjects: []
 		);
 
-		await ListenerRoutingService.ProcessNotificationAsync(
+		await CreateService().ProcessNotificationAsync(
 			context,
 			"Private message",
 			null,
 			INotifyService.NotificationType.Announce);
 
-		await ValueTask.CompletedTask;
+		await AssertNothingWasConsulted();
 	}
 
+	/// <summary>The control for the two above: past the guards, the addressee is looked up.</summary>
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with room and objects configured")]
-	public async ValueTask ProcessNotificationAsync_WithMonitorFlag_MatchesListenPatterns()
+	public async ValueTask ProcessNotificationAsync_PastTheGuards_LooksUpTheListener()
 	{
-		// This test would require:
-		// 1. A room object
-		// 2. An object with MONITOR flag set
-		// 3. ^-listen pattern attributes on the object
-		// 4. Verification that patterns are matched correctly
-		await ValueTask.CompletedTask;
-	}
+		var context = new NotificationContext(
+			Target: new DBRef(1, null),
+			Location: new DBRef(0, null),
+			ExcludedObjects: []
+		);
 
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with puppet configured")]
-	public async ValueTask ProcessNotificationAsync_WithPuppetFlag_RelaysToOwner()
-	{
-		// This test would require:
-		// 1. A room object
-		// 2. A thing with PUPPET flag set
-		// 3. An owner who is connected
-		// 4. Verification that message is relayed with prefix
-		await ValueTask.CompletedTask;
-	}
+		await CreateService().ProcessNotificationAsync(
+			context,
+			"Heard message",
+			null,
+			INotifyService.NotificationType.Say);
 
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with @listen attribute")]
-	public async ValueTask ProcessNotificationAsync_WithListenAttribute_MatchesPattern()
-	{
-		// This test would require:
-		// 1. A room object
-		// 2. An object with @listen attribute set
-		// 3. Verification that pattern matching works
-		// 4. Verification that appropriate action attribute is identified
-		await ValueTask.CompletedTask;
+		await Assert.That(_mediator.ReceivedCalls()).IsNotEmpty();
 	}
 }

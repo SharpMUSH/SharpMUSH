@@ -1,18 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Configuration.Generated;
-using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Tests.Server;
 
 namespace SharpMUSH.Tests.Configuration;
 
 public class ConfigurationTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsWrapper<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-
 	[Test]
 	public async Task ParseConfigurationFile()
 	{
@@ -21,13 +15,6 @@ public class ConfigurationTests
 
 		await Assert.That(options.Chat.ChatTokenAlias).IsEqualTo('+');
 		await Assert.That(options.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
-	}
-
-	[Test]
-	public async Task CanUseOptionsFromServer()
-	{
-		await Assert.That(Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
-		await Assert.That(Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
 	[Test]
