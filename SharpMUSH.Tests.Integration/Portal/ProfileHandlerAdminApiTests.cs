@@ -212,6 +212,43 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// An older profile-handler from a remote or fork is not this build's to upgrade: reset refuses before
+	/// bootstrap runs, so the installed record (source, commit, version) is exactly as it was. Upgrading it
+	/// first would record the bundled source, and the provenance check after it would then pass.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Reset_WhenAnOlderPackageFromAnotherSourceIsInstalled_RefusesWithoutUpgradingIt()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		var registry = factory.Services.GetRequiredService<IPackageRegistryService>();
+		var installed = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+		var fork = installed with
+		{
+			Version = "0.0.1",
+			SourceRepo = "https://example.invalid/fork/profile-handler.git",
+			InstalledCommit = "fedcba9876543210"
+		};
+		await registry.UpsertInstalledPackageAsync(fork);
+		try
+		{
+			using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+			var after = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+			await Assert.That(after.SourceRepo).IsEqualTo(fork.SourceRepo);
+			await Assert.That(after.InstalledCommit).IsEqualTo(fork.InstalledCommit);
+			await Assert.That(after.Version).IsEqualTo(fork.Version);
+			await Assert.That(after.CurrentRevision).IsEqualTo(fork.CurrentRevision);
+		}
+		finally
+		{
+			await registry.UpsertInstalledPackageAsync(installed);
+			await ResetAsync(http);
+		}
+	}
+
+	/// <summary>
 	/// When <c>http_handler</c> is repointed after install, the plan targets the new handler while the
 	/// recorded baselines stay on the old one. Writing there would leave values the registry does not
 	/// track (uninstall leaves them behind, upgrade sees add/add conflicts). Simulated by moving one

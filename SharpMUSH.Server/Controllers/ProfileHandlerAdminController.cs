@@ -104,6 +104,18 @@ public class ProfileHandlerAdminController(
 			return NotFound(new ApiErrorDto($"The configured http_handler #{number} does not exist."));
 		}
 
+		// A profile-handler from a configured remote or a fork is someone else's package, whatever its
+		// version: its record and baselines describe that package's softcode, not this build's. Refuse
+		// before bootstrap runs, which would otherwise upgrade an older one in place under the bundled
+		// source, and the reset would then overwrite the fork.
+		if (await registry.GetInstalledPackageAsync(PackageId) is InstalledPackageRecord existing
+				&& !BundledPackages.IsCatalogueSource(existing.SourceRepo))
+		{
+			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
+				$"{PackageId} was installed from {existing.SourceRepo}, not from this server's bundled packages; " +
+				"reinstall it from the bundled source through the package manager."));
+		}
+
 		if (!(await bundled.InstallBundledAsync([PackageId], ct)).Contains(PackageId))
 		{
 			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
@@ -122,15 +134,6 @@ public class ProfileHandlerAdminController(
 			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
 				$"Reset restores {PackageId} v{manifest.Version}, which is not the installed version; " +
 				"upgrade or reinstall it through the package manager."));
-		}
-
-		// The same version from a configured remote or a fork is someone else's package: bootstrap leaves
-		// it alone, and its record and baselines describe that package's softcode, not this build's.
-		if (!BundledPackages.IsCatalogueSource(installed.SourceRepo))
-		{
-			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
-				$"{PackageId} was installed from {installed.SourceRepo}, not from this server's bundled packages; " +
-				"reinstall it from the bundled source through the package manager."));
 		}
 
 		if (await PackageManagerAsync(ct) is not { } packageManager)
