@@ -41,7 +41,7 @@ You say, "This is 1 number"
 
 ```sharp
 > &upper me=ucstr(%0)
-> say foreach(upper, quiet quiet >shout`< quiet, >`, <)
+> say foreach(upper, quiet quiet >shout< quiet, >, <)
 You say, "quiet quiet SHOUT quiet"
 ```
 

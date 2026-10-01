@@ -37,7 +37,7 @@ HH:MM<br>
 HH:MM:SS<br>
 HH:MM:SS.SSS<br>
 now (Current time in UTC)<br>
-DDDDDDDDDD (Julian day, or seconds if followed by a unixepoch modifier)
+An integer number of Unix seconds since 1970-01-01T00:00:00Z (with or without a unixepoch modifier). Numeric Julian-day input is not supported.
 
 ## Time modifiers
 
@@ -57,7 +57,7 @@ unixepoch<br>
 localtime (Converts a UTC time to local time)<br>
 utc (Converts a local time to UTC)
 
-For details about what these formats and modifers mean, see https://www.sqlite.org/lang_datefunc.html
+The modifier vocabulary resembles SQLite date functions, but SharpMUSH parses numeric input as Unix seconds unconditionally; `unixepoch` therefore leaves an already parsed instant unchanged. Do not assume SQLite's Julian-day numeric-input semantics.
 
 Examples:
 ```sharp

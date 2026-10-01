@@ -27,6 +27,8 @@ public class RegexHelpExamplesTests
 	[Arguments(@"regmatch(aaa,lit(\Aa{0,3}\z))", "1")]
 	[Arguments(@"regmatch(aaa,lit(\Aa{,3}\z))", "0")]
 	[Arguments(@"regmatch(ABC,\\A%(?i:abc%)\\z)", "1")]
+	[Arguments(@"regedit(this test is the best string,%(?<char>.%)est,$<char>rash)", "this trash is the best string")]
+	[Arguments(@"regeditall(this test is the best string,%(.%)est,capstr($1)rash)", "this Trash is the Brash string")]
 	[Arguments(@"regedit(abc,%(?<x>a%)%(b%),$2$1)", "bac")]
 	[Arguments(@"regreplace(abc,%(?<x>a%)%(b%),lit($2$1))", "abc")]
 	[Arguments(@"regreplace(abc,%(?<x>a%)%(b%),lit(${x}$1))", "abc")]
@@ -38,4 +40,14 @@ public class RegexHelpExamplesTests
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	public async Task ForeachMarkersAreSingleCharacters()
+	{
+		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(new DBRef(1)));
+		await parser.FunctionParse(MarkupText.Plain("attrib_set(me/REGEX_HELP_UPPER,lit(ucstr(%0)))"));
+		var result = await parser.FunctionParse(MarkupText.Plain("foreach(REGEX_HELP_UPPER,quiet quiet >shout< quiet,>,<)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("quiet quiet SHOUT quiet");
+	}
+
 }

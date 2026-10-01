@@ -18,7 +18,7 @@
 -->
 # @filter
 
-`@filter <object>[=<pattern1>[, <pattern2>[, ..., <patternN>]]`
+`@filter <object>[=<pattern1>[, <pattern2>[, ..., <patternN>]]]`
 
 The filter attribute is used in conjunction with the AUDIBLE flag. When set, sound which matches any of the comma-separated list of wildcard patterns in this attribute is not propagated through the audible object.
 

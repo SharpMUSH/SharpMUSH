@@ -168,7 +168,9 @@ now describe .NET syntax, Unicode/ASCII class choices, strict anchors, parser es
 and the distinction between PennMUSH-compatible softcode captures and .NET replacements;
 the former PCRE manual attribution is retained. Further review corrections cover Unicode
 accent display, escaped table pipes and lowercase thorn, the recycle command spelling,
-quota-only destruction accounting, supported quota command forms, and actual uptime output. The IANA 2011n
+quota-only destruction accounting, supported quota command forms, actual uptime output,
+balanced filter notation, foreach markers, distinct listening/pose labels, the retry cap,
+and Unix-second numeric timecalc input. The IANA 2011n
 catalog is retained as a complete, explicitly historical section.
 
 ## Validation
