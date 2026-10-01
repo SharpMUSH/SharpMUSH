@@ -32,8 +32,9 @@ namespace SharpMUSH.Server.Controllers;
 /// Gagging a channel does not stop <c>@channel/recall</c>, and does not stop this.</para>
 ///
 /// <para>Each line is shaped as the <c>comm-feed</c> package shapes its <c>comm.message</c> push, and
-/// carries the same id, so the portal keeps one copy of a line it both pulled and was pushed. A game that
-/// redefines <c>FN`COMM`TEXT</c> changes the pushed text only; recall composes the bundled default.</para>
+/// carries the same id, so the portal keeps one copy of a line it both pulled and was pushed. Its
+/// <c>text</c> goes through the game's installed <c>FN`COMM`TEXT</c> as the push's does
+/// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
 /// </summary>
 [ApiController]
 [Route("api/comm")]
@@ -42,7 +43,8 @@ public class CommController(
 	IMediator mediator,
 	IPermissionService permissionService,
 	INotifyService notifyService,
-	IVisibleWorldProjection projection) : ControllerBase
+	IVisibleWorldProjection projection,
+	CommTextComposer textComposer) : ControllerBase
 {
 	/// <summary>The most people one conversation marker may name; a page to more than this is not a conversation.</summary>
 	public const int ConversationLimit = 32;
@@ -68,10 +70,15 @@ public class CommController(
 			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines), ct)
 			.ToListAsync(ct);
 		var name = channel.Name.ToPlainText();
+		var handler = await textComposer.HandlerAsync(ct);
 
-		return (await ChannelHelper.FilterRecallableAsync(buffered, executor))
-			.Select(line => ToRecallLine(name, line))
-			.ToList();
+		var recalled = new List<ChannelRecallLine>();
+		foreach (var line in await ChannelHelper.FilterRecallableAsync(buffered, executor))
+		{
+			recalled.Add(await ToRecallLineAsync(name, line, handler, ct));
+		}
+
+		return recalled;
 	}
 
 	[HttpGet("markers")]
@@ -195,11 +202,12 @@ public class CommController(
 	}
 
 	/// <summary>
-	/// A buffered line shaped as its <c>comm.message</c>: <c>text</c> composed as the bundled
-	/// <c>FN`COMM`TEXT</c> composes it. A line written straight into the buffer (<c>cbufferadd()</c>) has
-	/// no parts, and reads as an unattributed emit of the whole line.
+	/// A buffered line shaped as its <c>comm.message</c>, <c>text</c> composed by
+	/// <see cref="CommTextComposer"/>. A line written straight into the buffer (<c>cbufferadd()</c>) was
+	/// never pushed and has no parts, and reads as an unattributed emit of the whole line.
 	/// </summary>
-	private static ChannelRecallLine ToRecallLine(string channel, SharpChannelMessage line)
+	private async ValueTask<ChannelRecallLine> ToRecallLineAsync(string channel, SharpChannelMessage line,
+		AnySharpObject? handler, CancellationToken ct)
 	{
 		var ts = line.Timestamp.ToUnixTimeMilliseconds();
 		if (line.Style.Length == 0)
@@ -208,13 +216,7 @@ public class CommController(
 		}
 
 		var named = line.SpeakerName.Length > 0;
-		var text = line.Style switch
-		{
-			"pose" => $"{line.SpeakerName} {line.MessageText}",
-			"semipose" => line.SpeakerName + line.MessageText,
-			_ => line.MessageText
-		};
-		return new ChannelRecallLine(line.Id, channel, line.SpeakerName, named ? line.Sender.ToString() : null, text,
-			line.Style, ts);
+		return new ChannelRecallLine(line.Id, channel, line.SpeakerName, named ? line.Sender.ToString() : null,
+			await textComposer.ComposeAsync(handler, line, ct), line.Style, ts);
 	}
 }

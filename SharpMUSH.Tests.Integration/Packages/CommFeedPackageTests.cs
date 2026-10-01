@@ -236,6 +236,47 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(pushed["id"]!.GetValue<long>()).IsEqualTo(pulled.Id);
 	}
 
+	/// <summary>
+	/// Recall composes a line's <c>text</c> through the installed <c>FN`COMM`TEXT</c>, as the push does, with
+	/// the same executor (the handler), enactor (the speaker) and arguments — so a game that redefined it
+	/// gets the same text pulled as pushed.
+	/// </summary>
+	/// <remarks>
+	/// The tests share one world and run in parallel, so the redefinition answers differently only for a
+	/// line carrying this test's marker and composes every other line exactly as the bundled default does.
+	/// </remarks>
+	[Test]
+	public async Task ChannelLine_RecallComposesTextThroughTheInstalledFnCommText()
+	{
+		var speaker = await ViewerAsync("CommTextSpeaker");
+		var member = await ViewerAsync("CommTextMember");
+		var channel = await ChannelAsync("CommText", speaker, member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("custom");
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
+			.Message!.ToPlainText();
+
+		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
+		try
+		{
+			await using var watch = await OobWatch.OpenAsync(factory);
+			var sent = await watch.SentWhile(() => Run(speaker, $"@chat {channel}=:waves {marker}"), Run, member);
+
+			var pushed = Frames(sent[member.Handle], "comm.message").Single();
+			var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
+				.Recall(channel, null, CancellationToken.None);
+			var pulled = recall.Value!.Single(line => line.Id == pushed["id"]!.GetValue<long>());
+
+			await Assert.That(pushed["text"]!.GetValue<string>()).StartsWith("custom:")
+				.Because("the redefinition is what the push composed with");
+			await Assert.That(pulled.Text).IsEqualTo(pushed["text"]!.GetValue<string>());
+		}
+		finally
+		{
+			await God($"&FN`COMM`TEXT #{handler}={original}");
+		}
+	}
+
 	[Test]
 	public async Task ChannelPose_TextIsThePoseAsTheTerminalReadsIt()
 	{

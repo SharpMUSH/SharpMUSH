@@ -218,9 +218,11 @@ of a missing `v` and of any malformed member):
 - The recall endpoint refuses what `@channel/recall` refuses: a channel the
   character may not see answers 404, as a missing one does, and one they are
   not on and could not join answers 403. A line only See_All members were sent
-  stays hidden from everyone else. Its `text` is composed as the bundled
-  ``FN`COMM`TEXT`` composes it; a game that redefines that changes the pushed
-  text only.
+  stays hidden from everyone else. Its `text` goes through the installed
+  ``FN`COMM`TEXT`` on the handler, with the handler as executor, the speaker as
+  enactor and the same arguments as the push, so a game that redefines it gets
+  the same text pulled as pushed. The bundled default is used only when the
+  attribute is absent.
 
 ## Testing
 

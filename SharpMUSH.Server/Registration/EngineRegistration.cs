@@ -123,6 +123,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
 		services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
+		services.AddSingleton<CommTextComposer>();
 		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();

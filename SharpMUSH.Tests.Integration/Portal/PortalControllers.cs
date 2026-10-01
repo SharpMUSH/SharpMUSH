@@ -54,7 +54,8 @@ public static class PortalControllers
 			factory.Services.GetRequiredService<IMediator>(),
 			factory.Services.GetRequiredService<IPermissionService>(),
 			factory.Services.GetRequiredService<INotifyService>(),
-			factory.Services.GetRequiredService<IVisibleWorldProjection>())
+			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
+			factory.Services.GetRequiredService<CommTextComposer>())
 		{
 			ControllerContext = new ControllerContext
 			{
