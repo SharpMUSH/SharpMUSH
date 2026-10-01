@@ -249,6 +249,44 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// Bundled bootstrap keeps bundled packages current, at every boot and when asked by name. An older
+	/// profile-handler installed from a remote or fork is not one of them: upgrading it would record the
+	/// bundled source over the fork's and advance its baselines, and reset's provenance check would then
+	/// pass and overwrite what the fork's merge kept.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Bootstrap_LeavesAnOlderPackageFromAnotherSourceAsItWas()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		var registry = factory.Services.GetRequiredService<IPackageRegistryService>();
+		var installed = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+		var fork = installed with
+		{
+			Version = "0.0.1",
+			SourceRepo = "https://example.invalid/fork/profile-handler.git",
+			InstalledCommit = "0011223344556677"
+		};
+		await registry.UpsertInstalledPackageAsync(fork);
+		try
+		{
+			await factory.Services.GetRequiredService<IBundledPackageBootstrap>()
+				.InstallBundledAsync(["profile-handler"], CancellationToken.None);
+
+			var after = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+			await Assert.That(after.SourceRepo).IsEqualTo(fork.SourceRepo);
+			await Assert.That(after.InstalledCommit).IsEqualTo(fork.InstalledCommit);
+			await Assert.That(after.Version).IsEqualTo(fork.Version);
+			await Assert.That(after.CurrentRevision).IsEqualTo(fork.CurrentRevision);
+		}
+		finally
+		{
+			await registry.UpsertInstalledPackageAsync(installed);
+			await ResetAsync(http);
+		}
+	}
+
+	/// <summary>
 	/// When <c>http_handler</c> is repointed after install, the plan targets the new handler while the
 	/// recorded baselines stay on the old one. Writing there would leave values the registry does not
 	/// track (uninstall leaves them behind, upgrade sees add/add conflicts). Simulated by moving one

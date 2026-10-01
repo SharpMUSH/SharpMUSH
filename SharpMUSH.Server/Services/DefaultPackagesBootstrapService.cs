@@ -19,9 +19,10 @@ namespace SharpMUSH.Server.Services;
 /// packages (e.g. <c>common-functions</c>, <c>scene</c>) always install.
 ///
 /// Idempotent per package: an already-installed package is left to the package manager (so admins
-/// can upgrade/customize/uninstall independently) unless this build ships a strictly newer version,
-/// in which case it is upgraded in place. Either way pre-existing differing attributes resolve in
-/// favor of the existing values (three-way merge protects local edits, nothing is clobbered).
+/// can upgrade/customize/uninstall independently) unless it came from the bundled source and this build
+/// ships a strictly newer version, in which case it is upgraded in place. Either way pre-existing
+/// differing attributes resolve in favor of the existing values (three-way merge protects local edits,
+/// nothing is clobbered).
 /// </summary>
 public class DefaultPackagesBootstrapService(
 	IPackageManifestService manifests,
@@ -141,6 +142,16 @@ public class DefaultPackagesBootstrapService(
 	{
 		if (await registry.GetInstalledPackageAsync(packageId) is InstalledPackageRecord already)
 		{
+			// Installed from a configured remote or a fork: the admin's package under the same id, not this
+			// build's. Upgrading it would record the bundled source over theirs and move its baselines to the
+			// bundled values, whatever its version.
+			if (!BundledPackages.IsCatalogueSource(already.SourceRepo))
+			{
+				logger.LogDebug("Package {PackageId} was installed from {Source}; bundled bootstrap leaves it alone.",
+					packageId, already.SourceRepo);
+				return;
+			}
+
 			// Already installed: only step in when this build ships a NEWER version than the
 			// game has. Without this a game that installed an older bundled package never sees
 			// later additions to it, with no upgrade path short of a manual reinstall.
