@@ -301,14 +301,17 @@ public class CommController(
 	/// <summary>
 	/// Moves the marker on. Neither part may be later than any real line: the time no later than now, and
 	/// the id no larger than the largest id issued — which can run ahead of the clock when it stops or is
-	/// set back, so the clock alone would cut a real marker down and bring read lines back as unread. A
-	/// marker set past every line would call every line until then read.
+	/// set back, so the clock alone would cut a real marker down and bring read lines back as unread. After
+	/// a restart that is the previous process's ids too, which <see cref="IChannelMessageIdSource.CeilingAsync"/>
+	/// loads before this process has handed out any. A marker set past every line would call every line
+	/// until then read.
 	/// </summary>
 	private async Task<SharpReadMarker> AdvanceAsync(SharpPlayer player, string scope, long? lastReadId,
 		DateTimeOffset lastReadAt, CancellationToken ct)
 	{
 		var now = DateTimeOffset.UtcNow;
-		var latestId = Math.Max((now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond, messageIds.Latest);
+		var latestId = Math.Max((now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond,
+			await messageIds.CeilingAsync(ct));
 		var marker = new SharpReadMarker(scope,
 			lastReadId is { } id ? Math.Clamp(id, 0, latestId) : null,
 			lastReadAt > now ? now : lastReadAt);

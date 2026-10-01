@@ -43,6 +43,16 @@ public sealed record ReadMarkerUpdate(long? LastReadId, DateTimeOffset LastReadA
 /// the acting character's own objid among them is ignored.</summary>
 public sealed record ConversationReadMarkerUpdate(IReadOnlyList<string> With, long? LastReadId, DateTimeOffset LastReadAt);
 
+/// <summary>Limits the portal and the server share about page conversations.</summary>
+public static class CommLimits
+{
+	/// <summary>
+	/// The most other people one page conversation holds. The read-marker and recall endpoints refuse a
+	/// larger one, a page to more is not logged, and the portal does not mark one.
+	/// </summary>
+	public const int ConversationMaxOthers = 32;
+}
+
 /// <summary>
 /// One logged page, in the shape of the <c>comm.message</c> push for the same page
 /// (docs/softcode/comm-feed-handler.md), so the portal files a pulled page exactly as a pushed one.

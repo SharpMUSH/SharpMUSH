@@ -83,6 +83,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private Task _sync = Task.CompletedTask;
 
+	/// <summary>By conversation, the ids of lines that came from the page log and have not been pushed.</summary>
+	private readonly Dictionary<string, HashSet<long>> _pulledOnly = new(StringComparer.Ordinal);
+
+	/// <summary>Conversations known only from the page log's listing: no page has been pushed for them.</summary>
+	private readonly HashSet<string> _listedOnly = new(StringComparer.Ordinal);
+
 	/// <summary>Whether the conversations have been listed from the page log since the markers were read.</summary>
 	private bool _conversationsListed;
 
@@ -183,25 +189,27 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			return;
 
 		var generation = _generation;
-		var pulled = await server.ConversationRecallAsync(others);
+		// As many as a conversation keeps: the server composes each line's text, so asking for more is waste.
+		var pulled = await server.ConversationRecallAsync(others, HistoryLimit);
 		if (generation != _generation || pulled is not PageRecall recall) return;
 
 		if (!recall.Logging)
 		{
-			if (_pageLogging is not false)
-			{
-				_pageLogging = false;
-				Changed?.Invoke();
-			}
-
+			var turnedOff = _pageLogging is not false;
+			_pageLogging = false;
+			if (ForgetLoggedHistory() || turnedOff) Changed?.Invoke();
 			return;
 		}
 
 		// Turning back on is news even when the pull adds no line: the view's logging-off note depends on it.
 		var turnedOn = _pageLogging is not true;
 		_pageLogging = true;
-		var merged = Merge(key, recall.Lines.Select(line => new CommMessage(CommPayloadParser.PageKind, null, line.To,
-			line.From, line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList());
+		var lines = recall.Lines.Select(line => new CommMessage(CommPayloadParser.PageKind, null, line.To, line.From,
+			line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList();
+		var held = _history.TryGetValue(key, out var kept) ? kept.Select(line => line.Id).OfType<long>().ToHashSet() : [];
+		var fromTheLog = PulledOnly(key);
+		fromTheLog.UnionWith(lines.Select(line => line.Id).OfType<long>().Where(id => !held.Contains(id)));
+		var merged = Merge(key, lines);
 		if (merged || turnedOn) Changed?.Invoke();
 	}
 
@@ -370,6 +378,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		// logging on brings the kept conversations back without a reconnect.
 		_conversationsListed = list.Logging;
 		_pageLogging = list.Logging;
+		if (!list.Logging)
+		{
+			ForgetLoggedHistory();
+			return;
+		}
+
 		var behind = new List<string>();
 		foreach (var summary in list.Conversations)
 		{
@@ -379,9 +393,17 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				.Prepend(self)
 				.ToList();
 			var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Distinct().Order(StringComparer.Ordinal));
-			_conversations[key] = _conversations.GetValueOrDefault(key) is { } known
-				? known.Recency >= summary.LastId ? known : known with { LastAt = summary.LastAt, Recency = summary.LastId }
-				: new Conversation(participants, summary.LastAt, summary.LastId);
+			if (_conversations.GetValueOrDefault(key) is { } known)
+			{
+				_conversations[key] = known.Recency >= summary.LastId
+					? known
+					: known with { LastAt = summary.LastAt, Recency = summary.LastId };
+			}
+			else
+			{
+				_conversations[key] = new Conversation(participants, summary.LastAt, summary.LastId);
+				_listedOnly.Add(key);
+			}
 
 			if (_markers.TryGetValue(key, out var marker) && marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
 				behind.Add(key);
@@ -392,6 +414,46 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		{
 			await LoadConversationAsync(server, key);
 		}
+	}
+
+	/// <summary>The ids of a conversation's lines that came from the page log and were never pushed.</summary>
+	private HashSet<long> PulledOnly(string key)
+	{
+		if (!_pulledOnly.TryGetValue(key, out var ids)) _pulledOnly[key] = ids = [];
+		return ids;
+	}
+
+	/// <summary>
+	/// What the page log gave the feed, taken back out now the server says the log is off (it hides the log
+	/// then): each pulled line never pushed, and each conversation known only from the listing that has no
+	/// line left. Pages pushed live stay. The next list asks for the conversations again, so turning logging
+	/// back on brings them back. Answers whether anything went.
+	/// </summary>
+	private bool ForgetLoggedHistory()
+	{
+		var changed = false;
+		foreach (var (key, ids) in _pulledOnly)
+		{
+			if (ids.Count > 0 && _history.TryGetValue(key, out var lines)
+				&& lines.RemoveAll(line => line.Id is { } id && ids.Contains(id)) > 0)
+			{
+				changed = true;
+				Recount(key);
+			}
+		}
+
+		_pulledOnly.Clear();
+		foreach (var key in _listedOnly.Where(key => !_history.TryGetValue(key, out var lines) || lines.Count == 0).ToArray())
+		{
+			_conversations.Remove(key);
+			_history.Remove(key);
+			_unread.Remove(key);
+			changed = true;
+		}
+
+		_listedOnly.Clear();
+		_conversationsListed = false;
+		return changed;
 	}
 
 	private async Task PullAsync(IReadOnlyList<string> channels)
@@ -489,7 +551,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private static IReadOnlyList<string>? OthersIn(Conversation conversation, string viewer)
 	{
 		var others = conversation.Participants.Where(participant => participant.ObjId != viewer).ToArray();
-		if (others.Any(participant => participant.ObjId is null)) return null;
+		if (others.Length > CommLimits.ConversationMaxOthers || others.Any(participant => participant.ObjId is null)) return null;
 
 		return others.Length == 0 ? [viewer] : others.Select(participant => participant.ObjId!).ToArray();
 	}
@@ -522,6 +584,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var viewer = Viewer();
 
 		var key = message.Channel ?? ConversationFor(entry);
+		if (message.Channel is null)
+		{
+			_listedOnly.Remove(key);
+			if (message.Id is { } pushed && _pulledOnly.TryGetValue(key, out var fromTheLog)) fromTheLog.Remove(pushed);
+		}
 
 		// Already held — pulled from the server, or pushed before and replayed on a resumed connection.
 		if (message.Id is { } id && _history.TryGetValue(key, out var held) && held.Any(line => line.Id == id))
@@ -570,6 +637,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			_conversations.Remove(key);
 			_history.Remove(key);
 			_unread.Remove(key);
+			_pulledOnly.Remove(key);
+			_listedOnly.Remove(key);
 		}
 	}
 
@@ -626,6 +695,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_sync = Task.CompletedTask;
 		_pageLogging = null;
 		_conversationsListed = false;
+		_pulledOnly.Clear();
+		_listedOnly.Clear();
 
 		_channels = [];
 		_viewer = null;

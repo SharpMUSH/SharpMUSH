@@ -30,9 +30,9 @@ public interface ICommHistory
 	/// <summary>
 	/// A page conversation's logged history, oldest first, each page with the id its <c>comm.message</c>
 	/// carries. <paramref name="with"/> is the other people in it by objid (the character alone, for pages
-	/// to themselves).
+	/// to themselves). At most <paramref name="lines"/> pages, the latest.
 	/// </summary>
-	Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with);
+	Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines);
 }
 
 /// <summary><see cref="ICommHistory"/> over the <c>"api"</c> client, which carries the account session.</summary>
@@ -58,7 +58,8 @@ public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : I
 	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
 		Client.GetApiAsync<PageConversations>("api/comm/conversations", "The server returned no page conversations.");
 
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with) =>
-		Client.GetApiAsync<PageRecall>($"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall",
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines) =>
+		Client.GetApiAsync<PageRecall>(
+			$"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall?lines={lines}",
 			"The server returned no page history.");
 }

@@ -103,6 +103,8 @@ public class OobCommFeedPageLogTests
 		await Assert.That(lines[0].FromObjId).IsEqualTo(Tomas);
 		await Assert.That(lines[0].Id).IsEqualTo(20);
 		await Assert.That(history.PageRecalled).Contains(Tomas);
+		await Assert.That(history.PageRecallLines).IsEquivalentTo(new[] { OobCommFeed.HistoryLimit })
+			.Because("a conversation keeps that many lines, so the server composes no more");
 	}
 
 	[Test]
@@ -398,6 +400,59 @@ public class OobCommFeedPageLogTests
 		await Assert.That(feed.Conversations[0].Key).IsEqualTo(TomasKey).Because("its page has the highest id");
 		await Assert.That(feed.Conversations.Any(conversation => conversation.WithObjIds.Contains("#1000:1"))).IsFalse()
 			.Because("the conversation with the lowest last id is the least recent");
+	}
+
+	/// <summary>
+	/// The server hides the page log while <c>page_log</c> is off, and so does the feed once it hears so:
+	/// pages it pulled from the log go, pages pushed live stay, and a conversation known only from the
+	/// listing goes with its history. Turning logging on again lists the conversations afresh.
+	/// </summary>
+	[Test]
+	public async Task Page_logging_turned_off_hides_the_pulled_history_and_keeps_live_pages()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true,
+			[WithTomas(21, 21), new PageConversationSummary([Dace], ["Dace"], 10, T0.AddSeconds(10))]);
+		history.PageLog[Tomas] = [Logged(20, "logged", 20), Logged(21, "logged and pushed", 21)];
+		await LoadAsync(store, feed);
+		await feed.LoadHistoryAsync(TomasKey);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(21, "logged and pushed", 21));
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(22, "live", 22));
+
+		history.PageLogging = false;
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.PageLogging).IsFalse();
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).IsEquivalentTo(new[] { "logged and pushed", "live" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(feed.Conversations.Select(conversation => conversation.Key)).IsEquivalentTo(new[] { TomasKey })
+			.Because("the conversation with Dace was known only from the log");
+
+		history.PageLogging = true;
+		history.PageConversations = new PageConversations(Viewer, true,
+			[WithTomas(22, 22), new PageConversationSummary([Dace], ["Dace"], 10, T0.AddSeconds(10))]);
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations.Count).IsEqualTo(2).Because("logging back on lists them again");
+	}
+
+	/// <summary>
+	/// A conversation with more people than the server lets a marker name (a group page past
+	/// <see cref="CommLimits.ConversationMaxOthers"/>) is not marked: the server would
+	/// refuse the write every time.
+	/// </summary>
+	[Test]
+	public async Task A_conversation_too_large_for_a_marker_is_not_marked()
+	{
+		var (store, feed, history) = Create();
+		await LoadAsync(store, feed);
+		var others = Enumerable.Range(0, CommLimits.ConversationMaxOthers + 1).Select(n => $"#{2000 + n}:1").ToArray();
+		store.Set(CommPayloadParser.MessagePackage,
+			$$"""{"v":2,"id":50,"kind":"page","to":[{{string.Join(",", others.Append(Viewer).Select((_, i) => $"\"P{i}\""))}}],"toObjids":[{{string.Join(",", others.Append(Viewer).Select(o => $"\"{o}\""))}}],"from":"Tomas","fromObjid":"{{Tomas}}","text":"all","style":"say","ts":{{T0.ToUnixTimeMilliseconds()}}}""");
+
+		feed.MarkRead(feed.Conversations.Single().Key);
+
+		await Assert.That(history.ConversationMarks).IsEmpty();
 	}
 
 	/// <summary>Once listed, a later list does not ask for the conversations again: pushes keep it current.</summary>

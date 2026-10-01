@@ -231,8 +231,13 @@ of a missing `v` and of any malformed member):
   (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
   with spaces). Each character reads only their own copy; there is no staff
   read. With `page_log` off both answer `"logging": false` and nothing else,
-  and the conversation view says the game keeps no page history. Opening a
-  conversation asks again, since the option can be turned on at any time. As
+  and the conversation view says the game keeps no page history. The feed
+  then drops what it pulled from the log (pages pushed live stay, and a
+  conversation known only from the listing goes). Opening a conversation asks
+  again, since the option can be turned on at any time. A conversation pull
+  asks for 200 pages, as many as the feed keeps. Conversations are ordered,
+  and the least recent dropped past 100, by their latest page's id. A
+  conversation with more than 32 other people is not marked. As
   for channels, a failed read of the markers lists and pulls no conversation,
   and a failed listing, or one answered while `page_log` was off, is retried
   on the next `comm.channels`. Lines with ids are kept in id order, since ids

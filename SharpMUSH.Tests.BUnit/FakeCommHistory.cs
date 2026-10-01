@@ -43,12 +43,16 @@ public sealed class FakeCommHistory : ICommHistory
 			: new ApiFailure(ApiFailureKind.Unauthenticated, "nobody"));
 	}
 
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with)
+	/// <summary>How many lines each conversation pull asked for.</summary>
+	public List<int> PageRecallLines { get; } = [];
+
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines)
 	{
+		PageRecallLines.Add(lines);
 		var key = string.Join(' ', with.Order(StringComparer.Ordinal));
 		PageRecalled.Add(key);
 		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging,
-			PageLogging && PageLog.TryGetValue(key, out var lines) ? lines.ToArray() : []));
+			PageLogging && PageLog.TryGetValue(key, out var logged) ? logged.ToArray() : []));
 	}
 
 	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel)

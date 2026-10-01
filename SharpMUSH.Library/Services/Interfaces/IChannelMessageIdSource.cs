@@ -16,4 +16,12 @@ public interface IChannelMessageIdSource
 	/// clock, or one set back), so this, not the time, is the bound on an id a client may have seen.
 	/// </summary>
 	long Latest { get; }
+
+	/// <summary>
+	/// The largest id a client may hold: every id handed out so far, by this process or (after a restart,
+	/// before it has handed out any) the one before it, whose ids can be ahead of this process's clock; and
+	/// below every id handed out from now on. A read marker's id is bounded by this. A source with nothing to
+	/// load answers <see cref="Latest"/>.
+	/// </summary>
+	ValueTask<long> CeilingAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult(Latest);
 }

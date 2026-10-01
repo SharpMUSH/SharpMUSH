@@ -241,6 +241,30 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
 	}
 
+	/// <summary>
+	/// After a restart the id source has issued nothing yet, but ids the old process issued can be ahead of
+	/// the clock. A marker on one of them is kept, not cut down to the clock, so the page it read stays read.
+	/// The restart is a fresh id source over the host's own stored reservation.
+	/// </summary>
+	[Test]
+	public async Task AMarkerOnAnIdAheadOfTheClock_IsKeptAfterARestart()
+	{
+		var ilsa = await PlayerAsync("PageLogCeilingIlsa");
+		var wren = await PlayerAsync("PageLogCeilingWren");
+		var host = factory.Services.GetRequiredService<IChannelMessageIdSource>();
+		await host.NextAsync();
+		var restarted = new SharpMUSH.Library.Services.ChannelMessageIdSource(
+			factory.Services.GetRequiredService<IExpandedObjectDataService>());
+		// An id the old process may have issued: past the clock, inside its stored reservation.
+		var ahead = (DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond + 1_000_000;
+
+		var controller = await PortalControllers.CommControllerAs(factory, ilsa.DbRef, restarted);
+		var marked = Value(await controller.MarkConversation(
+			new ConversationReadMarkerUpdate([wren.Objid], ahead, DateTimeOffset.UtcNow), CancellationToken.None));
+
+		await Assert.That(marked.LastReadId).IsEqualTo(ahead);
+	}
+
 	/// <summary>A page's id is now a line id, and a conversation's marker keeps it.</summary>
 	[Test]
 	public async Task AConversationMarker_KeepsThePagesId()

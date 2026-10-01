@@ -72,7 +72,7 @@ public static class PageConversation
 	/// The most other people one conversation holds. The read-marker and recall endpoints refuse a larger
 	/// one, and a page to more is not logged, so the portal never lists a conversation it cannot open.
 	/// </summary>
-	public const int MaxOthers = 32;
+	public const int MaxOthers = API.CommLimits.ConversationMaxOthers;
 
 	/// <summary>The people, each once, sorted by objid ordinally — the order <see cref="ReadMarkerScope.Conversation"/> uses.</summary>
 	public static IReadOnlyList<DBRef> Normalize(IEnumerable<DBRef> people) =>
