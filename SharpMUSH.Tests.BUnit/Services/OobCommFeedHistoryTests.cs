@@ -213,6 +213,67 @@ public class OobCommFeedHistoryTests
 	/// the new list names it. The feed reads the markers again, so the lines before the rename are still
 	/// counted from where the viewer had read to.
 	/// </summary>
+	/// <summary>Leaving a channel and joining it again pulls it again: what was said meanwhile is history to fetch.</summary>
+	[Test]
+	public async Task A_channel_left_and_rejoined_is_pulled_again()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(publicId: 5);
+		history.Recall["Public"] = [Pulled(5, "read")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+		history.Recall["Public"] = [Pulled(5, "read"), Pulled(6, "while away")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.Recalled.Count(name => name == "Public")).IsEqualTo(2);
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A failed read of the markers on a join or rename pulls nothing, so the channel is not taken as done:
+	/// the next list tries again, and then counts from the marker.
+	/// </summary>
+	[Test]
+	public async Task A_failed_marker_refresh_pulls_nothing_and_the_next_list_retries()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+		await feed.Synced;
+
+		history.Markers = null;
+		history.Recall["Public"] = [Pulled(5, "read"), Pulled(6, "new")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.Recalled).IsEmpty();
+
+		history.Markers = Markers(publicId: 5);
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.Recalled).IsEquivalentTo(new[] { "Public" });
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(1);
+	}
+
+	/// <summary>A count the list carries is the game's own and stands; a marker does not recount it.</summary>
+	[Test]
+	public async Task A_count_the_list_carries_is_not_recounted_from_a_marker()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(publicId: 5);
+		history.Recall["Public"] = [Pulled(5, "read"), Pulled(6, "new")];
+
+		store.Set(CommPayloadParser.ChannelsPackage,
+			$$"""{"v":2,"viewer":{"name":"Ilsa","objid":"{{Viewer}}"},"channels":[{"name":"Public","unread":500}]}""");
+		await feed.Synced;
+
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(500);
+	}
+
 	[Test]
 	public async Task A_renamed_channel_keeps_its_marker()
 	{
