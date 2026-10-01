@@ -271,7 +271,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 			// The live view's story reads the directory for portraits; this API answers it 404, which
 			// leaves initials.
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(),

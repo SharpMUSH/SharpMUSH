@@ -40,7 +40,7 @@ public class SceneServiceParticipantTests : IDisposable
 		_clients.Add(http);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
-		return (new SceneService(factory), handler);
+		return (new SceneService(factory, Substitute.For<IAccountAuthState>()), handler);
 	}
 
 	[Test]

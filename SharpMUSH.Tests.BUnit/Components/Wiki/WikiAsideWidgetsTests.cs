@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
@@ -54,7 +55,7 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		var client = Track(new HttpClient(new SceneListHandler(scenes)) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
-		Services.AddSingleton(new SceneService(factory));
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
 
 		var cut = Render<ActiveSceneWidget>();
 		cut.WaitForAssertion(() => cut.Find(".kit-card--aside .kit-tile"), TimeSpan.FromSeconds(5));
@@ -73,7 +74,7 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		var client = Track(new HttpClient(new SceneListHandler("[]")) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
-		Services.AddSingleton(new SceneService(factory));
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
 
 		var cut = Render<ActiveSceneWidget>();
 		cut.WaitForAssertion(() => cut.Find(".kit-card--aside"), TimeSpan.FromSeconds(5));
@@ -95,7 +96,7 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		var client = Track(new HttpClient(new SceneListHandler(scenes)) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
-		Services.AddSingleton(new SceneService(factory));
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
 
 		var live = Render<ActiveSceneWidget>(p => p.Add(x => x.Zone, "MainContent"));
 		live.WaitForAssertion(() => live.Find(".kit-card .kit-tile"), TimeSpan.FromSeconds(5));

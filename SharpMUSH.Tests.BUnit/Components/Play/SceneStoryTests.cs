@@ -8,6 +8,7 @@ using NSubstitute;
 using SharpMUSH.Client.Components.Scenes;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Components;
 
@@ -30,7 +31,7 @@ public class SceneStoryTests : TrackingBunitContext
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
 		Services
 			.AddSingleton(factory)
-			.AddSingleton(new SceneService(factory))
+			.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)))
 			.AddSingleton(new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)

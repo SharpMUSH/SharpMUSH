@@ -8,7 +8,7 @@ namespace SharpMUSH.Client.Services;
 /// never writes scenes through this service: pose authoring happens via a normal
 /// game command (POSE/SAY/SEMIPOSE) sent on the GameHub connection.
 /// </summary>
-public class SceneService(IHttpClientFactory httpClientFactory)
+public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthState accountAuth)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
@@ -33,9 +33,14 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 
 	/// <summary>
 	/// Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request —
-	/// when they fall on the same side of a reported change.
+	/// when they are made as the same acting character and fall on the same side of a reported change.
+	/// The server filters these lists by who asks: a private scene is listed only to its owner and
+	/// members, so one character's answer is not another's.
 	/// </summary>
-	private readonly SingleFlight<(long Changes, string Url), ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
+	private readonly SingleFlight<((int, long)? Acting, long Changes, string Url), ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
+
+	/// <summary>The acting character the server answers a read for.</summary>
+	private (int, long)? Acting => accountAuth.ActiveCharacter is { } acting ? (acting.DbrefNumber, acting.CreationTime) : null;
 
 	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
@@ -82,7 +87,7 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
 	{
 		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
-		return _listFlight.RunAsync((Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
+		return _listFlight.RunAsync((Acting, Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
 	}
 
 	private async Task<ApiResult<IReadOnlyList<SceneSummary>>> FetchScenesAsync(string url)

@@ -147,7 +147,7 @@ public class StatsWidgetTests : TrackingBunitContext
 			.AddSingleton(sp => new WikiService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				NullLogger<WikiService>.Instance))
-			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
