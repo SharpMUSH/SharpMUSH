@@ -1,0 +1,43 @@
+.kit-pill {
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 13px;
+	background: var(--glass-pill-bg);
+	backdrop-filter: var(--glass-filter);
+	-webkit-backdrop-filter: var(--glass-filter);
+	box-shadow: var(--glass-edge);
+	color: var(--text);
+	font-size: 12px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+	box-sizing: border-box;
+}
+
+.kit-pill-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+/* tag variant: the mono "draft" / "locked" marker on rows and tiles */
+.kit-pill--tag {
+	height: 18px;
+	padding: 0 7px;
+	border-radius: 9px;
+	background: var(--surface-2);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	box-shadow: none;
+	color: var(--text-dim);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.04em;
+}
+
+.kit-pill--warn {
+	color: var(--warn);
+	background: var(--warn-tint);
+}

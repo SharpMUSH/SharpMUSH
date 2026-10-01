@@ -34,7 +34,8 @@ public class WikiController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
 	IPrerenderCacheService prerenderCache,
-	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, logger)
+	IWikiNameResolver names,
+	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/ns/{namespace}/{category}/{slug}?lang=fr
@@ -85,16 +86,16 @@ public class WikiController(
 			request.Title, request.Markdown, authorDbref, ns, request.Category, Localization.DefaultLocale);
 		return result switch
 		{
-			WikiPage page => PageCreated(page),
+			WikiPage page => await PageCreatedAsync(page),
 			Error<string> err => Conflict(new { error = err.Value })
 		};
 
-		IActionResult PageCreated(WikiPage page)
+		async Task<IActionResult> PageCreatedAsync(WikiPage page)
 		{
 			Logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} category={Category} by={Author}",
 				LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(page.Category), LogSanitizer.Sanitize(authorDbref));
 			return CreatedAtAction(nameof(GetPage),
-				new { ns = page.Namespace, category = page.Category, slug = page.Slug }, ToDto(page));
+				new { ns = page.Namespace, category = page.Category, slug = page.Slug }, await ToDtoAsync(page));
 		}
 	}
 
@@ -123,7 +124,7 @@ public class WikiController(
 
 		Logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", LogSanitizer.Sanitize(slug), page.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
 		prerenderCache.InvalidatePrefix("/wiki/");
-		return Ok(ToDto(page));
+		return Ok(await ToDtoAsync(page));
 	}
 
 	/// <summary>

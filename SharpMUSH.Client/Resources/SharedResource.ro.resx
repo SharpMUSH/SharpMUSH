@@ -3868,7 +3868,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Activitate recentă în wiki</value>
+    <value>Modificate recent</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4564,5 +4564,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Conversia nu a putut fi anulată: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimizează bannerul</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Afișează bannerul</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# necitit} few {# necitite} other {# de necitite}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# pagină} few {# pagini} other {# de pagini}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Răsfoiește</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Pagina principală wiki</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Modificări recente</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorii</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Pagină nouă</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Titlul paginii</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Caută în wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Cele mai recente modificări din wiki, cele mai noi primele.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Încă nu există pagini în această categorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>ciornă</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>blocată</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>chiar acum</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # minut} few {acum # minute} other {acum # de minute}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # oră} few {acum # ore} other {acum # de ore}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # zi} few {acum # zile} other {acum # de zile}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Wiki-ul lumii</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Tot ce ai nevoie ca să joci</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Poveste, reguli și ghiduri de început, editate de echipă și jucători. Nu ai nevoie de cont ca să citești.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Toată # pagină} few {Toate cele # pagini} other {Toate cele # de pagini}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Încă nu există pagini wiki.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Nicio pagină nu se potrivește cu „{0}”.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Live acum} one {Live acum · #} few {Live acum · #} other {Live acum · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Ultima modificare de {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>modificat {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Menționați · #} few {Menționați · #} other {Menționați · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Mai multe în {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Toate #} few {Toate #} other {Toate #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Și în</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Prezentare generală</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Spațiul de nume principal</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} few {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# personaj} few {# personaje} other {# de personaje}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Toți # online} few {Toți # online} other {Toți # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Găsește un personaj</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Online acum</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nimeni nu este online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>tu</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Personajele tale</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Creează un personaj</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Răsfoiește</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Toate personajele</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Cele mai noi</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Categorii de personaje</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Niciun personaj nu se numește {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>Într-o scenă · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Imagine completă</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Poștă</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Despre {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografie</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Pagină wiki · editată {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Vizualizator de imagini</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} din {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Închide</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Imaginea anterioară</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Imaginea următoare</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Această imagine nu poate fi afișată.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerie · #} few {Galerie · #} other {Galerie · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Folosește ca banner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Elimină bannerul</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Bannerul nu a putut fi schimbat: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Scene recente</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Încă nu există scene.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>în desfășurare</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Joacă des cu</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Încă nu există scene comune.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Scene recente</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Joacă des cu</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Adaugă imagine</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Profilul acestui personaj nu poate fi citit acum.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Restrânge bara laterală {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Extinde bara laterală {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Secțiuni</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Construire și administrare</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Instrumente de construire și de staff</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Caută și mergi la…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Cont: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplicații</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Limbă</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Meniul secțiunii</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Mergi la o pagină sau caută…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Caută „{0}” în wiki</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Găsește un personaj numit „{0}”</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Conectat ca {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>În scenă</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Mesaje</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# aici}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# ieșire} few {# ieșiri} other {# de ieșiri}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Descriere</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Poveste</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vizualizare</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scenă · înregistrată în arhiva scenelor</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Ieșire completă · cu canale și mesaje</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# acolo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Încuiat</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Închis</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Părăsește scena</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Mergi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Privește</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Rămâi</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Apăsați {0} pentru a merge</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Imagine completă</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>În această scenă</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detalii</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerie</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Fișa personajului: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poză</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Replică</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Comandă</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Scrie-ți poza…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Spune ceva…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Vorbește în afara rolului…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Scrie o comandă…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Tipul mesajului</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scenă</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Cameră</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Secțiuni de joc</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Nu mai este nimeni aici.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Domeniul aspectului</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Domeniul aspectului (opțional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Pagina căreia îi aparține widgetul, de ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Pachet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Pachet OOB (opțional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Date în timp real trimise de joc, de ex. weather.now; înlocuiește URL-ul de date</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Astăzi</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Ieri</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nou</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Mesaj către {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Mesaje private</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Încă nimic aici.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Înapoi la scenă</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Joc</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Coloana din dreapta a paginii de joc: cine este aici, ieșirile și panourile jocului.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Aici</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Ieșiri</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplicații</value>
   </data>
 </root>

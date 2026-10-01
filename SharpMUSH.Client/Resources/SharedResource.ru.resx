@@ -3868,7 +3868,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Недавняя активность в wiki</value>
+    <value>Недавно изменённые</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4564,5 +4564,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Не удалось отменить преобразование: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Свернуть баннер</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Показать баннер</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# страница} few {# страницы} many {# страниц} other {# страницы}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Главная вики</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Недавние изменения</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Категории</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Новая страница</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Заголовок страницы</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Поиск по вики</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Последние правки в вики, сначала новые.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>В этой категории пока нет страниц.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>черновик</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>заблокирована</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>только что</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# минуту назад} few {# минуты назад} many {# минут назад} other {# минуты назад}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# час назад} few {# часа назад} many {# часов назад} other {# часа назад}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# день назад} few {# дня назад} many {# дней назад} other {# дня назад}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Вики мира</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Всё, что нужно для игры</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Лор, правила и руководства для новичков, которые ведут персонал и игроки. Для чтения аккаунт не нужен.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Все # страница} few {Все # страницы} many {Все # страниц} other {Все # страницы}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Страниц в вики пока нет.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Нет страниц по запросу «{0}».</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Сейчас в эфире} one {Сейчас в эфире · #} few {Сейчас в эфире · #} many {Сейчас в эфире · #} other {Сейчас в эфире · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Последняя правка: {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>изменено {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Упомянуты · #} few {Упомянуты · #} many {Упомянуты · #} other {Упомянуты · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Ещё в {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Все #} few {Все #} many {Все #} other {Все #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Также на</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Основное пространство имён</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# в сети} few {# в сети} many {# в сети} other {# в сети}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# персонаж} few {# персонажа} many {# персонажей} other {# персонажа}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Все # в сети} few {Все # в сети} many {Все # в сети} other {Все # в сети}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Найти персонажа</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Сейчас в сети</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Никого нет в сети.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>вы</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Ваши персонажи</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Создать персонажа</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Все персонажи</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Новые</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Категории персонажей</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Персонажа с именем {0} нет.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>В сцене · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>В сети</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Полное изображение</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Почта</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Пейдж</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>О персонаже {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Биография</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Вики-страница · изменена {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Просмотр изображений</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} из {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Предыдущее изображение</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Следующее изображение</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Это изображение нельзя показать.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Галерея · #} few {Галерея · #} many {Галерея · #} other {Галерея · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Портрет</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Сделать обложкой</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Убрать обложку</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Не удалось сменить обложку: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Недавние сцены</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Сцен пока нет.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>идёт сейчас</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Часто играет с</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Общих сцен пока нет.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Недавние сцены</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Часто играет с</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Добавить изображение</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Профиль этого персонажа сейчас не удаётся прочитать.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Свернуть боковую панель «{0}»</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Развернуть боковую панель «{0}»</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Разделы</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Строительство и управление</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Инструменты строительства и персонала</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Поиск и переход…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Учётная запись: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Язык</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Меню раздела</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Перейти на страницу или искать…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Искать «{0}» в вики</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Найти персонажа по имени «{0}»</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Вы подключены как {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>В сцене</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Каналы</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Личные</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# здесь}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# выход} few {# выхода} many {# выходов} other {# выхода}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Описание</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>История</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Вид</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Сцена · записывается в архив сцен</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Полный вывод · включая каналы и личные сообщения</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# там}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Заперто</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Закрыто</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Покидает сцену</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Идти</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Осмотреть</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Остаться</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Нажмите {0}, чтобы пройти</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Изображение целиком</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Профиль</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>В этой сцене</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Бездействует {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Галерея</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Смотреть все</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Лист персонажа: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Поза</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Речь</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Команда</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Напишите позу…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Скажите что-нибудь…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Вне роли…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Введите команду…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Тип сообщения</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Сцена</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Комната</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Разделы игры</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Больше здесь никого нет.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Область макета</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Область макета (необязательно)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Страница, к которой относится виджет, например play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-пакет</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-пакет (необязательно)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Данные в реальном времени от игры, например weather.now; заменяет URL данных</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Вчера</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Новые</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Сообщение: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Личные сообщения</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Пока ничего нет.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Вернуться к сцене</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Игра</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Правая колонка страницы игры: кто здесь, выходы и панели игры.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Здесь</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Выходы</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Приложения</value>
   </data>
 </root>

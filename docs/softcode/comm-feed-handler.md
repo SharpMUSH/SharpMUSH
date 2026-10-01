@@ -1,0 +1,229 @@
+# WebSocket Support Package — the Channels and Pages Handlers
+
+This document is part of the **WebSocket Support Package**. It describes the
+``CHANNEL`MESSAGE``, ``PAGE`MESSAGE`` and ``PLAYER`CHANNELS`` event handlers
+that give a player's web client their channels and pages as structured OOB
+pushes — the data source behind the Play sidebar's **Channels** and **Pages**
+groups and the channel view (`docs/design/d1/README.md` §5.1, board `06`).
+It is the channels-and-pages companion of
+[`room-contents-handler.md`](room-contents-handler.md).
+
+> **It ships installed.** The handlers are the bundled **`comm-feed`**
+> package (`examples/packages/comm-feed/`), installed at first boot by
+> `DefaultPackagesBootstrapService` onto the configured `event_handler` object
+> (`{{$event_handler}}`, `#9` by default). Manage it like any other package:
+> `@package list`, `@package uninstall comm-feed`, or edit the attributes
+> directly (the package's three-way merge keeps local edits on upgrade).
+
+It implements the proposal in §7.3 of the design handoff, which is still
+waiting on the product owner's answer to §10 Q4 ("packages as proposed, or
+another route?"). The deviations from the proposal are listed at the end.
+
+---
+
+## Who receives what
+
+**The engine decides; the package passes it on.** Every visibility rule
+already runs in the engine before a line reaches anyone's terminal, and the
+events name the result:
+
+- ``CHANNEL`MESSAGE`` fires once per channel line, **after** it has been
+  delivered, with the objids of exactly the members it was delivered to. A
+  member who has gagged the channel, one the speaker may not be heard by
+  (the `Hear` interaction check), one whose `@chatformat` silenced the line,
+  and a muted member's copy of a connect or disconnect line are not among
+  them; a `CB_SEEALL` presence line (a hidden player's connect) names only
+  See_All members and the speaker. A line nobody received fires nothing.
+- ``PAGE`MESSAGE`` fires once per page that reached anyone, naming only the
+  recipients it reached: one who is not connected, is HAVEN, refuses pages
+  from the pager, or whose page lock the pager fails is not among them.
+- ``PLAYER`CHANNELS`` fires for a **connected** player on connect and when
+  their channel list may have changed: joining or leaving (including
+  `addcom`/`delcom`, `@channel/wipe`, and being joined by someone who controls
+  them), a change to their own channel flags (`gag`, `hide`, `mute`,
+  `combine`, a title), and the rename or deletion of a channel they are on.
+
+So `comm.message` goes to the delivered list (plus the pager, for a page, who
+saw their own page echoed) and `comm.channels` to the player whose list
+changed. Nothing reaches a player who did not see the line in their terminal:
+the handler can only narrow the engine's list, never widen it.
+
+A hidden speaker is **not** anonymised: `@channel/hide` keeps a member off the
+channel's who list, and their lines still name them in every member's
+terminal, so they name them in the payload too. An `@cemit` line (with or
+without `/spoof`) is the other way round: a member's terminal shows the
+message alone — only a NOSPOOF member is told who emitted it — so the event
+passes an empty speaker objid and name, and the payload's `from` is empty and
+`fromObjid` absent. `%#` is still the emitter.
+
+## Event arguments
+
+| Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` |
+|---|---|---|---|---|---|---|---|
+| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms |
+| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | |
+| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | |
+
+- Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
+  connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
+  for a page.
+- The name and message are **plain text**, and for a channel, what the
+  channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
+  `@chatformat` changes only their terminal line.
+- Cause is `connect`, `join`, `leave`, `status`, `rename` or `delete`.
+- `%#` is the speaker or pager. For ``PLAYER`CHANNELS`` it is the player on
+  connect, and `#1` otherwise: the change is reported by the database write,
+  which does not know who asked.
+
+`help event channel`, `help event page` and `help event player` carry the
+same in-game.
+
+## The handlers
+
+`me` is the event handler. The manifest
+(`examples/packages/comm-feed/package.yaml`) is the source of truth and
+comments every attribute; every helper is under ``FN`COMM`` so it cannot
+collide with `room-contents`' ``FN`*``.
+
+```mushcode
+&CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,)))
+&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1)))
+&PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
+```
+
+| Attribute | Decides |
+|---|---|
+| ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
+| ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
+| ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
+| ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
+| ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
+| ``FN`COMM`MESSAGE`` (`%0` kind … `%7` page recipients) | the whole `comm.message` payload |
+
+The idioms are the ones `room-contents` uses (see its handler document):
+`think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
+separator, and a `json_mod()` patch in which `null` removes a key, so a value
+a line does not have is absent rather than null. Two more:
+
+- **One `oob()` call per payload.** `oob(<list>, …)` sends the same payload to
+  every player in the list. A `comm.message` is the same for everyone who
+  received it, so it is built once and sent once; `comm.channels` is one
+  player's own list.
+- **`cstatus()` takes the object first** on SharpMUSH (`cstatus(<object>,
+  <channel>)`), the other way round from PennMUSH.
+- **The message is never evaluated again.** `%4` arrives as the text the
+  speaker's command produced; `json(string, %4)` escapes it and nothing
+  re-parses it, so `\[add(1,2)\]` typed on a channel arrives as `[add(1,2)]`.
+
+## Payloads (v2)
+
+Every payload carries `"v": 2`, lists are sent whole, identity is the objid
+(§7.1).
+
+### `comm.channels`
+
+The channels the viewer is **on**, and who the list was built for:
+
+```json
+{"v":2,"viewer":{"name":"Ilsa Varn","objid":"#19:1790780895139"},
+ "channels":[{"name":"Public","joined":true},{"name":"Builders","joined":true,"gagged":true}]}
+```
+
+- `joined` is `true` on every row the package sends. The key is there for a
+  game that redefines ``FN`COMM`CHANNELS`` to list channels the viewer could
+  join as well, with `"joined": false` — which would then also need a push
+  when a channel is created or its see lock changes, and the engine raises no
+  event for either.
+- `gagged: true` marks a channel the viewer is still on but hears nothing
+  from; absent otherwise.
+- There is **no `unread`**. The engine has no notion of what a player has
+  read — the terminal shows every line — so the client counts lines as they
+  arrive (below). A game that does track it can add `"unread": <n>` to a row
+  and the portal takes it.
+- `viewer` tells the client whose list it is, which is how it recognises its
+  own lines and leaves them out of the unread counts and a conversation's
+  "with".
+
+### `comm.message`
+
+A channel line:
+
+```json
+{"v":2,"kind":"channel","to":[],"from":"Wren Halloway","text":"anyone up for a scene?",
+ "style":"say","ts":1790780182950,"channel":"Public","fromObjid":"#12:1790741467794"}
+```
+
+A page (here a group pose-page):
+
+```json
+{"v":2,"kind":"page","to":["Tomas Reyes","Dace Kellan"],"from":"Ilsa Varn","text":"Ilsa Varn nods",
+ "style":"pose","ts":1790780182950,"fromObjid":"#19:1790780895139",
+ "toObjids":["#20:1790780895201","#21:1790780895260"]}
+```
+
+- `kind` is `channel` or `page`; `channel` appears only on a channel line.
+- `to` is the page's recipients as they were reached, in the order paged; it
+  is empty for a channel line (a channel has members, not addressees).
+  `toObjids` lines up with `to` and appears only on a page.
+- `from` is the speaker's name as the terminal line shows it (after the
+  mogrifier; with the pager's alias, `Name (alias)`, when `page_aliases` is
+  on); it is empty, and `fromObjid` absent, for a line with no speaker and for
+  an `@cemit`.
+- `text` is the line as the terminal reads it after the channel name or the
+  page prefix: a pose carries the name (`Ilsa Varn nods`), because that is how
+  a pose reads; `style` says which it was.
+- `ts` is milliseconds since 1970, taken when the line was sent.
+
+## What the portal does with them
+
+`SharpMUSH.Client/Services/OobCommFeed.cs` (`ICommFeed`) reads both off the
+**play** terminal's OOB store (`CommPayloadParser` does the parsing, tolerant
+of a missing `v` and of any malformed member):
+
+- `Channels` is the latest `comm.channels`, each with the feed's own unread
+  count.
+- A `comm.message` is filed under its channel, or under its conversation: a
+  page's key is every participant — pager and recipients, the viewer
+  included — by objid where there is one, sorted, prefixed `page `, so every
+  page among the same people is one conversation whoever sent it, and it can
+  never be a channel name (those cannot hold a space).
+- 200 lines are kept per key, and the 100 most recent conversations.
+- A line from someone else arriving for a key that is not `Viewing` is
+  unread until `MarkRead`. A count a `comm.channels` row carries, 0 included,
+  replaces the feed's own; a channel a new list no longer carries is
+  forgotten, history and count.
+- A new connection or a character switch clears it all, `Viewing` included,
+  as it clears the room.
+
+## Testing
+
+`SharpMUSH.Tests.Integration/Packages/CommFeedPackageTests.cs` drives the real
+path: players on websocket connections, the command they would type, the event,
+the package as installed at boot, and `oob()` publishing to NATS. It reads
+what each connection was sent off the NATS subject the connection server
+consumes, up to a probe each watched player sends itself afterwards, so
+"received nothing" is observed rather than timed out. It covers a channel
+member against a non-member, a gagged member, a hidden speaker, a pose,
+`@cemit` and `@cemit/spoof`, a hidden member's connect line (See_All only, and
+not to a member who muted the channel), a page
+to one and to several, a page lock and a HAVEN refusing it, a group page some
+recipients refuse, joining, gagging and leaving, a rename and a deletion, and
+connecting.
+
+`SharpMUSH.Tests/Services/ChannelBroadcastServiceTests.cs` checks the
+``CHANNEL`MESSAGE`` arguments and that an undelivered line raises nothing;
+`SharpMUSH.Tests.BUnit/Services/CommPayloadParserTests.cs` and
+`OobCommFeedTests.cs` cover the client.
+
+## Differences from §7.3
+
+- **No unread counts from the server.** The proposal has `comm.channels`
+  carry them; nothing in the engine knows them, so the client counts.
+- **`to` is empty on a channel line** rather than naming the channel, which is
+  in `channel`.
+- **Added keys:** `viewer` on `comm.channels`, `gagged` on a row, and
+  `style` and `toObjids` on `comm.message` — the first so the client knows
+  whose list and lines these are, the last so a conversation is keyed by
+  identity rather than by names that can change.
+- **Pushed on change and on connect**, where the proposal says "on change":
+  a fresh connection has nothing until then.

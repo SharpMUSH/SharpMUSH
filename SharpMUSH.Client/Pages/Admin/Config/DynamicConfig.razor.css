@@ -1,400 +1,489 @@
-.config-section-page {
-    display: block;
+.config-section {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+	gap: 14px;
+	align-items: start;
 }
 
-.config-section-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.config-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.375rem;
-}
-
-.config-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--text);
-}
-
-.config-desc {
-    margin: 0.375rem 0 0;
-    font-family: var(--font-ui);
-    font-size: 0.8125rem;
-    color: var(--text-dim);
+.config-section-main {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
 }
 
 .config-section-content {
-    padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
-.config-section-page ::deep .save-bar {
-    position: sticky;
-    /* --bottomnav-clearance is 0 except while the fixed touch bottom nav is on screen (shell.css);
-       a container query cannot see that. */
-    bottom: var(--bottomnav-clearance, 0px);
-    margin-top: 1.25rem;
-    padding: 0.875rem 1.125rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    z-index: 10;
+.config-section-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	position: sticky;
+	top: 12px;
 }
 
-.save-bar-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* ── Group: a section label above a card of rows ── */
+.cfg-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	scroll-margin-top: 12px;
 }
 
-.save-bar-info {
-    display: flex;
-    align-items: center;
+.cfg-row {
+	padding: 12px 16px;
 }
 
-.save-bar-actions {
-    display: flex;
-    gap: 0.75rem;
+.cfg-row:not(:first-child) {
+	border-top: 1px solid var(--border-soft);
 }
 
-/* ── Group title above each flat field card ── */
-.config-group-title {
-    font-family: var(--font-ui);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 0.5rem 0.125rem;
+.cfg-row--inline {
+	display: flex;
+	align-items: center;
+	gap: 16px;
 }
 
-/* ── Flat field card ── */
-.config-field-card {
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    overflow: hidden;
+.cfg-row-text {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
-.config-field-row {
-    padding: 1.125rem 1.375rem;
+.cfg-row-name {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text);
 }
 
-.config-field-row:not(:first-child) {
-    border-top: 1px solid var(--border-soft);
+.cfg-row-key {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
 }
 
-.config-field-row--inline {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+.cfg-row-changed {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--warn);
+	background: var(--warn-tint);
+	border-radius: 99px;
+	padding: 1px 7px;
 }
 
-.config-field-label {
-    flex: 1;
-    min-width: 0;
+.cfg-row-help {
+	margin-top: 2px;
+	font-size: 13px;
+	color: var(--text-dim);
 }
 
-.config-field-name {
-    font-family: var(--font-ui);
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 0.1875rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+.cfg-row-error {
+	margin-top: 4px;
+	font-size: 12px;
+	color: var(--link-missing);
 }
 
-.config-field-help {
-    font-family: var(--font-ui);
-    font-size: 0.78125rem;
-    color: var(--text-dim);
+.cfg-row-control {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
 }
 
-.config-field-key {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    color: var(--text-faint);
-    display: block;
-    margin-top: 0.125rem;
+.cfg-row--stacked .cfg-row-text {
+	margin-bottom: 10px;
 }
 
-.config-field-error {
-    font-family: var(--font-ui);
-    font-size: 0.75rem;
-    color: var(--mud-palette-error, #e57373);
-    margin-top: 0.25rem;
+.cfg-row-control--full {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
 }
 
-.config-changed {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--accent);
-    background: rgba(var(--glow), 0.12);
-    border: 1px solid rgba(var(--glow), 0.3);
-    border-radius: 99px;
-    padding: 0.0625rem 0.4375rem;
+/* ── Switch: 44×24; on = accent track + dark knob, off = border track + light knob ── */
+.cfg-switch {
+	width: 44px;
+	height: 24px;
+	flex-shrink: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 12px;
+	background: var(--border);
+	position: relative;
+	cursor: pointer;
+	transition: background var(--motion-pop);
 }
 
-.config-field-control {
-    width: 230px;
-    flex-shrink: 0;
-    display: flex;
-    justify-content: flex-end;
+/* an invisible 44px hit box around the 24px pill: README §9's touch target without a fatter switch */
+.cfg-switch::after {
+	content: "";
+	position: absolute;
+	inset: -10px;
 }
 
-.config-field-row--stacked .config-field-label {
-    margin-bottom: 0.75rem;
+.cfg-switch--on {
+	background: var(--accent);
 }
 
-.config-field-control--full {
-    width: 100%;
-    display: block;
+.cfg-switch:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
-/* ── Toggle pill ── */
-.config-toggle {
-    width: 46px;
-    height: 26px;
-    border-radius: 99px;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    background: var(--surface-2);
-    transition: background 0.15s;
-    margin-left: auto;
-    display: block;
-    padding: 0;
+.cfg-switch:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
-.config-toggle--on {
-    background: var(--accent);
+.cfg-switch-knob {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--switch-knob-off);
+	transition: left var(--motion-pop), background var(--motion-pop);
 }
 
-.config-toggle-knob {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
-    border-radius: 99px;
-    background: #888;
-    transition: left 0.15s, background 0.15s;
+.cfg-switch--on .cfg-switch-knob {
+	left: 23px;
+	background: var(--accent-on);
 }
 
-.config-toggle--on .config-toggle-knob {
-    left: 23px;
-    background: var(--accent-on);
+/* ── Numeric: range in faint mono, then a 112px mono input ── */
+.cfg-range {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--text-faint);
+	white-space: nowrap;
 }
 
-.config-toggle:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.cfg-num,
+.cfg-text {
+	height: 36px;
+	padding: 0 12px;
+	background: var(--surface-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	box-sizing: border-box;
+}
+
+.cfg-num {
+	width: 112px;
+	font-family: var(--font-mono);
+	text-align: right;
+}
+
+.cfg-text {
+	width: 100%;
+	min-width: 0;
+}
+
+.cfg-row--inline .cfg-text {
+	width: 230px;
+}
+
+.cfg-row--inline .cfg-text--char {
+	width: 56px;
+	text-align: center;
+	font-family: var(--font-mono);
+}
+
+.cfg-num:focus-visible,
+.cfg-text:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+	border-color: var(--accent);
+}
+
+.cfg-num::placeholder,
+.cfg-text::placeholder {
+	color: var(--text-faint);
+}
+
+.cfg-num[readonly],
+.cfg-text[readonly] {
+	opacity: 0.6;
 }
 
 /* ── Select pills ── */
-.config-pills {
-    display: flex;
-    gap: 0.375rem;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+.cfg-pills {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+	flex-wrap: wrap;
 }
 
-.config-pill {
-    padding: 0.375rem 0.6875rem;
-    border-radius: var(--radius);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    font-size: 0.75rem;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    transition: all 0.12s;
+.cfg-pill {
+	height: 30px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 15px;
+	background: var(--border);
+	color: var(--text);
+	font: inherit;
+	font-size: 13px;
+	cursor: pointer;
+	transition: background var(--motion-pop);
 }
 
-.config-pill:hover {
-    border-color: rgba(var(--glow), 0.4);
-    color: var(--text);
+.cfg-pill:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
-.config-pill--on {
-    border-color: rgba(var(--glow), 0.4);
-    background: rgba(var(--glow), 0.12);
-    color: var(--accent);
+.cfg-pill--on {
+	background: var(--accent);
+	color: var(--accent-on);
+	font-weight: 700;
 }
 
-/* ── Text / numeric input ── */
-.config-input {
-    width: 100%;
-    padding: 0.5625rem 0.75rem;
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    outline: none;
-    transition: border-color 0.12s;
+/* ── Chips (string list, dictionary values) ── */
+.cfg-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	min-height: 30px;
 }
 
-.config-input:focus {
-    border-color: var(--accent);
+.cfg-empty {
+	font-size: 13px;
+	color: var(--text-faint);
 }
 
-.config-input::placeholder {
-    color: var(--text-faint);
+.cfg-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 26px;
+	padding: 0 4px 0 10px;
+	border-radius: 13px;
+	background: var(--surface-2);
+	color: var(--text);
+	font-family: var(--font-mono);
+	font-size: 12px;
 }
 
-.config-input[readonly] {
-    opacity: 0.6;
+.cfg-chip--changed {
+	color: var(--warn);
+	background: var(--warn-tint);
 }
 
-/* ── Chip row (string list + dictionary values) ── */
-.config-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    align-items: center;
-    min-height: 30px;
-    margin-bottom: 0.5rem;
+.cfg-chip-x {
+	width: 24px;
+	height: 24px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: inherit;
+	font-size: 15px;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0.7;
 }
 
-.config-empty {
-    font-family: var(--font-ui);
-    font-size: 0.78125rem;
-    color: var(--text-faint);
-}
-
-.config-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3125rem;
-    font-family: var(--font-mono);
-    font-size: 0.71875rem;
-    padding: 0.1875rem 0.3125rem 0.1875rem 0.5625rem;
-    border-radius: 99px;
-    background: var(--surface-2);
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-}
-
-.config-chip--changed {
-    border-color: rgba(var(--glow), 0.3);
-    color: var(--accent);
-    background: rgba(var(--glow), 0.10);
-}
-
-.config-chip-x {
-    border: none;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font-size: 0.9375rem;
-    line-height: 1;
-    padding: 0 0.125rem;
-    opacity: 0.7;
-}
-
-.config-chip-x:hover {
-    opacity: 1;
+.cfg-chip-x:hover,
+.cfg-chip-x:focus-visible {
+	opacity: 1;
+	background: var(--border);
 }
 
 /* ── Dictionary editor ── */
-.config-dict {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
+.cfg-dict {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
-.config-dict-entry {
-    background: var(--surface-3);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius);
-    padding: 0.75rem;
+.cfg-dict-entry {
+	background: var(--surface-3);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-row);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 
-.config-dict-entry-head {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.625rem;
+.cfg-dict-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
-.config-icon-btn {
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    cursor: pointer;
+.cfg-icon-btn {
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-row);
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
 }
 
-.config-icon-btn--danger:hover {
-    color: var(--mud-palette-error, #e57373);
-    border-color: rgba(229, 115, 115, 0.5);
+.cfg-icon-btn--danger:hover,
+.cfg-icon-btn--danger:focus-visible {
+	color: var(--link-missing);
+	border-color: var(--link-missing);
 }
 
-.config-add-btn {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.4375rem 0.75rem;
-    border-radius: var(--radius);
-    border: 1px dashed var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    font-size: 0.78125rem;
+.cfg-add {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 12px;
+	border-radius: 18px;
+	border: 1px dashed var(--border);
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: 13px;
+	cursor: pointer;
 }
 
-.config-add-btn:hover {
-    border-color: rgba(var(--glow), 0.4);
-    color: var(--accent);
+.cfg-add:hover,
+.cfg-add:focus-visible {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+
+/* ── Unsaved bar (BottomBar) ── */
+.config-section-main ::deep .cfg-unsaved {
+	bottom: var(--bottomnav-clearance, 0px);
+	z-index: 10;
+}
+
+.cfg-unsaved-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.cfg-unsaved-row ::deep .cfg-unsaved-icon {
+	color: var(--warn);
+}
+
+.cfg-unsaved-text {
+	font-size: 14px;
+	color: var(--text);
+}
+
+.cfg-count {
+	height: 22px;
+	padding: 0 8px;
+	border-radius: 11px;
+	background: var(--warn-tint);
+	color: var(--warn);
+	font-size: 12px;
+	font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+}
+
+.cfg-unsaved-spacer {
+	flex: 1 1 auto;
+}
+
+/* ── In this section ── */
+.cfg-toc-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.cfg-toc {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 28px;
+	padding: 0 8px 0 10px;
+	border-left: 2px solid transparent;
+	color: var(--text-dim);
+	font-size: 13px;
+	text-decoration: none;
+	border-radius: 0 6px 6px 0;
+}
+
+.cfg-toc:hover {
+	color: var(--text);
+	background: var(--surface-2);
+}
+
+.cfg-toc:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.cfg-toc--current {
+	color: var(--accent);
+	border-left-color: var(--accent);
+}
+
+.cfg-toc-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.cfg-toc-count {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+/* README §3: main and aside stay side by side at the medium tier; only narrow stacks them */
+@container page (max-width: 48rem) {
+	.config-section {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.config-section-aside {
+		position: static;
+	}
 }
 
 @container page (max-width: 48rem) {
-    .save-bar-content {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
+	.cfg-row--inline {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
 
-    .save-bar-actions {
-        width: 100%;
-        justify-content: stretch;
-    }
+	.cfg-row-control {
+		justify-content: flex-start;
+	}
 
-    .save-bar-actions > * {
-        flex: 1;
-    }
+	.cfg-row--inline .cfg-text {
+		width: 100%;
+	}
 
-    /* Inline field rows stack: label above a full-width control. */
-    .config-field-row--inline {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
-    .config-field-row--inline .config-field-control {
-        width: 100%;
-        justify-content: flex-start;
-    }
+	.cfg-unsaved-row ::deep .kit-capsule,
+	.cfg-unsaved-spacer {
+		flex-basis: 100%;
+	}
 }

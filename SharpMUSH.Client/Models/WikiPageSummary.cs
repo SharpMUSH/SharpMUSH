@@ -29,4 +29,10 @@ public record WikiPageSummary(
 
 	/// <summary>True when this row's title is a fallback rather than the requested language.</summary>
 	public bool IsFallback { get; init; }
+
+	/// <summary>The first image in the page's Markdown (a row thumbnail or a category cover); null when there is none.</summary>
+	public string? Image { get; init; }
+
+	/// <summary>The name of the player who last edited the page; null when the server could not name one.</summary>
+	public string? LastEditedBy { get; init; }
 }

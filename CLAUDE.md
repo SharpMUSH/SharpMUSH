@@ -163,7 +163,7 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 
 - `IWidgetRegistry` / `ILayoutService` — widget system; widgets registered at startup in `Program.cs`
 - `ApplicationCatalog` — the Dynamic Applications snapshot; loads alongside the first render, so a reader that needs the whole list awaits `Loaded`
-- `IThemeService` — built-in MudTheme presets, the choice persisted in localStorage
+- `IThemeService` — built-in MudTheme accent presets, the choice persisted in localStorage (the CSS variables in `wwwroot/css/tokens.css` are static; see `docs/design/ui-patterns.md` §13)
 - `WikiService` / `SceneService` — HTTP clients for the server's wiki and scene APIs (scene writes go through game commands)
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
 - `AccountAuthService` — account-session token stored in WASM memory; mints per-character OTTs for the terminal

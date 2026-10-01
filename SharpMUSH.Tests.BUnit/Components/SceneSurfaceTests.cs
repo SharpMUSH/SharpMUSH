@@ -87,6 +87,9 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// </summary>
 	public HashSet<string> Failing { get; } = [];
 
+	/// <summary>Paths whose request never gets an answer: the transport throws, as a dropped connection does.</summary>
+	public HashSet<string> Unreachable { get; } = [];
+
 	public const string StoreDown = "The scene store did not answer.";
 
 	private const string SceneListWithNewScene = """
@@ -105,6 +108,10 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
+		if (Unreachable.Contains(path))
+		{
+			throw new HttpRequestException("Connection refused.");
+		}
 		if (Failing.Contains(path))
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
@@ -238,6 +245,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+			// The live view's story reads the directory for portraits; this API answers it 404, which
+			// leaves initials.
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(),
+				Microsoft.Extensions.Logging.Abstractions.NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
 			.AddSingleton(_terminal)
@@ -524,7 +535,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 			Tags: ["greeting"],
 			Source: "pose",
 			Location: "The Tavern",
-			Timestamp: 1700000600000)));
+			Timestamp: 1700000600000,
+			ActorObjId: "#12:1700000000000")));
 
 		cut.WaitForAssertion(() =>
 		{
@@ -753,13 +765,48 @@ public class SceneSurfaceTests : TrackingBunitContext
 			Tags: [],
 			Source: "pose",
 			Location: "The Tavern",
-			Timestamp: 1700000700000)));
+			Timestamp: 1700000700000,
+			ActorObjId: null)));
 
 		cut.WaitForAssertion(() => cut.Find(".scene-poses-error"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Markup).Contains("draws a blade");
 		await Assert.That(cut.Markup).Contains("says calm down");
 		await Assert.That(cut.Find(".scene-poses-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+	}
+
+	/// <summary>
+	/// A reload whose request throws in the transport (a dropped connection, not a 5xx) is a failed read
+	/// too: the reload runs unobserved from the hub event, so nothing may escape it, and the log stays.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_AReloadThatThrowsAfterAMove_KeepsThePosesOnScreen()
+	{
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("draws a blade"))
+				throw new InvalidOperationException("poses not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		_api.Unreachable.Add("/api/scenes/S1/poses");
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage(
+			SceneId: "S1",
+			EventType: "move",
+			ActorName: "Wizard",
+			PoseId: "P2",
+			Content: string.Empty,
+			Markup: string.Empty,
+			Tags: [],
+			Source: "pose",
+			Location: "The Tavern",
+			Timestamp: 1700000700000,
+			ActorObjId: null)));
+
+		cut.WaitForAssertion(() => cut.Find(".scene-poses-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).Contains("draws a blade");
+		await Assert.That(cut.Markup).Contains("says calm down");
 	}
 
 	/// <summary>An archive that did not answer is not an empty archive.</summary>

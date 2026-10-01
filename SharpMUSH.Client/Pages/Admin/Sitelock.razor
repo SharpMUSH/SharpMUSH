@@ -10,16 +10,12 @@
 <PageTitle>@Loc["SitelockRules"] - @Loc["Configuration"]</PageTitle>
 
 <div class="config-section-page">
-    <div class="config-section-header">
-        <div>
-            <div class="config-kicker">Admin · server settings</div>
-            <h1 class="config-title">@Loc["SitelockRules"]</h1>
-            <p class="config-desc">
-                @Loc["SitelockDescription"]
-                <code>!connect</code>, <code>!create</code>, <code>!guest</code>, <code>register</code>, <code>suspect</code>
-            </p>
-        </div>
-    </div>
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["SitelockRules"]">
+        <DescriptionContent>
+            @Loc["SitelockDescription"]
+            <code>!connect</code>, <code>!create</code>, <code>!guest</code>, <code>register</code>, <code>suspect</code>
+        </DescriptionContent>
+    </PlainPageHeader>
 
     <AdminKeyValueList Text="@Text"
                        Load="@(() => SitelockService.GetSitelockRulesAsync().AsEntriesAsync())"

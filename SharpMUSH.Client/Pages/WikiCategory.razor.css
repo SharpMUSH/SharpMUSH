@@ -1,0 +1,23 @@
+.wiki-cat {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.wiki-cat-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+@container page (max-width: 64rem) {
+	.wiki-cat-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@container page (max-width: 48rem) {
+	.wiki-cat-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

@@ -1,0 +1,92 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §5.6 Here: who and what is in the room, from room.contents. Characters as portrait tiles (the
+   first name, and the status word when it is not "active"), then objects as square thumbnails. The
+   viewer is not listed (board 01's "Here · 4" beside "5 here"). A character with a profile opens the
+   character sheet; anything else runs its cmd. *@
+@if (Bare)
+{
+    @Body
+}
+else
+{
+    <KitCard Aside="true" Title="@($"{Loc["TermBrowserHere"]} · {_listed.Count}")" Class="here-card">
+        @Body
+    </KitCard>
+}
+
+@code {
+    /// <summary>Without the card: the mobile Room sheet, whose tabs carry the title.</summary>
+    [Parameter] public bool Bare { get; set; }
+
+    private RenderFragment Body => __builder =>
+    {
+    @if (_listed.Count == 0)
+    {
+        <div class="here-empty">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</div>
+    }
+    else
+    {
+        <div class="here-grid">
+            @foreach (var occupant in _listed)
+            {
+                var o = occupant;
+                @if (IsThing(o))
+                {
+                    <button type="button" class="here-thing" aria-label="@o.Name" disabled="@(string.IsNullOrWhiteSpace(o.Cmd))"
+                            @onclick="() => OnCommand.InvokeAsync(o.Cmd!)">
+                        @if (ImageUrlPolicy.IsRenderable(o.Image?.Url))
+                        {
+                            <img class="here-thing-img" src="@ApiUrl.Resolve(o.Image!.Url)" alt="@(o.Image.Alt ?? string.Empty)" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="here-thing-img here-thing-fallback" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" /></span>
+                        }
+                        <span class="here-thing-label">@o.Name</span>
+                    </button>
+                }
+                else
+                {
+                    <PortraitTile Name="@o.Name" Label="@FirstName(o.Name)" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
+                                  Status="@StatusOf(o)" OnClick="() => Activate(o)" />
+                }
+            }
+        </div>
+    }
+    };
+
+    /// <summary>The latest <c>room.contents</c> rows.</summary>
+    [Parameter] public IReadOnlyList<RoomOccupant> Occupants { get; set; } = [];
+
+    /// <summary>A character with a profile was chosen: Play opens the sheet.</summary>
+    [Parameter] public EventCallback<RoomOccupant> OnCharacter { get; set; }
+
+    /// <summary>A row's cmd to send to the game.</summary>
+    [Parameter] public EventCallback<string> OnCommand { get; set; }
+
+    private IReadOnlyList<RoomOccupant> _listed = [];
+
+    protected override void OnParametersSet() =>
+        _listed = Occupants
+            .Where(o => !o.You)
+            .OrderBy(o => IsThing(o) ? 1 : 0)
+            .ToList();
+
+    /// <summary>Anything the payload says is not a player. A v1 row says nothing and is drawn as a person.</summary>
+    private static bool IsThing(RoomOccupant o) => o.Type is { } type && !string.Equals(type, "player", StringComparison.OrdinalIgnoreCase);
+
+    private static string? StatusOf(RoomOccupant o) =>
+        string.IsNullOrWhiteSpace(o.Status) || string.Equals(o.Status, "active", StringComparison.OrdinalIgnoreCase) ? null : o.Status;
+
+    private string FirstName(string name) =>
+        string.IsNullOrWhiteSpace(name) ? Loc["RolUntitled"]
+        : name.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var first, ..] ? first : name;
+
+    private Task Activate(RoomOccupant o)
+    {
+        if (o.Profile && OnCharacter.HasDelegate) return OnCharacter.InvokeAsync(o);
+        return string.IsNullOrWhiteSpace(o.Cmd) ? Task.CompletedTask : OnCommand.InvokeAsync(o.Cmd);
+    }
+}

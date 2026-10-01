@@ -2,7 +2,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Common;
@@ -49,6 +51,28 @@ public static class SceneLocate
 	/// </summary>
 	public static async ValueTask<string> PlayerOrSelf(IMUSHCodeParser parser, string name)
 		=> await ResolveAsync(parser, name, PlayerFlags) ?? name;
+
+	/// <summary>
+	/// Expands a dbref into its objid (<c>#13:1788365739971</c>), the spelling the rest of the engine uses
+	/// for a reference that is stored or compared, or null when it is empty, unparseable or names nothing.
+	/// </summary>
+	public static async ValueTask<string?> ObjIdAsync(IMUSHCodeParser parser, string? dbref)
+	{
+		if (string.IsNullOrWhiteSpace(dbref) || !DBRef.TryParse(dbref, out var parsed) || parsed is not { } reference)
+			return null;
+
+		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+		return await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject node
+			? node.Object().DBRef.ToString()
+			: null;
+	}
+
+	/// <summary>
+	/// <see cref="ObjIdAsync"/>, returning the input unchanged when it is empty or names nothing — a
+	/// missing reference is not an error to report where this is used.
+	/// </summary>
+	public static async ValueTask<string> ObjIdOrSelfAsync(IMUSHCodeParser parser, string? dbref)
+		=> await ObjIdAsync(parser, dbref) ?? dbref ?? string.Empty;
 
 	private static async ValueTask<string?> ResolveAsync(IMUSHCodeParser parser, string name, LocateFlags flags)
 	{

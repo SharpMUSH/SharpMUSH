@@ -1,0 +1,12 @@
+.kit-bottom-bar {
+	position: sticky;
+	bottom: 0;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	box-sizing: border-box;
+}

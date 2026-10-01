@@ -534,7 +534,9 @@ public partial class PackageInstallService
 			Sub(spec.NavPlacement),
 			zones.Count == 0 ? null : zones,
 			spec.Order,
-			packageId);
+			packageId,
+			Scope: Sub(spec.Scope),
+			OobPackage: Sub(spec.OobPackage));
 
 		return application;
 	}

@@ -113,7 +113,8 @@ public static class ScenePoseHandlers
 	{
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var result = await sceneService.UndoPoseAsync(poseId);
-		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} undone.");
+		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} undone.",
+			parser, "edit");
 	}
 
 	public static async ValueTask<MString> Redo(
@@ -125,7 +126,8 @@ public static class ScenePoseHandlers
 	{
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var result = await sceneService.RedoPoseAsync(poseId);
-		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} redone.");
+		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} redone.",
+			parser, "edit");
 	}
 
 	public static async ValueTask<MString> Move(

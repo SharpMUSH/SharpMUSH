@@ -1,0 +1,23 @@
+@* D1 §4.7 pill on images: 26px tall, radius 13, glass, 12px text, optional 7px status dot.
+   "In a scene · Salt Market at Dusk", "Idle 1m", "#312". *@
+<span class="kit-pill @(Tag ? "kit-pill--tag" : null) @(Warn ? "kit-pill--warn" : null) @Class">
+    @if (Dot is not null)
+    {
+        <span class="kit-pill-dot" style="@($"background:{Dot};")" aria-hidden="true"></span>
+    }
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>CSS colour of the status dot; null renders no dot.</summary>
+    [Parameter] public string? Dot { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The small mono tag on a list row or tile ("draft", "locked"): 18px, no glass.</summary>
+    [Parameter] public bool Tag { get; set; }
+
+    /// <summary>Warn tint (a draft, something needing attention).</summary>
+    [Parameter] public bool Warn { get; set; }
+}

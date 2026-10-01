@@ -160,6 +160,8 @@ public static class PackageManifestWriter
 		AppendOptional(yaml, "submit_route", application.SubmitRoute, "  ");
 		yaml.Append("  minimum_role: ").AppendLine(Scalar(application.MinimumRole));
 		AppendOptional(yaml, "nav_placement", application.NavPlacement, "  ");
+		AppendOptional(yaml, "scope", application.Scope, "  ");
+		AppendOptional(yaml, "oob_package", application.OobPackage, "  ");
 
 		if (application.Zones.Count > 0)
 		{

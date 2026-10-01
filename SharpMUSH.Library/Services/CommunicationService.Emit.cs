@@ -11,25 +11,43 @@ namespace SharpMUSH.Library.Services;
 public partial class CommunicationService
 {
 	public async ValueTask<CallState> SpeechAsync(IMUSHCodeParser parser, MString message, string token)
+		=> (await SpeakAsync(parser, message, token, frame: null)).Result;
+
+	public ValueTask<SpeechOutcome> FramedSpeechAsync(IMUSHCodeParser parser, MString message, string token,
+		Func<MString, MString, MString> frame)
+		=> SpeakAsync(parser, message, token, frame);
+
+	/// <summary>SAY/POSE/SEMIPOSE, or a caller's own <paramref name="frame"/> around the same name and words.</summary>
+	private async ValueTask<SpeechOutcome> SpeakAsync(IMUSHCodeParser parser, MString message, string token,
+		Func<MString, MString, MString>? frame)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var location = await executor.Where();
-		if (!await MayEmitInAsync(parser, executor, executor, location, here: true)) return CallState.Empty;
+		if (!await MayEmitInAsync(parser, executor, executor, location, here: true))
+			return new SpeechOutcome(false, CallState.Empty, MString.Empty, MString.Empty);
 		var transformed = speechService is null ? new CallState(message) : await speechService.Value.TransformAsync(parser, executor, message, token);
-		if (transformed.HadErrors) return transformed;
+		if (transformed.HadErrors) return new SpeechOutcome(false, transformed, MString.Empty, MString.Empty);
 		message = transformed.Message!;
 		var name = speechService is null ? MString.Plain(executor.Object().Name) : await speechService.Value.Names.FormatAsync(executor, NameContext.Speech);
 		var type = token == "\"" ? INotifyService.NotificationType.Say : token == ":" ? INotifyService.NotificationType.Pose : INotifyService.NotificationType.SemiPose;
-		var audience = token == "\"" ? MString.Concat([name, MString.Plain(" says, \""), message, MString.Plain("\"")])
-			: token == ":" ? MString.Concat([name, MString.Space, message]) : MString.Concat(name, message);
 		HashSet<DBRef>? omitted = null;
-		if (token == "\"")
+		MString audience;
+		if (frame is not null)
 		{
-			await notifyService.Notify(executor, MString.Concat([MString.Plain("You say, \""), message, MString.Plain("\"")]), executor, type);
-			omitted = [executor.Object().DBRef];
+			audience = frame(name, message);
+		}
+		else
+		{
+			audience = token == "\"" ? MString.Concat([name, MString.Plain(" says, \""), message, MString.Plain("\"")])
+				: token == ":" ? MString.Concat([name, MString.Space, message]) : MString.Concat(name, message);
+			if (token == "\"")
+			{
+				await notifyService.Notify(executor, MString.Concat([MString.Plain("You say, \""), message, MString.Plain("\"")]), executor, type);
+				omitted = [executor.Object().DBRef];
+			}
 		}
 		await EmitLocationAsync(executor, executor, location, audience, type, omitted);
-		return transformed;
+		return new SpeechOutcome(true, transformed, name, message);
 	}
 
 	public async ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request)

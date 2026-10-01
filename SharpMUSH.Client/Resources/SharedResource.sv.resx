@@ -3868,7 +3868,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Senaste wikiaktiviteten</value>
+    <value>Nyligen ändrade</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4564,5 +4564,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Konverteringen kunde inte avbrytas: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimera banderoll</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Visa banderoll</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# oläst} other {# olästa}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# sida} other {# sidor}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wikins startsida</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Senaste ändringar</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Ny sida</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Sidtitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Sök i wikin</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De senaste redigeringarna i wikin, nyaste först.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Inga sidor i den här kategorin ännu.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>utkast</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>låst</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>just nu</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minut sedan} other {# minuter sedan}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# timme sedan} other {# timmar sedan}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag sedan} other {# dagar sedan}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Världswiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Allt du behöver för att spela</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Bakgrund, regler och nybörjarguider, redigerade av personal och spelare. Inget konto krävs för att läsa.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Alla # sida} other {Alla # sidor}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Inga wikisidor ännu.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Inga sidor matchar ”{0}”.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Live nu} one {Live nu · #} other {Live nu · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Senast redigerad av {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>redigerad {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Omnämnda · #} other {Omnämnda · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Mer i {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Alla #} other {Alla #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Även på</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Översikt</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Huvudnamnrymd</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# rollfigur} other {# rollfigurer}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Alla # online} other {Alla # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Hitta en rollfigur</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Online nu</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Ingen är online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>du</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Dina rollfigurer</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Skapa en rollfigur</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Alla rollfigurer</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Nyaste</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Rollfigurskategorier</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Ingen rollfigur heter {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>I en scen · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Hela bilden</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Om {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografi</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikisida · redigerad {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Bildvisare</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} av {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Stäng</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Föregående bild</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Nästa bild</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Bilden kan inte visas.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galleri · #} other {Galleri · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Visa alla</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Porträtt</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Använd som banderoll</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Ta bort banderoll</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Banderollen kunde inte ändras: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Senaste scener</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Inga scener ännu.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>pågår nu</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Spelar ofta med</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Inga gemensamma scener ännu.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Senaste scener</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Spelar ofta med</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Lägg till bild</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Rollfigurens profil kan inte läsas just nu.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Fäll ihop sidopanelen {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Fäll ut sidopanelen {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Avsnitt</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Bygga och hantera</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bygg- och personalverktyg</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Sök och gå till…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Konto: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Appar</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Språk</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Avsnittsmeny</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Gå till en sida, eller sök…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Sök i wikin efter ”{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Hitta en rollfigur som heter ”{0}”</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Ansluten som {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>I scen</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Meddelanden</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# här}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# utgång} other {# utgångar}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beskrivning</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Berättelse</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vy</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scen · loggas i scenarkivet</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Full utdata · kanaler och meddelanden ingår</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# där}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Låst</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Stängd</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Lämnar scenen</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Gå</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Titta</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Stanna</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Tryck {0} för att gå</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Hela bilden</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>I den här scenen</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inaktiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galleri</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Visa alla</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Rollformulär: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Säg</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Skriv din pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Säg något…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Tala utanför rollen…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Skriv ett kommando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Meddelandetyp</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scen</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Rum</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Spelavsnitt</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Ingen annan är här.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layoutområde</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layoutområde (valfritt)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Sidan som widgeten hör till, t.ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-paket (valfritt)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Livedata som spelet skickar, t.ex. weather.now; ersätter data-URL:en</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>I går</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nytt</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Meddelande till {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privata meddelanden</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Inget här än.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Tillbaka till scenen</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spela</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Spelsidans högra kolumn: vem som är här, utgångarna och spelets paneler.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Här</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Utgångar</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Appar</value>
   </data>
 </root>

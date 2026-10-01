@@ -1,7 +1,32 @@
 .wiki-body-widget {
-    container-type: inline-size;
+	container-type: inline-size;
 }
 
-::deep .mud-paper {
-    padding: clamp(0.875rem, 6cqw, 1.25rem);
+.wiki-body-widget ::deep .wiki-body-card .kit-card-body {
+	padding: clamp(0.875rem, 6cqw, 1.25rem) clamp(0.875rem, 6cqw, 1.5rem);
+}
+
+.wiki-body-widget ::deep .wiki-article-body {
+	max-width: 640px;
+	font-size: 15px;
+	line-height: 1.7;
+}
+
+.wiki-body-history {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 28px;
+	padding: 0 8px;
+	border-radius: var(--radius-row);
+	font-size: 13px;
+	color: var(--text-dim);
+	text-decoration: none;
+}
+
+.wiki-body-history:hover,
+.wiki-body-history:focus-visible {
+	color: var(--text);
+	background: var(--surface-2);
+	outline: none;
 }
