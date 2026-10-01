@@ -40,7 +40,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <c>text</c> goes through the game's installed <c>FN`COMM`TEXT</c> as the push's does
 /// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
 ///
-/// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, off by
+/// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, on by
 /// default): the character's own copies only. Each route reads the session's character's log and takes no
 /// one else's name, so nobody, staff included, can read another character's pages here. With the option
 /// off they answer with nothing and <c>logging: false</c>, so the portal can say why there is no

@@ -39,13 +39,15 @@ public class AttributeVisibleDepthTests
 		return obj;
 	}
 
+	// Bounds the reads, not the fixture: a depth walk that never stops fails here, a slow runner does not.
+	private static readonly TimeSpan ReadBound = TimeSpan.FromSeconds(15);
+
 	[Test]
-	[Timeout(15_000)]
-	public async ValueTask GetVisibleAttributesAsync_DescendsToDepth_LevelBeforeSubtree(CancellationToken ct)
+	public async ValueTask GetVisibleAttributesAsync_DescendsToDepth_LevelBeforeSubtree()
 	{
 		var obj = await CreateTreeAsync("VisibleDepth");
 
-		var full = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 3);
+		var full = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 3).AsTask().WaitAsync(ReadBound);
 		await Assert.That(full.IsAttribute).IsTrue();
 
 		var names = full.Expect<SharpAttribute[]>().Select(a => a.LongName).ToList();
@@ -55,29 +57,38 @@ public class AttributeVisibleDepthTests
 		await Assert.That(names.IndexOf("TREE`BRANCH")).IsGreaterThan(names.IndexOf("TREE"));
 		await Assert.That(names.IndexOf("TREE`BRANCH`LEAF")).IsGreaterThan(names.IndexOf("TREE`BRANCH"));
 
-		var shallow = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 2);
+		var shallow = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 2).AsTask().WaitAsync(ReadBound);
 		var shallowNames = shallow.Expect<SharpAttribute[]>().Select(a => a.LongName).ToList();
 		await Assert.That(shallowNames).Contains("TREE`BRANCH");
 		await Assert.That(shallowNames).DoesNotContain("TREE`BRANCH`LEAF");
 	}
 
 	[Test]
-	[Timeout(15_000)]
-	public async ValueTask LazilyGetVisibleAttributesAsync_DeeperThanOne_TerminatesAtDepth(CancellationToken ct)
+	public async ValueTask LazilyGetVisibleAttributesAsync_DeeperThanOne_TerminatesAtDepth()
 	{
 		var obj = await CreateTreeAsync("LazyVisibleDepth");
 
 		var full = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 3);
 		await Assert.That(full.IsAttribute).IsTrue();
 
-		var names = await full.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(ct);
+		var names = await ReadNamesAsync(full.Expect<IAsyncEnumerable<LazySharpAttribute>>());
 		await Assert.That(names).Contains("TREE");
 		await Assert.That(names).Contains("TREE`BRANCH");
 		await Assert.That(names).Contains("TREE`BRANCH`LEAF");
 
 		var shallow = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 2);
-		var shallowNames = await shallow.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(ct);
+		var shallowNames = await ReadNamesAsync(shallow.Expect<IAsyncEnumerable<LazySharpAttribute>>());
 		await Assert.That(shallowNames).Contains("TREE`BRANCH");
 		await Assert.That(shallowNames).DoesNotContain("TREE`BRANCH`LEAF");
+	}
+
+	/// <summary>
+	/// Enumerates under a deadline of its own, started here rather than before the fixture, and cancels
+	/// the walk when it runs out so one that never ends does not keep running after the test.
+	/// </summary>
+	private static async Task<List<string>> ReadNamesAsync(IAsyncEnumerable<LazySharpAttribute> attributes)
+	{
+		using var deadline = new CancellationTokenSource(ReadBound);
+		return await attributes.Select(a => a.LongName).ToListAsync(deadline.Token).AsTask().WaitAsync(deadline.Token);
 	}
 }

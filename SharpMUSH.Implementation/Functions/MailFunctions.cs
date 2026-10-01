@@ -88,27 +88,34 @@ public partial class Functions
 			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText());
 		}
 
-		if (!await executor.IsWizard())
-		{
-			return PlayerMessageResult.FromError(ErrorMessages.Returns.PermissionDenied);
-		}
-
 		var playerArg = args["0"].Message!.ToPlainText()!;
 		return await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference) switch
 		{
-			AnySharpObject and SharpPlayer player => PlayerMessageResult.Success(player, args["1"].Message!.ToPlainText()),
+			AnySharpObject and SharpPlayer player => await CanReadMailOf(executor, player)
+				? PlayerMessageResult.Success(player, args["1"].Message!.ToPlainText())
+				: await RefuseMailFetch(executor, ErrorMessages.Returns.Nothing),
 			AnySharpObject or None => PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer),
 			Error<string> error => PlayerMessageResult.FromError(error.Value)
 		};
 	}
 
 	/// <summary>
-	/// Helper to check if executor can view another player's mail (must be wizard)
+	/// Whether <paramref name="executor"/> may read <paramref name="target"/>'s mailbox. PennMUSH asks
+	/// <c>controls(executor, player)</c> once the player is matched (<c>src/extmail.c</c> fun_mail,
+	/// fun_maillist, mailfun_fetch), so a player may always read their own.
 	/// </summary>
-	private async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
+	private ValueTask<bool> CanReadMailOf(AnySharpObject executor, AnySharpObject target)
+		=> PermissionService.Controls(executor, target);
+
+	/// <summary>
+	/// <c>mailfun_fetch</c> refusing a mailbox the caller does not control: it tells them, and the
+	/// function returns what it returns for any message it could not fetch.
+	/// </summary>
+	private async ValueTask<PlayerMessageResult> RefuseMailFetch(AnySharpObject executor, string failure)
 	{
-		return await executor.IsWizard();
+		await NotifyService.Notify(executor, ErrorMessages.Notifications.MailFetchPermissionDenied, executor);
+		return PlayerMessageResult.FromError(failure);
 	}
 
 	/// <summary>
@@ -148,11 +155,6 @@ public partial class Functions
 
 		if (args.Count == 1 && !isMsgNumber)
 		{
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 				async target =>
@@ -160,6 +162,11 @@ public partial class Functions
 					if (target is not SharpPlayer mailbox)
 					{
 						return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+					}
+
+					if (!await CanReadMailOf(executor, target))
+					{
+						return new CallState(ErrorMessages.Returns.PermissionDenied);
 					}
 
 					var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
@@ -186,11 +193,6 @@ public partial class Functions
 
 		var arg1 = args["1"].Message!.ToPlainText();
 
-		if (!await CanViewOtherPlayerMail(executor))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 			async target =>
@@ -198,6 +200,12 @@ public partial class Functions
 				if (target is not SharpPlayer)
 				{
 					return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+				}
+
+				if (!await CanReadMailOf(executor, target))
+				{
+					await NotifyService.Notify(executor, ErrorMessages.Notifications.MailFetchPermissionDenied, executor);
+					return new CallState(ErrorMessages.Returns.InvalidMessageOrPlayer);
 				}
 
 				var (folder, messageIndex) = await ParseMessageSpec(parser, target, arg1);
@@ -250,11 +258,6 @@ public partial class Functions
 		}
 		else if (args.Count == 2)
 		{
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
 			var playerArg = args["0"].Message!.ToPlainText()!;
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
@@ -262,6 +265,11 @@ public partial class Functions
 			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+			}
+
+			if (!await CanReadMailOf(executor, located))
+			{
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			targetPlayer = located;

@@ -206,6 +206,8 @@ public static partial class ErrorMessages
 		public const string NoMatchingColorName = "#-1 NO MATCHING COLOR NAME";
 		public const string NoQuerySpecified = "#-1 NO QUERY SPECIFIED";
 		public const string NoSuchMail = "#-1 NO SUCH MAIL";
+		/// <summary>PennMUSH <c>fun_mail</c> (<c>src/extmail.c:2144</c>) when <c>mailfun_fetch</c> found nothing to return.</summary>
+		public const string InvalidMessageOrPlayer = "#-1 INVALID MESSAGE OR PLAYER";
 		public const string NoSuchOption = "#-1 NO SUCH OPTION";
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		public const string NoSuchPid = "#-1 NO SUCH PID";

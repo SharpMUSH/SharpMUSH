@@ -224,7 +224,7 @@ of a missing `v` and of any malformed member):
   and its time). A marker never moves back. The endpoints act as the session's
   acting character, and a feed whose viewer is someone else uses none of it.
 - When the game keeps a page log (the `page_log` option, a SharpMUSH
-  extension, off by default), the feed also lists the character's page
+  extension, on by default), the feed also lists the character's page
   conversations from it (`GET api/comm/conversations`, the latest 100), so a reload keeps
   them, and pulls those whose last page is past the conversation's marker, so
   their unread counts survive too. Opening a conversation pulls its pages

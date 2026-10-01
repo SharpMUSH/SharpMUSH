@@ -32,19 +32,21 @@ public class SpeechCommandParityTests
 	private TestIsolationHelpers.TestPlayer _listener = null!;
 	private string _speakerName = null!;
 	private string _room = null!;
+	private string _roomName = null!;
 
 	[Before(Test)]
 	public async Task PutTwoPlayersInOneRoom()
 	{
-		_speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "Speaker");
-		_listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "Listener");
-
-		var dig = await God($"@dig SpeechParity{_speaker.DbRef.Number}");
+		// Both are created in the room rather than teleported there: a move's look and arrival notices are
+		// queued, and could otherwise land among what a test counts.
+		_roomName = TestIsolationHelpers.GenerateUniqueName("SpeechParity");
+		var dig = await God($"@dig {_roomName}");
 		_room = dig.Message!.ToPlainText().Trim();
-		await God($"@tel #{_speaker.DbRef.Number}={_room}");
-		await God($"@tel #{_listener.DbRef.Number}={_room}");
+		var room = DBRef.Parse(_room);
+		_speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Speaker", room);
+		_listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Listener", room);
 
 		_speakerName = (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(_speaker.DbRef)))
 			.Expect<AnySharpObject>().Object().Name;
@@ -468,7 +470,7 @@ public class SpeechCommandParityTests
 		{
 			Limit = options.Limit with { WhisperLoudness = 101 }
 		});
-		var roomName = $"SpeechParity{_speaker.DbRef.Number}";
+		var roomName = _roomName;
 		var (bystander, listenerName) = (await Bystander(), await NameOf(_listener.DbRef));
 		try
 		{

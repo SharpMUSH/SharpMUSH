@@ -70,7 +70,7 @@ public record ChatOptions(
 		Max = 500)]
 	uint ChannelTitleLength,
 
-	// SharpMUSH extension: PennMUSH keeps no page history. Off by default; see help page log.
+	// SharpMUSH extension: PennMUSH keeps no page history. On by default, so a game can turn it off; see help page log.
 	[property: SharpConfig(
 		Name = "page_log",
 		Category = "Chat",

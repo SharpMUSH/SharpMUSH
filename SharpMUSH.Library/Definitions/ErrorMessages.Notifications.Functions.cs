@@ -7,6 +7,8 @@ public static partial class ErrorMessages
 	public static partial class Notifications
 	{
 		public const string FunctionLibraryUnavailable = "Function library unavailable.";
+		/// <summary>PennMUSH <c>mailfun_fetch</c> (<c>src/extmail.c:2174</c>), unpunctuated, for a mailbox the caller does not control.</summary>
+		public const string MailFetchPermissionDenied = "Permission denied";
 		public const string FunctionGlobalUserDefinedHeader = "Global user-defined functions:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionUserDefinedCountFormat = "  User-defined: {0}";
