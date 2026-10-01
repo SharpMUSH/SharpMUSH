@@ -1,0 +1,16 @@
+@* D1 §4.11 message-type chips: 30px, radius 15, the selected one in solid accent. A radiogroup,
+   because exactly one is ever chosen. *@
+<div class="kit-chips" role="radiogroup" aria-label="@AriaLabel">
+    @foreach (var (key, label) in Items)
+    {
+        var on = key == Selected;
+        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" class="kit-chip @(on ? "kit-chip--on" : null)" @onclick="@(() => SelectedChanged.InvokeAsync(key))">@label</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<(string Key, string Label)> Items { get; set; } = [];
+    [Parameter] public string Selected { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedChanged { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+}

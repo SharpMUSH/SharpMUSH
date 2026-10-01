@@ -1,0 +1,59 @@
+/* D1 · Commons Dark — token additions for wwwroot/css/tokens.css (layer `tokens`).
+   Merge these into the existing :root block. Everything already in tokens.css stays as it is,
+   except --text-faint, which changes for contrast (see README §2).
+   No !important (ui-patterns.md §14); no hard-coded accent: derive from --accent / --glow. */
+
+:root {
+	/* ── changed ── */
+	--text-faint: #7d8790;          /* was #5f6870 (3.38:1 on --bg); now 5.24 / 4.86 / 4.52 on bg / surface / surface-2 */
+
+	/* ── surfaces ── */
+	--rail-bg: #0a0b0c;             /* icon rail, darker than --surface-3 (page sidebar) */
+
+	/* ── text roles ── */
+	--text-on-image: #d2d8dd;       /* secondary lines over banner images (with the scrim below) */
+	--link-missing: #ff8a8a;        /* wiki redlinks, 1px dashed underline; 7.84:1 on --surface */
+
+	/* ── status ── */
+	--warn: #ffb454;                /* "changed" badge, unsaved bar icon; 10.09:1 on --surface */
+	--warn-tint: rgba(255, 180, 84, 0.14);
+	--unread-alert: #ff8a8a;        /* rail mail badge fill (text uses --bg) */
+
+	/* ── OOC band (Play story) ── */
+	--ooc-band-bg: #2e2748;         /* --text on it: 11.89:1 */
+	--ooc-band-border: #6a5aa3;
+	--ooc-icon-bg: #4a3d78;
+	--ooc-icon-fg: #d6c9ff;         /* 6.12:1 on --ooc-icon-bg */
+
+	/* ── frame ── */
+	--rail-w: 72px;
+	--side-w: 232px;                /* same as today's expanded sidebar */
+	--side-strip-w: 62px;           /* same as today's collapsed sidebar (boards draw 64) */
+	--aside-w: 196px;
+	--main-pad: 16px 12px 16px 20px;
+
+	/* ── radii ── */
+	--radius-card: 16px;            /* cards, banners, bottom bar */
+	--radius-row: 10px;             /* sidebar rows, tiles */
+	--radius-tile: 10px;
+	--radius-portrait: 12px;        /* story portraits, OOC tile (rail items and the minimised banner use the existing --radius-lg, 14px) */
+
+	/* ── glass banner (README §4.3) ── */
+	--glass-bg: rgba(14, 15, 17, 0.30);
+	--glass-pill-bg: rgba(14, 15, 17, 0.45);
+	--glass-filter: blur(16px) saturate(180%);
+	--glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+	--on-image-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+	--scrim: linear-gradient(to top, rgba(10, 11, 13, 0.72) 0%, rgba(10, 11, 13, 0.64) 30%, rgba(10, 11, 13, 0.58) 50%, rgba(10, 11, 13, 0.2) 64%, rgba(10, 11, 13, 0) 74%);
+	--scrim-open: linear-gradient(to top, rgba(10, 11, 13, 0.8) 0%, rgba(10, 11, 13, 0.68) 40%, rgba(10, 11, 13, 0.58) 72%, rgba(10, 11, 13, 0.2) 84%, rgba(10, 11, 13, 0) 92%);
+	--blur-mask-soft: linear-gradient(to top, black 0%, black 35%, transparent 60%);   /* with blur(2px)  */
+	--blur-mask-mid: linear-gradient(to top, black 0%, black 20%, transparent 45%);    /* with blur(6px)  */
+	--blur-mask-deep: linear-gradient(to top, black 0%, transparent 30%);              /* with blur(12px) */
+	--blur-mask-soft-open: linear-gradient(to top, black 0%, black 45%, transparent 70%);
+	--blur-mask-mid-open: linear-gradient(to top, black 0%, black 28%, transparent 52%);
+	--blur-mask-deep-open: linear-gradient(to top, black 0%, transparent 36%);
+
+	/* ── name mentions (README §4.8): set --name per mention; the viewer's own name uses --accent ── */
+	--mention-offset: 3px;
+	--mention-alpha: 50%;
+}

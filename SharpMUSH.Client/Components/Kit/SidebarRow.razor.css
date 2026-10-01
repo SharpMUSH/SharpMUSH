@@ -1,0 +1,168 @@
+.kit-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 0 8px;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+	box-sizing: border-box;
+	position: relative;
+	transition: background var(--motion-pop);
+}
+
+.kit-row:hover {
+	background: var(--surface);
+}
+
+.kit-row:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.kit-row--image { height: 44px; }
+.kit-row--avatar { height: 40px; }
+.kit-row--icon { height: 40px; }
+
+.kit-row--channel {
+	height: 36px;
+	padding: 0 10px;
+	color: var(--text-dim);
+}
+
+.kit-row--dim { color: var(--text-dim); }
+
+.kit-row--unread {
+	font-weight: 700;
+	color: var(--text);
+}
+
+.kit-row--current {
+	background: var(--surface-2);
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.kit-row--collapsed {
+	justify-content: center;
+	padding: 0;
+}
+
+.kit-row-lead {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.kit-row-lead--group {
+	width: 36px;
+	height: 28px;
+	position: relative;
+}
+
+.kit-row-img {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+
+.kit-row-avatar {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.kit-row-lead--group .kit-row-avatar {
+	width: 24px;
+	height: 24px;
+	position: absolute;
+	left: 0;
+	top: 2px;
+}
+
+.kit-row-lead--group .kit-row-avatar--second {
+	left: 12px;
+	outline: 2px solid var(--surface-3);
+}
+
+.kit-row-fallback {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--surface-2);
+	color: var(--text-dim);
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.kit-row-icon {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	background: var(--surface-2);
+	color: var(--text-dim);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.kit-row--current .kit-row-icon {
+	color: var(--accent);
+}
+
+.kit-row-hash {
+	width: 14px;
+	font-family: var(--font-mono);
+	font-size: 15px;
+	color: var(--text-faint);
+}
+
+.kit-row-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.kit-row-count {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.kit-row-unread {
+	height: 18px;
+	min-width: 18px;
+	padding: 0 6px;
+	border-radius: 9px;
+	background: var(--accent);
+	color: var(--accent-on);
+	font-size: 11px;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.kit-row-unread--badge {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+}
+
+/* the collapsed strip rings the current row's picture in accent (README §3) */
+.kit-row--current .kit-row-img,
+.kit-row--current .kit-row-lead--group .kit-row-avatar {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}

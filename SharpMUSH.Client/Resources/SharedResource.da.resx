@@ -4566,4 +4566,13 @@
     <value>Konverteringen kunne ikke annulleres: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimér banner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Vis banner</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# ulæst} other {# ulæste}}</value>
+  </data>
 </root>

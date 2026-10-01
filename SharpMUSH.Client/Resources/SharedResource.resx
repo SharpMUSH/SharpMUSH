@@ -3857,4 +3857,31 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Could not cancel the conversion: {0}</value>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimise banner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Show banner</value>
+  </data>
+  <data name="AdmKitPreviewTitle" xml:space="preserve">
+    <value>Design kit</value>
+  </data>
+  <data name="AdmKitPreviewDesc" xml:space="preserve">
+    <value>Every D1 kit piece with sample data, for checking against the boards.</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# unread} other {# unread}}</value>
+  </data>
+  <data name="AdmKitViewLabel" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="AdmKitTypeLabel" xml:space="preserve">
+    <value>Message type</value>
+  </data>
+  <data name="AdmKitMessageLabel" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="AdmKitComposerPlaceholder" xml:space="preserve">
+    <value>Write your pose…</value>
+  </data>
 </root>

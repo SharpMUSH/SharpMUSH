@@ -1190,4 +1190,8 @@
 @media (pointer: coarse) {
 	.phosphor-nav-link { min-height: 44px; }
 	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+	/* The D1 kit (Components/Kit): rows, capsules and chips are 30–40px on a fine pointer. */
+	.kit-row, .kit-capsule, .kit-chip { min-height: 44px; }
+	.kit-capsule--icon { min-width: 44px; }
+	.kit-portrait, .kit-tile { min-height: 44px; }
 }

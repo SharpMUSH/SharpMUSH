@@ -4566,4 +4566,13 @@
     <value>Conversia nu a putut fi anulată: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimizează bannerul</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Afișează bannerul</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# necitit} few {# necitite} other {# de necitite}}</value>
+  </data>
 </root>

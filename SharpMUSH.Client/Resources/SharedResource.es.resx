@@ -4566,4 +4566,13 @@
     <value>No se pudo cancelar la conversión: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimizar el banner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Mostrar el banner</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# sin leer} other {# sin leer}}</value>
+  </data>
 </root>

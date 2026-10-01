@@ -4566,4 +4566,13 @@
     <value>Pretvorbu nije moguće otkazati: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Smanji natpis</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Prikaži natpis</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# nepročitana} few {# nepročitane} other {# nepročitanih}}</value>
+  </data>
 </root>

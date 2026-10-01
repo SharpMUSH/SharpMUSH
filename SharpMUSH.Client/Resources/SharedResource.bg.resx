@@ -4566,4 +4566,13 @@
     <value>Преобразуването не можа да бъде отменено: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Свиване на банера</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Показване на банера</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# непрочетено} other {# непрочетени}}</value>
+  </data>
 </root>

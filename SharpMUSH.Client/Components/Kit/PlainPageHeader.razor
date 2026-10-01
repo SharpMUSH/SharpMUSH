@@ -1,0 +1,26 @@
+@* D1 §4.9 header for a page without an image: mono kicker, 26px title, 13px dim description, and
+   the page's actions aligned right on the baseline. *@
+<header class="kit-page-head">
+    <div class="kit-page-text">
+        @if (Kicker is not null)
+        {
+            <div class="kit-page-kicker">@Kicker</div>
+        }
+        <h1 class="kit-page-title">@Title</h1>
+        @if (Description is not null)
+        {
+            <p class="kit-page-desc">@Description</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="kit-page-actions">@Actions</div>
+    }
+</header>
+
+@code {
+    [Parameter] public string? Kicker { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

@@ -4566,4 +4566,13 @@
     <value>Konverteringen kunde inte avbrytas: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimera banderoll</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Visa banderoll</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# oläst} other {# olästa}}</value>
+  </data>
 </root>

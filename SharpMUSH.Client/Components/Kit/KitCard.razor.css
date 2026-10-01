@@ -1,0 +1,59 @@
+.kit-card {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.kit-card-head {
+	min-height: 52px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--border-soft);
+}
+
+.kit-card-titles {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.kit-card-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.kit-card-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	margin-top: 1px;
+}
+
+.kit-card-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.kit-card-body {
+	min-width: 0;
+}
+
+.kit-card--aside {
+	padding: 12px;
+	gap: 10px;
+}
+
+.kit-card--aside .kit-card-head {
+	min-height: 0;
+	padding: 0;
+	border-bottom: 0;
+}
+
+.kit-card--aside .kit-card-title {
+	font-size: 13px;
+}

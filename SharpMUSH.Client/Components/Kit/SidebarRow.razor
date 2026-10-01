@@ -1,0 +1,128 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@* D1 §4.2 sidebar row: one shape, the lead changes with the content (30px image, 28px avatar or a
+   stacked pair, 30px icon tile, or a mono #). An <a> when it navigates, a <button> when it acts.
+   The current item carries aria-current="page"; a collapsed strip keeps only the lead and moves
+   the label to title/aria-label. *@
+@if (Href is not null)
+{
+    <a class="@RowClass" href="@Href" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@CollapsedName">
+        @Inner
+    </a>
+}
+else
+{
+    <button type="button" class="@RowClass" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@CollapsedName" @onclick="OnClick">
+        @Inner
+    </button>
+}
+
+@code {
+    public enum SidebarLead { Image, Avatar, Icon, Channel }
+
+    [Parameter] public SidebarLead Lead { get; set; } = SidebarLead.Icon;
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>A second avatar, stacked behind the first, for a group page.</summary>
+    [Parameter] public string? ImageUrl2 { get; set; }
+
+    /// <summary>The name initials and the tint come from; defaults to <see cref="Label"/>.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>The second person of a group page: their initials stand in when <see cref="ImageUrl2"/> is absent.</summary>
+    [Parameter] public string? Name2 { get; set; }
+
+    /// <summary>A MudBlazor icon for the icon lead.</summary>
+    [Parameter] public string? Icon { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public int? Count { get; set; }
+    [Parameter] public int Unread { get; set; }
+    [Parameter] public bool IsCurrent { get; set; }
+    [Parameter] public bool Dim { get; set; }
+    [Parameter] public bool Collapsed { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private bool IsGroup => Lead == SidebarLead.Avatar && (ImageUrl2 is not null || Name2 is not null);
+
+    private string SecondFallbackStyle =>
+        $"background:hsl({NameHue.Of(Name2)} 30% 24%);color:hsl({NameHue.Of(Name2)} 45% 82%);";
+
+    private string RowClass => string.Join(' ', new[]
+    {
+        "kit-row",
+        $"kit-row--{Lead.ToString().ToLowerInvariant()}",
+        IsCurrent ? "kit-row--current" : null,
+        Unread > 0 ? "kit-row--unread" : null,
+        Dim ? "kit-row--dim" : null,
+        Collapsed ? "kit-row--collapsed" : null,
+    }.Where(c => c is not null));
+
+    private string UnreadText => Loc.Plural("NavUnreadCount", "count", Unread);
+
+    /// <summary>Collapsed rows replace their accessible name with aria-label, so the unread count is folded in.</summary>
+    private string? CollapsedName => !Collapsed ? null : Unread > 0 ? $"{Label}, {UnreadText}" : Label;
+
+    private int Hue => NameHue.Of(Name ?? Label);
+    private string FallbackStyle => $"background:hsl({Hue} 30% 24%);color:hsl({Hue} 45% 82%);";
+    private string FallbackInitials => Initials.From(Name ?? Label);
+
+    private RenderFragment Inner => __builder =>
+    {
+        <span class="kit-row-lead @(IsGroup ? "kit-row-lead--group" : null)" aria-hidden="true">
+            @switch (Lead)
+            {
+                case SidebarLead.Image:
+                    @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+                    {
+                        <img class="kit-row-img" src="@ImageUrl!.Trim()" alt="" />
+                    }
+                    else
+                    {
+                        <span class="kit-row-img kit-row-fallback">@FallbackInitials</span>
+                    }
+                    break;
+                case SidebarLead.Avatar:
+                    @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+                    {
+                        <img class="kit-row-avatar" src="@ImageUrl!.Trim()" alt="" />
+                    }
+                    else
+                    {
+                        <span class="kit-row-avatar kit-row-fallback" style="@FallbackStyle">@FallbackInitials</span>
+                    }
+                    @if (IsGroup && ImageUrlPolicy.IsRenderable(ImageUrl2))
+                    {
+                        <img class="kit-row-avatar kit-row-avatar--second" src="@ImageUrl2!.Trim()" alt="" />
+                    }
+                    else if (IsGroup)
+                    {
+                        <span class="kit-row-avatar kit-row-avatar--second kit-row-fallback" style="@SecondFallbackStyle">@Initials.From(Name2)</span>
+                    }
+                    break;
+                case SidebarLead.Icon:
+                    <span class="kit-row-icon"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Folder)" Size="Size.Small" /></span>
+                    break;
+                case SidebarLead.Channel:
+                    <span class="kit-row-hash">#</span>
+                    break;
+            }
+        </span>
+        @if (!Collapsed)
+        {
+            <span class="kit-row-label">@Label</span>
+            @if (Unread > 0)
+            {
+                <span class="kit-row-unread" aria-label="@UnreadText">@Unread</span>
+            }
+            else if (Count is not null)
+            {
+                <span class="kit-row-count">@Count</span>
+            }
+        }
+        else if (Unread > 0)
+        {
+            <span class="kit-row-unread kit-row-unread--badge" aria-hidden="true">@Unread</span>
+        }
+    };
+}

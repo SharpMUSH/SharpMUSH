@@ -3819,4 +3819,13 @@
     <value>Impossible d’annuler la conversion : {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Réduire la bannière</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Afficher la bannière</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# non lu} other {# non lus}}</value>
+  </data>
 </root>

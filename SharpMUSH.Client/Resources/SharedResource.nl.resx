@@ -4566,4 +4566,13 @@
     <value>De conversie kon niet worden geannuleerd: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Banner minimaliseren</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Banner tonen</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# ongelezen} other {# ongelezen}}</value>
+  </data>
 </root>

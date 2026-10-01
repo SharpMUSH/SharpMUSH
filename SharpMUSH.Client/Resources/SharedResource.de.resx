@@ -4566,4 +4566,13 @@
     <value>Die Konvertierung konnte nicht abgebrochen werden: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Banner minimieren</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Banner anzeigen</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# ungelesen} other {# ungelesen}}</value>
+  </data>
 </root>
