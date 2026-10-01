@@ -381,11 +381,12 @@ public partial class Functions
 	[SharpFunction(Name = "cstatus", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]
 	public async ValueTask<CallState> ChannelStatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var playerArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		// Object first, unlike PennMUSH (pennmush-compatibility.md, "Argument order").
+		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var channelArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, channelArg, playerArg);
+		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, playerArg, channelArg);
 		if (error != null)
 		{
 			return error;

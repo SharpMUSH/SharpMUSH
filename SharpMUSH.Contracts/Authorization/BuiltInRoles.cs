@@ -74,6 +74,6 @@ public static class BuiltInRoles
 		PortalRole.Royalty => "#b39cff",
 		PortalRole.Builder => "#6cde9a",
 		PortalRole.Player => "#9aa3ab",
-		_ => "#5f6870"
+		_ => "#7d8790"
 	};
 }

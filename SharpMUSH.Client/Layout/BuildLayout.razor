@@ -1,0 +1,12 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Admin
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Build & manage section (README §3): the staff and building pages beside its sidebar. The
+   pages keep their own padding, so the section body adds none. /admin/config has its own tree
+   (ConfigLayout), with a row back to this section. *@
+<SectionShell Key="build" Class="build-shell" NavLabel="@Loc["NavBuildManage"]" PadBody="false">
+    <Nav Context="collapsed"><BuildSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

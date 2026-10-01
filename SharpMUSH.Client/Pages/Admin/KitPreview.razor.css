@@ -1,0 +1,119 @@
+.kit-preview {
+	display: grid;
+	grid-template-columns: var(--side-w) minmax(0, 1fr) var(--aside-w);
+	grid-template-areas:
+		"head head head"
+		"side main aside";
+	gap: 16px;
+	padding: var(--cpad);
+}
+
+.kit-preview-head {
+	grid-area: head;
+}
+
+.kit-preview-side {
+	grid-area: side;
+	background: var(--surface-3);
+	border-radius: var(--radius-card);
+	padding: 12px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	align-self: start;
+}
+
+.kit-preview-collapsed {
+	margin-top: 12px;
+	padding: 8px;
+	border-radius: 12px;
+	background: var(--surface-3);
+	border: 1px solid var(--border-soft);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.kit-preview-main {
+	grid-area: main;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.kit-preview-aside {
+	grid-area: aside;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	align-self: start;
+}
+
+.kit-preview-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.kit-preview-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.kit-preview-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.kit-preview-prose {
+	font-size: 15px;
+	line-height: 1.6;
+	padding: 12px 16px;
+}
+
+.kit-preview-compose {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.kit-preview-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 40px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: 15px;
+}
+
+.kit-preview-input::placeholder {
+	color: var(--text-faint);
+}
+
+@container page (max-width: 64rem) {
+	.kit-preview {
+		grid-template-columns: var(--side-w) minmax(0, 1fr);
+		grid-template-areas:
+			"head head"
+			"side main"
+			"aside aside";
+	}
+}
+
+@container page (max-width: 48rem) {
+	.kit-preview {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas:
+			"head"
+			"side"
+			"main"
+			"aside";
+	}
+}

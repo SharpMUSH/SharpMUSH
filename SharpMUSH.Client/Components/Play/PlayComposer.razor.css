@@ -1,0 +1,55 @@
+.composer-row {
+	display: flex;
+	align-items: flex-end;
+	gap: 10px;
+	margin-top: 8px;
+}
+
+.composer-input {
+	flex: 1;
+	min-width: 0;
+	min-height: 40px;
+	max-height: 160px;
+	padding: 9px 4px;
+	resize: none;
+	field-sizing: content;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 15px;
+	line-height: 1.45;
+	outline: none;
+}
+
+.composer-input::placeholder {
+	color: var(--text-faint);
+}
+
+.composer-input--command {
+	font-family: var(--font-mono);
+	font-size: 14px;
+}
+
+.composer-send {
+	height: 40px;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 20px;
+	background: var(--accent);
+	color: var(--accent-on);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.composer-send:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.composer-send:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}

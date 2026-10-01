@@ -1,0 +1,67 @@
+@page "/wiki/recent"
+@layout WikiLayout
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["NavWikiRecentChanges"] — @Loc["AppTitle"]</PageTitle>
+
+@* The sidebar's "Recent changes": the latest edits across the wiki as image rows with the editor
+   and when. Nothing listed these before outside the home widget. *@
+<div class="wiki-recent">
+    <PlainPageHeader Kicker="@Loc["Wiki"]" Title="@Loc["NavWikiRecentChanges"]" Description="@Loc["NavWikiRecentDesc"]" />
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+    }
+    else if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+    }
+    else if (_pages.Count == 0)
+    {
+        <EmptyState>@Loc["WidNoRecentWikiActivity"]</EmptyState>
+    }
+    else
+    {
+        <KitCard>
+            <div class="wiki-recent-list">
+                @foreach (var page in _pages)
+                {
+                    var p = page;
+                    <SidebarRow Class="wiki-recent-row" Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@p.Image" Name="@p.Title" Label="@p.Title"
+                                Sub="@Meta(p)" Href="@WikiRoutes.PathFor(p.Namespace, p.Category, p.Slug)" />
+                }
+            </div>
+        </KitCard>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private IReadOnlyList<WikiPageSummary> _pages = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await Wiki.GetRecentChangesResultAsync(50))
+        {
+            case IReadOnlyList<WikiPageSummary> pages:
+                _pages = pages;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _loading = false;
+    }
+
+    private string Meta(WikiPageSummary p)
+    {
+        var when = Loc.Format(p.UpdatedAt);
+        return p.LastEditedBy is null ? when : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, when);
+    }
+}

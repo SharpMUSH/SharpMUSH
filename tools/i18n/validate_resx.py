@@ -73,7 +73,7 @@ def placeholders(value: str) -> set[str]:
     # {…} that follows a category keyword leaves the top-level text, where bare args live.
     stripped = value
     for _ in range(10):  # plural constructs nest at most a couple deep in practice
-        new = re.sub(r"(?:zero|one|two|few|many|other|=\d+)\s*\{[^{}]*\}", " ", stripped)
+        new = re.sub(r"(?<!\w)(?:zero|one|two|few|many|other|=\d+)\s*\{[^{}]*\}", " ", stripped)
         if new == stripped:
             break
         stripped = new

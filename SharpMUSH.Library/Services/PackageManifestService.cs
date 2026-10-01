@@ -39,7 +39,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownApplicationKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"slug", "display_name", "icon", "type", "schema_url", "data_url", "submit_route",
-		"minimum_role", "nav_placement", "zones", "order"
+		"minimum_role", "nav_placement", "zones", "order", "scope", "oob_package"
 	};
 
 	private static readonly IReadOnlySet<string> ReservedManifestKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -1029,7 +1029,9 @@ public partial class PackageManifestService : IPackageManifestService
 			minimumRole,
 			AppString("nav_placement"),
 			zones,
-			order);
+			order,
+			AppString("scope"),
+			AppString("oob_package"));
 	}
 
 	/// <summary>True when a field carries at least one <c>{{ref}}</c> token (validated separately by <see cref="ValidateRefs"/>).</summary>
@@ -1439,7 +1441,8 @@ public partial class PackageManifestService : IPackageManifestService
 				("display_name", application.DisplayName), ("icon", application.Icon),
 				("schema_url", application.SchemaUrl), ("data_url", application.DataUrl),
 				("submit_route", application.SubmitRoute), ("minimum_role", application.MinimumRole),
-				("nav_placement", application.NavPlacement)
+				("nav_placement", application.NavPlacement), ("scope", application.Scope),
+				("oob_package", application.OobPackage)
 			];
 			foreach (var (fieldName, value) in appFields)
 			{

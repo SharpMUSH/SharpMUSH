@@ -29,7 +29,8 @@ public class WikiTranslationsController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
 	IPrerenderCacheService prerenderCache,
-	ILogger<WikiTranslationsController> logger) : WikiControllerBase(wikiService, localization, logger)
+	IWikiNameResolver names,
+	ILogger<WikiTranslationsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/{slug}/translations?ns=&amp;category=

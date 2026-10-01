@@ -22,9 +22,9 @@
 
 /* ── Topbar: glass-morphism, spans content column only ── */
 .phosphor-topbar {
-	height: 60px;
+	height: var(--topbar-h);
 	flex-shrink: 0;
-	display: flex;
+	display: none; /* touch chrome only (README §10 Q1: no desktop top bar) */
 	align-items: center;
 	gap: 0.625rem;
 	padding: 0 1rem;
@@ -34,14 +34,6 @@
 	-webkit-backdrop-filter: blur(8px);
 	position: relative;
 	z-index: 5;
-}
-
-.phosphor-topbar-title {
-	font-size: 1rem;
-	font-weight: 600;
-	color: var(--text);
-	letter-spacing: 0.01em;
-	white-space: nowrap;
 }
 
 /* ── Topbar icon buttons (menu, terminal, close) ── */
@@ -69,54 +61,16 @@
 	background: rgba(var(--glow), 0.12);
 }
 
-/* ── Topbar search box ── */
-.phosphor-search {
+/* ── The global TopBar zone (Q1): a slim strip above main, rendered only when it has widgets ── */
+.phosphor-topzone {
+	flex-shrink: 0;
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	width: 220px;
-	height: 34px;
-	padding: 0 0.625rem;
-	background: var(--surface-2);
-	border: 1px solid var(--border-soft);
-	border-radius: var(--radius);
-	color: var(--text-faint);
-	flex-shrink: 0;
-	transition: border-color 0.14s;
-}
-.phosphor-search:focus-within {
-	border-color: var(--accent);
-}
-.phosphor-search-icon {
-	font-size: 0.9375rem;
-	line-height: 1;
-	flex-shrink: 0;
-}
-.phosphor-search input {
-	flex: 1;
-	min-width: 0;
-	background: transparent;
-	border: none;
-	outline: none;
-	color: var(--text);
-	font-size: 0.78125rem;
-	font-family: inherit;
-}
-.phosphor-search input::placeholder {
-	color: var(--text-faint);
-}
-.phosphor-search input::-webkit-search-cancel-button {
-	display: none;
-}
-.phosphor-search-kbd {
-	margin-left: auto;
-	font-family: var(--font-mono);
-	font-size: 0.65625rem;
-	color: var(--text-faint);
-	border: 1px solid var(--border);
-	border-radius: 3px;
-	padding: 0 0.25rem;
-	flex-shrink: 0;
+	min-height: 44px;
+	padding: 0.375rem 1rem;
+	border-bottom: 1px solid var(--border-soft);
+	background: var(--surface-3);
 }
 
 /* ── Scrollable main content ── */
@@ -137,11 +91,12 @@
 	min-height: 100%;
 }
 
-.phosphor-page:has(> .full-bleed) {
+/* descendants, not children: a section page sits inside SectionShell's .kit-section-body */
+.phosphor-page:has(.full-bleed) {
 	max-width: none;
 }
 
-.phosphor-page:has(> .full-height) {
+.phosphor-page:has(.full-height) {
 	height: 100%;
 }
 
@@ -150,6 +105,151 @@
 		max-width: var(--content-max);
 		margin-inline: auto;
 	}
+}
+
+/* ── Rail (D1 §3): 72px, one 44×44 icon per section, radius 14; the current one filled
+   --surface-2 with an accent icon. Desktop only: touch chrome keeps the drawer and tab bar. ── */
+.phosphor-rail {
+	flex-shrink: 0;
+	width: var(--rail-w);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 14px 0;
+	box-sizing: border-box;
+	background: var(--rail-bg);
+	border-right: 1px solid var(--border-soft);
+	overflow-y: auto;
+	scrollbar-width: none;
+}
+
+.phosphor-rail-logo {
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.phosphor-rail-sep {
+	width: 28px;
+	height: 1px;
+	margin: 6px 0;
+	flex-shrink: 0;
+	background: var(--border);
+}
+
+.phosphor-rail-item {
+	position: relative;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 14px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	text-decoration: none;
+	transition: background var(--motion-pop), color var(--motion-pop);
+}
+
+.phosphor-rail-item:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.phosphor-rail-item:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.phosphor-rail-item--on,
+.phosphor-rail-item--on:hover {
+	background: var(--surface-2);
+	color: var(--accent);
+}
+
+.phosphor-rail-dot {
+	position: absolute;
+	top: 9px;
+	right: 9px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-dim);
+}
+
+.phosphor-rail-dot--unread {
+	background: var(--accent);
+	box-shadow: 0 0 6px rgba(var(--glow), 0.7);
+}
+
+.phosphor-rail-spacer {
+	flex: 1 1 auto;
+	min-height: 12px;
+}
+
+.phosphor-rail-lang {
+	width: 44px;
+	height: 44px;
+	display: grid;
+	place-items: center;
+	color: var(--text-dim);
+}
+
+/* the account in the rail is the avatar alone */
+.phosphor-profile-wrap--compact {
+	padding: 4px 0 0;
+	border-top: 0;
+}
+
+.phosphor-profile-wrap--compact .phosphor-profile-card {
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	justify-content: center;
+	background: transparent;
+	border: 0;
+	border-radius: 14px;
+}
+
+.phosphor-profile-wrap--compact .phosphor-profile-card:hover,
+.phosphor-profile-wrap--compact .phosphor-profile-card:focus-visible {
+	background: var(--surface-2);
+}
+
+.phosphor-profile-wrap--compact .phosphor-avatar-wrap,
+.phosphor-profile-wrap--compact .phosphor-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+}
+
+/* ── Page-sidebar slot (D1 §3): a section's SectionShell fills it; empty, the column is gone ── */
+.phosphor-pagebar {
+	flex-shrink: 0;
+	width: var(--side-w);
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: var(--surface-3);
+	border-right: 1px solid var(--border-soft);
+	transition: width var(--motion-slide);
+}
+
+.phosphor-pagebar:not(:has(.kit-pagebar)) {
+	display: none;
+}
+
+.phosphor-pagebar:has(.kit-pagebar--collapsed) {
+	width: 62px;
 }
 
 /* ── Widget aside columns (left / right sidebar zones) ── */
@@ -203,7 +303,7 @@
 	width: 232px;
 	flex-shrink: 0;
 	height: 100%;
-	display: flex;
+	display: none; /* touch chrome only: a desktop has the rail */
 	flex-direction: column;
 	overflow: hidden;
 	background: var(--surface-3);
@@ -823,7 +923,7 @@
 
 /* Links inside wiki content — themed color, underline on hover */
 .WikiContent .mud-card-content a {
-    color: var(--mud-palette-secondary, #80cbc4);
+    color: var(--accent);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 120ms ease, color 120ms ease;
@@ -831,7 +931,7 @@
 
 .WikiContent .mud-card-content a:hover,
 .WikiContent .mud-card-content a:focus-visible {
-    color: var(--mud-palette-secondary-lighten, #b2dfdb);
+    color: var(--accent-dim);
     border-bottom-color: currentColor;
 }
 
@@ -840,14 +940,32 @@
     font-style: italic;
 }
 
+/* D1 §4.8: a character link reads as a mention — body colour, a thin underline in the faint colour */
+.WikiContent .mud-card-content a.mention {
+    color: inherit;
+    border-bottom: 0;
+    text-decoration: underline 1px color-mix(in srgb, var(--name, var(--text-faint)) var(--mention-alpha), transparent);
+    text-underline-offset: var(--mention-offset);
+}
+
+.WikiContent .mud-card-content a.mention:hover,
+.WikiContent .mud-card-content a.mention:focus-visible {
+    color: inherit;
+    text-decoration-color: var(--name, var(--text-faint));
+}
+
 /* Redlinks — wiki links to pages that don't exist yet */
 .WikiContent .mud-card-content a.wiki-redlink {
-    color: var(--mud-palette-error, #f44336);
+    color: var(--link-missing);
+}
+
+/* the dashed border is the redlink's underline; a mention already has one */
+.WikiContent .mud-card-content a.wiki-redlink:not(.mention) {
     border-bottom: 1px dashed currentColor;
 }
 
 .WikiContent .mud-card-content a.wiki-redlink:hover {
-    color: var(--mud-palette-error-lighten, #e57373);
+    color: var(--link-missing);
 }
 
 /* Headings */
@@ -1082,23 +1200,18 @@
 	color: var(--accent);
 }
 
+/* The section button in the touch header only where the page has a section sidebar to open. */
+.phosphor-shell:not(:has(.kit-pagebar)) .phosphor-pagebar-btn {
+	display: none;
+}
+
 /* ══ PHONE-WIDTH content: single-column helpers + a condensed topbar. Tablets and
    landscape phones are WIDER than this, so they keep the desktop multi-column content
    (the readability win) — only their chrome goes touch-friendly (next block). ══ */
 @media (max-width: 760px) {
 
-	/* Condense the topbar: drop the search box, kbd hint, and language picker.
-	   Tablets (>760px) keep them — they have the room. */
+	/* A condensed header: the search is an icon, and the language stays (a phone has no other). */
 	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
-	.phosphor-search,
-	.phosphor-search-kbd,
-	.phosphor-lang { display: none; }
-	.phosphor-topbar-title {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		font-size: 0.9375rem;
-	}
 }
 
 /* ══ TOUCH CHROME: the nav becomes an off-canvas drawer + a bottom tab bar. Applies to
@@ -1107,6 +1220,15 @@
    while a mouse/trackpad desktop (pointer: fine + wide) keeps the sidebar. Keep this
    media condition in sync with sharpmushLayout.isTouchChrome() in layout.js. ══ */
 @media (max-width: 760px), (pointer: coarse) {
+	/* The rail is desktop chrome; touch chrome has the drawer, the header and the bottom tab bar.
+	   Anything that is not touch chrome (a fine pointer, or none at all) gets the rail alone. */
+	.phosphor-rail { display: none; }
+	.phosphor-sidebar { display: flex; }
+	.phosphor-topbar { display: flex; }
+
+	/* The section panel is always the full sidebar here (SectionShell ignores a desktop collapse). */
+	.phosphor-shell .phosphor-pagebar .kit-pagebar-toggle { display: none; }
+
 	/* The sidebar leaves the flex flow and slides in over the content, full-width. */
 	.phosphor-sidebar {
 		position: fixed;
@@ -1135,6 +1257,25 @@
 		transition: opacity 0.22s ease;
 	}
 	.phosphor-shell--nav-open .phosphor-nav-backdrop {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	/* The page sidebar leaves the flow too: an off-canvas panel opened from the header (below). */
+	.phosphor-pagebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: min(280px, 86vw);
+		z-index: 1001;
+		transform: translateX(-100%);
+		transition: transform 0.22s ease;
+		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
+	}
+	.phosphor-pagebar:has(.kit-pagebar--collapsed) { width: min(280px, 86vw); }
+	.phosphor-shell--pagebar-open .phosphor-pagebar { transform: translateX(0); }
+	.phosphor-shell--pagebar-open .phosphor-nav-backdrop {
 		opacity: 1;
 		pointer-events: auto;
 	}
@@ -1190,4 +1331,8 @@
 @media (pointer: coarse) {
 	.phosphor-nav-link { min-height: 44px; }
 	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+	/* The D1 kit (Components/Kit): rows, capsules and chips are 30–40px on a fine pointer. */
+	.kit-row, .kit-capsule, .kit-chip { min-height: 44px; }
+	.kit-capsule--icon { min-width: 44px; }
+	.kit-portrait, .kit-tile { min-height: 44px; }
 }

@@ -1,12 +1,28 @@
 @inherits LayoutComponentBase
 @layout MainLayout
-@using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Components.Admin
+@using SharpMUSH.Library.API
+@inject ConfigSchemaService SchemaService
+@inject IStringLocalizer<SharedResource> Loc
 
-<div class="config-shell">
-    <aside class="config-section-nav">
-        <ConfigNavDrawer />
-    </aside>
-    <div class="config-section-body">
-        @Body
-    </div>
-</div>
+@* Every /admin/config page: the D1 page sidebar (ConfigSidebar) beside the page body. The sidebar
+   gets per-section setting counts from the schema; when the schema cannot be read the tree still
+   renders, just without counts. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="config" Class="config-shell" NavLabel="@Loc["Configuration"]">
+    <Nav Context="collapsed"><ConfigSidebar SectionCounts="@_counts" Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>
+
+@code {
+    private IReadOnlyDictionary<string, int>? _counts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await SchemaService.GetSchemaAsync() is ConfigurationSchema schema)
+        {
+            _counts = schema.Properties.Values
+                .GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+}

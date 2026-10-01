@@ -131,7 +131,7 @@ public static class ThemePresetExtensions
 			DrawerBackground = preset.DrawerBackgroundColor,
 			TextPrimary = "#e9edf0",
 			TextSecondary = "#9aa3ab",
-			TextDisabled = "#5f6870",
+			TextDisabled = "#7d8790",
 			AppbarText = preset.PrimaryColor,
 			DrawerText = "#e9edf0",
 			DrawerIcon = preset.PrimaryColor,

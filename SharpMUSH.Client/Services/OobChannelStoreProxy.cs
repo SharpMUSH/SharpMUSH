@@ -1,3 +1,5 @@
+using SharpMUSH.Client.Models;
+
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
@@ -15,6 +17,8 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 
 	public event Action<string>? ChannelUpdated;
 
+	public event Action? RoomChanged;
+
 	/// <summary>
 	/// Swaps the backing store, re-pointing the forwarder without touching subscribers.
 	/// </summary>
@@ -24,7 +28,8 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 	/// Without this, a recreate (character switch) silently re-points at a fresh, empty store with no
 	/// event at all — subscribers like <c>Play.razor</c>'s sidebar would keep rendering the PREVIOUS
 	/// character's room contents/who-list until the new connection happened to push fresh OOB data.
-	/// Reuses <see cref="IOobChannelStore.Clear"/> rather than inventing a second reset mechanism.
+	/// Reuses <see cref="IOobChannelStore.Clear"/> rather than inventing a second reset mechanism; the
+	/// same clear empties the typed <see cref="Room"/> and raises <see cref="RoomChanged"/> once.
 	/// </remarks>
 	public void SetInner(IOobChannelStore inner)
 	{
@@ -32,19 +37,25 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 		{
 			_inner.Clear();
 			_inner.ChannelUpdated -= Forward;
+			_inner.RoomChanged -= ForwardRoom;
 		}
 
 		_inner = inner;
 		_inner.ChannelUpdated += Forward;
+		_inner.RoomChanged += ForwardRoom;
 	}
 
 	private void Forward(string package) => ChannelUpdated?.Invoke(package);
+
+	private void ForwardRoom() => RoomChanged?.Invoke();
 
 	public void Set(string package, string dataJson) => _inner?.Set(package, dataJson);
 
 	public string? Get(string package) => _inner?.Get(package);
 
 	public IReadOnlyCollection<string> Packages => _inner?.Packages ?? [];
+
+	public RoomState Room => _inner?.Room ?? RoomState.Empty;
 
 	public void Clear() => _inner?.Clear();
 }

@@ -67,3 +67,11 @@ think [parent(first(lcon(*Alice)),loc(*Alice))]
 think [lparent(first(lcon(*Alice)))] [lparent(loc(*Alice))] [children(loc(*Alice))]
 think [children(first(lcon(*Alice)))]
 think [parent(first(lcon(*Alice)),none)] [lparent(first(lcon(*Alice)))]
+
+::case sc.objeval  objeval() evaluates its object argument, and falls back to the executor when it cannot use it
+think [objeval([loc(*Alice)],add(1,2))] [strmatch(objeval(#[add(0,1)],num(me)),#1)]
+think [strmatch(objeval(#99999999,num(me)),num(me))]
+::login bob Bob bobpass
+::as bob
+think [strmatch(objeval(*Wiz,num(me)),num(me))] [objeval(*Wiz,setr(ov,ran))-[r(ov)]]
+::logout bob

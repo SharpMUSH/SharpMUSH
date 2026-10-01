@@ -16,22 +16,23 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 
 	public Task<Found<WikiPage>> GetByIdAsync(string id) => store.GetPageByIdAsync(id);
 
-	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20) => store.GetRecentPagesAsync(count);
+	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20, WikiVisibility? visibility = null)
+		=> store.GetRecentPagesAsync(count, visibility ?? WikiVisibility.All);
 
-	public Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50)
-		=> store.GetPagesAsync(Namespace(ns), skip, take);
+	public Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50, WikiVisibility? visibility = null)
+		=> store.GetPagesAsync(Namespace(ns), skip, take, visibility ?? WikiVisibility.All);
 
-	public Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
-		=> store.GetPagesAsync(ns is { } value ? Namespace(value) : null, skip, take);
+	public Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null, WikiVisibility? visibility = null)
+		=> store.GetPagesAsync(ns is { } value ? Namespace(value) : null, skip, take, visibility ?? WikiVisibility.All);
 
 	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 		=> store.CountPagesAsync(ns is { } value ? Namespace(value) : null, includeDrafts);
 
-	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)
-		=> store.GetPagesByCategoryAsync(WikiHelpers.NormalizeCategory(category), skip, take);
+	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
+		=> store.GetPagesByCategoryAsync(WikiHelpers.NormalizeCategory(category), skip, take, visibility ?? WikiVisibility.All);
 
-	public Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
-		=> store.GetPagesByTagAsync(tag.Trim().ToLowerInvariant(), skip, take);
+	public Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50, WikiVisibility? visibility = null)
+		=> store.GetPagesByTagAsync(tag.Trim().ToLowerInvariant(), skip, take, visibility ?? WikiVisibility.All);
 
 	public async Task<Result<WikiPage>> CreateAsync(
 		string title,

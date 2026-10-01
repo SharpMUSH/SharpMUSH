@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
 using SharpMUSH.Library.ParserInterfaces;
@@ -39,7 +40,8 @@ public static class SceneBroadcast
 
 	/// <summary>
 	/// Publishes a <see cref="SceneEventMessage"/> built from <paramref name="pose"/>
-	/// to <c>game.scene.{sceneId}</c>. Call after a SUCCESSFUL pose mutation.
+	/// to <c>game.scene.{sceneId}</c>. Call after a SUCCESSFUL pose mutation. Best-effort: a messaging
+	/// failure is logged, never thrown, so it cannot turn a committed mutation into an error.
 	/// </summary>
 	/// <param name="parser">The active parser (source of the DI <see cref="IServiceProvider"/>).</param>
 	/// <param name="sceneId">The owning scene id (the SignalR group key).</param>
@@ -59,21 +61,36 @@ public static class SceneBroadcast
 			return;
 		}
 
-		var message = BuildMessage(sceneId, eventType, pose);
-		var subject = SubjectForScene(sceneId);
+		// Every caller has already committed its mutation. A failure here must not reach it: the softcode
+		// caller would get no pose id for a pose that was recorded, and a retry would record it twice.
+		try
+		{
+			var message = BuildMessage(sceneId, eventType, pose,
+				await SceneLocate.ObjIdAsync(parser, pose?.AuthorDbref));
 
-		var nats = await GetConnectionAsync(options.Url);
-		await nats.PublishAsync(
-			subject,
-			message,
-			serializer: NatsJsonSerializer<SceneEventMessage>.Default);
+			var nats = await GetConnectionAsync(options.Url);
+			await nats.PublishAsync(
+				SubjectForScene(sceneId),
+				message,
+				serializer: NatsJsonSerializer<SceneEventMessage>.Default);
+		}
+		catch (Exception ex)
+		{
+			parser.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(typeof(SceneBroadcast))
+				.LogWarning(ex, "Scene {SceneId}: the {EventType} event was not published to the live feed", sceneId, eventType);
+		}
 	}
 
 	/// <summary>
 	/// Projects a <see cref="ScenePose"/> onto the realtime <see cref="SceneEventMessage"/>.
 	/// ActorName prefers <see cref="ScenePose.ShowAsName"/>, falling back to AuthorName.
 	/// </summary>
-	private static SceneEventMessage BuildMessage(string sceneId, string eventType, ScenePose? pose)
+	/// <param name="actorObjId">
+	/// The objid of <see cref="ScenePose.AuthorDbref"/>, resolved by the caller when the event is sent
+	/// (the pose stores only the dbref), or null when the author is gone. Ignored without a pose.
+	/// </param>
+	public static SceneEventMessage BuildMessage(string sceneId, string eventType, ScenePose? pose,
+		string? actorObjId)
 	{
 		if (pose is null)
 		{
@@ -87,7 +104,8 @@ public static class SceneBroadcast
 				Tags: [],
 				Source: string.Empty,
 				Location: string.Empty,
-				Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+				Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ActorObjId: null);
 		}
 
 		var actor = string.IsNullOrEmpty(pose.ShowAsName) ? pose.AuthorName : pose.ShowAsName;
@@ -102,7 +120,8 @@ public static class SceneBroadcast
 			Tags: pose.Tags,
 			Source: pose.Source,
 			Location: pose.OriginName,
-			Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ActorObjId: actorObjId);
 	}
 
 	private static async ValueTask<NatsConnection> GetConnectionAsync(string url)

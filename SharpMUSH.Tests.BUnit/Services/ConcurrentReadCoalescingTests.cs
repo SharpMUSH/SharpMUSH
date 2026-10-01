@@ -71,8 +71,9 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 
 		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(1);
 
+		// Within its short memo (README §6.3's several readers per page) a later read is answered from it.
 		await service.ListOnlineAsync();
-		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(2);
+		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -125,8 +126,10 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 
 		await Assert.That(handler.CallsTo("/api/applications")).IsEqualTo(1);
 
+		// The rail, the drawer and the section sidebars re-read on render; within the list's short memo a
+		// later read is answered from it, and a write through the client clears it.
 		await client.ListAsync();
-		await Assert.That(handler.CallsTo("/api/applications")).IsEqualTo(2);
+		await Assert.That(handler.CallsTo("/api/applications")).IsEqualTo(1);
 	}
 
 	/// <summary>

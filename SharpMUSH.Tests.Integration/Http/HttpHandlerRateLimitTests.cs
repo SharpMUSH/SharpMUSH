@@ -50,6 +50,24 @@ public class HttpHandlerRateLimitTests(ServerWebAppFactory factory)
 		return response.StatusCode;
 	}
 
+	/// <summary>
+	/// Sends <paramref name="count"/> requests at once and returns how many were served and refused.
+	/// The bucket refills continuously (a limit of 3 earns a permit every 333ms), so requests sent one
+	/// after another only exhaust it while each is faster than that: in a loaded run the fourth found a
+	/// refilled permit and was served. Sent together, every request takes its permit (the limiter runs
+	/// before the softcode does) within a few milliseconds. The exact accounting is pinned against a
+	/// controlled clock in HttpQuotaRateLimiterTests; this proves the route is wired to it.
+	/// </summary>
+	private async Task<(int Served, int Refused)> SendTogether(HttpClient http, string method, string path, int count)
+	{
+		var statuses = await Task.WhenAll(Enumerable.Range(0, count).Select(_ => SendAsync(http, method, path)));
+
+		await Assert.That(statuses.All(s => s is HttpStatusCode.OK or HttpStatusCode.TooManyRequests))
+			.IsTrue().Because(string.Join(", ", statuses));
+
+		return (statuses.Count(s => s == HttpStatusCode.OK), statuses.Count(s => s == HttpStatusCode.TooManyRequests));
+	}
+
 	[Test]
 	public async Task OverTheConfiguredQuota_Answers429()
 	{
@@ -58,19 +76,11 @@ public class HttpHandlerRateLimitTests(ServerWebAppFactory factory)
 		using var scope = PerSecond(3);
 		var http = factory.CreateHttpClient();
 
-		// The bucket starts at its ceiling, so exactly `http_per_second` requests are served before
-		// the next one is refused. Issued back to back, so refill (3 permits/second) cannot cover
-		// the fourth.
-		var statuses = new List<HttpStatusCode>();
-		for (var i = 0; i < 4; i++)
-		{
-			statuses.Add(await SendAsync(http, "QUOTA", "http/quota"));
-		}
-
-		await Assert.That(statuses[0]).IsEqualTo(HttpStatusCode.OK);
-		await Assert.That(statuses[1]).IsEqualTo(HttpStatusCode.OK);
-		await Assert.That(statuses[2]).IsEqualTo(HttpStatusCode.OK);
-		await Assert.That(statuses[3]).IsEqualTo(HttpStatusCode.TooManyRequests);
+		// The bucket starts at its ceiling: `http_per_second` requests are served and the rest of a
+		// burst is refused. Refill while the burst lands can only serve one or two more.
+		var (served, refused) = await SendTogether(http, "QUOTA", "http/quota", 10);
+		await Assert.That(served).IsGreaterThanOrEqualTo(3);
+		await Assert.That(refused).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -82,8 +92,9 @@ public class HttpHandlerRateLimitTests(ServerWebAppFactory factory)
 
 		using (PerSecond(1))
 		{
-			await Assert.That(await SendAsync(http, "QUOTALIVE", "http/quota-live")).IsEqualTo(HttpStatusCode.OK);
-			await Assert.That(await SendAsync(http, "QUOTALIVE", "http/quota-live")).IsEqualTo(HttpStatusCode.TooManyRequests);
+			var (served, refused) = await SendTogether(http, "QUOTALIVE", "http/quota-live", 5);
+			await Assert.That(served).IsGreaterThanOrEqualTo(1);
+			await Assert.That(refused).IsGreaterThanOrEqualTo(1);
 		}
 
 		// The option is read per request, so a raised limit admits traffic the old one refused —
