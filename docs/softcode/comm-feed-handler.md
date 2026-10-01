@@ -141,9 +141,11 @@ The channels the viewer is **on**, and who the list was built for:
 - `gagged: true` marks a channel the viewer is still on but hears nothing
   from; absent otherwise.
 - There is **no `unread`**. The engine has no notion of what a player has
-  read — the terminal shows every line — so the client counts lines as they
-  arrive (below). A game that does track it can add `"unread": <n>` to a row
-  and the portal takes it.
+  read — the terminal shows every line — so the portal counts for itself
+  (below): from the character's read markers where it has one for the channel,
+  which the portal keeps on the server so the count survives a reload, and by
+  counting lines as they arrive where it has none. A game that does track it
+  can add `"unread": <n>` to a row and the portal takes it.
 - `viewer` tells the client whose list it is, which is how it recognises its
   own lines and leaves them out of the unread counts and a conversation's
   "with".
@@ -198,7 +200,8 @@ of a missing `v` and of any malformed member):
   never be a channel name (those cannot hold a space).
 - 200 lines are kept per key, and the 100 most recent conversations.
 - A line from someone else arriving for a key that is not `Viewing` is
-  unread until `MarkRead`. A count a `comm.channels` row carries, 0 included,
+  unread until `MarkRead`, unless the key's read marker is already past it
+  (markers below). A count a `comm.channels` row carries, 0 included,
   replaces the feed's own; a channel a new list no longer carries is
   forgotten, history and count.
 - A new connection or a character switch clears it all, `Viewing` included,
