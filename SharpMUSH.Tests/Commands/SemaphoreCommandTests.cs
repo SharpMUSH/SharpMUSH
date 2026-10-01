@@ -383,8 +383,7 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@notify {semObj}/{uniqueAttr}"));
 
-		await Task.Delay(2000);
-
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, testMessage, executor, TimeSpan.FromSeconds(10));
 		await Assert.That(Heard(executor, testMessage, executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
@@ -454,8 +453,7 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
 
-		await Task.Delay(2000);
-
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, $"QRegValue:{testValue}", executor, TimeSpan.FromSeconds(10));
 		await Assert.That(Heard(executor, $"QRegValue:{testValue}", executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
@@ -622,9 +620,9 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
 
-		await Task.Delay(3000);
-
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, attrA);
+		await TestHelpers.WaitForAttribute(AttributeService, obj, attrB);
 
 		var attrResultA = (await AttributeService.GetAttributeAsync(obj, obj, attrA,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"First command in @wait callback should set {attrA}");
@@ -704,11 +702,10 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
 
-		await Task.Delay(2000);
-
 		// PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
 		// SharpMUSH currently stores the literal "[add(1,1)]" instead (the bug).
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, uniqueAttr);
 		var attr = (await AttributeService.GetAttributeAsync(obj, obj, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
@@ -736,9 +733,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"+waitstore_{uniqueId.ToLower()} {targetName}"));
 
-		await Task.Delay(3000);
-
 		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode, uniqueAttr);
 		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{uniqueAttr} should have been set by the @wait callback");
 
@@ -769,9 +765,8 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
 
-		await Task.Delay(3000);
-
 		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode, grpAttr);
 		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, grpAttr,
 			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{grpAttr} should have been set by the @wait callback's @switch non-#-1 branch");
 
@@ -933,8 +928,7 @@ public class SemaphoreCommandTests
 
 		// ...and still runs once released, so the test cannot pass by the task being lost.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {semObj}/{attr}"));
-		await Task.Delay(1200);
-
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(executor, token, executor, TimeSpan.FromSeconds(10));
 		await Assert.That(Heard(executor, token, executor, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
