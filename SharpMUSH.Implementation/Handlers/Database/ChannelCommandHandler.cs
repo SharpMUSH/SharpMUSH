@@ -3,6 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Notifications;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
@@ -20,8 +21,12 @@ public class CreateChannelCommandHandler(IChannelStore database) : ICommandHandl
 /// removes it. A listener run from inside this handler runs before that pass and can be handed the old
 /// name — which is what the rename test in <c>CommFeedPackageTests</c> saw when the announcement was
 /// published here.
+///
+/// <para>A channel's id is its name, so a rename moves the recall buffer to the new id: PennMUSH keeps
+/// the buffer on the channel, and its history survives a rename.</para>
 /// </summary>
-public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelCommand>
+public class UpdateChannelCommandHandler(IChannelStore database, IChannelBufferService buffers)
+	: ICommandHandler<UpdateChannelCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -36,6 +41,14 @@ public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandl
 			request.ModLock,
 			request.Mogrifier,
 			request.Buffer, cancellationToken);
+
+		if (request.Name is { } name
+			&& request.Channel.Id is { } oldId
+			&& await database.GetChannelAsync(name.ToPlainText(), cancellationToken) is { Id: { } newId })
+		{
+			await buffers.MoveBufferAsync(oldId, newId);
+		}
+
 		return Unit.Value;
 	}
 }

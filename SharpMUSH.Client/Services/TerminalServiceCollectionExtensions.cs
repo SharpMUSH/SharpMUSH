@@ -56,8 +56,10 @@ public static class TerminalServiceCollectionExtensions
 
 		// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
 		// package pushes to every connection a player has, and only the play connection is the one to
-		// count. Built by AttachPlayTerminalFeeds, not on first use — see there.
-		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels));
+		// count. Built by AttachPlayTerminalFeeds, not on first use — see there. The server's history and read
+		// markers come through ICommHistory, which Program registers; without it the feed counts on its own.
+		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
+			history: sp.GetService<ICommHistory>()));
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();

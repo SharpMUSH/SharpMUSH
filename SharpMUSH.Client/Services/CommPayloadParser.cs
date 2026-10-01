@@ -95,7 +95,8 @@ public static class CommPayloadParser
 				Str(root, "from") ?? string.Empty,
 				Text(root, "fromObjid"),
 				Str(root, "text") ?? string.Empty,
-				Time(root) ?? receivedAt);
+				Time(root) ?? receivedAt,
+				Id(root));
 
 			return new CommEntry(message, recipients);
 		}
@@ -148,6 +149,15 @@ public static class CommPayloadParser
 		&& value.ValueKind == JsonValueKind.Object
 		&& Text(value, "name") is { } name
 			? new CommParticipant(name, Text(value, "objid"))
+			: null;
+
+	/// <summary>
+	/// <c>id</c>, the id the recall endpoint returns for the same line: a whole number, or none. A line
+	/// without one (a page, or a game whose package predates it) is never taken for another.
+	/// </summary>
+	private static long? Id(JsonElement root) =>
+		root.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.TryGetInt64(out var value)
+			? value
 			: null;
 
 	private static DateTimeOffset? Time(JsonElement root)

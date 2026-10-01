@@ -23,6 +23,7 @@ public class ChannelBroadcastService(
 	IAttributeService attributeService,
 	IMUSHCodeParser parser,
 	IEventService eventService,
+	IChannelMessageIdSource messageIds,
 	ILogger<ChannelBroadcastService> logger)
 	: IChannelBroadcastService
 {
@@ -45,6 +46,9 @@ public class ChannelBroadcastService(
 
 		var message = line.FormatOverride ?? BuildDefaultMessage(line);
 		var sentAt = DateTimeOffset.UtcNow;
+		// Taken before delivery, so the event and the buffer name the line alike: the portal drops a pushed
+		// line whose id it already pulled. A line that is never buffered still has one.
+		var id = await messageIds.NextAsync(cancellationToken);
 
 		using (logger.BeginScope(new Dictionary<string, string>
 		{
@@ -57,11 +61,11 @@ public class ChannelBroadcastService(
 
 			// The event follows delivery, before the recall buffer: once the members have the terminal line,
 			// a buffer write that fails (or is cancelled) must not keep the comm feed from getting it too.
-			await RaiseChannelMessageEventAsync(notification, sender, line, recipients, sentAt);
+			await RaiseChannelMessageEventAsync(notification, sender, line, recipients, sentAt, id);
 
 			if (!line.SkipBuffer)
 			{
-				await BufferAsync(notification, sender, message, sentAt, cancellationToken);
+				await BufferAsync(notification, sender, line, message, sentAt, id, cancellationToken);
 			}
 		}
 	}
@@ -70,24 +74,23 @@ public class ChannelBroadcastService(
 	/// <see cref="SharpEvents.ChannelMessage"/>: the line as parts, and exactly who it was delivered to, so
 	/// a handler can pass it on (the <c>comm-feed</c> package's <c>comm.message</c>) without deciding again
 	/// who may hear it. Nobody heard it, nothing fires. The parts are plain text after the mogrifier; a
-	/// member's own <c>@chatformat</c> changes only their terminal line.
+	/// member's own <c>@chatformat</c> changes only their terminal line. The last argument is the line's id,
+	/// which the recall buffer holds it under too.
 	/// </summary>
 	private async ValueTask RaiseChannelMessageEventAsync(
 		ChannelMessageNotification notification,
 		AnySharpObject? sender,
 		ChannelLine line,
 		IReadOnlyList<AnySharpObject> recipients,
-		DateTimeOffset sentAt)
+		DateTimeOffset sentAt,
+		long id)
 	{
 		if (recipients.Count == 0)
 		{
 			return;
 		}
 
-		// An @cemit line does not name its emitter: a member's terminal shows the message alone, and only
-		// a NOSPOOF member is told who sent it. The handler still runs with the emitter as %#.
-		var named = notification.MessageType is not (INotifyService.NotificationType.Emit
-			or INotifyService.NotificationType.NSEmit);
+		var named = Named(notification);
 
 		await eventService.TriggerEventAsync(
 			parser,
@@ -99,8 +102,16 @@ public class ChannelBroadcastService(
 			named ? line.PlayerName.ToPlainText() : string.Empty,
 			line.Message.ToPlainText(),
 			string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString())),
-			sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+			sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
+			id.ToString(CultureInfo.InvariantCulture));
 	}
+
+	/// <summary>
+	/// Whether the line names its speaker. An @cemit line does not: a member's terminal shows the message
+	/// alone, and only a NOSPOOF member is told who sent it. The handler still runs with the emitter as %#.
+	/// </summary>
+	private static bool Named(ChannelMessageNotification notification) =>
+		notification.MessageType is not (INotifyService.NotificationType.Emit or INotifyService.NotificationType.NSEmit);
 
 	/// <summary>The chat type character as the word <see cref="SharpEvents.ChannelMessage"/> passes.</summary>
 	private static string StyleFor(string chatType) => chatType switch
@@ -360,14 +371,17 @@ public class ChannelBroadcastService(
 	}
 
 	/// <summary>
-	/// Logs the line and adds it to the channel's recall buffer. A sourceless line (a server notice) is
-	/// logged but not recalled, since a recall entry names its sender.
+	/// Logs the line and adds it to the channel's recall buffer under <paramref name="id"/>, with the parts
+	/// the portal's recall endpoint shapes it from. A sourceless line (a server notice) is logged but not
+	/// recalled, since a recall entry names its sender.
 	/// </summary>
 	private async ValueTask BufferAsync(
 		ChannelMessageNotification notification,
 		AnySharpObject? sender,
+		ChannelLine line,
 		MString message,
 		DateTimeOffset sentAt,
+		long id,
 		CancellationToken cancellationToken)
 	{
 		logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
@@ -379,12 +393,16 @@ public class ChannelBroadcastService(
 
 		var channelMessage = new SharpChannelMessage
 		{
+			Id = id,
 			ChannelId = notification.Channel.Id ?? string.Empty,
 			Timestamp = sentAt,
 			Sender = sender.Object().DBRef,
 			Message = message,
 			MessageType = notification.MessageType.ToString(),
-			SeeAllOnly = notification.SeeAllOnly
+			SeeAllOnly = notification.SeeAllOnly,
+			Style = StyleFor(line.ChatType),
+			SpeakerName = Named(notification) ? line.PlayerName.ToPlainText() : string.Empty,
+			MessageText = line.Message.ToPlainText()
 		};
 		await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
 	}

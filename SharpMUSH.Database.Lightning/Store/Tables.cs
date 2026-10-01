@@ -47,6 +47,7 @@ public static class Tables
 	public static readonly TableDef Session = TableDef.Node("session");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);
+	public static readonly TableDef ReadMarker = TableDef.Node("read.marker");
 	public static readonly TableDef State = TableDef.Node("state");
 	public static readonly TableDef ExpandedObj = TableDef.Node("x.obj");
 	public static readonly TableDef ExpandedSrv = TableDef.Node("x.srv");

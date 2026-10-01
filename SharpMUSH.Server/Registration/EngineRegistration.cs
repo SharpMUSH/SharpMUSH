@@ -123,6 +123,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
 		services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
+		services.AddSingleton<CommTextComposer>();
 		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
@@ -186,6 +187,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
 		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();
+		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
