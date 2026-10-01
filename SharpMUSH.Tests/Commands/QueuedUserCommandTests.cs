@@ -24,10 +24,11 @@ public class QueuedUserCommandTests : ServerTestBase
 	[Before(Test)]
 	public async Task CreateActor()
 	{
-		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "QueuedCmd");
+		// Created in its room, not teleported there: the look after a move is queued and could otherwise
+		// land among what a test counts.
 		_room = await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdRoom")}");
-		await Cmd($"@tel {_actor.DbRef}={_room}");
+		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "QueuedCmd", DBRef.Parse(_room.Trim()));
 		_commands = await CreateThing("QueuedCmdObj");
 		_token = TestIsolationHelpers.GenerateUniqueName("qc").ToLowerInvariant();
 	}
