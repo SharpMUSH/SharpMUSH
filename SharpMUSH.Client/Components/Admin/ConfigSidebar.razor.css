@@ -1,0 +1,118 @@
+.config-side {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-height: 100%;
+	padding: 12px 8px;
+	box-sizing: border-box;
+}
+
+.config-side--collapsed {
+	padding: 12px 4px;
+}
+
+.config-side-head {
+	padding: 4px 10px 12px;
+}
+
+.config-side-title {
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.config-side-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	margin-top: 2px;
+}
+
+.config-side-tree {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.config-side-group {
+	display: block;
+}
+
+/* the group row: the same shape as a kit icon row, on a <summary> */
+.config-side-summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 40px;
+	padding: 0 8px;
+	border-radius: var(--radius-row);
+	color: var(--text);
+	font-size: 14px;
+	cursor: pointer;
+	list-style: none;
+	transition: background var(--motion-pop);
+}
+
+.config-side-summary::-webkit-details-marker {
+	display: none;
+}
+
+.config-side-summary:hover {
+	background: var(--surface);
+}
+
+.config-side-summary:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.config-side-icon {
+	width: 30px;
+	height: 30px;
+	flex-shrink: 0;
+	border-radius: 8px;
+	background: var(--surface-2);
+	color: var(--text-dim);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.config-side-group[open] > .config-side-summary .config-side-icon {
+	color: var(--accent);
+}
+
+.config-side-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.config-side-chevron {
+	color: var(--text-dim);
+	display: inline-flex;
+	transition: transform var(--motion-pop);
+}
+
+.config-side-group[open] > .config-side-summary .config-side-chevron {
+	transform: rotate(90deg);
+}
+
+.config-side-sections {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 2px 0 6px 20px;
+}
+
+.config-side-spacer {
+	flex: 1 1 auto;
+	min-height: 16px;
+}
+
+.config-side-maint {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}

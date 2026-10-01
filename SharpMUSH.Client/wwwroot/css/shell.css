@@ -22,7 +22,7 @@
 
 /* ── Topbar: glass-morphism, spans content column only ── */
 .phosphor-topbar {
-	height: 60px;
+	height: var(--topbar-h);
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;

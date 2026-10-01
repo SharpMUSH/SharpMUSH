@@ -8,13 +8,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <div class="config-section-page">
-	<div class="config-section-header">
-		<div>
-			<div class="config-kicker">Admin · server settings</div>
-			<h1 class="config-title">@Loc["ImportConfiguration"]</h1>
-			<p class="config-desc">@Loc["ImportConfigDescription"]</p>
-		</div>
-	</div>
+	<PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["ImportConfiguration"]" Description="@Loc["ImportConfigDescription"]" />
 
 	<div class="config-field-card config-dropzone">
 		<MudFileUpload T="IBrowserFile"

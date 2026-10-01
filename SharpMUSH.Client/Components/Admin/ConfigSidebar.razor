@@ -1,0 +1,136 @@
+@using SharpMUSH.Client.Models.Configuration
+@using Microsoft.AspNetCore.Components.Routing
+@inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@inject AdminConfigService AdminConfigService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* D1 §6.4 page sidebar for /admin/config: a tree of the six groups, the open group's sections as
+   indented rows with setting counts, and Maintenance (Import, Export) pinned to the bottom. Hosted
+   by ConfigLayout until the shell's page-sidebar slot exists (Phase 1); Collapsed renders the group
+   icons only, each linking to the group's first section. *@
+<div class="config-side @(Collapsed ? "config-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <div class="config-side-head">
+            <div class="config-side-title">@Loc["Configuration"]</div>
+            <div class="config-side-sub">@Loc["ResConfigSectionKicker"]</div>
+        </div>
+        <SectionLabel>@Loc["Settings"]</SectionLabel>
+    }
+    <nav class="config-side-tree" aria-label="@Loc["Settings"]">
+        @foreach (var g in ConfigSections.Groups)
+        {
+            @if (Collapsed)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@g.Icon" Label="@Loc[g.TitleKey]" Href="@g.FirstRoute" IsCurrent="@(g == _currentGroup)" Collapsed="true" />
+            }
+            else
+            {
+                @* open is owned by Blazor: the summary's native toggle is prevented, because a browser also
+                   fires toggle for a <details> created open, which would close the current group on load. *@
+                <details class="config-side-group" open="@_open.Contains(g.Key)">
+                    <summary class="config-side-summary" aria-label="@string.Format(Loc["AdmConfigGroupToggle"], Loc[g.TitleKey])" aria-expanded="@(_open.Contains(g.Key) ? "true" : "false")" @onclick="@(() => Toggle(g.Key))" @onclick:preventDefault>
+                        <span class="config-side-icon" aria-hidden="true"><MudIcon Icon="@g.Icon" Size="Size.Small" /></span>
+                        <span class="config-side-label">@Loc[g.TitleKey]</span>
+                        <span class="config-side-chevron" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></span>
+                    </summary>
+                    <div class="config-side-sections">
+                        @foreach (var s in g.Sections)
+                        {
+                            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@s.Icon" Label="@Loc[s.TitleKey]" Href="@s.Route" IsCurrent="@(s == _currentSection)" Count="@CountFor(s)" />
+                        }
+                    </div>
+                </details>
+            }
+        }
+    </nav>
+    <div class="config-side-spacer"></div>
+    <div class="config-side-maint">
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["Maintenance"]</SectionLabel>
+        }
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Upload" Label="@Loc["Import"]" Href="/admin/config/import" IsCurrent="@_onImport" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Download" Label="@Loc["Export"]" OnClick="ExportAsync" Collapsed="@Collapsed" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Settings per schema category; null while the schema is unknown, so no counts show.</summary>
+    [Parameter] public IReadOnlyDictionary<string, int>? SectionCounts { get; set; }
+
+    private readonly HashSet<string> _open = new(StringComparer.Ordinal);
+    private ConfigSection? _currentSection;
+    private ConfigGroup? _currentGroup;
+    private bool _onImport;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Locate();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Locate()
+    {
+        // Base-relative, so a portal hosted under a sub-path still matches its own routes.
+        var path = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var cut = path.IndexOfAny(['?', '#']);
+        if (cut >= 0) path = path[..cut];
+        _currentSection = ConfigSections.SectionForPath(path);
+        _currentGroup = ConfigSections.GroupForPath(path);
+        _onImport = path.TrimEnd('/').Equals("/admin/config/import", StringComparison.OrdinalIgnoreCase);
+        if (_currentGroup is not null)
+        {
+            _open.Add(_currentGroup.Key);
+        }
+    }
+
+    private void Toggle(string key)
+    {
+        if (!_open.Remove(key))
+        {
+            _open.Add(key);
+        }
+    }
+
+    private int? CountFor(ConfigSection s) =>
+        SectionCounts is not null && SectionCounts.TryGetValue(s.SchemaCategory, out var n) ? n : null;
+
+    private async Task ExportAsync()
+    {
+        var export = await AdminConfigService.ExportConfigAsync();
+        var (json, error) = export switch
+        {
+            string body => (body, null),
+            ApiFailure failure => ((string?)null, failure.Message)
+        };
+        if (json is null)
+        {
+            Snackbar.Add($"{Loc["ExportFailed"]}: {error}", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", "sharpmush-config.json", "application/json", json);
+            Snackbar.Add(Loc["ConfigurationExported"].Value, Severity.Success);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["ExportFailed"].Value, Severity.Error);
+        }
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

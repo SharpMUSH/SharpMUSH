@@ -1,27 +1,49 @@
 .config-shell {
-    padding: var(--cpad);
-    display: grid;
-    grid-template-columns: 230px 1fr;
-    gap: 1.375rem;
-    align-items: start;
+	display: grid;
+	grid-template-columns: var(--side-w) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+	padding: 0;
+	min-height: 100%;
 }
 
-.config-section-nav,
+.config-section-nav {
+	min-width: 0;
+	background: var(--surface-3);
+	border-right: 1px solid var(--border-soft);
+	position: sticky;
+	top: 0;
+	/* the scroll container starts under the topbar (and above the touch tab bar), so a
+	   100dvh box would hide its bottom rows — the pinned Maintenance links */
+	max-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-clearance, 0px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	align-self: stretch;
+}
+
 .config-section-body {
-    min-width: 0;
+	min-width: 0;
+	padding: var(--main-pad);
+}
+
+/* The hand-built section pages (Banned names, Import, Restrictions, Sitelock) put the kit's plain
+   header straight into a .config-section-page block with no gap; the header carries no margin of
+   its own, so the space under it is set here once for all of them. */
+.config-section-body ::deep .config-section-page > .kit-page-head {
+	margin-bottom: 1.25rem;
 }
 
 @container page (max-width: 64rem) {
-    .config-shell {
-        grid-template-columns: 1fr;
-        gap: 0.875rem;
-    }
+	.config-shell {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 12px;
+	}
 
-    .config-section-nav {
-        max-height: 17.5rem;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius);
-    }
+	.config-section-nav {
+		position: static;
+		max-height: 17.5rem;
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-card);
+		margin: 12px 12px 0;
+	}
 }
