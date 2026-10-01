@@ -17,7 +17,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class LocalFunctionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -233,6 +232,8 @@ public class LocalFunctionTests
 	}
 
 	[Test]
+	// Deletes the builtin add() for the whole game until the finally restores it.
+	[NotInParallel]
 	public async Task TemporarilyDeletedBuiltinsRemainReservedForLocals()
 	{
 		var name = "reserved" + Guid.NewGuid().ToString("N");
