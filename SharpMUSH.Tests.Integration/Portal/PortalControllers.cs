@@ -46,16 +46,20 @@ public static class PortalControllers
 			"TestScheme");
 	}
 
-	public static async Task<CommController> CommControllerAs(ServerWebAppFactory factory, DBRef character)
-		=> CommControllerFor(factory, await IdentityFor(factory, character));
+	/// <param name="ids">The line id source the controller bounds markers by; the host's own unless given.</param>
+	public static async Task<CommController> CommControllerAs(ServerWebAppFactory factory, DBRef character,
+		IChannelMessageIdSource? ids = null)
+		=> CommControllerFor(factory, await IdentityFor(factory, character), ids);
 
-	public static CommController CommControllerFor(ServerWebAppFactory factory, ClaimsIdentity identity) =>
+	public static CommController CommControllerFor(ServerWebAppFactory factory, ClaimsIdentity identity,
+		IChannelMessageIdSource? ids = null) =>
 		new(
 			factory.Services.GetRequiredService<IMediator>(),
 			factory.Services.GetRequiredService<IPermissionService>(),
 			factory.Services.GetRequiredService<INotifyService>(),
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
-			factory.Services.GetRequiredService<CommTextComposer>())
+			factory.Services.GetRequiredService<CommTextComposer>(),
+			ids ?? factory.Services.GetRequiredService<IChannelMessageIdSource>())
 		{
 			ControllerContext = new ControllerContext
 			{

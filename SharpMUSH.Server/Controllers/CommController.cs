@@ -44,7 +44,8 @@ public class CommController(
 	IPermissionService permissionService,
 	INotifyService notifyService,
 	IVisibleWorldProjection projection,
-	CommTextComposer textComposer) : ControllerBase
+	CommTextComposer textComposer,
+	IChannelMessageIdSource messageIds) : ControllerBase
 {
 	/// <summary>The most people one conversation marker may name; a page to more than this is not a conversation.</summary>
 	public const int ConversationLimit = 32;
@@ -170,16 +171,18 @@ public class CommController(
 	}
 
 	/// <summary>
-	/// Moves the marker on. Neither part may be later than now: every real line was sent by now, and a
-	/// marker set in the future would call every line until then read.
+	/// Moves the marker on. Neither part may be later than any real line: the time no later than now, and
+	/// the id no larger than the largest id issued — which can run ahead of the clock when it stops or is
+	/// set back, so the clock alone would cut a real marker down and bring read lines back as unread. A
+	/// marker set past every line would call every line until then read.
 	/// </summary>
 	private async Task<SharpReadMarker> AdvanceAsync(SharpPlayer player, string scope, long? lastReadId,
 		DateTimeOffset lastReadAt, CancellationToken ct)
 	{
 		var now = DateTimeOffset.UtcNow;
-		var nowId = (now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
+		var latestId = Math.Max((now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond, messageIds.Latest);
 		var marker = new SharpReadMarker(scope,
-			lastReadId is { } id ? Math.Clamp(id, 0, nowId) : null,
+			lastReadId is { } id ? Math.Clamp(id, 0, latestId) : null,
 			lastReadAt > now ? now : lastReadAt);
 		return await mediator.Send(new AdvanceReadMarkerCommand(player.Object.DBRef, marker), ct);
 	}

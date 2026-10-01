@@ -203,6 +203,35 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await Assert.That(theirs.Channels.Any(m => m.Channel == channel)).IsFalse();
 	}
 
+	/// <summary>Line ids issued while the clock ran behind them (stopped, or set back).</summary>
+	private sealed class AheadOfTheClock(long latest) : IChannelMessageIdSource
+	{
+		public long Latest => latest;
+		public ValueTask<long> NextAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult(latest);
+	}
+
+	/// <summary>
+	/// A marker id is bounded by the largest id issued, not by the clock: ids run ahead of the clock when
+	/// it stops or is set back, and a marker cut down to the time would bring read lines back as unread.
+	/// </summary>
+	[Test]
+	public async Task AChannelMarker_KeepsAnIdIssuedAheadOfTheClock()
+	{
+		var reader = await NewPlayerAsync("CommMarkAhead");
+		var channel = await ChannelAsync("CommMarkAhead", reader);
+		var now = (DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
+		var issued = now + 3_600_000_000;
+
+		var controller = await PortalControllers.CommControllerAs(factory, reader, new AheadOfTheClock(issued + 10));
+		var mark = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(issued, DateTimeOffset.UtcNow),
+			CancellationToken.None));
+		var beyond = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(issued + 1_000_000, DateTimeOffset.UtcNow),
+			CancellationToken.None));
+
+		await Assert.That(mark.LastReadId).IsEqualTo(issued);
+		await Assert.That(beyond.LastReadId).IsEqualTo(issued + 10).Because("no line has an id past the last one issued");
+	}
+
 	/// <summary>A marker follows the channel, not its name.</summary>
 	[Test]
 	public async Task AChannelMarker_SurvivesARename()

@@ -15,16 +15,20 @@ public class InMemoryChannelBufferService(IChannelMessageIdSource ids) : IChanne
 	private readonly ConcurrentDictionary<string, CircularBuffer<SharpChannelMessage>> _buffers = new();
 	private const int DefaultBufferSize = 100;
 
-	public ValueTask AddMessageAsync(SharpChannelMessage message)
+	/// <summary>Held by an add and by a move, so a line is never added to a buffer that a move is taking away.</summary>
+	private readonly Lock _moving = new();
+
+	public async ValueTask AddMessageAsync(SharpChannelMessage message)
 	{
 		if (message.Id == 0)
 		{
-			message.Id = ids.Next();
+			message.Id = await ids.NextAsync();
 		}
 
-		var buffer = _buffers.GetOrAdd(message.ChannelId, _ => new CircularBuffer<SharpChannelMessage>(DefaultBufferSize));
-		buffer.Add(message);
-		return ValueTask.CompletedTask;
+		lock (_moving)
+		{
+			_buffers.GetOrAdd(message.ChannelId, _ => new CircularBuffer<SharpChannelMessage>(DefaultBufferSize)).Add(message);
+		}
 	}
 
 	public async IAsyncEnumerable<SharpChannelMessage> GetMessagesAsync(string channelId, int count)
@@ -46,17 +50,40 @@ public class InMemoryChannelBufferService(IChannelMessageIdSource ids) : IChanne
 	public ValueTask<int> CountMessagesAsync(string channelId)
 		=> ValueTask.FromResult(_buffers.TryGetValue(channelId, out var buffer) ? buffer.Count : 0);
 
+	/// <remarks>
+	/// A line can already be under the new id — broadcast on the renamed channel between the rename and
+	/// this move — so the two buffers are merged in id order, keeping the newest
+	/// <see cref="DefaultBufferSize"/>, rather than one replacing the other. A broadcast that resolved the
+	/// channel before the rename and buffers after the move still files its line under the old id.
+	/// </remarks>
 	public ValueTask MoveBufferAsync(string fromChannelId, string toChannelId)
 	{
-		if (!string.Equals(fromChannelId, toChannelId, StringComparison.Ordinal)
-			&& _buffers.TryRemove(fromChannelId, out var buffer))
+		if (string.Equals(fromChannelId, toChannelId, StringComparison.Ordinal))
 		{
-			foreach (var message in buffer.GetRecent(int.MaxValue))
+			return ValueTask.CompletedTask;
+		}
+
+		lock (_moving)
+		{
+			if (!_buffers.TryRemove(fromChannelId, out var moved))
 			{
-				message.ChannelId = toChannelId;
+				return ValueTask.CompletedTask;
 			}
 
-			_buffers[toChannelId] = buffer;
+			var lines = moved.GetRecent(int.MaxValue);
+			if (_buffers.TryGetValue(toChannelId, out var existing))
+			{
+				lines = [.. lines.Concat(existing.GetRecent(int.MaxValue)).OrderBy(line => line.Id)];
+			}
+
+			var merged = new CircularBuffer<SharpChannelMessage>(DefaultBufferSize);
+			foreach (var line in lines)
+			{
+				line.ChannelId = toChannelId;
+				merged.Add(line);
+			}
+
+			_buffers[toChannelId] = merged;
 		}
 
 		return ValueTask.CompletedTask;

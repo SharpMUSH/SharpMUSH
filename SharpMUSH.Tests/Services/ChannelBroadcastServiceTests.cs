@@ -139,7 +139,8 @@ public class ChannelBroadcastServiceTests
 	private sealed class FixedIds : IChannelMessageIdSource
 	{
 		public long Peek { get; } = 1_790_780_182_950_000;
-		public long Next() => Peek;
+		public long Latest => Peek;
+		public ValueTask<long> NextAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult(Peek);
 	}
 
 	private static readonly FixedIds Ids = new();

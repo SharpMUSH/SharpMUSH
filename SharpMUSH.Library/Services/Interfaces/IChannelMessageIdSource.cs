@@ -8,5 +8,11 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IChannelMessageIdSource
 {
 	/// <summary>The next id: larger than every id handed out before it, here and before a restart.</summary>
-	long Next();
+	ValueTask<long> NextAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// The largest id handed out so far by this process, or 0. Ids can run ahead of the clock (a stopped
+	/// clock, or one set back), so this, not the time, is the bound on an id a client may have seen.
+	/// </summary>
+	long Latest { get; }
 }

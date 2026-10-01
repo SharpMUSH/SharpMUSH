@@ -48,7 +48,7 @@ public class ChannelBroadcastService(
 		var sentAt = DateTimeOffset.UtcNow;
 		// Taken before delivery, so the event and the buffer name the line alike: the portal drops a pushed
 		// line whose id it already pulled. A line that is never buffered still has one.
-		var id = messageIds.Next();
+		var id = await messageIds.NextAsync(cancellationToken);
 
 		using (logger.BeginScope(new Dictionary<string, string>
 		{
