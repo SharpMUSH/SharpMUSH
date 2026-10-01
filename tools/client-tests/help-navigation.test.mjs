@@ -5,7 +5,7 @@ import test from 'node:test';
 const source = readFileSync(new URL('../../SharpMUSH.Client/Components/Help/HelpEntryPanel.razor.js', import.meta.url), 'utf8');
 const { bindSections, unbindSections } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 
-test('TOC activation keeps the article route and moves keyboard focus', () => {
+test('TOC activation uses the canonical article route and moves keyboard focus', () => {
     const calls = [];
     const attributes = new Map();
     let callback;
@@ -23,7 +23,7 @@ test('TOC activation keeps the article route and moves keyboard focus', () => {
         ownerDocument: {
             getElementById: id => id === 'examples' ? section : null,
             defaultView: {
-                location: { href: 'https://example.com/help/align%28%29' },
+                location: { href: 'https://example.com/help/align%20columns' },
                 history: { state: {}, pushState: (_, __, url) => calls.push(url.href) }
             }
         },

@@ -7,13 +7,12 @@ export function bindSections(article) {
         const link = event.target.closest?.("nav.help-toc a");
         if (!link || !article.contains(link)) return;
         const view = article.ownerDocument.defaultView;
-        const fragment = new URL(link.getAttribute("href"), view.location.href).hash;
+        const destination = new URL(link.getAttribute("href"), view.location.href);
+        const fragment = destination.hash;
         const id = decodeURIComponent(fragment.slice(1));
         const section = article.ownerDocument.getElementById(id);
         if (!section || !article.contains(section)) return;
         event.preventDefault();
-        const destination = new URL(view.location.href);
-        destination.hash = fragment;
         view.history.pushState(view.history.state, "", destination);
         focusSection(article, id);
     };

@@ -157,7 +157,9 @@ attribute flag propagation text, the Unicode claim, removal of duplicate channel
 function aliases, and moving drop-cap prose out of its code fence. Review corrections
 also distinguish C# hardcode from PennMUSH's C, explain recycled dbrefs and durable
 objids, label inert queue economy settings, repair JSON modification examples, and
-give the economy and evaluation-lock articles useful overviews. The IANA 2011n
+give the economy and evaluation-lock articles useful overviews. Building costs now
+describe quota slots rather than pennies; the executor-selection example has balanced
+parentheses, and render compatibility is a declared profile decision. The IANA 2011n
 catalog is retained as a complete, explicitly historical section.
 
 ## Validation

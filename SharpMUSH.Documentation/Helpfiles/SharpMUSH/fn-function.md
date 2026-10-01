@@ -45,7 +45,7 @@ When an `<obj>` is given, debug information is automatically suppressed when eva
 
 Example:
 ```sharp
-&BRIGHT_PEMIT #10=fn(%@/pemit, %0, -->[ansi(h,%1)]))
+&BRIGHT_PEMIT #10=fn(%@/pemit, %0, -->[ansi(h,%1)])
 @function/delete PEMIT
 @function PEMIT=#10, BRIGHT_PEMIT
 @lock/page *Mike=!=*Padraic

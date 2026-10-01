@@ -199,6 +199,8 @@ public class CompatibilityProfileStructureTests
 	public async ValueTask ProfileHasDecidedDifferences()
 	{
 		await Assert.That(DecidedDifferences().Count()).IsGreaterThan(30);
+		await Assert.That(DecidedDifferences().Select(entry => entry().Heading))
+			.Contains("`render()` markup compatibility");
 	}
 
 	public static IEnumerable<Func<ProfileEntry>> DecidedDifferences() =>

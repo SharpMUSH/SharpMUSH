@@ -205,6 +205,7 @@ class CompareTests(unittest.TestCase):
     def test_the_shipped_allowlist_names_real_profile_entries(self):
         allowlist = compare.load_allowlist(Path(__file__).resolve().parent.parent / "known-differences.json")
         self.assertTrue(allowlist)
+        self.assertIn("`render()` markup compatibility", compare.profile_headings())
 
     def test_declared_profile_uses_section_metadata_across_articles(self):
         with tempfile.TemporaryDirectory() as d:
