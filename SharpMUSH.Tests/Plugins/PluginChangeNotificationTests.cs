@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.Plugins;
 /// to every connected client). A refused unload (unknown / load-once) does NOT fire it, and a load of a new
 /// plugin does not either.
 /// </summary>
-[NotInParallel]
 public class PluginChangeNotificationTests
 {
 	private static readonly IServiceProvider EmptyProvider = new EmptyServiceProvider();

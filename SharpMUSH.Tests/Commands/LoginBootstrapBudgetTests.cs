@@ -12,7 +12,6 @@ using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class LoginBootstrapBudgetTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -28,7 +27,14 @@ public class LoginBootstrapBudgetTests
 		var services = Factory.Services;
 		var connections = services.GetRequiredService<IConnectionService>();
 		var mediator = services.GetRequiredService<IMediator>();
-		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<SharpPlayer>();
+		// A wizard of this test's own, standing in a room of its own: the wizard MOTD applies, and its
+		// connect announcement reaches nobody else's players.
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "LoginBudget");
+		var room = await Factory.CommandParser.CommandParse(1, connections,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("LoginBudgetRoom")}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {playerRef}=WIZARD"));
+		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
 		var events = Substitute.For<IEventService>();
 		var bus = Substitute.For<IMessageBus>();

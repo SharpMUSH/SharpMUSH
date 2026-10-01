@@ -76,7 +76,7 @@ public class PackageWriteTransactionTests
 			.IsEquivalentTo([$"{objid}/TX_VALUE=original"]);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Revert_ReturnsEveryWriteToItsStateBeforeTheFirst()
 	{
 		const string package = "tx-revert";
@@ -94,7 +94,7 @@ public class PackageWriteTransactionTests
 		await Assert.That(await (await LiveAsync(created!.Object().DBRef)).Flags.Value.AnyAsync(f => f.Name == "GOING")).IsTrue();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Dispose_WithoutCommit_RevertsWhenAnExceptionUnwinds()
 	{
 		const string package = "tx-dispose";
@@ -111,7 +111,7 @@ public class PackageWriteTransactionTests
 		await AssertOriginalAsync(dbref, objid, "Tx Dispose Subject", package);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Commit_KeepsEveryWrite()
 	{
 		const string package = "tx-commit";
@@ -131,7 +131,7 @@ public class PackageWriteTransactionTests
 		await Assert.That((await Registry.GetManagedAttributesAsync(package)).Count).IsEqualTo(2);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task LinkingAnExitItDidNotCreate_IsRefused()
 	{
 		var writes = await BeginAsync();
