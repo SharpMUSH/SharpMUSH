@@ -45,9 +45,9 @@ public class HelpArticleTests
 	public async Task WebHasStableAnchorsAndOneCompleteArticle()
 	{
 		var article = HelpArticleParser.Parse(Article, "help").Single().Article;
-		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + topic, article);
+		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + Uri.EscapeDataString(topic), article);
 		await Assert.That(html).Contains("id=\"examples\"");
-		await Assert.That(html).Contains("href=\"/help/sample#examples\"");
+		await Assert.That(html).Contains("href=\"/help/sample%28%29#examples\"");
 		await Assert.That(html).Contains("aria-label=\"Article sections\"");
 		await Assert.That(html).Contains("Option details");
 		await Assert.That(html.Split("Example details").Length).IsEqualTo(2);
