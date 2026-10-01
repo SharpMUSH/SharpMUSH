@@ -34,7 +34,7 @@ public class JiterFunctionTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Jiter()
 	{
 		var objNum = await CreateObjectWithAttribute("jiter_obj", "F1", "add(%0,1)");
@@ -49,7 +49,7 @@ public class JiterFunctionTests
 		await Check($"jiter(#{objNum}/F1, 10)", "11");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task JiterStrings()
 	{
 		var objNum = await CreateObjectWithAttribute("jiter_str_obj", "W", "ucstr(%0)");

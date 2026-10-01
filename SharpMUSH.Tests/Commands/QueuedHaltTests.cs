@@ -39,7 +39,6 @@ namespace SharpMUSH.Tests.Commands;
 /// — that the queue exempts players, so the entry is admitted and reaches execution rather than being
 /// dropped as an object's would be.</para>
 /// </summary>
-[NotInParallel]
 public class QueuedHaltTests : ServerTestBase
 {
 	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
