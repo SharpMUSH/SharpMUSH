@@ -7,7 +7,7 @@
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
    by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
    a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
-   sends @chat to a channel, or page to the conversation's people by dbref (a quoted name when there is no
+   sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
    objid). While open, the feed's Viewing is this key, so its lines do not count as unread. *@
 <section class="comm" aria-labelledby="comm-title">
     <header class="comm-head">
@@ -197,10 +197,13 @@
         await OnSend.InvokeAsync(line);
     }
 
-    /// <summary>Each person by dbref (the objid's number) when known, else by name in quotes: a name may have spaces.</summary>
+    /// <summary>
+    /// Each person by full objid when known, else by name in quotes: a name may have spaces. Not the bare dbref:
+    /// the conversation outlives its player, and the page command refuses an objid whose dbref was recycled.
+    /// </summary>
     private static string PageTargets(CommConversation c) =>
         string.Join(' ', c.With.Select((name, i) =>
-            i < c.WithObjIds.Count && c.WithObjIds[i] is { Length: > 0 } objid ? objid.Split(':')[0] : $"\"{name}\""));
+            i < c.WithObjIds.Count && c.WithObjIds[i] is { Length: > 0 } objid ? objid : $"\"{name}\""));
 
     public void Dispose()
     {
