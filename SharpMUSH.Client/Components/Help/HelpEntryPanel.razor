@@ -83,16 +83,20 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_loading || !_focusRequested || _entry?.Topic is null)
+        if (_loading || _entry?.Topic is null)
         {
             return;
         }
-        _focusRequested = false;
         var section = _entry.SectionId ?? Uri.UnescapeDataString(new Uri(Navigation.Uri).Fragment.TrimStart('#'));
         try
         {
             _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Help/HelpEntryPanel.razor.js");
-            await _module.InvokeVoidAsync("focusSection", _articleElement, section);
+            await _module.InvokeVoidAsync("bindSections", _articleElement);
+            if (_focusRequested)
+            {
+                _focusRequested = false;
+                await _module.InvokeVoidAsync("focusSection", _articleElement, section);
+            }
         }
         catch (JSException error)
         {
@@ -104,6 +108,7 @@ else
     {
         if (_module is not null)
         {
+            await _module.InvokeVoidAsync("unbindSections", _articleElement);
             await _module.DisposeAsync();
         }
     }
