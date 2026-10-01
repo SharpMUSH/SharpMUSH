@@ -135,17 +135,30 @@
             var matches = topics.Where(t => t.Contains(_query, StringComparison.OrdinalIgnoreCase)).ToList();
             return (Loc.Plural("NavHelpMatches", "count", matches.Count), matches.Take(TopicsShown).ToList());
         }
-        return (Loc["NavHelpTopics"], Slice(topics, _topic, _index?.Topic));
+        // The getting-started entries are Browse rows already; listed here too, the one being read was
+        // two rows for one destination, both marked current.
+        return (Loc["NavHelpTopics"], Slice(topics, _topic, _index?.Topic, [.. Starters().Select(s => s.Topic)]));
     }
 
     /// <summary>
     /// <see cref="TopicsShown"/> topics around <paramref name="current"/>, or from the start of the list
-    /// when it is not one of them, leaving out the corpus's own index entry (the index row links it).
+    /// when it is not one of them, leaving out the corpus's own index entry (the index row links it) and
+    /// any <paramref name="linkedElsewhere"/>. A current topic that is left out still places the slice:
+    /// it surrounds where that topic falls.
     /// </summary>
-    public static IReadOnlyList<string> Slice(IReadOnlyList<string> topics, string? current, string? indexTopic)
+    public static IReadOnlyList<string> Slice(IReadOnlyList<string> topics, string? current, string? indexTopic,
+        IReadOnlyCollection<string>? linkedElsewhere = null)
     {
-        var listed = topics.Where(t => !string.Equals(t, indexTopic, StringComparison.OrdinalIgnoreCase)).ToList();
-        var at = current is null ? -1 : listed.FindIndex(t => string.Equals(t, current, StringComparison.OrdinalIgnoreCase));
+        var listed = new List<string>();
+        var at = -1;
+        foreach (var topic in topics)
+        {
+            if (at < 0 && string.Equals(topic, current, StringComparison.OrdinalIgnoreCase)) at = listed.Count;
+            if (string.Equals(topic, indexTopic, StringComparison.OrdinalIgnoreCase)
+                || linkedElsewhere?.Contains(topic, StringComparer.OrdinalIgnoreCase) == true) continue;
+            listed.Add(topic);
+        }
+
         var start = at < 0 ? 0 : Math.Clamp(at - TopicsShown / 2, 0, Math.Max(0, listed.Count - TopicsShown));
         return listed.Skip(start).Take(TopicsShown).ToList();
     }

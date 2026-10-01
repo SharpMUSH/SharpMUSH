@@ -94,6 +94,40 @@ public class HelpSidebarTests : TrackingBunitContext
 		await Assert.That(labels.IndexOf("topic-100")).IsGreaterThan(2).Because("the neighbours before it are shown too");
 	}
 
+	/// <summary>
+	/// A getting-started entry is listed once, in Browse. The topic slice listed it again, so on
+	/// /help/newbie the same destination appeared twice and both rows claimed aria-current="page".
+	/// </summary>
+	[Test]
+	public async Task OnAStarterTopic_ItIsListedAndMarkedOnce()
+	{
+		Install(isStaff: false);
+		var cut = RenderAt("/help/newbie");
+		await Assert.That(cut.FindAll("a.kit-row[href='/help/newbie']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a.kit-row[aria-current='page']").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".help-side-browse a.kit-row[aria-current='page']").GetAttribute("href")).IsEqualTo("/help/newbie");
+	}
+
+	/// <summary>Leaving a starter out of the slice keeps the slice around where it falls in the list.</summary>
+	[Test]
+	public async Task OnAStarterTopic_TheSliceStillSurroundsWhereItFalls()
+	{
+		var corpus = new Dictionary<string, Dictionary<string, string>>
+		{
+			["help"] = Enumerable.Range(0, 200)
+				.Select(i => $"alpha-{i:000}")
+				.Append("newbie")
+				.Append("help")
+				.ToDictionary(t => t, t => $"# {t}\nBody of {t}.", StringComparer.OrdinalIgnoreCase),
+		};
+		Install(isStaff: false, corpus);
+		var cut = RenderAt("/help/newbie");
+		var labels = cut.FindAll(".help-side-topics a.kit-row").Select(r => r.TextContent.Trim()).ToList();
+		await Assert.That(labels).DoesNotContain("newbie");
+		await Assert.That(labels.Count).IsEqualTo(HelpSidebar.TopicsShown);
+		await Assert.That(labels[^1]).IsEqualTo("alpha-199").Because("newbie sorts after every alpha-* entry, so its neighbours are the last of them");
+	}
+
 	[Test]
 	public async Task OnTheIndex_TheSliceIsTheStartOfTheList()
 	{
