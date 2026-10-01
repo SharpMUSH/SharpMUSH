@@ -204,7 +204,7 @@ public class ProfileHandlerAdminController(
 	/// <summary>The player package writes are made as, resolved the way the package installer resolves it.</summary>
 	private async Task<SharpPlayer?> PackageManagerAsync(CancellationToken ct) =>
 		await mediator.Send(new GetObjectNodeQuery(
-				new DBRef((int)(options.CurrentValue.Database.PackageManager ?? 3))), ct)
+				new DBRef((int)DatabaseOptions.PackageManagerOrSeeded(options.CurrentValue.Database.PackageManager))), ct)
 			is AnySharpObject and SharpPlayer player
 			? player
 			: null;

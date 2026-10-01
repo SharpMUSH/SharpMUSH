@@ -19,7 +19,7 @@ namespace SharpMUSH.Library.Services;
 /// Package install orchestration (decisions 20.2, 20.7, 20.13): gathers live
 /// state for the pure plan engine, executes reviewed changesets, and records
 /// baselines plus revision snapshots. All created objects are owned by the
-/// Package Manager wizard (config <c>package_manager</c>, default #3).
+/// Package Manager wizard (config <c>package_manager</c>, default the seeded #7).
 /// </summary>
 public partial class PackageInstallService(
 	IObjectStore database,
@@ -105,7 +105,7 @@ public partial class PackageInstallService(
 
 	private async Task<SharpPlayer> GetPackageManagerWizardAsync(CancellationToken cancellationToken)
 	{
-		var number = (int)(configuration.CurrentValue.Database.PackageManager ?? 3);
+		var number = (int)DatabaseOptions.PackageManagerOrSeeded(configuration.CurrentValue.Database.PackageManager);
 		var node = await database.GetObjectNodeAsync(new DBRef(number), cancellationToken);
 		return node switch
 		{
