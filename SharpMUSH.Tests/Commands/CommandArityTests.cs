@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -17,24 +15,28 @@ namespace SharpMUSH.Tests.Commands;
 /// swallowed command exceptions. These tests pin the enforcement: a bare invocation of a command
 /// that requires arguments answers with an arity error rather than a crash.
 /// </summary>
-/// <remarks>
-/// <c>[NotInParallel]</c> because these assertions are the only ones in the suite that check for the
-/// ABSENCE of a message. Several classes use <c>#-1 EXCEPTION: ordinary text</c> as a fixture value
-/// (<c>CommandArgumentResultTests</c>, <c>InputSessionCommandTests</c>, <c>InputHookFailureTests</c>,
-/// <c>SearchPredicateResultTests</c>), and one of those reaches this class's recipient while it is
-/// running — so between two and eleven of these thirteen cases failed per run, with different
-/// members each time, while all thirteen passed alone. The unkeyed non-parallel bucket runs as one
-/// sequential loop after the whole parallel bucket, so nothing else is in flight during these.
-/// </remarks>
-[NotInParallel]
 public class CommandArityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>
+	/// A player standing in a room of its own. These are the suite's checks for the ABSENCE of a
+	/// message, and several classes use <c>#-1 EXCEPTION: ordinary text</c> as a fixture value
+	/// (<c>CommandArgumentResultTests</c>, <c>InputSessionCommandTests</c>, <c>InputHookFailureTests</c>,
+	/// <c>SearchPredicateResultTests</c>); a player in the shared default room heard theirs.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> IsolatedPlayerAsync(string prefix)
+	{
+		var dug = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+		var room = DBRef.Parse(dug.Message!.ToPlainText());
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
+	}
 
 	[Test]
 	[Arguments("@switch", "@SWITCH", 3)]
@@ -46,8 +48,7 @@ public class CommandArityTests
 	public async Task ABareCommandThatRequiresArgumentsReportsItsArityInsteadOfThrowing(
 		string command, string reportedName, int minArgs)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, $"Arity{reportedName.TrimStart('@')}");
+		var player = await IsolatedPlayerAsync($"Arity{reportedName.TrimStart('@')}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
@@ -70,9 +71,7 @@ public class CommandArityTests
 	[Arguments("@channel")]
 	public async Task AnArgumentlessSwitchedChannelFormDoesNotThrow(string command)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService,
-			$"ChanArity{command.Replace("@", "").Replace("/", "")}");
+		var player = await IsolatedPlayerAsync($"ChanArity{command.Replace("@", "").Replace("/", "")}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
@@ -94,9 +93,7 @@ public class CommandArityTests
 	[Arguments("@channel/recall")]
 	public async Task ASwitchedChannelFormMissingItsChannelAnswersWithUsage(string command)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService,
-			$"ChanUsage{command.Replace("@", "").Replace("/", "")}");
+		var player = await IsolatedPlayerAsync($"ChanUsage{command.Replace("@", "").Replace("/", "")}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
