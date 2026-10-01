@@ -29,29 +29,14 @@ public class CommunicationCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private static readonly SemaphoreSlim ChannelGate = new(1, 1);
-
-	private static bool _channelReady;
-
 	/// <summary>
 	/// Creates the channel once for the session; tests starting together would otherwise race to
 	/// create it.
 	/// </summary>
+	private static readonly RunOnce ChannelSetup = new();
+
 	[Before(Test)]
-	public async Task SetupTestChannel()
-	{
-		await ChannelGate.WaitAsync();
-		try
-		{
-			if (_channelReady) return;
-			await CreateTestChannelAsync();
-			_channelReady = true;
-		}
-		finally
-		{
-			ChannelGate.Release();
-		}
-	}
+	public Task SetupTestChannel() => ChannelSetup.RunAsync(CreateTestChannelAsync);
 
 	private async Task CreateTestChannelAsync()
 	{

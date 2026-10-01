@@ -47,25 +47,10 @@ public class DatabaseCommandTests
 	/// The tables are only ever read, so they are created and filled once for the session; recreating
 	/// them per test would truncate them under any test reading them at the time.
 	/// </summary>
-	private static readonly SemaphoreSlim SeedGate = new(1, 1);
-
-	private static bool _seeded;
+	private static readonly RunOnce TableSetup = new();
 
 	[Before(Test)]
-	public async Task InitializeAsync()
-	{
-		await SeedGate.WaitAsync();
-		try
-		{
-			if (_seeded) return;
-			await SeedTablesAsync();
-			_seeded = true;
-		}
-		finally
-		{
-			SeedGate.Release();
-		}
-	}
+	public Task InitializeAsync() => TableSetup.RunAsync(SeedTablesAsync);
 
 	private async Task SeedTablesAsync()
 	{

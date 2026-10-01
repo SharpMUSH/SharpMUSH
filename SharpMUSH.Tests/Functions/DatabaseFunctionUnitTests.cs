@@ -10,8 +10,7 @@ public class DatabaseFunctionUnitTests
 {
 	// No test writes to the table, so it is seeded once and read concurrently. Reseeding it per test
 	// truncated it under whichever test was reading at the time.
-	private static readonly SemaphoreSlim SeedGate = new(1, 1);
-	private static bool _seeded;
+	private static readonly RunOnce TableSetup = new();
 
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -23,20 +22,7 @@ public class DatabaseFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Before(Test)]
-	public async Task InitializeAsync()
-	{
-		await SeedGate.WaitAsync();
-		try
-		{
-			if (_seeded) return;
-			await SeedAsync();
-			_seeded = true;
-		}
-		finally
-		{
-			SeedGate.Release();
-		}
-	}
+	public Task InitializeAsync() => TableSetup.RunAsync(SeedAsync);
 
 	private async Task SeedAsync()
 	{
