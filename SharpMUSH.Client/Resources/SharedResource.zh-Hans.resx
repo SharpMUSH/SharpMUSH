@@ -1724,7 +1724,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>落地页的主要内容。</value>
+    <value>首页：主栏和侧栏。</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3227,6 +3227,14 @@
     <value>允许任何人观看</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>此标签页的终端正以 {0} 的身份游戏，而不是 {1}。请在以 {1} 游戏的标签页中开始场景，或切换回 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>无法确认此标签页的终端正以哪个角色游戏。请稍后再试。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>开始一个场景</value>
     <comment>MT</comment>
@@ -3913,10 +3921,6 @@
   </data>
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>未经审查的来源 — 应用前请检查全部内容</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>查看全部 {0} 项 →</value>
     <comment>MT</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
@@ -4840,6 +4844,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>查找名为“{0}”的角色</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>已登录为 {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>概览</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>账户</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>偏好</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>你的账户、你的角色以及门户的外观。</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, other {# 条消息}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>未读</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>来自 {0} 的转发消息：</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>返回 {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>动态</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {当前在线} other {当前在线 · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>正在进行的场景</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, other {找到 # 个}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>全部场景</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>正在进行</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>你的场景</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>已排期</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, other {# 场进行中}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, other {最近 # 场}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>场景档案</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>{0} 参与过的场景。</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>计划稍后进行的场景，最近的在前。</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>所有者已结束的场景。</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>登录并以某个角色行动，即可查看你参与过的场景。</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>私密</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>计划于 {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>按标签筛选动作</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>开始于</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>最近活动</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>发起人</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>篇幅</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, other {角色 · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, other {# 个主题}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>搜索帮助</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>帮助索引</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>入门</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>MUSH 新手</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {无匹配} other {# 个匹配}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>管理员帮助</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>管理员索引</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>管理 · 拼写检查</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>管理 · 数据库</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>管理 · 诊断</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>管理 · 自动化</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>构建 · 恢复</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>按类型筛选</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>显示为</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>角色或分配</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>处理器属性</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>上传图片</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>此游戏未安装帮助主题。</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>显示 {0} 的 README</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>已作为 {0} 连接</value>

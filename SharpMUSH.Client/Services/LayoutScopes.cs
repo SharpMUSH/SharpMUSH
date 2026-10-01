@@ -28,7 +28,7 @@ public static class LayoutScopes
 		new(Global, "LayScopeGlobal", "LayScopeGlobalDesc",
 			[WidgetZone.TopBar, WidgetZone.LeftSidebar, WidgetZone.RightSidebar, WidgetZone.Footer]),
 		new(Home, "LayScopeHome", "LayScopeHomeDesc",
-			[WidgetZone.MainContent]),
+			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 		new(WikiIndex, "LayScopeWikiIndex", "LayScopeWikiIndexDesc",
 			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 		new(Profile, "LayScopeProfile", "LayScopeProfileDesc",

@@ -190,10 +190,50 @@ public class OnlineCharactersWidgetTests : TrackingBunitContext
 			if (!cut.Markup.Contains("Castor")) throw new InvalidOperationException("online list not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 
-		var rows = cut.FindAll("a[href^='/characters/']").Select(a => a.TextContent.Trim()).ToList();
+		var rows = cut.FindAll("a[href^='/character/'] .kit-row-label").Select(a => a.TextContent.Trim()).ToList();
 
 		// Name ordering survives the deduplication: Castor before Solitaire, each exactly once.
 		await Assert.That(rows).IsEquivalentTo(new[] { "Castor", "Solitaire" });
+	}
+
+	/// <summary>
+	/// Each row linked to <c>/characters/{objid}</c>, a route that does not exist (the directory is
+	/// <c>/characters</c>, a profile <c>/character/{Name}</c>), so every name on the home page led to the
+	/// not-found page. D1 §6.5: the rows are sidebar avatar rows in an aside card, "Online now · N",
+	/// with "See everyone" to the directory's online filter.
+	/// </summary>
+	/// <summary>
+	/// A home layout saved before D1 keeps this widget in MainContent. There it takes the main card
+	/// (52px header with See everyone at the right) and lays its rows across the width.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InTheMainColumn_TakesTheMainCard()
+	{
+		Wire(this, new DoubledConnectionHandler());
+
+		var cut = Render<OnlineCharactersWidget>(p => p.Add(x => x.Zone, "MainContent"));
+		cut.WaitForAssertion(() => cut.Find("a.kit-row"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-card-head .kit-card-controls a.online-characters-all").GetAttribute("href")).IsEqualTo("/characters?online=1");
+		await Assert.That(cut.Find(".online-characters-rows").ClassList).Contains("online-characters-rows--main");
+	}
+
+	[TUnit.Core.Test]
+	public async Task RowsOpenTheProfile_InAnAsideCard_WithSeeEveryone()
+	{
+		Wire(this, new DoubledConnectionHandler());
+
+		var cut = Render<OnlineCharactersWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Castor")) throw new InvalidOperationException("online list not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/character/Castor", "/character/Solitaire" });
+		await Assert.That(cut.Find(".kit-card.kit-card--aside .kit-card-title")).IsNotNull();
+		await Assert.That(cut.Find("a.online-characters-all").GetAttribute("href")).IsEqualTo("/characters?online=1");
 	}
 
 	// An unrecognised charset makes reading the body throw InvalidOperationException before the

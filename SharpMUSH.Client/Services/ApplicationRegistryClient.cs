@@ -31,7 +31,7 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 			var apps = await http.GetFromJsonAsync<List<PortalApplication>>("api/applications");
 			return (true, apps ?? []);
 		}
-		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		catch (Exception ex) when (IsUnavailable(ex))
 		{
 			logger.LogWarning(ex, "Failed to list applications.");
 			return (false, []);
@@ -46,12 +46,19 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 			var http = httpClientFactory.CreateClient("api");
 			return await http.GetFromJsonAsync<PortalApplication>($"api/applications/{Uri.EscapeDataString(slug)}");
 		}
-		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		catch (Exception ex) when (IsUnavailable(ex))
 		{
 			logger.LogWarning(ex, "Failed to fetch application {Slug}.", LogSanitizer.Sanitize(slug));
 			return null;
 		}
 	}
+
+	/// <summary>
+	/// A read that could not be answered. These reads take no token, so a cancellation is
+	/// <see cref="HttpClient"/>'s timeout, and it means the same as a failed request.
+	/// </summary>
+	private static bool IsUnavailable(Exception ex) =>
+		ex is HttpRequestException or JsonException or NotSupportedException or TaskCanceledException;
 
 	/// <summary>Creates or updates an application; a refusal carries the server's reason.</summary>
 	public Task<ApiResult<Success>> UpsertAsync(PortalApplication application) =>

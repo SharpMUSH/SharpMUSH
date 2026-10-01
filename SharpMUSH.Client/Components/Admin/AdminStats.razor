@@ -1,0 +1,8 @@
+@* The row of figures at the top of an admin page (installed packages, wiki drafts, word counts):
+   a grid of AdminStat tiles that re-flows by track count, so it needs no tier of its own. *@
+<div class="adm-stats @Class">@ChildContent</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

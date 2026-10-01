@@ -197,9 +197,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 			.Because("someone not on the channel did not see the line in their terminal");
 
 		var speakerObjid = await Objid(speaker);
-		foreach (var who in new[] { speaker, member })
+		foreach (var message in new[] { speaker, member }.Select(who => Frames(sent[who.Handle], "comm.message").Single()))
 		{
-			var message = Frames(sent[who.Handle], "comm.message").Single();
 			await Assert.That(message["v"]!.GetValue<int>()).IsEqualTo(2);
 			await Assert.That(message["kind"]!.GetValue<string>()).IsEqualTo("channel");
 			await Assert.That(message["channel"]!.GetValue<string>()).IsEqualTo(channel);
@@ -344,9 +343,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 		var pagerObjid = await Objid(pager);
 		var recipientObjid = await Objid(recipient);
-		foreach (var who in new[] { pager, recipient })
+		foreach (var message in new[] { pager, recipient }.Select(who => Frames(sent[who.Handle], "comm.message").Single()))
 		{
-			var message = Frames(sent[who.Handle], "comm.message").Single();
 			await Assert.That(message["v"]!.GetValue<int>()).IsEqualTo(2);
 			await Assert.That(message["kind"]!.GetValue<string>()).IsEqualTo("page");
 			await Assert.That(message.ContainsKey("channel")).IsFalse();
@@ -371,9 +369,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var sent = await watch.SentWhile(() => Run(pager, $"page {first.Name} {second.Name}=:nods {marker}"), Run,
 			pager, first, second);
 
-		foreach (var who in new[] { pager, first, second })
+		foreach (var message in new[] { pager, first, second }.Select(who => Frames(sent[who.Handle], "comm.message").Single()))
 		{
-			var message = Frames(sent[who.Handle], "comm.message").Single();
 			await Assert.That(Strings(message["to"])).IsEquivalentTo(new[] { first.Name, second.Name });
 			await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("pose");
 			await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"{pager.Name} nods {marker}");
@@ -430,9 +427,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 		await Assert.That(Frames(sent[locked.Handle], "comm.message")).IsEmpty();
 		await Assert.That(Frames(sent[haven.Handle], "comm.message")).IsEmpty();
-		foreach (var who in new[] { pager, willing })
+		foreach (var message in new[] { pager, willing }.Select(who => Frames(sent[who.Handle], "comm.message").Single()))
 		{
-			var message = Frames(sent[who.Handle], "comm.message").Single();
 			await Assert.That(Strings(message["to"])).IsEquivalentTo(new[] { willing.Name });
 		}
 	}

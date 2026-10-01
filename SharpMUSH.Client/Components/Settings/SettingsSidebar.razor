@@ -1,0 +1,78 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Client.Services
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §6.5 Settings page sidebar: "Settings" and who is signed in, the overview, Account (the
+   account page and its characters) and Preferences (theme). Collapsed keeps each row's icon. *@
+<div class="settings-side @(Collapsed ? "settings-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Settings"]">
+            <Sub>
+                @if (!string.IsNullOrEmpty(AccountAuth.Username))
+                {
+                    <span>@string.Format(Loc["NavSettingsSignedInAs"], AccountAuth.Username)</span>
+                }
+            </Sub>
+        </SidebarHead>
+    }
+    <nav class="settings-side-group" aria-label="@Loc["Settings"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Tune" Label="@Loc["NavSettingsOverview"]"
+                    Href="/settings" IsCurrent="@(_path == "/settings")" Collapsed="@Collapsed" />
+    </nav>
+    @if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavSettingsGroupAccount"]</SectionLabel>
+    }
+    <nav class="settings-side-group" aria-label="@Loc["NavSettingsGroupAccount"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.ManageAccounts" Label="@Loc["AuthAccount"]"
+                    Href="/account" IsCurrent="@(_path == "/account")" Collapsed="@Collapsed" />
+        @* The characters linked to the account are managed on the account page, in their own card. *@
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.People" Label="@Loc["Characters"]"
+                    Href="/account#characters" Collapsed="@Collapsed" />
+    </nav>
+    @if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavSettingsGroupPreferences"]</SectionLabel>
+    }
+    <nav class="settings-side-group" aria-label="@Loc["NavSettingsGroupPreferences"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Palette" Label="@Loc["NavTheme"]"
+                    Href="/settings/theme" IsCurrent="@(_path == "/settings/theme")" Collapsed="@Collapsed" />
+    </nav>
+</div>
+
+@code {
+    /// <summary>Only the icons, for the collapsed strip.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    private string _path = "/";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.AuthStateChanged += OnAuthChanged;
+        Locate();
+    }
+
+    private void Locate()
+    {
+        _path = SectionPath.Of(Nav).Path;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        Locate();
+        StateHasChanged();
+    });
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.AuthStateChanged -= OnAuthChanged;
+    }
+}

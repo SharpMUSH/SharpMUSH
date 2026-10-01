@@ -1724,7 +1724,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Glavni sadržaj odredišne stranice.</value>
+    <value>Početna stranica: glavni stupac i bočni stupac.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3227,6 +3227,14 @@
     <value>Dopusti svima da gledaju</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminal u ovoj kartici igra kao {0}, a ne kao {1}. Pokrenite scenu iz kartice koja igra kao {1} ili se vratite na {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nije moguće potvrditi kojim likom igra terminal u ovoj kartici. Pokušajte ponovno za trenutak.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Pokreni scenu</value>
     <comment>MT</comment>
@@ -3914,10 +3922,6 @@
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Nepregledani izvor — provjerite sve prije primjene</value>
     <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Prikaži sve ({0}) →</value>
-    <comment>MT — count moved into parentheses so no Croatian numeral agreement is required</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Čekanje da se poslužitelj pokrene…</value>
@@ -4840,6 +4844,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Pronađi lika po imenu „{0}”</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Prijavljeni ste kao {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Pregled</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Račun</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Postavke</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Vaš račun, vaši likovi i izgled ovog portala.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# poruka} few {# poruke} other {# poruka}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Nepročitano</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Proslijeđena poruka od {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Natrag na {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Što se događa</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Sada na mreži} other {Sada na mreži · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scene koje su upravo u tijeku</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# pronađen} few {# pronađena} other {# pronađenih}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Pregled</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Sve scene</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Uživo sada</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Vaše scene</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Zakazane</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Završene</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# uživo} few {# uživo} other {# uživo}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# nedavna} few {# nedavne} other {# nedavnih}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Arhiva scena</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scene u kojima je {0} sudjelovao/la.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scene planirane za kasnije, najbliže prve.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scene koje su njihovi vlasnici završili.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Prijavite se i igrajte kao lik da biste vidjeli scene u kojima ste sudjelovali.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privatna</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Zakazano za {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtriraj poze po oznaci</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detalji</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Započeta</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Zadnja aktivnost</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Započeo/la</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Duljina</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Uloge · #} few {Uloge · #} other {Uloge · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# tema} few {# teme} other {# tema}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Pretraži pomoć</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Pregled</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Kazalo pomoći</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Prvi koraci</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Novi u MUSH-u</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Teme</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Nema podudaranja} one {# podudaranje} few {# podudaranja} other {# podudaranja}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Pomoć za administratore</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Administratorsko kazalo</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administracija · Pravopis</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Baza podataka</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Upravljanje · Dijagnostika</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Upravljanje · Automatizacija</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Izgradnja · Oporavak</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtriraj po vrsti</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Prikaži kao</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Uloge ili dodjele</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Atributi rukovatelja</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Prenesi sliku</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Ova igra nema instaliranih tema pomoći.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Prikaži README za {0}</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Povezan kao {0}</value>

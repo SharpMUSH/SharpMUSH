@@ -131,6 +131,30 @@ public class AdminKeyValueListTests : TrackingBunitContext
 		await Assert.That(component.FindAll(".config-list-sub")).IsEmpty();
 	}
 
+	/// <summary>
+	/// A page that has no placeholder for the key says so. The banned-name page used to pass its label a
+	/// second time, and the component dropped any placeholder whose text equalled the label.
+	/// </summary>
+	[Test]
+	public async Task AKeyWithoutAPlaceholderRendersNone()
+	{
+		var component = Render(KeyOnlyText() with { KeyPlaceholder = null }, () => Entries());
+
+		await Assert.That(component.Find("input").HasAttribute("placeholder")).IsFalse();
+	}
+
+	/// <summary>
+	/// A placeholder is shown whatever its text. Inferring "no placeholder" from text equal to the label
+	/// hid one wherever a translation happened to word the two alike.
+	/// </summary>
+	[Test]
+	public async Task APlaceholderWordedLikeItsLabelIsStillShown()
+	{
+		var component = Render(KeyOnlyText() with { KeyPlaceholder = "Host pattern" }, () => Entries());
+
+		await Assert.That(component.Find("input").GetAttribute("placeholder")).IsEqualTo("Host pattern");
+	}
+
 	[Test]
 	public async Task AddSplitsTheValueListAndReloads()
 	{
@@ -149,7 +173,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("  *.example.com  ");
 		component.FindAll("input")[1].Input("!connect , register ,");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(addedKey).IsEqualTo("*.example.com");
 		await Assert.That(addedValues).IsEquivalentTo(new[] { "!connect", "register" });
@@ -171,7 +195,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("*.example.com");
 		component.FindAll("input")[1].Input("!connect");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(loads).IsEqualTo(1);
 		await Assert.That(component.FindAll("input")[0].GetAttribute("value")).IsEqualTo("*.example.com");
@@ -193,7 +217,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 				return Task.FromResult<ApiResult<Success>>(new Success());
 			});
 
-		component.Find("button.config-icon-btn--danger").Click();
+		component.Find("button.config-delete").Click();
 
 		await Assert.That(deleted).IsEqualTo("alpha.example");
 		await Assert.That(loads).IsEqualTo(2);
@@ -226,7 +250,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("*.example.com");
 		component.FindAll("input")[1].Input(" , , ");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(calls).IsEqualTo(0);
 		await Assert.That(Services.GetRequiredService<ISnackbar>().ShownSnackbars

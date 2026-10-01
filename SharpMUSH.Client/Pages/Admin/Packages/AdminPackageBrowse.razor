@@ -10,16 +10,11 @@
 
 <PageTitle>@Loc["PkgBrowseHeading"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="pkg-page" style="padding:var(--cpad);">
-    <div class="pkg-header">
-        <div class="pkg-kicker">@Loc["PkgKickerRegistry"]</div>
-        <h1 class="pkg-title">@Loc["PkgBrowseHeading"]</h1>
-        <p class="pkg-desc">
-            @Loc["PkgBrowseDescription"]
-        </p>
-    </div>
+<div class="pkg-page">
+    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]" Title="@Loc["PkgBrowseHeading"]" Description="@Loc["PkgBrowseDescription"]" />
 
-    <div class="pkg-toolbar mb-4">
+    <KitCard>
+    <div class="pkg-toolbar">
         <MudSelect T="string" @bind-Value="_selectedRemote" Label="@Loc["PkgRemoteLabel"]" Variant="Variant.Outlined"
                    Margin="Margin.Dense" Class="pkg-remote-select">
             @foreach (var remote in _remotes ?? [])
@@ -34,10 +29,11 @@
             <TrustBadge Trust="@_remoteRecord.Trust" />
         }
     </div>
+    </KitCard>
 
     @if (_remoteRecord is { Trust: PackageRemoteTrust.Unknown })
     {
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
+        <MudAlert Severity="Severity.Warning">
             @Loc["PkgUnreviewedSource"]
         </MudAlert>
     }
@@ -49,25 +45,25 @@
 
     @if (_snapshot is not null)
     {
-        <div class="pkg-snapshot-meta mb-2">
+        <div class="pkg-snapshot-meta">
             @Loc["PkgSnapshotAt", _snapshot.Url, _snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]]
         </div>
         <div class="pkg-grid">
             @foreach (var entry in _snapshot.Packages)
             {
-                <div class="pkg-card">
-                    <div class="pkg-card-head">
-                        <span style="flex:1;min-width:0;">@(entry.PackageId ?? entry.Path)</span>
-                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
+                <KitCard Title="@(entry.PackageId ?? entry.Path)">
+                    <Controls>
+                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]" aria-label="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]"
                                        OnClick="@(() => ShowReadmeAsync(entry))" />
-                    </div>
+                    </Controls>
+                    <ChildContent>
                     <div class="pkg-card-body">
-                        <div style="font-size:0.8125rem;color:var(--text-dim);margin-bottom:0.75rem;">@(entry.Description ?? Loc["PkgNoDescription"])</div>
+                        <div class="pkg-card-desc">@(entry.Description ?? Loc["PkgNoDescription"])</div>
                         @if (entry.PackageId is null)
                         {
                             <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@Loc["PkgManifestParseFailed"]</MudAlert>
                         }
-                        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                        <div class="pkg-card-row">
                             <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
                                        Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="pkg-version-select">
                                 @foreach (var version in entry.Versions)
@@ -81,12 +77,13 @@
                         </div>
                         @if (entry.Versions.Count == 0)
                         {
-                            <div style="font-size:0.75rem;color:var(--text-faint);margin-top:0.5rem;">
+                            <div class="pkg-card-note">
                                 @Loc["PkgNoReleaseTags"]
                             </div>
                         }
                     </div>
-                </div>
+                    </ChildContent>
+                </KitCard>
             }
         </div>
     }

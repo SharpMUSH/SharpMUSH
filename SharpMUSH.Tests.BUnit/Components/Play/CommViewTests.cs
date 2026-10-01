@@ -95,8 +95,13 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Public=hello%; world" });
 	}
 
+	/// <summary>
+	/// By full objid, not the bare dbref: a conversation outlives the player it was with, and once that dbref
+	/// is recycled a bare <c>#312</c> pages whoever holds it now. The page command resolves an objid and
+	/// refuses a stale one.
+	/// </summary>
 	[Test]
-	public async Task AConversation_PagesItsPeopleByDbref_SoNamesWithSpacesArrive()
+	public async Task AConversation_PagesItsPeopleByObjid_SoNamesWithSpacesArriveAndARecycledDbrefDoesNot()
 	{
 		var key = "page #312:1 #313:1 #315:1";
 		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes", "Dace Kellan"], ["#312:1", "#315:1"], 0, Now)];
@@ -104,7 +109,7 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(cut.Find(".comm-title").TextContent).IsEqualTo("Tomas Reyes, Dace Kellan");
 		cut.Find(".comm-compose input").Input("meet at nine");
 		cut.Find(".comm-compose input").KeyDown("Enter");
-		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312 #315=meet at nine" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1 #315:1=meet at nine" });
 	}
 
 	[Test]

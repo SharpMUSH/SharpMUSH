@@ -4,6 +4,8 @@
 @using SharpMUSH.Client.Services
 @inject SceneService Scenes
 @inject CharacterDirectoryService Directory
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.3 Often plays with (board 25): who shares the most scenes with this character, as portrait
@@ -27,9 +29,8 @@
             <div class="often-plays-grid">
                 @foreach (var partner in _partners)
                 {
-                    var p = partner;
-                    <PortraitTile Name="@p.Name" ImageUrl="@ImageOf(p.Name)" Alt="@p.Name" Label="@p.Name"
-                                  Href="@($"/character/{Uri.EscapeDataString(p.Name)}")" />
+                    <PortraitTile Name="@partner.Name" ImageUrl="@ImageOf(partner.Name)" Alt="@partner.Name" Label="@partner.Name"
+                                  Href="@($"/character/{Uri.EscapeDataString(partner.Name)}")" />
                 }
             </div>
         }
@@ -49,23 +50,35 @@
     private bool _loading = true;
     private string? _loadedFor;
 
+    /// <summary>Partners are counted from the scenes the acting character may see; a switch reads them again.</summary>
+    private readonly ViewerScopedReload _reload = new();
+
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }));
+
     protected override async Task OnParametersSetAsync()
     {
-        var name = ProfileCharacter.NameFrom(Config, PageContext);
-        var key = $"{name}\u0000{PageContext?.Dbref}";
-        if (name is null || key == _loadedFor) return;
+        var key = $"{ProfileCharacter.NameFrom(Config, PageContext)}\u0000{PageContext?.Dbref}";
+        if (key == _loadedFor) return;
         _loadedFor = key;
-        _loading = true;
-        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
-        {
-            _directory = rows;
-        }
-        _partners = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
-            && await Scenes.GetPartnersAsync(dbref, Shown) is IReadOnlyList<ScenePartner> partners
-                ? partners
-                : null;
-        _loading = false;
+        await LoadAsync();
     }
+
+    private async Task LoadAsync()
+    {
+        if (ProfileCharacter.NameFrom(Config, PageContext) is not { } name) return;
+        var ticket = _reload.Begin();
+        _loading = true;
+        var directory = await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : null;
+        var partners = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
+            && await Scenes.GetPartnersAsync(dbref, Shown) is IReadOnlyList<ScenePartner> read
+                ? read
+                : null;
+        if (!_reload.IsCurrent(ticket)) return;
+        if (directory is not null) _directory = directory;
+        (_partners, _loading) = (partners, false);
+    }
+
+    public void Dispose() => _reload.Dispose();
 
     private string? ImageOf(string name) =>
         _directory.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;

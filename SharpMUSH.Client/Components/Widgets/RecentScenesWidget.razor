@@ -4,6 +4,8 @@
 @using SharpMUSH.Client.Services
 @inject SceneService Scenes
 @inject CharacterDirectoryService Directory
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.3 Recent scenes (board 25): the character's last three scenes the viewer may see, a live one
@@ -27,10 +29,9 @@
             <div class="recent-scenes-rows">
                 @foreach (var scene in _scenes)
                 {
-                    var s = scene;
-                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(s)"
-                                Name="@TitleOf(s)" Label="@TitleOf(s)" Sub="@(s.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(s.LastActivityAtUtc))"
-                                Href="@(s.IsLive ? $"/scenes/{s.Id}/live" : $"/scenes/{s.Id}")" />
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(scene)"
+                                Name="@TitleOf(scene)" Label="@TitleOf(scene)" Sub="@(scene.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(scene.LastActivityAtUtc))"
+                                Href="@(scene.IsLive ? $"/scenes/{scene.Id}/live" : $"/scenes/{scene.Id}")" />
                 }
             </div>
         }
@@ -49,19 +50,33 @@
     private bool _loading = true;
     private string? _loadedFor;
 
+    /// <summary>The scenes listed are the ones the acting character may see; a switch, or a scene this tab started, reads them again.</summary>
+    private readonly ViewerScopedReload _reload = new();
+
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }), Scenes);
+
     protected override async Task OnParametersSetAsync()
     {
-        var name = ProfileCharacter.NameFrom(Config, PageContext);
-        var key = $"{name}\u0000{PageContext?.Dbref}";
-        if (name is null || key == _loadedFor) return;
+        var key = $"{ProfileCharacter.NameFrom(Config, PageContext)}\u0000{PageContext?.Dbref}";
+        if (key == _loadedFor) return;
         _loadedFor = key;
-        _loading = true;
-        _scenes = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
-            && await Scenes.GetParticipantScenesAsync(dbref, Shown) is IReadOnlyList<SceneSummary> scenes
-                ? scenes.OrderByDescending(s => s.IsLive).ThenByDescending(s => s.LastActivityAt).ToList()
-                : null;
-        _loading = false;
+        await LoadAsync();
     }
+
+    private async Task LoadAsync()
+    {
+        if (ProfileCharacter.NameFrom(Config, PageContext) is not { } name) return;
+        var ticket = _reload.Begin();
+        _loading = true;
+        var scenes = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
+            && await Scenes.GetParticipantScenesAsync(dbref, Shown) is IReadOnlyList<SceneSummary> read
+                ? read.OrderByDescending(s => s.IsLive).ThenByDescending(s => s.LastActivityAt).ToList()
+                : null;
+        if (!_reload.IsCurrent(ticket)) return;
+        (_scenes, _loading) = (scenes, false);
+    }
+
+    public void Dispose() => _reload.Dispose();
 
     private static string TitleOf(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var title) && !string.IsNullOrWhiteSpace(title) ? title : s.RoomName;

@@ -1,0 +1,23 @@
+@* One figure on an admin page, in the D1 card shape: an accent icon tile, the value, a mono label
+   and an optional dim line under it. Warn tints the tile for a figure that needs attention
+   (drafts, protected pages). Key names the tile for tests. *@
+<div class="adm-stat @(Warn ? "adm-stat--warn" : null)" data-stat="@Key">
+    <span class="adm-stat-icon" aria-hidden="true"><MudIcon Icon="@Icon" Size="Size.Small" /></span>
+    <div class="adm-stat-text">
+        <div class="adm-stat-value">@Value</div>
+        <div class="adm-stat-label">@Label</div>
+        @if (Sub is not null)
+        {
+            <div class="adm-stat-sub">@Sub</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Sub { get; set; }
+    [Parameter] public bool Warn { get; set; }
+    [Parameter] public string? Key { get; set; }
+}

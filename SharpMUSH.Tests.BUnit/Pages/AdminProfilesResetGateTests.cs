@@ -79,7 +79,7 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 	private IRenderedComponent<AdminProfiles> RenderLoaded()
 	{
 		var cut = Render<AdminProfiles>();
-		cut.WaitForAssertion(() => cut.Find(".ph-status"));
+		cut.WaitForAssertion(() => cut.Find(".adm-profiles-status"));
 		return cut;
 	}
 

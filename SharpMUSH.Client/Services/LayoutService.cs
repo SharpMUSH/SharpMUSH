@@ -151,10 +151,14 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 				[
 					new WidgetPlacement("Stats", 0, null, Span: 12),
 					new WidgetPlacement("WikiBody", 1, HomeWikiPage, Span: 12),
-					new WidgetPlacement("ActiveScene", 2, null, Span: 8),
-					new WidgetPlacement("OnlineCharacters", 3, null, Span: 4),
-					new WidgetPlacement("RecentWikiActivity", 4, null, Span: 8),
-					new WidgetPlacement("Quickstart", 5, null, Span: 4)
+					new WidgetPlacement("ActiveScene", 2, null, Span: 12),
+					new WidgetPlacement("RecentWikiActivity", 3, null, Span: 12)
+				],
+				// D1 §6.5 (board 30): the home aside is "Online now" then "Getting started".
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("OnlineCharacters", 0, null),
+					new WidgetPlacement("Quickstart", 1, null)
 				]
 			},
 			SidebarsOff),

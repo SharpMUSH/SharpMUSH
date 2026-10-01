@@ -9,458 +9,441 @@
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
+<PageTitle>@Loc["ImportPennMUSHDatabase"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
 <div class="dbimport-page">
-	<header class="dbimport-header">
-		<div class="dbimport-kicker">Admin · Database</div>
-		<h1 class="dbimport-title">@Loc["ImportPennMUSHDatabase"]</h1>
-		<p class="dbimport-subtitle">@Loc["ImportDatabaseDescription"]</p>
-	</header>
+    <PlainPageHeader Kicker="@Loc["AdmDatabaseKicker"]" Title="@Loc["ImportPennMUSHDatabase"]" Description="@Loc["ImportDatabaseDescription"]" />
 
-	@if (_error is not null)
-	{
-		<MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_error</MudAlert>
-	}
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+    }
 
-	@if (_pollError is not null)
-	{
-		<MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">@_pollError</MudAlert>
-	}
+    @if (_pollError is not null)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true">@_pollError</MudAlert>
+    }
 
-	@if (!_isConverting && _result == null)
-	{
-		<div class="dbimport-card dbimport-dropzone">
-			<MudFileUpload T="IBrowserFile"
-			               Accept=".db,.txt"
-			               FilesChanged="OnFileSelected"
-			               MaximumFileCount="1"
-			               MaxFileSize="104857600" />
-			<div class="dbimport-dropzone-inner">
-				<MudIcon Icon="Icons.Material.Filled.CloudUpload" Class="dbimport-dropzone-icon" />
-				<span class="dbimport-dropzone-title">@Loc["DropDatabaseFile"]</span>
-				<span class="dbimport-dropzone-hint">@Loc["SupportedFormatsDb"]</span>
-			</div>
-		</div>
+    @if (!_isConverting && _result == null)
+    {
+        <KitCard Class="dbimport-dropzone">
+            <div class="dbimport-body">
+                <MudFileUpload T="IBrowserFile"
+                               Accept=".db,.txt"
+                               FilesChanged="OnFileSelected"
+                               MaximumFileCount="1"
+                               MaxFileSize="104857600" />
+                <div class="dbimport-dropzone-inner">
+                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="dbimport-dropzone-icon" />
+                    <span class="dbimport-dropzone-title">@Loc["DropDatabaseFile"]</span>
+                    <span class="dbimport-dropzone-hint">@Loc["SupportedFormatsDb"]</span>
+                </div>
+            </div>
+        </KitCard>
 
-		@if (_selectedFile != null)
-		{
-			<div class="dbimport-card">
-				<div class="dbimport-section-label">@Loc["SelectedFile"]</div>
-				<div class="dbimport-file-row">
-					<MudIcon Icon="Icons.Material.Filled.Description" Class="dbimport-file-icon" />
-					<span class="dbimport-file-name">@_selectedFile.Name</span>
-					<span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
-				</div>
+        @if (_selectedFile != null)
+        {
+            <KitCard Title="@Loc["SelectedFile"]">
+                <div class="dbimport-body">
+                    <div class="dbimport-file-row">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Class="dbimport-file-icon" />
+                        <span class="dbimport-file-name">@_selectedFile.Name</span>
+                        <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+                    </div>
 
-				<div class="dbimport-section-label">@Loc["MailDatabaseOptional"]</div>
-				<MudFileUpload T="IBrowserFile"
-				               FilesChanged="OnMailFileSelected"
-				               MaximumFileCount="1"
-				               MaxFileSize="104857600" />
-				@if (_selectedMailFile != null)
-				{
-					<div class="dbimport-file-row">
-						<MudIcon Icon="Icons.Material.Filled.Mail" Class="dbimport-file-icon" />
-						<span class="dbimport-file-name">@_selectedMailFile.Name</span>
-						<span class="dbimport-file-size">(@($"{_selectedMailFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
-					</div>
-				}
+                    <SectionLabel Class="dbimport-label">@Loc["MailDatabaseOptional"]</SectionLabel>
+                    <MudFileUpload T="IBrowserFile"
+                                   FilesChanged="OnMailFileSelected"
+                                   MaximumFileCount="1"
+                                   MaxFileSize="104857600" />
+                    @if (_selectedMailFile != null)
+                    {
+                        <div class="dbimport-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Mail" Class="dbimport-file-icon" />
+                            <span class="dbimport-file-name">@_selectedMailFile.Name</span>
+                            <span class="dbimport-file-size">(@($"{_selectedMailFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+                        </div>
+                    }
 
-				<div class="dbimport-section-label">@Loc["ChatDatabaseOptional"]</div>
-				<MudFileUpload T="IBrowserFile"
-				               FilesChanged="OnChatFileSelected"
-				               MaximumFileCount="1"
-				               MaxFileSize="104857600" />
-				@if (_selectedChatFile != null)
-				{
-					<div class="dbimport-file-row">
-						<MudIcon Icon="Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
-						<span class="dbimport-file-name">@_selectedChatFile.Name</span>
-						<span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
-					</div>
-				}
+                    <SectionLabel Class="dbimport-label">@Loc["ChatDatabaseOptional"]</SectionLabel>
+                    <MudFileUpload T="IBrowserFile"
+                                   FilesChanged="OnChatFileSelected"
+                                   MaximumFileCount="1"
+                                   MaxFileSize="104857600" />
+                    @if (_selectedChatFile != null)
+                    {
+                        <div class="dbimport-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
+                            <span class="dbimport-file-name">@_selectedChatFile.Name</span>
+                            <span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+                        </div>
+                    }
 
-				<div class="dbimport-actions">
-					<MudButton StartIcon="Icons.Material.Filled.Clear"
-					           Class="dbimport-btn dbimport-btn-ghost"
-					           OnClick="ClearSelection">
-						@Loc["ClearSelection"]
-					</MudButton>
+                    <div class="dbimport-actions">
+                        <CapsuleButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
+                        <CapsuleButton Icon="@(_isUploading ? null : Icons.Material.Filled.Upload)" Primary="true"
+                                       OnClick="StartConversion" Disabled="_isUploading">
+                            @if (_isUploading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                @Loc["Uploading"]
+                            }
+                            else
+                            {
+                                @Loc["StartConversion"]
+                            }
+                        </CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+    }
+    else if (_isConverting && _progress != null)
+    {
+        <KitCard Title="@Loc["ConvertingDatabase"]">
+            <div class="dbimport-body">
+                <MudProgressLinear Value="@_progress.PercentageComplete"
+                                   Color="Color.Primary"
+                                   Size="Size.Large" />
 
-					<MudButton StartIcon="Icons.Material.Filled.Upload"
-					           Class="dbimport-btn dbimport-btn-primary"
-					           OnClick="StartConversion"
-					           Disabled="_isUploading">
-						@if (_isUploading)
-						{
-							<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-							<MudText Class="ms-2">@Loc["Uploading"]</MudText>
-						}
-						else
-						{
-							<MudText>@Loc["StartConversion"]</MudText>
-						}
-					</MudButton>
-				</div>
-			</div>
-		}
-	}
-	else if (_isConverting && _progress != null)
-	{
-		<div class="dbimport-card">
-			<div class="dbimport-section-label">@Loc["ConvertingDatabase"]</div>
+                <div class="dbimport-progress-caption">
+                    @Loc["PercentComplete", _progress.PercentageComplete, _progress.CurrentPhase]
+                </div>
 
-			<MudProgressLinear Value="@_progress.PercentageComplete"
-			                   Color="Color.Primary"
-			                   Size="Size.Large"
-			                   Class="mt-3 mb-2" />
+                <div class="dbimport-grid">
+                    <div class="dbimport-tile">
+                        <SectionLabel Class="dbimport-label">@Loc["Progress"]</SectionLabel>
+                        <div class="dbimport-stat-list">
+                            <div class="dbimport-stat"><span>@Loc["Phase"]</span><strong>@_progress.CurrentPhase</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Elapsed"]</span><strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></div>
+                            @if (_progress.EstimatedTimeRemaining.HasValue)
+                            {
+                                <div class="dbimport-stat"><span>@Loc["EstimatedRemaining"]</span><strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></div>
+                            }
+                        </div>
+                    </div>
 
-			<div class="dbimport-progress-caption">
-				@($"{_progress.PercentageComplete:F1}% Complete - {_progress.CurrentPhase}")
-			</div>
+                    <div class="dbimport-tile">
+                        <SectionLabel Class="dbimport-label">@Loc["ObjectsCreated"]</SectionLabel>
+                        <div class="dbimport-stat-list">
+                            <div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_progress.PlayersCreated</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_progress.RoomsCreated</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_progress.ThingsCreated</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_progress.ExitsCreated</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Total"]</span><strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></div>
+                        </div>
+                    </div>
 
-			<div class="dbimport-grid">
-				<div class="dbimport-tile">
-					<div class="dbimport-tile-label">@Loc["Progress"]</div>
-					<div class="dbimport-stat-list">
-						<div class="dbimport-stat"><span>@Loc["Phase"]</span><strong>@_progress.CurrentPhase</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Elapsed"]</span><strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></div>
-						@if (_progress.EstimatedTimeRemaining.HasValue)
-						{
-							<div class="dbimport-stat"><span>@Loc["EstimatedRemaining"]</span><strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></div>
-						}
-					</div>
-				</div>
+                    <div class="dbimport-tile">
+                        <SectionLabel Class="dbimport-label">@Loc["AdditionalData"]</SectionLabel>
+                        <div class="dbimport-stat-list">
+                            <div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_progress.AttributesCreated</strong></div>
+                            <div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_progress.LocksCreated</strong></div>
+                        </div>
+                    </div>
 
-				<div class="dbimport-tile">
-					<div class="dbimport-tile-label">@Loc["ObjectsCreated"]</div>
-					<div class="dbimport-stat-list">
-						<div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_progress.PlayersCreated</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_progress.RoomsCreated</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_progress.ThingsCreated</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_progress.ExitsCreated</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Total"]</span><strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></div>
-					</div>
-				</div>
+                    @if (_progress.RecentErrors.Any() || _progress.RecentWarnings.Any())
+                    {
+                        <div class="dbimport-tile">
+                            <SectionLabel Class="dbimport-label">@Loc["Issues"]</SectionLabel>
+                            @if (_progress.RecentErrors.Any())
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+                                    @Loc["Errors", _progress.RecentErrors.Count]
+                                </MudAlert>
+                            }
+                            @if (_progress.RecentWarnings.Any())
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true">
+                                    @Loc["WarningsLabel", _progress.RecentWarnings.Count]
+                                </MudAlert>
+                            }
+                        </div>
+                    }
+                </div>
 
-				<div class="dbimport-tile">
-					<div class="dbimport-tile-label">@Loc["AdditionalData"]</div>
-					<div class="dbimport-stat-list">
-						<div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_progress.AttributesCreated</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_progress.LocksCreated</strong></div>
-					</div>
-				</div>
+                <div class="dbimport-actions dbimport-actions-start">
+                    <CapsuleButton Icon="@Icons.Material.Filled.Cancel" Class="dbimport-cancel" OnClick="CancelConversion">
+                        @Loc["CancelConversion"]
+                    </CapsuleButton>
+                </div>
+            </div>
+        </KitCard>
+    }
+    else if (_result != null)
+    {
+        <KitCard>
+            <ChildContent>
+                <div class="dbimport-body">
+                    <MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Dense="true">
+                        @(_result.IsSuccessful ? Loc["ConversionSuccess"] : Loc["ConversionErrors"])
+                    </MudAlert>
 
-				@if (_progress.RecentErrors.Any() || _progress.RecentWarnings.Any())
-				{
-					<div class="dbimport-tile">
-						<div class="dbimport-tile-label">@Loc["Issues"]</div>
-						@if (_progress.RecentErrors.Any())
-						{
-							<MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
-								@_progress.RecentErrors.Count error(s)
-							</MudAlert>
-						}
-						@if (_progress.RecentWarnings.Any())
-						{
-							<MudAlert Severity="Severity.Warning" Dense="true">
-								@_progress.RecentWarnings.Count warning(s)
-							</MudAlert>
-						}
-					</div>
-				}
-			</div>
+                    <div class="dbimport-grid">
+                        <div class="dbimport-tile">
+                            <SectionLabel Class="dbimport-label">@Loc["ObjectsConverted"]</SectionLabel>
+                            <div class="dbimport-stat-list">
+                                <div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_result.PlayersConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_result.RoomsConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_result.ThingsConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_result.ExitsConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["TotalObjects"]</span><strong>@_result.TotalObjects</strong></div>
+                            </div>
+                        </div>
 
-			<div class="dbimport-actions dbimport-actions-start">
-				<MudButton StartIcon="Icons.Material.Filled.Cancel"
-				           Class="dbimport-btn dbimport-btn-danger"
-				           OnClick="CancelConversion">
-					@Loc["CancelConversion"]
-				</MudButton>
-			</div>
-		</div>
-	}
-	else if (_result != null)
-	{
-		<div class="dbimport-card">
-			<MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Class="mb-4">
-				@if (_result.IsSuccessful)
-				{
-					<MudText Typo="Typo.h6">@Loc["ConversionSuccess"]</MudText>
-				}
-				else
-				{
-					<MudText Typo="Typo.h6">@Loc["ConversionErrors"]</MudText>
-				}
-			</MudAlert>
+                        <div class="dbimport-tile">
+                            <SectionLabel Class="dbimport-label">@Loc["AdditionalData"]</SectionLabel>
+                            <div class="dbimport-stat-list">
+                                <div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_result.AttributesConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_result.LocksConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["MailAliasesLabel"]</span><strong>@_result.MailAliasesConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["MailMessagesLabel"]</span><strong>@_result.MailMessagesConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["ChannelsLabel"]</span><strong>@_result.ChannelsConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["ChannelMembersLabel"]</span><strong>@_result.ChannelMembersConverted</strong></div>
+                                <div class="dbimport-stat"><span>@Loc["Duration"]</span><strong>@FormatTimeSpan(_result.Duration)</strong></div>
+                            </div>
+                        </div>
 
-			<div class="dbimport-grid">
-				<div class="dbimport-tile">
-					<div class="dbimport-tile-label">@Loc["ObjectsConverted"]</div>
-					<div class="dbimport-stat-list">
-						<div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_result.PlayersConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_result.RoomsConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_result.ThingsConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_result.ExitsConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["TotalObjects"]</span><strong>@_result.TotalObjects</strong></div>
-					</div>
-				</div>
+                        @if (_result.Errors.Any())
+                        {
+                            <div class="dbimport-tile dbimport-tile-wide">
+                                <SectionLabel Class="dbimport-label dbimport-label-error">@Loc["Errors", _result.Errors.Count]</SectionLabel>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var error in _result.Errors)
+                                    {
+                                        <MudListItem T="string">
+                                            <MudText Color="Color.Error">@error</MudText>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </div>
+                        }
 
-				<div class="dbimport-tile">
-					<div class="dbimport-tile-label">@Loc["AdditionalData"]</div>
-					<div class="dbimport-stat-list">
-						<div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_result.AttributesConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_result.LocksConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["MailAliasesLabel"]</span><strong>@_result.MailAliasesConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["MailMessagesLabel"]</span><strong>@_result.MailMessagesConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["ChannelsLabel"]</span><strong>@_result.ChannelsConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["ChannelMembersLabel"]</span><strong>@_result.ChannelMembersConverted</strong></div>
-						<div class="dbimport-stat"><span>@Loc["Duration"]</span><strong>@FormatTimeSpan(_result.Duration)</strong></div>
-					</div>
-				</div>
+                        @if (_result.Warnings.Any())
+                        {
+                            <div class="dbimport-tile dbimport-tile-wide">
+                                <SectionLabel Class="dbimport-label dbimport-label-warning">@Loc["WarningsLabel", _result.Warnings.Count]</SectionLabel>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var warning in _result.Warnings)
+                                    {
+                                        <MudListItem T="string">
+                                            <MudText Color="Color.Warning">@warning</MudText>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </div>
+                        }
+                    </div>
 
-				@if (_result.Errors.Any())
-				{
-					<div class="dbimport-tile dbimport-tile-wide">
-						<div class="dbimport-tile-label dbimport-tile-label-error">Errors (@_result.Errors.Count)</div>
-						<MudList T="string" Dense="true">
-							@foreach (var error in _result.Errors)
-							{
-								<MudListItem T="string">
-									<MudText Color="Color.Error">@error</MudText>
-								</MudListItem>
-							}
-						</MudList>
-					</div>
-				}
-
-				@if (_result.Warnings.Any())
-				{
-					<div class="dbimport-tile dbimport-tile-wide">
-						<div class="dbimport-tile-label dbimport-tile-label-warning">Warnings (@_result.Warnings.Count)</div>
-						<MudList T="string" Dense="true">
-							@foreach (var warning in _result.Warnings)
-							{
-								<MudListItem T="string">
-									<MudText Color="Color.Warning">@warning</MudText>
-								</MudListItem>
-							}
-						</MudList>
-					</div>
-				}
-			</div>
-
-			<div class="dbimport-actions dbimport-actions-start">
-				<MudButton StartIcon="Icons.Material.Filled.Refresh"
-				           Class="dbimport-btn dbimport-btn-primary"
-				           OnClick="Reset">
-					@Loc["ImportAnotherDatabase"]
-				</MudButton>
-			</div>
-		</div>
-	}
+                    <div class="dbimport-actions dbimport-actions-start">
+                        <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset">@Loc["ImportAnotherDatabase"]</CapsuleButton>
+                    </div>
+                </div>
+            </ChildContent>
+        </KitCard>
+    }
 </div>
 
 @code {
-	private IBrowserFile? _selectedFile;
-	private IBrowserFile? _selectedMailFile;
-	private IBrowserFile? _selectedChatFile;
-	private bool _isUploading;
-	private bool _isConverting;
-	private bool _isUpdatingProgress;
-	private string? _sessionId;
-	private ConversionProgress? _progress;
-	private ConversionResult? _result;
-	private System.Threading.Timer? _progressTimer;
-	private string? _error;
+    private IBrowserFile? _selectedFile;
+    private IBrowserFile? _selectedMailFile;
+    private IBrowserFile? _selectedChatFile;
+    private bool _isUploading;
+    private bool _isConverting;
+    private bool _isUpdatingProgress;
+    private string? _sessionId;
+    private ConversionProgress? _progress;
+    private ConversionResult? _result;
+    private System.Threading.Timer? _progressTimer;
+    private string? _error;
 
-	// Kept apart from _error so a poll that succeeds clears only what a poll said, not why a cancel was refused.
-	private string? _pollError;
+    // Kept apart from _error so a poll that succeeds clears only what a poll said, not why a cancel was refused.
+    private string? _pollError;
 
-	private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
+    private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
 
-	private void OnMailFileSelected(IBrowserFile? file) => _selectedMailFile = file;
+    private void OnMailFileSelected(IBrowserFile? file) => _selectedMailFile = file;
 
-	private void OnChatFileSelected(IBrowserFile? file) => _selectedChatFile = file;
+    private void OnChatFileSelected(IBrowserFile? file) => _selectedChatFile = file;
 
-	private void ClearSelection()
-	{
-		_selectedFile = null;
-		_selectedMailFile = null;
-		_selectedChatFile = null;
-	}
+    private void ClearSelection()
+    {
+        _selectedFile = null;
+        _selectedMailFile = null;
+        _selectedChatFile = null;
+    }
 
-	private async Task StartConversion()
-	{
-		if (_selectedFile is null)
-			return;
+    private async Task StartConversion()
+    {
+        if (_selectedFile is null)
+            return;
 
-		_isUploading = true;
-		_error = null;
+        _isUploading = true;
+        _error = null;
 
-		try
-		{
-			await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
-			await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
-			await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
-			var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
-				_selectedMailFile?.Name, chatStream, _selectedChatFile?.Name);
+        try
+        {
+            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
+            await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
+            await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
+            var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
+                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name);
 
-			switch (upload)
-			{
-				case string sessionId:
-					_sessionId = sessionId;
-					_isConverting = true;
-					_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-					break;
-				case ApiFailure failure:
-					_error = Loc["DatabaseImportFailed", failure.Message].Value;
-					break;
-			}
-		}
-		catch (Exception ex)
-		{
-			// Reading the chosen file failed in the browser (too large, or gone), before anything was sent.
-			Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
-			_error = Loc["DatabaseImportFailed", ex.Message].Value;
-		}
-		finally
-		{
-			_isUploading = false;
-		}
-	}
+            switch (upload)
+            {
+                case string sessionId:
+                    _sessionId = sessionId;
+                    _isConverting = true;
+                    _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+                    break;
+                case ApiFailure failure:
+                    _error = Loc["DatabaseImportFailed", failure.Message].Value;
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // The boundary of a click handler, kept wide on purpose. The service turns every transport and
+            // read failure into an ApiFailure, and the picker refuses a file over the limit before this
+            // runs, so what reaches here is unforeseen — and an exception escaping a handler takes the
+            // whole portal down to its error bar, where this keeps the page and says why.
+            Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
+            _error = Loc["DatabaseImportFailed", ex.Message].Value;
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
 
-	private void OnTimerCallback(object? state)
-	{
-		_ = Task.Run(async () =>
-		{
-			try
-			{
-				await UpdateProgressAsync();
-			}
-			catch (Exception ex)
-			{
-				Logger.LogError(ex, "Progress update failed");
-				_progressTimer?.Dispose();
-				_isConverting = false;
-				await InvokeAsync(StateHasChanged);
-			}
-		});
-	}
+    private void OnTimerCallback(object? state)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await UpdateProgressAsync();
+            }
+            // The only observer of this fire-and-forget task, so it takes everything: an exception left
+            // here goes unobserved and the timer keeps firing into it every second. The service already
+            // answers transport and server failures as values, so this is the unforeseen kind.
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error updating conversion progress");
+                _progressTimer?.Dispose();
+                _isConverting = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
 
-	private async Task UpdateProgressAsync()
-	{
-		if (_isUpdatingProgress || _sessionId == null || !_isConverting)
-			return;
+    private async Task UpdateProgressAsync()
+    {
+        if (_isUpdatingProgress || _sessionId == null || !_isConverting)
+            return;
 
-		_isUpdatingProgress = true;
+        _isUpdatingProgress = true;
 
-		try
-		{
-			switch (await ConversionService.GetProgressAsync(_sessionId))
-			{
-				case ConversionProgress progress:
-					_progress = progress;
-					_pollError = null;
-					break;
-				case ApiFailure { Kind: ApiFailureKind.NotFound } failure:
-					// The server has no such session — it restarted, or dropped it. Polling again would spin
-					// over an empty card forever, which is what a null used to do.
-					StopPolling(Loc["DatabaseImportFailed", failure.Message].Value);
-					break;
-				case ApiFailure failure:
-					// One missed poll is not the conversion failing: it runs on the server either way. Say so
-					// and ask again on the next tick.
-					_pollError = failure.Message;
-					break;
-			}
+        try
+        {
+            switch (await ConversionService.GetProgressAsync(_sessionId))
+            {
+                case ConversionProgress progress:
+                    _progress = progress;
+                    _pollError = null;
+                    break;
+                case ApiFailure { Kind: ApiFailureKind.NotFound } failure:
+                    // The server has no such session — it restarted, or dropped it. Polling again would spin
+                    // over an empty card forever, which is what a null used to do.
+                    StopPolling(Loc["DatabaseImportFailed", failure.Message].Value);
+                    break;
+                case ApiFailure failure:
+                    // One missed poll is not the conversion failing: it runs on the server either way. Say so
+                    // and ask again on the next tick.
+                    _pollError = failure.Message;
+                    break;
+            }
 
-			// 100% can arrive a moment before the server has stored the result; until it has, the result
-			// read answers 404 and the next tick asks again.
-			if (_isConverting && _progress?.PercentageComplete >= 100)
-			{
-				switch (await ConversionService.GetResultAsync(_sessionId))
-				{
-					case ConversionResult result:
-						_result = result;
-						_pollError = null;
-						_isConverting = false;
-						_progressTimer?.Dispose();
-						break;
-					case ApiFailure { Kind: not ApiFailureKind.NotFound } failure:
-						_pollError = failure.Message;
-						break;
-				}
-			}
+            // 100% can arrive a moment before the server has stored the result; until it has, the result
+            // read answers 404 and the next tick asks again.
+            if (_isConverting && _progress?.PercentageComplete >= 100)
+            {
+                switch (await ConversionService.GetResultAsync(_sessionId))
+                {
+                    case ConversionResult result:
+                        _result = result;
+                        _pollError = null;
+                        _isConverting = false;
+                        _progressTimer?.Dispose();
+                        break;
+                    case ApiFailure { Kind: not ApiFailureKind.NotFound } failure:
+                        _pollError = failure.Message;
+                        break;
+                }
+            }
 
-			await InvokeAsync(StateHasChanged);
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError(ex, "Error updating conversion progress");
-			_progressTimer?.Dispose();
-			_isConverting = false;
-			await InvokeAsync(StateHasChanged);
-		}
-		finally
-		{
-			_isUpdatingProgress = false;
-		}
-	}
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _isUpdatingProgress = false;
+        }
+    }
 
-	private async Task CancelConversion()
-	{
-		if (_sessionId == null)
-			return;
+    private async Task CancelConversion()
+    {
+        if (_sessionId == null)
+            return;
 
-		// A refused cancel used to reset the page as though the conversion had stopped, while the server
-		// carried on converting.
-		switch (await ConversionService.CancelConversionAsync(_sessionId))
-		{
-			case Success:
-				Reset();
-				break;
-			case ApiFailure failure:
-				_error = Loc["ConversionCancelFailed", failure.Message].Value;
-				break;
-		}
-	}
+        // A refused cancel used to reset the page as though the conversion had stopped, while the server
+        // carried on converting.
+        switch (await ConversionService.CancelConversionAsync(_sessionId))
+        {
+            case Success:
+                Reset();
+                break;
+            case ApiFailure failure:
+                _error = Loc["ConversionCancelFailed", failure.Message].Value;
+                break;
+        }
+    }
 
-	private void StopPolling(string error)
-	{
-		_progressTimer?.Dispose();
-		_isConverting = false;
-		_sessionId = null;
-		_progress = null;
-		_pollError = null;
-		_error = error;
-	}
+    private void StopPolling(string error)
+    {
+        _progressTimer?.Dispose();
+        _isConverting = false;
+        _sessionId = null;
+        _progress = null;
+        _pollError = null;
+        _error = error;
+    }
 
-	private void Reset()
-	{
-		_selectedFile = null;
-		_selectedMailFile = null;
-		_selectedChatFile = null;
-		_sessionId = null;
-		_progress = null;
-		_result = null;
-		_isConverting = false;
-		_isUploading = false;
-		_error = null;
-		_pollError = null;
-		_progressTimer?.Dispose();
-	}
+    private void Reset()
+    {
+        _selectedFile = null;
+        _selectedMailFile = null;
+        _selectedChatFile = null;
+        _sessionId = null;
+        _progress = null;
+        _result = null;
+        _isConverting = false;
+        _isUploading = false;
+        _error = null;
+        _pollError = null;
+        _progressTimer?.Dispose();
+    }
 
-	private string FormatTimeSpan(TimeSpan ts)
-	{
-		if (ts.TotalHours >= 1)
-			return $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
-		if (ts.TotalMinutes >= 1)
-			return $"{ts.Minutes}m {ts.Seconds}s";
-		return $"{ts.Seconds}s";
-	}
+    private string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
+        if (ts.TotalMinutes >= 1)
+            return $"{ts.Minutes}m {ts.Seconds}s";
+        return $"{ts.Seconds}s";
+    }
 
-	public void Dispose()
-	{
-		_progressTimer?.Dispose();
-	}
+    public void Dispose()
+    {
+        _progressTimer?.Dispose();
+    }
 }

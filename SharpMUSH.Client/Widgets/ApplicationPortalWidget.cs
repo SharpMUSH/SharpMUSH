@@ -13,6 +13,9 @@ namespace SharpMUSH.Client.Widgets;
 public sealed class ApplicationPortalWidget(PortalApplication app) : IPortalWidget
 {
 	public string Name => app.Slug;
+
+	/// <summary>The lowest portal role that may see this application where a layout places it.</summary>
+	public SharpMUSH.Library.Authorization.PortalRole MinimumRole => app.MinimumRoleEnum;
 	public string DisplayName => app.DisplayName;
 	public WidgetSize DefaultSize => WidgetSize.Large;
 	public WidgetZone[] AllowedZones => app.ZoneEnums.ToArray();

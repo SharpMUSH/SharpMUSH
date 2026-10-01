@@ -31,7 +31,7 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 	public async Task SceneService_ConcurrentActiveSceneReads_FetchOnce()
 	{
 		var handler = new GatedHttpHandler(_ => EmptyList());
-		var service = new SceneService(Factory(handler));
+		var service = new SceneService(Factory(handler), Substitute.For<IAccountAuthState>());
 
 		var first = service.GetActiveScenesAsync();
 		var second = service.GetActiveScenesAsync();
@@ -44,11 +44,55 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 		await Assert.That(handler.CallsTo("/api/scenes?filter=active&count=50")).IsEqualTo(2);
 	}
 
+	/// <summary>
+	/// A read asked for after a reported change does not join one that started before it. That earlier
+	/// request may have been answered before the change, so sharing it handed the sidebar's reload the
+	/// list without the scene that had just been started. Reads on the same side of a change still share.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneService_AReadAfterAReportedChange_DoesNotJoinOneFromBefore()
+	{
+		var handler = new GatedHttpHandler(_ => EmptyList());
+		var service = new SceneService(Factory(handler), Substitute.For<IAccountAuthState>());
+
+		var before = service.GetActiveScenesAsync();
+		service.ReportChanged();
+		var after = service.GetActiveScenesAsync();
+		var alsoAfter = service.GetActiveScenesAsync();
+		handler.Release();
+		await Task.WhenAll(before, after, alsoAfter);
+
+		await Assert.That(handler.CallsTo("/api/scenes?filter=active&count=50")).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// A read for one acting character does not join another's. The server filters these lists by who
+	/// asks — a private scene is listed only to its owner and members — so a read started before a switch
+	/// of character answers for the previous character, and joining it handed the new one that list.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneService_ReadsForTwoActingCharacters_AreNotCoalesced()
+	{
+		var handler = new GatedHttpHandler(_ => EmptyList());
+		var auth = Substitute.For<IAccountAuthState>();
+		var service = new SceneService(Factory(handler), auth);
+
+		auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(313, 1, "Ilsa Varn", "PLAYER", IsActing: true));
+		var ilsas = service.GetActiveScenesAsync();
+		auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(314, 1, "Wren Halloway", "PLAYER", IsActing: true));
+		var wrens = service.GetActiveScenesAsync();
+		var alsoWrens = service.GetActiveScenesAsync();
+		handler.Release();
+		await Task.WhenAll(ilsas, wrens, alsoWrens);
+
+		await Assert.That(handler.CallsTo("/api/scenes?filter=active&count=50")).IsEqualTo(2);
+	}
+
 	[TUnit.Core.Test]
 	public async Task SceneService_DifferentFilters_AreNotCoalesced()
 	{
 		var handler = new GatedHttpHandler(_ => EmptyList());
-		var service = new SceneService(Factory(handler));
+		var service = new SceneService(Factory(handler), Substitute.For<IAccountAuthState>());
 
 		var active = service.GetActiveScenesAsync();
 		var recent = service.GetRecentScenesAsync();

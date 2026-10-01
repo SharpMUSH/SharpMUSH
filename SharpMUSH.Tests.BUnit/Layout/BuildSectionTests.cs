@@ -74,6 +74,29 @@ public class BuildSectionTests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-side-title").TextContent).IsEqualTo("Build & manage");
 	}
 
+	/// <summary>
+	/// The dashboard opens pages the sidebar does not list (players, accounts, suggestions, the server,
+	/// the database import). On those no row was current, so the sidebar lost the reader's place; the
+	/// dashboard row, which is how they got there, now is. A listed page keeps its own row.
+	/// </summary>
+	[Test]
+	[Arguments("/admin/players", "/admin")]
+	[Arguments("/admin/suggestions", "/admin")]
+	[Arguments("/admin/database/import", "/admin")]
+	[Arguments("/admin", "/admin")]
+	[Arguments("/admin/roles", "/admin/roles")]
+	[Arguments("/admin/packages/browse", "/admin/packages")]
+	public async Task AnAdminPageTheSidebarDoesNotList_MarksTheDashboard(string path, string current)
+	{
+		_auth.SetPolicies("players.view", "roles.admin", "packages.admin");
+		Nav.NavigateTo(path);
+		var cut = Render<BuildSidebar>();
+		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/admin']"), TimeSpan.FromSeconds(5));
+
+		var marked = cut.FindAll("a.kit-row[aria-current='page']").Select(a => a.GetAttribute("href")).ToList();
+		await Assert.That(marked).IsEquivalentTo(new[] { current });
+	}
+
 	[Test]
 	public async Task TheConfigTree_OffersTheWayBack_OnlyWhenThereIsSomewhereElseToGo()
 	{

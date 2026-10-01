@@ -1,23 +1,25 @@
 @page "/help"
+@layout HelpLayout
+@using SharpMUSH.Client.Components.Help
 @inject GameHelpService HelpFiles
+@inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 @* The index of the help files the server ships — the same corpus `help` answers from at a telnet
    prompt. It is not a wiki page: nothing here is editable from the portal, and a fresh game shows
-   the full index rather than an invitation to write one. *@
+   the full index rather than an invitation to write one. In the D1 kit: the plain header, the index
+   entry in a card, the topic list in a card with its filter (which /help?q= sets, from the sidebar's
+   search), and the admin corpus in its own card for Wizard and God. *@
 
 <PageTitle>@Loc["Help"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="help-page">
-    <header class="help-header">
-        <div class="help-kicker">@Loc["AdmHelpKicker"]</div>
-        <h1 class="help-title">@Loc["Help"]</h1>
-        <p class="help-subtitle">@Loc["AdmHelpSubtitle"]</p>
-    </header>
+    <PlainPageHeader Kicker="@Loc["AdmHelpKicker"]" Title="@Loc["Help"]" Description="@Loc["AdmHelpSubtitle"]" />
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" />
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
     }
     else if (_index is null)
     {
@@ -25,31 +27,41 @@
     }
     else
     {
-        <section class="help-body">
-            <article class="help-entry">@((MarkupString)(_index.Html ?? string.Empty))</article>
-        </section>
+        @* A game with no help files answers no index entry: no card rather than an empty one. *@
+        @if (!string.IsNullOrWhiteSpace(_index.Html))
+        {
+            <KitCard>
+                <article class="help-entry">@((MarkupString)_index.Html)</article>
+            </KitCard>
+        }
 
-        <section class="help-body help-topics">
-            <h2 class="help-section-title">@string.Format(Loc["HelpAllTopics"], _index.Topics.Count)</h2>
-            <MudTextField T="string" @bind-Value="_filter" Immediate="true"
-                          Placeholder="@Loc["HelpFilterTopics"]"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Class="help-filter" />
-
-            @if (Filtered.Count == 0)
-            {
-                <p class="help-empty">@Loc["HelpNoTopicsMatch"]</p>
-            }
-            else
-            {
-                <ul class="help-topic-list">
-                    @foreach (var topic in Filtered)
+        <KitCard Title="@string.Format(Loc["HelpAllTopics"], _index.Topics.Count)">
+            <Controls>
+                <input class="help-filter" type="search" placeholder="@Loc["HelpFilterTopics"]" aria-label="@Loc["HelpFilterTopics"]"
+                       value="@_filter" @oninput="@(e => _filter = e.Value?.ToString() ?? string.Empty)" />
+            </Controls>
+            <ChildContent>
+                <div class="help-topics">
+                    @if (_index.Topics.Count == 0)
                     {
-                        <li><a href="/help/@Uri.EscapeDataString(topic)">@topic</a></li>
+                        <p class="help-empty">@Loc["HelpNoTopics"]</p>
                     }
-                </ul>
-            }
-        </section>
+                    else if (Filtered.Count == 0)
+                    {
+                        <p class="help-empty">@Loc["HelpNoTopicsMatch"]</p>
+                    }
+                    else
+                    {
+                        <ul class="help-topic-list">
+                            @foreach (var topic in Filtered)
+                            {
+                                <li><a href="/help/@Uri.EscapeDataString(topic)">@topic</a></li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </ChildContent>
+        </KitCard>
 
         <AuthorizeView Roles="Wizard,God">
             <Authorized>
@@ -57,18 +69,18 @@
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="help-admin">@Loc["HelpLoadFailed"] @_adminError</MudAlert>
                 }
-                else if (_adminIndex is not null)
+                else if (_adminIndex is { Topics.Count: > 0 })
                 {
-                    <section class="help-body help-topics help-admin">
-                        <h2 class="help-section-title">@Loc["HelpAdminTitle"]</h2>
-                        <p class="help-subtitle">@Loc["HelpAdminSubtitle"]</p>
-                        <ul class="help-topic-list">
-                            @foreach (var topic in _adminIndex.Topics)
-                            {
-                                <li><a href="/help/admin/@Uri.EscapeDataString(topic)">@topic</a></li>
-                            }
-                        </ul>
-                    </section>
+                    <KitCard Class="help-admin" Title="@Loc["HelpAdminTitle"]" Sub="@Loc["HelpAdminSubtitle"]">
+                        <div class="help-topics">
+                            <ul class="help-topic-list">
+                                @foreach (var topic in _adminIndex.Topics)
+                                {
+                                    <li><a href="/help/admin/@Uri.EscapeDataString(topic)">@topic</a></li>
+                                }
+                            </ul>
+                        </div>
+                    </KitCard>
                 }
             </Authorized>
         </AuthorizeView>
@@ -89,13 +101,16 @@
             ? []
             : string.IsNullOrWhiteSpace(_filter)
                 ? _index.Topics
-                : _index.Topics.Where(t => t.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+                : _index.Topics.Where(t => t.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
+        _filter = HelpQuery.From(Nav.Uri);
+
         var result = await HelpFiles.GetIndexAsync();
         (_index, _error) = result switch
         {
@@ -122,4 +137,13 @@
 
         _loading = false;
     }
+
+    /// <summary>The sidebar's search changes only the query, so the page stays mounted and takes the new term.</summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _filter = HelpQuery.From(e.Location);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 }

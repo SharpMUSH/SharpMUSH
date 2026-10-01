@@ -1,22 +1,23 @@
 @page "/scenes/active"
-@using SharpMUSH.Client.Models
-@using SharpMUSH.Client.Services
+@layout ScenesLayout
+@using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
+@inject AccountAuthService AccountAuth
+@implements IDisposable
 
-<PageTitle>@Loc["WidActiveScenes"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["NavScenesLive"] — @Loc["AppTitle"]</PageTitle>
 
+@* The sidebar's "Live now": every running scene as a card, the live view its accent action. *@
 <div class="scenes-active-page">
-    <div style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);">@Loc["SceneArchive"]</div>
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["WidActiveScenes"]</MudText>
-    <div style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["ResActiveScenesSubtitle"]</div>
+    <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Loc["NavScenesLive"]" Description="@Loc["ResActiveScenesSubtitle"]" />
 
     @if (_loading)
     {
-        <div style="display:flex;flex-direction:column;gap:0.625rem;">
+        <div class="scenes-list" aria-busy="true">
             @for (var i = 0; i < 4; i++)
             {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Style="border-radius:var(--radius);" />
+                <div class="scenes-skeleton"></div>
             }
         </div>
     }
@@ -26,49 +27,14 @@
     }
     else if (_scenes.Count == 0)
     {
-        <EmptyState>@Loc["WidNoActiveScenes"]</EmptyState>
+        <div class="scenes-empty">@Loc["WidNoActiveScenes"]</div>
     }
     else
     {
-        <div style="display:flex;flex-direction:column;gap:0.625rem;">
+        <div class="scenes-list">
             @foreach (var scene in _scenes)
             {
-                <MudPaper Elevation="0" Class="scene-card">
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1875rem;">
-                            <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
-                            <MudText Style="font-size:0.875rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                @SceneTitle(scene)
-                            </MudText>
-                        </div>
-                        <div class="scene-meta-row">
-                            <MudText Style="font-size:0.75rem;color:var(--text-dim);">
-                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                @scene.RoomName
-                            </MudText>
-                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                @Loc.Plural("RolPoseCount", "count", scene.PoseCount)
-                            </MudText>
-                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                @Loc["ResStartedAt", scene.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")]
-                            </MudText>
-                        </div>
-                    </div>
-                    <div class="scene-actions" style="display:flex;gap:0.5rem;flex-shrink:0;">
-                        <MudButton Variant="Variant.Text" Size="Size.Small"
-                                   Style="color:var(--text-dim);text-transform:none;"
-                                   Href="@($"/scenes/{scene.Id}")">
-                            @Loc["ResViewLog"]
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                   Style="border-color:var(--accent);color:var(--accent);text-transform:none;"
-                                   Href="@($"/scenes/{scene.Id}/live")">
-                            @Loc["RolWatchLive"]
-                        </MudButton>
-                    </div>
-                </MudPaper>
+                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@_canJoin" />
             }
         </div>
     }
@@ -78,10 +44,29 @@
     private IReadOnlyList<SceneSummary> _scenes = [];
     private string? _error;
     private bool _loading = true;
+    private bool _canJoin;
+
+    /// <summary>
+    /// The list is the acting character's view — the server lists a private scene only to its owner and
+    /// members — so a switch of character re-reads it, as does a scene this tab started.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await SceneService.GetActiveScenesAsync();
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }), SceneService);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var ticket = _reload.Begin();
+        var pending = SceneService.GetActiveScenesAsync();
+        await AccountAuth.InitAsync();
+        var canJoin = AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null;
+        var result = await pending;
+        if (!_reload.IsCurrent(ticket)) return;
+        _canJoin = canJoin;
         (_scenes, _error) = result switch
         {
             IReadOnlyList<SceneSummary> scenes => (scenes, (string?)null),
@@ -90,8 +75,5 @@
         _loading = false;
     }
 
-    private string SceneTitle(SceneSummary s) =>
-        s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
-            ? t
-            : Loc["RolSceneIn", s.RoomName];
+    public void Dispose() => _reload.Dispose();
 }

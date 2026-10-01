@@ -11,29 +11,41 @@
 <div class="config-section-page">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["CommandAndFunctionRestrictions"]" Description="@Loc["RestrictionsDescription"]" />
 
-    <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" Class="config-tabs mb-4">
-        <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
-            <div class="config-tab-body">
-                <AdminKeyValueList Text="@CommandText"
-                                   Load="@(() => RestrictionsService.GetCommandRestrictionsAsync().AsEntriesAsync())"
-                                   Add="@RestrictionsService.AddCommandRestrictionAsync"
-                                   Delete="@RestrictionsService.DeleteCommandRestrictionAsync" />
-            </div>
-        </MudTabPanel>
+    @* The kit's chips switch the two lists, as on the media library. Only the chosen list is rendered,
+       and each branch is its own component, so switching loads that list afresh. *@
+    <div class="restr-body">
+        <TypeChips Items="@Tables" Selected="@_table" SelectedChanged="@(t => _table = t)" AriaLabel="@Loc["Restrictions"]" />
 
-        <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
-            <div class="config-tab-body">
-                <AdminKeyValueList Text="@FunctionText"
-                                   Load="@(() => RestrictionsService.GetFunctionRestrictionsAsync().AsEntriesAsync())"
-                                   Add="@RestrictionsService.AddFunctionRestrictionAsync"
-                                   Delete="@RestrictionsService.DeleteFunctionRestrictionAsync" />
-            </div>
-        </MudTabPanel>
-    </MudTabs>
+        @if (_table == FunctionsTable)
+        {
+            <AdminKeyValueList Text="@FunctionText"
+                               Load="@(() => RestrictionsService.GetFunctionRestrictionsAsync().AsEntriesAsync())"
+                               Add="@RestrictionsService.AddFunctionRestrictionAsync"
+                               Delete="@RestrictionsService.DeleteFunctionRestrictionAsync" />
+        }
+        else
+        {
+            <AdminKeyValueList Text="@CommandText"
+                               Load="@(() => RestrictionsService.GetCommandRestrictionsAsync().AsEntriesAsync())"
+                               Add="@RestrictionsService.AddCommandRestrictionAsync"
+                               Delete="@RestrictionsService.DeleteCommandRestrictionAsync" />
+        }
+    </div>
 </div>
 
 @code {
-    // The two tabs are the same list with the nouns swapped, which is why this page used to be its
+    private const string CommandsTable = "commands";
+    private const string FunctionsTable = "functions";
+
+    private string _table = CommandsTable;
+
+    private IReadOnlyList<(string Key, string Label)> Tables =>
+    [
+        (CommandsTable, Loc["CommandRestrictions"]),
+        (FunctionsTable, Loc["FunctionRestrictions"]),
+    ];
+
+    // The two tables are the same list with the nouns swapped, which is why this page used to be its
     // own body written twice.
     private AdminKeyValueListText CommandText => new(
         AddTitle: Loc["AddCommandRestriction"],

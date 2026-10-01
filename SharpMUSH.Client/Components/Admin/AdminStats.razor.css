@@ -1,0 +1,5 @@
+.adm-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+	gap: 12px;
+}

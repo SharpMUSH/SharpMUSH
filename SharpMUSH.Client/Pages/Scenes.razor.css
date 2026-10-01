@@ -1,49 +1,65 @@
-::deep .scene-card:hover {
-    border-color: var(--accent);
-    background: var(--surface-2);
-}
-
 .scenes-page {
-    padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 960px;
 }
 
-::deep .scene-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.875rem 1.125rem;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
+.scenes-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
-::deep .scene-card .scene-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
+.scenes-skeleton {
+	height: 72px;
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
 }
 
-/* Mobile: stack each scene card so the title block sits above its actions,
-   trim the page padding, and let the meta row wrap instead of overflowing. */
+.scenes-empty {
+	padding: 24px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-card);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.scene-start-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	padding: 12px 16px 16px;
+}
+
+.scene-start-form ::deep .scene-start-title {
+	flex: 1 1 16rem;
+}
+
+.scene-start-buttons {
+	display: flex;
+	gap: 8px;
+}
+
+/* narrow: the start form stacks, and its buttons split the row */
 @container page (max-width: 48rem) {
-    .scenes-page {
-        padding: var(--cpad-mobile);
-    }
-    ::deep .scene-card {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.625rem;
-        padding: 0.875rem;
-    }
-    ::deep .scene-card .scene-meta-row {
-        flex-wrap: wrap;
-        gap: 0.5rem 0.875rem;
-    }
-    ::deep .scene-card .scene-actions {
-        width: 100%;
-    }
-    ::deep .scene-card .scene-actions .mud-button-root {
-        flex: 1;
-        min-height: 44px;
-    }
+	.scenes-page {
+		max-width: none;
+	}
+
+	.scene-start-form {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.scene-start-form ::deep .scene-start-title {
+		flex: 0 0 auto;
+	}
+
+	.scene-start-buttons ::deep .kit-capsule {
+		flex: 1;
+		justify-content: center;
+	}
 }

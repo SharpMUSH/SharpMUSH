@@ -1,4 +1,5 @@
 @page "/account"
+@layout SettingsLayout
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -21,144 +22,149 @@
     {
         @if (_isDebugAuth)
         {
-            <div class="acct-card" style="max-width:560px;">
-                <MudAlert Severity="Severity.Info" Class="mb-3">
-                    <strong>@Loc["AuthDebugMode"]</strong> — @Loc["AuthDebugModeBody", "DebugAdmin"]
-                </MudAlert>
-                <button class="acct-btn acct-btn-primary" @onclick='() => Nav.NavigateTo("/")'>@Loc["AuthGoToHome"]</button>
-            </div>
+            <KitCard Class="acct-debug">
+                <div class="acct-section">
+                    <MudAlert Severity="Severity.Info" Class="mb-3">
+                        <strong>@Loc["AuthDebugMode"]</strong> — @Loc["AuthDebugModeBody", "DebugAdmin"]
+                    </MudAlert>
+                    <button class="acct-btn acct-btn-primary" @onclick='() => Nav.NavigateTo("/")'>@Loc["AuthGoToHome"]</button>
+                </div>
+            </KitCard>
         }
     }
     else
     {
-        <div class="acct-header">
-            <div class="acct-kicker">@Loc["AuthAccount"]</div>
-            <div class="acct-title">@AccountAuth.Username</div>
-        </div>
+        <PlainPageHeader Kicker="@($"{Loc["Settings"]} · {Loc["AuthAccount"]}")" Title="@(AccountAuth.Username ?? string.Empty)"
+                         Description="@Loc["NavSettingsAccountDescription"]">
+            <Actions>
+                <button class="acct-btn acct-btn-danger" @onclick="LogoutAsync">@Loc["AuthLogOutOfAccount"]</button>
+            </Actions>
+        </PlainPageHeader>
 
         @if (AccountAuth.MustChangePassword)
         {
-            <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudAlert Severity="Severity.Warning">
                 <strong>@Loc["AuthPasswordChangeRequired"]</strong>
                 @Loc["AuthPasswordChangeRequiredBody"]
             </MudAlert>
         }
 
-        <div class="acct-card">
-            @if (!AccountAuth.MustChangePassword)
-            {
-                <div class="acct-card-title">@Loc["AuthProfile"]</div>
+        @* While a password change is forced, the password is the only thing on the page. *@
+        <KitCard Title="@Loc[AccountAuth.MustChangePassword ? "AuthPassword" : "AuthProfile"]">
+            <div class="acct-section">
+                @if (!AccountAuth.MustChangePassword)
+                {
+                    <div class="acct-row">
+                        @if (_editingUsername)
+                        {
+                            <MudTextField @bind-Value="_newUsername" Label="@Loc["AuthUsername"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input acct-grow" />
+                            <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SaveUsernameAsync">@Loc["Save"]</button>
+                            <button class="acct-btn acct-btn-ghost" @onclick="() => _editingUsername = false">@Loc["Cancel"]</button>
+                        }
+                        else
+                        {
+                            <div class="acct-value"><span class="acct-label">@Loc["AuthUsername"]</span> @AccountAuth.Username</div>
+                            <button class="acct-btn acct-btn-outline"
+                                    @onclick="() => { _newUsername = AccountAuth.Username ?? string.Empty; _editingUsername = true; }">
+                                @Loc["AuthEdit"]
+                            </button>
+                        }
+                    </div>
+                }
 
-                <div class="acct-row">
-                    @if (_editingUsername)
+                <div class="acct-row acct-row--password">
+                    @if (_editingPassword)
                     {
-                        <MudTextField @bind-Value="_newUsername" Label="@Loc["AuthUsername"]"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;" />
-                        <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SaveUsernameAsync">@Loc["Save"]</button>
-                        <button class="acct-btn acct-btn-ghost" @onclick="() => _editingUsername = false">@Loc["Cancel"]</button>
+                        <div class="acct-fields">
+                            <MudTextField @bind-Value="_oldPassword" Label="@Loc["AuthCurrentPassword"]"
+                                          InputType="InputType.Password"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                            <MudTextField @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]"
+                                          InputType="InputType.Password"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                        </div>
+                        <div class="acct-field-actions">
+                            <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">@Loc["Save"]</button>
+                            <button class="acct-btn acct-btn-ghost" @onclick="() => _editingPassword = false">@Loc["Cancel"]</button>
+                        </div>
                     }
                     else
                     {
-                        <div style="flex:1;color:var(--text);"><span class="acct-label">@Loc["AuthUsername"]</span> @AccountAuth.Username</div>
-                        <button class="acct-btn acct-btn-outline"
-                                @onclick="() => { _newUsername = AccountAuth.Username ?? string.Empty; _editingUsername = true; }">
-                            @Loc["AuthEdit"]
-                        </button>
+                        <div class="acct-value"><span class="acct-label">@Loc["AuthPassword"]</span> ••••••••</div>
+                        <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">@Loc["AuthChange"]</button>
                     }
                 </div>
-            }
 
-            <div class="acct-row acct-row--password">
-                @if (_editingPassword)
+                @if (_profileError is not null)
                 {
-                    <div style="display:flex;flex-direction:column;gap:0.5rem;flex:1;">
-                        <MudTextField @bind-Value="_oldPassword" Label="@Loc["AuthCurrentPassword"]"
-                                      InputType="InputType.Password"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
-                        <MudTextField @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]"
-                                      InputType="InputType.Password"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:0.375rem;">
-                        <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">@Loc["Save"]</button>
-                        <button class="acct-btn acct-btn-ghost" @onclick="() => _editingPassword = false">@Loc["Cancel"]</button>
-                    </div>
+                    <MudAlert Severity="Severity.Error" Class="mt-3">@_profileError</MudAlert>
                 }
-                else
+                @if (_profileSuccess is not null)
                 {
-                    <div style="flex:1;color:var(--text);"><span class="acct-label">@Loc["AuthPassword"]</span> ••••••••</div>
-                    <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">@Loc["AuthChange"]</button>
+                    <MudAlert Severity="Severity.Success" Class="mt-3">@_profileSuccess</MudAlert>
                 }
             </div>
-
-            @if (_profileError is not null)
-            {
-                <MudAlert Severity="Severity.Error" Class="mt-3">@_profileError</MudAlert>
-            }
-            @if (_profileSuccess is not null)
-            {
-                <MudAlert Severity="Severity.Success" Class="mt-3">@_profileSuccess</MudAlert>
-            }
-        </div>
+        </KitCard>
 
         @if (!AccountAuth.MustChangePassword)
         {
-            <div class="acct-card">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem;">
-                    <div class="acct-card-title" style="margin-bottom:0;">@Loc["Characters"]</div>
-                    <button class="acct-btn acct-btn-outline" @onclick="RefreshCharactersAsync" disabled="@_busy">
-                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
-                        @Loc["Refresh"]
-                    </button>
-                </div>
+            @* The anchor the Settings sidebar's Characters row lands on. *@
+            <div id="characters" class="acct-anchor">
+                <KitCard Title="@Loc["Characters"]" Sub="@Loc["NavSettingsCharactersDescription"]">
+                    <Controls>
+                        <button class="acct-btn acct-btn-outline" @onclick="RefreshCharactersAsync" disabled="@_busy">
+                            <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
+                            @Loc["Refresh"]
+                        </button>
+                    </Controls>
+                    <ChildContent>
+                        <div class="acct-section">
+                            @if (_loadingChars)
+                            {
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                            }
+                            else if (AccountAuth.Characters.Count == 0)
+                            {
+                                <div class="acct-empty">@Loc["AuthNoCharactersLinked"]</div>
+                            }
+                            else
+                            {
+                                <div class="acct-table-scroll">
+                                    <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
+                                        <HeaderContent>
+                                            <MudTh>@Loc["AuthColumnName"]</MudTh>
+                                            <MudTh>@Loc["AuthColumnDbref"]</MudTh>
+                                            <MudTh>@Loc["Flags"]</MudTh>
+                                            <MudTh>@Loc["AuthColumnActions"]</MudTh>
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd data-label="@Loc["AuthColumnName"]">@context.Name</MudTd>
+                                            <MudTd data-label="@Loc["AuthColumnDbref"]">#@context.DbrefNumber</MudTd>
+                                            <MudTd data-label="@Loc["Flags"]">
+                                                @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                                                {
+                                                    <span class="acct-flag">@flag</span>
+                                                }
+                                            </MudTd>
+                                            <MudTd data-label="@Loc["AuthColumnActions"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                                               Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
+                                                               OnClick="() => UnlinkCharacterAsync(context.DbrefNumber)" />
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </MudTable>
+                                </div>
+                            }
 
-                @if (_loadingChars)
-                {
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="color:var(--accent);" />
-                }
-                else if (AccountAuth.Characters.Count == 0)
-                {
-                    <div style="color:var(--text-faint);">@Loc["AuthNoCharactersLinked"]</div>
-                }
-                else
-                {
-                    <div class="acct-table-scroll">
-                    <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@Loc["AuthColumnName"]</MudTh>
-                            <MudTh>@Loc["AuthColumnDbref"]</MudTh>
-                            <MudTh>@Loc["Flags"]</MudTh>
-                            <MudTh>@Loc["AuthColumnActions"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd data-label="@Loc["AuthColumnName"]">@context.Name</MudTd>
-                            <MudTd data-label="@Loc["AuthColumnDbref"]">#@context.DbrefNumber</MudTd>
-                            <MudTd data-label="@Loc["Flags"]">
-                                @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                                {
-                                    <span class="acct-flag">@flag</span>
-                                }
-                            </MudTd>
-                            <MudTd data-label="@Loc["AuthColumnActions"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
-                                               Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
-                                               OnClick="() => UnlinkCharacterAsync(context.DbrefNumber)" />
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                    </div>
-                }
-
-                <a class="acct-btn acct-btn-primary" style="margin-top:1rem;display:inline-block;"
-                   href="/characters/new">
-                    @Loc["AuthCreateNewCharacter"]
-                </a>
+                            <a class="acct-btn acct-btn-primary acct-create" href="/characters/new">
+                                @Loc["AuthCreateNewCharacter"]
+                            </a>
+                        </div>
+                    </ChildContent>
+                </KitCard>
             </div>
         }
-
-        <button class="acct-btn acct-btn-danger" @onclick="LogoutAsync">
-            @Loc["AuthLogOutOfAccount"]
-        </button>
     }
 
 </div>

@@ -1,4 +1,5 @@
 @page "/help/admin/{Topic}"
+@layout HelpLayout
 @using SharpMUSH.Client.Components.Help
 @attribute [Authorize(Roles = "Wizard,God")]
 @inject IStringLocalizer<SharedResource> Loc
@@ -9,20 +10,17 @@
 <PageTitle>@Topic — @Loc["HelpAdminTitle"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="help-page">
-    <header class="help-header">
-        <div class="help-kicker">
-            <a class="help-kicker-link" href="/help">@Loc["Help"]</a>
-            <span class="help-kicker-sep">/</span>
-            <span class="help-kicker-current">@Loc["HelpAdminTitle"]</span>
-            <span class="help-kicker-sep">/</span>
-            <span class="help-kicker-current">@Topic</span>
-        </div>
-        <h1 class="help-title">@Topic</h1>
-    </header>
+    <PlainPageHeader Kicker="@($"{Loc["Help"]} / {Loc["HelpAdminTitle"]}")" Title="@Topic">
+        <Actions>
+            <CapsuleButton Href="/help" Icon="@Icons.Material.Outlined.MenuBook">@Loc["NavHelpIndex"]</CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
 
-    <section class="help-body">
-        <HelpEntryPanel Topic="@Topic" Admin="true" />
-    </section>
+    <KitCard>
+        <div class="help-body">
+            <HelpEntryPanel Topic="@Topic" Admin="true" />
+        </div>
+    </KitCard>
 </div>
 
 @code {

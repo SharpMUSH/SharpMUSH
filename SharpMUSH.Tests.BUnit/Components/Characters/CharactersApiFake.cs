@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 using AccountCharacter = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Components.Characters;
@@ -70,7 +71,7 @@ public sealed class CharactersApiFake : HttpMessageHandler
 			.AddSingleton(factory)
 			.AddSingleton(sp => new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton(sp => new CharacterProfileService(factory, sp.GetRequiredService<CharacterDirectoryService>()))
-			.AddSingleton(new SceneService(factory))
+			.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)))
 			.AddSingleton(new GalleryService(factory))
 			.AddSingleton<SidebarCollapseService>()
 			.AddLocalization();

@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Settings
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Settings section (/settings, /account, /settings/theme): the D1 page sidebar beside the page
+   body. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="settings" Class="settings-shell" NavLabel="@Loc["Settings"]">
+    <Nav Context="collapsed"><SettingsSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

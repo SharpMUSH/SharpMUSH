@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
@@ -79,7 +80,21 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// </summary>
 	public bool ASceneAppears { get; set; }
 
-	private int _activeListCalls;
+	/// <summary>Set once the page has sent <c>+scene/create</c>; the engine can only answer after that.</summary>
+	public bool CreateSent { get; set; }
+
+	/// <summary>
+	/// Somebody else started a scene after the page loaded, and before this player pressed Start. It is
+	/// on every active read from then on, whatever this player's own create does.
+	/// </summary>
+	public bool AnotherSceneStarted { get; set; }
+
+	/// <summary>
+	/// Somebody else starts a scene in the window between this player's create going out and the
+	/// engine answering it: absent from the roster read just before the create, present on every
+	/// read after it.
+	/// </summary>
+	public bool AnotherPlayerStartsASceneMeanwhile { get; set; }
 
 	/// <summary>
 	/// Paths the server fails with a 503 and an <c>{ "error": … }</c> body, as it does when the scene
@@ -105,6 +120,19 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	]
 	""";
 
+	private const string SceneListWithAnotherPlayersScene = """
+	[
+	  {"id":"S1","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000000000,"lastActivityAt":1700000500000,"poseCount":2,
+	   "ownerDbref":"#1","ownerName":"Wizard","starterDbref":"#1","starterName":"Wizard",
+	   "roomDbref":"#7","roomName":"The Tavern","meta":{"title":"Barroom Brawl"}},
+	  {"id":"S3","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
+	   "startedAt":1700000700000,"lastActivityAt":1700000700000,"poseCount":0,
+	   "ownerDbref":"#42","ownerName":"Someone","starterDbref":"#42","starterName":"Someone",
+	   "roomDbref":"#8","roomName":"The Square","meta":{"title":"Market Day"}}
+	]
+	""";
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
@@ -122,13 +150,12 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 
 		string? body = path switch
 		{
-			// Keyed on the ACTIVE list specifically: the page reads recent and active from this same
-			// path on load, so counting every read would have the scene appear before the form was
-			// even used. It shows up on the second active read — the page's first poll — which is
-			// what "a scene was created" looks like from out here.
-			"/api/scenes" when ASceneAppears
-				&& request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
-				&& ++_activeListCalls > 1 => SceneListWithNewScene,
+			// Keyed on the ACTIVE list and on the create having been sent: a scene this player made cannot
+			// be on the roster before they asked for it, and one somebody else made can be at any time.
+			"/api/scenes" when request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
+				&& (ASceneAppears && CreateSent || AnotherSceneStarted) => SceneListWithNewScene,
+			"/api/scenes" when request.RequestUri.Query.Contains("filter=active", StringComparison.Ordinal)
+				&& AnotherPlayerStartsASceneMeanwhile && CreateSent => SceneListWithAnotherPlayersScene,
 			"/api/scenes" => SceneList,
 			"/api/scenes/S1" => Scene,
 			"/api/scenes/S1/poses" => Poses,
@@ -244,7 +271,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 			// The live view's story reads the directory for portraits; this API answers it 404, which
 			// leaves initials.
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(),
@@ -252,7 +279,13 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
 			.AddSingleton(_terminal)
+			.AddSingleton(new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+
+		_terminal.When(t => t.SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/create", StringComparison.Ordinal))))
+			.Do(_ => _api.CreateSent = true);
+		// The terminal is connected as #1, the owner of the fixture's own new scene (S2).
+		_terminal.SendCommandAsync("num(me)", Arg.Any<int>()).Returns(["#1"]);
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -406,7 +439,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("says calm down");
 
 		// Click the "combat" tag chip → only the combat pose remains.
-		var combatChip = cut.FindAll(".mud-chip")
+		var combatChip = cut.FindAll(".kit-chips button")
 			.First(c => c.TextContent.Trim() == "combat");
 		combatChip.Click();
 
@@ -562,7 +595,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_StartsAScene_ThroughTheTerminal()
 	{
 		_terminal.IsConnected.Returns(true);
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
 		cut.Find(".scene-start button").Click();
@@ -581,7 +614,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_DoesNotOfferToStartAScene_WithoutAConnection()
 	{
 		_terminal.IsConnected.Returns(false);
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
@@ -601,7 +634,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_ShowsTheStartButton_WhenTheTerminalConnectsAfterRender()
 	{
 		_terminal.IsConnected.Returns(false);
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scenes-page"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".scene-start button")).IsEmpty();
 
@@ -620,7 +653,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_StartedFromTheBrowser_AreVisibleToOthersByDefault()
 	{
 		_terminal.IsConnected.Returns(true);
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
 		cut.Find(".scene-start button").Click();
@@ -638,7 +671,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	{
 		_terminal.IsConnected.Returns(true);
 		_api.ASceneAppears = true;
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
 		cut.Find(".scene-start button").Click();
@@ -653,6 +686,125 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.WaitForAssertion(
 			() => _terminal.Received().SendAsync("+scene/private"),
 			TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
+	/// A scene the form saw created is reported, so the section sidebar — mounted with the layout, and
+	/// not remounted by anything the form does — reloads its counts and live rows.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ACreatedScene_IsReportedToTheRestOfTheSection()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
+		var reports = 0;
+		Services.GetRequiredService<SceneService>().Changed += () => reports++;
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("A quiet corner");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (reports == 0) throw new InvalidOperationException("not reported yet");
+		}, TimeSpan.FromSeconds(10));
+		await Assert.That(reports).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A scene is not started as a character other than the one the tab acts as. A switch of character
+	/// rebinds the web session but leaves the terminal playing the previous one, and +scene/create goes
+	/// down the terminal — so the form created, and could make private, a scene owned by the character
+	/// the reader had switched away from. It now asks the terminal who it is and refuses on a mismatch.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalPlaysAnotherCharacter_StartsNothingAndSaysSo()
+	{
+		_terminal.IsConnected.Returns(true);
+		_terminal.ConnectedPlayerName.Returns("Wizard");
+		_api.ASceneAppears = true;
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(314, 1, "Wren Halloway", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Not As Wren");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains("RolSceneTerminalIsAnotherCharacter(Wizard, Wren Halloway)");
+		await _terminal.DidNotReceive().SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/", StringComparison.Ordinal)));
+	}
+
+	/// <summary>A terminal that does not say who it is, while a character acts, is refused the same way.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalDoesNotSayWhoItIs_StartsNothingAndSaysSo()
+	{
+		_terminal.IsConnected.Returns(true);
+		_terminal.SendCommandAsync("num(me)", Arg.Any<int>()).Returns(Array.Empty<string>());
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(1, 1, "Wizard", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Unconfirmed");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains("RolSceneTerminalUnconfirmed");
+		await _terminal.DidNotReceive().SendAsync(Arg.Is<string>(c => c.StartsWith("+scene/", StringComparison.Ordinal)));
+	}
+
+	/// <summary>The same character on both is the ordinary case: the scene starts.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_WhenTheTerminalPlaysTheActingCharacter_StartsTheScene()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
+		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
+			new AccountAuthService.CharacterSummary(1, 1, "Wizard", "PLAYER", IsActing: true)));
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("As Myself");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() => _terminal.Received().SendAsync("+scene/create As Myself"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-start-error")).IsEmpty();
+	}
+
+	/// <summary>A create the engine refused changed no list, so nothing is reported.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ARefusedCreate_ReportsNothing()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+		var reports = 0;
+		Services.GetRequiredService<SceneService>().Changed += () => reports++;
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Refused Quietly");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Refused Quietly"),
+			TimeSpan.FromSeconds(5));
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await Assert.That(reports).IsEqualTo(0);
 	}
 
 	/// <summary>
@@ -691,7 +843,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		_terminal.IsConnected.Returns(true);
 		_api.ASceneAppears = false;
 
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
 		cut.Find(".scene-start button").Click();
@@ -706,6 +858,74 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		// Long enough to outlast the roster poll, so this is "it never sent it" rather than "it had
 		// not got there yet" — the distinction the whole test rests on.
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
+	}
+
+	/// <summary>
+	/// A scene somebody else started while this player was reading the page is not taken for theirs.
+	///
+	/// <para>The form compared the roster against the one it had loaded with the page, which could be
+	/// minutes old. A scene anyone started in between was "new" on the first poll, so a refused create
+	/// still sent +scene/private — onto whatever scene the player was focused on. The comparison is now
+	/// against a roster read just before the create goes out.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ASceneSomebodyElseStarted_IsNotTakenForTheNewOne()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+		_api.AnotherSceneStarted = true;
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Refused");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Refused"),
+			TimeSpan.FromSeconds(5));
+
+		// Outlasts the roster poll, as in the test above.
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await _terminal.DidNotReceive().SendAsync("+scene/private");
+	}
+
+	/// <summary>
+	/// A scene another player starts while this player's create is in flight is not taken for theirs.
+	///
+	/// <para>The roster read just before the create shuts out scenes that already existed, but anything
+	/// new after it counted: a scene somebody else started in the moment the engine took to answer — or
+	/// to refuse — was "the new one", and +scene/private went out against whatever scene this player was
+	/// focused on. A new scene is now this player's only if this connection's character owns it.</para>
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AnotherPlayersSceneStartedDuringTheCreate_IsNotTakenForTheNewOne()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+		_api.AnotherPlayerStartsASceneMeanwhile = true;
+
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Refused Meanwhile");
+		cut.Find(".scene-start-public input").Change(false);
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Refused Meanwhile"),
+			TimeSpan.FromSeconds(5));
+
+		// Outlasts the roster poll, as in the tests above.
 		await Task.Delay(TimeSpan.FromSeconds(3));
 
 		await _terminal.DidNotReceive().SendAsync("+scene/private");
@@ -814,7 +1034,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	public async Task Scenes_AFailedListIsNotAnEmptyArchive()
 	{
 		_api.Failing.Add("/api/scenes");
-		var cut = Render<Scenes>();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-list-error"), TimeSpan.FromSeconds(5));
 

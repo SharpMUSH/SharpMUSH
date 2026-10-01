@@ -1,4 +1,8 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using NSubstitute;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit;
 
@@ -19,6 +23,17 @@ namespace SharpMUSH.Tests.BUnit;
 public abstract class TrackingBunitContext : BunitContext
 {
 	private readonly DisposableTracker _tracker = new();
+
+	/// <summary>
+	/// Every component that shows the acting character's data reads it from <see cref="IAccountAuthState"/>,
+	/// which the app forwards to <see cref="AccountAuthService"/>. A test that registers an
+	/// <see cref="AccountAuthService"/> gets that one, as the app would; a test that registers neither gets
+	/// a session nobody is signed in to; a test that registers its own <see cref="IAccountAuthState"/>
+	/// overrides this.
+	/// </summary>
+	protected TrackingBunitContext() =>
+		Services.TryAddSingleton<IAccountAuthState>(sp =>
+			sp.GetService<AccountAuthService>() ?? Substitute.For<IAccountAuthState>());
 
 	/// <summary>
 	/// Takes ownership of <paramref name="disposable"/> and returns it unchanged. Public so a shared

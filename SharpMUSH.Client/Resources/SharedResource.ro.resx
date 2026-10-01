@@ -1724,7 +1724,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Conținutul principal al paginii de întâmpinare.</value>
+    <value>Pagina de start: coloana principală și coloana laterală.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3227,6 +3227,14 @@
     <value>Oricine poate urmări</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminalul din această filă joacă drept {0}, nu drept {1}. Pornește scena dintr-o filă care joacă drept {1} sau revino la {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nu s-a putut confirma cu ce personaj joacă terminalul din această filă. Încearcă din nou peste câteva momente.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Începe o scenă</value>
     <comment>MT</comment>
@@ -3914,10 +3922,6 @@
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Sursă neverificată — inspectați totul înainte de aplicare</value>
     <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Vedeți toate ({0}) →</value>
-    <comment>MT — Romanian needs a gender for 'all'; feminine/neuter 'toate' fits the likely items (scene, pagini, poze)</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Se așteaptă pornirea serverului…</value>
@@ -4840,6 +4844,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Conectat ca {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Prezentare generală</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Cont</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Preferințe</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Contul tău, personajele tale și cum arată acest portal.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# mesaj} few {# mesaje} other {# de mesaje}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Necitit</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Mesaj redirecționat de la {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Înapoi la {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Ce se întâmplă</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online acum} other {Online acum · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Vezi pe toată lumea</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scene în desfășurare acum</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# găsit} few {# găsite} other {# găsite}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Răsfoire</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Toate scenele</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>În direct acum</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Scenele tale</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Programate</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Încheiate</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# în direct} few {# în direct} other {# în direct}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# recentă} few {# recente} other {# de recente}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Arhiva scenelor</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scenele la care a participat {0}.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scene planificate pentru mai târziu, cele mai apropiate primele.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scene pe care proprietarii lor le-au încheiat.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Autentifică-te și joacă un personaj pentru a vedea scenele la care ai participat.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privată</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Programată pentru {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrează pozele după etichetă</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detalii</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Începută</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Ultima activitate</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Începută de</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Lungime</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Distribuție · #} few {Distribuție · #} other {Distribuție · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# subiect} few {# subiecte} other {# de subiecte}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Caută în ajutor</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Răsfoire</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Indexul ajutorului</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Primii pași</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Nou în MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Subiecte</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Niciun rezultat} one {# rezultat} few {# rezultate} other {# de rezultate}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Ajutor pentru administratori</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Index pentru administratori</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administrare · Ortografie</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Bază de date</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Gestionare · Diagnosticare</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Gestionare · Automatizare</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Construire · Recuperare</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrează după tip</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Afișează ca</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roluri sau atribuiri</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Atributele handlerului</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Încarcă o imagine</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Acest joc nu are subiecte de ajutor instalate.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Afișează README pentru {0}</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Conectat ca {0}</value>

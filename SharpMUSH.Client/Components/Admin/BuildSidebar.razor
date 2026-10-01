@@ -83,14 +83,25 @@
         _apps = [.. PortalNavSections.AppsForSection(all, role, "Build"), .. PortalNavSections.AppsForSection(all, role, "Manage")];
     }
 
+    /// <summary>
+    /// The row for this page; on an admin page the sidebar does not list (players, accounts, the
+    /// server, reached from the dashboard's cards) the dashboard row stands for it.
+    /// </summary>
     private bool IsCurrent(string href, bool exact) =>
+        Matches(href, exact)
+        || (href == Dashboard
+            && _path.StartsWith(Dashboard + "/", StringComparison.OrdinalIgnoreCase)
+            && !_entries.Any(e => Matches(e.Href, e.ExactMatch)));
+
+    private const string Dashboard = "/admin";
+
+    private bool Matches(string href, bool exact) =>
         _path.Equals(href, StringComparison.OrdinalIgnoreCase)
         || (!exact && _path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase));
 
     private void Locate()
     {
-        var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
-        _path = path.Length == 0 ? "/" : path;
+        _path = SectionPath.Of(Nav).Path;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>

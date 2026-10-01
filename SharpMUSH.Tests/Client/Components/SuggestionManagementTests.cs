@@ -159,7 +159,7 @@ public class SuggestionManagementTests
 
 		var cut = ctx.Render<SuggestionManagement>();
 
-		var description = cut.Find("p.ph-subtitle");
+		var description = cut.Find("p.kit-page-desc");
 		await Assert.That(description.TextContent).Contains("spell-check and suggestion categories");
 	}
 
@@ -251,8 +251,8 @@ public class SuggestionManagementTests
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
 
-		// the per-category word count renders as a ".ph-chip" badge ("{n} words").
-		var chips = cut.FindAll(".ph-chip");
+		// the per-category word count renders as a ".sugg-count" tag ("{n} words").
+		var chips = cut.FindAll(".sugg-count");
 		var wordCountChip = chips.FirstOrDefault(c => c.TextContent.Contains("words"));
 
 		await Assert.That(wordCountChip).IsNotNull();

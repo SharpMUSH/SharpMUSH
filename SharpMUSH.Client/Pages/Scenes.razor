@@ -1,87 +1,189 @@
 @page "/scenes"
-@using SharpMUSH.Client.Models
-@using SharpMUSH.Client.Services
+@layout ScenesLayout
+@using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 @inject ITerminalService Terminal
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
 @implements IDisposable
 
 <PageTitle>@Loc["SceneArchive"] — @Loc["AppTitle"]</PageTitle>
 
+@* The scene archive in the D1 kit: the plain header with Start scene, and the scenes as cards. Which
+   scenes is the address the sidebar links to (ScenesFilter): every scene, the acting character's
+   (?mine=1), the scheduled ones or the finished ones. The live list is its own page, /scenes/active. *@
 <div class="scenes-page">
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["SceneArchive"]</MudText>
-    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["ResScenesSubtitle"]</MudText>
-
-    @* Starting a scene goes down the terminal websocket, which is already open as this character —
-       the same channel the live compose box posts through. Shown only when that connection exists,
-       because without it there is nothing to send the verb down. *@
-    @if (Terminal.IsConnected)
-    {
-        <div class="scene-start">
-            @if (!_starting)
+    <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Heading" Description="@Description">
+        <Actions>
+            @* Starting a scene goes down the terminal websocket, which is already open as this character —
+               the same channel the live compose box posts through. Shown only when that connection
+               exists, because without it there is nothing to send the verb down. *@
+            @if (Terminal.IsConnected && !_starting)
             {
-                <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="@(() => _starting = true)">@Loc["RolStartScene"]</MudButton>
-            }
-            else
-            {
-                <div class="scene-start-form">
-                    <MudTextField T="string" @bind-Value="_newTitle" Immediate="true"
-                                  Class="scene-start-title" Margin="Margin.Dense"
-                                  Variant="Variant.Outlined" Label="@Loc["RolSceneTitleLabel"]" />
-                    <MudCheckBox T="bool" @bind-Value="_newPublic" Dense="true"
-                                 Class="scene-start-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               Class="scene-start-submit"
-                               Disabled="@(string.IsNullOrWhiteSpace(_newTitle) || _busy)"
-                               OnClick="StartSceneAsync">@Loc["RolStartScene"]</MudButton>
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                               OnClick="@(() => { _starting = false; _newTitle = string.Empty; })">@Loc["Cancel"]</MudButton>
+                <div class="scene-start">
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="@(() => _starting = true)">@Loc["RolStartScene"]</CapsuleButton>
                 </div>
+            }
+        </Actions>
+    </PlainPageHeader>
+
+    @if (Terminal.IsConnected && _starting)
+    {
+        <KitCard Class="scene-start" Title="@Loc["RolStartScene"]">
+            <div class="scene-start-form">
+                <MudTextField T="string" @bind-Value="_newTitle" Immediate="true"
+                              Class="scene-start-title" Margin="Margin.Dense"
+                              Variant="Variant.Outlined" Label="@Loc["RolSceneTitleLabel"]" />
+                <MudCheckBox T="bool" @bind-Value="_newPublic" Dense="true"
+                             Class="scene-start-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
+                @if (_startError is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="scene-start-error">@_startError</MudAlert>
+                }
+                <div class="scene-start-buttons">
+                    <CapsuleButton Primary="true" Class="scene-start-submit"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_newTitle) || _busy)"
+                                   OnClick="StartSceneAsync">@Loc["RolStartScene"]</CapsuleButton>
+                    <CapsuleButton OnClick="@(() => { _starting = false; _newTitle = string.Empty; })">@Loc["Cancel"]</CapsuleButton>
+                </div>
+            </div>
+        </KitCard>
+    }
+
+    @if (_loading)
+    {
+        <div class="scenes-list" aria-busy="true">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="scenes-skeleton"></div>
             }
         </div>
     }
-
-    <MudTabs Elevation="0" Rounded="false" @bind-ActivePanelIndex="_tab">
-        <MudTabPanel Text="@Loc["ResTabRecent"]" BadgeData="@(_recent?.Count)" BadgeColor="Color.Default">
-            @SceneList(_recent, _recentError)
-        </MudTabPanel>
-        <MudTabPanel Text="@Loc["ResTabLive"]" BadgeData="@(_active?.Count)" BadgeColor="Color.Success">
-            @SceneList(_active, _activeError)
-        </MudTabPanel>
-    </MudTabs>
+    else if (_filter == ScenesFilter.Mine && _acting is null)
+    {
+        <div class="scenes-empty scenes-mine-none">@Loc["NavScenesMineNone"]</div>
+    }
+    else if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="scene-list-error">@_error</MudAlert>
+    }
+    else if (_scenes is null || _scenes.Count == 0)
+    {
+        <div class="scenes-empty">@Loc["ResNoScenesFound"]</div>
+    }
+    else
+    {
+        <div class="scenes-list">
+            @foreach (var scene in _scenes)
+            {
+                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(_acting is not null)" />
+            }
+        </div>
+    }
 </div>
 
 @code {
-    private int _tab;
     private bool _loading = true;
     private bool _starting;
     private bool _busy;
     private string _newTitle = string.Empty;
 
+    /// <summary>Why the last Start did not go out, shown in the form.</summary>
+    private string? _startError;
+
     // Matches the engine's default. Here so the choice is visible when a scene is started, and so
     // the exception can be made without knowing a command.
     private bool _newPublic = true;
-    private IReadOnlyList<SceneSummary>? _recent;
-    private IReadOnlyList<SceneSummary>? _active;
-    private string? _recentError;
-    private string? _activeError;
+
+    private string _filter = ScenesFilter.All;
+    private IReadOnlyList<SceneSummary>? _scenes;
+    private string? _error;
+
+    /// <summary>Bumped by every load; only the newest load's answer is shown.</summary>
+    private int _loadGeneration;
+
+    /// <summary>The character this tab acts as: whose scenes "Your scenes" lists, and who can join a live one.</summary>
+    private AccountAuthService.CharacterSummary? _acting;
+
+    private string Heading => _filter switch
+    {
+        ScenesFilter.Mine => Loc["NavScenesMine"],
+        ScenesFilter.Scheduled => Loc["NavScenesScheduled"],
+        ScenesFilter.Finished => Loc["NavScenesFinished"],
+        _ => Loc["NavScenesArchiveTitle"],
+    };
+
+    private string Description => _filter switch
+    {
+        ScenesFilter.Mine when _acting is { } acting => string.Format(Loc["NavScenesMineDesc"], acting.Name),
+        ScenesFilter.Scheduled => Loc["NavScenesScheduledDesc"],
+        ScenesFilter.Finished => Loc["NavScenesFinishedDesc"],
+        _ => Loc["ResScenesSubtitle"],
+    };
 
     // MainLayout opens the websocket, and a player can arrive before it finishes; reading
     // IsConnected once without listening leaves the start button permanently absent for them.
-    protected override void OnInitialized() => Terminal.ConnectionStateChanged += OnConnectionChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        _filter = ScenesFilter.FromUri(Nav.Uri);
+        await AccountAuth.InitAsync();
+        _acting = ActingCharacter();
+        await LoadAsync();
+    }
 
-    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
+    public void Dispose()
+    {
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+    }
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-    protected override async Task OnInitializedAsync()
+    /// <summary>A sidebar link changes only the query, so the page stays mounted and reloads its list.</summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        var recentTask = SceneService.GetRecentScenesAsync(50);
-        var activeTask = SceneService.GetActiveScenesAsync();
-        (_recent, _recentError) = Listed(await recentTask);
-        (_active, _activeError) = Listed(await activeTask);
+        var filter = ScenesFilter.FromUri(e.Location);
+        if (filter == _filter) return;
+        _filter = filter;
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void OnActingChanged() => _ = InvokeAsync(async () =>
+    {
+        _acting = ActingCharacter();
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    private AccountAuthService.CharacterSummary? ActingCharacter() =>
+        AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var generation = ++_loadGeneration;
+        var filter = _filter;
+        (var scenes, var error) = filter switch
+        {
+            ScenesFilter.Mine when _acting is { } acting => Listed(await SceneService.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize)),
+            ScenesFilter.Mine => (null, null),
+            ScenesFilter.Scheduled or ScenesFilter.Finished => Listed(await SceneService.ListScenesAsync(filter, ScenesFilter.PageSize)),
+            _ => Listed(await SceneService.GetRecentScenesAsync(ScenesFilter.PageSize)),
+        };
+
+        // A slower answer must not overwrite a newer one: the reader may have left the filter, or — on
+        // "Your scenes", where the filter stays the same — switched the character it lists.
+        if (generation != _loadGeneration) return;
+        (_scenes, _error) = (scenes, error);
         _loading = false;
     }
 
@@ -91,22 +193,48 @@
         if (title.Length == 0) return;
 
         _busy = true;
+        _startError = null;
         try
         {
+            // +scene/create runs as whoever the terminal plays, and a switch of character rebinds the web
+            // session without reconnecting the terminal. Started from here after a switch, the scene would
+            // belong to the character the reader left — so the terminal is asked who it is, and a scene
+            // goes out only as the character the page acts as. Unknown when the query times out, which is
+            // refused too while a character is acting: it is the same question unanswered.
+            var self = await Terminal.SendCommandAsync("num(me)") is [var dbref, ..] && dbref.Trim().StartsWith('#')
+                ? dbref.Trim()
+                : null;
+            if (_acting is { } acting && self != $"#{acting.DbrefNumber}")
+            {
+                _startError = self is null
+                    ? Loc["RolSceneTerminalUnconfirmed"]
+                    : Loc["RolSceneTerminalIsAnotherCharacter", Terminal.ConnectedPlayerName ?? self, acting.Name];
+                return;
+            }
+
             // Ids, not a count: the list is capped, so on a game already at the cap a successful
             // create would not change its length and the scene would look like it had never happened.
-            var before = _active?.Select(s => s.Id).ToHashSet() ?? [];
+            // Read now rather than trusted from when the page loaded: a scene somebody else started in
+            // between would otherwise be taken for this one. Unknown when the read fails, and then
+            // nothing is ever taken for new.
+            var before = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> running
+                ? running.Select(s => s.Id).ToHashSet()
+                : null;
+
+            // New is not enough: somebody else can start a scene between that read and the engine's
+            // answer to this one. The create makes the connection's character (self, above) the owner,
+            // so a new scene is this one only if that character owns it.
             await Terminal.SendAsync($"+scene/create {title}");
 
             // The verb travels to the engine and back over NATS, so the scene is not in the API the
             // instant the send returns. Poll briefly for it rather than guessing at a sleep long
             // enough to cover the round trip: whichever happens first, the page stops waiting.
             var created = false;
-            for (var attempt = 0; attempt < 6 && !created; attempt++)
+            for (var attempt = 0; attempt < 6 && !created && before is not null && self is not null; attempt++)
             {
                 await Task.Delay(250);
-                (_active, _activeError) = Listed(await SceneService.GetActiveScenesAsync());
-                created = _active?.Any(s => !before.Contains(s.Id)) == true;
+                created = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> now
+                    && now.Any(s => !before.Contains(s.Id) && s.OwnerDbref == self);
             }
 
             // +scene/private acts on the focused scene, and creation is what focuses the new one, so
@@ -116,10 +244,12 @@
                 await Terminal.SendAsync("+scene/private");
             }
 
-            (_recent, _recentError) = Listed(await SceneService.GetRecentScenesAsync(50));
+            await LoadAsync();
 
             if (created)
             {
+                // The section sidebar read its counts when the layout mounted, and nothing here remounts it.
+                SceneService.ReportChanged();
                 _starting = false;
                 _newTitle = string.Empty;
                 _newPublic = true;
@@ -142,77 +272,4 @@
         IReadOnlyList<SceneSummary> scenes => (scenes, null),
         ApiFailure failure => (null, failure.Message),
     };
-
-    private RenderFragment SceneList(IReadOnlyList<SceneSummary>? scenes, string? error) => __builder =>
-    {
-        if (_loading)
-        {
-            for (var i = 0; i < 4; i++)
-            {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Class="mb-2" Style="border-radius:var(--radius);" />
-            }
-        }
-        else if (error is not null)
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="scene-list-error">@error</MudAlert>
-        }
-        else if (scenes is null || scenes.Count == 0)
-        {
-            <EmptyState>@Loc["ResNoScenesFound"]</EmptyState>
-        }
-        else
-        {
-            <div style="display:flex;flex-direction:column;gap:0.625rem;">
-                @foreach (var scene in scenes)
-                {
-                    <MudPaper Elevation="0" Class="scene-card">
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1875rem;">
-                                @if (scene.IsLive)
-                                {
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                                             Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
-                                }
-                                <MudText Style="font-size:0.875rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    @SceneTitle(scene)
-                                </MudText>
-                            </div>
-                            <div class="scene-meta-row">
-                                <MudText Style="font-size:0.75rem;color:var(--text-dim);">
-                                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                    @scene.RoomName
-                                </MudText>
-                                <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                    <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
-                                    @Loc.Plural("RolPoseCount", "count", scene.PoseCount)
-                                </MudText>
-                                <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                    @scene.LastActivityAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")
-                                </MudText>
-                            </div>
-                        </div>
-                        <div class="scene-actions" style="display:flex;gap:0.5rem;flex-shrink:0;">
-                            <MudButton Variant="Variant.Text" Size="Size.Small"
-                                       Color="Color.Primary" Href="@($"/scenes/{scene.Id}")">
-                                @Loc["ResRead"]
-                            </MudButton>
-                            @if (scene.IsLive)
-                            {
-                                <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                           Style="border-color:var(--accent);color:var(--accent);"
-                                           Href="@($"/scenes/{scene.Id}/live")">
-                                    @Loc["ResJoin"]
-                                </MudButton>
-                            }
-                        </div>
-                    </MudPaper>
-                }
-            </div>
-        }
-    };
-
-    private string SceneTitle(SceneSummary s) =>
-        s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
-            ? t
-            : Loc["RolSceneIn", s.RoomName];
 }

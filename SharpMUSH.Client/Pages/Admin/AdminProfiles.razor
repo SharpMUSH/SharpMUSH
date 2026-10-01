@@ -7,21 +7,31 @@
 
 <PageTitle>@Loc["ProfileHandler"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div class="ph-header">
-        <div class="ph-kicker">@Loc["AdmKicker"]</div>
-        <h1 class="ph-title">@Loc["ProfileHandler"]</h1>
-        <p class="ph-subtitle">
+<div class="adm-profiles">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["ProfileHandler"]">
+        <DescriptionContent>
             @((MarkupString)Loc["AdmProfilesSubtitle",
                 "<code>http_handler</code>",
                 "<code>GET`CHARACTERS</code> / <code>GET`PROFILE</code>",
                 "<code>&amp;FN`CHARVIS …</code>"].Value)
-        </p>
-    </div>
+        </DescriptionContent>
+        <Actions>
+            @* The reset rewrites the handler's wizard softcode; the server takes packages.admin for it,
+               so a moderator who can read the status is not offered a button that can only 403. *@
+            @if (_status?.HandlerExists == true)
+            {
+                <AuthorizeView Policy="packages.admin">
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.RestartAlt" Disabled="_resetting" OnClick="ResetAsync">
+                        @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
+                    </CapsuleButton>
+                </AuthorizeView>
+            }
+        </Actions>
+    </PlainPageHeader>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Style="color:var(--accent);" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
     }
     else if (_status is null)
     {
@@ -29,67 +39,60 @@
     }
     else
     {
-        <div class="ph-card ph-status">
-            <div class="ph-status-row">
-                <span class="ph-status-label">@Loc["AdmProfilesConfigured"]</span>
-                <span class="ph-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
-            </div>
-            @if (_status.Configured)
-            {
-                <div class="ph-status-row">
-                    <span class="ph-status-label">@Loc["AdmProfilesHandler"]</span>
-                    <span class="ph-status-value">
-                        @(_status.HandlerExists
-                            ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
-                            : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
-                    </span>
+        <KitCard Title="@Loc["AdmStatus"]">
+            <div class="adm-profiles-status">
+                <div class="adm-profiles-status-row">
+                    <span class="adm-profiles-status-label">@Loc["AdmProfilesConfigured"]</span>
+                    <span class="adm-profiles-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
                 </div>
-            }
-        </div>
+                @if (_status.Configured)
+                {
+                    <div class="adm-profiles-status-row">
+                        <span class="adm-profiles-status-label">@Loc["AdmProfilesHandler"]</span>
+                        <span class="adm-profiles-status-value">
+                            @(_status.HandlerExists
+                                ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
+                                : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
+                        </span>
+                    </div>
+                }
+            </div>
+        </KitCard>
 
         @if (_status.HandlerExists)
         {
-            <div class="ph-card ph-attrs">
-                <div class="ph-attrs-head">
+            <KitCard Title="@Loc["AdmProfilesAttributesTitle"]">
+                <div class="adm-profiles-attrs-head">
                     <span>@Loc["AdmAttribute"]</span>
                     <span>@Loc["AdmStatus"]</span>
                 </div>
                 @foreach (var attr in _status.Attributes)
                 {
-                    <div class="ph-attrs-row">
+                    <div class="adm-profiles-attrs-row">
                         <code>@attr.Attribute</code>
                         @if (attr.Present)
                         {
-                            <span class="ph-chip ph-chip-ok">@Loc["AdmPresent"]</span>
+                            <Pill Tag="true" Class="adm-profiles-present">@Loc["AdmPresent"]</Pill>
                         }
                         else
                         {
-                            <span class="ph-chip ph-chip-warn">@Loc["AdmMissing"]</span>
+                            <Pill Tag="true" Warn="true">@Loc["AdmMissing"]</Pill>
                         }
                     </div>
                 }
-            </div>
-
-            @* The reset rewrites the handler's wizard softcode; the server takes packages.admin for it,
-               so a moderator who can read the status is not offered a button that can only 403. *@
-            <AuthorizeView Policy="packages.admin">
-                <Authorized>
-                    <MudButton Variant="Variant.Filled"
-                               StartIcon="@Icons.Material.Filled.RestartAlt"
-                               OnClick="ResetAsync" Disabled="_resetting"
-                               Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
-                        @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
-                    </MudButton>
-                    <p class="ph-caption">
-                        @((MarkupString)Loc["AdmProfilesResetCaption",
-                            "<code>GET`*</code>",
-                            "<code>FN`*</code>"].Value)
-                    </p>
-                </Authorized>
-                <NotAuthorized>
-                    <p class="ph-caption">@Loc["AdmProfilesResetNeedsPackagesAdmin"]</p>
-                </NotAuthorized>
-            </AuthorizeView>
+                <AuthorizeView Policy="packages.admin">
+                    <Authorized>
+                        <p class="adm-profiles-caption">
+                            @((MarkupString)Loc["AdmProfilesResetCaption",
+                                "<code>GET`*</code>",
+                                "<code>FN`*</code>"].Value)
+                        </p>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p class="adm-profiles-caption">@Loc["AdmProfilesResetNeedsPackagesAdmin"]</p>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </KitCard>
         }
     }
 </div>

@@ -18,100 +18,6 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// A text-file index built from a dictionary instead of a directory, so the real
-/// <see cref="HelpTopicResolver"/> can run its actual matching over a corpus a test can state in
-/// four lines. Entry keys are topic names, exactly as the markdown-header indexer produces them.
-/// </summary>
-file sealed class DictionaryTextFileService(Dictionary<string, Dictionary<string, string>> corpora)
-	: ITextFileService
-{
-	private Dictionary<string, string>? Corpus(string reference) =>
-		corpora.TryGetValue(reference.Split('/')[0], out var entries) ? entries : null;
-
-	public Task<IEnumerable<string>> ListCategoriesAsync() =>
-		Task.FromResult<IEnumerable<string>>(corpora.Keys);
-
-	public Task<string> ListEntriesAsync(string fileReference, string separator = " ") =>
-		Task.FromResult(string.Join(separator, Corpus(fileReference)?.Keys ?? Enumerable.Empty<string>()));
-
-	public Task<string?> GetEntryAsync(string fileReference, string entryName)
-	{
-		var corpus = Corpus(fileReference);
-		return Task.FromResult(corpus is not null && corpus.TryGetValue(entryName, out var body) ? body : null);
-	}
-
-	public Task<IEnumerable<string>> ListFilesAsync(string? category = null) =>
-		Task.FromResult<IEnumerable<string>>([]);
-
-	public Task<string?> GetFileContentAsync(string fileReference) => Task.FromResult<string?>(null);
-
-	public Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
-	{
-		var regex = new Regex(
-			"^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$",
-			RegexOptions.IgnoreCase);
-		return Task.FromResult<IEnumerable<string>>(
-			(Corpus(fileReference)?.Keys ?? Enumerable.Empty<string>()).Where(k => regex.IsMatch(k)).ToList());
-	}
-
-	public Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm) =>
-		Task.FromResult<IEnumerable<string>>(
-			(Corpus(fileReference) ?? new Dictionary<string, string>())
-			.Where(kv => kv.Value.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-			.Select(kv => kv.Key)
-			.ToList());
-
-	public Task ReindexAsync() => Task.CompletedTask;
-}
-
-/// <summary>
-/// Serves <c>/api/help*</c> by invoking the real <see cref="HelpController"/>, so the pages are
-/// tested against the shapes and the HTML the server actually produces rather than against a
-/// hand-written fixture that could drift from it.
-/// </summary>
-/// <remarks>
-/// The controller's <c>[Authorize(Roles = "Wizard,God")]</c> gate is framework-enforced and does not
-/// run here; that refusal is asserted over real HTTP in
-/// <c>SharpMUSH.Tests.Integration.Portal.HelpApiTests</c>. What this handler does honour is the
-/// <paramref name="isStaff"/> flag, so the page's own decision about whether to ask for the admin
-/// corpus can be observed.
-/// </remarks>
-file sealed class HelpApiHandler(IHelpTopicResolver resolver, bool isStaff) : HttpMessageHandler
-{
-	protected override async Task<HttpResponseMessage> SendAsync(
-		HttpRequestMessage request, CancellationToken cancellationToken)
-	{
-		var controller = new HelpController(resolver);
-		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
-		var topic = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["topic"];
-
-		if (path.StartsWith("api/help/admin", StringComparison.Ordinal) && !isStaff)
-		{
-			return new HttpResponseMessage(HttpStatusCode.Forbidden);
-		}
-
-		object? result = path switch
-		{
-			"api/help" => (await controller.Index()).Result,
-			"api/help/entry" => (await controller.Entry(topic)).Result,
-			"api/help/admin" => (await controller.AdminIndex()).Result,
-			"api/help/admin/entry" => (await controller.AdminEntry(topic)).Result,
-			_ => null
-		};
-
-		return result switch
-		{
-			OkObjectResult ok => Json(ok.Value!, HttpStatusCode.OK),
-			NotFoundObjectResult missing => Json(missing.Value!, HttpStatusCode.NotFound),
-			_ => new HttpResponseMessage(HttpStatusCode.NotFound)
-		};
-	}
-
-	private static HttpResponseMessage Json(object value, HttpStatusCode status) =>
-		new(status) { Content = JsonContent.Create(value, value.GetType()) };
-}
-
-/// <summary>
 /// The portal help pages, rendered against the real help API.
 /// </summary>
 /// <remarks>
@@ -134,7 +40,7 @@ public class HelpPageTests : TrackingBunitContext
 		@mail invokes the built-in MUSH mailer.
 		""";
 
-	private static readonly Dictionary<string, Dictionary<string, string>> Corpora = new()
+	internal static readonly Dictionary<string, Dictionary<string, string>> Corpora = new()
 	{
 		["help"] = new(StringComparer.OrdinalIgnoreCase)
 		{
@@ -169,25 +75,8 @@ public class HelpPageTests : TrackingBunitContext
 
 	private void AddHelpServices(bool isStaff)
 	{
-		var resolver = new HelpTopicResolver(new DictionaryTextFileService(Corpora));
-		var client = Track(new HttpClient(new HelpApiHandler(resolver, isStaff))
-		{
-			BaseAddress = new Uri("https://localhost:8081/")
-		});
-
-		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient("api").Returns(client);
-
-		Services
-			.AddSingleton(client)
-			.AddMudServices()
-			.AddSingleton(factory)
-			.AddSingleton(sp => new GameHelpService(
-				sp.GetRequiredService<IHttpClientFactory>(),
-				NullLogger<GameHelpService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
-
-		JSInterop.Mode = JSRuntimeMode.Loose;
+		HelpApi.Install(this, isStaff, Corpora);
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}
 
 	[TUnit.Core.Test]
@@ -299,5 +188,87 @@ public class HelpPageTests : TrackingBunitContext
 		WaitForMarkup(cut, "HelpLoadFailed");
 
 		await Assert.That(cut.Markup).DoesNotContain("Wizard-only security notes.");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Index_IsAPlainHeader_WithTheEntryAndTheTopicsInCards()
+	{
+		AddHelpServices(isStaff: false);
+		this.AddAuthorization();
+
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("AdmHelpKicker");
+		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("Help");
+		await Assert.That(cut.Find(".kit-card .help-entry").TextContent).Contains("This is the index");
+		await Assert.That(cut.Find(".kit-card .help-topic-list")).IsNotNull();
+		await Assert.That(cut.Find(".kit-card-controls input.help-filter")).IsNotNull()
+			.Because("the filter sits in the topic card's header");
+	}
+
+	/// <summary>
+	/// A game with no help files installed answers an index with no entry and no topics. The page drew
+	/// an empty card for the entry and told the reader "no topic matches that filter" when there was
+	/// no filter; it now draws no entry card and says the game has no help topics.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Index_WithNoHelpFiles_SaysSo_WithoutAnEmptyCard()
+	{
+		HelpApi.Install(this, isStaff: false, new Dictionary<string, Dictionary<string, string>> { ["help"] = new(), ["ahelp"] = new() });
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+		this.AddAuthorization();
+
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		cut.WaitForAssertion(() => cut.Find(".help-empty"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".help-entry").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".help-empty").TextContent).IsEqualTo("HelpNoTopics");
+		await Assert.That(cut.Markup).DoesNotContain("HelpNoTopicsMatch");
+	}
+
+	/// <summary>The sidebar's search lands on <c>/help?q=</c> when no topic has exactly that name.</summary>
+	[TUnit.Core.Test]
+	public async Task Index_TheAddressFiltersTheTopics()
+	{
+		AddHelpServices(isStaff: false);
+		this.AddAuthorization();
+		Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>().NavigateTo("/help?q=mail-s");
+
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
+
+		var topics = cut.FindAll(".help-topic-list a").Select(a => a.TextContent).ToList();
+		await Assert.That(topics).IsEquivalentTo(new[] { "mail-sending" });
+		await Assert.That(cut.Find("input.help-filter").GetAttribute("value")).IsEqualTo("mail-s");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Topic_IsAPlainHeader_UnderHelp_WithTheEntryInACard()
+	{
+		AddHelpServices(isStaff: false);
+		this.AddAuthorization();
+
+		var cut = Render<SharpMUSH.Client.Pages.HelpTopic>(p => p.Add(c => c.Topic, "newbie"));
+		WaitForMarkup(cut, "If you are new to MUSHing");
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Help");
+		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("newbie");
+		await Assert.That(cut.Find(".kit-page-actions a").GetAttribute("href")).IsEqualTo("/help");
+		await Assert.That(cut.Find(".kit-card .help-entry").TextContent).Contains("If you are new to MUSHing");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AdminTopic_IsAPlainHeader_UnderHelpAndAdmin()
+	{
+		AddHelpServices(isStaff: true);
+		this.AddAuthorization().SetAuthorized("headwiz").SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.HelpAdminTopic>(p => p.Add(c => c.Topic, "Security"));
+		WaitForMarkup(cut, "Wizard-only security notes.");
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Help / HelpAdminTitle");
+		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("Security");
+		await Assert.That(cut.Find(".kit-card .help-entry").TextContent).Contains("Wizard-only security notes.");
 	}
 }

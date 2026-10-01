@@ -10,19 +10,12 @@
 
 <PageTitle>@Loc["PkgRemotesHeading"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="pkg-page" style="padding:var(--cpad);">
-    <div class="pkg-header">
-        <div class="pkg-kicker">@Loc["PkgKickerSources"]</div>
-        <h1 class="pkg-title">@Loc["PkgRemotesHeading"]</h1>
-        <p class="pkg-desc">
-            @Loc["PkgRemotesDescription"]
-        </p>
-    </div>
+<div class="pkg-page">
+    <PlainPageHeader Kicker="@Loc["PkgKickerSources"]" Title="@Loc["PkgRemotesHeading"]" Description="@Loc["PkgRemotesDescription"]" />
 
 <div class="pkg-cols">
     <div>
-        <div class="pkg-card">
-            <div class="pkg-card-head">@Loc["PkgConfiguredRemotes"]</div>
+        <KitCard Title="@Loc["PkgConfiguredRemotes"]">
             <div class="pkg-card-body">
                 @if (_remotes is null)
                 {
@@ -30,7 +23,7 @@
                 }
                 else
                 {
-                    <MudTable Items="_remotes" Dense="true" Class="pkg-remotes-table">
+                    <MudTable Items="_remotes" Dense="true" Elevation="0" Class="pkg-remotes-table">
                         <HeaderContent>
                             <MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgUrl"]</MudTh><MudTh>@Loc["PkgTrust"]</MudTh><MudTh>@Loc["PkgBranch"]</MudTh><MudTh />
                         </HeaderContent>
@@ -41,13 +34,13 @@
                             <MudTd data-label="@Loc["PkgBranch"]">@(context.Branch ?? Loc["PkgDefaultBranch"])</MudTd>
                             <MudTd>
                                 <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
-                                               title="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
+                                               title="@Loc["PkgBrowse"]" aria-label="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
                                 @* The bundled catalogue is not a configured remote — it is the set of
                                    packages embedded in this server build, so there is nothing to delete. *@
                                 @if (!BundledPackageSource.IsCatalogueRemote(context.Name))
                                 {
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                                   OnClick="@(() => DeleteAsync(context.Name))" />
+                                                   aria-label="@Loc["Delete"]" OnClick="@(() => DeleteAsync(context.Name))" />
                                 }
                             </MudTd>
                         </RowTemplate>
@@ -72,16 +65,16 @@
                     </MudButton>
                 </MudStack>
             </div>
-        </div>
+        </KitCard>
     </div>
 
     <div>
-        <div class="pkg-card">
-            <div class="pkg-card-head">
-                <span style="flex:1;">@Loc["PkgCommunityDirectory"]</span>
+        <KitCard Title="@Loc["PkgCommunityDirectory"]">
+            <Controls>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
-                               OnClick="@LoadCommunityAsync" />
-            </div>
+                               aria-label="@Loc["Refresh"]" OnClick="@LoadCommunityAsync" />
+            </Controls>
+            <ChildContent>
             <div class="pkg-card-body">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
                     @Loc["PkgCommunityDirectoryHint"]
@@ -94,12 +87,12 @@
                 {
                     @foreach (var entry in _community.Listings)
                     {
-                        <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border:1px solid var(--border-soft);background:var(--surface-2);border-radius:var(--radius);">
+                        <div class="pkg-listing">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.subtitle1">@entry.Listing.Name</MudText>
                                 <TrustBadge Trust="PackageRemoteTrust.Community" />
                                 <MudSpacer />
-                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
+                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.Listing.Name]" aria-label="@Loc["PkgShowReadme", entry.Listing.Name]"
                                                OnClick="@(() => ShowReadmeAsync(entry.Listing))" />
                                 @if (entry.AlreadyConfigured)
                                 {
@@ -113,7 +106,7 @@
                             </MudStack>
                             <MudText Typo="Typo.body2">@entry.Listing.Description</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Listing.Url</MudText>
-                        </MudPaper>
+                        </div>
                     }
                     @if (_community.Listings.Count == 0)
                     {
@@ -125,7 +118,8 @@
                     }
                 }
             </div>
-        </div>
+            </ChildContent>
+        </KitCard>
     </div>
 </div>
 </div>

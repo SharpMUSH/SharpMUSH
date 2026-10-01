@@ -3,27 +3,20 @@
 @attribute [Authorize(Policy = "layout.admin")]
 @inject IStringLocalizer<SharedResource> Loc
 @inject ILayoutService LayoutService
-@inject NavigationManager Nav
 
 <PageTitle>@Loc["LayLayouts"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="laybrowse">
-    <div class="laybrowse-head">
-        <div>
-            <div class="laybrowse-kicker">@Loc["LayLayoutsKicker"]</div>
-            <h1 class="laybrowse-title">@Loc["LayLayouts"]</h1>
-            <p class="laybrowse-blurb">@Loc["LayLayoutsBlurb"]</p>
-        </div>
-    </div>
+    <PlainPageHeader Kicker="@Loc["LayLayoutsKicker"]" Title="@Loc["LayLayouts"]" Description="@Loc["LayLayoutsBlurb"]" />
 
     <div class="laybrowse-grid">
         @foreach (var scope in LayoutScopes.All)
         {
             var customized = _customized.Contains(scope.Scope);
-            <button type="button" class="lay-card" @onclick="@(() => Open(scope.Scope))">
+            <a class="lay-card" href="@($"/admin/layout/{scope.Scope}")">
                 <div class="lay-card-top">
-                    <span class="lay-card-icon"><MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size:1.125rem;" /></span>
-                    <div style="flex:1;min-width:0;">
+                    <span class="lay-card-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" /></span>
+                    <div class="lay-card-titles">
                         <div class="lay-card-name">@Loc[scope.DisplayNameKey]</div>
                         <div class="lay-card-sub">@scope.Scope</div>
                     </div>
@@ -36,7 +29,7 @@
                         <span class="lay-zone">@Loc[z.ResourceKey()]</span>
                     }
                 </div>
-            </button>
+            </a>
         }
     </div>
 </div>
@@ -46,6 +39,4 @@
 
     protected override async Task OnInitializedAsync()
         => _customized = await LayoutService.GetCustomizedScopesAsync();
-
-    private void Open(string scope) => Nav.NavigateTo($"/admin/layout/{scope}");
 }

@@ -1,11 +1,14 @@
+/* The actions sit on the title's baseline while there is room and drop under the title when
+   there is not: the text takes an 18rem basis and the head wraps, with no breakpoint. */
 .kit-page-head {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: flex-end;
-	gap: 16px;
+	gap: 12px 16px;
 }
 
 .kit-page-text {
-	flex: 1 1 auto;
+	flex: 1 1 18rem;
 	min-width: 0;
 }
 
@@ -34,7 +37,8 @@
 
 .kit-page-actions {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
-	flex-shrink: 0;
+	min-width: 0;
 }

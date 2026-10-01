@@ -1,14 +1,38 @@
-.diag-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin: 1rem 0; }
-.diag-controls label { display: flex; flex-direction: column; gap: .3rem; }
-.ph-card { display: block; margin: 1rem 0; padding: 1rem; }
-::deep .diagnostics-table { overflow-x: auto; }
-::deep table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-::deep th, ::deep td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
-button, select, input { color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: .5rem; }
-button:disabled { opacity: .5; }
+.diag-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: var(--main-pad);
+    min-width: 0;
+}
+
+.diag-card-body { padding: 14px 16px 16px; min-width: 0; }
+.diag-card-body p { margin: 0 0 0.75rem; font-size: 13px; color: var(--text-dim); }
+
+.diag-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+.diag-controls--card { padding: 14px 16px; }
+.diag-controls label { display: flex; flex-direction: column; gap: .3rem; font-size: 13px; color: var(--text-dim); }
+
+.diag-page ::deep .diagnostics-table { overflow-x: auto; }
+.diag-page ::deep table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.diag-page ::deep th,
+.diag-page ::deep td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
+.diag-page ::deep th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }
+
+button, select, input {
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    padding: .5rem .75rem;
+    font: inherit;
+    font-size: 13px;
+}
+button { cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
 
 @container page (max-width: 48rem) {
     .diag-controls { align-items: stretch; flex-direction: column; }
     .diag-controls label { min-width: 0; }
-    .ph-card { padding: .75rem; }
+    .diag-card-body { padding: 12px 14px 14px; }
 }

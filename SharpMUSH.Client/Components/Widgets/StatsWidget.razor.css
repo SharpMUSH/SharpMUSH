@@ -1,10 +1,38 @@
 .stats-widget {
-    container-type: inline-size;
+	min-width: 0;
 }
 
-@container (max-width: 48rem) {
-    .stats-widget ::deep .mud-grid-item-sm-3 {
-        max-width: 50%;
-        flex-basis: 50%;
-    }
+.stats-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+	gap: 12px;
+}
+
+.stats-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 12px 14px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	min-width: 0;
+}
+
+.stats-tile-label {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.stats-tile-value {
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.2;
+	color: var(--accent);
 }

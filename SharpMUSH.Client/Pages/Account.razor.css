@@ -1,51 +1,57 @@
 .acct-page {
-    padding: var(--cpad);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    max-width: 56rem;
 }
 
-.acct-header {
-    margin-bottom: 1.75rem;
+.acct-section {
+    padding: 14px 16px 16px;
 }
 
-.acct-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.5rem;
-}
-
-.acct-title {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.15;
-}
-
-.acct-card {
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 1.375rem 1.5rem;
-    margin-bottom: 1.25rem;
-}
-
-.acct-card-title {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 1rem;
+.acct-anchor {
+    scroll-margin-top: 16px;
 }
 
 .acct-label {
-    font-size: 0.6875rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-faint);
     margin-right: 0.5rem;
+}
+
+.acct-value {
+    flex: 1;
+    color: var(--text);
+}
+
+.acct-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.acct-field-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.acct-page ::deep .acct-grow {
+    flex: 1;
+}
+
+.acct-empty {
+    font-size: 13px;
+    color: var(--text-faint);
+}
+
+.acct-create {
+    margin-top: 1rem;
 }
 
 /* ── Buttons ── */
@@ -57,11 +63,14 @@
     font-family: var(--font-ui);
     font-size: 0.8125rem;
     font-weight: 600;
-    padding: 0.4375rem 1rem;
-    border-radius: var(--radius);
+    min-height: 36px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-radius: 18px;
     border: 1px solid transparent;
     cursor: pointer;
-    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    text-decoration: none;
+    transition: background var(--motion-pop), border-color var(--motion-pop), color var(--motion-pop);
     line-height: 1.2;
 }
 
@@ -136,39 +145,39 @@
 }
 
 /* ── Token-styled inputs (MudBlazor outlined) ── */
-.acct-card ::deep .acct-input .mud-input-outlined .mud-input-outlined-border {
+.acct-page ::deep .acct-input .mud-input-outlined .mud-input-outlined-border {
     border-color: var(--border);
 }
 
-.acct-card ::deep .acct-input .mud-input-root {
+.acct-page ::deep .acct-input .mud-input-root {
     background: var(--surface-3);
     border-radius: var(--radius);
     color: var(--text);
 }
 
-.acct-card ::deep .acct-input input {
+.acct-page ::deep .acct-input input {
     color: var(--text);
 }
 
-.acct-card ::deep .acct-input .mud-input.mud-input-focused .mud-input-outlined-border {
+.acct-page ::deep .acct-input .mud-input.mud-input-focused .mud-input-outlined-border {
     border-color: var(--accent);
     border-width: 1px;
 }
 
-.acct-card ::deep .acct-input label.mud-input-label {
+.acct-page ::deep .acct-input label.mud-input-label {
     color: var(--text-faint);
 }
 
-.acct-card ::deep .acct-input label.mud-input-label-inputcontrol.mud-input-focused {
+.acct-page ::deep .acct-input label.mud-input-label-inputcontrol.mud-input-focused {
     color: var(--accent);
 }
 
 /* ── Token-styled table ── */
-.acct-card ::deep .acct-table .mud-table-root {
+.acct-page ::deep .acct-table .mud-table-root {
     background: transparent;
 }
 
-.acct-card ::deep .acct-table th {
+.acct-page ::deep .acct-table th {
     color: var(--text-faint);
     font-size: 0.6875rem;
     letter-spacing: 0.08em;
@@ -176,12 +185,12 @@
     border-bottom-color: var(--border);
 }
 
-.acct-card ::deep .acct-table td {
+.acct-page ::deep .acct-table td {
     color: var(--text);
     border-bottom-color: var(--border-soft);
 }
 
-.acct-card ::deep .acct-table tr:hover td {
+.acct-page ::deep .acct-table tr:hover td {
     background: var(--surface-2);
 }
 
@@ -191,14 +200,8 @@
 }
 
 @container page (max-width: 48rem) {
-    .acct-page {
-        padding: var(--cpad-mobile);
-    }
-    .acct-card {
-        padding: var(--cpad-mobile);
-    }
-    .acct-title {
-        font-size: 1.375rem;
+    .acct-section {
+        padding: 12px;
     }
     .acct-row, .acct-row--password {
         flex-direction: column;
@@ -208,24 +211,24 @@
         width: 100%;
     }
 
-    ::deep .acct-table thead {
+    .acct-page ::deep .acct-table thead {
         display: none;
     }
 
-    ::deep .acct-table tr {
+    .acct-page ::deep .acct-table tr {
         display: block;
         border-bottom: 1px solid var(--border);
         padding-block: 0.5rem;
     }
 
-    ::deep .acct-table td {
+    .acct-page ::deep .acct-table td {
         display: grid;
         grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
         gap: 0.5rem;
         border: none;
     }
 
-    ::deep .acct-table td::before {
+    .acct-page ::deep .acct-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
         font-size: 0.8125rem;

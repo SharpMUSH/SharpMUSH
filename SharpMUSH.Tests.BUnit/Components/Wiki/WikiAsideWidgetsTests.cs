@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
@@ -54,7 +55,7 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		var client = Track(new HttpClient(new SceneListHandler(scenes)) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
-		Services.AddSingleton(new SceneService(factory));
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
 
 		var cut = Render<ActiveSceneWidget>();
 		cut.WaitForAssertion(() => cut.Find(".kit-card--aside .kit-tile"), TimeSpan.FromSeconds(5));
@@ -73,11 +74,40 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		var client = Track(new HttpClient(new SceneListHandler("[]")) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
-		Services.AddSingleton(new SceneService(factory));
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
 
 		var cut = Render<ActiveSceneWidget>();
 		cut.WaitForAssertion(() => cut.Find(".kit-card--aside"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("a[href='/scenes']")).IsNotNull();
 		await Assert.That(cut.FindAll(".kit-tile").Count).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// D1 §6.5: the home page places both widgets in its main column, where an aside card would sit
+	/// narrow and headerless. In MainContent they take the main card (52px header, sub-line) and lay
+	/// their tiles or rows out across the width.
+	/// </summary>
+	[Test]
+	public async Task InTheMainColumn_BothTakeTheMainCard()
+	{
+		const string scenes = """
+		[{"id":"42","status":"active","isPublic":true,"isTempRoom":false,"poseCount":12,"ownerDbref":"#1","ownerName":"Ilsa","starterDbref":"#1","starterName":"Ilsa","roomDbref":"#1201","roomName":"Lower Docks","meta":{"title":"Salt Market at Dusk"}}]
+		""";
+		var client = Track(new HttpClient(new SceneListHandler(scenes)) { BaseAddress = new Uri("https://localhost:8081/") });
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(client);
+		Services.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)));
+
+		var live = Render<ActiveSceneWidget>(p => p.Add(x => x.Zone, "MainContent"));
+		live.WaitForAssertion(() => live.Find(".kit-card .kit-tile"), TimeSpan.FromSeconds(5));
+		await Assert.That(live.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(live.Find(".kit-card-head .kit-card-title").TextContent).Contains("1");
+		await Assert.That(live.Find(".active-scene-tiles--main a.kit-tile").GetAttribute("href")).IsEqualTo("/scenes/42/live");
+
+		var recent = Render<RecentWikiActivityWidget>(p => p.Add(x => x.Zone, "MainContent"));
+		recent.WaitForAssertion(() => recent.Find(".kit-card a.kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(recent.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(recent.Find(".kit-card-head .kit-card-title").TextContent).IsNotEmpty();
+		await Assert.That(recent.Find(".kit-card-head a[href='/wiki/recent']")).IsNotNull();
 	}
 }

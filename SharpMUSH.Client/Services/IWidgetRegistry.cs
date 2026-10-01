@@ -11,7 +11,11 @@ public interface IWidgetRegistry
 	/// <summary>Registers a widget by its <see cref="IPortalWidget.Name"/>.</summary>
 	void Register(IPortalWidget widget);
 
-	/// <summary>Returns the widget with the given name, or <c>null</c> if not registered.</summary>
+	/// <summary>
+	/// Returns the widget with the given name. <see cref="WidgetRegistry"/> answers an unregistered name with an
+	/// <see cref="SharpMUSH.Client.Widgets.UnresolvedApplicationWidget"/>, treating it as an application slug;
+	/// other implementations may return <c>null</c>.
+	/// </summary>
 	IPortalWidget? GetWidget(string name);
 
 	/// <summary>Returns all registered widgets.</summary>
