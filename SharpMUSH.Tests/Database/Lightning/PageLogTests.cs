@@ -332,6 +332,86 @@ public class PageLogTests
 		await Assert.That(none).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// A conversation counts its pages: each one recorded adds one, also one that arrives out of order, and a
+	/// purge leaves the count of what is still kept.
+	/// </summary>
+	[Test]
+	public async Task Conversations_CountTheirPages_ThroughRecordingAndPurging()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "old", At));
+		await Send(Page(wren, "Wren", [ilsa], ["Ilsa"], "new", At.AddDays(2)));
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "late arrival", At.AddMinutes(1)));
+
+		await Assert.That((await _db.GetPageConversationsAsync(ilsa)).Single().Pages).IsEqualTo(3);
+		await Assert.That((await _db.GetPageConversationsAsync(wren)).Single().Pages).IsEqualTo(3);
+
+		await _db.PurgePageLogAsync(At.AddDays(1));
+
+		await Assert.That((await _db.GetPageConversationsAsync(ilsa)).Single().Pages).IsEqualTo(1);
+	}
+
+	/// <summary>A summary written before conversations counted their pages is counted when it is read.</summary>
+	[Test]
+	public async Task AConversationSummaryWithoutACount_IsCountedWhenRead()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "one", At));
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "two", At.AddMinutes(1)));
+		var key = SharpMUSH.Library.Plugins.Storage.Lightning.Keys.Composite(ilsa.Number, PageConversation.Key([wren]));
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.TryGet(Tables.PageConversation, key, out var bytes);
+			var record = Codec.Deserialize<SharpMUSH.Database.Lightning.Records.PageConversationRecord>(bytes);
+			tx.Put(Tables.PageConversation, key, Codec.Serialize(record with { Pages = null }));
+		});
+
+		await Assert.That((await _db.GetPageConversationsAsync(ilsa)).Single().Pages).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// The latest pages across every conversation, oldest first: what <c>page/recall</c> with no player
+	/// shows. Only the character's own copies.
+	/// </summary>
+	[Test]
+	public async Task RecentPages_AreTheNewestAcrossConversations_OldestFirst()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		var tomas = await NewPlayer("Tomas");
+		var outsider = await NewPlayer("Outsider");
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "1 to wren", At));
+		await Send(Page(ilsa, "Ilsa", [tomas], ["Tomas"], "2 to tomas", At.AddMinutes(1)));
+		await Send(Page(wren, "Wren", [ilsa], ["Ilsa"], "3 from wren", At.AddMinutes(2)));
+		await Send(Page(ilsa, "Ilsa", [wren, tomas], ["Wren", "Tomas"], "4 to both", At.AddMinutes(3)));
+		await Send(Page(wren, "Wren", [tomas], ["Tomas"], "not ilsa's", At.AddMinutes(4)));
+
+		var lastThree = await _db.GetRecentPagesAsync(ilsa, 3);
+		var all = await _db.GetRecentPagesAsync(ilsa, 0);
+
+		await Assert.That(lastThree.Select(page => page.Message)).IsEquivalentTo(
+			new[] { "2 to tomas", "3 from wren", "4 to both" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(all.Select(page => page.Message)).IsEquivalentTo(
+			new[] { "1 to wren", "2 to tomas", "3 from wren", "4 to both" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await _db.GetRecentPagesAsync(outsider, 10)).IsEmpty();
+	}
+
+	/// <summary>The pager's own name, beside the name the page gave them, survives the round trip.</summary>
+	[Test]
+	public async Task ThePagersOwnName_IsKept()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		await Send(Page(ilsa, "Ilsa (il)", [wren], ["Wren"], "hello", At) with { SenderPlainName = "Ilsa" });
+
+		var page = (await _db.GetPageLogAsync(wren, [ilsa], 0)).Single();
+		await Assert.That(page.SenderName).IsEqualTo("Ilsa (il)");
+		await Assert.That(page.SenderPlainName).IsEqualTo("Ilsa");
+	}
+
 	[Test]
 	public async Task Purging_WithNothingOldEnough_DeletesNothing()
 	{

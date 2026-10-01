@@ -104,6 +104,8 @@ hi
   `regmatchalli()` — a second name for `reglmatchalli()`. Despite the name it searches a list and
   returns positions; it is not a case-insensitive `regmatch()`.<br>
   `rendermarkdown()` — CommonMark to markup.<br>
+  `pagerecall()`, `pageconversations()` — read your own page log (the `page_log` option); PennMUSH
+  keeps no page log.<br>
   `formq()`, the wiki functions and the scene functions — SharpMUSH subsystems with no PennMUSH
   counterpart.
 
@@ -115,6 +117,8 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
   `@account` — administers web-portal accounts.<br>
   `@locale` — the language the server addresses you in.<br>
   `@map` — `@dolist` passing the element as `%0` rather than substituting it.<br>
+  `page/recall`, `page/conversations`, `page/timestamps` — switches that read your own page log;
+  PennMUSH keeps no page log, so the parity harness has no case for them.<br>
   `register`, `login`, `make`, `play` — the account layer at the login screen.<br>
   `version` — `@version` before you have connected. PennMUSH has no bare `version`; it is accepted
   here because crawlers and players from MUX-family servers type it, and it publishes nothing `INFO`

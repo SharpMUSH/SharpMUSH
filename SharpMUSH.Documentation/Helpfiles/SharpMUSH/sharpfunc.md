@@ -69,14 +69,13 @@
 - [boolean values]
 - [@config]
 # Communication functions
-  Communication functions are side-effect functions that send a message to an object or objects.
+  Communication functions are side-effect functions that send a message to an object or objects. [PAGERECALL()] and [PAGECONVERSATIONS()] are the exception: they read your own page log and send nothing (SharpMUSH extensions).
 
-|              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [@CEMIT]    | [EMIT()]     | [NSLEMIT()]    | [MESSAGE()]  | [EMIT()]   |
-| [NSLEMIT()]  | [OEMIT()]  | [PEMIT()]  | [PEMIT()] | [REMIT()]  |
-| [ZEMIT()]  | [OEMIT()]    | [PEMIT()]    | [PEMIT()]   | [REMIT()]    |
-| [ZEMIT()]    |              |              |              |              |
+|                       |                       |                       |                       |
+|-----------------------|-----------------------|-----------------------|-----------------------|
+| [@CEMIT]              | [EMIT()]              | [MESSAGE()]           | [NSLEMIT()]           |
+| [OEMIT()]             | [PEMIT()]             | [REMIT()]             | [ZEMIT()]             |
+| [PAGERECALL()]        | [PAGECONVERSATIONS()] |                       |                       |
 
 **See Also:**
 - [channel functions]

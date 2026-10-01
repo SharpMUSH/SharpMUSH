@@ -51,6 +51,15 @@ public static class CommLimits
 	/// larger one, a page to more is not logged, and the portal does not mark one.
 	/// </summary>
 	public const int ConversationMaxOthers = 32;
+
+	/// <summary>
+	/// The most logged pages one recall returns: the portal's conversation recall, <c>page/recall</c> and
+	/// <c>pagerecall()</c> alike.
+	/// </summary>
+	public const int PageRecallMaxLines = 500;
+
+	/// <summary>The most page conversations one listing returns, read without reading the rest.</summary>
+	public const int PageConversationListMax = 100;
 }
 
 /// <summary>

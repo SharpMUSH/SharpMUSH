@@ -34,3 +34,9 @@ public class GetPageConversationsQueryHandler(IPageLogStore store)
 		CancellationToken cancellationToken)
 		=> store.GetPageConversationsAsync(query.Character, query.Limit, cancellationToken);
 }
+
+public class GetRecentPagesQueryHandler(IPageLogStore store) : IQueryHandler<GetRecentPagesQuery, IReadOnlyList<SharpPage>>
+{
+	public ValueTask<IReadOnlyList<SharpPage>> Handle(GetRecentPagesQuery query, CancellationToken cancellationToken)
+		=> store.GetRecentPagesAsync(query.Character, query.Lines, cancellationToken);
+}

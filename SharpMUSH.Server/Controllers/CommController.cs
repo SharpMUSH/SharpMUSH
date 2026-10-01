@@ -62,13 +62,13 @@ public class CommController(
 	public const int ConversationLimit = PageConversation.MaxOthers;
 
 	/// <summary>The most logged pages one conversation recall returns, and what it returns when not asked for fewer.</summary>
-	public const int PageRecallLimit = 500;
+	public const int PageRecallLimit = CommLimits.PageRecallMaxLines;
 
 	/// <summary>
 	/// The most conversations the listing returns, the latest: as many as the portal's feed keeps
 	/// (<c>OobCommFeed.ConversationLimit</c>), read without reading the rest.
 	/// </summary>
-	public const int PageConversationListLimit = 100;
+	public const int PageConversationListLimit = CommLimits.PageConversationListMax;
 
 	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
 

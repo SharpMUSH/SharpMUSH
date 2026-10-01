@@ -15,3 +15,9 @@ public record GetPageLogQuery(DBRef Character, IReadOnlyList<DBRef> With, int Li
 /// <paramref name="Limit"/> (0 for all). Not cached, as <see cref="GetPageLogQuery"/>.
 /// </summary>
 public record GetPageConversationsQuery(DBRef Character, int Limit = 0) : IQuery<IReadOnlyList<SharpPageConversation>>;
+
+/// <summary>
+/// The last <paramref name="Lines"/> pages across all of <paramref name="Character"/>'s own conversations
+/// (0 for all), oldest first: <c>page/recall</c> with no player. Not cached, as <see cref="GetPageLogQuery"/>.
+/// </summary>
+public record GetRecentPagesQuery(DBRef Character, int Lines) : IQuery<IReadOnlyList<SharpPage>>;

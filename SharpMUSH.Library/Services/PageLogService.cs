@@ -40,7 +40,8 @@ public sealed class PageLogService(
 			recipients.Select(recipient => recipient.Object().Name).ToArray(),
 			style,
 			message,
-			time.GetUtcNow());
+			time.GetUtcNow(),
+			sender.Object().Name);
 
 	public async ValueTask RecordAsync(SharpPage page, IReadOnlyList<AnySharpObject> participants,
 		CancellationToken cancellationToken = default)
