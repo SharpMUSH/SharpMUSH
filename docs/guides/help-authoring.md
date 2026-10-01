@@ -161,7 +161,9 @@ give the economy and evaluation-lock articles useful overviews. Building costs n
 describe quota slots rather than pennies; the executor-selection example has balanced
 parentheses, and render compatibility is a declared profile decision. Related API and
 listener lists retain distinct function/attribute names beside their shared canonical
-help link instead of repeating an indistinguishable link. The IANA 2011n
+help link instead of repeating an indistinguishable link. Mail examples use actual
+fences, regex guidance distinguishes substring search from anchored validation, and
+TOC labels come from parsed heading content rather than raw Markdown. The IANA 2011n
 catalog is retained as a complete, explicitly historical section.
 
 ## Validation

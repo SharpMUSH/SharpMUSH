@@ -55,6 +55,17 @@ public class HelpArticleTests
 	}
 
 	[Test]
+	public async Task TocLabelsUseParsedHeadingText()
+	{
+		var markdown = Article.Replace("\"heading\":\"Examples\"", "\"heading\":\"`money()` and **balances**\"")
+			.Replace("## Examples", "## `money()` and **balances**");
+		var article = HelpArticleParser.Parse(markdown, "help").Single().Article;
+		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + Uri.EscapeDataString(topic), article);
+		await Assert.That(html).Contains(">money() and balances</a>");
+		await Assert.That(html).Contains("<code>money()</code> and <strong>balances</strong>");
+	}
+
+	[Test]
 	public async Task LegacyAliasesIgnoreFencedAndIndentedHeadings()
 	{
 		const string markdown = "# real\n# alias\nBody\n```sharp\n# fenced\n```\n\n    # indented\n\n# next\nNext body";

@@ -47,6 +47,7 @@ public static class HelpHtmlRenderer
 		ArgumentNullException.ThrowIfNull(topicHref);
 
 		var document = Markdown.Parse(markdown, Pipeline);
+		var sectionLabels = new Dictionary<string, string>(StringComparer.Ordinal);
 		if (article is not null)
 		{
 			foreach (var heading in document.OfType<HeadingBlock>())
@@ -56,6 +57,7 @@ public static class HelpHtmlRenderer
 				if (section is not null)
 				{
 					heading.GetAttributes().Id = section.Id;
+					sectionLabels[section.Id] = HeadingLabel(heading.Inline?.FirstChild);
 				}
 			}
 		}
@@ -79,8 +81,27 @@ public static class HelpHtmlRenderer
 
 		var toc = article is null || article.Sections.Count == 0 ? string.Empty
 			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
-				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(section.Heading)}</a></li>")) + "</ul></nav>";
+				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>")) + "</ul></nav>";
 		return toc + writer;
+	}
+
+	private static string HeadingLabel(Inline? inline)
+	{
+		var text = new StringBuilder();
+		for (var child = inline; child is not null; child = child.NextSibling)
+		{
+			text.Append(child switch
+			{
+				LiteralInline literal => literal.Content.ToString(),
+				CodeInline code => code.Content,
+				HtmlEntityInline entity => entity.Transcoded.ToString(),
+				AutolinkInline link => link.Url,
+				LineBreakInline => " ",
+				ContainerInline container => HeadingLabel(container.FirstChild),
+				_ => string.Empty
+			});
+		}
+		return text.ToString();
 	}
 
 	/// <summary>
