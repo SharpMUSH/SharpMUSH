@@ -18,6 +18,7 @@ public class RealityContentsProjectionTests
 	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
+	// Each row switches the session-wide reality configuration on or off.
 	[Test, NotInParallel]
 	[Arguments("examine", true)]
 	[Arguments("examine-format", true)]
