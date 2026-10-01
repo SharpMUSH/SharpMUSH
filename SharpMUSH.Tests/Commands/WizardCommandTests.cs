@@ -700,6 +700,8 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	// @purge frees every GOING_TWICE object in the shared world, including other tests' fixtures.
+	[NotInParallel]
 	public async ValueTask PurgeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

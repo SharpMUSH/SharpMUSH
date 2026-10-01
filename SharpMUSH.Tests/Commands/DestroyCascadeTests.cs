@@ -22,7 +22,6 @@ namespace SharpMUSH.Tests.Commands;
 /// </list>
 /// Test config: destroy_possessions and really_safe on.
 /// </summary>
-[NotInParallel]
 public class DestroyCascadeTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
