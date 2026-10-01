@@ -35,7 +35,6 @@ public class DefinitionAuthorizationTests
 		return actor;
 	}
 	[Test]
-	[NotInParallel]
 	public async Task ActorStartsOutsideSharedHomeAndDisconnectDoesNotNotifyItsObservers()
 	{
 		var observer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "DefinitionObserver");

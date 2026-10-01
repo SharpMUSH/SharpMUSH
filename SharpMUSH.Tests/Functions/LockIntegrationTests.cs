@@ -305,7 +305,6 @@ public class LockIntegrationTests
 
 	// Oracle: testlock(+num(TestObj), me) = 1 when TestObj is in inventory
 	[Test]
-	[NotInParallel]
 	public async Task Testlock_CarryPrefix_CarriedObject()
 	{
 		var obj = await CreateObject("CarryLockTest");
@@ -329,31 +328,31 @@ public class LockIntegrationTests
 	// the name branches asked Locate for MAT_CONTENTS and MAT_ABSOLUTE respectively, neither of which
 	// names a scope, so neither had anywhere to look.
 	[Test]
-	[NotInParallel]
 	public async Task Testlock_CarryPrefix_CarriedObjectByName()
 	{
-		var obj = await CreateObject("CarryLockByName");
+		var name = TestIsolationHelpers.GenerateUniqueName("CarryLockByName");
+		var obj = await CreateObject(name);
 		await Command($"@tel #{obj.Number}=%#");
-		var result = await Eval("testlock(+CarryLockByName,%#)");
+		var result = await Eval($"testlock(+{name},%#)");
 		await Assert.That(result).IsEqualTo("1");
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task Testlock_CarryPrefix_UncarriedObjectByName()
 	{
-		var obj = await CreateObject("UncarriedLockByName");
+		var name = TestIsolationHelpers.GenerateUniqueName("UncarriedLockByName");
+		var obj = await CreateObject(name);
 		await Command($"@tel #{obj.Number}=#0");
-		var result = await Eval("testlock(+UncarriedLockByName,%#)");
+		var result = await Eval($"testlock(+{name},%#)");
 		await Assert.That(result).IsEqualTo("0");
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task Testlock_OwnerPrefix_ByName()
 	{
-		await CreateObject("OwnerLockByName");
-		var result = await Eval("testlock($OwnerLockByName,%#)");
+		var name = TestIsolationHelpers.GenerateUniqueName("OwnerLockByName");
+		await CreateObject(name);
+		var result = await Eval($"testlock(${name},%#)");
 		await Assert.That(result).IsEqualTo("1");
 	}
 }

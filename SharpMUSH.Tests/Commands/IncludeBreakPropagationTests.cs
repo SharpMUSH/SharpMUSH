@@ -23,7 +23,6 @@ namespace SharpMUSH.Tests.Commands;
 /// <para>Each case writes a marker after the <c>@include</c>, present exactly when the caller was
 /// allowed to keep going.</para>
 /// </summary>
-[NotInParallel]
 public class IncludeBreakPropagationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

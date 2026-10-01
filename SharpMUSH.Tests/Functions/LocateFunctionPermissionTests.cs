@@ -34,7 +34,6 @@ public class LocateFunctionPermissionTests
 		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
 
 	[Test]
-	[NotInParallel]
 	public async Task AMortalCannotSearchARemoteLookersNeighbours()
 	{
 		// A room the mortal is nowhere near, holding a looker and something for it to find. The looker
@@ -62,7 +61,6 @@ public class LocateFunctionPermissionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task TheGateSurvivesDefaultScopeInjection()
 	{
 		// fun_locate injects the default scope set *before* it gates (fundb.c), so a flags string that

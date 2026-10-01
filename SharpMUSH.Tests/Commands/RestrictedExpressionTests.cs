@@ -15,7 +15,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class RestrictedExpressionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -307,9 +306,10 @@ public class RestrictedExpressionTests
 	public async Task AttributeAndSideEffectWrappersAreRejectedEvenForGod()
 	{
 		var name = "restricted" + Guid.NewGuid().ToString("N");
-		await Cmd($"&{name} me=secret");
-		await Cmd($"@function {name}=me,{name}");
-		await Cmd($"@function/local {name}=me,{name}");
+		var holder = await OwnExecutor();
+		await Cmd($"&{name} {holder}=secret");
+		await Cmd($"@function {name}={holder},{name}");
+		await Cmd($"@function/local {name}={holder},{name}");
 		foreach (var expression in new[] { $"u(me/{name})", $"{name}()", $"localfun({name})", "pemit(me,leak)", "trigger(me/CODE)", "set(me/DESC,denied)", "r(secret)" })
 			await Assert.That(await Eval($"restrictedexpr(,{expression})")).Contains("RESTRICTED EXPRESSION");
 		await Assert.That(await Eval("add(2,3)")).IsEqualTo("5");
@@ -320,17 +320,14 @@ public class RestrictedExpressionTests
 	public async Task IndirectFunctionCannotReadAnAttributeFallback(bool halted)
 	{
 		var attribute = "restrictedfn" + Guid.NewGuid().ToString("N");
-		var target = "me";
+		string target;
 		using (var setupBudget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
 		using (setupBudget.Enter())
 		{
-			if (halted)
-			{
-				var created = await Factory.CommandParser.CommandParse(1,
-					Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain($"@create {attribute}"));
-				target = created.Message!.ToPlainText();
-				await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(target, out _)).IsTrue();
-			}
+			var created = await Factory.CommandParser.CommandParse(1,
+				Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain($"@create {attribute}"));
+			target = created.Message!.ToPlainText();
+			await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(target, out _)).IsTrue();
 			await Cmd($"&{attribute} {target}=classified attribute");
 			if (halted) await Cmd($"@set {target}=HALT");
 		}
@@ -442,6 +439,8 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	// Compares the whole queue's pending total, which any concurrently queued work changes.
+	[NotInParallel]
 	public async Task RestrictedCommandListsCannotScheduleDeferredWork()
 	{
 		var queue = Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.ITaskScheduler>();
@@ -566,6 +565,8 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	// Swaps the process-wide Console.Out to capture ANTLR's trace.
+	[NotInParallel]
 	[Arguments("fn(add,1,2)")]
 	[Arguments("fn(fn,add,1,2)")]
 	[Arguments("fn_alias(add,1,2)")]
@@ -754,6 +755,8 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	// Swaps the process-wide Console.Out to capture ANTLR's trace.
+	[NotInParallel]
 	[Arguments("restrictedexpr(ucstr,ucstr(%0),private-input)")]
 	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input)")]
 	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input)")]
@@ -777,7 +780,7 @@ public class RestrictedExpressionTests
 				Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true, ParserPredictionMode = ParserPredictionMode.TwoStage }
 			})
 		};
-		// This nonparallel test captures ANTLR Trace output; restore TUnit's writer in finally.
+		// Restore TUnit's writer in finally.
 #pragma warning disable TUnit0055
 		var previous = Console.Out;
 		using var output = new StringWriter();

@@ -290,7 +290,6 @@ public class WizardCommandTests
 	/// contexts, so the &amp; command evaluates the RHS via ParsedMessage().
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async ValueTask WaitCommand_EvaluatesAmpersandAttrValue()
 	{
 		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitEvalWiz");
@@ -319,7 +318,6 @@ public class WizardCommandTests
 	/// that %0, not @wait's own args. This matches PennMUSH wenv preservation behavior.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async ValueTask WaitCommand_PreservesPatternMatchArgs()
 	{
 		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitArgObj");
@@ -667,7 +665,7 @@ public class WizardCommandTests
 	// PennMUSH's hide_player has no "already hidden/visible" branch for the no-target case: it
 	// unconditionally re-applies the requested state to every connection and re-sends the same
 	// notify (bsd.c:7234-7250). Repeating /on (or /off) just repeats the same message.
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Hide_OnSwitch_Repeated_StillNotifiesHidden()
 	{
 		// Use isolated player to avoid modifying shared God (#1).
@@ -684,7 +682,7 @@ public class WizardCommandTests
 		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsTrue();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async ValueTask Hide_OffSwitch_Repeated_StillNotifiesVisible()
 	{
 		// Use isolated player to avoid modifying shared God (#1).
@@ -702,6 +700,8 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	// @purge frees every GOING_TWICE object in the shared world, including other tests' fixtures.
+	[NotInParallel]
 	public async ValueTask PurgeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

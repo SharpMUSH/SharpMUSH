@@ -20,7 +20,6 @@ namespace SharpMUSH.Tests.Commands;
 /// are never mutated - a stray <c>$</c>-command on #1 would be live for every other test in the
 /// session.</para>
 /// </summary>
-[NotInParallel]
 public class ScanCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

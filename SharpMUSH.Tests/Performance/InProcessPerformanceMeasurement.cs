@@ -97,48 +97,10 @@ public class InProcessPerformanceMeasurement
 		TestDiagnostics.WriteLine("- iter() accumulates results and calls Notify() once");
 		TestDiagnostics.WriteLine("- This difference likely explains the performance gap");
 		TestDiagnostics.WriteLine("\nIf @dolist is significantly slower, the bottleneck is likely:");
-		TestDiagnostics.WriteLine("1. Kafka message publishing overhead (1000 vs 1 publish)");
+		TestDiagnostics.WriteLine("1. Message bus publishing overhead (1000 vs 1 publish)");
 		TestDiagnostics.WriteLine("2. Message serialization overhead");
 		TestDiagnostics.WriteLine("3. NOT the parsing or execution time");
 
-		// via reflection to avoid assembly reference
-		var batchingServiceType = Type.GetType("SharpMUSH.SocketServer.Services.TelnetOutputBatchingService, SharpMUSH.SocketServer");
-		if (batchingServiceType != null)
-		{
-			var batchingService = WebAppFactoryArg.Services.GetService(batchingServiceType);
-			if (batchingService != null)
-			{
-				var getMetricsMethod = batchingServiceType.GetMethod("GetMetrics");
-				if (getMetricsMethod != null)
-				{
-					var metricsResult = getMetricsMethod.Invoke(batchingService, null);
-					if (metricsResult != null)
-					{
-						var metricsType = metricsResult.GetType();
-						var messagesReceived = (long)metricsType.GetField("Item1")!.GetValue(metricsResult)!;
-						var batchesFlushed = (long)metricsType.GetField("Item2")!.GetValue(metricsResult)!;
-						var avgBatchSize = (double)metricsType.GetField("Item3")!.GetValue(metricsResult)!;
-						var flushesFromSize = (long)metricsType.GetField("Item4")!.GetValue(metricsResult)!;
-						var flushesFromTimeout = (long)metricsType.GetField("Item5")!.GetValue(metricsResult)!;
-						var totalTcpWriteTimeMs = (long)metricsType.GetField("Item6")!.GetValue(metricsResult)!;
-
-						TestDiagnostics.WriteLine("\n=== BATCHING SERVICE METRICS ===");
-						TestDiagnostics.WriteLine($"Messages received:   {messagesReceived}");
-						TestDiagnostics.WriteLine($"Batches flushed:     {batchesFlushed}");
-						TestDiagnostics.WriteLine($"Avg batch size:      {avgBatchSize:F2}");
-						TestDiagnostics.WriteLine($"Flush from size:     {flushesFromSize}");
-						TestDiagnostics.WriteLine($"Flush from timeout:  {flushesFromTimeout}");
-						TestDiagnostics.WriteLine($"TCP write time:      {totalTcpWriteTimeMs}ms");
-
-						if (avgBatchSize < 2.0 && messagesReceived > 100)
-						{
-							TestDiagnostics.WriteLine("\nWARNING: Batching is NOT working effectively!");
-							TestDiagnostics.WriteLine("Average batch size < 2 means messages arrive too slowly to batch.");
-						}
-					}
-				}
-			}
-		}
 	}
 
 	[Test, Explicit]

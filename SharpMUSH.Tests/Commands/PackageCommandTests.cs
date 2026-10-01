@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -17,7 +16,6 @@ namespace SharpMUSH.Tests.Commands;
 /// wizard-only command lock. The manifest is produced through the same
 /// IPackageAuthoringService the /admin/packages/author panel uses.
 /// </summary>
-[NotInParallel] // integration test over shared services + the session-shared Notify substitute
 public class PackageCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -25,27 +23,35 @@ public class PackageCommandTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	/// <summary>Command feedback is "spoken by" the executor (here, God), per orator semantics.</summary>
-	private async Task ExpectNotify(DBRef player, string contains)
-		=> await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player),
-				INotifyService.NotificationType.Announce);
+	/// <summary>The wizard who runs @package, so what it is told reaches nobody else.</summary>
+	private TestIsolationHelpers.TestPlayer _wizard = null!;
 
-	/// <summary>Asserts a single notify whose message contains every fragment. The manifest / scan
-	/// report is one pemit, so matching all fragments — including one unique to this test — isolates
-	/// the assertion against the session-shared substitute without resetting it.</summary>
-	private async Task ExpectNotifyAll(DBRef player, params string[] contains)
-		=> await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				contains.All(c => MessageContains(msg, c))), TestHelpers.MatchingObject(player),
-				INotifyService.NotificationType.Announce);
+	[Before(Test)]
+	public async Task CreateWizard()
+	{
+		_wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PkgWizard");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {_wizard.DbRef}=WIZARD"));
+	}
+
+	private ValueTask<CallState> AsWizard(string command) =>
+		Parser.CommandParse(_wizard.Handle, ConnectionService, MarkupText.Plain(command));
+
+	/// <summary>Command feedback is "spoken by" the executor, per orator semantics. The manifest / scan
+	/// report is one pemit, so exactly one message must match.</summary>
+	private async Task ExpectNotify(Func<string, bool> match)
+		=> await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(_wizard.DbRef)
+				.Where(delivery => delivery.Sender == _wizard.DbRef
+					&& delivery.Type == INotifyService.NotificationType.Announce
+					&& match(delivery.Message)))
+			.Count().IsEqualTo(1);
+
+	/// <summary>Asserts a single notify whose message contains every fragment.</summary>
+	private async Task ExpectNotifyAll(params string[] contains)
+		=> await ExpectNotify(message => contains.All(c => message.Contains(c, StringComparison.Ordinal)));
 
 	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#7) — mirrors the authoring service tests.</summary>
 	private async Task<DBRef> CreateThingAsync(string name)
@@ -64,98 +70,74 @@ public class PackageCommandTests
 	[Test]
 	public async ValueTask Package_SelfContainedSelection_PemitsManifest()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-
 		// Two things where the second references the first (and nothing else) — self-contained.
 		var core = await CreateThingAsync("PkgSelfCore");
 		var global = await CreateThingAsync("PkgSelfGlobal");
 		await SetAttrAsync(core, "FN_FMT", "formatted output");
 		await SetAttrAsync(global, "CMD_SELF", $"$+self:@pemit %#=[u(#{core.Number}/FN_FMT)]");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@package #{core.Number} #{global.Number}=test-pkg,2.0.0,A self-contained test"));
+		await AsWizard($"@package #{core.Number} #{global.Number}=test-pkg,2.0.0,A self-contained test");
 
 		// The whole manifest comes back in one pemit: header markers, metadata, and
 		// the cross-reference rewritten to a symbolic {{ref}} (no raw dbref survives).
 		// The version is quoted because it leads with a digit — plain, YAML would hand
 		// back a number. PackageManifestWriter quotes with ' throughout.
-		await ExpectNotifyAll(god,
+		await ExpectNotifyAll(
 			"----- BEGIN package.yaml -----", "package: test-pkg", "version: '2.0.0'", "{{pkgselfcore}}");
 	}
 
 	[Test]
 	public async ValueTask PackageScan_ReportsRefsAndExternalDbrefs()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-
 		var thing = await CreateThingAsync("PkgScanThing");
 		await SetAttrAsync(thing, "FN_GREET", $"Hello from here, near #0");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@package/scan #{thing.Number}"));
+		await AsWizard($"@package/scan #{thing.Number}");
 
-		await ExpectNotifyAll(god, "PACKAGE SCAN: 1 object(s) selected", "pkgscanthing", "#0");
+		await ExpectNotifyAll("PACKAGE SCAN: 1 object(s) selected", "pkgscanthing", "#0");
 	}
 
 	[Test]
 	public async ValueTask Package_NotSelfContained_DirectsToWebPanel()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-
 		var thing = await CreateThingAsync("PkgExternalThing");
 		await SetAttrAsync(thing, "FN_GREET", $"References the outside world: #0");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@package #{thing.Number}=ext-pkg"));
+		await AsWizard($"@package #{thing.Number}=ext-pkg");
 
 		// No manifest — the external dbref must be classified in the web panel.
-		await ExpectNotifyAll(god, "Unclassified", "/admin/packages/author");
+		await ExpectNotifyAll("Unclassified", "/admin/packages/author");
 	}
 
 	[Test]
 	public async ValueTask Package_VeiledAttribute_IsExcludedFromManifest()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-
 		var thing = await CreateThingAsync("PkgVeiledThing");
 		// A public attribute (exported) and a VEILED one (@decompile hides it, so must we).
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&PUBLICATTR #{thing.Number}=public shown value"));
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&SECRETATTR #{thing.Number}=veiled secret value"));
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@set #{thing.Number}/SECRETATTR=VEILED"));
+		await AsWizard($"&PUBLICATTR #{thing.Number}=public shown value");
+		await AsWizard($"&SECRETATTR #{thing.Number}=veiled secret value");
+		await AsWizard($"@set #{thing.Number}/SECRETATTR=VEILED");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@package #{thing.Number}=veil-pkg"));
+		await AsWizard($"@package #{thing.Number}=veil-pkg");
 
 		// The manifest is produced, includes the public attribute, and omits the
 		// VEILED one entirely — matching what @decompile would show.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(god), Arg.Is<SharpMessage>(msg =>
-				MessageContains(msg, "----- BEGIN package.yaml -----") &&
-				MessageContains(msg, "PUBLICATTR") &&
-				!MessageContains(msg, "SECRETATTR") &&
-				!MessageContains(msg, "veiled secret value")),
-				TestHelpers.MatchingObject(god), INotifyService.NotificationType.Announce);
+		await ExpectNotify(message =>
+			message.Contains("----- BEGIN package.yaml -----", StringComparison.Ordinal) &&
+			message.Contains("PUBLICATTR", StringComparison.Ordinal) &&
+			!message.Contains("SECRETATTR", StringComparison.Ordinal) &&
+			!message.Contains("veiled secret value", StringComparison.Ordinal));
 	}
-
-	private static bool MessageContains(SharpMessage msg, string contains)
-		=> TestHelpers.MessagePlainTextContains(msg, contains);
 
 	[Test]
 	public async ValueTask Package_InvalidPackageId_IsRejected()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-
 		var thing = await CreateThingAsync("PkgBadIdThing");
 		await SetAttrAsync(thing, "FN_X", "self-contained value");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@package #{thing.Number}=Not A Valid Id"));
+		await AsWizard($"@package #{thing.Number}=Not A Valid Id");
 
-		await ExpectNotify(god, "is not a valid package id");
+		await ExpectNotify(message => message.Contains("is not a valid package id", StringComparison.Ordinal));
 	}
 
 	[Test]

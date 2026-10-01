@@ -11,10 +11,9 @@ namespace SharpMUSH.Tests.Commands;
 /// test exercises @include against a backtick-named attribute and a plain-named control to show whether
 /// @include actually mishandles the backtick name (and if so, where).
 ///
-/// Each included body sets a marker attribute on the executor (#1); we then read that marker with get().
+/// Each included body sets a marker attribute on the object it lives on; we then read that marker with get().
 /// If @include ran the body the marker is set; if @include silently no-ops the marker stays empty.
 /// </summary>
-[NotInParallel]
 public class IncludeBacktickAttributeTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -36,14 +35,14 @@ public class IncludeBacktickAttributeTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclPlain");
 		var marker = $"INCL_PLAIN_RESULT_{tag}";
 
-		await Cmd($"&INCLUDEPLAIN_{tag} {obj}=&{marker} #1=ran_plain");
+		await Cmd($"&INCLUDEPLAIN_{tag} {obj}=&{marker} {obj}=ran_plain");
 
-		await Assert.That(await Eval($"get({obj}/INCLUDEPLAIN_{tag})")).IsEqualTo($"&{marker} #1=ran_plain")
+		await Assert.That(await Eval($"get({obj}/INCLUDEPLAIN_{tag})")).IsEqualTo($"&{marker} {obj}=ran_plain")
 			.Because("the plain attribute should be readable by get()");
 
 		await Cmd($"@include {obj}/INCLUDEPLAIN_{tag}");
 
-		await Assert.That(await Eval($"get(#1/{marker})")).IsEqualTo("ran_plain")
+		await Assert.That(await Eval($"get({obj}/{marker})")).IsEqualTo("ran_plain")
 			.Because("@include of a plain-named attribute runs its body (control)");
 	}
 
@@ -54,14 +53,14 @@ public class IncludeBacktickAttributeTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclBacktick");
 		var marker = $"INCL_BT_RESULT_{tag}";
 
-		await Cmd($"&INCLUDE`CAPTURE {obj}=&{marker} #1=ran_backtick");
+		await Cmd($"&INCLUDE`CAPTURE {obj}=&{marker} {obj}=ran_backtick");
 
-		await Assert.That(await Eval($"get({obj}/INCLUDE`CAPTURE)")).IsEqualTo($"&{marker} #1=ran_backtick")
+		await Assert.That(await Eval($"get({obj}/INCLUDE`CAPTURE)")).IsEqualTo($"&{marker} {obj}=ran_backtick")
 			.Because("the backtick attribute should be readable by get() (backticks are valid attr-name chars)");
 
 		await Cmd($"@include {obj}/INCLUDE`CAPTURE");
 
-		await Assert.That(await Eval($"get(#1/{marker})")).IsEqualTo("ran_backtick")
+		await Assert.That(await Eval($"get({obj}/{marker})")).IsEqualTo("ran_backtick")
 			.Because("@include of a backtick-named attribute must run its body, exactly as the plain-named control does");
 	}
 }

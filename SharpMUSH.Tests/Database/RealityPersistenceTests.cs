@@ -18,6 +18,7 @@ public class RealityPersistenceTests
 	public required ServerWebAppFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
+	// Rewrites and enables the shared world's reality configuration, which every other test would see.
 	[Test, NotInParallel]
 	public async Task LayerChangesSurviveReloadWithoutWideningRemovedSets()
 	{

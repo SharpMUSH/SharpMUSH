@@ -12,7 +12,6 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class GeneralCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -30,15 +29,12 @@ public class GeneralCommandTests
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
-		TestDiagnostics.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
+		var token = Token();
+		var command = str.Replace("=", $"={token} ");
+		TestDiagnostics.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"{token} {expected}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -53,255 +49,186 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3=@pemit #1=3 This is a test {token}"));
 
 		// @dolist/inline iterates 3 times (elements: 1, 2, 3) → 3 identical notifications
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "3 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"3 This is a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3=@pemit #1={{4 This is, a test {token}}};"));
 
 		// @dolist/inline iterates 3 times (elements: 1, 2, 3) → 3 identical notifications
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "4 This is, a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"4 This is, a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
 	public async ValueTask DolistDoubleHashReplacement()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3=@pemit #1={token}-dolist-hash-##"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"{token}-dolist-hash-1", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-dolist-hash-2", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-dolist-hash-3", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
+			MarkupText.Plain($"@dolist/inline 1 2 3={{@pemit #1=5 This is a test {token}; @pemit #1=6 This is also a test {token}}}"));
 
 		// @dolist/inline iterates 3 times → both @pemit commands fire 3 times each
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "5 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "6 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"5 This is a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
+		await Assert.That(Heard($"6 This is also a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain(
-				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
+				$"@dolist/inline 1 2 3={{@pemit #1=7 This is a test {token}; @pemit #1=8 This is also a test {token}}}; @pemit #1=9 Repeat 3 times in this mode {token}."));
 
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "7 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "8 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "9 Repeat 3 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"7 This is a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
+		await Assert.That(Heard($"8 This is also a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
+		await Assert.That(Heard($"9 Repeat 3 times in this mode {token}.", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain(
-				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
+				$"@dolist/inline 1={{@dolist/inline 1 2 3=@pemit #1=10 This is a test {token}}}; @pemit #1=11 Repeat 1 times in this mode {token}."));
 
 		// outer 1 element × inner 3 elements = 3 for "10"; @pemit 11 is outside = 1×
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "10 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "11 Repeat 1 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"10 This is a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
+		await Assert.That(Heard($"11 Repeat 1 times in this mode {token}.", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain(
-				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
+				$"@dolist/inline 1 2={{@dolist/inline 1 2 3=@pemit #1=12 This is a test {token}}}; @pemit #1=13 Repeat 2 times in this mode {token}."));
 
 		// outer 2 elements × inner 3 elements = 6 for "12"; @pemit 13 is outside = 2×
-		await NotifyService
-			.Received(6)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "12 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "13 Repeat 2 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"12 This is a test {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(6);
+		await Assert.That(Heard($"13 Repeat 2 times in this mode {token}.", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(2);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain(
-				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
+				$"@dolist/inline a b={{@dolist/inline 1 2 3=@pemit #1=14 This is a test {token} %i0}}; @pemit #1=15 Repeat 1 times in this mode {token} %i0"));
 
 		// outer 2 elements (a,b) × inner 3 elements (1,2,3) → each distinct inner msg fires 2×
 		// the outer @pemit fires once per outer element ("15 ...a" and "15 ...b")
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode a")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode b")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"14 This is a test {token} 1", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(2);
+		await Assert.That(Heard($"14 This is a test {token} 2", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(2);
+		await Assert.That(Heard($"14 This is a test {token} 3", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(2);
+		await Assert.That(Heard($"15 Repeat 1 times in this mode {token} a", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"15 Repeat 1 times in this mode {token} b", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain(
-				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
+				$"@dolist/inline a b={{@dolist/inline 1 2 3={{@ifelse eq(%i0,1)=think %i0 is 1 {token}; @ifelse eq(%i0,2)=think %i0 is 2 {token},think {{%i0 is 1, or 3 {token}}}}}}}"));
 
 		// outer 2 elements (a,b) × inner 3 elements (1,2,3) → each branch fires 2× (once per outer iter)
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "3 is 1, or 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "1 is 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "2 is 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"3 is 1, or 3 {token}", INotifyService.NotificationType.Announce)).IsEqualTo(2);
+		await Assert.That(Heard($"1 is 1 {token}", INotifyService.NotificationType.Announce)).IsEqualTo(2);
+		await Assert.That(Heard($"2 is 2 {token}", INotifyService.NotificationType.Announce)).IsEqualTo(2);
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MarkupText.Plain("think assert 1a; @assert; think assert 2a; think assert 3a"));
-		await Parser.CommandListParse(MarkupText.Plain("think break 1a; @break; think break 2a; think break 3a"));
+		var t = Token();
+		await Parser.CommandListParse(MarkupText.Plain($"think assert 1a {t}; @assert; think assert 2a {t}; think assert 3a {t}"));
+		await Parser.CommandListParse(MarkupText.Plain($"think break 1a {t}; @break; think break 2a {t}; think break 3a {t}"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"break 1a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 2a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 3a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 1a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 2a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"assert 3a {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MarkupText.Plain("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
-		await Parser.CommandListParse(MarkupText.Plain("think break 1b; @break 1; think break 2b; think break 3b"));
+		var t = Token();
+		await Parser.CommandListParse(MarkupText.Plain($"think assert 1b {t}; @assert 1; think assert 2b {t}; think assert 3b {t}"));
+		await Parser.CommandListParse(MarkupText.Plain($"think break 1b {t}; @break 1; think break 2b {t}; think break 3b {t}"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"assert 1b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 2b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 3b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 1b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 2b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"break 3b {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MarkupText.Plain("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
-		await Parser.CommandListParse(MarkupText.Plain("think break 1c; @break 0; think break 2c; think break 3c"));
+		var t = Token();
+		await Parser.CommandListParse(MarkupText.Plain($"think assert 1c {t}; @assert 0; think assert 2c {t}; think assert 3c {t}"));
+		await Parser.CommandListParse(MarkupText.Plain($"think break 1c {t}; @break 0; think break 2c {t}; think break 3c {t}"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 3c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"break 1c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 2c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 3c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 1c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"assert 2c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"assert 3c {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 
 	[Test]
 	public async ValueTask DoBreakCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var t = Token();
 		await Parser.CommandListParse(
-			MarkupText.Plain("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
+			MarkupText.Plain($"think break 1d {t}; @break 1=think broken 1d {t}; think break 2d {t}; think break 3d {t}"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 1d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"break 1d {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 2d {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"break 3d {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"broken 1d {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask DoBreakCommandList2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var t = Token();
 		await Parser.CommandListParse(
-			MarkupText.Plain("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
+			MarkupText.Plain($"think break 1e {t}; @break 1={{think broken 1e {t}; think broken 2e {t}}}; think break 2e {t}; think break 3e {t}"));
 
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 3e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 1e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("broken 2e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Heard($"break 1e {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"break 2e {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"break 3e {t}", INotifyService.NotificationType.Announce)).IsEqualTo(0);
+		await Assert.That(Heard($"broken 1e {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(Heard($"broken 2e {t}", INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -321,23 +248,24 @@ public class GeneralCommandTests
 	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// @whereis #1 → "One is in Room Zero." — pattern B: object name "One" and room "Room Zero" make this globally unique.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@whereis #1"));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WhereIsTarget");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "God is in")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@whereis {player.DbRef}"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(executor).Count(delivery =>
+				delivery.Message.StartsWith($"{player.Name} is in", StringComparison.Ordinal)
+				&& delivery.Sender == executor && delivery.Type == INotifyService.NotificationType.Announce))
+			.IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create test_object_whereis"));
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WhereIsThing");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@whereis test_object_whereis"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@whereis {thing}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor, executor)).IsTrue();
 	}
@@ -379,8 +307,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_ListsControlledObjectsByWordPrefix()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindMortal");
+		var mortal = await MortalInARoomOfItsOwnAsync("FindMortal");
 		var token = TestIsolationHelpers.GenerateUniqueName("FindTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create Red {token}"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}Blue"));
@@ -397,8 +324,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_RejectsARangeThatIsNotAnObject()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindRange");
+		var mortal = await MortalInARoomOfItsOwnAsync("FindRange");
 
 		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain("@find x=#999999999")).AsTask());
@@ -423,8 +349,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_ReportsByTypeWithOwnersAndTotals()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchMortal");
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchMortal");
 		var token = TestIsolationHelpers.GenerateUniqueName("SearchTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}"));
 
@@ -443,8 +368,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_ShowsAnExitsEnds()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchExit");
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchExit");
 		var token = TestIsolationHelpers.GenerateUniqueName("SearchExitTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@dig/teleport {token}Room"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@open {token}Out"));
@@ -492,6 +416,31 @@ public class GeneralCommandTests
 
 		await Assert.That(messages.Any(m => m.Contains($"(#{match.Number}"))).IsTrue();
 		await Assert.That(messages.Any(m => m.Contains($"(#{control.Number}"))).IsFalse();
+	}
+
+	private static string Token() => TestIsolationHelpers.GenerateUniqueName("Gen");
+
+	private static string UniqueAttributeName(string prefix) => $"{prefix}_{Guid.NewGuid():N}".ToUpperInvariant();
+
+	/// <summary>How many times God heard exactly <paramref name="message"/> from itself.</summary>
+	private int Heard(string message, INotifyService.NotificationType type)
+		=> HeardBy(WebAppFactoryArg.ExecutorDBRef, message, WebAppFactoryArg.ExecutorDBRef, type);
+
+	private int HeardBy(DBRef who, string message, DBRef sender, INotifyService.NotificationType type)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(who).Count(delivery =>
+			delivery.Message == message && delivery.Sender == sender && delivery.Type == type);
+
+	/// <summary>
+	/// A connected mortal standing in a fresh room, so the window <see cref="MessagesWhile"/> reads holds
+	/// only what its own command produced — not, say, another test's player connecting in the default home.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> MortalInARoomOfItsOwnAsync(string prefix)
+	{
+		var dig = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
@@ -600,31 +549,25 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Select_MatchesFirstExpression()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @select runs the action for the FIRST matching expression only ('help @switch'); both
 		// patterns here match "test", so the second must not fire. /inline so the actions run in
 		// place rather than becoming queue entries this assertion would race.
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@select/inline test=t*,@pemit #1=SelectFirst_A_31708,*est,@pemit #1=SelectFirst_B_31708"));
+			MarkupText.Plain($"@select/inline test=t*,@pemit #1=SelectFirst_A_{token},*est,@pemit #1=SelectFirst_B_{token}"));
 
-		await NotifyService.Received(1).Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_A_31708")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-
-		await NotifyService.DidNotReceive().Notify(
-			TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_B_31708")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"SelectFirst_A_{token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"SelectFirst_B_{token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(0);
 	}
 
 	[Test]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access DESCRIPTION="));
+		var name = UniqueAttributeName("ATTRINFO");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {name}=no_command"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute DESCRIPTION"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute {name}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor, executor)).IsTrue();
 	}
@@ -632,11 +575,12 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access MYATTR=no_command"));
+		var name = UniqueAttributeName("MYATTR");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {name}=no_command"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
-		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
+		var entry = entries.FirstOrDefault(e => e.Name == name);
 
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
@@ -645,11 +589,12 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessValidatesFlags()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access TESTATTR=INVALIDFLAG"));
+		var name = UniqueAttributeName("TESTATTR");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {name}=INVALIDFLAG"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
-		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR");
+		var entry = entries.FirstOrDefault(e => e.Name == name);
 
 		await Assert.That(entry).IsNull();
 	}
@@ -657,25 +602,27 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_EntryFlagsAreAppliedWhenAttributeCreated()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access TESTATTR2=no_command"));
+		var name = UniqueAttributeName("TESTATTR2");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {name}=no_command"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
-		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR2");
+		var entry = entries.FirstOrDefault(e => e.Name == name);
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
 
 		// Use SetAttributeCommand directly to bypass & command test issues
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AttrEntryFlags");
 		var player = (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		var success = await Mediator.Send(new Library.Commands.Database.SetAttributeCommand(
-			new DBRef(1),
-			["TESTATTR2"],
+			target,
+			[name],
 			MarkupText.Plain("test value"),
 			player));
 
 		await Assert.That(success).IsTrue();
 
-		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
+		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(target, [name]))
 			.ToArrayAsync();
 
 		var attr = attrs.LastOrDefault();
@@ -685,130 +632,85 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3=@pemit #1=Batched test message {token}"));
 
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Batched test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Batched test message {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b c=@pemit {executor}=DoListBatchesToOtherPlayers: Message to other player"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b c=@pemit {executor}=DoListBatchesToOtherPlayers: Message to other player {token}"));
 
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"DoListBatchesToOtherPlayers: Message to other player {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2={{@dolist/inline a b=@pemit #1=Nested message {token}}}"));
 
-		await NotifyService
-			.Received(4)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Nested message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Nested message {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(4);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived {token}"));
 
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"DoListWithoutBreak_AllMessagesReceived {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3={{@pemit #1=Message {token} %iL;@break}}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens, so all 3
 		// messages fire — this is the actual MUSH behavior: @break affects the next iteration, not current.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Message {token} 1", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"Message {token} 2", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"Message {token} 3", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2 3={{@pemit #1=Message before break {token}; @break}}"));
 
-		await NotifyService
-			.Received(3)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message before break")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Message before break {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(3);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		// With {@pemit; @break}, @pemit runs in each inner iteration: 2 outer * 3 inner = 6 messages.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline 1 2={{@dolist/inline a b c={{@pemit #1=Inner message {token}; @break}}}}"));
 
-		await NotifyService
-			.Received(6)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Inner message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Inner message {token}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(6);
 	}
 
 	[Test]
 	public async ValueTask DoListWithDelimiter()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = Token();
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
+			MarkupText.Plain($"@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit {token}: %i0"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: apple")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: banana")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: orange")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Heard($"Fruit {token}: apple", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"Fruit {token}: banana", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"Fruit {token}: orange", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -855,11 +757,10 @@ public class GeneralCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look/outside"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, roomName)),
-				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(player.DbRef).Count(delivery =>
+				delivery.Message.Contains(roomName, StringComparison.Ordinal)
+				&& delivery.Sender == player.DbRef && delivery.Type == INotifyService.NotificationType.Announce))
+			.IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -874,11 +775,7 @@ public class GeneralCommandTests
 
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("think"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, string.Empty)),
-				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(HeardBy(player.DbRef, string.Empty, player.DbRef, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		// The notify happens before the return, so asserting on it alone would not have caught the
 		// command indexing a "0" argument that a bare `think` does not have. The resulting
@@ -898,10 +795,7 @@ public class GeneralCommandTests
 			MarkupText.Plain("think lnum(10,1)"));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("10 9 8 7 6 5 4 3 2 1");
-		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "10 9 8 7 6 5 4 3 2 1")),
-			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(HeardBy(player.DbRef, "10 9 8 7 6 5 4 3 2 1", player.DbRef, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>

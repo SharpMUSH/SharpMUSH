@@ -20,9 +20,9 @@ namespace SharpMUSH.Tests.Commands;
 /// <c>@STARTUP</c> re-registration. These hit the real DB via the shared web-app factory.
 /// The <c>@function</c> registry is a process-wide singleton and attributes live on the
 /// shared God object, so every test mints UNIQUE function/attribute names (<see cref="U"/>)
-/// to stay conflict-free if other test classes run concurrently.
+/// to stay conflict-free if other test classes run concurrently. The few that have to touch a
+/// built-in or the whole registry run alone.
 /// </summary>
-[NotInParallel]
 public class UserDefinedFunctionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -128,6 +128,7 @@ public class UserDefinedFunctionTests
 	}
 
 	[Test]
+	[NotInParallel] // overrides add(), which every other test may call
 	public async ValueTask BuiltInTakesPrecedence()
 	{
 		// add() is a built-in; defining a user function with the same name must not override it.
@@ -274,6 +275,7 @@ public class UserDefinedFunctionTests
 	}
 
 	[Test]
+	[NotInParallel] // overrides add(), which every other test may call
 	public async ValueTask BuiltinRestoresOriginalAfterOverride()
 	{
 		// Delete a built-in so it can be overridden, override it, then /builtin restores the original.
@@ -300,6 +302,7 @@ public class UserDefinedFunctionTests
 	}
 
 	[Test]
+	[NotInParallel] // @function/restore * drops every other test's user function
 	public async ValueTask PreserveSurvivesRestoreReset()
 	{
 		// /preserve marks a user function to survive the bulk /restore * reset; an unmarked one is removed.

@@ -34,7 +34,7 @@ public class FilterQFunctionTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task FilterQCapturesRejects()
 	{
 		var objNum = await CreateObjectWithAttribute("filterq_obj", "ISNUM", "isnum(%0)");
@@ -49,7 +49,7 @@ public class FilterQFunctionTests
 		await Check($"[filterq(r, #{objNum}/ISNUM, 1|a|2, |)]:%q<r>", "1|2:a");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task FilterQPassesExtraArgs()
 	{
 		var objNum = await CreateObjectWithAttribute("filterq_args_obj", "GTN", "gt(%0,%1)");

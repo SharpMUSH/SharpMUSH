@@ -308,7 +308,7 @@ public class MailDeliveryTests
 		await Run(sender, $"@mail #{mortal.DbRef.Number}=Hello/Body.");
 		await Run(sender, $"@mail #{royal.DbRef.Number}=Hello/Body.");
 		await Run(royal, "@mail me=Self/Body.");
-		await Scheduler.DrainImmediateQueueForTests();
+		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await Get(mortal.DbRef, "AMAILED")).IsEqualTo(string.Empty);
 		await Assert.That(await Get(royal.DbRef, "AMAILED")).StartsWith($"#{sender.DbRef.Number}");

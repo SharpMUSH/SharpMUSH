@@ -34,7 +34,7 @@ public class EverySomeFunctionTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task EveryReturnsOneZero()
 	{
 		var objNum = await CreateObjectWithAttribute("every_obj", "ISNUM", "isnum(%0)");
@@ -43,7 +43,7 @@ public class EverySomeFunctionTests
 		await Check($"every(#{objNum}/ISNUM, 1 a 2 b)", "0");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SomeReturnsOneZero()
 	{
 		var objNum = await CreateObjectWithAttribute("some_obj", "ISNUM", "isnum(%0)");
@@ -52,7 +52,7 @@ public class EverySomeFunctionTests
 		await Check($"some(#{objNum}/ISNUM, a b c)", "0");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task RegisterCapturesNonMatches()
 	{
 		var objNum = await CreateObjectWithAttribute("everysome_reg_obj", "ISNUM", "isnum(%0)");
@@ -65,7 +65,7 @@ public class EverySomeFunctionTests
 		await Check($"[every(#{objNum}/ISNUM, 1 2 3, , fails)]:%q<fails>", "1:");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task LambdaPredicateReturnsOneZero()
 	{
 		// The #lambda branch must produce the same results as an attribute predicate.
@@ -75,7 +75,7 @@ public class EverySomeFunctionTests
 		await Check(@"some(#lambda/isnum\(\%0\), a b c)", "0");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task LambdaBranchCapturesNonMatchesInRegister()
 	{
 		// With a register the lambda branch evaluates every element (no short-circuit) and

@@ -20,6 +20,8 @@ public class ApplicationRegistryTests
 	private IApplicationRegistryService Registry =>
 		(IApplicationRegistryService)WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.ISharpDatabase>();
 
+	private static string Slug(string prefix) => $"{prefix}-{Guid.NewGuid():N}"[..(prefix.Length + 13)];
+
 	private static RegisteredApplication PageApp(string slug, int order = 0) => new(
 		slug, $"App {slug}", "Icons.Material.Filled.Apps", ApplicationKind.Page,
 		$"http/{slug}/schema", $"http/{slug}", $"http/{slug}/submit", PortalRole.Player, "main", null, order);
@@ -29,38 +31,43 @@ public class ApplicationRegistryTests
 		$"http/{slug}/schema", null, null, PortalRole.Wizard, null,
 		[WidgetZone.MainContent, WidgetZone.RightSidebar], 5);
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Applications_UpsertGetListRemove()
 	{
-		await Registry.UpsertApplicationAsync(PageApp("app-alpha", order: 2));
-		await Registry.UpsertApplicationAsync(PageApp("app-beta", order: 1));
+		// The registry is shared by the session, so the listing is narrowed to this test's own slugs.
+		var prefix = Slug("app");
+		var alpha = $"{prefix}-alpha";
+		var beta = $"{prefix}-beta";
+		await Registry.UpsertApplicationAsync(PageApp(alpha, order: 2));
+		await Registry.UpsertApplicationAsync(PageApp(beta, order: 1));
 
-		var fetched = await Registry.GetApplicationAsync("app-alpha");
-		await Assert.That(fetched.Value).IsEqualTo(PageApp("app-alpha", order: 2));
+		var fetched = await Registry.GetApplicationAsync(alpha);
+		await Assert.That(fetched.Value).IsEqualTo(PageApp(alpha, order: 2));
 
 		// Upsert replaces in full.
-		await Registry.UpsertApplicationAsync(PageApp("app-alpha", order: 9));
-		var upgraded = await Registry.GetApplicationAsync("app-alpha");
+		await Registry.UpsertApplicationAsync(PageApp(alpha, order: 9));
+		var upgraded = await Registry.GetApplicationAsync(alpha);
 		await Assert.That(upgraded.Expect<RegisteredApplication>().Order).IsEqualTo(9);
 
 		// List is ordered by Order then slug.
 		var all = await Registry.GetApplicationsAsync();
-		var ours = all.Where(a => a.Slug.StartsWith("app-")).ToList();
+		var ours = all.Where(a => a.Slug.StartsWith($"{prefix}-")).ToList();
 		await Assert.That(ours.Count).IsEqualTo(2);
-		await Assert.That(ours[0].Slug).IsEqualTo("app-beta"); // order 1 before 9
+		await Assert.That(ours[0].Slug).IsEqualTo(beta); // order 1 before 9
 
-		await Registry.RemoveApplicationAsync("app-alpha");
-		await Registry.RemoveApplicationAsync("app-beta");
-		var missing = await Registry.GetApplicationAsync("app-alpha");
+		await Registry.RemoveApplicationAsync(alpha);
+		await Registry.RemoveApplicationAsync(beta);
+		var missing = await Registry.GetApplicationAsync(alpha);
 		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task WidgetApplication_RoundTripsEnumsAndZones()
 	{
-		await Registry.UpsertApplicationAsync(WidgetApp("app-widget"));
+		var slug = Slug("app-widget");
+		await Registry.UpsertApplicationAsync(WidgetApp(slug));
 
-		var app = (await Registry.GetApplicationAsync("app-widget")).Expect<RegisteredApplication>();
+		var app = (await Registry.GetApplicationAsync(slug)).Expect<RegisteredApplication>();
 		await Assert.That(app.Kind).IsEqualTo(ApplicationKind.Widget);
 		await Assert.That(app.MinimumRole).IsEqualTo(PortalRole.Wizard);
 		await Assert.That(app.DataUrl).IsNull();
@@ -69,14 +76,15 @@ public class ApplicationRegistryTests
 		await Assert.That(app.Zones).Contains(WidgetZone.MainContent);
 		await Assert.That(app.Zones).Contains(WidgetZone.RightSidebar);
 
-		await Registry.RemoveApplicationAsync("app-widget");
+		await Registry.RemoveApplicationAsync(slug);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ComponentApplication_RoundTripsRenderKindAndComponentFields()
 	{
+		var slug = Slug("app-component");
 		var component = new RegisteredApplication(
-			"app-component", "Component App", null, ApplicationKind.Page,
+			slug, "Component App", null, ApplicationKind.Page,
 			"http/app-component/schema", null, null, PortalRole.Player, "Plugins", null, 3,
 			OwningPackage: "demo-pkg",
 			RenderKind: ApplicationRenderKind.Component,
@@ -85,16 +93,16 @@ public class ApplicationRegistryTests
 
 		await Registry.UpsertApplicationAsync(component);
 
-		var fetched = await Registry.GetApplicationAsync("app-component");
+		var fetched = await Registry.GetApplicationAsync(slug);
 		var app = fetched.Expect<RegisteredApplication>();
 		await Assert.That(app.RenderKind).IsEqualTo(ApplicationRenderKind.Component);
 		await Assert.That(app.ComponentAssemblyUrl).IsEqualTo("api/plugins/demo-pkg/ui/Demo.Ui.dll");
 		await Assert.That(app.ComponentTypeName).IsEqualTo("Demo.Ui.Widget");
 
-		await Registry.RemoveApplicationAsync("app-component");
+		await Registry.RemoveApplicationAsync(slug);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GetApplication_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetApplicationAsync("does-not-exist");

@@ -1,29 +1,49 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class UserDefinedCommandsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	/// <summary>A $-command matched from an action list is its own queue entry (#1132); wait for it to run.</summary>
-	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+	private Task DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().SettleForTestsAsync();
+
+	/// <summary>
+	/// How many times God was told exactly <paramref name="message"/>, as <paramref name="type"/>, by
+	/// <paramref name="sender"/> (by anyone when null).
+	/// </summary>
+	private int Heard(string message, DBRef? sender, INotifyService.NotificationType type) =>
+		WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef).Count(delivery =>
+			(sender is null || delivery.Sender == sender)
+			&& delivery.Type == type
+			&& delivery.Message == message);
+
+	private async Task ExpectHeardOnce(string message, DBRef? sender, INotifyService.NotificationType type)
+	{
+		var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+		while (Heard(message, sender, type) == 0 && DateTime.UtcNow < deadline)
+		{
+			await Task.Delay(20);
+		}
+
+		await Assert.That(Heard(message, sender, type)).IsEqualTo(1);
+	}
+
+	private async Task ExpectNotHeard(string message, DBRef? sender, INotifyService.NotificationType type) =>
+		await Assert.That(Heard(message, sender, type)).IsEqualTo(0);
 
 	[Test]
 	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcWildEq");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -31,11 +51,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} a=b"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Boo! a - b")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Boo! a - b", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -44,7 +60,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_Single_SubstitutesArg()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSingle");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -52,11 +67,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} World"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Hello, World!")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Hello, World!", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -65,7 +76,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_TwoCaptures_WithLiteralBetween_SubstitutesBothArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTwo");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -73,11 +83,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice to Bob"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Message from Alice to Bob")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: Message from Alice to Bob", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -86,7 +92,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ExactMatch_NoWildcards_FiresCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcExact");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -94,11 +99,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Pong!")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Pong!", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -107,7 +108,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ThreeCaptures_SubstitutesAllThreeArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcThree");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -115,11 +115,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} foo bar baz"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: A=foo B=bar C=baz")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: A=foo B=bar C=baz", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -128,7 +124,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_SingleCaptureGroup_SubstitutesArg()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx1");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -138,11 +133,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} hello world"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: You said: hello world")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: You said: hello world", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -152,7 +143,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_PercentZeroIsFullMatch_PercentOneIsCaptureGroup()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx2");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -163,11 +153,7 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} prefix_42"));
 
 		// %0 is the full match which includes the command token: "{token} prefix_42"
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Full: {token} prefix_42, Part: 42")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"Full: {token} prefix_42, Part: 42", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -179,7 +165,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NamedCaptureGroups_AreNotCountedByPercentPlus()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxPlus");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -189,11 +174,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice Bob"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: 3 Alice Bob Alice")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: 3 Alice Bob Alice", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -203,7 +184,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_TwoCaptureGroups_SubstitutesBothArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx3");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -213,11 +193,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice Bob"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Alice messaged Bob")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: Alice messaged Bob", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -227,7 +203,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NamedCaptureGroups_AccessibleByIndex()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx4");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -237,11 +212,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} 3d6"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: Rolling 3d6", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -252,7 +223,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NamedCaptureGroups_AccessibleByName_ViaRArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxName");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucn");
 		await Parser.CommandParse(1, ConnectionService,
@@ -262,11 +232,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} 3d6"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: Rolling 3d6", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -282,7 +248,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NonCapturingGroup_IsWrittenWithAnEscapedColon()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxNoCap");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucnc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -293,11 +258,7 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} toward door"));
 
 		// %1 is "door", not "toward": the alternation is a group that does not capture.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: door")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: door", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -307,7 +268,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_EscapedColonIsALiteralColonInThePattern()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcColon");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -315,11 +275,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}:go north"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: north")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token}: north", obj, INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -327,7 +283,6 @@ public class UserDefinedCommandsTests
 	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test"));
@@ -336,16 +291,8 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test2"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Value 1 received")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Value 2 received")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce("Value 1 received", WebAppFactoryArg.ExecutorDBRef, INotifyService.NotificationType.Announce);
+		await ExpectHeardOnce("Value 2 received", WebAppFactoryArg.ExecutorDBRef, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -355,7 +302,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask ParentInheritedCommand_Fires()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("pic");
 
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdParent_{token}");
@@ -372,11 +318,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Inherited {token}")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
+		await ExpectHeardOnce($"Inherited {token}", childObj, INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -386,7 +328,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask NoCommandOnAttribute_BlocksTreeDescendants()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("ncb");
 
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NcParent_{token}");
@@ -394,9 +335,10 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentObj}=no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired {token}"));
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&CMD_{token} {childObj}=$dummy:say dummy"));
@@ -405,11 +347,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Leaf fired")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard($"Leaf fired {token}", null, INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -419,7 +357,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask ChildCommand_MasksParentTreeBranch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("cmk");
 
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"MskPar_{token}");
@@ -438,18 +375,10 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&CMD_{token} {childObj}=${token}:@pemit %#=Child {token}"));
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Child {token}")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
+		await ExpectHeardOnce($"Child {token}", childObj, INotifyService.NotificationType.PrivateEmit);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Parent leaf")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
+		await ExpectHeardOnce("Parent leaf", childObj, INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -459,7 +388,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask NoInherit_FallsThrough_ToGrandparent()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("nif");
 
 		var grandObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiGrand_{token}");
@@ -485,11 +413,7 @@ public class UserDefinedCommandsTests
 		// parent's CMD_token has no_inherit so entire branch skipped, falls to grand
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Grand leaf")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
+		await ExpectHeardOnce("Grand leaf", childObj, INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -499,7 +423,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask ParentNoCommand_BlocksLeafInheritance()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("pnc");
 
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"PncPar_{token}");
@@ -519,11 +442,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Leaf {token}")),
-				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+		await ExpectNotHeard($"Leaf {token}", null, INotifyService.NotificationType.PrivateEmit);
 	}
 
 	// Reported bug: a $command like `$test:@emit ...` does NOT match when the
@@ -536,7 +455,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask NoLeadingSpace_TerminalEntry_Matches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcNoLeadSpace");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -544,11 +462,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -558,7 +472,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask LeadingSpace_TerminalEntry_StillMatches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceTerm");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -566,11 +479,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($" {token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -580,7 +489,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask LeadingSpace_CommandList_StillMatches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceList");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -590,11 +498,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($" {token}"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -604,7 +508,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask LeadingSpace_AfterSemicolonInCommandList_StillMatches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceSemi");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -614,11 +517,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;  {token}"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	// A $command that is part of a multi-command ';' list must match against its own per-command
@@ -632,7 +531,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask SemicolonList_SecondCommand_NoLeadingSpace_Match()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiNoSpace");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -642,11 +540,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;{token}"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -656,7 +550,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask TrailingSpace_TerminalEntry_StillMatches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceTerm");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -664,11 +557,7 @@ public class UserDefinedCommandsTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} "));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -677,7 +566,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask TrailingSpace_CommandList_StillMatches()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceList");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -687,11 +575,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"{token} "));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -701,7 +585,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask SemicolonList_FirstCommand_WithTail_Match()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiFirst");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -711,11 +594,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"{token};@emit TAIL"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} Matched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -725,7 +604,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask SemicolonList_MiddleAndLastCommands_Match()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiThree");
 		var mid = TestIsolationHelpers.GenerateUniqueName("ucmid");
@@ -738,16 +616,8 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"@emit HEAD;{mid};{last}"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{mid} MidMatched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{last} LastMatched")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{mid} MidMatched", obj, INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{last} LastMatched", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -758,7 +628,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask SemicolonList_WildcardArg_CapturesPerCommandSlice()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -768,11 +637,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"@emit AAAAAAAAAA;{token} Bob"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "GREET=<Bob>")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce("GREET=<Bob>", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -782,7 +647,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask SemicolonList_TwoWildcardArgs_CapturePerCommandSlice()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var listParser = WebAppFactoryArg.CommandParser;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg2");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
@@ -792,11 +656,7 @@ public class UserDefinedCommandsTests
 		await listParser.CommandListParse(MarkupText.Plain($"@emit IGNORE;{token} Alice to Bob"));
 		await DrainQueue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "MSG=<Alice>-<Bob>")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce("MSG=<Alice>-<Bob>", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -808,7 +668,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask HaltedObjectDollarCommandDoesNotFire()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcHalt");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
@@ -816,20 +675,12 @@ public class UserDefinedCommandsTests
 
 		// Not halted: the $-command fires.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} fired", obj, INotifyService.NotificationType.Emit);
 
 		// Halt the object, then trigger again: the emit count must stay at exactly one.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}=HALT"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} fired", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -842,7 +693,6 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask DollarCommandMatchesAgainstTheEvaluatedLine()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DollarEval");
 		var token = TestIsolationHelpers.GenerateUniqueName("de");
 		await Parser.CommandParse(1, ConnectionService,
@@ -851,10 +701,6 @@ public class UserDefinedCommandsTests
 		// The command name only exists after the strcat evaluates.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"[strcat({token})]"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} evaluated")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} evaluated", obj, INotifyService.NotificationType.Emit);
 	}
 }

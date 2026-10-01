@@ -19,7 +19,7 @@ public class TestWorldIsolationTests
 	public required RealityGameServerFactory SecondaryHost { get; init; }
 
 	[Test]
-	[NotInParallel]
+	[NotInParallel("RecurringJobDocument")]
 	public async Task NoTestHostFiresRecurringJobsInTheBackground()
 	{
 		// RecurringJobTests drives the job document by hand, on a clock of its own. A background runner on

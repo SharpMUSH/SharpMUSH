@@ -19,7 +19,6 @@ namespace SharpMUSH.Tests.Commands;
 /// drifts: how much whitespace the token eats, whether <c>/noeval</c> is honoured, and the fact
 /// that <c>';'</c> followed by a space is POSE rather than SEMIPOSE.</para>
 /// </summary>
-[NotInParallel]
 public class SpeechCommandParityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

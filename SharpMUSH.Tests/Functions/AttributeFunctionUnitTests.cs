@@ -22,16 +22,31 @@ public class AttributeFunctionUnitTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
+	/// <summary>
+	/// Evaluates <paramref name="expression"/> as God with every <c>%!</c> pointing at a thing of this
+	/// test's own, so the attributes it sets and then lists are nobody else's.
+	/// </summary>
+	private async Task<MString> EvalOnOwnObjectAsync(string expression)
+	{
+		if (expression.Contains("%!"))
+		{
+			var holder = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "AttrFn");
+			expression = expression.Replace("%!", holder.ToString());
+		}
+
+		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
+		return result!.Message!;
+	}
+
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/attribute,ZAP!)][get(%!/attribute)]", "ZAP!")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZAP!\e[0m")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!ZAP!\e[0m")]
 	public async Task SetAndGet(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(input));
+		var result = await EvalOnOwnObjectAsync(input);
 		// The ANSI byte stream, which ToString() no longer produces: it is the plain text now.
-		await Assert.That(result!.Message!.Render(MarkupFormat.Ansi)).IsEqualTo(expected);
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -45,12 +60,10 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "them")]
 	public async Task GenderTest1(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(await PronounAsync(null, input)).IsEqualTo(expected);
 	}
 
 	[Test]
-	[DependsOn(nameof(GenderTest1))]
 	[Arguments("%s", "she")]
 	[Arguments("%a", "hers")]
 	[Arguments("%p", "her")]
@@ -61,14 +74,10 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "her")]
 	public async Task GenderTest2(string input, string expected)
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me=F"));
-
-		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(await PronounAsync("F", input)).IsEqualTo(expected);
 	}
 
 	[Test]
-	[DependsOn(nameof(GenderTest2))]
 	[Arguments("%s", "he")]
 	[Arguments("%a", "his")]
 	[Arguments("%p", "his")]
@@ -79,28 +88,22 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "him")]
 	public async Task GenderTest3(string input, string expected)
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me=M"));
-
-		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(await PronounAsync("M", input)).IsEqualTo(expected);
 	}
 
-	/// <summary>
-	/// Runs after all GenderTest2 and GenderTest3 cases complete. Wipes the GENDER attribute
-	/// from player #1 so that the shared state does not affect any subsequent tests or retries
-	/// that rely on the default (gender-neutral) pronouns.
-	/// </summary>
-	[Test]
-	[DependsOn(nameof(GenderTest2))]
-	[DependsOn(nameof(GenderTest3))]
-	public async Task GenderCleanup()
+	/// <summary>Evaluates <paramref name="input"/> as a fresh player whose GENDER is <paramref name="gender"/>.</summary>
+	private async Task<string> PronounAsync(string? gender, string input)
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me="));
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "Gender");
+		if (gender is not null)
+			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&GENDER {player}={gender}"));
+
+		var result = await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(input));
+		return result!.Message!.ToString();
 	}
 
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
 						 "[attrib_set(%!/Test_Grep_CaseSensitive_2,another_test_value)]" +
 						 "[attrib_set(%!/NO_MATCH,different)][grep(%!,Test_Grep_CaseSensitive_*,test)]",
@@ -115,12 +118,11 @@ public class AttributeFunctionUnitTests
 		"TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
 	public async Task Test_Grep_CaseSensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Grepi_CaseInsensitive1_1,has_VALUE)]" +
 						 "[attrib_set(%!/Test_Grepi_CaseInsensitive1_2,also_VALUE)]" +
 						 "[attrib_set(%!/Test_Grepi_CaseInsensitive1_UPPER,more_VALUE)]" +
@@ -133,31 +135,28 @@ public class AttributeFunctionUnitTests
 		"TEST_GREPI_CASEINSENSITIVE2_1 TEST_GREPI_CASEINSENSITIVE2_2 TEST_GREPI_CASEINSENSITIVE2_UPPER")]
 	public async Task Test_Grepi_CaseInsensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_*_match)][attrib_set(%!/WILDGREP_2,different)][wildgrep(%!,WILDGREP_*,*wildcard*)]", "WILDGREP_1")]
 	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_value_match)][wildgrep(%!,WILDGREP_*,test_*_match)]", "WILDGREP_1")]
 	public async Task Test_Wildgrep_Pattern(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/WILDGREP_1,has_WILDCARD)][attrib_set(%!/WILDGREP_UPPER,TEST_WILDCARD)][wildgrepi(%!,WILDGREP_*,*WILDCARD*)]", "WILDGREP_1 WILDGREP_UPPER")]
 	public async Task Test_Wildgrepi_CaseInsensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_001,value1)]" +
 						 "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_002,value2)]" +
 						 "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_100,value3)]" +
@@ -175,12 +174,11 @@ public class AttributeFunctionUnitTests
 		"TESTREGLATTR_UNIQUE_RGX3_A TESTREGLATTR_UNIQUE_RGX3_B TESTREGLATTR_UNIQUE_RGX3_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_001,value1)]" +
 						 "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_002,value2)]" +
 						 "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_100,value3)]" +
@@ -195,12 +193,11 @@ public class AttributeFunctionUnitTests
 						 "[regnattr(%!/^TESTREGNATTR_UNIQUE_CNT3_\\[XYZ\\]$)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Regxattr_RangeWithRegex1_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattr_RangeWithRegex1_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattr_RangeWithRegex1_100,value3)]" +
@@ -217,12 +214,11 @@ public class AttributeFunctionUnitTests
 		"TEST_REGXATTR_RANGEWITHREGEX3_1 TEST_REGXATTR_RANGEWITHREGEX3_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Xattr_FirstMatch1_A,v1)]" +
 						 "[attrib_set(%!/Test_Xattr_FirstMatch1_B,v2)]" +
 						 "[attrib_set(%!/Test_Xattr_FirstMatch1_C,v3)]" +
@@ -238,12 +234,11 @@ public class AttributeFunctionUnitTests
 	[Arguments("[xattr(%!/Test_Xattr_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
 	public async Task Test_Xattr_RangeAndErrors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Xattrp_FirstMatch1_A,v1)]" +
 						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_B,v2)]" +
 						 "[attrib_set(%!/Test_Xattrp_FirstMatch1_C,v3)]" +
@@ -259,25 +254,23 @@ public class AttributeFunctionUnitTests
 	[Arguments("[xattrp(%!/Test_Xattrp_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
 	public async Task Test_Xattrp_RangeAndErrors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[regxattr(%!/Test_Regxattr_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
 	public async Task Test_Regxattr_CountZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[regxattrp(%!/Test_Regxattrp_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
 	public async Task Test_Regxattrp_CountZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -285,31 +278,29 @@ public class AttributeFunctionUnitTests
 	[Arguments("zfun(TEST_ATTR)", "#-1 NO ZONE SET")]
 	public async Task Test_Zfun_NoZoneSet(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Regrep_Unique_Attr_A1,hello_world)][attrib_set(%!/Regrep_Unique_Attr_A2,goodbye)][regrep(%!,Regrep_Unique_Attr_A*,hello)]",
 		"REGREP_UNIQUE_ATTR_A1")]
 	[Arguments("[attrib_set(%!/Regrep_Unique_Attr_B1,match_prefix_value)][attrib_set(%!/Regrep_Unique_Attr_B2,no_match)][regrep(%!,Regrep_Unique_Attr_B*,match_prefix)]",
 		"REGREP_UNIQUE_ATTR_B1")]
 	public async Task Regrep(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Regrepi_Unique_Attr_C1,HELLO_WORLD)][attrib_set(%!/Regrepi_Unique_Attr_C2,goodbye)][regrepi(%!,Regrepi_Unique_Attr_C*,hello)]",
 		"REGREPI_UNIQUE_ATTR_C1")]
 	[Arguments("[attrib_set(%!/Regrepi_Unique_Attr_D1,MixedCase_Value)][attrib_set(%!/Regrepi_Unique_Attr_D2,other)][regrepi(%!,Regrepi_Unique_Attr_D*,mixedcase)]",
 		"REGREPI_UNIQUE_ATTR_D1")]
 	public async Task Regrepi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -319,7 +310,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("regedit(aaa,a,b)", "baa")]
 	public async Task Regedit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -333,7 +324,6 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
 	[Arguments(
 		"[setq(0,create(AttrFuncTest_Pgrep_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Pgrep_ParentObj_ParentInherit)))]" +
@@ -342,12 +332,11 @@ public class AttributeFunctionUnitTests
 		"PGREP_PARENTINHERIT_ATTR")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments(
 		"[setq(0,create(AttrFuncTest_Reglattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Reglattrp_ParentObj_ParentInherit)))]" +
 		"[attrib_set(%q0/REGLATTRP_PARENTINHERIT_001,value1)]" +
@@ -357,12 +346,11 @@ public class AttributeFunctionUnitTests
 		"REGLATTRP_PARENTINHERIT_001 REGLATTRP_PARENTINHERIT_002 REGLATTRP_PARENTINHERIT_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments(
 		"[setq(0,create(AttrFuncTest_Regnattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Regnattrp_ParentObj_ParentInherit)))]" +
 		"[attrib_set(%q0/REGNATTRP_PARENTINHERIT_001,value1)]" +
@@ -372,12 +360,11 @@ public class AttributeFunctionUnitTests
 		"3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
@@ -392,12 +379,11 @@ public class AttributeFunctionUnitTests
 		"REGXATTRP_PARENTINHERIT_001 REGXATTRP_PARENTINHERIT_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)]" +
 						 "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1,leaf1)]" +
 						 "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH2,leaf2)]" +
@@ -414,12 +400,11 @@ public class AttributeFunctionUnitTests
 		"TEST_LATTR_ATTRIBUTETREES3")]
 	public async Task Test_Lattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Grep_AttributeTrees,root)]" +
 						 "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH1,has_search_term)]" +
 						 "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH2,different)]" +
@@ -430,12 +415,11 @@ public class AttributeFunctionUnitTests
 						 "[grep(%!,Test_Grep_AttributeTrees_2**,test)]", "TEST_GREP_ATTRIBUTETREES_2 TEST_GREP_ATTRIBUTETREES_2`SUB1")]
 	public async Task Test_Grep_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Reglattr_AttributeTrees1,val)]" +
 						 "[attrib_set(%!/Test_Reglattr_AttributeTrees1`A,val1)]" +
 						 "[attrib_set(%!/Test_Reglattr_AttributeTrees1`B,val2)]" +
@@ -448,12 +432,11 @@ public class AttributeFunctionUnitTests
 		"TEST_REGLATTR_ATTRIBUTETREES2_001 TEST_REGLATTR_ATTRIBUTETREES2_001`SUB")]
 	public async Task Test_Reglattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Regnattr_AttributeTrees1,v)]" +
 						 "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L1,v)]" +
 						 "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L2,v)]" +
@@ -465,12 +448,11 @@ public class AttributeFunctionUnitTests
 						 "[regnattr(%!/^Test_Regnattr_AttributeTrees2)]", "3")]
 	public async Task Test_Regnattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Wildgrep_AttributeTrees,val)]" +
 						 "[attrib_set(%!/Test_Wildgrep_AttributeTrees`CHILD,has_pattern)]" +
 						 "[attrib_set(%!/Test_Wildgrep_AttributeTrees`OTHER,no_match)]" +
@@ -478,12 +460,11 @@ public class AttributeFunctionUnitTests
 		"TEST_WILDGREP_ATTRIBUTETREES`CHILD")]
 	public async Task Test_Wildgrep_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Regxattr_AttributeTrees,v1)]" +
 						 "[attrib_set(%!/Test_Regxattr_AttributeTrees`A,v2)]" +
 						 "[attrib_set(%!/Test_Regxattr_AttributeTrees`B,v3)]" +
@@ -492,12 +473,11 @@ public class AttributeFunctionUnitTests
 		"TEST_REGXATTR_ATTRIBUTETREES`A TEST_REGXATTR_ATTRIBUTETREES`B")]
 	public async Task Test_Regxattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get,testvalue)]" +
 						 "[get(%!/Test_Basic_AttribSet_And_Get)]", "testvalue")]
 	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get21,val1)]" +
@@ -505,20 +485,19 @@ public class AttributeFunctionUnitTests
 						 "[get(%!/Test_Basic_AttribSet_And_Get21)][get(%!/Test_Basic_AttribSet_And_Get22)]", "val1val2")]
 	public async Task Test_Basic_AttribSet_And_Get(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(str));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		var result = await EvalOnOwnObjectAsync(str);
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Lattr_Simple1,v1)]" +
 						 "[attrib_set(%!/Test_Lattr_Simple2,v2)]" +
 						 "[lattr(%!/Test_Lattr_Simple*)]",
 		"TEST_LATTR_SIMPLE1 TEST_LATTR_SIMPLE2")]
 	public async Task Test_Lattr_Simple(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(str));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		var result = await EvalOnOwnObjectAsync(str);
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -634,7 +613,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(name,)", "0")]
 	public async Task Valid_Name(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -643,12 +622,11 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
 	public async Task Valid_AttributeValue(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await EvalOnOwnObjectAsync(str);
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_V_AttrName,groupsvalue)][v(Test_V_AttrName)]", "groupsvalue")]
 	[Arguments("[attrib_set(%!/Test_V_AttrName2,hello world)][v(Test_V_AttrName2)]", "hello world")]
 	public async Task Test_V_AttributeName(string str, string expected)

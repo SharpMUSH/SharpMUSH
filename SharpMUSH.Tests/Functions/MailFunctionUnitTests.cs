@@ -6,37 +6,38 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-[NotInParallel]
 public class MailFunctionUnitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	/// <summary>Evaluates as this test's own player, whose mailbox holds exactly the three fixture messages.</summary>
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParserFor(_player);
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	// Unique test identifier to ensure we don't conflict with other test runs
 	private static readonly string TestRunId = Guid.NewGuid().ToString("N")[..8];
-	private static bool _setupComplete;
 
+	private DBRef _player;
+
+	/// <summary>
+	/// Every test gets a fresh player who has mailed itself three messages. God's mailbox is the one
+	/// every other mail test writes to, so counting it was only ever exact when nothing else ran. The
+	/// player is a wizard, as God was: <c>mail(&lt;player&gt;)</c> is refused to a mortal here, even
+	/// for their own name.
+	/// </summary>
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
 	{
-		// [NotInParallel] on the class guarantees sequential execution — no semaphore needed.
-		if (_setupComplete) return;
-
-		var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
+		_player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "MailFunctions");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
+			MarkupText.Plain($"@set {_player}=WIZARD"));
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(_player))).Expect<AnySharpObject>();
 		var testPlayer = executor.Expect<SharpPlayer>();
-
-		var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
-
-		await foreach (var mail in existingMail)
-		{
-			await Mediator.Send(new DeleteMailCommand(mail));
-		}
 
 		var testMail1 = new SharpMail
 		{
@@ -89,8 +90,6 @@ public class MailFunctionUnitTests
 		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
 		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
 		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
-
-		_setupComplete = true;
 	}
 
 	[Test]
@@ -402,7 +401,8 @@ public class MailFunctionUnitTests
 	[Arguments("objeval(here,mailstats())", "#-1 NO SUCH PLAYER")]
 	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		// God, who controls the room objeval() runs as.
+		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

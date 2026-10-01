@@ -19,6 +19,7 @@ public class RealityLiveCommandDispatchTests
 	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
+	// Rewrites the shared world's reality configuration, which every other test would see.
 	[Test, NotInParallel]
 	[Arguments("nearby", true, false)]
 	[Arguments("location", true, false)]

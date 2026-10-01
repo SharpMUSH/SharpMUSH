@@ -1,7 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -11,11 +9,8 @@ namespace SharpMUSH.Tests.Configuration;
 /// </summary>
 public class CodeGenerationTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IOptionsWrapper<SharpMUSHOptions> Configuration =>
-		WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+	/// <summary>The accessor reads whatever options it is handed; the shipped defaults populate every property.</summary>
+	private static SharpMUSHOptions Options => SharpMUSHOptions.Default();
 
 	#region ConfigMetadata Tests
 
@@ -171,7 +166,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task ConfigAccessor_GetValue_ReturnsCorrectValue()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 
 		var mudNameValue = ConfigAccessor.GetValue(options, "MudName");
 		await Assert.That(mudNameValue).IsNotNull();
@@ -185,7 +180,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task ConfigAccessor_GetValue_InvalidProperty_ReturnsNull()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 
 		var invalidValue = ConfigAccessor.GetValue(options, "InvalidPropertyName123");
 		await Assert.That(invalidValue).IsNull();
@@ -194,7 +189,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task ConfigAccessor_TryGetValue_SucceedsForValidProperty()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 
 		var success = ConfigAccessor.TryGetValue(options, "MudName", out var value);
 		await Assert.That(success).IsTrue();
@@ -205,7 +200,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task ConfigAccessor_TryGetValue_FailsForInvalidProperty()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 
 		var success = ConfigAccessor.TryGetValue(options, "InvalidPropertyName123", out var value);
 		await Assert.That(success).IsFalse();
@@ -257,7 +252,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task ConfigAccessor_AllProperties_CanBeAccessed()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 		var propertyNames = ConfigMetadata.PropertyToAttributeName.Keys;
 
 		foreach (var propName in propertyNames)
@@ -275,7 +270,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task Integration_ConfigMetadataAndAccessor_WorkTogether()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 
 		var propertyToAttr = ConfigMetadata.PropertyToAttributeName;
 		var firstProperty = propertyToAttr.First();
@@ -294,7 +289,7 @@ public class CodeGenerationTests
 	[Test]
 	public async Task Integration_AllMetadataProperties_HaveValidAccessors()
 	{
-		var options = Configuration.CurrentValue;
+		var options = Options;
 		var propertyMetadata = ConfigMetadata.PropertyMetadata;
 
 		foreach (var (propName, metadata) in propertyMetadata)

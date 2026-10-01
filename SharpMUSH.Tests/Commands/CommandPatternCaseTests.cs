@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -14,13 +13,11 @@ namespace SharpMUSH.Tests.Commands;
 /// is caseless unless <c>CASE</c> is set. <c>^</c>-listen patterns already do this
 /// (<c>ListenAttributeSearch</c>).
 /// </summary>
-[NotInParallel]
 public class CommandPatternCaseTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
@@ -69,9 +66,12 @@ public class CommandPatternCaseTests
 	}
 
 	private async Task AssertEmitted(DBRef obj, string token, int times)
-		=> await NotifyService
-			.Received(times)
-			.Notify(TestHelpers.MatchingObject(WebAppFactoryArg.ExecutorDBRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} fired")),
-				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token} fired", obj);
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(god).Count(delivery =>
+				delivery.Message == $"{token} fired" && delivery.Sender == obj
+				&& delivery.Type == INotifyService.NotificationType.Emit))
+			.IsEqualTo(times);
+	}
 }

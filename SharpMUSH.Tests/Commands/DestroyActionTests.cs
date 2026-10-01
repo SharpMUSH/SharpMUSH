@@ -13,7 +13,6 @@ namespace SharpMUSH.Tests.Commands;
 /// command lists run from the queue, so every assertion is a side effect the action wrote, polled until
 /// the queue has drained it.
 /// </summary>
-[NotInParallel]
 public class DestroyActionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

@@ -360,7 +360,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask God_CanSetTrustFlag()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GodTrustFlagTestObj"));

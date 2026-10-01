@@ -6,9 +6,12 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Functions;
 
-[NotInParallel]
 public class DatabaseFunctionUnitTests
 {
+	// No test writes to the table, so it is seeded once and read concurrently. Reseeding it per test
+	// truncated it under whichever test was reading at the time.
+	private static readonly RunOnce TableSetup = new();
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -19,7 +22,9 @@ public class DatabaseFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Before(Test)]
-	public async Task InitializeAsync()
+	public Task InitializeAsync() => TableSetup.RunAsync(SeedAsync);
+
+	private async Task SeedAsync()
 	{
 		// Use unique table names for function tests to avoid interference with command tests
 		var connectionString = MySqlTestServer.Instance.GetConnectionString();

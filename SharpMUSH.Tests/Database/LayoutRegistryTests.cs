@@ -30,7 +30,7 @@ public class LayoutRegistryTests
 		},
 		new LayoutSettings(LeftSidebarEnabled: true, RightSidebarEnabled: false, FooterEnabled: true));
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Layouts_UpsertGetListRemove()
 	{
 		await Registry.UpsertLayoutAsync("test-profile", SampleLayout());
@@ -60,7 +60,7 @@ public class LayoutRegistryTests
 		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GetLayout_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetLayoutAsync("never-customized-scope");

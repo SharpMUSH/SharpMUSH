@@ -20,7 +20,6 @@ namespace SharpMUSH.Tests.Plugins;
 ///   holds.</item>
 /// </list>
 /// </summary>
-[NotInParallel]
 public class ApplicationSourceOverlayTests
 {
 	private static string AppSourceDllPath =>

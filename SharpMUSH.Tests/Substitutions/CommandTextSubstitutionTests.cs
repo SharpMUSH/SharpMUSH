@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.Substitutions;
 /// tools/oracle. Object names differ, and the /noeval case uses <c>@emit</c> where the transcript used
 /// <c>@pemit</c>, because SharpMUSH still evaluates the right side of an <c>=</c> command under /noeval.
 /// </summary>
-[NotInParallel]
 public class CommandTextSubstitutionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -49,7 +48,7 @@ public class CommandTextSubstitutionTests
 		await Mediator.Send(new AdmitCommandListRequest(MarkupText.Plain(list),
 			Factory.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState,
 			new DbRefAttribute(_actor.DbRef, ["CMDTEXT"]), -1));
-		await Factory.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+		await Factory.Services.GetRequiredService<ITaskScheduler>().SettleForTestsAsync();
 		return Factory.Notifications.For(_actor.DbRef).Skip(before).ToList();
 	}
 
@@ -172,22 +171,15 @@ public class CommandTextSubstitutionTests
 	{
 		var exit = $"cmdexit{Guid.NewGuid():N}"[..20];
 		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
-		// @open builds the exit in the executor's own location, so God stands in the actor's room for it.
-		await God($"@teleport/silent me={_room}");
-		try
-		{
-			await God($"@open {exit}={destination}");
-		}
-		finally
-		{
-			await God("@teleport/silent me=#0");
-		}
+		await God($"@open {exit}={destination},,{_room}");
 
 		await Assert.That(await Queued($"@pemit me=pre;{exit};@pemit me=after u=%u"))
 			.Contains($"after u=GOTO {exit}");
 	}
 
 	[Test]
+	// The hook is on THINK for the whole game while it is set.
+	[NotInParallel]
 	public async Task HookSeesTheRawAndTheEvaluatedCommand()
 	{
 		var hook = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "CmdTextHook");

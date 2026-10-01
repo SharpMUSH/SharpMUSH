@@ -44,14 +44,14 @@ public class DbWalkPermissionTests
 	/// <summary>Mortal, its own room, and something in that room — the shared setup for the filter cases.</summary>
 	private async Task<(TestIsolationHelpers.TestPlayer Mortal, string Room)> MortalInARoom(string label)
 	{
+		var own = await Dig(TestIsolationHelpers.GenerateUniqueName($"{label}Room"));
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, label);
+			WebAppFactoryArg.Services, Mediator, ConnectionService, label, own);
 		var room = (await EvalAs(mortal.DbRef, "loc(%#)")).Split(':')[0];
 		return (mortal, room);
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task AMortalCannotListTheContentsOfARoomItIsNotIn()
 	{
 		var faraway = await Dig("WalkGateRoom");
@@ -75,7 +75,6 @@ public class DbWalkPermissionTests
 	/// lexits()". All of them are one walk now, so all of them refuse together.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task ConExitAndNextRefuseWhereLconRefuses()
 	{
 		var faraway = await Dig("WalkFamilyRoom");
@@ -103,7 +102,6 @@ public class DbWalkPermissionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task StandingInTheRoomIsEnoughToListIt()
 	{
 		var (mortal, room) = await MortalInARoom("WalkStanding");
@@ -121,7 +119,6 @@ public class DbWalkPermissionTests
 	/// <c>skipdark</c>, which is a separate, additional pass.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task ADarkObjectIsHiddenFromAMortalStandingInTheRoom()
 	{
 		var (mortal, room) = await MortalInARoom("WalkDark");
@@ -148,7 +145,6 @@ public class DbWalkPermissionTests
 	/// it in its own contents listing.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task TheOwnerOfADarkObjectStillSeesItListed()
 	{
 		var (mortal, room) = await MortalInARoom("WalkOwnDark");
@@ -166,7 +162,6 @@ public class DbWalkPermissionTests
 	/// listed everything.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task LconsSecondArgumentSelectsAType()
 	{
 		var (mortal, room) = await MortalInARoom("WalkKeyword");
@@ -200,7 +195,6 @@ public class DbWalkPermissionTests
 	/// forms return a window of the same walk. Both now count the same filtered list, so they agree.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task CountAndWindowAgreeWithTheList()
 	{
 		var room = await Dig("WalkCountRoom");
@@ -222,7 +216,6 @@ public class DbWalkPermissionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task TheWindowFormsRejectAStartOrCountBelowOne()
 	{
 		var room = await Dig("WalkRangeRoom");

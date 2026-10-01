@@ -9,14 +9,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-/// <summary>
-/// <c>[NotInParallel]</c>: <c>DrainImmediateQueueForTests</c> waits on the whole of the immediate
-/// queue, which <see cref="ServerWebAppFactory"/> shares across the session, and the drain here uses
-/// the default five-second timeout that throws. It therefore has to be kept off the same slot as
-/// <see cref="QueueQuotaTests"/>, which parks a full quota's worth of entries on that queue — the
-/// attribute is only load-bearing when both ends carry it.
-/// </summary>
-[NotInParallel]
 public class DidItServiceTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -136,6 +128,19 @@ public class DidItServiceTests
 	}
 
 	private IDidItService DidItService => WebAppFactoryArg.Services.GetRequiredService<IDidItService>();
+
+	/// <summary>Polls <paramref name="thing"/>'s <paramref name="attribute"/> until it has a value, or ten seconds pass.</summary>
+	private async Task<string> AttributeOnceSet(DBRef thing, string attribute)
+	{
+		var deadline = DateTime.UtcNow.AddSeconds(10);
+		while (true)
+		{
+			var value = (await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/{attribute})]")))!
+				.Message!.ToPlainText().Trim();
+			if (value.Length > 0 || DateTime.UtcNow >= deadline) return value;
+			await Task.Delay(20);
+		}
+	}
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{
@@ -320,10 +325,8 @@ public class DidItServiceTests
 
 		await Assert.That(messages.Any(m => m.Contains("sneaks."))).IsFalse();
 
-		await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
-			.DrainImmediateQueueForTests();
-
-		var marked = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MARKED)]"));
-		await Assert.That(marked!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+		// The action attribute is queued; wait for this test's own entry rather than draining the
+		// session-wide queue, which every other running test is writing to.
+		await Assert.That(await AttributeOnceSet(thing, "MARKED")).IsEqualTo("yes");
 	}
 }
