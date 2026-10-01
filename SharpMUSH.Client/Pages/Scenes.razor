@@ -229,6 +229,8 @@
 
             if (created)
             {
+                // The section sidebar read its counts when the layout mounted, and nothing here remounts it.
+                SceneService.ReportChanged();
                 _starting = false;
                 _newTitle = string.Empty;
                 _newPublic = true;

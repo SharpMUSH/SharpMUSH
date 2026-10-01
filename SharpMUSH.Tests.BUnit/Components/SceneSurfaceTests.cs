@@ -689,6 +689,56 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// A scene the form saw created is reported, so the section sidebar — mounted with the layout, and
+	/// not remounted by anything the form does — reloads its counts and live rows.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ACreatedScene_IsReportedToTheRestOfTheSection()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = true;
+		var reports = 0;
+		Services.GetRequiredService<SceneService>().Changed += () => reports++;
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("A quiet corner");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (reports == 0) throw new InvalidOperationException("not reported yet");
+		}, TimeSpan.FromSeconds(10));
+		await Assert.That(reports).IsEqualTo(1);
+	}
+
+	/// <summary>A create the engine refused changed no list, so nothing is reported.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ARefusedCreate_ReportsNothing()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.ASceneAppears = false;
+		var reports = 0;
+		Services.GetRequiredService<SceneService>().Changed += () => reports++;
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		cut.Find(".scene-start button").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-start-title input").Input("Refused Quietly");
+		cut.Find(".scene-start-submit").Click();
+
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create Refused Quietly"),
+			TimeSpan.FromSeconds(5));
+		await Task.Delay(TimeSpan.FromSeconds(3));
+
+		await Assert.That(reports).IsEqualTo(0);
+	}
+
+	/// <summary>
 	/// A hub that exists but has dropped is revived, not left alone.
 	///
 	/// <para>The page asked for ConnectAsync, which returns the moment it sees a hub object —

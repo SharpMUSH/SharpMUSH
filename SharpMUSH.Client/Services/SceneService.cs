@@ -12,6 +12,15 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
+	/// <summary>
+	/// Raised when this tab knows the scene lists have changed — a scene it started has appeared — so
+	/// views that read them once, such as the section sidebar, read them again.
+	/// </summary>
+	public event Action? Changed;
+
+	/// <summary>Tells every view of the scene lists that they have changed.</summary>
+	public void ReportChanged() => Changed?.Invoke();
+
 	/// <summary>Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request.</summary>
 	private readonly SingleFlight<string, ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
 

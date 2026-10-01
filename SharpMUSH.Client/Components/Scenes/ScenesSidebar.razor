@@ -54,11 +54,10 @@
         }
         @foreach (var scene in (_live ?? []).Take(LiveShown))
         {
-            var s = scene;
-            var title = Loc.Title(s);
-            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@SceneText.Image(s)"
-                        Name="@title" Label="@title" Sub="@s.RoomName" Href="@($"/scenes/{Uri.EscapeDataString(s.Id)}/live")"
-                        IsCurrent="@IsScene(s)" Collapsed="@Collapsed" />
+            var title = Loc.Title(scene);
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@SceneText.Image(scene)"
+                        Name="@title" Label="@title" Sub="@scene.RoomName" Href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}/live")"
+                        IsCurrent="@IsScene(scene)" Collapsed="@Collapsed" />
         }
     </nav>
 </div>
@@ -77,17 +76,29 @@
     private string _path = "/scenes";
     private string _filter = ScenesFilter.All;
     private int _mineGeneration;
+    private int _listsGeneration;
 
     protected override async Task OnInitializedAsync()
     {
         Nav.LocationChanged += OnLocationChanged;
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        Scenes.Changed += OnScenesChanged;
         Locate();
+        await LoadListsAsync();
+        await LoadMineAsync();
+    }
+
+    /// <summary>The live and recent lists behind the header counts and the live rows.</summary>
+    private async Task LoadListsAsync()
+    {
+        // A reload that overtakes an earlier one: only the newest answer counts.
+        var generation = ++_listsGeneration;
         var live = Scenes.GetActiveScenesAsync();
         var recent = Scenes.GetRecentScenesAsync();
-        _live = await live is IReadOnlyList<SceneSummary> running ? running : null;
-        _recent = await recent is IReadOnlyList<SceneSummary> latest ? latest : null;
-        await LoadMineAsync();
+        var running = await live is IReadOnlyList<SceneSummary> active ? active : null;
+        var latest = await recent is IReadOnlyList<SceneSummary> ended ? ended : null;
+        if (generation != _listsGeneration) return;
+        (_live, _recent) = (running, latest);
     }
 
     /// <summary>"Your scenes" belongs to the character this tab acts as; with none there is no row at all.</summary>
@@ -119,6 +130,16 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// The lists changed under the sidebar — a scene started on /scenes, which neither navigates nor
+    /// remounts this layout — so every count it shows is read again.
+    /// </summary>
+    private void OnScenesChanged() => _ = InvokeAsync(async () =>
+    {
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
+        StateHasChanged();
+    });
+
     private void OnActingChanged() => _ = InvokeAsync(async () =>
     {
         await LoadMineAsync();
@@ -138,5 +159,6 @@
     {
         Nav.LocationChanged -= OnLocationChanged;
         AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+        Scenes.Changed -= OnScenesChanged;
     }
 }

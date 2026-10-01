@@ -149,6 +149,27 @@ public class ScenesSidebarTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scenes-side-browse a[href='/scenes/active'] .kit-row-count").TextContent).IsEqualTo("7");
 	}
 
+	/// <summary>
+	/// A scene started on /scenes shows up here. The sidebar read its lists once, on mount, and a create
+	/// neither remounts the section layout nor navigates, so the counts and live rows stayed as they were
+	/// until the reader left the section.
+	/// </summary>
+	[Test]
+	public async Task AReportedChange_ReloadsTheCountsAndTheLiveRows()
+	{
+		var cut = RenderAt("/scenes", CharactersApiFake.Anonymous(this));
+		_api.Extra[SceneJson.Active] = SceneJson.List(
+			SceneJson.Scene("S1", "Salt Market at Dusk", image: "/api/wiki-assets/s/salt.jpg"),
+			SceneJson.Scene("S2", "Lamplighters' Vigil"),
+			SceneJson.Scene("S4", "A Quiet Corner"));
+
+		Services.GetRequiredService<SceneService>().ReportChanged();
+
+		cut.WaitForAssertion(() => cut.Find(".scenes-side-live a.kit-row[href='/scenes/S4/live']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("3 live");
+		await Assert.That(cut.Find(".scenes-side-browse a[href='/scenes/active'] .kit-row-count").TextContent).IsEqualTo("3");
+	}
+
 	[Test]
 	public async Task Collapsed_KeepsTheIconsAndSceneLeads_Only()
 	{
