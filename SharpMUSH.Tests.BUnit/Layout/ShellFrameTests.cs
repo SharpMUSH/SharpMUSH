@@ -87,4 +87,13 @@ public class ShellFrameTests
 		var touch = MediaBlock(Shell(), "(max-width: 760px), (pointer: coarse)");
 		await Assert.That(Regex.IsMatch(touch, @"\.kit-pagebar-toggle\s*\{[^}]*display:\s*none")).IsTrue();
 	}
+
+	[Test]
+	public async Task PlayFocusMode_TakesTheShellChromeAway_TheTouchHeaderIncluded()
+	{
+		var rule = Regex.Match(Shell(), @"\.phosphor-shell:has\(\.play--focus\)\s*:is\((?<parts>[^)]*)\)\s*\{[^}]*display:\s*none");
+		await Assert.That(rule.Success).IsTrue();
+		foreach (var part in new[] { ".phosphor-rail", ".phosphor-topbar", ".phosphor-topzone", ".phosphor-footer", ".phosphor-widget-aside" })
+			await Assert.That(rule.Groups["parts"].Value).Contains(part);
+	}
 }

@@ -30,6 +30,7 @@
 
 .play--focus {
     grid-template-columns: minmax(0, 1fr);
+    padding: 8px;
 }
 
 .play-main {
@@ -303,6 +304,7 @@
     }
     .play--focus {
         grid-template-columns: minmax(0, 1fr);
+        padding: 8px;
     }
 }
 
@@ -324,6 +326,19 @@
         background: var(--surface);
     }
     .play--focus .play-tabs {
+        display: none;
+    }
+    /* Focus on a phone: the shell's header is gone too (shell.css), so the card meets the screen's
+       edges, clear of the notch and the home indicator (viewport-fit=cover). */
+    .play--focus {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        gap: 0;
+    }
+    .play--focus ::deep .scene-card {
+        border-width: 0;
+        border-radius: 0;
+    }
+    .play--focus ::deep .scene-card-sub {
         display: none;
     }
     .play-story-scroll {
