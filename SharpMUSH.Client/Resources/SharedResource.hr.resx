@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Pronađi lika po imenu „{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Povezan kao {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>U sceni</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Poruke</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# ovdje}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# izlaz} few {# izlaza} other {# izlaza}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Priča</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Prikaz</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scena · bilježi se u arhivu scena</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Potpuni ispis · s kanalima i porukama</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# tamo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zaključano</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zatvoreno</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Napušta scenu</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Idi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Pogledaj</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ostani</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pritisnite {0} za odlazak</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>U ovoj sceni</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Neaktivan {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Pojedinosti</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerija</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>List lika: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poza</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Govor</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Napišite svoju pozu…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Recite nešto…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Govorite izvan uloge…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Upišite naredbu…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Vrsta poruke</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scena</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Prostorija</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Dijelovi igre</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Ovdje nema nikoga drugog.</value>
+  </data>
 </root>

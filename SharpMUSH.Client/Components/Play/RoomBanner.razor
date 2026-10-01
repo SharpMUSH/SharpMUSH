@@ -1,0 +1,70 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §5.2 the room banner, from room.info: the picture, the name and "area · N here · N exits".
+   Description shows the description over the picture (150→200px); Minimise collapses to the strip.
+   There is no Look button. Nothing renders before a room.info arrives. *@
+@if (Info is not null)
+{
+    <GlassBanner Title="@Info.Name" ImageUrl="@Info.Image?.Url" Alt="@Info.Image?.Alt" Focal="@Info.Image?.Focal"
+                 Hue="@NameHue.Of(Info.Name)" Open="@_descOpen" Minimised="@Minimised" MinimisedChanged="MinimisedChanged"
+                 Fact="@StripFact" HeadingLevel="1">
+        <Secondary>@Facts</Secondary>
+        <Actions>
+            @if (HasDescription)
+            {
+                <CapsuleButton Icon="@Icons.Material.Outlined.Notes" Pressed="@_descOpen" Primary="@_descOpen"
+                               Class="room-banner-desc" OnClick="ToggleDescription">@Loc["NavPlayDescription"]</CapsuleButton>
+            }
+        </Actions>
+        <OpenContent>
+            <div class="room-banner-desc-text">@Info.Desc?.Text</div>
+        </OpenContent>
+    </GlassBanner>
+}
+
+@code {
+    /// <summary>The latest <c>room.info</c>, or null before one arrives.</summary>
+    [Parameter] public RoomInfo? Info { get; set; }
+
+    /// <summary>How many occupants <c>room.contents</c> lists.</summary>
+    [Parameter] public int Here { get; set; }
+
+    /// <summary>How many exits <c>room.exits</c> lists.</summary>
+    [Parameter] public int Exits { get; set; }
+
+    [Parameter] public bool Minimised { get; set; }
+    [Parameter] public EventCallback<bool> MinimisedChanged { get; set; }
+
+    private bool _descOpen;
+    private string? _roomSeen;
+
+    private bool HasDescription => !string.IsNullOrWhiteSpace(Info?.Desc?.Text);
+
+    protected override void OnParametersSet()
+    {
+        // A new room closes the previous room's description.
+        var room = Info?.ObjId ?? Info?.Dbref ?? Info?.Name;
+        if (!string.Equals(room, _roomSeen, StringComparison.Ordinal))
+        {
+            _roomSeen = room;
+            _descOpen = false;
+        }
+        if (!HasDescription) _descOpen = false;
+    }
+
+    private void ToggleDescription() => _descOpen = !_descOpen;
+
+    private string Facts => string.Join(" · ", new[]
+    {
+        Info?.Area,
+        Loc.Plural("NavPlayHereCount", "count", Here),
+        Loc.Plural("NavPlayExitCount", "count", Exits),
+    }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    private string StripFact => string.Join(" · ", new[]
+    {
+        Info?.Area,
+        Loc.Plural("NavPlayHereCount", "count", Here),
+    }.Where(s => !string.IsNullOrWhiteSpace(s)));
+}

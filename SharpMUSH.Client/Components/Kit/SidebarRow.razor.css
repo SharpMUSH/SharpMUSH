@@ -201,3 +201,19 @@
 	outline: 2px solid var(--accent);
 	outline-offset: 1px;
 }
+
+/* the collapsed strip shows a channel as a tile with its first letter, #P (board 07) */
+.kit-row--collapsed .kit-row-hash {
+	width: 38px;
+	height: 38px;
+	border-radius: 10px;
+	background: var(--surface-2);
+	display: grid;
+	place-items: center;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.kit-row--collapsed.kit-row--unread .kit-row-hash {
+	color: var(--text);
+}

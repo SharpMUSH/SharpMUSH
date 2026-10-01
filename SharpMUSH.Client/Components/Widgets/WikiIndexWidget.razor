@@ -60,7 +60,7 @@
                     <div class="wiki-cat-card">
                         @if (ImageUrlPolicy.IsRenderable(g.Cover))
                         {
-                            <img class="wiki-cat-cover" src="@g.Cover!.Trim()" alt="" loading="lazy" />
+                            <img class="wiki-cat-cover" src="@ApiUrl.Resolve(g.Cover!)" alt="" loading="lazy" />
                         }
                         else
                         {

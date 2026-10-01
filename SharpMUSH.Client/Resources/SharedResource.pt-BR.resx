@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Encontrar um personagem chamado “{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Conectado como {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>Em cena</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Canais</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Mensagens</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# aqui}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# saída} other {# saídas}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Descrição</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>História</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Visualização</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Cena · registrada no arquivo de cenas</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Saída completa · canais e mensagens incluídos</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# lá}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Trancado</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Fechado</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Sai da cena</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Ir</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Olhar</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ficar</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pressione {0} para ir</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Imagem inteira</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Perfil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>Nesta cena</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inativo {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detalhes</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galeria</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Ver tudo</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Ficha de personagem: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Dizer</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Comando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Escreva sua pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Diga algo…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Fale fora do personagem…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Digite um comando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Tipo de mensagem</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Cena</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Sala</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Seções do jogo</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Não há mais ninguém aqui.</value>
+  </data>
 </root>

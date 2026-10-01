@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>„{0}” nevű karakter keresése</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Csatlakozva: {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>Jelenetben</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Üzenetek</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# itt}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# kijárat} other {# kijárat}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Leírás</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Történet</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Nézet</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Jelenet · a jelenetarchívumba kerül</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Teljes kimenet · csatornákkal és üzenetekkel</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# ott}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zárva</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zárt</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Elhagyja a jelenetet</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Menj</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Nézd meg</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Maradok</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Nyomja meg: {0}</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Teljes kép</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>Ebben a jelenetben</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Tétlen {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Részletek</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galéria</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterlap: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Póz</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Beszéd</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Parancs</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Írd meg a pózodat…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Mondj valamit…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Szerepen kívül…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Írj be egy parancsot…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Üzenettípus</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Jelenet</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Helyszín</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Játékrészek</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Rajtad kívül senki sincs itt.</value>
+  </data>
 </root>

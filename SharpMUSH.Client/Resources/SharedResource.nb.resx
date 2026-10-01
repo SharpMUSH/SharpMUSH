@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Finn en figur som heter «{0}»</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Tilkoblet som {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>I scene</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Meldinger</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# her}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# utgang} other {# utganger}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beskrivelse</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Historie</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Visning</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scene · loggføres i scenearkivet</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Full utdata · kanaler og meldinger inkludert</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# der}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Låst</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Stengt</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Forlater scenen</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Gå</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Se</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Bli</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Trykk {0} for å gå</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Hele bildet</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>I denne scenen</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inaktiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galleri</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterark: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Si</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Skriv posen din…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Si noe…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Snakk utenfor rollen…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Skriv en kommando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Meldingstype</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scene</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Rom</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Spilldeler</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Ingen andre er her.</value>
+  </data>
 </root>

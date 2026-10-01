@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>查找名为“{0}”的角色</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>已作为 {0} 连接</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>场景中</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {此处 # 人}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, other {# 个出口}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>故事</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>视图</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>场景 · 记录到场景存档</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>完整输出 · 包括频道和私信</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {那里 # 人}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>已锁</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>已关闭</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>离开场景</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>前往</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>查看</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>留下</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>按 {0} 前往</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>完整图片</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>资料</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>在此场景中</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>闲置 {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>图库</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>角色卡：{0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>动作</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>说</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>场外</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>命令</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>写下你的动作…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>说点什么…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>场外发言…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>输入命令…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>消息类型</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>场景</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>房间</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>游戏分区</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>这里没有其他人。</value>
+  </data>
 </root>

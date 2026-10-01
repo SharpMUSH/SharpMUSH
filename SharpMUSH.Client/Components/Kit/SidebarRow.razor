@@ -57,6 +57,9 @@ else
     private string SecondFallbackStyle =>
         $"background:hsl({NameHue.Of(Name2)} 30% 24%);color:hsl({NameHue.Of(Name2)} 45% 82%);";
 
+    /// <summary>Collapsed, a channel keeps its first letter so the strip can tell them apart (board 07).</summary>
+    private string ChannelMark => Collapsed && Label.Length > 0 ? $"#{char.ToUpperInvariant(Label[0])}" : "#";
+
     private string RowClass => string.Join(' ', new[]
     {
         "kit-row",
@@ -86,7 +89,7 @@ else
                 case SidebarLead.Image:
                     @if (ImageUrlPolicy.IsRenderable(ImageUrl))
                     {
-                        <img class="kit-row-img" src="@ImageUrl!.Trim()" alt="" />
+                        <img class="kit-row-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
                     }
                     else if (Icon is not null)
                     {
@@ -100,7 +103,7 @@ else
                 case SidebarLead.Avatar:
                     @if (ImageUrlPolicy.IsRenderable(ImageUrl))
                     {
-                        <img class="kit-row-avatar" src="@ImageUrl!.Trim()" alt="" />
+                        <img class="kit-row-avatar" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
                     }
                     else
                     {
@@ -108,7 +111,7 @@ else
                     }
                     @if (IsGroup && ImageUrlPolicy.IsRenderable(ImageUrl2))
                     {
-                        <img class="kit-row-avatar kit-row-avatar--second" src="@ImageUrl2!.Trim()" alt="" />
+                        <img class="kit-row-avatar kit-row-avatar--second" src="@ApiUrl.Resolve(ImageUrl2!)" alt="" />
                     }
                     else if (IsGroup)
                     {
@@ -119,7 +122,7 @@ else
                     <span class="kit-row-icon"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Folder)" Size="Size.Small" /></span>
                     break;
                 case SidebarLead.Channel:
-                    <span class="kit-row-hash">#</span>
+                    <span class="kit-row-hash">@ChannelMark</span>
                     break;
             }
         </span>

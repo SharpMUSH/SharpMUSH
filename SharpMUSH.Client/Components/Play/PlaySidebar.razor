@@ -1,0 +1,128 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject ICommFeed Feed
+@inject CharacterDirectoryService Directory
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §5.1 Play page sidebar (boards 01, 07): "Play · ● Connected as {name}", then In scene (the room's
+   picture, the scene's title and its cast), Channels (# rows, bold with an unread pill) and Pages (one
+   row per conversation: a portrait, or a stacked pair for a group page). Channels and pages come from
+   the comm feed (§7.3); an empty feed shows neither group. Collapsed keeps only the leads. *@
+<div class="play-side @(Collapsed ? "play-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Play"]">
+            <Sub>
+                <span class="play-side-dot @(Connected ? "play-side-dot--on" : null)" aria-hidden="true"></span>
+                <span>@(Connected && !string.IsNullOrWhiteSpace(CharacterName) ? Loc["NavPlayConnectedAs", CharacterName] : Loc["Disconnected"])</span>
+            </Sub>
+        </SidebarHead>
+    }
+    @if (Room?.Scene is { } scene)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavPlayInScene"]</SectionLabel>
+        }
+        <nav class="play-side-scene" aria-label="@Loc["NavPlayInScene"]">
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@Room.Image?.Url" Name="@SceneTitle(scene)"
+                        Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null)"
+                        Collapsed="@Collapsed" OnClick="OnOpenScene" />
+        </nav>
+    }
+    @if (Channels.Count > 0)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavPlayChannels"]</SectionLabel>
+        }
+        <nav class="play-side-channels" aria-label="@Loc["NavPlayChannels"]">
+            @foreach (var channel in Channels)
+            {
+                var name = channel.Name;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="@name" Unread="@channel.Unread"
+                            IsCurrent="@(Current == name)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(name))" />
+            }
+        </nav>
+    }
+    @if (Feed.Conversations.Count > 0)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavPlayPages"]</SectionLabel>
+        }
+        <nav class="play-side-pages" aria-label="@Loc["NavPlayPages"]">
+            @foreach (var conversation in Feed.Conversations)
+            {
+                var key = conversation.Key;
+                var group = conversation.With.Count > 1;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Avatar"
+                            ImageUrl="@ImageOf(conversation, 0)" ImageUrl2="@(group ? ImageOf(conversation, 1) : null)"
+                            Name="@conversation.With.FirstOrDefault()" Name2="@(group ? conversation.With[1] : null)"
+                            Label="@PageLabel(conversation)" Unread="@conversation.Unread"
+                            IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
+            }
+        </nav>
+    }
+</div>
+
+@code {
+    /// <summary>Only the leads, for the collapsed strip (board 07).</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>The character the play connection is logged in as, or null.</summary>
+    [Parameter] public string? CharacterName { get; set; }
+
+    [Parameter] public bool Connected { get; set; }
+
+    /// <summary>The latest <c>room.info</c>: its scene is the In scene row, its picture that row's image.</summary>
+    [Parameter] public RoomInfo? Room { get; set; }
+
+    /// <summary>The channel or conversation key main is showing, or null for the scene/terminal.</summary>
+    [Parameter] public string? Current { get; set; }
+
+    [Parameter] public EventCallback OnOpenScene { get; set; }
+
+    /// <summary>A channel's name or a conversation's key was chosen.</summary>
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
+
+    private IReadOnlyList<CommChannel> Channels => Feed.Channels.Where(c => c.Joined).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Feed.Changed += OnFeedChanged;
+        // Portraits for page rows. A directory that could not be read leaves initials, which is what a
+        // character without a picture shows anyway.
+        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _directory = rows;
+        }
+    }
+
+    private void OnFeedChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private string SceneTitle(RoomScene scene) =>
+        string.IsNullOrWhiteSpace(scene.Title) ? Room?.Name ?? string.Empty : scene.Title;
+
+    /// <summary>One person: their full name. A group: first names, as the board's "Tomas, Dace".</summary>
+    private static string PageLabel(CommConversation c) =>
+        c.With.Count == 1 ? c.With[0] : string.Join(", ", c.With.Select(FirstName));
+
+    private static string FirstName(string name) =>
+        name.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var first, ..] ? first : name;
+
+    /// <summary>The directory's picture for the n-th person, by objid when the feed has one, else by name.</summary>
+    private string? ImageOf(CommConversation c, int index)
+    {
+        var objid = index < c.WithObjIds.Count ? c.WithObjIds[index] : null;
+        var name = index < c.With.Count ? c.With[index] : null;
+        var row = _directory.FirstOrDefault(r => objid is not null && string.Equals(r.Objid, objid, StringComparison.Ordinal))
+            ?? _directory.FirstOrDefault(r => name is not null && string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+        return row?.Image;
+    }
+
+    public void Dispose() => Feed.Changed -= OnFeedChanged;
+}

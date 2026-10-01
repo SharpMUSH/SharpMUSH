@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Charakter namens „{0}“ suchen</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Verbunden als {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>In der Szene</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanäle</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# hier}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# Ausgang} other {# Ausgänge}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Geschichte</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Ansicht</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Szene · wird im Szenenarchiv protokolliert</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Vollständige Ausgabe · mit Kanälen und Pages</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# dort}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Verschlossen</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Geschlossen</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Verlässt die Szene</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Gehen</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Ansehen</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Bleiben</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Drücke {0}, um zu gehen</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Ganzes Bild</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>In dieser Szene</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Untätig {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerie</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Alle ansehen</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Charakterbogen: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Sagen</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Befehl</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Schreib deine Pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Sag etwas…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Sprich außerhalb der Rolle…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Gib einen Befehl ein…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Nachrichtentyp</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Szene</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Raum</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Spielbereiche</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Sonst ist niemand hier.</value>
+  </data>
 </root>

@@ -31,7 +31,7 @@ else
         <span class="kit-tile-media" style="@($"height:{Height}px;")">
             @if (ImageUrlPolicy.IsRenderable(ImageUrl))
             {
-                <img class="kit-tile-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+                <img class="kit-tile-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
             }
             else
             {

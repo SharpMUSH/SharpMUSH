@@ -1,0 +1,6 @@
+.room-banner-desc-text {
+	white-space: pre-line;
+	font-size: 13px;
+	line-height: 1.5;
+	max-width: 60ch;
+}

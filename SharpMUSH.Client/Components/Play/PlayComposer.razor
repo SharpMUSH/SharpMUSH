@@ -1,0 +1,142 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* D1 §5.8 / §4.11 the Play composer in the bottom bar: Pose · Say · OOC · Command, the field and Send.
+   Pose, Say and OOC send pose, say and the game's ooc command (the Scene plugin tags those poses
+   "ooc", §7.2) with the text encoded so the parser hands it back unchanged; Command sends the line as
+   typed. Enter sends and Shift+Enter is a new line, decided in layout.js per key; Ctrl/⌘+Enter also
+   sends. *@
+<BottomBar Class="composer">
+    <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
+    <div class="composer-row">
+        <textarea class="composer-input @(_type == Command ? "composer-input--command" : null)" rows="1" @ref="_input"
+                  aria-label="@Loc["NavPlayMessageType"]: @Label(_type)" placeholder="@Placeholder"
+                  value="@_text" @oninput="OnInput" @onkeydown="OnKeyDownAsync"></textarea>
+        <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendAsync">@Loc["Send"]</button>
+    </div>
+</BottomBar>
+
+@code {
+    /// <summary>Whether the play connection is up; nothing is sent while it is not.</summary>
+    [Parameter] public bool Connected { get; set; }
+
+    /// <summary>The command line to send to the game.</summary>
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    private const string Pose = "pose";
+    private const string Say = "say";
+    private const string Ooc = "ooc";
+    private const string Command = "command";
+
+    private IReadOnlyList<(string Key, string Label)> _types = [];
+    private string _type = Pose;
+    private string _text = string.Empty;
+    private ElementReference _input;
+    private bool _focusInput;
+
+    private bool CanSend => Connected && !string.IsNullOrWhiteSpace(_text);
+
+    protected override void OnInitialized() =>
+        _types = [(Pose, Label(Pose)), (Say, Label(Say)), (Ooc, Label(Ooc)), (Command, Label(Command))];
+
+    private string Label(string type) => type switch
+    {
+        Pose => Loc["NavPlayTypePose"],
+        Say => Loc["NavPlayTypeSay"],
+        Ooc => Loc["NavPlayTypeOoc"],
+        _ => Loc["NavPlayTypeCommand"],
+    };
+
+    private string Placeholder => _type switch
+    {
+        Pose => Loc["NavPlayPlaceholderPose"],
+        Say => Loc["NavPlayPlaceholderSay"],
+        Ooc => Loc["NavPlayPlaceholderOoc"],
+        _ => Loc["NavPlayPlaceholderCommand"],
+    };
+
+    private void OnTypeChanged(string type) => _type = type;
+
+    private void OnInput(ChangeEventArgs e) => _text = e.Value?.ToString() ?? string.Empty;
+
+    /// <summary>Starts a page to someone (the character sheet's Page): Command, with the page prefilled.</summary>
+    /// <param name="command">The row's own Page action (<c>page #312=</c>, which survives a rename), when it has one.</param>
+    public Task StartPageAsync(string name, string? command = null)
+    {
+        _type = Command;
+        _text = command ?? $"page {name}=";
+        _focusInput = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // Ctrl/⌘+Enter inserts nothing in a textarea, so it needs no preventDefault. Plain Enter is handled in
+    // layout.js (SendFromEnter), which prevents the newline only for the Enter that sends.
+    private Task OnKeyDownAsync(KeyboardEventArgs e) =>
+        e.Key == "Enter" && (e.CtrlKey || e.MetaKey) ? SendAsync() : Task.CompletedTask;
+
+    private async Task SendAsync()
+    {
+        if (!CanSend) return;
+        var line = _type switch
+        {
+            Pose => $"pose {MushComposeEncoder.Encode(_text)}",
+            Say => $"say {MushComposeEncoder.Encode(_text)}",
+            Ooc => $"ooc {MushComposeEncoder.Encode(_text)}",
+            _ => _text.Trim(),
+        };
+        _text = string.Empty;
+        await OnSend.InvokeAsync(line);
+    }
+
+    private DotNetObjectReference<PlayComposer>? _self;
+
+    /// <summary>Enter, from layout.js's listener on the field.</summary>
+    [JSInvokable]
+    public Task SendFromEnter() => InvokeAsync(async () =>
+    {
+        await SendAsync();
+        StateHasChanged();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _self = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.composerEnter", _input, _self);
+            }
+            catch (JSException)
+            {
+                // No layout script: Ctrl+Enter and the Send button still send.
+            }
+        }
+        if (!_focusInput) return;
+        _focusInput = false;
+        try
+        {
+            await _input.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_self is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.uncomposerEnter", _input);
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException)
+        {
+            // The page is going away with its listener.
+        }
+        _self.Dispose();
+    }
+}

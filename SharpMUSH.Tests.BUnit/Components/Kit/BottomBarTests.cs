@@ -36,6 +36,22 @@ public class BottomBarTests : BunitContext
 	}
 
 	[Test]
+	public async Task TypeChips_AreOneTabStop_AndArrowsMoveTheChoice()
+	{
+		// A radiogroup is one tab stop (the checked radio); the arrows move the choice, wrapping.
+		string? picked = null;
+		var items = new List<(string, string)> { ("pose", "Pose"), ("say", "Say"), ("ooc", "OOC"), ("cmd", "Command") };
+		var cut = Render<TypeChips>(p => p.Add(x => x.Items, items).Add(x => x.Selected, "pose").Add(x => x.SelectedChanged, v => picked = v));
+		var radios = cut.FindAll("[role=radio]");
+		await Assert.That(radios.Select(r => r.GetAttribute("tabindex")).ToList())
+			.IsEquivalentTo(new[] { "0", "-1", "-1", "-1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		radios[0].KeyDown("ArrowRight");
+		await Assert.That(picked).IsEqualTo("say");
+		cut.FindAll("[role=radio]")[0].KeyDown("ArrowLeft");
+		await Assert.That(picked).IsEqualTo("cmd");
+	}
+
+	[Test]
 	public async Task TypeChips_WithoutAriaLabel_OmitsTheAttribute()
 	{
 		var items = new List<(string, string)> { ("pose", "Pose") };

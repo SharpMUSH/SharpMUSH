@@ -38,7 +38,7 @@
                 <button type="button" class="gallery-hero" aria-label="@(hero.Caption ?? hero.FileName)" @onclick="@(() => OpenViewer(IndexOf(hero)))">
                     @if (ImageUrlPolicy.IsRenderable(hero.Url))
                     {
-                        <img src="@hero.Url" alt="@(hero.Caption ?? string.Empty)" loading="lazy" />
+                        <img src="@ApiUrl.Resolve(hero.Url)" alt="@(hero.Caption ?? string.Empty)" loading="lazy" />
                     }
                     @if (hero.IsIcon)
                     {
@@ -56,7 +56,7 @@
                             <button type="button" class="gallery-small-tile" aria-label="@(e.Caption ?? e.FileName)" @onclick="@(() => OpenViewer(IndexOf(e)))">
                                 @if (ImageUrlPolicy.IsRenderable(e.Url))
                                 {
-                                    <img src="@e.Url" alt="@(e.Caption ?? string.Empty)" loading="lazy" />
+                                    <img src="@ApiUrl.Resolve(e.Url)" alt="@(e.Caption ?? string.Empty)" loading="lazy" />
                                 }
                             </button>
                         }

@@ -4842,4 +4842,124 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Conectat ca {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>În scenă</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Mesaje</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# aici}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# ieșire} few {# ieșiri} other {# de ieșiri}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Descriere</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Poveste</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vizualizare</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scenă · înregistrată în arhiva scenelor</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Ieșire completă · cu canale și mesaje</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# acolo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Încuiat</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Închis</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Părăsește scena</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Mergi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Privește</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Rămâi</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Apăsați {0} pentru a merge</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Imagine completă</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>În această scenă</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detalii</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerie</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Fișa personajului: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poză</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Replică</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Comandă</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Scrie-ți poza…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Spune ceva…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Vorbește în afara rolului…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Scrie o comandă…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Tipul mesajului</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scenă</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Cameră</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Secțiuni de joc</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Nu mai este nimeni aici.</value>
+  </data>
 </root>
