@@ -18,14 +18,11 @@ namespace SharpMUSH.Tests.Commands;
 /// <para>
 /// The <see cref="INotifyService"/> substitute is shared across the whole test session, so no
 /// assertion here reads <c>ReceivedCalls()</c> and none calls <c>ClearReceivedCalls()</c> -
-/// <c>[NotInParallel]</c> only serialises this class against other <c>[NotInParallel]</c> tests,
-/// so clearing would delete the recorded calls of whatever parallelizable test is running
-/// alongside. Notification assertions go through <see cref="MessagesWhile"/>, which reads the
+/// clearing would delete the recorded calls of whatever test is running alongside. Notification assertions go through <see cref="MessagesWhile"/>, which reads the
 /// recipient-keyed <see cref="TestHelpers.NotificationRecorder"/> and windows it to the messages
 /// produced by one command.
 /// </para>
 /// </summary>
-[NotInParallel]
 public class AttributeTreeWriteGateTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
