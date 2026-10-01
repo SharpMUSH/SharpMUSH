@@ -26,6 +26,7 @@ public partial class NavigationTests
 		public IEnumerable<(byte[] Key, byte[] Value)> Range(TableDef table, byte[] prefix) => inner.Range(table, prefix);
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFrom(TableDef table, byte[] prefix, byte[] afterKey, byte[]? afterValue) => inner.RangeFrom(table, prefix, afterKey, afterValue);
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey) => inner.RangeFromKey(table, startKey);
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix) => inner.RangeReverse(table, prefix);
 		public IEnumerable<byte[]> Dups(TableDef table, byte[] key) => inner.Dups(table, key);
 		public Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key) => inner.CountDups(table, key);
 		public int DeletePrefix(TableDef table, byte[] prefix) => throw new InvalidOperationException("Repair must remain bounded.");

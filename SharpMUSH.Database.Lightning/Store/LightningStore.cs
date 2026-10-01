@@ -550,6 +550,41 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
+		/// <summary>
+		/// <see cref="Range"/> walked backwards: the cursor seeks to the first key past the prefix (the prefix
+		/// with its last byte below 0xFF raised by one, the bytes after it dropped) and steps back from there,
+		/// or starts at the table's last key when nothing sorts past the prefix.
+		/// </summary>
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			var positioned = PrefixSuccessor(prefix) is { } past && cursor.SetRange(past) == MDBResultCode.Success
+				? cursor.Previous().resultCode
+				: cursor.Last().resultCode;
+			if (positioned != MDBResultCode.Success) yield break;
+			do
+			{
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
+			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+		}
+
+		/// <summary>The smallest key greater than every key starting with <paramref name="prefix"/>; null when there is none.</summary>
+		private static byte[]? PrefixSuccessor(byte[] prefix)
+		{
+			for (var i = prefix.Length - 1; i >= 0; i--)
+			{
+				if (prefix[i] == 0xFF) continue;
+				var successor = prefix[..(i + 1)];
+				successor[i]++;
+				return successor;
+			}
+
+			return null;
+		}
+
 		public IEnumerable<byte[]> Dups(TableDef table, byte[] key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));

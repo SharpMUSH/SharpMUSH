@@ -68,6 +68,12 @@ public sealed record SharpPageConversation(
 /// <summary>How a page conversation is named: the same people in any order are one conversation.</summary>
 public static class PageConversation
 {
+	/// <summary>
+	/// The most other people one conversation holds. The read-marker and recall endpoints refuse a larger
+	/// one, and a page to more is not logged, so the portal never lists a conversation it cannot open.
+	/// </summary>
+	public const int MaxOthers = 32;
+
 	/// <summary>The people, each once, sorted by objid ordinally — the order <see cref="ReadMarkerScope.Conversation"/> uses.</summary>
 	public static IReadOnlyList<DBRef> Normalize(IEnumerable<DBRef> people) =>
 		people.Distinct().OrderBy(person => person.ToString(), StringComparer.Ordinal).ToArray();

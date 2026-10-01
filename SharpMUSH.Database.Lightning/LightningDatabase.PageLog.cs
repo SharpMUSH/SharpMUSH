@@ -13,8 +13,10 @@ namespace SharpMUSH.Database.Lightning;
 /// rows), and a conversation's are a range under it in the order they were sent.</item>
 /// <item><see cref="Tables.PageConversation"/>: one row per character and conversation, keyed dbref + 0x00 +
 /// conversation, naming who it is with and its latest page, so listing them reads no pages.</item>
-/// <item><see cref="Tables.PageLogTime"/>: id + dbref → the copy's key, so the retention purge reads only
-/// what it deletes, oldest first, and stops at the first page young enough to keep.</item>
+/// <item><see cref="Tables.PageLogTime"/>: when sent (ms) + id + dbref → the copy's key, so the retention
+/// purge reads only what it deletes, oldest first, and stops at the first page young enough to keep. It is
+/// keyed by the time sent, not the id alone: an id can run ahead of the clock (the id source reserves a block
+/// across a restart, and holds its value when the clock steps back), so an id is no measure of age.</item>
 /// </list>
 /// The conversation is the others' objids (<see cref="PageConversation.Key"/>); an objid holds neither a
 /// space nor 0x00, so no conversation's prefix is another's.
@@ -59,7 +61,7 @@ public partial class LightningDatabase
 				var key = PageLogKey(owner.Number, conversation, page.Id);
 
 				tx.Put(Tables.PageLog, key, Codec.Serialize(record with { CharacterCreationTime = creation }));
-				tx.Put(Tables.PageLogTime, PageLogTimeKey(page.Id, owner.Number), key);
+				tx.Put(Tables.PageLogTime, PageLogTimeKey(record.TimestampMs, page.Id, owner.Number), key);
 
 				// The summary follows the latest page; one left by an earlier holder of the dbref is replaced.
 				var conversationKey = Keys.Composite(owner.Number, conversation);
@@ -91,13 +93,16 @@ public partial class LightningDatabase
 		var conversation = PageConversation.Key(others.Length > 0 ? others : [character]);
 		var prefix = Keys.Concat(Keys.Dbref(character.Number), Keys.Sep, Keys.Str(conversation), Keys.Sep);
 
-		var pages = Store.Read(tx => tx.Range(Tables.PageLog, prefix)
+		// Newest first, so only the lines asked for are read, however long the conversation has run.
+		var newest = Store.Read(tx => tx.RangeReverse(Tables.PageLog, prefix)
 			.Select(entry => Codec.Deserialize<PageLogRecord>(entry.Value))
 			.Where(record => record.CharacterCreationTime == creation)
+			.Take(lines > 0 ? lines : int.MaxValue)
 			.Select(ToPage)
 			.ToList());
-		IReadOnlyList<SharpPage> last = lines > 0 && pages.Count > lines ? pages[^lines..] : pages;
-		return ValueTask.FromResult(last);
+		newest.Reverse();
+		IReadOnlyList<SharpPage> pages = newest;
+		return ValueTask.FromResult(pages);
 	}
 
 	public ValueTask<IReadOnlyList<SharpPageConversation>> GetPageConversationsAsync(DBRef character,
@@ -119,7 +124,7 @@ public partial class LightningDatabase
 
 	public async ValueTask<int> PurgePageLogAsync(DateTimeOffset before, CancellationToken cancellationToken = default)
 	{
-		var cutoff = (before - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
+		var cutoff = before.ToUnixTimeMilliseconds();
 		var purged = 0;
 		while (!cancellationToken.IsCancellationRequested)
 		{
@@ -131,7 +136,7 @@ public partial class LightningDatabase
 		return purged;
 	}
 
-	/// <summary>Deletes up to <see cref="PageLogPurgeBatch"/> copies older than <paramref name="cutoff"/>, oldest first.</summary>
+	/// <summary>Deletes up to <see cref="PageLogPurgeBatch"/> copies sent before <paramref name="cutoff"/> (ms), oldest first.</summary>
 	private static int PurgePageLogBatch(ITx tx, long cutoff)
 	{
 		var expired = tx.Range(Tables.PageLogTime, [])
@@ -166,9 +171,10 @@ public partial class LightningDatabase
 	private static void DeletePageLog(ITx tx, long number)
 	{
 		var prefix = Keys.Composite(number, "");
-		foreach (var (key, _) in tx.Range(Tables.PageLog, prefix).ToList())
+		foreach (var (_, value) in tx.Range(Tables.PageLog, prefix).ToList())
 		{
-			tx.Delete(Tables.PageLogTime, PageLogTimeKey(Keys.ReadDbref(key.AsSpan(key.Length - 8)), number));
+			var record = Codec.Deserialize<PageLogRecord>(value);
+			tx.Delete(Tables.PageLogTime, PageLogTimeKey(record.TimestampMs, record.Id, number));
 		}
 
 		tx.DeletePrefix(Tables.PageLog, prefix);
@@ -178,7 +184,8 @@ public partial class LightningDatabase
 	private static byte[] PageLogKey(long number, string conversation, long id) =>
 		Keys.Concat(Keys.Dbref(number), Keys.Sep, Keys.Str(conversation), Keys.Sep, Keys.Dbref(id));
 
-	private static byte[] PageLogTimeKey(long id, long number) => Keys.Concat(Keys.Dbref(id), Keys.Dbref(number));
+	private static byte[] PageLogTimeKey(long sentMs, long id, long number) =>
+		Keys.Concat(Keys.Dbref(sentMs), Keys.Dbref(id), Keys.Dbref(number));
 
 	/// <summary>A copy's key without its id: dbref + 0x00 + conversation + 0x00.</summary>
 	private static byte[] ConversationPrefix(byte[] logKey) => logKey[..^8];

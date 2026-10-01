@@ -233,6 +233,81 @@ public class OobCommFeedPageLogTests
 		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).IsEquivalentTo(new[] { "live only" });
 	}
 
+	/// <summary>
+	/// <c>page_log</c> is a live option: a game that turns it on while the portal is open has history to
+	/// pull, so opening a conversation asks again rather than trusting an earlier "off".
+	/// </summary>
+	[Test]
+	public async Task A_page_log_turned_on_later_is_pulled_when_a_conversation_opens()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, false, []);
+		history.PageLogging = false;
+		await LoadAsync(store, feed);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(21, "live", 21));
+		await feed.LoadHistoryAsync(TomasKey);
+
+		history.PageLogging = true;
+		history.PageLog[Tomas] = [Logged(20, "logged once on", 20), Logged(21, "live", 21)];
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.PageLogging).IsTrue();
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).IsEquivalentTo(new[] { "logged once on", "live" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// As for channels: without the markers, conversations would be filed uncounted, so a failed read of the
+	/// markers neither lists nor pulls any; the next list tries again.
+	/// </summary>
+	[Test]
+	public async Task A_failed_marker_read_lists_no_conversations_and_the_next_list_retries()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = null;
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(22, 22)]);
+		history.PageLog[Tomas] = [Logged(21, "read", 21), Logged(22, "new", 22)];
+		await LoadAsync(store, feed);
+
+		await Assert.That(history.ConversationListings).IsEqualTo(0);
+		await Assert.That(history.PageRecalled).IsEmpty();
+		await Assert.That(feed.Conversations).IsEmpty();
+
+		history.Markers = Markers(tomasId: 21);
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(1);
+	}
+
+	/// <summary>A failed read of the conversation list is retried on the next list, not given up on.</summary>
+	[Test]
+	public async Task A_failed_conversation_list_is_retried_on_the_next_list()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = null;
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations).IsEmpty();
+
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(TomasKey);
+		await Assert.That(feed.PageLogging).IsTrue();
+	}
+
+	/// <summary>Once listed, a later list does not ask for the conversations again: pushes keep it current.</summary>
+	[Test]
+	public async Task The_conversations_are_listed_once_per_sync()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		await LoadAsync(store, feed);
+		await LoadAsync(store, feed);
+
+		await Assert.That(history.ConversationListings).IsEqualTo(1);
+	}
+
 	/// <summary>A feed held for someone other than the session's character does not use their page log.</summary>
 	[Test]
 	public async Task Another_characters_conversations_are_not_used()

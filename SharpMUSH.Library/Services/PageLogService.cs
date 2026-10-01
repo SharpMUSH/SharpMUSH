@@ -40,7 +40,8 @@ public sealed class PageLogService(
 			message,
 			time.GetUtcNow());
 
-		if (!Enabled) return page;
+		// A page to more people than a conversation holds is not one: the portal could never open it.
+		if (!Enabled || page.Participants.Count - 1 > PageConversation.MaxOthers) return page;
 
 		// A copy is for a character who can read it, through the portal: a player. An object may page.
 		var owners = recipients.Prepend(sender)

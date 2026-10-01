@@ -59,7 +59,7 @@ public class CommController(
 	IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The most people one conversation marker may name; a page to more than this is not a conversation.</summary>
-	public const int ConversationLimit = 32;
+	public const int ConversationLimit = PageConversation.MaxOthers;
 
 	/// <summary>The most logged pages one conversation recall returns, and what it returns when not asked for fewer.</summary>
 	public const int PageRecallLimit = 500;

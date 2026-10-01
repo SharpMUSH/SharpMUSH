@@ -230,7 +230,10 @@ of a missing `v` and of any malformed member):
   (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
   with spaces). Each character reads only their own copy; there is no staff
   read. With `page_log` off both answer `"logging": false` and nothing else,
-  and the conversation view says the game keeps no page history.
+  and the conversation view says the game keeps no page history. Opening a
+  conversation asks again, since the option can be turned on at any time. As
+  for channels, a failed read of the markers lists and pulls no conversation,
+  and a failed listing is retried on the next `comm.channels`.
 - The recall endpoint refuses what `@channel/recall` refuses: a channel the
   character may not see answers 404, as a missing one does, and one they are
   not on and could not join answers 403. A line only See_All members were sent

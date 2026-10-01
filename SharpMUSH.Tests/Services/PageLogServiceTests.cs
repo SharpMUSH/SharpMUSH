@@ -2,6 +2,7 @@ using Mediator;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -49,6 +50,31 @@ public class PageLogServiceTests
 
 		await Assert.That(await service.PurgeExpiredAsync()).IsEqualTo(3);
 		await mediator.Received(1).Send(new PurgePageLogCommand(Now.AddDays(-days)), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// A conversation is at most <see cref="PageConversation.MaxOthers"/> other people: the read-marker and
+	/// recall endpoints refuse a larger one, so a larger page is not logged, rather than listed as a
+	/// conversation that can never be opened.
+	/// </summary>
+	[Test]
+	[Arguments(PageConversation.MaxOthers, true)]
+	[Arguments(PageConversation.MaxOthers + 1, false)]
+	public async Task APageToMoreThanAConversationHolds_IsNotLogged(int recipients, bool logged)
+	{
+		var mediator = Substitute.For<IMediator>();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		var defaults = SharpMUSHOptions.Default();
+		options.CurrentValue.Returns(defaults with { Chat = defaults.Chat with { PageLog = true } });
+		var service = new PageLogService(mediator, Substitute.For<IChannelMessageIdSource>(), options, new StoppedClock(Now));
+		var objects = new TestObjectFactory();
+		var sender = objects.CreatePlayer(1000, "Pager");
+		var to = Enumerable.Range(1001, recipients).Select(n => objects.CreatePlayer(n, $"Paged{n}")).ToArray();
+
+		var page = await service.DeliveredAsync(sender, "Pager", to, "say", "hello all");
+
+		await Assert.That(page.Recipients.Count).IsEqualTo(recipients);
+		await mediator.Received(logged ? 1 : 0).Send(Arg.Any<RecordPageCommand>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

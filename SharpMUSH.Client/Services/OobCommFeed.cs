@@ -83,6 +83,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private Task _sync = Task.CompletedTask;
 
+	/// <summary>Whether the conversations have been listed from the page log since the markers were read.</summary>
+	private bool _conversationsListed;
+
 	/// <summary>Whether the game keeps a page log, as the server last said; null until it has.</summary>
 	private bool? _pageLogging;
 
@@ -172,7 +175,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// </summary>
 	private async Task LoadConversationAsync(ICommHistory server, string key)
 	{
-		if (_pageLogging is false || _syncedFor is not { } viewer
+		// Asked even after an earlier "off": page_log is a live option, and a game may have turned it on since.
+		if (_syncedFor is not { } viewer
 			|| !_conversations.TryGetValue(key, out var conversation) || OthersIn(conversation, viewer) is not { } others)
 			return;
 
@@ -270,7 +274,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (string.Equals(_syncedFor, viewer, StringComparison.Ordinal))
 		{
 			var unpulled = _channels.Select(channel => channel.Name).Where(name => !_pulled.Contains(name)).ToArray();
-			if (unpulled.Length > 0) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
+			if (unpulled.Length > 0 || !_conversationsListed) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
 			return;
 		}
 
@@ -280,6 +284,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_syncedFor = null;
 		_markers.Clear();
 		_pulled.Clear();
+		_conversationsListed = false;
 		_sync = ReadMarkersAsync(_server, viewer, _generation);
 	}
 
@@ -298,7 +303,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		Changed?.Invoke();
 	}
 
-	/// <summary>Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>.</summary>
+	/// <summary>
+	/// Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>, and lists the
+	/// conversations if an earlier listing failed. A failed read of the markers does neither: the next list
+	/// tries again.
+	/// </summary>
 	private async Task RefreshAsync(ICommHistory server, string viewer, int generation, IReadOnlyList<string> channels)
 	{
 		var answer = await server.MarkersAsync();
@@ -310,6 +319,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		ApplyMarkers(markers, viewer);
 		await PullAsync(channels);
+		if (!_conversationsListed) await RebuildConversationsAsync(server, viewer, generation);
 		Changed?.Invoke();
 	}
 
@@ -352,6 +362,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			|| !string.Equals(list.Character, viewer, StringComparison.Ordinal) || _viewer is not { } self)
 			return;
 
+		_conversationsListed = true;
 		_pageLogging = list.Logging;
 		var behind = new List<string>();
 		foreach (var summary in list.Conversations)
@@ -603,6 +614,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_syncingFor = null;
 		_sync = Task.CompletedTask;
 		_pageLogging = null;
+		_conversationsListed = false;
 
 		_channels = [];
 		_viewer = null;

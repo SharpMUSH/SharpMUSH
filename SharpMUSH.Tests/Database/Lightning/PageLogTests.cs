@@ -230,6 +230,53 @@ public class PageLogTests
 		await Assert.That(_db.Store.Read(tx => tx.Range(Tables.PageLogTime, []).Count())).IsEqualTo(2);
 	}
 
+	/// <summary>
+	/// Retention is by when a page was sent. An id can run ahead of the clock (the id source reserves a
+	/// block across a restart, or holds its value when the clock steps back), so an id is no measure of age.
+	/// </summary>
+	[Test]
+	public async Task Purging_GoesByWhenAPageWasSent_NotByItsId()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "old, with an id ahead of the clock", At) with { Id = IdAt(At.AddYears(1)) });
+		await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "recent", At.AddDays(2)) with { Id = IdAt(At.AddYears(1)) + 1 });
+
+		var purged = await _db.PurgePageLogAsync(At.AddDays(1));
+
+		await Assert.That(purged).IsEqualTo(2);
+		await Assert.That((await _db.GetPageLogAsync(ilsa, [wren], 0)).Select(page => page.Message))
+			.IsEquivalentTo(new[] { "recent" });
+	}
+
+	/// <summary>
+	/// The recall reads a conversation from its newest page back, and stops at the lines asked for: the
+	/// store's reverse range yields a prefix's entries last first, and nothing either side of it.
+	/// </summary>
+	[Test]
+	public async Task TheReverseRange_YieldsAPrefixNewestFirst_AndStopsAtItsEdges()
+	{
+		byte[] Key(string prefix, int n) => [.. System.Text.Encoding.UTF8.GetBytes(prefix), (byte)n];
+		await _db.Store.WriteAsync(tx =>
+		{
+			foreach (var prefix in new[] { "a", "b", "c" })
+			{
+				for (var n = 1; n <= 3; n++) tx.Put(Tables.PageConversation, Key(prefix, n), [(byte)n]);
+			}
+		});
+		await _db.Store.WriteAsync(tx => tx.Put(Tables.PageConversation, [0xFF, 0xFF], [9]));
+
+		var middle = _db.Store.Read(tx => tx.RangeReverse(Tables.PageConversation, Key("b", 0)[..1]).Select(e => e.Value[0]).ToList());
+		var last = _db.Store.Read(tx => tx.RangeReverse(Tables.PageConversation, [0xFF]).Select(e => e.Value[0]).ToList());
+		var firstTwo = _db.Store.Read(tx => tx.RangeReverse(Tables.PageConversation, Key("a", 0)[..1]).Take(2).Select(e => e.Value[0]).ToList());
+		var none = _db.Store.Read(tx => tx.RangeReverse(Tables.PageConversation, Key("d", 0)[..1]).Count());
+
+		await Assert.That(middle).IsEquivalentTo(new byte[] { 3, 2, 1 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(last).IsEquivalentTo(new byte[] { 9 }).Because("a prefix of 0xFF bytes has no successor key to seek to");
+		await Assert.That(firstTwo).IsEquivalentTo(new byte[] { 3, 2 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(none).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task Purging_WithNothingOldEnough_DeletesNothing()
 	{

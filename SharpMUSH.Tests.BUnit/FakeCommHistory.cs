@@ -32,10 +32,16 @@ public sealed class FakeCommHistory : ICommHistory
 	/// <summary>The conversations whose history was pulled, by the same key as <see cref="PageLog"/>.</summary>
 	public List<string> PageRecalled { get; } = [];
 
-	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
-		Task.FromResult<ApiResult<PageConversations>>(PageConversations is { } conversations
+	/// <summary>How many times the conversation list was asked for.</summary>
+	public int ConversationListings { get; private set; }
+
+	public Task<ApiResult<PageConversations>> ConversationsAsync()
+	{
+		ConversationListings++;
+		return Task.FromResult<ApiResult<PageConversations>>(PageConversations is { } conversations
 			? conversations
 			: new ApiFailure(ApiFailureKind.Unauthenticated, "nobody"));
+	}
 
 	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with)
 	{
