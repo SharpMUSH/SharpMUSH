@@ -1,0 +1,76 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §5.3 the scene card: a header with the title (the scene's, else the room's) and a sub-line for
+   the view, the Story | Terminal switch (a radiogroup, only while in a scene), the focus-mode button and
+   any extra header controls (the terminal settings); then the view, then the footer (the composer). *@
+<section class="scene-card" aria-labelledby="scene-card-title">
+    <header class="scene-card-head">
+        @if (Lead is not null)
+        {
+            <div class="scene-card-lead">@Lead</div>
+        }
+        <div class="scene-card-titles">
+            <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
+            <div class="scene-card-sub">@(View == PlayView.Story && InScene ? Loc["NavPlayStorySub"] : Loc["NavPlayTerminalSub"])</div>
+        </div>
+        @if (InScene)
+        {
+            <div class="scene-card-switch" role="radiogroup" aria-label="@Loc["NavPlayView"]">
+                @Radio(PlayView.Story, Loc["NavPlayStory"])
+                @Radio(PlayView.Terminal, Loc["Terminal"])
+            </div>
+        }
+        @Controls
+        <button type="button" class="scene-card-focus @(Focus ? "scene-card-focus--on" : null)" aria-pressed="@(Focus ? "true" : "false")"
+                aria-label="@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])" title="@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])"
+                @onclick="() => FocusChanged.InvokeAsync(!Focus)">
+            <MudIcon Icon="@(Focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Size="Size.Small" />
+        </button>
+    </header>
+    <div class="scene-card-body">@ChildContent</div>
+    @if (Footer is not null)
+    {
+        <div class="scene-card-foot">@Footer</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Whether the viewer is in a scene: only then is there a Story view to switch to.</summary>
+    [Parameter] public bool InScene { get; set; }
+
+    [Parameter] public PlayView View { get; set; } = PlayView.Terminal;
+    [Parameter] public EventCallback<PlayView> ViewChanged { get; set; }
+
+    /// <summary>Focus mode: the page sidebar, the banner and the aside step away (board 05).</summary>
+    [Parameter] public bool Focus { get; set; }
+    [Parameter] public EventCallback<bool> FocusChanged { get; set; }
+
+    /// <summary>Before the titles: the room's thumbnail while the banner is minimised on a small screen.</summary>
+    [Parameter] public RenderFragment? Lead { get; set; }
+
+    /// <summary>Extra header controls, before the focus button (the terminal settings).</summary>
+    [Parameter] public RenderFragment? Controls { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The bottom bar: the composer.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    private RenderFragment Radio(PlayView value, string label) => __builder =>
+    {
+        var on = View == value;
+        <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")"
+                tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">@label</button>
+    };
+
+    private Task Choose(PlayView value) => value == View ? Task.CompletedTask : ViewChanged.InvokeAsync(value);
+
+    /// <summary>Two radios: any arrow moves to the other one.</summary>
+    private Task OnRadioKey(KeyboardEventArgs e, PlayView from) => e.Key switch
+    {
+        "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" => Choose(from == PlayView.Story ? PlayView.Terminal : PlayView.Story),
+        _ => Task.CompletedTask,
+    };
+}

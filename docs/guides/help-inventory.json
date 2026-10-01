@@ -5562,6 +5562,18 @@
       "redirect": true
     },
     {
+      "file": "sharpattr.md",
+      "corpus": "help",
+      "names": [
+        "IMAGE",
+        "IMAGE ATTRIBUTES",
+        "IMAGE\\`BANNER",
+        "IMAGE\\`ALT",
+        "IMAGE\\`FOCAL"
+      ],
+      "canonical": "IMAGE"
+    },
+    {
       "file": "sharpchat.md",
       "corpus": "help",
       "names": [
@@ -7481,6 +7493,30 @@
         "EVENT HTTP"
       ],
       "canonical": "EVENT HTTP"
+    },
+    {
+      "file": "sharpevents.md",
+      "corpus": "help",
+      "names": [
+        "EVENT ROOM"
+      ],
+      "canonical": "EVENT ROOM"
+    },
+    {
+      "file": "sharpevents.md",
+      "corpus": "help",
+      "names": [
+        "EVENT CHANNEL"
+      ],
+      "canonical": "EVENT CHANNEL"
+    },
+    {
+      "file": "sharpevents.md",
+      "corpus": "help",
+      "names": [
+        "EVENT PAGE"
+      ],
+      "canonical": "EVENT PAGE"
     },
     {
       "file": "sharpflag.md",

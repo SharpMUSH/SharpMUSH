@@ -8,12 +8,8 @@
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
-@inject CharacterSwitchService CharacterSwitch
 @inject ApplicationCatalog Applications
 @inject ServerInfoService ServerInfo
-@inject IJSRuntime JS
-@inject ILogger<NavMenu> Logger
-@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -77,58 +73,13 @@
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionBuild"]</div>
-            <AuthorizeView Policy="softcode.use">
-                <Authorized>@NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])</Authorized>
-            </AuthorizeView>
+            <BuildNavLinks Group="BuildNavCatalog.Group.Build" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
-            <AuthorizeView Policy="applications.admin">
-                <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, Loc["AdmApplicationsTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="layout.admin">
-                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, Loc["LayLayouts"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView>
-                <Authorized Context="snapshotAuth">
-                    @if (snapshotAuth.User.HasClaim("perm", "snapshots.capture") || snapshotAuth.User.HasClaim("perm", "snapshots.restore"))
-                    {
-                        @NavItem("/admin/snapshots", Icons.Material.Filled.History, Loc["SnapshotsTitle"])
-                    }
-                </Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="packages.admin">
-                <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, Loc["PkgPackages"])</Authorized>
-            </AuthorizeView>
         </div>
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionManage"]</div>
-            <AuthorizeView Policy="queue.inspect">
-                <Authorized>@NavItem("/admin/diagnostics", Icons.Material.Filled.QueryStats, Loc["DiagTitle"])</Authorized>
-                <NotAuthorized>
-                    <AuthorizeView Policy="queue.inspect.own" Context="ownInspection">
-                        <Authorized>@NavItem("/admin/diagnostics", Icons.Material.Filled.QueryStats, Loc["DiagTitle"])</Authorized>
-                    </AuthorizeView>
-                </NotAuthorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="players.view">
-                <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, Loc["AdmBreadcrumb"], NavLinkMatch.All)</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="jobs.manage.own">
-                <Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized>
-                <NotAuthorized><AuthorizeView Policy="jobs.manage" Context="jobAdmin"><Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized></AuthorizeView></NotAuthorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="roles.admin">
-                <Authorized>@NavItem("/admin/roles", Icons.Material.Filled.Shield, Loc["AdmRolesTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="wiki.admin">
-                <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, Loc["WikiAdmin"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="media.admin">
-                <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, Loc["AdmMediaTitle"])</Authorized>
-            </AuthorizeView>
-            <AuthorizeView Policy="config.admin">
-                <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
-            </AuthorizeView>
+            <BuildNavLinks Group="BuildNavCatalog.Group.Manage" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
 
@@ -143,65 +94,7 @@
         }
     </nav>
 
-    @* Claims-driven: gated on the cascaded ClaimsPrincipal (not just AccountAuth.Username/Characters)
-       so it flips to the anonymous "Sign in" affordance the instant DebugAuthStateProvider /
-       AccountAuthStateProvider report an unauthenticated principal — including right after an
-       explicit logout. Falling back to AccountAuth's fields alone previously left this card
-       showing the literal "DebugAdmin" sentinel post-logout, since nothing here ever gated on
-       auth state at all. *@
-    <AuthorizeView>
-        <Authorized>
-            <div class="phosphor-profile-wrap">
-                <button type="button"
-                        class="phosphor-profile-card"
-                        title="@DisplayName"
-                        aria-haspopup="true"
-                        aria-expanded="@(_panelOpen ? "true" : "false")"
-                        @onclick="TogglePanel">
-                    <div class="phosphor-avatar-wrap">
-                        <div class="phosphor-avatar"
-                             style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
-                            @AvatarInitial
-                        </div>
-                        <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
-                    </div>
-                    @if (!IsCollapsed)
-                    {
-                        <div style="text-align:left;line-height:1.2;overflow:hidden;flex:1;">
-                            <div class="phosphor-profile-name">@DisplayName</div>
-                            <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? Loc["NavOnline"] : Loc["NavOffline"])</div>
-                        </div>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="phosphor-profile-chevron" />
-                    }
-                </button>
-                <AccountPanel IsOpen="_panelOpen"
-                              IsOpenChanged="@(open => _panelOpen = open)"
-                              Characters="AccountAuth.Characters"
-                              ActiveCharacter="AccountAuth.ActiveCharacter"
-                              OnSwitchCharacter="HandleSwitchCharacterAsync"
-                              OnOpenInNewTab="HandleOpenInNewTabAsync"
-                              OnLogout="HandleLogoutAsync" />
-            </div>
-        </Authorized>
-        <NotAuthorized>
-            <div class="phosphor-profile-wrap">
-                <a href="/login" class="phosphor-profile-card" title="@Loc["AuthSignIn"]">
-                    <div class="phosphor-avatar-wrap">
-                        <div class="phosphor-avatar" style="background:var(--surface-3);color:var(--text-faint);">
-                            <MudIcon Icon="@Icons.Material.Filled.Login" Style="font-size:1.1rem;" />
-                        </div>
-                    </div>
-                    @if (!IsCollapsed)
-                    {
-                        <div style="text-align:left;line-height:1.2;overflow:hidden;">
-                            <div class="phosphor-profile-name">@Loc["AuthSignIn"]</div>
-                            <div class="phosphor-profile-sub">@Loc["NavGuestTag"]</div>
-                        </div>
-                    }
-                </a>
-            </div>
-        </NotAuthorized>
-    </AuthorizeView>
+    <AccountButton Compact="IsCollapsed" />
 </div>
 
 @code {
@@ -225,13 +118,10 @@
     // The configured game name shown as the sidebar brand. Defaults to the config default until the
     // ServerInfo fetch settles.
     private string _gameName = "SharpMUSH";
-    private bool _panelOpen;
 
     // Play-session terminal status, surfaced as a dot on the Play nav item.
     private bool _playActive;
     private bool _playUnread;
-
-    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
 
     private RenderFragment NavItem(string href, string icon, string label, NavLinkMatch match = NavLinkMatch.Prefix) =>
         @<NavLink class="phosphor-nav-link" href="@href" Match="match">
@@ -242,39 +132,6 @@
             }
         </NavLink>;
 
-    private string AvatarInitial
-    {
-        get
-        {
-            var ch = AccountAuth.ActiveCharacter;
-            if (ch is not null && ch.Name.Length > 0)
-                return ch.Name[0].ToString().ToUpper();
-            var user = AccountAuth.Username;
-            return !string.IsNullOrEmpty(user) ? user[0].ToString().ToUpper() : "?";
-        }
-    }
-
-    private int AvatarHue
-    {
-        get
-        {
-            var name = DisplayName;
-            var code = name.Length > 0 ? name[0] : 'A';
-            return AvHues[code % AvHues.Length];
-        }
-    }
-
-    private string DisplayName => AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
-
-    private string UserTag
-    {
-        get
-        {
-            var ch = AccountAuth.ActiveCharacter;
-            return ch is not null ? $"#{ch.DbrefNumber}" : Loc["NavAccountTag"];
-        }
-    }
-
     protected override void OnInitialized()
     {
         _characterActive = Terminal.IsConnected;
@@ -284,7 +141,6 @@
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
         PlayTerminal.LineReceived += OnPlayLine;
         Nav.LocationChanged += OnLocationChanged;
-        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
     }
 
     protected override async Task OnInitializedAsync()
@@ -353,45 +209,6 @@
     private bool IsOnPlay()
         => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
 
-    // NavMenu is a sibling of MainLayout, not a child: no parameter flow reaches it, so it must
-    // subscribe. This is the notification path whose absence left the card stale.
-    private void OnActiveCharacterChanged()
-        => InvokeAsync(StateHasChanged);
-
-    private void TogglePanel() => _panelOpen = !_panelOpen;
-
-    /// <summary>Switches the portal's active character (SignalR + REST); does not touch the terminal.</summary>
-    private Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
-        => CharacterSwitch.SwitchAsync(character);
-
-    /// <summary>
-    /// Opens a new browser tab already acting as <paramref name="character"/>. A tab opened via
-    /// <c>window.open</c> inherits a COPY of this tab's sessionStorage — including the account
-    /// session, which is what lets the new tab authenticate at all, but also the OPENER's active
-    /// character, not the one just clicked here. So the target is passed explicitly as a one-shot
-    /// <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> entry hint that the new tab's MainLayout consumes
-    /// and immediately strips from the URL. Both halves of the key are required — a bare dbref is
-    /// ambiguous across a recycled object, and SwitchCharacterRequest needs both anyway.
-    /// </summary>
-    private async Task HandleOpenInNewTabAsync(AccountAuthService.CharacterSummary character)
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
-        }
-        catch (JSException ex)
-        {
-            Logger.LogWarning(ex, "Could not open a new tab as #{Dbref}", character.DbrefNumber);
-        }
-    }
-
-    private async Task HandleLogoutAsync()
-    {
-        // AccountAuth.LogoutAsync is the single chokepoint that ends both game terminals (guarded on
-        // IsConnected), so this handler only has to navigate away afterwards.
-        await AccountAuth.LogoutAsync();
-        Nav.NavigateTo("/", forceLoad: false);
-    }
 
     public void Dispose()
     {
@@ -399,6 +216,5 @@
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
-        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
     }
 }

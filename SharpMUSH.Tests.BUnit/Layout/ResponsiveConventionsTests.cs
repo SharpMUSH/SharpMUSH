@@ -79,7 +79,6 @@ public class ResponsiveConventionsTests
 		"Pages/Admin/SitelockRedirect.razor",
 		"Pages/NotFound.razor",
 		"Pages/SettingsCharactersRedirect.razor",
-		"Pages/WikiIndex.razor",
 	};
 
 	private static readonly string[] SanctionedTiers = ["48rem", "64rem", "90rem"];

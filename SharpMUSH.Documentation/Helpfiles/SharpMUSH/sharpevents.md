@@ -34,9 +34,14 @@ Event Types:
 - **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
-- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity
+- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail
 - **http**: http\`blocked http\`fail http\`command
+- **room**: room\`contents
+- **channel**: channel\`message
+- **page**: page\`message
+
+The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what.
 
 # EVENT DB
 - **db\`dbck**: Run after the regular database consistency check.
@@ -129,6 +134,9 @@ To mimic old behaviour:
 - **player\`inactivity**
 - Triggered when idle players are disconnected. Only run if at least one player gets idlebooted (Or auto-hidden), not at every inactivity check.
 
+- **player\`channels** (*objid*, *cause*, *channel*)
+- Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect. Not triggered for a player who is not connected: they are sent their whole list when they connect.
+
 # EVENT SOCKET
 - **socket\`connect** (*descriptor*, *ip*)
 - Triggered when a socket first connects to the port. Using both this and player\`connect could be spammy. This happens when a connecting socket sees the connect screen.
@@ -155,3 +163,16 @@ To mimic old behaviour:
 - Triggered after an HTTP command is executed, using the same remaining request lifetime. It is omitted if that lifetime has already expired. If the event exhausts the deadline, the HTTP response is 503; request cancellation also cancels the event.
 
 **Note**: A sitelock rule with deny_silent will not trigger http\`blocked
+
+# EVENT ROOM
+- **room\`contents** (*room objid*, *cause*)
+- Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect or disconnect. %# is whoever caused it — the mover, or the wizard who `@tel`'d them.
+
+# EVENT CHANNEL
+- **channel\`message** (*channel*, *speaker objid*, *style*, *speaker name*, *message*, *recipients*, *time*)
+- Triggered after a channel line has been delivered. *<recipients>* is the objids of exactly the members it was delivered to: a member who has gagged the channel, one the speaker may not be heard by, one whose `@chatformat` silenced the line, and a muted member's copy of a connect or disconnect line are not among them. Nobody received it, nothing is triggered. *<style>* is one of say, pose, semipose, emit or presence (a connect or disconnect line). *<speaker name>* and *<message>* are plain text, as the channel's mogrifier left them. *<speaker objid>* is empty for a line with no speaker, and both it and *<speaker name>* are empty for an `@cemit` line, which does not name its emitter (%# is still the emitter). *<time>* is milliseconds since 1970.
+
+# EVENT PAGE
+- **page\`message** (*pager objid*, *recipients*, *style*, *pager name*, *message*, *time*)
+- Triggered after a page reaches at least one recipient. *<recipients>* is the objids of the players it reached: one who is not connected, is HAVEN, refuses pages from the pager, or whose page lock the pager fails is not among them. *<style>* is one of say, pose or semipose. *<pager name>* is as the recipients' terminal shows it, with the page alias when page_aliases is on. *<message>* is plain text. *<time>* is milliseconds since 1970.
+

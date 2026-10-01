@@ -28,3 +28,7 @@ public sealed record EmitOutcome(bool Admitted, CallState Result)
 {
 	public Option<CallState> TargetFailure { get; init; } = new None();
 }
+
+/// <summary>What a framed speech did: whether the location admitted it, the transform's result, and the
+/// speaker's name and the transformed message the frame was given (empty when not admitted).</summary>
+public sealed record SpeechOutcome(bool Admitted, CallState Result, MString Name, MString Message);

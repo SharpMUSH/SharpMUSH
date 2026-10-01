@@ -1,0 +1,112 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §5.4 one pose in the Story view: a 44px portrait (radius 12), the name in its colour (700) and the
+   time (12px dim), then the pose at 15px/1.6 with the other participants' names as mentions. A pose
+   tagged "ooc" is the OOC band (§4.10). The portrait and the name open the character: the sheet in
+   Play (OnCharacter), the profile page elsewhere. *@
+@if (IsOoc)
+{
+    <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null)">
+        <OocBand Name="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
+            <span class="story-body">@Body</span>
+        </OocBand>
+    </div>
+}
+else
+{
+    <div class="story-row @(Pose.IsDeleted ? "story-row--deleted" : null)">
+        @if (OnCharacter.HasDelegate)
+        {
+            <button type="button" class="story-portrait-btn" aria-label="@Pose.DisplayName" @onclick="Open">@Portrait</button>
+        }
+        else
+        {
+            <a class="story-portrait-btn" href="@ProfileHref" tabindex="-1" aria-hidden="true">@Portrait</a>
+        }
+        <div class="story-main">
+            <div class="story-head">
+                @if (OnCharacter.HasDelegate)
+                {
+                    <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
+                }
+                else
+                {
+                    <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
+                }
+                <span class="story-time">@Time</span>
+                @if (Pose.WasEdited)
+                {
+                    <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">@Loc["RolEditedBadge"]</span>
+                }
+            </div>
+            <div class="story-body">@Body</div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ScenePoseView Pose { get; set; } = null!;
+
+    /// <summary>The author's picture, raw; rendered only when <see cref="ImageUrlPolicy"/> allows it.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>The author's name colour, <c>#rrggbb</c>; anything else is ignored.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>The scene's participants; the author is never a mention in their own pose.</summary>
+    [Parameter] public IReadOnlyList<StoryMentions.Target> Mentions { get; set; } = [];
+
+    /// <summary>Opens a character by name (Play's sheet). Without it, names link to the profile page.</summary>
+    [Parameter] public EventCallback<string> OnCharacter { get; set; }
+
+    /// <summary>The tag the Scene plugin's <c>ooc</c> command puts on its poses (README §7.2).</summary>
+    public const string OocTag = "ooc";
+
+    private bool IsOoc => Pose.Tags.Any(t => string.Equals(t, OocTag, StringComparison.OrdinalIgnoreCase));
+
+    private string? SafeColor => NameColor.Safe(Color);
+
+    private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
+
+    private string Time => Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm");
+
+    private string ProfileHref => "/character/" + Uri.EscapeDataString(Pose.DisplayName);
+
+    private MarkupString Body { get; set; }
+    private string? _bodyMarkup;
+    private IReadOnlyList<StoryMentions.Target>? _bodyMentions;
+
+    /// <summary>
+    /// Renders and marks the body only when the pose or the participants changed: every room push re-renders
+    /// the whole story, and a backlog is a hundred poses.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_bodyMentions, Mentions) && string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) return;
+        _bodyMarkup = Pose.Markup;
+        _bodyMentions = Mentions;
+        Body = (MarkupString)StoryMentions.Mark(SceneMarkupRenderer.ToHtml(Pose.Markup),
+            Mentions.Where(m => !IsAuthor(m.Name)).ToList());
+    }
+
+    private bool IsAuthor(string name) =>
+        string.Equals(name, Pose.DisplayName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, Pose.AuthorName, StringComparison.OrdinalIgnoreCase);
+
+    private Task Open() => OnCharacter.InvokeAsync(Pose.DisplayName);
+
+    private RenderFragment Portrait => __builder =>
+    {
+        @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+        {
+            <img class="story-portrait" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
+        }
+        else
+        {
+            var hue = NameHue.Of(Pose.DisplayName);
+            <span class="story-portrait story-portrait--initials" style="background:hsl(@hue 30% 24%);color:hsl(@hue 45% 82%);">@Initials.From(Pose.DisplayName)</span>
+        }
+    };
+}

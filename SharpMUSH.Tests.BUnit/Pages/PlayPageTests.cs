@@ -64,7 +64,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var playTerminal = Substitute.For<IPlayTerminalService>();
 		playTerminal.IsConnected.Returns(false);
-		playTerminal.OobChannels.Returns(Substitute.For<IOobChannelStore>());
+		playTerminal.OobChannels.Returns(new OobChannelStore());
 		var playHost = new PlayTerminalServiceHost(() => playTerminal);
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
@@ -74,6 +74,8 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		var terminalHost = new TerminalServiceHost(() => terminal);
 		Services.AddSingleton(terminalHost);
 		Services.AddSingleton<ITerminalService>(terminalHost);
+
+		PlayPageServices.Install(Services);
 	}
 
 	/// <summary>
@@ -136,7 +138,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 
 		// The whole point: no terminal shell, and therefore none of GlobalTerminal's connbar —
 		// which is where the Connect button that could never succeed used to live.
-		await Assert.That(cut.FindAll(".play-shell")).IsEmpty();
+		await Assert.That(cut.FindAll(".play")).IsEmpty();
 		await Assert.That(cut.FindAll(".sharp-terminal-container")).IsEmpty();
 	}
 
@@ -150,7 +152,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>
 		{
-			if (cut.FindAll(".play-shell").Count == 0)
+			if (cut.FindAll(".play").Count == 0)
 				throw new InvalidOperationException("terminal shell not rendered yet");
 		});
 
@@ -170,7 +172,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>
 		{
-			if (cut.FindAll(".play-shell").Count == 0)
+			if (cut.FindAll(".play").Count == 0)
 				throw new InvalidOperationException("terminal shell not rendered yet");
 		});
 
@@ -198,7 +200,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Markup).DoesNotContain("NavPlayNeedsCharacter");
-		await Assert.That(cut.FindAll(".play-shell")).IsEmpty();
+		await Assert.That(cut.FindAll(".play")).IsEmpty();
 		await Assert.That(cut.Find("button.mud-button-root").TextContent).Contains("NavTryAgain");
 	}
 
@@ -219,7 +221,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (cut.FindAll(".play-shell").Count == 0)
+			if (cut.FindAll(".play").Count == 0)
 				throw new InvalidOperationException("terminal shell not rendered yet");
 		});
 

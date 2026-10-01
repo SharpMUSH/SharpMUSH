@@ -1,84 +1,101 @@
 @page "/admin/config"
 @attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Models.Configuration
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
-@inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 @inject ConfigSchemaService SchemaService
 
 <PageTitle>@Loc["Configuration"] - @Loc["AppTitle"]</PageTitle>
 
+@* D1 §6.4 configuration home (board 27): a plain header, a two-column grid of linked group cards
+   (accent icon tile, name, count, an Important tag on Security, description, section chips), and
+   an aside of the admin tools the viewer may use plus how changes apply. Counts come from the
+   schema; when it cannot be read the cards stay usable and the alert says why. *@
 <div class="config-home">
-    <div class="config-home-header">
-        <div class="config-kicker">@Loc["ResConfigHomeKicker"]</div>
-        <h1 class="config-title">@Loc["ServerConfiguration"]</h1>
-        <p class="config-desc">@Loc["ManageAllSettings"]</p>
-    </div>
+    <div class="config-home-main">
+        <PlainPageHeader Kicker="@Loc["ResConfigHomeKicker"]" Title="@Loc["ServerConfiguration"]" Description="@Loc["ManageAllSettings"]" />
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
-    }
-    else
-    {
-        @if (_error is not null)
+        @* The six cards need nothing from the schema; only their counts do, so they render at once. *@
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+        }
+        else if (_error is not null)
         {
             <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@Loc["FailedToLoadSchema"]: @_error</MudAlert>
         }
         <div class="config-cat-grid">
-            @foreach (var cat in Categories)
-            {
-                var c = cat;
-                <div class="config-cat-card" @onclick="@(() => Navigation.NavigateTo(c.Route))">
-                    <div class="config-cat-icon">
-                        <MudIcon Icon="@c.Icon" Style="font-size:1.375rem;color:var(--accent);" />
-                    </div>
-                    <div style="flex:1;min-width:0;">
-                        <div class="config-cat-title">
-                            @Loc[c.TitleKey]
-                            @if (c.Important)
+                @foreach (var group in ConfigSections.Groups)
+                {
+                    var g = group;
+                    var shown = g.Sections.Take(ChipsShown).ToList();
+                    var more = g.Sections.Count - shown.Count;
+                    <a class="config-cat-card" href="@g.FirstRoute">
+                        <div class="config-cat-head">
+                            <span class="config-cat-icon" aria-hidden="true"><MudIcon Icon="@g.Icon" Size="Size.Small" /></span>
+                            <div class="config-cat-titles">
+                                <div class="config-cat-title">
+                                    @Loc[g.TitleKey]
+                                    @if (g.Important)
+                                    {
+                                        <span class="config-cat-flag">@Loc["Important"]</span>
+                                    }
+                                </div>
+                                @if (!_loading && _error is null)
+                                {
+                                    <div class="config-cat-count">@Loc.Plural("AdmConfigSettingsCount", "count", CountFor(g))</div>
+                                }
+                            </div>
+                        </div>
+                        <div class="config-cat-desc">@Loc[g.DescKey]</div>
+                        <div class="config-cat-chips">
+                            @foreach (var section in shown)
                             {
-                                <span class="config-cat-flag">@Loc["Important"]</span>
+                                <span class="config-cat-chip">@Loc[section.TitleKey]</span>
+                            }
+                            @if (more > 0)
+                            {
+                                <span class="config-cat-more">@string.Format(Loc["AdmConfigMoreSections"], more)</span>
                             }
                         </div>
-                        <div class="config-cat-desc">@Loc[c.DescKey]</div>
-                        @if (_error is null)
-                        {
-                            <div class="config-cat-count">@GetGroupCount(c.Group) @Loc["Settings"]</div>
-                        }
-                    </div>
-                </div>
-            }
+                    </a>
+                }
         </div>
-    }
+    </div>
+
+    <aside class="config-home-aside">
+        <KitCard Aside="true" Title="@Loc["AdmConfigMoreTools"]">
+            <div class="config-home-tools">
+                <AuthorizeView Policy="applications.admin">
+                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Apps" Label="@Loc["AdmConfigToolApplications"]" Href="/admin/applications" /></Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="layout.admin">
+                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Dashboard" Label="@Loc["AdmConfigToolLayouts"]" Href="/admin/layout" /></Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="packages.admin">
+                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Inventory2" Label="@Loc["AdmConfigToolPackages"]" Href="/admin/packages" /></Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="roles.admin">
+                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.AdminPanelSettings" Label="@Loc["AdmConfigToolRoles"]" Href="/admin/roles" /></Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="wiki.admin">
+                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["AdmConfigToolWiki"]" Href="/admin/wiki" /></Authorized>
+                </AuthorizeView>
+            </div>
+        </KitCard>
+        <KitCard Aside="true" Title="@Loc["AdmConfigHowChangesApply"]">
+            <p class="config-home-how">@Loc["AdmConfigHowChangesApplyBody"]</p>
+        </KitCard>
+    </aside>
 </div>
 
 @code {
+    private const int ChipsShown = 4;
+
     private bool _loading = true;
     private string? _error;
-    private Dictionary<string, int> _groupCounts = new();
-
-    private sealed record CatCard(string Group, string TitleKey, string DescKey, string Icon, string Route, bool Important = false);
-
-    private static readonly CatCard[] Categories =
-    [
-        new("Server",      "Server",       "ServerCategoryDescription",      Icons.Material.Filled.Computer,   "/admin/config/net"),
-        new("Performance", "Performance",  "PerformanceCategoryDescription", Icons.Material.Filled.Speed,      "/admin/config/limit"),
-        new("Security",    "Security",     "SecurityCategoryDescription",    Icons.Material.Filled.Security,   "/admin/config/sitelock", Important: true),
-        new("Content",     "Content",      "ContentCategoryDescription",     Icons.Material.Filled.Article,    "/admin/config/message"),
-        new("Logs",        "LogsAndFiles", "LogsCategoryDescription",        Icons.Material.Filled.FolderOpen, "/admin/config/log"),
-        new("Advanced",    "Advanced",     "AdvancedCategoryDescription",    Icons.Material.Filled.Tune,       "/admin/config/attribute"),
-    ];
-
-    private static readonly Dictionary<string, string[]> GroupCategories = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Server"]      = ["Net", "Database"],
-        ["Performance"] = ["Limit", "Command"],
-        ["Security"]    = ["SitelockRules", "BannedNames", "Restriction"],
-        ["Content"]     = ["Message", "Cosmetic", "Chat"],
-        ["Logs"]        = ["Log", "File", "TextFile", "Dump"],
-        ["Advanced"]    = ["Attribute", "Flag", "Cost", "Compatibility", "Alias", "Debug", "Function", "Warning"]
-    };
+    private Dictionary<string, int> _categoryCounts = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,11 +104,9 @@
         switch (await SchemaService.GetSchemaAsync())
         {
             case ConfigurationSchema schema:
-                foreach (var (group, categories) in GroupCategories)
-                {
-                    _groupCounts[group] = schema.Properties.Values
-                        .Count(p => categories.Any(c => c.Equals(p.Category, StringComparison.OrdinalIgnoreCase)));
-                }
+                _categoryCounts = schema.Properties.Values
+                    .GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
                 break;
             case ApiFailure failure:
                 _error = failure.Message;
@@ -101,6 +116,6 @@
         _loading = false;
     }
 
-    private int GetGroupCount(string group) =>
-        _groupCounts.TryGetValue(group, out var count) ? count : 0;
+    private int CountFor(ConfigGroup group) =>
+        group.Sections.Sum(s => _categoryCounts.TryGetValue(s.SchemaCategory, out var n) ? n : 0);
 }

@@ -162,7 +162,13 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		LayoutScopes.WikiIndex => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{
-				[WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)]
+				[WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)],
+				// D1 README §6.1: the wiki home aside is "Recently changed" then "Live now".
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("RecentWikiActivity", 0, null),
+					new WidgetPlacement("ActiveScene", 1, null)
+				]
 			},
 			SidebarsOff),
 
@@ -176,14 +182,33 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 					new WidgetPlacement("character-header", 0, null),
 					new WidgetPlacement("WikiBody", 1, null)
 				],
-				[WidgetZone.RightSidebar] = [new WidgetPlacement("CharacterGallery", 0, null)]
+				// README §6.3: Gallery, then Recent scenes, then Often plays with.
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("CharacterGallery", 0, null),
+					new WidgetPlacement("RecentScenes", 1, null),
+					new WidgetPlacement("OftenPlaysWith", 2, null)
+				]
+			},
+			SidebarsOff),
+
+		// README §5.6 / §7.4: Here, then Exits.
+		LayoutScopes.Play => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("Here", 0, null),
+					new WidgetPlacement("Exits", 1, null)
+				]
 			},
 			SidebarsOff),
 
 		_ => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{
-				[WidgetZone.TopBar] = [new WidgetPlacement("QuickLinks", 0, null)],
+				// README §10 Q1: no top bar in D1; the zone draws a strip only once an admin fills it.
+				[WidgetZone.TopBar] = [],
 				[WidgetZone.LeftSidebar] = [],
 				[WidgetZone.RightSidebar] = [],
 				[WidgetZone.MainContent] = [],

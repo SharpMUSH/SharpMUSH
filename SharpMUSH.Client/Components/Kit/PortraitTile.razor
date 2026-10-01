@@ -1,0 +1,52 @@
+@* D1 §4.5 portrait tile: people in a 2-column grid. Image full width, 64–76px tall, radius 10; no
+   image → initials on a tinted fill at the same height so the grid never jumps. A dim label means
+   away or idle, and the word comes from softcode. *@
+@if (Href is not null)
+{
+    <a class="@RootClass" href="@Href" aria-label="@AriaLabel">@Inner</a>
+}
+else
+{
+    <button type="button" class="@RootClass" aria-label="@AriaLabel" @onclick="OnClick">@Inner</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>Real alt text from softcode (IMAGE`ALT). Null leaves the image decorative: the label already names the person.</summary>
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>The label under the image; defaults to <see cref="Name"/>.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>A softcode status word ("away", "idle 14m"); appended after " · " and dims the label.</summary>
+    [Parameter] public string? Status { get; set; }
+
+    /// <summary>Accent ring — the viewer's own tile.</summary>
+    [Parameter] public bool Highlight { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public int Height { get; set; } = 72;
+
+    /// <summary>The accessible name when the label is shortened (a first name in Play's Here).</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    private string RootClass => Highlight ? "kit-portrait kit-portrait--highlight" : "kit-portrait";
+    private string Text => Status is null ? (Label ?? Name) : $"{Label ?? Name} · {Status}";
+    private int Hue => NameHue.Of(Name);
+    private string FallbackStyle => $"height:{Height}px;background:hsl({Hue} 30% 24%);color:hsl({Hue} 45% 82%);";
+
+    private RenderFragment Inner => __builder =>
+    {
+        @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+        {
+            <img class="kit-portrait-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+        }
+        else
+        {
+            <span class="kit-portrait-fallback" style="@FallbackStyle" aria-hidden="true">@Initials.From(Name)</span>
+        }
+        <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">@Text</span>
+    };
+}

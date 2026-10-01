@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>最近的 Wiki 动态</value>
+    <value>最近更改</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4565,5 +4565,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>无法取消转换：{0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>收起横幅</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>显示横幅</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, other {# 条未读}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, other {# 个页面}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki 首页</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>最近更改</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>新页面</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>页面标题</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>搜索 Wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Wiki 的最新编辑，最新的在前。</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>此分类下还没有页面。</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>草稿</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>已锁定</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>刚刚</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, other {# 分钟前}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, other {# 小时前}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, other {# 天前}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · 世界 Wiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>游戏所需的一切</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>由管理员和玩家编辑的世界观、规则和入门指南。阅读无需账号。</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, other {全部 # 个页面}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>还没有 Wiki 页面。</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>没有与“{0}”匹配的页面。</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {正在进行} other {正在进行 · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>最后由 {0} 编辑</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>编辑于 {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, other {提及 · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>{0} 中的更多内容</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, other {全部 #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>其他语言</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>概览</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>主命名空间</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, other {# 人在线}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, other {# 个角色}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, other {全部 # 人在线}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>查找角色</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>当前在线</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>目前无人在线。</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>你</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>你的角色</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>创建角色</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>所有角色</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>最新</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>角色类别</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>没有名为 {0} 的角色。</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>正在场景中 · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>在线</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>完整图片</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>邮件</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>关于 {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki 页面 · {0}编辑</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>图片查看器</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>第 {0} 张，共 {1} 张</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>上一张</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>下一张</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>无法显示此图片。</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, other {相册 · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>头像</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>设为横幅</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>移除横幅</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>无法更改横幅：{0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>最近的场景</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>还没有场景。</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>常一起游戏</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>还没有共同的场景。</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>最近的场景</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>常一起游戏</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>添加图片</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>暂时无法读取此角色的资料。</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>收起“{0}”侧栏</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>展开“{0}”侧栏</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>板块</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>构建与管理</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>构建与管理员工具</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>搜索并前往…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>账户：{0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>板块菜单</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>前往页面或搜索…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>在 Wiki 中搜索“{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>查找名为“{0}”的角色</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>已作为 {0} 连接</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>场景中</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {此处 # 人}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, other {# 个出口}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>故事</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>视图</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>场景 · 记录到场景存档</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>完整输出 · 包括频道和私信</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {那里 # 人}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>已锁</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>已关闭</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>离开场景</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>前往</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>查看</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>留下</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>按 {0} 前往</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>完整图片</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>资料</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>在此场景中</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>闲置 {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>图库</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>角色卡：{0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>动作</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>说</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>场外</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>命令</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>写下你的动作…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>说点什么…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>场外发言…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>输入命令…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>消息类型</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>场景</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>房间</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>游戏分区</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>这里没有其他人。</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>布局范围</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>布局范围（可选）</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>此小组件所属的页面，例如 play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB 包</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB 包（可选）</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>游戏推送的实时数据，例如 weather.now；替代数据 URL</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>今天</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>昨天</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>新消息</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>发送给 {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>这里还没有内容。</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>返回场景</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>游戏页面右栏：在场者、出口和游戏面板。</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>在场</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>出口</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>应用</value>
   </data>
 </root>

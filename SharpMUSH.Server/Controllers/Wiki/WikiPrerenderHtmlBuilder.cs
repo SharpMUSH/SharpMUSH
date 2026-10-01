@@ -104,7 +104,7 @@ public static class WikiPrerenderHtmlBuilder
 			["@type"] = "Article",
 			["headline"] = page.Title,
 			["datePublished"] = page.Page.CreatedAt.ToString("O"),
-			["dateModified"] = page.Page.UpdatedAt.ToString("O"),
+			["dateModified"] = page.UpdatedAt.ToString("O"),
 			["url"] = canonicalUrl,
 			["inLanguage"] = page.Locale,
 		};

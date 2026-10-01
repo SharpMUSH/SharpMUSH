@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Nedavna aktivnost na wikiju</value>
+    <value>Nedavno izmijenjeno</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4565,5 +4565,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Pretvorbu nije moguće otkazati: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Smanji natpis</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Prikaži natpis</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# nepročitana} few {# nepročitane} other {# nepročitanih}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# stranica} few {# stranice} other {# stranica}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Pregledaj</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Početna wikija</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Nedavne promjene</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorije</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nova stranica</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Naslov stranice</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Pretraži wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Najnovija uređivanja wikija, najnovija prva.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategorija</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>U ovoj kategoriji još nema stranica.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>skica</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>zaključana</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>upravo sada</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # minute} few {prije # minute} other {prije # minuta}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # sat} few {prije # sata} other {prije # sati}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # dan} few {prije # dana} other {prije # dana}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Wiki svijeta</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Sve što trebate za igru</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Priče, pravila i vodiči za početnike, koje uređuju osoblje i igrači. Za čitanje nije potreban račun.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Sve # stranica} few {Sve # stranice} other {Svih # stranica}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Još nema wiki stranica.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Nijedna stranica ne odgovara „{0}“.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Uživo sada} one {Uživo sada · #} few {Uživo sada · #} other {Uživo sada · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Zadnje uredio {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>uređeno {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Spomenuti · #} few {Spomenuti · #} other {Spomenuti · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Više u {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Sve #} few {Sve #} other {Sve #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Također na</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Pregled</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Glavni imenski prostor</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# na mreži} few {# na mreži} other {# na mreži}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# lik} few {# lika} other {# likova}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Svi # na mreži} few {Svi # na mreži} other {Svi # na mreži}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Pronađi lika</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Sada na mreži</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nitko nije na mreži.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>vi</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Vaši likovi</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Stvori lika</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Pregledaj</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Svi likovi</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Najnoviji</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Kategorije likova</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Nijedan lik se ne zove {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>U sceni · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Na mreži</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Pošta</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>O liku {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Životopis</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki stranica · uređeno {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Preglednik slika</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} od {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Zatvori</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Prethodna slika</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Sljedeća slika</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Ova se slika ne može prikazati.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerija · #} few {Galerija · #} other {Galerija · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Postavi kao naslovnu</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Ukloni naslovnu</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Naslovna se nije mogla promijeniti: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Nedavne scene</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Još nema scena.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>uživo</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Često igra s</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Još nema zajedničkih scena.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Nedavne scene</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Često igra s</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Dodaj sliku</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Profil ovog lika trenutačno se ne može pročitati.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Sažmi bočnu traku {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Proširi bočnu traku {0}</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Odjeljci</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Izgradnja i upravljanje</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Alati za izgradnju i osoblje</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Pretraži i idi na…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Račun: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplikacije</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Jezik</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Izbornik odjeljka</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Idi na stranicu ili pretraži…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Pretraži wiki za „{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Pronađi lika po imenu „{0}”</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Povezan kao {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>U sceni</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Poruke</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# ovdje}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# izlaz} few {# izlaza} other {# izlaza}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Priča</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Prikaz</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scena · bilježi se u arhivu scena</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Potpuni ispis · s kanalima i porukama</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# tamo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zaključano</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zatvoreno</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Napušta scenu</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Idi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Pogledaj</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ostani</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pritisnite {0} za odlazak</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>U ovoj sceni</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Neaktivan {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Pojedinosti</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerija</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>List lika: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poza</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Govor</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Napišite svoju pozu…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Recite nešto…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Govorite izvan uloge…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Upišite naredbu…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Vrsta poruke</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scena</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Prostorija</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Dijelovi igre</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Ovdje nema nikoga drugog.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Opseg rasporeda</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Opseg rasporeda (neobavezno)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Stranica kojoj widget pripada, npr. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB paket (neobavezno)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Podaci uživo koje šalje igra, npr. weather.now; zamjenjuje URL podataka</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Danas</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Jučer</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Novo</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Poruka za {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privatne poruke</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Ovdje još nema ničega.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Natrag na scenu</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Igra</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Desni stupac stranice igre: tko je ovdje, izlazi i ploče igre.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Ovdje</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Izlazi</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplikacije</value>
   </data>
 </root>

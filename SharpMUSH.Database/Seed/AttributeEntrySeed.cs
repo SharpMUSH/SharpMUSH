@@ -71,6 +71,13 @@ public static class AttributeEntrySeed
 		("IDESCFORMAT", ["no_command","prefixmatch"]),
 		("IDESCRIBE", ["no_command","prefixmatch"]),
 		("IDLE", ["no_command","prefixmatch"]),
+		// The standard image attributes the portal reads (spec 2026-09-29 §1). Set with `&IMAGE obj=<url>`;
+		// visual+public on every leaf because neither flag propagates down a tree. prefixmatch only matters
+		// for `@image obj=<url>` on the root; the leaves carry it for uniformity with the spec's flag set.
+		("IMAGE", ["no_command","visual","prefixmatch","public"]),
+		("IMAGE`ALT", ["no_command","visual","prefixmatch","public"]),
+		("IMAGE`BANNER", ["no_command","visual","prefixmatch","public"]),
+		("IMAGE`FOCAL", ["no_command","visual","prefixmatch","public"]),
 		("INFILTER", ["no_command","prefixmatch"]),
 		("INPREFIX", ["no_command","prefixmatch"]),
 		("INVFORMAT", ["no_command","prefixmatch"]),

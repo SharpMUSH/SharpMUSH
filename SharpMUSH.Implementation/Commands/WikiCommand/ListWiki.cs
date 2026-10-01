@@ -48,7 +48,7 @@ public static class ListWiki
 		}
 
 		var canSeeDrafts = await WikiCommandHelper.CanSeeDrafts(executor);
-		var pages = VisiblePages(canSeeDrafts, await wikiService.GetAllPagesAsync(0, MaxListed, ns));
+		var pages = await wikiService.GetAllPagesAsync(0, MaxListed, ns, Visibility(canSeeDrafts));
 		var total = await wikiService.CountPagesAsync(ns, canSeeDrafts);
 
 		var lines = new List<MString>
@@ -58,9 +58,7 @@ public static class ListWiki
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
 			.Select(l => MarkupText.Plain("  " + l)));
 		// Both terms are drawn from the same population — the pages this reader may see — so the remainder
-		// is "visible pages past the window", and neither the header nor this line reveals a draft. The
-		// visible row count, not the fetched window's size, is what must be subtracted: drafts filtered out
-		// of the window still consumed window slots, so the window's size counts pages this reader cannot.
+		// is "visible pages past the window", and neither the header nor this line reveals a draft.
 		if (total > pages.Count)
 			lines.Add(MarkupText.Plain($"  … and {total - pages.Count} more. See the web portal for the full index."));
 
@@ -135,11 +133,11 @@ public static class ListWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		// Filtered after the fetch, so a burst of draft edits shortens the answer rather than disclosing
-		// them. Asking for count+N and trimming would only move the guesswork around. No total is rendered
-		// beside these rows, and none should be: it would be the same disclosure @wiki/list's header was.
-		var pages = VisiblePages(
-			await WikiCommandHelper.CanSeeDrafts(executor), await wikiService.GetRecentChangesAsync(count));
+		// The store filters before counting, so a burst of draft edits neither shows nor shortens the answer.
+		// No total is rendered beside these rows, and none should be: it would be the same disclosure
+		// @wiki/list's header was.
+		var pages = await wikiService.GetRecentChangesAsync(
+			count, Visibility(await WikiCommandHelper.CanSeeDrafts(executor)));
 
 		var lines = new List<MString> { MarkupText.Plain("WIKI: Recently edited pages:") };
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
@@ -151,16 +149,16 @@ public static class ListWiki
 	}
 
 	/// <summary>
-	/// Drops the unpublished pages this reader may not see. Every listing surface feeds its rows through
-	/// this, because <c>GetAllPagesAsync</c> and <c>GetRecentChangesAsync</c> both return drafts and say so.
+	/// The pages this reader may see, for the store to apply before it pages: <c>GetAllPagesAsync</c> and
+	/// <c>GetRecentChangesAsync</c> return drafts unless told otherwise.
 	/// </summary>
 	/// <param name="canSeeDrafts">
 	/// <see cref="WikiCommandHelper.CanSeeDrafts"/> for this reader, passed in rather than resolved here so
 	/// that a surface which also renders a <em>count</em> gates both on the one value. Deriving the rows
 	/// from one rule and the total from another is how the header came to disclose what the rows hid.
 	/// </param>
-	private static IReadOnlyList<WikiPage> VisiblePages(bool canSeeDrafts, IReadOnlyList<WikiPage> pages) =>
-		canSeeDrafts ? pages : pages.Where(p => p.Published).ToList();
+	private static WikiVisibility Visibility(bool canSeeDrafts) =>
+		canSeeDrafts ? WikiVisibility.All : WikiVisibility.PublishedOnly;
 
 	/// <summary>
 	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.

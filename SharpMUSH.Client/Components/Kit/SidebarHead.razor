@@ -1,0 +1,14 @@
+@* D1 §3 page sidebar header: the section's name at 18px/700 and one 12px dim line under it
+   ("Main namespace · 69 pages", "● 23 online · 142 characters"). *@
+<div class="kit-side-head">
+    <div class="kit-side-title">@Title</div>
+    @if (Sub is not null)
+    {
+        <div class="kit-side-sub">@Sub</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Sub { get; set; }
+}

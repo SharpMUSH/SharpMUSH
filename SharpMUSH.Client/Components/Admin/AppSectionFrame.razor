@@ -1,0 +1,33 @@
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* An application page joins the section its NavPlacement names (README §3): Build and Manage apps
+   sit in Build & manage with its sidebar; an app in a section of its own gets that section's list of
+   apps as its sidebar; Play and World apps (and unplaced ones) have no section sidebar. *@
+@if (App?.NavPlacement is { } placement && IsBuild(placement))
+{
+    <SectionShell Key="build" Class="build-shell" NavLabel="@Loc["NavBuildManage"]" PadBody="false">
+        <Nav Context="collapsed"><BuildSidebar Collapsed="@collapsed" /></Nav>
+        <ChildContent>@ChildContent</ChildContent>
+    </SectionShell>
+}
+else if (App?.NavPlacement is { } novel && !PortalNavSections.BuiltInSections.Contains(novel, StringComparer.OrdinalIgnoreCase))
+{
+    <SectionShell Key="@($"apps-{novel.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@novel" PadBody="false">
+        <Nav Context="collapsed"><AppSectionSidebar Section="@novel" Collapsed="@collapsed" /></Nav>
+        <ChildContent>@ChildContent</ChildContent>
+    </SectionShell>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public PortalApplication? App { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private static bool IsBuild(string placement) =>
+        string.Equals(placement, "Build", StringComparison.OrdinalIgnoreCase) || string.Equals(placement, "Manage", StringComparison.OrdinalIgnoreCase);
+}

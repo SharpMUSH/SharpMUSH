@@ -67,3 +67,12 @@ public sealed record ScenePoseView(
 
 	public DateTimeOffset CreatedAtUtc => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt);
 }
+
+/// <summary>Someone who shares scenes with a character (<c>SceneController.ScenePartnerDto</c>).</summary>
+public sealed record ScenePartner(string Dbref, string Name, int Scenes);
+
+/// <summary>
+/// The portal-known profile fields (spec §3). <see cref="Color"/> is always <c>#rrggbb</c> or null;
+/// image URLs are raw and pass <c>ImageUrlPolicy</c> where they render.
+/// </summary>
+public sealed record CharacterProfileData(string Name, string Objid, string Dbref, string? Image, string? Banner, string? Color, string? Role);

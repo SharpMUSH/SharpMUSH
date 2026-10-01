@@ -1,0 +1,203 @@
+.comm {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	overflow: hidden;
+}
+
+.comm-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px 10px 16px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.comm-titles {
+	flex: 1;
+	min-width: 0;
+}
+
+.comm-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.comm-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.comm-close {
+	width: 36px;
+	height: 36px;
+	display: grid;
+	place-items: center;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.comm-close:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.comm-close:focus-visible,
+.comm-send:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* column-reverse keeps the newest line in view as lines arrive */
+.comm-scroll {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column-reverse;
+	padding: 8px 20px;
+}
+
+.comm-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.comm-empty {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+.comm-day,
+.comm-new {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.comm-day::before,
+.comm-day::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--border);
+}
+
+.comm-new {
+	color: var(--unread-alert);
+	font-weight: 700;
+}
+
+.comm-new::before {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--unread-alert);
+}
+
+.comm-group {
+	display: flex;
+	gap: 12px;
+}
+
+.comm-avatar {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.comm-avatar--initials {
+	display: grid;
+	place-items: center;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.comm-body {
+	min-width: 0;
+	flex: 1;
+}
+
+.comm-meta {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.comm-name {
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.comm-time {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.comm-text {
+	font-size: 15px;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.comm-compose {
+	flex-shrink: 0;
+	padding: 0 12px 12px;
+}
+
+.comm-compose-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.comm-input {
+	flex: 1;
+	min-width: 0;
+	height: 40px;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 15px;
+	outline: none;
+}
+
+.comm-input::placeholder {
+	color: var(--text-faint);
+}
+
+.comm-send {
+	height: 40px;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 20px;
+	background: var(--accent);
+	color: var(--accent-on);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.comm-send:disabled {
+	opacity: 0.45;
+	cursor: default;
+}

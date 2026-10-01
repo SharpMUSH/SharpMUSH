@@ -1,8 +1,8 @@
 format: 1
 package: room-contents
-version: 1.0.0
+version: 2.0.0
 authors: [SharpMUSH]
-description: "Pushes room.contents / room.exits OOB updates to a room's connected occupants, driving the portal's Play sidebar."
+description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [oob, websocket, portal, play, events]
@@ -11,44 +11,237 @@ requires_server: ">=0.1"
 # Attach mode (decision 20.3): manages the ROOM`CONTENTS event handler and its
 # helpers on the existing event_handler object ({{$event_handler}}, #9 by
 # default). The engine fires ROOM`CONTENTS on movement, connect and disconnect;
-# without a handler attribute nothing is emitted and the Play sidebar has no
+# without a handler attribute nothing is emitted and the Play page has no
 # data source.
+#
+# 2.0 is OOB v2 (docs/design/d1/README.md §7.1, docs/superpowers/specs/
+# 2026-09-29-image-attributes-and-oob-v2-design.md §4): every payload carries
+# "v": 2, is built PER VIEWER, and only adds keys to the v1 shapes, so a v1
+# consumer keeps working. The payload shapes are documented in README.md and
+# docs/softcode/room-contents-handler.md.
+#
+# Cost. One event does the viewer-independent work once — FN`PREPARE builds
+# every occupant's base row, every exit's base row and destination preview,
+# and the room's own info into q-registers — and then, per connected viewer,
+# only what differs by viewer: visibility, lock state, hint, "you", scene.
+# With K occupants, M exits and N viewers that is O(K+M) evaluations of
+# descriptions and images plus O(N·(K+M)) cheap patches. FN`DESC is the
+# expensive part (it evaluates DESCRIBE, once per room and once per exit
+# destination); on a big hub, blank FN`DESC, or FN`DEST, and the page falls
+# back to its own text.
 objects:
   - ref: handler
     target: "{{$event_handler}}"
     attributes:
-      # ── Helpers (me-relative; redefinable per game) ───────────────────────
-      # The "who" predicate (%0 = a room occupant). lcon() includes exits on this
-      # engine, so exits are filtered out here. Players are listed only while
-      # CONNECTED — a disconnected or portal-only (background) player is not
-      # present in the room for display purposes, matching PennMUSH; non-players
-      # always show.
+      # ── Predicates (me-relative; redefinable per game) ───────────────────
+      # The "who" predicate (%0 = a room occupant, %1 = the viewer). lcon()
+      # includes exits on this engine, so exits are filtered out here. Players
+      # are listed only while CONNECTED — a disconnected or portal-only
+      # (background) player is not present in the room for display purposes,
+      # matching PennMUSH; non-players always show. A DARK occupant is listed
+      # only to a viewer who may see it — Wizard/Royalty, See_All, or itself —
+      # because lcon() runs as the wizard handler and keeps them. hastype(),
+      # not isplayer(): there is no isplayer() on this engine (nor on
+      # PennMUSH), and not() of the resulting #-1 error is true, which listed
+      # every disconnected player in 1.0.
       FN`WHOVIS: |-
-        cand(not(hastype(%0,exit)),cor(not(isplayer(%0)),hasflag(%0,CONNECTED)))
-      # One occupant row (%0 = the occupant). cmd is what a client issues on click.
+        cand(not(hastype(%0,exit)),cor(not(hastype(%0,player)),hasflag(%0,CONNECTED)),cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All)))
+      # Who receives a push (%0 = a room occupant): connected players. oob() would
+      # skip everyone else anyway; filtering first keeps the per-viewer payloads
+      # from being built for nobody.
+      FN`VIEWER: |-
+        cand(hastype(%0,player),hasflag(%0,CONNECTED))
+      # One player counts toward a destination's head count (%0 = a player).
+      # The count is computed once per event and shown to every viewer, so it
+      # takes the mortal's view: DARK (hidden) staff are never counted.
+      FN`ONLINE: |-
+        cand(hasflag(%0,CONNECTED),not(hasflag(%0,DARK)))
+      # Whether a viewer (%1) may see an exit (%0). DARK exits are hidden unless
+      # LIGHT, or the viewer is Wizard/Royalty or holds See_All. A game with its
+      # own visibility rules redefines this one attribute.
+      FN`EXITVIS: |-
+        cor(not(hasflag(%0,DARK)),hasflag(%0,LIGHT),orflags(%1,Wr),haspower(%1,See_All))
+
+      # ── Value helpers ────────────────────────────────────────────────────
+      # Idle seconds (%0) → the status word the Play page shows. active under
+      # five minutes, idle under thirty, away beyond. Redefine to taste.
+      FN`STATUS: |-
+        switch(1,lt(%0,300),active,lt(%0,1800),idle,away)
+      # The area a room (%0) belongs to: the name of its zone, else of its
+      # parent, else nothing (and the key is omitted). Area is a game concept —
+      # a game that models it some other way redefines this.
+      FN`AREA: |-
+        if(isdbref(setr(a,zone(%0))),name(%q<a>),if(isdbref(setr(a,parent(%0))),name(%q<a>)))
+      # A player's name colour (%0 = the player) as a JSON string, or null. It
+      # lands in a CSS custom property on the page, so only #rrggbb is accepted;
+      # anything else — including a value that tries to carry more CSS — is
+      # dropped. Brackets are escaped because a bare [...] is evaluated here.
+      FN`COLOR: |-
+        if(regmatch(setr(c,get(%0/PROFILE`COLOR)),^#\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]$),json(string,%q<c>),null)
+      # An IMAGE`FOCAL value (%0) is two numbers, each 0 to 1. Checked without a
+      # regex: a bad value used to reach json(number), whose error made the row,
+      # then the payload, invalid — and oob() then rejected the whole
+      # room.contents for every viewer, silently.
+      FN`FOCALOK: |-
+        cand(eq(words(%0),2),isnum(first(%0)),isnum(last(%0)),gte(first(%0),0),lte(first(%0),1),gte(last(%0),0),lte(last(%0),1))
+      # One image attribute (%1) of an object (%0), or blank unless the
+      # attribute is visual. The handler is a wizard, so get() alone would
+      # read an attribute its owner made private: the seeded visual flag is a
+      # default for a NEW attribute, and an IMAGE set before the seed existed,
+      # or with visual cleared since, keeps its owner's choice. visual does not
+      # propagate down a tree and a private branch hides its leaves (help
+      # ATTRIBUTE FLAGS2), so IMAGE`BANNER also needs a visual IMAGE. get(),
+      # never u(): a URL is text the owner typed.
+      FN`PICTURE: |-
+        if(cand(hasflag(%0/%1,visual),cor(not(strmatch(%1,*`*)),hasflag(%0/[before(%1,`)],visual))),get(%0/%1))
+      # The image reference of an object (%0) for the URL %1, as
+      # {"url","alt","focal"} from IMAGE`ALT / IMAGE`FOCAL (help IMAGE), or the
+      # word null when %1 is blank — null in a json_mod() patch REMOVES the
+      # key, which is how a row without a picture carries no image key at all.
+      # alt falls back to the object's name; focal is present only when set
+      # and well-formed.
+      FN`IMAGEREF: |-
+        if(%1,json_mod(json(object,url,json(string,%1),alt,json(string,strfirstof(u(me/FN`PICTURE,%0,IMAGE`ALT),name(%0)))),patch,json(object,focal,if(u(me/FN`FOCALOK,setr(f,u(me/FN`PICTURE,%0,IMAGE`FOCAL))),json_array(iter(%q<f>,json(number,%i0))),null))),null)
+      # An object's (%0) thumbnail: IMAGE. Occupant rows and exit destination
+      # previews use it.
+      FN`IMAGE: |-
+        u(me/FN`IMAGEREF,%0,u(me/FN`PICTURE,%0,IMAGE))
+      # A room's (%0) banner: IMAGE`BANNER, the wide art, falling back to
+      # IMAGE (help IMAGE). room.info uses it — it is the Play page's banner.
+      FN`BANNER: |-
+        u(me/FN`IMAGEREF,%0,strfirstof(u(me/FN`PICTURE,%0,IMAGE`BANNER),u(me/FN`PICTURE,%0,IMAGE)))
+      # The description text of a room (%0), evaluated as the room itself — the
+      # same executor `look` gives it — so its own softcode runs with its own
+      # permissions and not the handler's. It is evaluated ONCE per event, with
+      # the event's enactor (%#, %N): the player who walked in or connected, or
+      # the wizard who @tel'd someone. A description that branches on the
+      # enactor shows that branch to every viewer it is pushed to; the handler
+      # limits room.info to the enactor when the enactor is in the room, but a
+      # destination preview goes to everyone. A game whose descriptions branch
+      # on who is looking sets this to a blank, and the page falls back to its
+      # own text. It is also the expensive helper — see the cost note above.
+      FN`DESC: |-
+        objeval(%0,u(%0/DESCRIBE))
+      # The scene bound to a room (%0) as seen by a viewer (%1), or null. Two
+      # guards: scenewhere() answers #-1 NOT FOUND / #-1 PERMISSION, which is
+      # rejected first — scene(#-1 NOT FOUND,id) answers the same constant, so
+      # an id echo alone would pass it; then scene() must echo the id, which
+      # only a real scene does — without the Scene plugin the calls are unknown
+      # functions, which this parser leaves as literal text (as PennMUSH
+      # does), and the echo fails on that. The scene functions gate on the
+      # ENACTOR, so a private scene the causer may not see is null for
+      # everyone; when the causer may see it, each viewer gets it only if it is
+      # public, they are Wizard/Royalty, or they are a member.
+      FN`SCENE: |-
+        if(cand(not(strmatch(setr(s,scenewhere(%0)),#-1*)),strmatch(%q<s>,scene(%q<s>,id))),if(cor(scene(%q<s>,public),orflags(%1,Wr),not(strmatch(scenemember(%q<s>,%1),#-1*))),json(object,id,json(string,%q<s>),title,json(string,scene(%q<s>,title)),cast,json(number,words(scenemembers(%q<s>)))),null),null)
+      # The hint shown on a locked exit (%0): its @fail message, as stored. It
+      # is plain text to the page — never evaluated, so softcode in an @fail
+      # arrives as the code itself.
+      FN`EXITHINT: |-
+        get(%0/FAILURE)
+      # open | locked | closed for an exit (%0) and a viewer (%1); %2 is what
+      # loc(%0) answered. closed is an exit that leads nowhere (#-1 NOT LINKED);
+      # a VARIABLE (#-2) or HOME (#-3) destination stays open. locked is the
+      # exit's Basic lock failing for THIS viewer.
+      FN`EXITSTATE: |-
+        switch(1,strmatch(%2,#-1*),closed,not(elock(%0/Basic,%1)),locked,open)
+      # An exit destination (%0): {name, area?, image?, desc, here}. here
+      # counts the connected, non-DARK players there. Viewer-independent, so
+      # FN`PREPARE computes it once per exit per event.
+      FN`DEST: |-
+        json_mod(json(object,name,json(string,name(%0)),desc,json(string,u(me/FN`DESC,%0)),here,json(number,words(filter(me/FN`ONLINE,lplayers(%0))))),patch,json(object,area,if(setr(a,u(me/FN`AREA,%0)),json(string,%q<a>),null),image,u(me/FN`IMAGE,%0)))
+
+      # ── Base rows (viewer-independent; computed once per event) ──────────
+      # Every row is a base object every viewer gets, json_mod()-patched per
+      # viewer with the keys that differ: a null in the patch removes the key,
+      # so "no image" and "not you" are absent rather than null.
+      #
+      # An occupant's base row (%0 = the occupant). v1 keys dbref, name and cmd
+      # are unchanged; v2 adds objid, type, and for players image, color
+      # (PROFILE`COLOR, validated), status/idle (help idle()) and profile.
+      FN`WHOBASE: |-
+        json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,image,u(me/FN`IMAGE,%0),color,if(hastype(%0,player),u(me/FN`COLOR,%0),null),status,if(hastype(%0,player),json(string,u(me/FN`STATUS,idle(%0))),null),idle,if(hastype(%0,player),json(number,idle(%0)),null),profile,if(hastype(%0,player),true,null)))
+      # An exit's base row (%0 = the exit). v1 keys name and cmd are unchanged;
+      # v2 adds dbref, objid, aliases and, when set, confirm (a CONFIRM
+      # attribute on the exit, plain text). state, hint and dest are per
+      # viewer and patched on by FN`EXITROW.
+      FN`EXITBASE: |-
+        json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),aliases,json_array(iter(fullalias(%0),json(string,%i0))),cmd,json(string,goto [num(%0)])),patch,json(object,confirm,if(setr(c,get(%0/CONFIRM)),json(string,%q<c>),null)))
+      # An exit's destination preview (%0 = the exit), or nothing when it leads
+      # nowhere, HOME, or a VARIABLE destination.
+      FN`EXITDEST: |-
+        if(isdbref(setr(d,loc(%0))),u(me/FN`DEST,%q<d>))
+      # The room's own info (%0 = the room) without the per-viewer scene block.
+      # Its image is the banner (FN`BANNER), not the thumbnail.
+      FN`INFOBASE: |-
+        json_mod(json(object,v,json(number,2),dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),desc,json(object,format,json(string,text),text,json(string,u(me/FN`DESC,%0)))),patch,json(object,area,if(setr(a,u(me/FN`AREA,%0)),json(string,%q<a>),null),image,u(me/FN`BANNER,%0)))
+      # Once per event (%0 = the room): every base row into a q-register the
+      # per-viewer helpers read — w<n> for occupant #n, x<n> and d<n> for exit
+      # #n and its destination preview, info<n> for room #n — and mover, the
+      # enactor's bare dbref when the enactor is in the room AND is a viewer
+      # (FN`VIEWER). A causer that is in the room but receives nothing — a
+      # thing that moved itself in — would otherwise match no viewer, and
+      # room.info would go to nobody. u() shares the
+      # caller's registers on this engine, so a register set here is visible in
+      # every helper the handler calls afterwards. Occupants are gathered with
+      # the handler itself as the viewer (it is a wizard, so nothing is hidden
+      # from it); each real viewer filters that set down. lcon(), lexits() and
+      # loc() answer OBJIDS (#12:1790741308439) here, so every key goes through
+      # num(): a register name cannot hold the colon.
+      FN`PREPARE: |-
+        null(setq(mover,if(cand(strmatch(num(loc(%#)),num(%0)),u(me/FN`VIEWER,%#)),num(%#))),iter(filter(me/FN`WHOVIS,lcon(%0),,,%!),setq(w[rest(num(%i0),#)],u(me/FN`WHOBASE,%i0))),iter(if(hastype(%0,room),lexits(%0)),setq(x[rest(num(%i0),#)],u(me/FN`EXITBASE,%i0),d[rest(num(%i0),#)],u(me/FN`EXITDEST,%i0))),setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0)))
+
+      # ── Rows (per viewer) ────────────────────────────────────────────────
+      # Each reads its base row from the register FN`PREPARE filled, or builds
+      # it on the spot when called outside an event (a game's own query, a
+      # test), and patches on what differs by viewer.
+      #
+      # One occupant row (%0 = the occupant, %1 = the viewer): "you": true on
+      # the viewer's own row, and a Page action on everyone else's player rows.
       FN`WHOROW: |-
-        json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
-      # One exit row (%0 = the exit).
+        json_mod(strfirstof(r(w[rest(num(%0),#)]),u(me/FN`WHOBASE,%0)),patch,json(object,you,if(strmatch(num(%0),num(%1)),true,null),actions,if(cand(hastype(%0,player),not(strmatch(num(%0),num(%1)))),json(array,json(object,label,json(string,Page),cmd,json(string,page [num(%0)]=))),null)))
+      # One exit row (%0 = the exit, %1 = the viewer): state for this viewer,
+      # hint only when locked, and the destination preview only when NOT locked
+      # — a locked door does not describe what is behind it. cmd stays on a
+      # locked exit: locks are dynamic, and trying one is how a player reads
+      # its @fail.
       FN`EXITROW: |-
-        json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
+        json_mod(strfirstof(r(x[rest(num(%0),#)]),u(me/FN`EXITBASE,%0)),patch,json(object,state,json(string,setr(st,u(me/FN`EXITSTATE,%0,%1,loc(%0)))),hint,if(cand(strmatch(%q<st>,locked),setr(h,u(me/FN`EXITHINT,%0))),json(string,%q<h>),null),dest,if(cand(not(strmatch(%q<st>,locked)),setr(dd,strfirstof(r(d[rest(num(%0),#)]),u(me/FN`EXITDEST,%0)))),%q<dd>,null)))
+
+      # ── Payloads (%0 = the room, %1 = the viewer) ────────────────────────
+      # iter()/json_array() use %r as their separator: a row embeds names,
+      # descriptions and hints, which can contain a space or a pipe, and cannot
+      # contain a raw newline once json() has escaped it. json_array() also
+      # yields [] for an empty list, so no base-case guard is needed.
+      #
+      # The exits payload is guarded on %0 actually being a room. The event
+      # fires for whatever container was affected, and a container is not always
+      # a room — a player carrying something, or a thing something was
+      # teleported into, both raise it. lexits() answers #-1 for those, as
+      # PennMUSH does, and an unguarded iter() would then build one bogus row
+      # out of "#-1". An empty exits list is the right answer for a non-room,
+      # and still worth sending: it clears whatever the sidebar showed before.
+      FN`PAYLOAD`CONTENTS: |-
+        json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
+      FN`PAYLOAD`EXITS: |-
+        json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
+      FN`PAYLOAD`INFO: |-
+        json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
 
       # ── The handler ──────────────────────────────────────────────────────
       # %0 = the affected room, %1 = cause (move-in / move-out / connect / disconnect).
       #
-      # oob(<targets>, <package>, <json>) takes a target LIST and delivers only to
-      # those that are players holding a live WebSocket/GMCP connection, so passing
-      # lcon(%0) (the whole room) needs no manual connected/player filtering.
-      #
-      # iter()/json_array() use "|" as their separator: a row like {"cmd":"look #1"}
-      # contains a space, and the default space separator would split it apart.
-      #
-      # The exits half is guarded on %0 actually being a room. The event fires for
-      # whatever container was affected, and a container is not always a room — a
-      # player carrying something, or a thing something was teleported into, both
-      # raise it. lexits() answers #-1 for those, as PennMUSH does (help lexits is
-      # `lexits(<room>)`, and dbwalk's validloc is IsRoom for exits), and an
-      # unguarded iter() would then build one bogus row out of "#-1" and try to
-      # look it up. An empty exits list is the right answer for a non-room, and
-      # still worth sending: it clears whatever the sidebar showed before.
+      # FN`PREPARE once, then per connected player in the room: build that
+      # player's own room.contents and room.exits and oob() them to that player
+      # alone — a dark exit, a lock hint and "you" differ per viewer. room.info
+      # goes out on move-in and connect: to the enactor alone when the enactor
+      # is a viewer in the room (the player who walked in or connected — the
+      # usual case, and the one whose %N the description was evaluated for),
+      # and to everyone otherwise (%# is the object that CAUSED the event: the
+      # wizard who @tel'd someone from elsewhere, God for a system move, or a
+      # thing that moved itself in — the mover is then unknown or receives
+      # nothing). A viewer already holding the
+      # same room.info can ignore it. null() swallows the oob() counts, which
+      # would otherwise be thought at the handler object.
       ROOM`CONTENTS: |-
-        think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(if(hastype(%0,room),lexits(%0)),u(me/FN`EXITROW,itext(0)),%b,|),|)))
+        think null(u(me/FN`PREPARE,%0),iter(filter(me/FN`VIEWER,lcon(%0)),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
