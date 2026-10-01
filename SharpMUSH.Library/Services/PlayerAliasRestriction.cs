@@ -56,9 +56,8 @@ internal static class PlayerAliasRestriction
 	{
 		var count = 0;
 
-		foreach (var entry in value.Split(PlayerAliases.Delimiter))
+		foreach (var alias in value.Split(PlayerAliases.Delimiter).Select(entry => entry.TrimStart(' ')))
 		{
-			var alias = entry.TrimStart(' ');
 			if (alias.Length == 0)
 			{
 				return new Error<string>(ErrorMessages.Notifications.PlayerAliasNull);

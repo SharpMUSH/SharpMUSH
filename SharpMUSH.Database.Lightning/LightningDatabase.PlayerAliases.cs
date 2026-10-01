@@ -39,13 +39,10 @@ public partial class LightningDatabase
 		}
 
 		var key = Keys.Dbref(dbref);
-		foreach (var old in record.Aliases)
+		// One index row serves the name and an alias spelled the same way; the name keeps it.
+		foreach (var old in record.Aliases.Where(old => !old.Equals(record.Name, StringComparison.OrdinalIgnoreCase)))
 		{
-			// One index row serves the name and an alias spelled the same way; the name keeps it.
-			if (!old.Equals(record.Name, StringComparison.OrdinalIgnoreCase))
-			{
-				tx.Delete(Tables.ObjName, Keys.Lower(old), key);
-			}
+			tx.Delete(Tables.ObjName, Keys.Lower(old), key);
 		}
 
 		foreach (var alias in aliases)

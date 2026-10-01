@@ -31,19 +31,10 @@ public static class PlayerAliases
 	/// (<c>src/plyrlist.c:116</c>) splits on <c>;</c>, skips leading spaces and drops empty entries.
 	/// </summary>
 	public static string[] Split(string value)
-	{
-		var names = new List<string>();
-		foreach (var entry in value.Split(Delimiter))
-		{
-			var name = entry.TrimStart(' ');
-			if (name.Length > 0 && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
-			{
-				names.Add(name);
-			}
-		}
-
-		return [.. names];
-	}
+		=> [.. value.Split(Delimiter)
+			.Select(entry => entry.TrimStart(' '))
+			.Where(name => name.Length > 0)
+			.Distinct(StringComparer.OrdinalIgnoreCase)];
 
 	/// <summary>PennMUSH's <c>shortalias</c> (<c>src/utils.c</c>): the alias list up to its first <c>;</c>.</summary>
 	public static string Short(string fullAlias)
