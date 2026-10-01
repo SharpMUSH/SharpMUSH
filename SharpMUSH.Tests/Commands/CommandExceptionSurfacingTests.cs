@@ -1,8 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -32,13 +30,10 @@ namespace SharpMUSH.Tests.Commands;
 /// test-registered command that throws <see cref="KeyNotFoundException"/>, so no future fix can
 /// silently disarm this class again.</para>
 /// </summary>
-[NotInParallel]
 public class CommandExceptionSurfacingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
@@ -56,6 +51,7 @@ public class CommandExceptionSurfacingTests
 			return;
 		}
 
+		// Tests of this class run concurrently; whichever gets here first registers it.
 		var attribute = new SharpCommandAttribute
 		{
 			Name = CrashingCommand.ToUpperInvariant(),
@@ -66,7 +62,7 @@ public class CommandExceptionSurfacingTests
 			ParameterNames = []
 		};
 
-		library.Add(CrashingCommand,
+		library.TryAdd(CrashingCommand,
 			(new CommandDefinition(attribute,
 				_ => throw new KeyNotFoundException("Deliberate crash for exception-surfacing tests.")), true));
 	}
@@ -243,25 +239,19 @@ public class CommandExceptionSurfacingTests
 	}
 
 	/// <summary>
-	/// Plain text of the most recent Notify to <paramref name="target"/> that carries an exception
-	/// payload. The INotifyService substitute is shared for the whole test session, hence filtering
-	/// by an isolated player's DBRef.
+	/// The most recent exception report <paramref name="target"/> received for <see cref="CrashingCommand"/>,
+	/// read from the recipient-keyed recorder. Every target but God is this test's own; God's bucket is
+	/// shared, which is why the command is part of the match.
 	/// </summary>
 	private string? NotificationTo(DBRef target) =>
-		LastMatching(call =>
-			call.GetArguments() is [AnySharpObject obj, ..] && obj.Object().DBRef == target);
+		LastReport(WebAppFactoryArg.Notifications.For(target));
 
 	private string? NotificationToHandle(long handle) =>
-		LastMatching(call => call.GetArguments() is [long h, ..] && h == handle);
+		LastReport(WebAppFactoryArg.Notifications.ForHandle(handle));
 
-	private string? LastMatching(Func<ICall, bool> targetMatches) =>
-		NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(targetMatches)
-			.Select(call => call.GetArguments() is [_, SharpMessage msg, ..]
-				? msg switch { MString markup => markup.ToPlainText(), string text => text }
-				: null)
-			.LastOrDefault(text => text is not null && text.StartsWith("#-1 EXCEPTION: "));
+	private static string? LastReport(IEnumerable<string> messages) =>
+		messages.LastOrDefault(text => text.StartsWith("#-1 EXCEPTION: ", StringComparison.Ordinal)
+			&& text.Contains(CrashingCommand, StringComparison.Ordinal));
 
 	private static string PayloadOf(string? notification)
 		=> notification!["#-1 EXCEPTION: ".Length..];
