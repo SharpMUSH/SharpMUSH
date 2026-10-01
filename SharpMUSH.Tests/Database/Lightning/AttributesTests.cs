@@ -199,6 +199,56 @@ public class AttributesTests
 		await Assert.That(attr.Flags.Select(f => f.Name)).Contains("wizard");
 	}
 
+	/// <summary>
+	/// PennMUSH's atr_add applies an entry's default flags only when it creates the attribute. Setting an
+	/// existing one again keeps the flags its owner chose: re-applying the defaults put <c>visual</c> back on
+	/// an attribute its owner had made private.
+	/// </summary>
+	[Test]
+	public async Task SetKeepsTheFlagsOfAnAttributeThatAlreadyExists()
+	{
+		var god = await God();
+		await _db.CreateOrUpdateAttributeEntryAsync("KEEPFLAGS", ["visual"]);
+		await _db.SetAttributeAsync(new DBRef(1), ["KEEPFLAGS"], MarkupText.Plain("one"), god);
+		var target = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object();
+		var visual = await _db.GetAttributeFlagAsync("visual");
+		await Assert.That(await _db.UnsetAttributeFlagAsync(target, ["KEEPFLAGS"], visual!)).IsTrue();
+
+		await _db.SetAttributeAsync(new DBRef(1), ["KEEPFLAGS"], MarkupText.Plain("two"), god);
+
+		var attr = await _db.GetAttributeAsync(new DBRef(1), ["KEEPFLAGS"]).FirstAsync();
+		await Assert.That(attr.Value.ToPlainText()).IsEqualTo("two");
+		await Assert.That(attr.Flags.Select(f => f.Name)).DoesNotContain("visual");
+	}
+
+	/// <summary>
+	/// Setting a new leaf under a branch that exists creates only the leaf (with its defaults). The branch
+	/// keeps its flags and its owner, as in PennMUSH, where an existing branch only gains AF_ROOT.
+	/// </summary>
+	[Test]
+	public async Task SetUnderAnExistingBranchLeavesTheBranchsFlagsAndOwnerAlone()
+	{
+		var god = await God();
+		var otherRef = await _db.CreatePlayerAsync("LeafSetter", "password", new DBRef(0), new DBRef(0), 100);
+		var other = (await _db.GetObjectNodeAsync(otherRef)).Expect<SharpPlayer>();
+		await _db.CreateOrUpdateAttributeEntryAsync("KEEPBRANCH", ["visual"]);
+		await _db.CreateOrUpdateAttributeEntryAsync("KEEPBRANCH`LEAF", ["visual"]);
+		await _db.SetAttributeAsync(new DBRef(1), ["KEEPBRANCH"], MarkupText.Plain("root"), god);
+		var target = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object();
+		var visual = await _db.GetAttributeFlagAsync("visual");
+		await Assert.That(await _db.UnsetAttributeFlagAsync(target, ["KEEPBRANCH"], visual!)).IsTrue();
+
+		await _db.SetAttributeAsync(new DBRef(1), ["KEEPBRANCH", "LEAF"], MarkupText.Plain("leaf"), other);
+
+		var path = await _db.GetAttributeAsync(new DBRef(1), ["KEEPBRANCH", "LEAF"]).ToListAsync();
+		await Assert.That(path[0].Flags.Select(f => f.Name)).DoesNotContain("visual");
+		await Assert.That(path[0].Flags.Select(f => f.Name)).Contains("branch");
+		await Assert.That(path[0].Value.ToPlainText()).IsEqualTo("root");
+		await Assert.That((await path[0].Owner.WithCancellation(CancellationToken.None))?.Object.DBRef).IsEqualTo(god.Object.DBRef);
+		await Assert.That(path[1].Flags.Select(f => f.Name)).Contains("visual");
+		await Assert.That((await path[1].Owner.WithCancellation(CancellationToken.None))?.Object.DBRef).IsEqualTo(other.Object.DBRef);
+	}
+
 	[Test]
 	public async Task MigrationSeedsTheAncestorFormats()
 	{
