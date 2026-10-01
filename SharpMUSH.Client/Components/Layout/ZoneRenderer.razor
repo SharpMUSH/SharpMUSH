@@ -1,10 +1,8 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
 @using SharpMUSH.Client.Components.Widgets
-@using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Widgets
 @using SharpMUSH.Library.Authorization
-@using Microsoft.Extensions.DependencyInjection
 
 @if (_placements.Count > 0)
 {
@@ -64,11 +62,10 @@
 
     private IReadOnlyList<WidgetPlacement> _placements = [];
 
-    /// <summary>
-    /// Applications the catalog did not have, fetched by slug to check their minimum role, and handed to the
-    /// widget that renders them so it does not fetch them again. Kept across parameter sets.
-    /// </summary>
-    private Dictionary<string, PortalApplication> _fetched = new(StringComparer.Ordinal);
+    /// <summary>The minimum-role gate, shared with the Play page's aside. Created on first use, since it needs the injected services.</summary>
+    private ApplicationWidgetGate? _gate;
+
+    private ApplicationWidgetGate Gate => _gate ??= new ApplicationWidgetGate(Registry, Services);
 
     /// <summary>Bumped per parameter set, so a resolution that finishes after a newer one is dropped.</summary>
     private int _generation;
@@ -82,8 +79,6 @@
             return;
         }
 
-        // A layout is one arrangement for everyone, so an application widget placed in it is gated here, where
-        // it renders: below its minimum role it is left out (the server still gates its data routes).
         var role = AuthState is null
             ? PortalRole.Guest
             : PortalRoleHelper.CurrentRole((await AuthState).User);
@@ -93,78 +88,18 @@
 
         // An application the catalog has not delivered yet has no role to check. Everything else renders now;
         // such a placement joins once its application is found and admits this viewer.
-        _placements = Visible(ordered, role, resolved: null);
-        var unresolved = ordered
-            .Where(p => Registry?.GetWidget(p.WidgetName) is UnresolvedApplicationWidget)
-            .Select(p => p.WidgetName)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (unresolved.Count == 0)
+        _placements = Visible(ordered, role);
+        if (await Gate.ResolveAsync(ordered.Select(p => p.WidgetName)) && generation == _generation)
         {
-            return;
-        }
-
-        var resolved = await ApplicationsAsync(unresolved);
-        if (generation == _generation)
-        {
-            _fetched = resolved;
-            _placements = Visible(ordered, role, resolved);
+            _placements = Visible(ordered, role);
         }
     }
 
-    private IReadOnlyList<WidgetPlacement> Visible(
-        List<WidgetPlacement> ordered, PortalRole role, IReadOnlyDictionary<string, PortalApplication>? resolved) =>
-        ordered.Where(p => Registry?.GetWidget(p.WidgetName) switch
-        {
-            ApplicationPortalWidget app => role >= app.MinimumRole,
-            UnresolvedApplicationWidget => resolved is not null
-                && resolved.TryGetValue(p.WidgetName, out var app) && role >= app.MinimumRoleEnum,
-            _ => true
-        }).ToList().AsReadOnly();
-
-    /// <summary>
-    /// Each slug's application, found the way <see cref="SchemaWidget"/> finds it: the catalog once it is in,
-    /// else a fetch by slug. The fetches run together, and a slug fetched for an earlier parameter set is not
-    /// fetched again. A slug with no application, or whose fetch failed, is absent, so its placement stays out.
-    /// </summary>
-    /// <remarks>
-    /// The two services are asked for here rather than injected: only an unresolved placement reaches this, and
-    /// it renders <see cref="SchemaWidget"/>, which injects both, so any host that gets here registers them.
-    /// Injecting them would make every host of a zone register them whether or not it places an application.
-    /// </remarks>
-    private async Task<Dictionary<string, PortalApplication>> ApplicationsAsync(IReadOnlyList<string> slugs)
-    {
-        var catalog = Services.GetRequiredService<ApplicationCatalog>();
-        var registryClient = Services.GetRequiredService<ApplicationRegistryClient>();
-        await catalog.Loaded;
-        var found = await Task.WhenAll(slugs.Select(async slug => (Slug: slug,
-            App: _fetched.GetValueOrDefault(slug) ?? catalog.Get(slug) ?? await registryClient.GetAsync(slug))));
-        return found
-            .Where(f => f.App is not null)
-            .ToDictionary(f => f.Slug, f => f.App!, StringComparer.Ordinal);
-    }
+    private IReadOnlyList<WidgetPlacement> Visible(List<WidgetPlacement> ordered, PortalRole role) =>
+        ordered.Where(p => Gate.Admits(p.WidgetName, role)).ToList().AsReadOnly();
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
-    private Dictionary<string, object> BuildParams(WidgetPlacement placement, IPortalWidget descriptor)
-    {
-        var parameters = new Dictionary<string, object>
-        {
-            ["Config"] = placement.Config!,
-            ["Zone"] = Zone.ToString()
-        };
-
-        // SchemaWidget (and application-backed widgets, which render through it) resolves its routes
-        // from the placement's widget name (slug), so pass it through.
-        if (descriptor.ComponentType == typeof(SchemaWidget))
-        {
-            parameters["WidgetName"] = placement.WidgetName;
-            if (_fetched.TryGetValue(placement.WidgetName, out var application))
-            {
-                parameters["Application"] = application;
-            }
-        }
-
-        return parameters;
-    }
+    private Dictionary<string, object> BuildParams(WidgetPlacement placement, IPortalWidget descriptor) =>
+        Gate.Parameters(placement.WidgetName, descriptor, placement.Config, Zone.ToString());
 }

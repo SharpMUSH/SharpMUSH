@@ -293,6 +293,49 @@ public class PlayPageD1Tests : TrackingBunitContext
 			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
+	/// <summary>
+	/// Before the catalog is in (or when it failed), a placed application is the registry's by-slug fallback,
+	/// which carries no role. The aside fetches it and checks the role before showing it, as zones do.
+	/// </summary>
+	private IRenderedComponent<Host> RenderPlayBeforeTheCatalog(params string[] placed)
+	{
+		Services.AddSingleton(new ApplicationCatalog([]));
+		var registry = new WidgetRegistry();
+		foreach (var widget in SharpMUSH.Client.Widgets.BuiltInWidgets.All) registry.Register(widget);
+		Services.AddSingleton<IWidgetRegistry>(registry);
+		var layouts = Substitute.For<ILayoutService>();
+		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(Task.FromResult(PlayLayout(placed)));
+		Services.AddSingleton(layouts);
+		var cut = RenderPlay();
+		PushRoom();
+		return cut;
+	}
+
+	private static List<string> AsideApps(IRenderedComponent<Host> cut) =>
+		cut.FindComponents<SharpMUSH.Client.Components.Widgets.SchemaWidget>().Select(w => w.Instance.WidgetName).ToList();
+
+	[Test]
+	public async Task BeforeTheCatalogIsIn_APlacedPanelAboveTheViewersRole_IsNotShown()
+	{
+		var cut = RenderPlayBeforeTheCatalog("Here", "Exits", "staffboard");
+		cut.WaitForState(() => cut.FindComponents<SharpMUSH.Client.Components.Layout.WidgetErrorBoundary>().Count >= 2, TimeSpan.FromSeconds(5));
+
+		await Assert.That(AsideApps(cut)).DoesNotContain("staffboard");
+		cut.FindAll(".play-tab")[1].Click();
+		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
+			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task BeforeTheCatalogIsIn_APlacedPanelTheViewerMayUse_IsShown()
+	{
+		AddAuthorization().SetAuthorized("headwiz").SetRoles("Wizard");
+		var cut = RenderPlayBeforeTheCatalog("Here", "Exits", "staffboard");
+
+		cut.WaitForState(() => AsideApps(cut).Contains("staffboard"), TimeSpan.FromSeconds(5));
+		await Assert.That(AsideApps(cut)).Contains("staffboard");
+	}
+
 	[Test]
 	public async Task APanelThatDoesNotAllowTheRightSidebar_IsNotAppended()
 	{
@@ -393,6 +436,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 				"/api/scenes/42/poses" => "[]",
 				"/http/characters" => """[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":""}]""",
 				"/api/profile/Tomas%20Reyes/gallery" => "[]",
+				// The per-slug fetch a placement falls back to while the catalog is empty (pending or failed).
+				"/api/applications/staffboard" => System.Text.Json.JsonSerializer.Serialize(Apps[1], System.Text.Json.JsonSerializerOptions.Web),
 				_ => null,
 			};
 			return Task.FromResult(body is null

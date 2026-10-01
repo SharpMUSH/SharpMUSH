@@ -27,7 +27,8 @@ public sealed class WidgetRegistry : IWidgetRegistry
 		// Unknown name → treat it as an application slug and render through SchemaWidget, which resolves
 		// the app's routes by slug (from the catalog or a lazy fetch). This keeps an app-backed placement
 		// (e.g. the seeded "character-header") rendering even if the startup catalog snapshot was empty.
-		// ZoneRenderer resolves the app first to apply its minimum role, and leaves out one it cannot find.
+		// Every renderer gates it through ApplicationWidgetGate, which resolves the app first to apply its
+		// minimum role and leaves out one it cannot find.
 		return new UnresolvedApplicationWidget(name);
 	}
 
