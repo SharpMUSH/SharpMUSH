@@ -257,7 +257,11 @@
 
 @code {
     /// <summary><c>?setup=1</c>: opened from the first-run wizard, which this page hands back to.</summary>
-    [SupplyParameterFromQuery(Name = "setup")] public bool FromSetup { get; set; }
+    /// <remarks>A string, not a bool: Blazor binds a bool query value only from "true"/"false", and throws on
+    /// the "1" the wizard links with, which took the whole page down.</remarks>
+    [SupplyParameterFromQuery(Name = "setup")] public string? SetupParameter { get; set; }
+
+    private bool FromSetup => SetupParameter is "1" || string.Equals(SetupParameter, "true", StringComparison.OrdinalIgnoreCase);
 
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _selectedMailFile;

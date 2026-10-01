@@ -134,6 +134,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
 		await Assert.That(cut.Markup).DoesNotContain("Salt Market at Dusk");
+		await Assert.That(cut.FindAll(".play-tab")[0].TextContent.Trim()).IsEqualTo("Terminal")
+			.Because("the main tab opens the terminal when there is no scene to show");
 	}
 
 	[Test]

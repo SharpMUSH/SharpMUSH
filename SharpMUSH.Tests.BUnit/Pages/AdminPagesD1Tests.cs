@@ -286,6 +286,26 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll("a.adm-dash-setup-link[href='/setup']").Count).IsEqualTo(shown ? 1 : 0);
 	}
 
+	/// <summary>
+	/// The wizard opens the import page as <c>?setup=1</c>, and the page hands back to the wizard from its
+	/// header. A bool query parameter threw on that "1" and took the page down.
+	/// </summary>
+	[Test]
+	[Arguments("/admin/database/import?setup=1", true)]
+	[Arguments("/admin/database/import", false)]
+	public async Task ImportDatabase_FromTheWizard_OffersTheWayBack(string address, bool offered)
+	{
+		Auth.SetPolicies("server.admin");
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(address);
+		var cut = RenderPage(typeof(ImportDatabase));
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-page"), TimeSpan.FromSeconds(5));
+		var back = cut.FindAll("a.dbimport-continue-setup");
+		await Assert.That(back.Count).IsEqualTo(offered ? 1 : 0);
+		if (offered)
+			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=applications");
+	}
+
 	[Test]
 	public async Task Jobs_HidesTheCreateCard_FromAViewerWhoMayOnlyManageAll()
 	{

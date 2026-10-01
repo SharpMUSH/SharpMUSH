@@ -145,7 +145,7 @@ else
             <nav class="play-tabs" aria-label="@Loc["NavPlayTabs"]">
                 <button type="button" class="play-tab @(_mobileSheet is null ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet is null ? "true" : "false")"
                         @onclick="() => _mobileSheet = null">
-                    <MudIcon Icon="@Icons.Material.Outlined.Theaters" Size="Size.Small" /><span>@Loc["NavPlayTabScene"]</span>
+                    <MudIcon Icon="@(InScene ? Icons.Material.Outlined.Theaters : Icons.Material.Outlined.Terminal)" Size="Size.Small" /><span>@(InScene ? Loc["NavPlayTabScene"] : Loc["Terminal"])</span>
                 </button>
                 <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Room ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Room ? "true" : "false")"
                         @onclick="() => OpenMobileSheetAsync(MobileSheet.Room)">
