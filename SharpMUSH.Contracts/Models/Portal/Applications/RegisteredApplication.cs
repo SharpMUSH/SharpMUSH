@@ -51,6 +51,15 @@ public enum ApplicationKind
 /// For <c>RenderKind == "Component"</c>: the full Type name to resolve out of the loaded assembly and hand
 /// to <c>&lt;DynamicComponent&gt;</c>. Null for Schema apps.
 /// </param>
+/// <param name="Scope">
+/// The layout scope a Widget app belongs to (e.g. <c>"play"</c>), so a page can list the game's own
+/// panels for its zones and sidebar; null when the app is not tied to one scope.
+/// </param>
+/// <param name="OobPackage">
+/// An OOB package name (e.g. <c>"weather.now"</c>) whose latest payload is the widget's data, in place
+/// of <see cref="DataUrl"/>: the widget reads it from the play connection's OOB store and re-renders on
+/// each push. Null for apps whose data comes over HTTP.
+/// </param>
 public sealed record RegisteredApplication(
 	string Slug,
 	string DisplayName,
@@ -66,7 +75,9 @@ public sealed record RegisteredApplication(
 	string? OwningPackage = null,
 	string RenderKind = ApplicationRenderKind.Schema,
 	string? ComponentAssemblyUrl = null,
-	string? ComponentTypeName = null);
+	string? ComponentTypeName = null,
+	string? Scope = null,
+	string? OobPackage = null);
 
 /// <summary>
 /// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants

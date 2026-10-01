@@ -143,7 +143,7 @@ public record SharpMUSHOptions
 			ExitsConnectRooms: false,
 			HttpHandler: 8,
 			PackageManager: 7,
-			HttpRequestsPerSecond: 30,
+			HttpRequestsPerSecond: 60,
 			MasterRoom: 2,
 			PlayerStart: 0,
 			ZoneControlZmpOnly: true,

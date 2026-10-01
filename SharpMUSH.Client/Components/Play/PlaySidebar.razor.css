@@ -1,0 +1,39 @@
+.play-side {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.play-side--collapsed {
+	align-items: center;
+	gap: 6px;
+}
+
+.play-side-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-faint);
+	flex-shrink: 0;
+}
+
+.play-side-dot--on {
+	background: var(--accent);
+}
+
+.play-side-scene,
+.play-side-channels,
+.play-side-pages {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.play-side--collapsed .play-side-scene,
+.play-side--collapsed .play-side-channels,
+.play-side--collapsed .play-side-pages {
+	align-items: center;
+	gap: 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--border);
+}

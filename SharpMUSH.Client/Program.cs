@@ -34,6 +34,8 @@ builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
+builder.Services.AddScoped<CharacterProfileService>();
+builder.Services.AddScoped<SidebarCollapseService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
@@ -93,6 +95,8 @@ foreach (var widget in BuiltInWidgets.All)
 var apiBaseAddress = ApiBaseAddressResolver.Resolve(
 	builder.HostEnvironment.BaseAddress,
 	builder.Configuration[ApiBaseAddressResolver.ConfigurationKey]);
+// Server file paths (/api/wiki-assets/...) in an <img> resolve against the API, not the page.
+SharpMUSH.Client.Components.Kit.ApiUrl.UseBase(apiBaseAddress);
 
 // Bridge Widget-kind Dynamic Applications (Area 21) into the layout palette: load the registry once
 // per page load (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The
@@ -141,6 +145,7 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 var app = builder.Build();
+app.Services.AttachPlayTerminalFeeds();
 
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, "locale");

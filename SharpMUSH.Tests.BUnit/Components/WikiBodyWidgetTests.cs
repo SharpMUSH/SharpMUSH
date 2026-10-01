@@ -52,6 +52,7 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
 			.AddSingleton<WikiMarkdigPipeline>()
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		Auth = AddAuthorization();

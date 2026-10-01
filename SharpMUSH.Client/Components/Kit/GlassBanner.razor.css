@@ -1,0 +1,243 @@
+.kit-banner {
+	position: relative;
+	border-radius: var(--radius-card);
+	border: 1px solid var(--border);
+	overflow: hidden;
+	background: var(--surface-2);
+	transition: height var(--motion-slide);
+}
+
+.kit-banner-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.kit-banner-blur {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.kit-banner-blur--soft {
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+	mask-image: var(--blur-mask-soft);
+	-webkit-mask-image: var(--blur-mask-soft);
+}
+
+.kit-banner-blur--mid {
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	mask-image: var(--blur-mask-mid);
+	-webkit-mask-image: var(--blur-mask-mid);
+}
+
+.kit-banner-blur--deep {
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	mask-image: var(--blur-mask-deep);
+	-webkit-mask-image: var(--blur-mask-deep);
+}
+
+.kit-banner-scrim {
+	position: absolute;
+	inset: 0;
+	background: var(--scrim);
+	pointer-events: none;
+}
+
+.kit-banner--open .kit-banner-blur--soft {
+	mask-image: var(--blur-mask-soft-open);
+	-webkit-mask-image: var(--blur-mask-soft-open);
+}
+
+.kit-banner--open .kit-banner-blur--mid {
+	mask-image: var(--blur-mask-mid-open);
+	-webkit-mask-image: var(--blur-mask-mid-open);
+}
+
+.kit-banner--open .kit-banner-blur--deep {
+	mask-image: var(--blur-mask-deep-open);
+	-webkit-mask-image: var(--blur-mask-deep-open);
+}
+
+.kit-banner--open .kit-banner-scrim {
+	background: var(--scrim-open);
+}
+
+.kit-banner--noimage .kit-banner-blur,
+.kit-banner--noimage .kit-banner-scrim {
+	display: none;
+}
+
+.kit-banner-open {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	top: 56px;
+	bottom: 64px;
+	overflow: auto;
+	color: var(--text);
+	font-size: 14px;
+	line-height: 1.5;
+	text-shadow: var(--on-image-shadow);
+}
+
+/* bottom row: the lead (a portrait), the text, and the bottom-right capsules */
+.kit-banner-foot {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: 14px;
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	min-width: 0;
+}
+
+.kit-banner-lead {
+	flex: none;
+	line-height: 0;
+}
+
+.kit-banner-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--text);
+	text-shadow: var(--on-image-shadow);
+}
+
+.kit-banner-bottom-actions {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* no image: a gradient on the subject's hue (the profile's fallback) */
+.kit-banner--hue {
+	background:
+		radial-gradient(ellipse at 30% 50%, rgba(var(--glow), 0.12) 0%, transparent 60%),
+		linear-gradient(135deg, hsl(var(--banner-hue) 40% 16%) 0%, hsl(calc(var(--banner-hue) + 40) 30% 10%) 100%);
+}
+
+.kit-banner-kicker {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-on-image);
+}
+
+.kit-banner-title {
+	margin: 0;
+	font-family: inherit;
+	font-weight: 700;
+	font-size: 17px;
+	line-height: 1.25;
+}
+
+.kit-banner-text--hero .kit-banner-title {
+	font-size: 26px;
+}
+
+.kit-banner-text--character .kit-banner-title {
+	font-size: 28px;
+}
+
+.kit-banner-secondary {
+	font-size: 12px;
+	color: var(--text-on-image);
+	margin-top: 2px;
+}
+
+.kit-banner-back {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	display: flex;
+	gap: 6px;
+}
+
+.kit-banner-actions {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: flex;
+	gap: 6px;
+}
+
+.kit-banner-strip {
+	position: relative;
+	height: 48px;
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--border);
+	overflow: hidden;
+	background: var(--surface-2);
+}
+
+.kit-banner-strip-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.kit-banner-strip-blur {
+	position: absolute;
+	inset: 0;
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	mask-image: linear-gradient(to right, black 0%, black 30%, transparent 60%);
+	-webkit-mask-image: linear-gradient(to right, black 0%, black 30%, transparent 60%);
+	pointer-events: none;
+}
+
+.kit-banner-strip-scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to right, rgba(10, 11, 13, 0.72) 0%, rgba(10, 11, 13, 0.45) 35%, rgba(10, 11, 13, 0) 65%);
+	pointer-events: none;
+}
+
+.kit-banner-strip-row {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 0 6px 0 14px;
+	color: var(--text);
+	text-shadow: var(--on-image-shadow);
+}
+
+.kit-banner-strip-title {
+	margin: 0;
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.kit-banner-strip-fact {
+	font-size: 12px;
+	color: var(--text-on-image);
+}
+
+.kit-banner-spacer {
+	flex: 1 1 auto;
+}
+
+@container page (max-width: 48rem) {
+	.kit-banner-foot {
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.kit-banner-bottom-actions {
+		flex-basis: 100%;
+	}
+}

@@ -38,6 +38,13 @@ public class RoomContentsPackageTests(ServerWebAppFactory factory)
 		await Assert.That(managed).Contains("FN`WHOROW");
 		await Assert.That(managed).Contains("FN`EXITROW");
 		await Assert.That(managed).Contains("FN`WHOVIS");
+		// 2.0 (OOB v2): the per-viewer payload builders and the seams they compose.
+		await Assert.That(managed).Contains("FN`PAYLOAD`CONTENTS");
+		await Assert.That(managed).Contains("FN`PAYLOAD`EXITS");
+		await Assert.That(managed).Contains("FN`PAYLOAD`INFO");
+		await Assert.That(managed).Contains("FN`IMAGE");
+		await Assert.That(managed).Contains("FN`EXITVIS");
+		await Assert.That(managed).Contains("FN`STATUS");
 	}
 
 	/// <summary>

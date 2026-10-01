@@ -1,0 +1,111 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §6.1 wiki page sidebar (board 21): "Wiki · Main namespace · N pages", a search that lands on
+   the wiki home, Browse (Wiki home, Recent changes), the categories as image rows with counts, and
+   a dashed New page button for those who may create. Collapsed keeps the category covers. Hosted
+   by WikiLayout until the shell's page-sidebar slot exists (Phase 1). *@
+<div class="wiki-side @(Collapsed ? "wiki-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Wiki"]">
+            <Sub>@Loc["NavWikiMainNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</Sub>
+        </SidebarHead>
+        <SidebarSearch Placeholder="@Loc["NavWikiSearch"]" OnSearch="Search" />
+        <SectionLabel>@Loc["NavWikiBrowse"]</SectionLabel>
+    }
+    <nav class="wiki-side-browse" aria-label="@Loc["NavWikiBrowse"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavWikiHome"]" Href="/wiki" IsCurrent="@(_path == "/wiki")" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.History" Label="@Loc["NavWikiRecentChanges"]" Href="/wiki/recent" IsCurrent="@(_path == "/wiki/recent")" Collapsed="@Collapsed" />
+    </nav>
+    @if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
+    }
+    <nav class="wiki-side-cats" aria-label="@Loc["NavWikiCategories"]">
+        @foreach (var group in _groups)
+        {
+            var g = group;
+            var label = WikiCategories.Label(g.Key, Loc["ResCategoryGeneral"]);
+            var route = WikiCategories.Route(g.Key);
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
+        }
+    </nav>
+    <div class="wiki-side-spacer"></div>
+    <AuthorizeView Policy="wiki.create">
+        <Authorized>
+            @if (Collapsed)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Add" Label="@Loc["NavWikiNewPage"]" OnClick="@(() => _newOpen = !_newOpen)" Collapsed="true" />
+            }
+            else if (_newOpen)
+            {
+                <form class="wiki-side-new-form" @onsubmit="CreatePage" @onsubmit:preventDefault>
+                    <input type="text" placeholder="@Loc["NavWikiNewPageTitle"]" aria-label="@Loc["NavWikiNewPageTitle"]" value="@_newTitle" @oninput="@(e => _newTitle = e.Value?.ToString() ?? string.Empty)" />
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" AriaLabel="@Loc["NavWikiNewPage"]" OnClick="CreatePage" />
+                </form>
+            }
+            else
+            {
+                <button type="button" class="wiki-side-new" @onclick="@(() => _newOpen = true)">
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["NavWikiNewPage"]
+                </button>
+            }
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+
+    private IReadOnlyList<WikiPageSummary> _pages = [];
+    private IReadOnlyList<WikiCategoryGroup> _groups = [];
+    private string _path = "/wiki";
+    private bool _newOpen;
+    private string _newTitle = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+        var (pages, _) = await Wiki.GetAllPagesAsync(0, 500);
+        _pages = pages;
+        _groups = WikiCategories.Group(pages);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Locate();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Locate()
+    {
+        var path = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var cut = path.IndexOfAny(['?', '#']);
+        _path = (cut >= 0 ? path[..cut] : path).TrimEnd('/');
+        if (_path.Length == 0) _path = "/";
+    }
+
+    private void Search(string term)
+    {
+        Nav.NavigateTo(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}");
+    }
+
+    private void CreatePage()
+    {
+        var title = _newTitle.Trim();
+        if (title.Length == 0) return;
+        _newOpen = false;
+        _newTitle = string.Empty;
+        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}");
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

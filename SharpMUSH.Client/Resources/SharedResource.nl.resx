@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Recente wiki-activiteit</value>
+    <value>Onlangs gewijzigd</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4565,5 +4565,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>De conversie kon niet worden geannuleerd: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Banner minimaliseren</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Banner tonen</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# ongelezen} other {# ongelezen}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# pagina} other {# pagina's}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Bladeren</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-startpagina</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Recente wijzigingen</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorieën</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nieuwe pagina</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Paginatitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Zoeken in de wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De laatste bewerkingen in de wiki, nieuwste eerst.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Nog geen pagina's in deze categorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>concept</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>vergrendeld</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>zojuist</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minuut geleden} other {# minuten geleden}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# uur geleden} other {# uur geleden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag geleden} other {# dagen geleden}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Wereldwiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Alles wat je nodig hebt om te spelen</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Achtergrond, regels en startgidsen, bewerkt door staf en spelers. Geen account nodig om te lezen.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Alle # pagina} other {Alle # pagina's}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Nog geen wikipagina's.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Geen pagina's komen overeen met “{0}”.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Nu live} one {Nu live · #} other {Nu live · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Laatst bewerkt door {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>bewerkt {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Genoemd · #} other {Genoemd · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Meer in {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Alle #} other {Alle #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Ook in</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Overzicht</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Hoofdnaamruimte</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# personage} other {# personages}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Alle # online} other {Alle # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Zoek een personage</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Nu online</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Niemand is online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>jij</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Jouw personages</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Personage aanmaken</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Bladeren</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Alle personages</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Nieuwste</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Personagecategorieën</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Er is geen personage met de naam {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>In een scène · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Volledige afbeelding</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Over {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografie</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikipagina · bewerkt {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Afbeeldingsviewer</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} van {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Sluiten</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Vorige afbeelding</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Volgende afbeelding</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Deze afbeelding kan niet worden weergegeven.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerij · #} other {Galerij · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Als banner gebruiken</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Banner verwijderen</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>De banner kon niet worden gewijzigd: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Recente scènes</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Nog geen scènes.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>nu bezig</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Speelt vaak met</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Nog geen gedeelde scènes.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Recente scènes</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Speelt vaak met</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Afbeelding toevoegen</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Het profiel van dit personage kan nu niet worden gelezen.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Zijbalk {0} inklappen</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Zijbalk {0} uitklappen</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Onderdelen</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Bouwen &amp; beheren</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bouw- en staftools</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Zoeken en ga naar…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Account: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Taal</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Menu van dit onderdeel</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ga naar een pagina of zoek…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Zoek in de wiki naar ‘{0}’</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Zoek een personage met de naam ‘{0}’</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Verbonden als {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>In scène</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanalen</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Berichten</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# hier}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# uitgang} other {# uitgangen}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beschrijving</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Verhaal</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Weergave</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scène · vastgelegd in het scènearchief</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Volledige uitvoer · inclusief kanalen en berichten</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# daar}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Op slot</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Gesloten</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Verlaat de scène</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Ga</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Bekijk</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Blijf</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Druk op {0} om te gaan</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Volledige afbeelding</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profiel</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>In deze scène</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactief {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerij</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Personageblad: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Zeggen</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Commando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Schrijf je pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Zeg iets…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Spreek buiten je rol…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Typ een commando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Berichttype</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Kamer</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Speelonderdelen</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Er is hier verder niemand.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Lay-outbereik</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Lay-outbereik (optioneel)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>De pagina waar de widget bij hoort, bijv. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-pakket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-pakket (optioneel)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live gegevens die het spel stuurt, bijv. weather.now; vervangt de gegevens-URL</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Vandaag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Gisteren</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nieuw</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Bericht aan {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanaal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privéberichten</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Nog niets hier.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Terug naar de scène</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spelen</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>De rechterkolom van de speelpagina: wie er is, de uitgangen en spelpanelen.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Uitgangen</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
   </data>
 </root>

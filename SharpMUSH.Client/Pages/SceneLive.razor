@@ -1,7 +1,6 @@
 @page "/scenes/{Id}/live"
 @attribute [Authorize]
-@implements IAsyncDisposable
-@using Microsoft.AspNetCore.SignalR
+@using SharpMUSH.Client.Components.Scenes
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Library.Models.Portal
 @using SharpMUSH.Library.Services.Interfaces
@@ -9,7 +8,6 @@
 @inject SceneService SceneService
 @inject IConnectionStateService Hub
 @inject ITerminalService Terminal
-@inject ISceneHubControl SceneHub
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
 
@@ -82,18 +80,7 @@ else
         }
 
         <div class="scene-log scene-log--live">
-            @if (_posesError is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
-            }
-            else if (_poses.Count == 0)
-            {
-                <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["RolWaitingForActivity"]</MudText>
-            }
-            @foreach (var pose in _poses)
-            {
-                <ScenePoseLine Pose="pose" />
-            }
+            <SceneStory SceneId="@Id" LiveUnavailableChanged="OnLiveUnavailable" />
         </div>
 
         <div class="scene-live-compose">
@@ -125,29 +112,23 @@ else
     [Parameter] public required string Id { get; set; }
 
     private SceneSummary? _scene;
-    private readonly List<ScenePoseView> _poses = [];
     private bool _loading = true;
     private bool _notFound;
+
+    /// <summary>
+    /// The scene hub refused the live subscription (SceneStory reports it): the archive still shows, but
+    /// this connection is not in the scene's group, so nothing posted from here would come back.
+    /// </summary>
     private bool _liveUnavailable;
 
     /// <summary>Why the scene could not be read, for any failure but 404 — which is <see cref="_notFound"/>.</summary>
     private string? _error;
 
-    /// <summary>Why the pose chain could not be read; the poses already shown stay on screen.</summary>
-    private string? _posesError;
     private string _composeText = string.Empty;
     // Emit by default: it renders the author's words verbatim, with no name glued to the front.
     // That is what a compose box on one scene's own page is for — the other three modes stay
     // available for the times a player wants the built-in framing.
     private string _mode = "emit";
-    private bool _subscribed;
-    private string? _joinedSceneId;
-
-    protected override void OnInitialized()
-    {
-        SceneHub.OnSceneEventReceived += HandleSceneEvent;
-        _subscribed = true;
-    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -155,8 +136,6 @@ else
         _notFound = false;
         _liveUnavailable = false;
         _error = null;
-        _posesError = null;
-        _poses.Clear();
         _scene = null;
 
         // A scene that does not exist and one that exists but is not visible to this caller BOTH land here,
@@ -173,147 +152,16 @@ else
                 break;
             case ApiFailure { Kind: ApiFailureKind.NotFound }:
                 _notFound = true;
-                _loading = false;
-                return;
+                break;
             case ApiFailure failure:
                 _error = failure.Message;
-                _loading = false;
-                return;
-        }
-
-        ShowPoses(await SceneService.GetPosesAsync(Id, count: 100));
-
-        // Only the login and character-switch paths connect the hub, so a returning player arrives
-        // here with none. Reconnect rather than connect: ConnectAsync returns the moment it sees a
-        // hub object, connected or not, so it cannot revive a dropped one.
-        if (!Hub.IsConnected)
-        {
-            await Hub.ReconnectAsync();
-        }
-
-        // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
-        if (!string.Equals(_joinedSceneId, Id, StringComparison.Ordinal))
-        {
-            await LeaveJoinedSceneAsync();
-
-            try
-            {
-                await SceneHub.JoinSceneAsync(Id);
-                _joinedSceneId = Id;
-            }
-            catch (HubException)
-            {
-                // NOT the not-found card. The fetch above already returned this scene, so the caller
-                // demonstrably may read it and its archive is about to render; calling it missing would be
-                // a plain lie, and it is the lie that costs a real user the page they are entitled to.
-                //
-                // What was refused is only the live subscription. The hub gates that on a character AND on
-                // the same visibility the fetch just passed, so this is either a session acting as no
-                // character (guests cannot join scenes) or a scene that stopped being visible in the moment
-                // between the two calls. Naming that leaks nothing: the caller learned this scene exists
-                // from the 200 they already hold, which is the enumeration boundary — not this message.
-                _liveUnavailable = true;
-            }
+                break;
         }
 
         _loading = false;
     }
 
-    private void HandleSceneEvent(SceneEventMessage msg)
-    {
-        if (!string.Equals(msg.SceneId, Id, StringComparison.Ordinal)) return;
-
-        switch (msg.EventType)
-        {
-            case "pose":
-                // Append exactly once — there is no optimistic insert, so an author's own
-                // pose arrives here and renders for the first time.
-                if (_poses.All(p => !string.Equals(p.Id, msg.PoseId, StringComparison.Ordinal)))
-                {
-                    _poses.Add(FromEvent(msg, existing: null));
-                }
-                break;
-
-            case "edit":
-                ReplacePose(msg.PoseId, existing => FromEvent(msg, existing));
-                break;
-
-            case "delete":
-                // Strike through in place (keep ordering).
-                ReplacePose(msg.PoseId, existing => existing with { IsDeleted = true });
-                break;
-
-            case "move":
-                // Reorder isn't fully described by the event payload; re-fetch the ordered chain.
-                _ = ReloadPosesAsync();
-                return;
-
-            default:
-                // "meta" and unknown event kinds: nothing to patch in the pose list.
-                return;
-        }
-
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void ReplacePose(string poseId, Func<ScenePoseView, ScenePoseView> mutate)
-    {
-        var idx = _poses.FindIndex(p => string.Equals(p.Id, poseId, StringComparison.Ordinal));
-        if (idx >= 0)
-        {
-            _poses[idx] = mutate(_poses[idx]);
-        }
-    }
-
-    private async Task ReloadPosesAsync()
-    {
-        ShowPoses(await SceneService.GetPosesAsync(Id, count: 100));
-        await InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Replaces the chain with a fresh read. A read that failed leaves what is on screen alone: clearing
-    /// it would wipe a live log the player is reading because one re-fetch after a move did not arrive.
-    /// </summary>
-    private void ShowPoses(ApiResult<IReadOnlyList<ScenePoseView>> result)
-    {
-        switch (result)
-        {
-            case IReadOnlyList<ScenePoseView> fresh:
-                _poses.Clear();
-                _poses.AddRange(fresh);
-                _posesError = null;
-                break;
-            case ApiFailure failure:
-                _posesError = failure.Message;
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Projects a realtime event onto a <see cref="ScenePoseView"/>. For edits the
-    /// existing pose supplies the fields the event does not carry (author identity);
-    /// EditCount is bumped so the "edited" badge shows.
-    /// </summary>
-    private ScenePoseView FromEvent(SceneEventMessage msg, ScenePoseView? existing) => new(
-        Id: msg.PoseId,
-        SceneId: msg.SceneId,
-        AuthorDbref: existing?.AuthorDbref,
-        AuthorName: existing?.AuthorName ?? msg.ActorName,
-        ShowAsName: msg.ActorName,
-        OriginDbref: existing?.OriginDbref,
-        OriginName: existing?.OriginName ?? msg.Location,
-        Source: msg.Source,
-        Tags: msg.Tags ?? [],
-        Meta: existing?.Meta ?? new Dictionary<string, string>(),
-        CreatedAt: existing?.CreatedAt ?? msg.Timestamp,
-        IsDeleted: false,
-        Content: msg.Content,
-        Markup: msg.Markup,
-        EditCount: existing is null ? 1 : existing.EditCount + 1,
-        LastEditedAt: existing is null ? null : msg.Timestamp,
-        LastEditorDbref: existing?.LastEditorDbref,
-        LastEditorName: existing is null ? null : msg.ActorName);
+    private void OnLiveUnavailable(bool unavailable) => _liveUnavailable = unavailable;
 
     private async Task SendPoseAsync()
     {
@@ -338,42 +186,6 @@ else
         // Down the terminal websocket, already open as this character. The hub's SendCommand
         // publishes to a subject nothing consumes; the hub is kept for RECEIVING the pose back.
         await Terminal.SendAsync(command);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_subscribed)
-        {
-            SceneHub.OnSceneEventReceived -= HandleSceneEvent;
-            _subscribed = false;
-        }
-
-        await LeaveJoinedSceneAsync();
-    }
-
-    /// <summary>
-    /// Leaves the joined scene group, if any, tolerating a hub refusal. This runs on navigation away and
-    /// during disposal, where a thrown <see cref="HubException"/> has nowhere to surface; a refused leave
-    /// costs at most one subscription that the connection's own teardown drops anyway.
-    /// </summary>
-    /// <remarks>
-    /// Only the refusal is caught here. A connection that closes mid-call is the hub control's problem and
-    /// is a no-op there (<see cref="ISceneHubControl.LeaveSceneAsync"/>) — which matters most on this path,
-    /// since disposal is exactly when the connection is being torn down.
-    /// </remarks>
-    private async Task LeaveJoinedSceneAsync()
-    {
-        if (_joinedSceneId is not { } sceneId) return;
-
-        _joinedSceneId = null;
-        try
-        {
-            await SceneHub.LeaveSceneAsync(sceneId);
-        }
-        catch (HubException)
-        {
-            // Nothing to do and nowhere to report it: the group membership dies with the connection.
-        }
     }
 
     private string SceneTitle(SceneSummary s) =>

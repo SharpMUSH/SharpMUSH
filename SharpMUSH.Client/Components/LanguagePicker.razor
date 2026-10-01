@@ -3,8 +3,10 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject ILogger<LanguagePicker> Logger
+@inject IStringLocalizer<SharedResource> Loc
 
-<MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+<MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin"
+         AriaLabel="@Loc["NavLanguage"]">
     @foreach (var lang in _languages)
     {
         <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
@@ -20,6 +22,10 @@
 </MudMenu>
 
 @code {
+    /// <summary>Where the menu anchors: under the old top bar's icon by default; beside the rail's.</summary>
+    [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomRight;
+    [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopRight;
+
     private string _currentLocale = "en";
 
     private readonly record struct LanguageOption(string Code, string DisplayName);

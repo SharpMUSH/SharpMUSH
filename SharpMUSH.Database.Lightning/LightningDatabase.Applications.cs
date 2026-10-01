@@ -30,7 +30,9 @@ public partial class LightningDatabase
 		OwningPackage = application.OwningPackage,
 		RenderKind = application.RenderKind,
 		ComponentAssemblyUrl = application.ComponentAssemblyUrl,
-		ComponentTypeName = application.ComponentTypeName
+		ComponentTypeName = application.ComponentTypeName,
+		Scope = application.Scope,
+		OobPackage = application.OobPackage
 	};
 
 	private static RegisteredApplication MapApplication(ApplicationRecord r) => new(
@@ -48,7 +50,9 @@ public partial class LightningDatabase
 		r.OwningPackage,
 		r.RenderKind ?? ApplicationRenderKind.Schema,
 		r.ComponentAssemblyUrl,
-		r.ComponentTypeName);
+		r.ComponentTypeName,
+		r.Scope,
+		r.OobPackage);
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 		=> await Store.WriteAsync(tx =>

@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -357,6 +358,24 @@ public partial class Commands
 						pageFormatArgs, incomingDefault, checkParents: true));
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
+
+			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
+			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
+			await EventService.TriggerEventAsync(
+				parser,
+				SharpEvents.PageMessage,
+				executor.Object().DBRef,
+				executor.Object().DBRef.ToString(),
+				string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString())),
+				pageType switch
+				{
+					PageMessageType.Pose => "pose",
+					PageMessageType.SemiPose => "semipose",
+					_ => "say"
+				},
+				senderName,
+				message.ToPlainText(),
+				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
 		}
 
 		return CallState.Empty;

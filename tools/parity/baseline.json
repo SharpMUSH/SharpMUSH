@@ -221,6 +221,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "30-softcode/sc.objeval#2",
+   "command": "Bob bobpass"
+  },
+  {
    "key": "30-softcode/sc.strings#1",
    "command": "think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]"
   },

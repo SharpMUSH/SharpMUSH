@@ -67,6 +67,8 @@ public class LayoutEditorTests : TrackingBunitContext
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
+		// The live preview renders the WikiIndex widget, whose hero gates New page with AuthorizeView.
+		AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -86,9 +88,11 @@ public class LayoutEditorTests : TrackingBunitContext
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("LayWidgetWikiIndex");
 		await Assert.That(markup).Contains("LayWidgetCharacterGallery");
-		// QuickLinks has no MainContent zone, so it is filtered out of this scope's palette.
-		await Assert.That(markup).DoesNotContain("LayWidgetQuickLinks");
+		// QuickLinks has no MainContent zone but does have RightSidebar, which the wiki home gained in
+		// D1 (Recently changed / Live now), so it belongs in this scope's palette now.
+		await Assert.That(markup).Contains("LayWidgetQuickLinks");
 		await Assert.That(markup).Contains("WidgetZoneMainContent");
+		await Assert.That(markup).Contains("WidgetZoneRightSidebar");
 	}
 
 	/// <summary>

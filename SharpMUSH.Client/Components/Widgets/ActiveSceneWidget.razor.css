@@ -1,12 +1,29 @@
 .active-scene-widget {
-    container-type: inline-size;
-    height: 100%;
+	container-type: inline-size;
+	height: 100%;
 }
 
-.active-scene-widget-head {
-    display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
+.active-scene-tiles {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.active-scene-empty {
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.active-scene-archive {
+	display: inline-block;
+	margin-top: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.active-scene-archive:hover,
+.active-scene-archive:focus-visible {
+	text-decoration: underline;
 }

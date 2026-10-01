@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The wiki pages (/wiki, a page, its history, recent changes, a category): the D1 page sidebar
+   beside the page body. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="wiki" Class="wiki-shell" NavLabel="@Loc["Wiki"]">
+    <Nav Context="collapsed"><WikiSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

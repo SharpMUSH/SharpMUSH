@@ -1,8 +1,16 @@
 .recent-wiki-widget {
-    container-type: inline-size;
-    height: 100%;
+	container-type: inline-size;
+	height: 100%;
 }
 
-::deep .mud-paper {
-    padding: clamp(0.875rem, 6cqw, 1.25rem);
+.recent-wiki-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0 -4px;
+}
+
+.recent-wiki-empty {
+	font-size: 13px;
+	color: var(--text-faint);
 }
