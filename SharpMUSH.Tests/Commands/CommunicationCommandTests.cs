@@ -205,15 +205,34 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
-	public async ValueTask RemitBasic(string command, string expected)
+	public async ValueTask RemitBasic()
 	{
-		TestDiagnostics.WriteLine("Testing: {0}", command);
-		var unique = TestIsolationHelpers.GenerateUniqueName(expected);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace(expected, unique)));
+		var (room, listener) = await ListenerInARoomOfItsOwnAsync("Remit");
+		var unique = TestIsolationHelpers.GenerateUniqueName("Test remote emit");
 
-		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.Emit)).IsEqualTo(1);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {room}={unique}"));
+
+		await Assert.That(HeardFromGod(listener, unique, INotifyService.NotificationType.Emit)).IsEqualTo(1);
 	}
+
+	/// <summary>
+	/// A fresh connected player alone in a fresh room, so a remote emit can be addressed somewhere no
+	/// other test is — God's own location moves while other tests run.
+	/// </summary>
+	private async Task<(string Room, DBRef Listener)> ListenerInARoomOfItsOwnAsync(string prefix)
+	{
+		var dig = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix + "Room")}"));
+		var room = dig.Message!.ToPlainText()!.Trim();
+		var listener = await CreatePlayerAsync(prefix + "Listener");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {listener.DbRef}={room}"));
+		return (room, listener.DbRef);
+	}
+
+	/// <summary>How many times <paramref name="who"/> heard exactly <paramref name="message"/> from God as <paramref name="type"/>.</summary>
+	private int HeardFromGod(DBRef who, string message, INotifyService.NotificationType type)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(who)
+			.Count(delivery => delivery.Sender == WebAppFactoryArg.ExecutorDBRef && delivery.Type == type && delivery.Message == message);
 
 	[Test]
 	public async ValueTask OemitBasic()
@@ -303,14 +322,14 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("@nsremit #0=Test nospoof remote")]
-	public async ValueTask NsremitBasic(string command)
+	public async ValueTask NsremitBasic()
 	{
-		TestDiagnostics.WriteLine("Testing: {0}", command);
+		var (room, listener) = await ListenerInARoomOfItsOwnAsync("Nsremit");
 		var unique = TestIsolationHelpers.GenerateUniqueName("Test nospoof remote");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command.Replace("Test nospoof remote", unique)));
 
-		await Assert.That(GodHeardFromGod(unique, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nsremit {room}={unique}"));
+
+		await Assert.That(HeardFromGod(listener, unique, INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 	}
 
 	[Test]
