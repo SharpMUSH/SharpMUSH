@@ -437,6 +437,48 @@ public class OobCommFeedPageLogTests
 	}
 
 	/// <summary>
+	/// The conversation being viewed stays a conversation when logging goes off, even if it was known only
+	/// from the listing: the view needs it to stay one, to say why there is no history and to page its people.
+	/// Its pulled pages go, as everywhere.
+	/// </summary>
+	[Test]
+	public async Task The_viewed_conversation_stays_when_page_logging_goes_off()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(20, 20)]);
+		history.PageLog[Tomas] = [Logged(20, "logged", 20)];
+		await LoadAsync(store, feed);
+		feed.Viewing = TomasKey;
+		await feed.LoadHistoryAsync(TomasKey);
+
+		history.PageLogging = false;
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(TomasKey);
+		await Assert.That(feed.Conversations.Single().WithObjIds).IsEquivalentTo(new[] { Tomas });
+		await Assert.That(feed.Messages(TomasKey)).IsEmpty();
+	}
+
+	/// <summary>For the same reason, the conversation being viewed is never the one dropped past the limit.</summary>
+	[Test]
+	public async Task The_viewed_conversation_is_not_dropped_past_the_limit()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true,
+			Enumerable.Range(0, OobCommFeed.ConversationLimit)
+				.Select(n => new PageConversationSummary([$"#{1000 + n}:1"], [$"P{n}"], 1000 + n, T0.AddSeconds(100 + n)))
+				.ToArray());
+		await LoadAsync(store, feed);
+		var oldest = feed.Conversations[^1].Key;
+		feed.Viewing = oldest;
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(5000, "newest", 500));
+
+		await Assert.That(feed.Conversations.Any(conversation => conversation.Key == oldest)).IsTrue();
+		await Assert.That(feed.Conversations.Count).IsEqualTo(OobCommFeed.ConversationLimit);
+	}
+
+	/// <summary>
 	/// A conversation with more people than the server lets a marker name (a group page past
 	/// <see cref="CommLimits.ConversationMaxOthers"/>) is not marked: the server would
 	/// refuse the write every time.
