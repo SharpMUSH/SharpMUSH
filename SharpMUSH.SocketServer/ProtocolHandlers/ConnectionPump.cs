@@ -59,6 +59,7 @@ public sealed class ConnectionPump(
 		{
 			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
 			(handle, session) = rebound;
+			await AnnounceResumedAsync(handle, session, ct);
 		}
 		else
 		{
@@ -182,6 +183,23 @@ public sealed class ConnectionPump(
 			finally { sink.OutputGate.Release(); }
 		}
 		finally { sink.ResumeGate.Release(); }
+	}
+
+	/// <summary>
+	/// Tells the engine the session resumed, so it re-sends the state a connect sends (room, channels):
+	/// replay covers only the frames after the client's lastSeq, and a reloaded page has none of the
+	/// earlier ones. A failure costs the client that refresh, not the connection.
+	/// </summary>
+	private async Task AnnounceResumedAsync(long handle, string session, CancellationToken ct)
+	{
+		try
+		{
+			await publishEndpoint.Publish(new SessionResumedMessage(handle, session), ct);
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+		{
+			logger.LogWarning(ex, "Could not announce the resumed session for {Handle}; its state is not re-sent", handle);
+		}
 	}
 
 	private async Task SetExpiryAsync(long handle, DateTimeOffset? expiry, CancellationToken ct)

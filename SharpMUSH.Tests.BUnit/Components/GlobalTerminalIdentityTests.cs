@@ -145,7 +145,7 @@ public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposabl
 		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, Services.GetRequiredService<TerminalServiceHost>()));
 
 		// No picker: the terminal auto-connects as the active character (Alpha, the roster default).
-		cut.WaitForAssertion(() => first.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
+		cut.WaitForAssertion(() => first.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Alpha");
 
 		await cut.InvokeAsync(() => first.ConnectionStateChanged += Raise.Event<Action<bool>>(true));
@@ -163,8 +163,8 @@ public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposabl
 
 		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, play));
 
-		cut.WaitForAssertion(() => play.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott"));
-		await command.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>());
+		cut.WaitForAssertion(() => play.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
+		await command.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 	}
 
 	/// <summary>

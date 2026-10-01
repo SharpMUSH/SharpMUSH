@@ -50,10 +50,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	public IReadOnlyList<TerminalLine> Lines
 	{
-		get { lock (_lines) return _lines.AsReadOnly(); }
+		// A copy taken under the lock: a view of the live list would be enumerated outside it while the
+		// receive loop appends.
+		get { lock (_lines) return _lines.ToArray(); }
 	}
 
-	public async Task ConnectAsync(string serverUri)
+	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null);
+
+	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity)
 	{
 		_serverUri = serverUri;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
@@ -65,7 +69,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.Reattached += HandleReattached;
 
 		_logger.LogInformation("Connecting to {ServerUri}", LogSanitizer.Sanitize(serverUri));
-		await wsService.ConnectAsync(serverUri);
+		await wsService.ConnectAsync(serverUri, identity);
 		AddSystemLine($"Connected to {serverUri}");
 	}
 
@@ -77,7 +81,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	}
 
 	/// <inheritdoc/>
-	public async Task ConnectWithOttAsync(string serverUri, string ott)
+	public async Task ConnectWithOttAsync(string serverUri, string ott, TerminalIdentity? identity = null)
 	{
 		// Discard any buffered commands from a previous (possibly interrupted) session so they
 		// are not flushed to the server before the new connect token is authenticated.
@@ -86,7 +90,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// server held early input: WebSocketInputConsumer now waits for the connection to register
 		// (ConnectionIncarnation.WaitForRegistrationAsync) before running it, so a line sent the moment
 		// the socket opens is no longer lost — and every sign-in paid the sleep.
-		await ConnectAsync(serverUri);
+		await ConnectAsync(serverUri, identity);
+		// A reload resumed the session this tab held: it is still logged in, and the login line would run
+		// in it as a command. HandleReattached has already said so in the terminal.
+		if (wsService.Resumed)
+		{
+			_logger.LogInformation("Resumed the previous session; the OTT is not used");
+			return;
+		}
 		_logger.LogInformation("Using pre-fetched OTT for account character login");
 		// Never echo any part of the OTT: ConnectWithOttAsync is used for real account
 		// logins, so the token must not leak into the terminal line buffer (or anything
@@ -120,9 +131,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// </summary>
 	/// <remarks>
 	/// Recreation — rather than reconnection — is what makes a character switch safe: a fresh
-	/// <see cref="IWebSocketClientService"/> starts with a null resume token and therefore sends
-	/// hello instead of resume, so the server cannot rebind the socket to the previous
-	/// character's session.
+	/// <see cref="IWebSocketClientService"/> starts with no resume token in memory, and the one it may
+	/// read from storage is keyed by the identity it connects as, so it sends hello instead of resume
+	/// and the server cannot rebind the socket to the previous character's session.
 	/// </remarks>
 	public async ValueTask DisposeAsync()
 	{
@@ -288,6 +299,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// </summary>
 	private void HandleReattached(object? sender, EventArgs e)
 	{
+		// A reload: the screen it had comes back first, then the frames it missed, so it reads as one.
+		// The lines are already stored, so they are not kept a second time.
+		if (wsService.ResumeSlot is { } slot)
+		{
+			foreach (var line in slot.TakeScrollback())
+				AddLine(line, keep: false);
+		}
+
 		AddSystemLine("Session resumed — reconnected without re-login.");
 	}
 
@@ -305,7 +324,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddLine(line);
 	}
 
-	private void AddLine(TerminalLine line)
+	private void AddLine(TerminalLine line, bool keep = true)
 	{
 		lock (_lines)
 		{
@@ -313,6 +332,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				_lines.RemoveAt(0);
 			_lines.Add(line);
 		}
+		// Kept for a reload (TerminalScrollback decides which lines, and what of them). The slot's
+		// script call completes at once in the browser; a refused one only costs the stored screen.
+		if (keep && wsService.ResumeSlot is { } slot)
+			_ = slot.AppendLineAsync(line).AsTask();
 		LineReceived?.Invoke(line);
 	}
 

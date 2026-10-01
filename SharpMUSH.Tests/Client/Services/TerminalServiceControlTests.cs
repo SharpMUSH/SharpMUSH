@@ -19,6 +19,24 @@ public class TerminalServiceControlTests
 		await Assert.That(svc.Lines.Count).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// <c>Lines</c> was a live view of the list the receive loop appends to, so the lock around it
+	/// guarded nothing: enumerating it while a line arrived threw "Collection was modified". It is a
+	/// snapshot, so a line added later does not reach a reader that already has it.
+	/// </summary>
+	[Test]
+	public async Task Lines_IsASnapshot_ThatALaterLineDoesNotChange()
+	{
+		var ws = Substitute.For<IWebSocketClientService>();
+		var svc = new TerminalService(ws, Substitute.For<ILogger<TerminalService>>());
+		await svc.SendAsync("first");
+
+		var seen = svc.Lines;
+		await svc.SendAsync("second");
+
+		await Assert.That(seen.Select(l => l.Text)).IsEquivalentTo(["first"]);
+	}
+
 	[Test]
 	public async Task ConnectAsGuestAsync_Connects_ClearsBuffer_AndSendsConnectGuest()
 	{

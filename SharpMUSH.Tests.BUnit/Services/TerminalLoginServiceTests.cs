@@ -101,7 +101,7 @@ public class TerminalLoginServiceTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(ok).IsTrue();
 		await Assert.That(auth.ActiveCharacter?.DbrefNumber).IsEqualTo(2);
-		await terminal.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott");
+		await terminal.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "the-ott", new TerminalIdentity("wiz", "#2:2"));
 	}
 
 	[Test]
@@ -113,7 +113,7 @@ public class TerminalLoginServiceTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(ok).IsFalse();
 		await Assert.That(auth.ActiveCharacter).IsNull();
-		await terminal.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>());
+		await terminal.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 	}
 
 	public new async ValueTask DisposeAsync()

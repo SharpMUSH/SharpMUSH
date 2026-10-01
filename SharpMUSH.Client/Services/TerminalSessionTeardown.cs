@@ -20,14 +20,20 @@ namespace SharpMUSH.Client.Services;
 /// so QUIT is already on the wire first.
 /// </para>
 /// Both are guarded on <c>IsConnected</c>, so tearing down an idle terminal is a no-op.
+/// <para>
+/// Every stored resume point goes too, the idle terminals' included: on a shared browser, whoever
+/// reloads the tab next must not resume the session that was just logged out.
+/// </para>
 /// </remarks>
-public sealed class TerminalSessionTeardown(ITerminalService terminal, IPlayTerminalService playTerminal)
+public sealed class TerminalSessionTeardown(
+	ITerminalService terminal, IPlayTerminalService playTerminal, TerminalResumeStore resumePoints)
 	: IAccountSessionEndingHandler
 {
 	public async Task OnAccountSessionEndingAsync()
 	{
 		await QuitAsync(terminal);
 		await QuitAsync(playTerminal);
+		await resumePoints.ClearAllAsync();
 	}
 
 	private static async Task QuitAsync(ITerminalService terminal)

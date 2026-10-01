@@ -202,6 +202,8 @@ public class TerminalServiceHostTests
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
+		// The resume store the websocket clients keep their point in talks to the page.
+		services.AddSingleton(Substitute.For<Microsoft.JSInterop.IJSRuntime>());
 		services.AddTerminalServices();
 
 		await using var provider = services.BuildServiceProvider();
@@ -227,6 +229,8 @@ public class TerminalServiceHostTests
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
+		// The resume store the websocket clients keep their point in talks to the page.
+		services.AddSingleton(Substitute.For<Microsoft.JSInterop.IJSRuntime>());
 		services.AddTerminalServices();
 
 		await using var provider = services.BuildServiceProvider();

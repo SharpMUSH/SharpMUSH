@@ -1,6 +1,6 @@
 format: 1
 package: room-contents
-version: 2.0.0
+version: 2.1.0
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -10,9 +10,13 @@ requires_server: ">=0.1"
 
 # Attach mode (decision 20.3): manages the ROOM`CONTENTS event handler and its
 # helpers on the existing event_handler object ({{$event_handler}}, #9 by
-# default). The engine fires ROOM`CONTENTS on movement, connect and disconnect;
-# without a handler attribute nothing is emitted and the Play page has no
-# data source.
+# default). The engine fires ROOM`CONTENTS on movement, connect, disconnect and
+# resume; without a handler attribute nothing is emitted and the Play page has
+# no data source.
+#
+# 2.1 sends a resumed session (cause resume) its room.info, room.contents and
+# room.exits, as a connect does: every package that carries current state is
+# re-sent on connect and on resume (docs/design/d1/README.md §7.1).
 #
 # 2.0 is OOB v2 (docs/design/d1/README.md §7.1, docs/superpowers/specs/
 # 2026-09-29-image-attributes-and-oob-v2-design.md §4): every payload carries
@@ -229,12 +233,16 @@ objects:
         json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
 
       # ── The handler ──────────────────────────────────────────────────────
-      # %0 = the affected room, %1 = cause (move-in / move-out / connect / disconnect).
+      # %0 = the affected room, %1 = cause (move-in / move-out / connect /
+      # disconnect / resume).
       #
       # FN`PREPARE once, then per connected player in the room: build that
       # player's own room.contents and room.exits and oob() them to that player
-      # alone — a dark exit, a lock hint and "you" differ per viewer. room.info
-      # goes out on move-in and connect: to the enactor alone when the enactor
+      # alone — a dark exit, a lock hint and "you" differ per viewer. A resume
+      # (a session the connection server rebound, a reload above all) re-sends
+      # one session's state and changes nothing for anyone else, so its viewers
+      # are the enactor alone, when the enactor is a viewer in the room. room.info
+      # goes out on move-in, connect and resume: to the enactor alone when the enactor
       # is a viewer in the room (the player who walked in or connected — the
       # usual case, and the one whose %N the description was evaluated for),
       # and to everyone otherwise (%# is the object that CAUSED the event: the
@@ -244,4 +252,4 @@ objects:
       # same room.info can ignore it. null() swallows the oob() counts, which
       # would otherwise be thought at the handler object.
       ROOM`CONTENTS: |-
-        think null(u(me/FN`PREPARE,%0),iter(filter(me/FN`VIEWER,lcon(%0)),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
+        think null(u(me/FN`PREPARE,%0),iter(if(strmatch(%1,resume),%q<mover>,filter(me/FN`VIEWER,lcon(%0))),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))

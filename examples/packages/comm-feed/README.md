@@ -6,7 +6,8 @@ fills the web portal's Play sidebar **Channels** and **Pages** groups and its
 channel view, as `room-contents` fills *Here* and *Exits*.
 
 - **`comm.channels`** — `{"v": 2, "viewer": {…}, "channels": [ … ]}`, the
-  channels the player is on, sent to that player on connect and whenever
+  channels the player is on, sent to that player on connect, on resume (a
+  reloaded page keeps its session), and whenever
   their list changes (join, leave, their own channel flags, a rename or
   deletion).
 - **`comm.message`** — `{"v": 2, "kind": "channel" | "page", …}`, one channel

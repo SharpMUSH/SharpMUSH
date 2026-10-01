@@ -46,8 +46,9 @@ public class CharacterUpgradeService(
 		commandTerminal.ConnectedPlayerName = character.Name;
 		playTerminal.ConnectedPlayerName = character.Name;
 
-		await commandTerminal.ConnectWithOttAsync(serverUri, commandOtt);
-		await playTerminal.ConnectWithOttAsync(serverUri, playOtt);
+		var identity = TerminalIdentity.Of(accountAuth.Username, character);
+		await commandTerminal.ConnectWithOttAsync(serverUri, commandOtt, identity);
+		await playTerminal.ConnectWithOttAsync(serverUri, playOtt, identity);
 
 		await connectionState.ReconnectAsync();
 		return true;

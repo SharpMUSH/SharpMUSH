@@ -55,6 +55,7 @@ public class MainLayoutBootRequestTests : TrackingBunitContext
 		Services.AddSingleton(new ApplicationRegistryClient(factory, NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []));
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		Services.AddSingleton<TerminalLoginService>();
 		var terminal = new TerminalServiceHost(() => Substitute.For<ITerminalService>());

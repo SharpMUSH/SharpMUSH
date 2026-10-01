@@ -11,6 +11,8 @@ public static class SharpEvents
 	/// Fired (room-scoped, not actor-scoped) whenever a room's visible contents change — an
 	/// object enters/leaves, or a player connects/disconnects in it. Args: (roomobjid, cause).
 	/// The handler is expected to fan out structured pushes to that room's connected occupants.
+	/// Cause <c>resume</c> is a web session the connection server rebound (a reload): nothing in the
+	/// room changed, and the enactor, the resuming player, is the one to send the room to again.
 	/// </summary>
 	public const string RoomContents = "ROOM`CONTENTS";
 
@@ -38,7 +40,8 @@ public static class SharpEvents
 	/// Fired (player-scoped) when a connected player's channel list may have changed: on connect, on
 	/// joining or leaving a channel, on a change to their own channel flags, and when one of their
 	/// channels is renamed or deleted. Args: (player objid, cause, channel name or empty). Cause is
-	/// <c>connect</c>, <c>join</c>, <c>leave</c>, <c>status</c>, <c>rename</c> or <c>delete</c>.
+	/// <c>connect</c>, <c>resume</c> (a web session the connection server rebound, sent its list again),
+	/// <c>join</c>, <c>leave</c>, <c>status</c>, <c>rename</c> or <c>delete</c>.
 	/// </summary>
 	public const string PlayerChannels = "PLAYER`CHANNELS";
 }

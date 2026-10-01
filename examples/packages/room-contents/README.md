@@ -5,8 +5,9 @@ The `` ROOM`CONTENTS `` event handler, delivered as an attach-mode package
 banner, the *Here* and *Exits* cards) populate.
 
 The engine fires `` ROOM`CONTENTS `` room-scoped whenever a room's population
-changes — movement, connect, disconnect — with `%0` = the affected room and
-`%1` = the cause (`move-in`, `move-out`, `connect`, `disconnect`). This package
+changes — movement, connect, disconnect — and for a resumed web session, with
+`%0` = the affected room and `%1` = the cause (`move-in`, `move-out`,
+`connect`, `disconnect`, `resume`). This package
 supplies the attribute that turns that event into **OOB v2** pushes, built for
 one connected occupant at a time and sent to that occupant alone:
 
@@ -16,7 +17,11 @@ one connected occupant at a time and sent to that occupant alone:
 - **`room.exits`** — `{"v": 2, "exits": [ … ]}`, one row per exit the viewer
   may see, with the `goto` command a client issues to traverse it.
 - **`room.info`** — `{"v": 2, …}`, the room itself: identity, area, picture,
-  description and the scene running in it. Sent on `move-in` and `connect`.
+  description and the scene running in it. Sent on `move-in`, `connect` and
+  `resume`.
+
+A `resume` (a reload, which keeps the session) re-sends all three to the
+resuming player alone, as a connect would: nothing changed for anyone else.
 
 The portal routes incoming OOB frames by package name into its per-connection
 channel store. Without a handler attribute the engine emits nothing and the

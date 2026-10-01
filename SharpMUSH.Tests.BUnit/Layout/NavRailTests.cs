@@ -54,6 +54,7 @@ public class NavRailTests : TrackingBunitContext
 		Services.AddSingleton(playHost);
 		Services.AddSingleton<IPlayTerminalService>(playHost);
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
+		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 
 		var client = Track(new HttpClient(_apps) { BaseAddress = new Uri("https://localhost:8081/") });

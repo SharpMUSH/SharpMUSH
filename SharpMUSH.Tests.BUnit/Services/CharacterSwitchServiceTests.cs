@@ -55,7 +55,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]);
 		var connection = Substitute.For<IConnectionStateService>();
-		return (auth, connection, new CharacterSwitchService(auth, connection));
+		return (auth, connection, new CharacterSwitchService(auth, connection, new TerminalResumeStore(JSInterop.JSRuntime)));
 	}
 
 	[Test]
@@ -92,5 +92,22 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await Assert.That(auth.AccountSessionToken).IsEqualTo("inherited-token");
 		await Assert.That(auth.ActiveCharacter).IsNull();
 		await connection.DidNotReceive().ReconnectAsync();
+		await Assert.That(JSInterop.Invocations["SharpMUSH.Resume.removeAll"]).IsEmpty()
+			.Because("a refused switch leaves the tab as it was, resume points included");
+	}
+
+	/// <summary>
+	/// A terminal still open as the previous character must not leave a point a later reload could
+	/// resume: the switch forgets every stored point and revokes the open terminals' slots.
+	/// </summary>
+	[Test]
+	public async Task SwitchAsync_forgets_every_stored_resume_point()
+	{
+		var (_, _, service) = Build();
+
+		await service.SwitchAsync(Beta);
+
+		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
+		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
 	}
 }

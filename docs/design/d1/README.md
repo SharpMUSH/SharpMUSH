@@ -466,9 +466,27 @@ The `room-contents` package pushes these (`examples/packages/room-contents`, `` 
 - Use `objid` for identity so caches survive a recycled dbref.
 - **Per-viewer content:** the handler builds each connected occupant's own `room.contents` and
   `room.exits` and sends them to that player alone, so a dark exit, a lock hint and `you` differ per viewer.
+- **Snapshot on connect and on resume.** Every package that carries current state (`room.info`,
+  `room.contents`, `room.exits`, `comm.channels`) is sent again when a session connects and when it
+  resumes, so a client never depends on having seen an earlier push. A new state package follows the
+  same rule.
+  - *Connect* is a login: the engine fires `` PLAYER`CHANNELS `` and `` ROOM`CONTENTS `` with cause
+    `connect`.
+  - *Resume* is the connection server rebinding a socket to a session that is still logged in: a page
+    reload (the portal keeps its resume token and last frame number in sessionStorage), or a dropped
+    connection coming back within `Session:GraceSeconds`. Once it has replayed the frames after the
+    client's `lastSeq`, it sends `SessionResumedMessage`, and the engine fires the same two events with
+    cause `resume`. The bundled handlers send a resume to the resuming player alone; nothing changed
+    for anyone else.
+  - Replay alone is not enough. It covers only the frames after `lastSeq`, and a reloaded page holds
+    none of the ones before. A resume whose frames have left the replay store is refused, and the
+    client logs in fresh, which is a connect.
+- Event packages (`comm.message`, `query.*`) are not state and are not re-sent. Replay delivers the ones
+  a resumed session missed.
+- The client keeps the latest payload per package (`OobChannelStore`), so a repeat is harmless.
 
 ```jsonc
-// room.info (NEW): on arrival and on connect (there is no attribute-change event, so an edit is not re-sent)
+// room.info (NEW): on arrival, on connect and on resume (there is no attribute-change event, so an edit is not re-sent)
 { "v": 2, "dbref": "#1201", "objid": "#1201:1719500000", "name": "Lower Docks", "area": "Harbour Ward",
   "image": { "url": "/assets/rooms/1201.jpg", "alt": "The quay at dusk", "width": 1600, "height": 440, "focal": [0.5, 0.6] },
   "desc": { "format": "text", "text": "Tarred pilings and stacked…" },

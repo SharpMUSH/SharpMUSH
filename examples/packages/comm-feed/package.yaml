@@ -20,7 +20,8 @@ requires_server: ">=0.1"
 # names only the recipients it reached (not connected, HAVEN, page lock and
 # interaction refusals are already left out). So comm.message goes to that
 # list, plus the pager for a page, and never to anyone the terminal did not
-# show it to. PLAYER`CHANNELS fires for a connected player on connect and when
+# show it to. PLAYER`CHANNELS fires for a connected player on connect, on resume
+# (a web session rebound to its socket, a reload above all), and when
 # their channel list changes (join, leave, a change to their own channel flags,
 # a rename or deletion of one of their channels).
 #
@@ -89,7 +90,7 @@ objects:
       # to one copy.
       PAGE`MESSAGE: |-
         think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
-      # %0 player, %1 cause (connect, join, leave, status, rename, delete),
-      # %2 channel name (empty on connect). The whole list, to that player.
+      # %0 player, %1 cause (connect, resume, join, leave, status, rename,
+      # delete), %2 channel name (empty on connect and resume). The whole list, to that player.
       PLAYER`CHANNELS: |-
         think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))

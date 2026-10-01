@@ -29,7 +29,7 @@ public class TerminalLoginService(
 		await connectionState.ReconnectAsync();
 
 		terminal.ConnectedPlayerName = character.Name;
-		await terminal.ConnectWithOttAsync(ServerUri, ott);
+		await terminal.ConnectWithOttAsync(ServerUri, ott, TerminalIdentity.Of(accountAuth.Username, character));
 		return true;
 	}
 
