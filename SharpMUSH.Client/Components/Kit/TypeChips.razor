@@ -1,0 +1,61 @@
+@* D1 §4.11 message-type chips: 30px, radius 15, the selected one in solid accent. A radiogroup,
+   because exactly one is ever chosen: one tab stop (the checked chip), and the arrow keys move the
+   choice and the focus with it, wrapping at the ends. *@
+<div class="kit-chips" role="radiogroup" aria-label="@AriaLabel">
+    @for (var i = 0; i < Items.Count; i++)
+    {
+        var index = i;
+        var (key, label) = Items[i];
+        var on = key == Selected;
+        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" tabindex="@(on || (index == 0 && !HasSelection) ? 0 : -1)"
+                class="kit-chip @(on ? "kit-chip--on" : null)" @ref="_chips[index]"
+                @onclick="@(() => SelectedChanged.InvokeAsync(key))" @onkeydown="@(e => OnKeyAsync(e, index))">@label</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<(string Key, string Label)> Items { get; set; } = [];
+    [Parameter] public string Selected { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedChanged { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+
+    private ElementReference[] _chips = [];
+    private int? _focus;
+
+    private bool HasSelection => Items.Any(i => i.Key == Selected);
+
+    protected override void OnParametersSet()
+    {
+        if (_chips.Length != Items.Count) _chips = new ElementReference[Items.Count];
+    }
+
+    // No preventDefault: it is decided at render time and would swallow the key after this one. An
+    // arrow's default on a button is at most a scroll, which the focus move settles anyway.
+    private async Task OnKeyAsync(KeyboardEventArgs e, int index)
+    {
+        var step = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => 1,
+            "ArrowLeft" or "ArrowUp" => -1,
+            _ => 0,
+        };
+        if (step == 0 || Items.Count == 0) return;
+        var next = ((index + step) % Items.Count + Items.Count) % Items.Count;
+        _focus = next;
+        await SelectedChanged.InvokeAsync(Items[next].Key);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focus is not { } index || index >= _chips.Length) return;
+        _focus = null;
+        try
+        {
+            await _chips[index].FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Not attached (prerender or a test renderer): the choice moved, the focus stays.
+        }
+    }
+}

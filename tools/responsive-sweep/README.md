@@ -49,8 +49,8 @@ otherwise most of the run is failures rather than measurements.
 ## Setup
 
 There is no `package.json` at the repo root — this is a .NET repo, not a JS one — so this
-tool carries its own minimal `package.json` pinning `playwright-core@1.61.1`, the version
-whose `browsers.json` expects chromium revision `1228`, which is what is already present
+tool carries its own minimal `package.json` pinning `playwright-core@1.62.1`, the version
+whose `browsers.json` expects chromium revision `1234`, which is what is already present
 under `~/.cache/ms-playwright`. `playwright-core` never bundles or downloads a browser
 itself; it only launches whatever revision-matched build it finds in that cache. Installing
 a mismatched `playwright-core` version would either fail to find the cached browser or

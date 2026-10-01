@@ -1,0 +1,157 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
+@inject NavigationManager Nav
+@inject AccountAuthService AccountAuth
+@inject CharacterSwitchService CharacterSwitch
+@inject IJSRuntime JS
+@inject ILogger<AccountButton> Logger
+@implements IDisposable
+
+@* The account block: the acting character's avatar (and, when not Compact, its name and status)
+   opening the account panel, or "Sign in" for an anonymous visitor. Shared by the desktop rail
+   (Compact: the avatar only) and the mobile drawer. Claims-driven: gated on the cascaded principal,
+   so it flips to "Sign in" the instant the auth state reports an unauthenticated principal,
+   including right after an explicit logout. *@
+<AuthorizeView>
+    <Authorized>
+        <div class="phosphor-profile-wrap @(Compact ? "phosphor-profile-wrap--compact" : null)">
+            <button type="button"
+                    class="phosphor-profile-card"
+                    title="@DisplayName"
+                    aria-label="@(Compact ? string.Format(Loc["NavAccountFor"], DisplayName) : null)"
+                    aria-haspopup="true"
+                    aria-expanded="@(_panelOpen ? "true" : "false")"
+                    @onclick="TogglePanel">
+                <div class="phosphor-avatar-wrap">
+                    <div class="phosphor-avatar"
+                         style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
+                        @AvatarInitial
+                    </div>
+                    <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
+                </div>
+                @if (!Compact)
+                {
+                    <div style="text-align:left;line-height:1.2;overflow:hidden;flex:1;">
+                        <div class="phosphor-profile-name">@DisplayName</div>
+                        <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? Loc["NavOnline"] : Loc["NavOffline"])</div>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="phosphor-profile-chevron" />
+                }
+            </button>
+            <AccountPanel IsOpen="_panelOpen"
+                          IsOpenChanged="@(open => _panelOpen = open)"
+                          Characters="AccountAuth.Characters"
+                          ActiveCharacter="AccountAuth.ActiveCharacter"
+                          OnSwitchCharacter="HandleSwitchCharacterAsync"
+                          OnOpenInNewTab="HandleOpenInNewTabAsync"
+                          OnLogout="HandleLogoutAsync" />
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="phosphor-profile-wrap @(Compact ? "phosphor-profile-wrap--compact" : null)">
+            <a href="/login" class="phosphor-profile-card" title="@Loc["AuthSignIn"]" aria-label="@(Compact ? Loc["AuthSignIn"].Value : null)">
+                <div class="phosphor-avatar-wrap">
+                    <div class="phosphor-avatar" style="background:var(--surface-3);color:var(--text-faint);">
+                        <MudIcon Icon="@Icons.Material.Filled.Login" Style="font-size:1.1rem;" />
+                    </div>
+                </div>
+                @if (!Compact)
+                {
+                    <div style="text-align:left;line-height:1.2;overflow:hidden;">
+                        <div class="phosphor-profile-name">@Loc["AuthSignIn"]</div>
+                        <div class="phosphor-profile-sub">@Loc["NavGuestTag"]</div>
+                    </div>
+                }
+            </a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    /// <summary>The avatar only (the rail); otherwise the full card (the drawer).</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private bool _characterActive;
+    private bool _panelOpen;
+
+    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
+
+    private string AvatarInitial
+    {
+        get
+        {
+            var ch = AccountAuth.ActiveCharacter;
+            if (ch is not null && ch.Name.Length > 0)
+                return ch.Name[0].ToString().ToUpper();
+            var user = AccountAuth.Username;
+            return !string.IsNullOrEmpty(user) ? user[0].ToString().ToUpper() : "?";
+        }
+    }
+
+    private int AvatarHue
+    {
+        get
+        {
+            var name = DisplayName;
+            var code = name.Length > 0 ? name[0] : 'A';
+            return AvHues[code % AvHues.Length];
+        }
+    }
+
+    private string DisplayName => AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
+
+    private string UserTag => AccountAuth.ActiveCharacter is { } ch ? $"#{ch.DbrefNumber}" : Loc["NavAccountTag"];
+
+    protected override void OnInitialized()
+    {
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
+    }
+
+    private void OnConnectionChanged(bool connected) => InvokeAsync(() =>
+    {
+        _characterActive = connected;
+        StateHasChanged();
+    });
+
+    private void OnActiveCharacterChanged() => InvokeAsync(StateHasChanged);
+
+    private void TogglePanel() => _panelOpen = !_panelOpen;
+
+    /// <summary>Switches the portal's active character (SignalR + REST); does not touch the terminal.</summary>
+    private Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+        => CharacterSwitch.SwitchAsync(character);
+
+    /// <summary>
+    /// Opens a new browser tab already acting as <paramref name="character"/>, passing the target as a
+    /// one-shot <c>?as=&lt;dbref&gt;-&lt;creationTime&gt;</c> hint the new tab's MainLayout consumes: a
+    /// tab opened with window.open inherits a copy of this tab's sessionStorage, including this tab's
+    /// active character, not the one just clicked.
+    /// </summary>
+    private async Task HandleOpenInNewTabAsync(AccountAuthService.CharacterSummary character)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not open a new tab as #{Dbref}", character.DbrefNumber);
+        }
+    }
+
+    private async Task HandleLogoutAsync()
+    {
+        // AccountAuth.LogoutAsync ends both game terminals; this only navigates away afterwards.
+        await AccountAuth.LogoutAsync();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    public void Dispose()
+    {
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
+    }
+}

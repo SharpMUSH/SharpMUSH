@@ -1,41 +1,34 @@
 @page "/characters"
+@layout CharactersLayout
+@using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Client.Components.Characters
 @using SharpMUSH.Client.Services
 @inject CharacterDirectoryService Directory
+@inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 <PageTitle>@Loc["Characters"] — @Loc["AppTitle"]</PageTitle>
 
+@* The character directory in the D1 kit: the plain header, the game's categories (FN`CHARCAT,
+   opaque to the portal) as chips, and the characters as portrait tiles. The address filters it:
+   ?q= by name (the sidebar search), ?online=1 to who is connected, ?new=1 to the last fortnight. *@
 <div class="char-page">
-    <div class="char-header">
-        <div>
-            <div class="char-kicker">@HeaderKicker</div>
-            <h1 class="char-title">@Loc["Characters"]</h1>
-        </div>
-        <div class="char-search">
-            <span class="char-search-icon">⌕</span>
-            <input type="search" placeholder="@Loc["SearchCharacters"]"
+    <PlainPageHeader Kicker="@HeaderKicker" Title="@Loc["Characters"]">
+        <Actions>
+            <input class="char-filter" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
                    value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
-        </div>
-    </div>
+        </Actions>
+    </PlainPageHeader>
 
-    @* Filter pills — categories sourced from the game (FN`CHARCAT); opaque to the portal *@
-    @if (!_loading && _categories.Count > 0)
+    @if (!_loading && _categories.Count > 1)
     {
-        <div class="char-pills">
-            <button type="button" class="char-pill @(_selectedCategory is null ? "char-pill--on" : "")"
-                    @onclick="@(() => _selectedCategory = null)">@Loc["All"]</button>
-            @foreach (var cat in _categories)
-            {
-                var c = cat;
-                <button type="button" class="char-pill @(_selectedCategory == c ? "char-pill--on" : "")"
-                        @onclick="@(() => _selectedCategory = c)">@(c.Length == 0 ? Loc["WkKindOther"] : c)</button>
-            }
-        </div>
+        <TypeChips Items="@CategoryChips" Selected="@(_selectedCategory ?? AllKey)" SelectedChanged="SelectCategory" AriaLabel="@Loc["NavCharCategories"]" />
     }
 
     @if (_loading)
     {
-        <div class="char-grid">
+        <div class="char-grid" aria-busy="true">
             @for (var i = 0; i < 8; i++)
             {
                 <div class="char-skeleton"></div>
@@ -58,47 +51,27 @@
             @foreach (var character in Filtered)
             {
                 var ch = character;
-                var hue = AvatarHue(ch.Name);
-                <a class="char-card" href="@($"/character/{Uri.EscapeDataString(ch.Name)}")">
-                    <div class="char-card-top">
-                        <div class="char-avatar"
-                             style="@($"background:linear-gradient(140deg,hsl({hue} 40% 34%),hsl({hue} 34% 24%));color:hsl({hue} 45% 84%);")">
-                            @Initials(ch.Name)
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div class="char-name">@ch.Name</div>
-                            <div class="char-dbref">@ch.Dbref</div>
-                        </div>
-                    </div>
-                    <div class="char-card-foot">
-                        @if (!string.IsNullOrWhiteSpace(ch.Category))
-                        {
-                            <span class="char-chip">@ch.Category</span>
-                        }
-                        else
-                        {
-                            <span></span>
-                        }
-                        @* "y" is the culture's YearMonthPattern, not a literal month-then-year: "MMM yyyy"
-                           would hand Chinese its own month names in English element order ("7月 2026"
-                           rather than "2026年7月"). *@
-                        <span class="char-joined">@Loc["MemberSince", ch.CreatedAt.ToLocalTime().ToString("y")]</span>
-                    </div>
-                </a>
+                <PortraitTile Name="@ch.Name" ImageUrl="@ch.Image" Alt="@ch.Name" Label="@ch.Name" Height="120"
+                              Highlight="@IsOnline(ch)" Href="@($"/character/{Uri.EscapeDataString(ch.Name)}")" />
             }
         </div>
     }
 </div>
 
 @code {
+    private const string AllKey = "";
+    private const string UncategorisedKey = "\u0000";
+
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
+    /// <summary>Who is connected, by objid: two characters may share a display name, never an objid.</summary>
+    private HashSet<string> _onlineObjids = new(StringComparer.Ordinal);
     private bool _loading = true;
     private bool _failed;
     private string _search = string.Empty;
     private string? _selectedCategory;
     private List<string> _categories = [];
-
-    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
+    private bool _onlyOnline;
+    private bool _onlyNew;
 
     // "0 characters registered" is the same lie as the 0 on the dashboard tile when the directory
     // request is what failed, so the count is only claimed for a roster that actually arrived.
@@ -109,24 +82,39 @@
                 ? Loc["WidUnavailable"].Value
                 : Loc.Plural("NavCharactersRegistered", "count", _all.Count);
 
+    private IReadOnlyList<(string Key, string Label)> CategoryChips =>
+        [(AllKey, Loc["All"].Value), .. _categories.Select(c => c.Length == 0 ? (UncategorisedKey, Loc["WkKindOther"].Value) : (c, c))];
+
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
     {
         get
         {
             var results = _all.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(_search))
-                results = results.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+                results = results.Where(c => c.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
             if (_selectedCategory is not null)
                 results = results.Where(c => (c.Category?.Trim() ?? string.Empty) == _selectedCategory);
+            if (_onlyOnline)
+                results = results.Where(IsOnline);
+            if (_onlyNew)
+                results = results.Where(CharactersSidebar.IsNew);
             return results.ToList();
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await Directory.ListAsync();
+        Nav.LocationChanged += OnLocationChanged;
+        ReadQuery();
+        var all = Directory.ListAsync();
+        var online = Directory.ListOnlineAsync();
+        var result = await all;
         _failed = result is not IReadOnlyList<CharacterDirectoryService.CharacterSummary>;
         _all = result is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : [];
+        if (await online is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here)
+        {
+            _onlineObjids = new HashSet<string>(here.Select(r => r.Objid), StringComparer.Ordinal);
+        }
         _categories = _all
             .Select(c => c.Category?.Trim() ?? string.Empty)
             .Distinct()
@@ -136,17 +124,36 @@
         _loading = false;
     }
 
-    private static int AvatarHue(string name)
+    private bool IsOnline(CharacterDirectoryService.CharacterSummary character) => _onlineObjids.Contains(character.Objid);
+
+    private void SelectCategory(string key) =>
+        _selectedCategory = key == AllKey ? null : key == UncategorisedKey ? string.Empty : key;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        var code = name.Length > 0 ? name[0] : 'A';
-        return AvHues[code % AvHues.Length];
+        ReadQuery();
+        _ = InvokeAsync(StateHasChanged);
     }
 
-    private static string Initials(string name)
+    /// <summary>?q=, ?online=1 and ?new=1; the client carries no query-string helper library.</summary>
+    private void ReadQuery()
     {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return "?";
-        if (parts.Length == 1) return parts[0][0].ToString().ToUpperInvariant();
-        return (parts[0][0].ToString() + parts[1][0]).ToUpperInvariant();
+        _search = string.Empty;
+        _onlyOnline = false;
+        _onlyNew = false;
+        foreach (var pair in new Uri(Nav.Uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eq = pair.IndexOf('=');
+            var key = eq < 0 ? pair : pair[..eq];
+            var value = eq < 0 ? string.Empty : Uri.UnescapeDataString(pair[(eq + 1)..].Replace('+', ' '));
+            switch (key)
+            {
+                case "q": _search = value; break;
+                case "online": _onlyOnline = value == "1"; break;
+                case "new": _onlyNew = value == "1"; break;
+            }
+        }
     }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 }

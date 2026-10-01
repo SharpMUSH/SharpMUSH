@@ -459,6 +459,16 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		using var hidden = JsonDocument.Parse(await (await http.GetAsync("http/characters")).Content.ReadAsStringAsync());
 		var hiddenRow = hidden.RootElement.EnumerateArray().Single(row => row.GetProperty("name").GetString() == name);
 		await Assert.That(hiddenRow.GetProperty("image").GetString()).IsEqualTo(string.Empty);
+
+		// visual does not propagate down an attribute tree, and a private branch hides its leaves
+		// (help ATTRIBUTE FLAGS2): a visual IMAGE`BANNER under a private IMAGE stays unpublished.
+		await Cmd($"@set #{player.Object.Key}/IMAGE`BANNER=visual");
+
+		using (var privateBranch = await Profile())
+		{
+			var fields = privateBranch.RootElement.GetProperty("fields");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo(string.Empty);
+		}
 	}
 
 	[Test]

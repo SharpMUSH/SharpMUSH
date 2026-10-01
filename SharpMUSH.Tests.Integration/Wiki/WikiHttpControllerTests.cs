@@ -28,7 +28,9 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		string Namespace,
 		string MarkdownSource,
 		string RenderedHtml,
-		int RevisionNumber);
+		int RevisionNumber,
+		string? LastEditedBy,
+		string? Image);
 
 	private record WikiRevisionDto(
 		int RevisionNumber,
@@ -152,6 +154,42 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(fetched).IsNotNull();
 		await Assert.That(fetched!.MarkdownSource).IsEqualTo(updatedMarkdown);
 		await Assert.That(fetched.RevisionNumber).IsGreaterThan(createdDto.RevisionNumber);
+	}
+
+	[Test]
+	public async Task GetPage_CarriesTheLastEditorsName_AndTheFirstImage()
+	{
+		// D1 README §7.5: the page banner and "Last edited by X" need the editor's name and the
+		// first image on the article, which the DTO used to drop.
+		var http = factory.CreateHttpClient();
+		var slug = $"d1-image-{Guid.NewGuid():N}";
+		var create = await http.PostAsJsonAsync("api/wiki",
+			new CreatePageRequest("Image Page", "![The quay](/api/wiki-assets/abc/quay.jpg)\n\nBody text.", null));
+		await Assert.That(create.StatusCode).IsEqualTo(HttpStatusCode.Created);
+		var created = await create.Content.ReadFromJsonAsync<WikiPageDto>();
+
+		var response = await http.GetAsync($"api/wiki/ns/main/general/{created!.Slug}");
+		var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
+
+		await Assert.That(dto!.Image).IsEqualTo("/api/wiki-assets/abc/quay.jpg");
+		await Assert.That(dto.LastEditedBy).IsNotNull();
+		await Assert.That(dto.LastEditedBy).IsNotEmpty();
+		await Assert.That(dto.LastEditedBy).DoesNotContain("#")
+			.Because("the DTO carries the editor's name, not the dbref the revision keeps");
+	}
+
+	[Test]
+	public async Task GetPage_TheFirstImage_MayBeReferenceStyle_AndCarriesItsQueryUnescaped()
+	{
+		// The image is found in the rendered HTML, so a reference-style image counts like any other,
+		// and an & in the URL comes back as written (not as &amp;) so the client can match the <img>.
+		var http = factory.CreateHttpClient();
+		var create = await http.PostAsJsonAsync("api/wiki",
+			new CreatePageRequest($"Ref Image {Guid.NewGuid():N}", "![The quay][q]\n\nBody.\n\n[q]: /api/wiki-assets/abc/quay.jpg?w=800&h=400", null));
+		await Assert.That(create.StatusCode).IsEqualTo(HttpStatusCode.Created);
+		var dto = await create.Content.ReadFromJsonAsync<WikiPageDto>();
+
+		await Assert.That(dto!.Image).IsEqualTo("/api/wiki-assets/abc/quay.jpg?w=800&h=400");
 	}
 
 	[Test]

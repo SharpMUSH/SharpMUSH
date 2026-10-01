@@ -12,12 +12,26 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILogger<CharacterDirectoryService> logger)
 {
+	private const string CharactersRoute = "http/characters";
+	private const string OnlineRoute = "http/online";
+
+	// Each read is a softcode iteration over every player, draws on the softcode HTTP rate limit, and one
+	// page has several readers (the page, the sidebar, the aside widgets, the wiki's mentions, the home
+	// page's stats tile). They share one in-flight read and a short memo; a failed read is not remembered,
+	// so the next caller asks again.
+	private readonly ShortMemo<ServerResult<IReadOnlyList<CharacterSummary>>> _roster =
+		new(TimeSpan.FromSeconds(30), r => r.Value is IReadOnlyList<CharacterSummary>);
+
+	private readonly ShortMemo<ServerResult<IReadOnlyList<CharacterSummary>>> _online =
+		new(TimeSpan.FromSeconds(10), r => r.Value is IReadOnlyList<CharacterSummary>);
+
 	/// <summary>
 	/// A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms, and the
 	/// game-defined category (FN`CHARCAT). The portal imposes no categories of its own — blank
-	/// (or absent, on handlers that predate categorization) means uncategorized.
+	/// (or absent, on handlers that predate categorization) means uncategorized. Image is the
+	/// character's IMAGE attribute (profile-handler 1.5); blank or absent means none.
 	/// </summary>
-	public record CharacterSummary(string Name, string Objid, long Created, string Category = "")
+	public record CharacterSummary(string Name, string Objid, long Created, string Category = "", string? Image = null)
 	{
 		public DateTimeOffset CreatedAt => DateTimeOffset.FromUnixTimeMilliseconds(Created);
 
@@ -35,20 +49,8 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// and a caller that never got an answer must not make one — so the failure is in the type, where
 	/// a consumer has to decide what to do with it.
 	/// </remarks>
-	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters", cancellationToken);
-			return new ServerResult<IReadOnlyList<CharacterSummary>>(Normalize(rows));
-		}
-		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
-		{
-			logger.LogWarning(ex, "Failed to load character directory.");
-			return new Error();
-		}
-	}
+	public Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default) =>
+		Shared(_roster, CharactersRoute, "Failed to load character directory.", cancellationToken);
 
 	/// <summary>
 	/// Returns the characters currently connected, name-sorted and one row per character;
@@ -57,17 +59,35 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// the roster of every character that exists: a character being listed there implies nothing
 	/// about presence.
 	/// </summary>
-	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default)
+	public Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default) =>
+		Shared(_online, OnlineRoute, "Failed to load the online character list.", cancellationToken);
+
+	/// <summary>
+	/// A caller that has already given up is told so rather than handed a shared answer; one that gives up
+	/// while waiting ends only its own wait.
+	/// </summary>
+	private Task<ServerResult<IReadOnlyList<CharacterSummary>>> Shared(ShortMemo<ServerResult<IReadOnlyList<CharacterSummary>>> memo,
+		string route, string failureMessage, CancellationToken cancellationToken) =>
+		cancellationToken.IsCancellationRequested
+			? Task.FromCanceled<ServerResult<IReadOnlyList<CharacterSummary>>>(cancellationToken)
+			: memo.GetAsync(() => FetchAsync(route, failureMessage)).WaitAsync(cancellationToken);
+
+	/// <summary>
+	/// The one request behind both reads. It runs without any caller's token because concurrent callers
+	/// share it: a caller's cancellation ends only that caller's wait (<see cref="Task.WaitAsync(CancellationToken)"/>),
+	/// and surfaces to it as an <see cref="OperationCanceledException"/>.
+	/// </summary>
+	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchAsync(string route, string failureMessage)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online", cancellationToken);
+			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>(route);
 			return new ServerResult<IReadOnlyList<CharacterSummary>>(Normalize(rows));
 		}
-		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
+		catch (Exception ex) when (IsRequestFailure(ex))
 		{
-			logger.LogWarning(ex, "Failed to load the online character list.");
+			logger.LogWarning(ex, "{FailureMessage}", failureMessage);
 			return new Error();
 		}
 	}
@@ -90,16 +110,14 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// is the failure mode this service exists to avoid. A cancellation the caller actually asked
 	/// for is a different fact: it means the caller stopped wanting an answer, not that the game
 	/// could not give one, and rendering "unavailable" for a navigation the user themselves
-	/// abandoned would be a lie in the other direction. That one propagates.
+	/// abandoned would be a lie in the other direction. That one propagates — and it never reaches
+	/// here: the shared request carries no caller's token, so every cancellation inside it is the
+	/// timeout, and a caller's own cancellation ends only that caller's wait.
 	/// </para>
 	/// </remarks>
-	private static bool IsRequestFailure(Exception ex, CancellationToken cancellationToken) =>
-		ex switch
-		{
-			OperationCanceledException => !cancellationToken.IsCancellationRequested,
-			HttpRequestException or JsonException or InvalidOperationException or NotSupportedException => true,
-			_ => false
-		};
+	private static bool IsRequestFailure(Exception ex) =>
+		ex is OperationCanceledException or HttpRequestException or JsonException
+			or InvalidOperationException or NotSupportedException;
 
 	/// <summary>
 	/// One row per character, name-sorted. A <c>null</c> body (a bare <c>null</c> literal, which is

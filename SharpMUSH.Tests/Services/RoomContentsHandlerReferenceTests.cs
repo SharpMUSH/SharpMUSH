@@ -624,6 +624,9 @@ public class RoomContentsHandlerReferenceTests
 			await InstallPackage();
 			f = await BuildFixture(token);
 
+			// visual does not propagate down an attribute tree, and a private branch hides its leaves
+			// (help ATTRIBUTE FLAGS2): the room's visual IMAGE`BANNER, under a private IMAGE, stays hidden.
+			await Cmd($"&IMAGE`BANNER {f.Room}=/assets/rooms/{token}-leaf.jpg");
 			await Cmd($"@set {f.Mortal}/IMAGE=!visual");
 			await Cmd($"@set {f.Room}/IMAGE=!visual");
 			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-private.jpg");
@@ -637,7 +640,8 @@ public class RoomContentsHandlerReferenceTests
 				.IsEqualTo($"/assets/obj/{token}.jpg");
 
 			using var info = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
-			await Assert.That(info.RootElement.TryGetProperty("image", out _)).IsFalse();
+			await Assert.That(info.RootElement.TryGetProperty("image", out _)).IsFalse()
+				.Because("a visual IMAGE`BANNER under a private IMAGE must not be published");
 
 			using var dest = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
 			await Assert.That(dest.RootElement.TryGetProperty("image", out _)).IsFalse()

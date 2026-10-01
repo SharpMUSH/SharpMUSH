@@ -48,6 +48,12 @@ public record WikiPageDto(
 
 	/// <summary>Locales this reader can actually read the page in, source locale first.</summary>
 	public IReadOnlyList<string> AvailableLocales { get; init; } = [];
+
+	/// <summary>The name of the player who last edited the page; null when the editor is gone.</summary>
+	public string? LastEditedBy { get; init; }
+
+	/// <summary>The first image in the page's Markdown (the page banner), or null.</summary>
+	public string? Image { get; init; }
 }
 
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
@@ -64,7 +70,11 @@ public record WikiRevisionDto(
 	string EditorDbref,
 	DateTimeOffset Timestamp,
 	string? EditSummary,
-	string MarkdownSource);
+	string MarkdownSource)
+{
+	/// <summary>The editor's name, resolved from <see cref="EditorDbref"/>; null when the player is gone.</summary>
+	public string? EditorName { get; init; }
+}
 
 /// <summary>Request body for creating or updating one locale's translation of a page.</summary>
 /// <param name="ExpectedRevisionNumber">

@@ -98,7 +98,7 @@ public class BundledPackagesTests
 
 		await Assert.That(installed).IsEquivalentTo(new[]
 		{
-			"http-handler", "profile-handler", "room-contents", "common-functions", "plus-help", "scene"
+			"http-handler", "profile-handler", "room-contents", "comm-feed", "common-functions", "plus-help", "scene"
 		});
 	}
 

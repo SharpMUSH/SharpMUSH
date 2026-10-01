@@ -9,13 +9,7 @@
 <PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
 
 <div class="config-section-page">
-    <div class="config-section-header">
-        <div>
-            <div class="config-kicker">Admin · server settings</div>
-            <h1 class="config-title">@Loc["BannedPlayerNames"]</h1>
-            <p class="config-desc">@Loc["BannedNamesDescription"]</p>
-        </div>
-    </div>
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["BannedPlayerNames"]" Description="@Loc["BannedNamesDescription"]" />
 
     <AdminKeyValueList Text="@Text"
                        Load="@(() => BannedNamesService.GetBannedNamesAsync().AsEntriesAsync())"

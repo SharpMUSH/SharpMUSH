@@ -1,0 +1,78 @@
+.kit-palette {
+	width: min(560px, calc(100vw - 32px));
+	max-height: 70vh;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+	overflow: hidden;
+}
+
+.kit-palette-field {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 52px;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--border-soft);
+	color: var(--text-faint);
+}
+
+.kit-palette-field input {
+	flex: 1 1 auto;
+	min-width: 0;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 15px;
+	outline: none;
+}
+
+.kit-palette-kbd {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 0 5px;
+}
+
+.kit-palette-list {
+	list-style: none;
+	margin: 0;
+	padding: 6px;
+	overflow-y: auto;
+}
+
+.kit-palette-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 40px;
+	padding: 0 10px;
+	border-radius: var(--radius-row);
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.kit-palette-item--active {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.kit-palette-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.kit-palette-hint {
+	flex-shrink: 0;
+	font-size: 12px;
+	color: var(--text-faint);
+}

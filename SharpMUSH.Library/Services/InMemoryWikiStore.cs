@@ -35,15 +35,15 @@ public sealed class InMemoryWikiStore : IWikiStore
 	public Task<Found<WikiPage>> GetPageByIdAsync(string id)
 		=> Task.FromResult<Found<WikiPage>>(_pagesById.TryGetValue(id, out var page) ? page : new NotFound());
 
-	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(_pagesById.Values
+	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.OrderByDescending(p => p.UpdatedAt)
 			.ThenByDescending(p => int.Parse(p.Id, CultureInfo.InvariantCulture))
 			.Take(count)
 			.ToList());
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(InNamespace(ns)
+	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(InNamespace(ns), visibility)
 			.OrderBy(p => p.Namespace, StringComparer.Ordinal)
 			.ThenBy(p => p.Slug, StringComparer.Ordinal)
 			.Skip(skip)
@@ -53,21 +53,24 @@ public sealed class InMemoryWikiStore : IWikiStore
 	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
 		=> Task.FromResult(InNamespace(ns).Count(p => includeDrafts || p.Published));
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(_pagesById.Values
+	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList());
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(_pagesById.Values
+	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList());
+
+	private static IEnumerable<WikiPage> Visible(IEnumerable<WikiPage> pages, WikiVisibility visibility)
+		=> pages.Where(p => visibility.Admits(p.Published, p.AuthorDbref));
 
 	private IEnumerable<WikiPage> InNamespace(string? ns)
 		=> ns is null

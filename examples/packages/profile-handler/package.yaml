@@ -37,9 +37,11 @@ objects:
       # handler is a wizard, so get() alone would read — and the unauthenticated routes would
       # publish — an attribute its owner made private: the seeded visual flag is a default for a
       # NEW attribute, and an IMAGE set before the seed existed, or with visual cleared since, keeps
-      # its owner's choice. get(), never u(): a URL is text the player typed.
+      # its owner's choice. visual does not propagate down a tree and a private branch hides its
+      # leaves (help ATTRIBUTE FLAGS2), so IMAGE`BANNER also needs a visual IMAGE. get(), never
+      # u(): a URL is text the player typed.
       FN`PICTURE: |-
-        if(hasflag(%0/%1,visual),get(%0/%1))
+        if(cand(hasflag(%0/%1,visual),cor(not(strmatch(%1,*`*)),hasflag(%0/[before(%1,`)],visual))),get(%0/%1))
       # A player's name colour (%0 = the player), or blank. It lands in a CSS custom property on
       # the page, so only #rrggbb passes; a value that tries to carry more CSS reads as unset.
       # Brackets are escaped because a bare [...] is evaluated here.

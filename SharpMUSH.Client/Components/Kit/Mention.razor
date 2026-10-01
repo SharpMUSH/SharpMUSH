@@ -1,0 +1,62 @@
+@* D1 §4.8 name mention: body colour and body weight, with a 1px underline in the character's name
+   colour at --mention-alpha, offset --mention-offset. With no colour the underline is the neutral
+   faint, never the accent; the viewer's own name is the one exception. A mention is a link: to
+   /character/{Name} everywhere, or an OnClick (Play opens the character sheet drawer). *@
+@if (Href is not null)
+{
+    <a class="mention" href="@Href" style="@Style">@Text</a>
+}
+else
+{
+    <button type="button" class="mention" style="@Style" @onclick="OnClick">@Text</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The character's softcode colour. Only <c>#rrggbb</c> is written into the style (<see cref="NameColor"/>);
+    /// null or anything else → the neutral faint underline.
+    /// </summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>The viewer's own name: underline in the accent.</summary>
+    [Parameter] public bool Self { get; set; }
+
+    /// <summary>Defaults to /character/{Name}. Pass null explicitly (with OnClick) for a button.</summary>
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>The display text; defaults to <see cref="Name"/>.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _hrefSupplied;
+
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        _hrefSupplied = parameters.TryGetValue<string?>(nameof(Href), out _);
+        return base.SetParametersAsync(parameters);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!_hrefSupplied)
+        {
+            Href = "/character/" + Uri.EscapeDataString(Name);
+        }
+    }
+
+    private string? Style => Self ? "--name:var(--accent)" : NameColor.Safe(Color) is { } color ? $"--name:{color}" : null;
+
+    private RenderFragment Text => __builder =>
+    {
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            @Name
+        }
+    };
+}

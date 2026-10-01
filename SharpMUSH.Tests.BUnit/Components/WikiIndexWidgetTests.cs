@@ -50,6 +50,8 @@ public class WikiIndexWidgetTests : TrackingBunitContext
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
+		// The D1 hero gates its New page capsule with AuthorizeView.
+		AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

@@ -153,8 +153,18 @@ file static class WikiServiceSetup
 				.AddSingleton(sp => new CharacterDirectoryService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						NullLogger<CharacterDirectoryService>.Instance))
+				// The profile banner reads the profile fields and the character's scenes; both 404 here,
+				// so the page degrades to the route's name and still composes its scope.
+				.AddSingleton(sp => new CharacterProfileService(
+						sp.GetRequiredService<IHttpClientFactory>(),
+						sp.GetRequiredService<CharacterDirectoryService>()))
+				.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+				// The profile page offers edit controls to the character's own account; nobody signs in here.
+				.AddSingleton(sp => new AccountAuthService(sp.GetRequiredService<IHttpClientFactory>(), ctx.JSInterop.JSRuntime,
+						NullLogger<AccountAuthService>.Instance, []))
 				// The profile header is an application-backed SchemaWidget; it injects these.
 				.AddSingleton(new SharpMUSH.Client.Services.ApplicationCatalog([]))
+				.AddSingleton(Substitute.For<IPlayTerminalService>())
 				.AddSingleton(sp => new ApplicationRegistryClient(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						NullLogger<ApplicationRegistryClient>.Instance))
@@ -196,15 +206,16 @@ public class WikiPageRouteTests : TrackingBunitContext
 	{
 		// The index composes from the "wiki-index" layout scope; its default layout is the
 		// WikiIndex widget — a hero + auto-generated category grid sourced from WikiService.
+		// The localizer here echoes keys, so the hero title renders as its resx key.
 		var cut = Render<SharpMUSH.Client.Pages.WikiIndex>();
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Everything you need to play"))
+			if (!cut.Markup.Contains("NavWikiHeroTitle"))
 				throw new InvalidOperationException("wiki-index layout not resolved yet");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("Everything you need to play");
+		await Assert.That(cut.Markup).Contains("NavWikiHeroTitle");
 		await Assert.That(cut.Markup).Contains("wiki-hero");
 	}
 
@@ -266,6 +277,28 @@ public class WikiPageRouteTests : TrackingBunitContext
 		await Assert.That(editor.Instance.Article).IsNotNull();
 		await Assert.That(editor.Instance.Article!.Content).IsEqualTo("Content here.");
 		await Assert.That(cut.Markup).Contains("wiki-edit-title");
+	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_MissingPage_StartsFromTheTitleTheCreatorEntered()
+	{
+		// The sidebar's New page asks for a title and opens the editor at its slug; the slug alone
+		// ("salt_market") is not what the creator typed.
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/wiki/main/general/salt_market/edit?title=Salt%20Market");
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, "salt_market")
+						.Add(c => c.Ns, "main")
+						.Add(c => c.Category, "general")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindComponents<WikiEdit>().Count == 0)
+				throw new InvalidOperationException("editor not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindComponent<WikiEdit>().Instance.Article!.Title).IsEqualTo("Salt Market");
 	}
 }
 
