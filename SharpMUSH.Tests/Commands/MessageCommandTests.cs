@@ -93,47 +93,26 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask MessageSilentSwitch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		// A wizard of the test's own sends it, so a confirmation would land in a bucket nobody else writes.
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "MsgSilentSender");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {sender.DbRef}=WIZARD"));
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgSilent");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
 
-		// Count confirmations already received (from other tests in session) before this command runs.
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var confirmationsBefore = calls.Count(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not SharpMessage msg) return false;
-			var text = msg switch { MString markup => markup.ToPlainText(), string plain => plain };
-			return text == "Message sent to 1 recipient(s).";
-		});
+		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
-
-		// Unique content string confirms the message was delivered to executor.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageSilent_Value_61829")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+		// Unique content string confirms the message was delivered.
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(objDbRef)
+				.Count(delivery => delivery.Message == "MessageSilent_Value_61829"
+					&& delivery.Sender == sender.DbRef
+					&& delivery.Type == INotifyService.NotificationType.Announce))
+			.IsEqualTo(1);
 
 		// Confirmation must not have been sent by the silent command.
-		calls = NotifyService.ReceivedCalls().ToList();
-		var confirmationsAfter = calls.Count(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not SharpMessage msg) return false;
-			var text = msg switch { MString markup => markup.ToPlainText(), string plain => plain };
-			return text == "Message sent to 1 recipient(s).";
-		});
-
-		await Assert.That(confirmationsAfter).IsEqualTo(confirmationsBefore);
+		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef)).DoesNotContain("Message sent to 1 recipient(s).");
 	}
 
 	[Test]

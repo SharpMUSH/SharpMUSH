@@ -110,11 +110,12 @@ public class ObjectPredicateFlagTests
 	/// gate and not the search failing.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async Task ADarkObjectIsNotLocatableByAMortalSharingItsRoom()
 	{
+		var room = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("DarkLocateRoom")}")))!.Message!.ToPlainText());
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "DarkLocate");
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DarkLocate", room);
 		var mortalLoc = (await EvalAs(mortal.DbRef, "loc(%#)")).Split(':')[0];
 
 		var darkName = TestIsolationHelpers.GenerateUniqueName("DarkLocateHidden");
