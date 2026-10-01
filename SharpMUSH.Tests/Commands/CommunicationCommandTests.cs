@@ -103,11 +103,31 @@ public class CommunicationCommandTests
 		return [.. WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)];
 	}
 
-	/// <summary>
-	/// A fresh player is refused the test channel ("wrong type of thing"), so God is the member in the
-	/// alias tests, and each alias he adds is unique to the test adding it.
-	/// </summary>
 	private static string UniqueAlias(string prefix) => $"{prefix}_{Guid.NewGuid().ToString("N")[..12]}";
+
+	/// <summary>
+	/// Runs <paramref name="body"/> with a fresh player who owns, and so is a member of, a channel of
+	/// their own. The alias tests used God and the session's shared channel, and lost whenever another
+	/// test's work left God off it.
+	/// </summary>
+	private async Task WithOwnChannelAsync(string prefix, Func<TestIsolationHelpers.TestPlayer, string, Task> body)
+	{
+		var player = await CreatePlayerAsync(prefix);
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("CC");
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open", "Player"], owner));
+		try
+		{
+			await body(player, channelName);
+		}
+		finally
+		{
+			if (await Mediator.Send(new GetChannelQuery(channelName)) is { } channel)
+			{
+				await Mediator.Send(new DeleteChannelCommand(channel));
+			}
+		}
+	}
 
 	private Task<TestIsolationHelpers.TestPlayer> CreatePlayerAsync(string prefix) =>
 		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
@@ -492,10 +512,13 @@ public class CommunicationCommandTests
 		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = UniqueAlias(command.Split('=')[0].Split(' ')[1]);
 
-		var said = await NotifiedGodWhile($"addcom {alias}=Public");
+		await WithOwnChannelAsync("AddComBasic", async (player, channel) =>
+		{
+			var said = await NotifiedWhile(player, $"addcom {alias}={channel}");
 
-		await Assert.That(said.Any(message => message.StartsWith($"Alias '{alias}' added for channel ", StringComparison.OrdinalIgnoreCase)))
-			.IsTrue().Because($"God was told: {string.Join(" | ", said)}");
+			await Assert.That(said.Any(message => message.StartsWith($"Alias '{alias}' added for channel ", StringComparison.OrdinalIgnoreCase)))
+				.IsTrue().Because($"the player was told: {string.Join(" | ", said)}");
+		});
 	}
 
 	[Test]
@@ -533,12 +556,16 @@ public class CommunicationCommandTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = UniqueAlias(command.Split(' ')[1]);
-		await NotifiedGodWhile($"addcom {alias}=Public");
 
-		var said = await NotifiedGodWhile($"delcom {alias}");
+		await WithOwnChannelAsync("DelComBasic", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {alias}={channel}");
 
-		await Assert.That(said.Any(message => message.Equals($"Alias '{alias}' deleted.", StringComparison.OrdinalIgnoreCase)))
-			.IsTrue();
+			var said = await NotifiedWhile(player, $"delcom {alias}");
+
+			await Assert.That(said.Any(message => message.Equals($"Alias '{alias}' deleted.", StringComparison.OrdinalIgnoreCase)))
+				.IsTrue().Because($"the player was told: {string.Join(" | ", said)}");
+		});
 	}
 
 	[Test]
@@ -579,14 +606,17 @@ public class CommunicationCommandTests
 		var alias = UniqueAlias(parts[0].Split(' ')[1]);
 		var title = parts[1];
 
-		await NotifiedGodWhile($"addcom {alias}=Public");
+		await WithOwnChannelAsync("ComTitleBasic", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {alias}={channel}");
 
-		// This command sends TWO notifications - one from ChannelTitle.Handle and one naming the alias.
-		var said = await NotifiedGodWhile($"comtitle {alias}={title}");
+			// This command sends TWO notifications - one from ChannelTitle.Handle and one naming the alias.
+			var said = await NotifiedWhile(player, $"comtitle {alias}={title}");
 
-		await Assert.That(said.Any(message =>
-				message.StartsWith($"Title set to '{title}' for alias '{alias}' (channel ", StringComparison.OrdinalIgnoreCase)))
-			.IsTrue().Because($"God was told: {string.Join(" | ", said)}");
+			await Assert.That(said.Any(message =>
+					message.StartsWith($"Title set to '{title}' for alias '{alias}' (channel ", StringComparison.OrdinalIgnoreCase)))
+				.IsTrue().Because($"the player was told: {string.Join(" | ", said)}");
+		});
 	}
 
 	[Test]
@@ -610,16 +640,19 @@ public class CommunicationCommandTests
 		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var first = UniqueAlias("test_alias_COMLIST1");
 		var second = UniqueAlias("test_alias_COMLIST2");
-		await NotifiedGodWhile($"addcom {first}=Public");
-		await NotifiedGodWhile($"addcom {second}=Public");
+		await WithOwnChannelAsync("ComListBasic", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {first}={channel}");
+			await NotifiedWhile(player, $"addcom {second}={channel}");
 
-		var said = await NotifiedGodWhile(command);
+			var said = await NotifiedWhile(player, command);
 
-		// The output is sent as a multi-line MString containing all aliases (in lowercase)
-		// Note: Aliases are stored in uppercase but displayed in lowercase
-		await Assert.That(said.Count(message =>
-				message.Contains(first.ToLowerInvariant()) && message.Contains(second.ToLowerInvariant())))
-			.IsEqualTo(1).Because($"God was told: {string.Join(" | ", said)}");
+			// The output is sent as a multi-line MString containing all aliases (in lowercase)
+			// Note: Aliases are stored in uppercase but displayed in lowercase
+			await Assert.That(said.Count(message =>
+					message.Contains(first.ToLowerInvariant()) && message.Contains(second.ToLowerInvariant())))
+				.IsEqualTo(1).Because($"the player was told: {string.Join(" | ", said)}");
+		});
 	}
 
 	[Test]
