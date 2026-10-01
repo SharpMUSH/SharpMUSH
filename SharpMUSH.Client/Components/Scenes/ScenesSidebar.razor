@@ -1,0 +1,168 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject SceneService Scenes
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The Scenes page sidebar (README §6.5, in the board-21 shape): "Scenes · ● N live · N recent", Browse
+   over every list /api/scenes serves (All, Live now, Your scenes for a viewer acting as a character,
+   Scheduled, Finished), and up to five running scenes as image rows into their live view. Collapsed
+   keeps the browse icons and the scene leads. *@
+<div class="scenes-side @(Collapsed ? "scenes-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["SceneArchive"]">
+            <Sub>
+                @if (_live is not null)
+                {
+                    <span class="scenes-side-dot" aria-hidden="true"></span>
+                    <span>@Loc.Plural("NavScenesLiveCount", "count", _live.Count)</span>
+                }
+                @if (_recent is not null)
+                {
+                    <span aria-hidden="true">·</span>
+                    <span>@Loc.Plural("NavScenesRecentCount", "count", _recent.Count)</span>
+                }
+            </Sub>
+        </SidebarHead>
+        <SectionLabel>@Loc["NavScenesBrowse"]</SectionLabel>
+    }
+    <nav class="scenes-side-browse" aria-label="@Loc["NavScenesBrowse"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["NavScenesAll"]"
+                    Href="/scenes" IsCurrent="@(_path == "/scenes" && _filter == ScenesFilter.All)" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Sensors" Label="@Loc["NavScenesLive"]" Count="@_live?.Count"
+                    Href="/scenes/active" IsCurrent="@(_path == "/scenes/active")" Collapsed="@Collapsed" />
+        @if (_acting is not null)
+        {
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.PersonPin" Label="@Loc["NavScenesMine"]" Count="@_mine?.Count"
+                        Href="@ScenesFilter.Href(ScenesFilter.Mine)" IsCurrent="@IsFilter(ScenesFilter.Mine)" Collapsed="@Collapsed" />
+        }
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Event" Label="@Loc["NavScenesScheduled"]"
+                    Href="@ScenesFilter.Href(ScenesFilter.Scheduled)" IsCurrent="@IsFilter(ScenesFilter.Scheduled)" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Inventory2" Label="@Loc["NavScenesFinished"]"
+                    Href="@ScenesFilter.Href(ScenesFilter.Finished)" IsCurrent="@IsFilter(ScenesFilter.Finished)" Collapsed="@Collapsed" />
+    </nav>
+    @if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavScenesLive"]</SectionLabel>
+    }
+    <nav class="scenes-side-live" aria-label="@Loc["NavScenesLive"]">
+        @if (_live is { Count: 0 } && !Collapsed)
+        {
+            <div class="scenes-side-empty">@Loc["WidNoActiveScenes"]</div>
+        }
+        @foreach (var scene in (_live ?? []).Take(LiveShown))
+        {
+            var title = Loc.Title(scene);
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@SceneText.Image(scene)"
+                        Name="@title" Label="@title" Sub="@scene.RoomName" Href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}/live")"
+                        IsCurrent="@IsScene(scene)" Collapsed="@Collapsed" />
+        }
+    </nav>
+</div>
+
+@code {
+    /// <summary>Only the leads, for the collapsed strip.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    private const int LiveShown = 5;
+
+    /// <summary>Null until read, and when the read failed: a count the server did not give is not zero.</summary>
+    private IReadOnlyList<SceneSummary>? _live;
+    private IReadOnlyList<SceneSummary>? _recent;
+    private IReadOnlyList<SceneSummary>? _mine;
+    private AccountAuthService.CharacterSummary? _acting;
+    private string _path = "/scenes";
+    private string _filter = ScenesFilter.All;
+    private int _mineGeneration;
+    private int _listsGeneration;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        Scenes.Changed += OnScenesChanged;
+        Locate();
+        await LoadListsAsync();
+        await LoadMineAsync();
+    }
+
+    /// <summary>The live and recent lists behind the header counts and the live rows.</summary>
+    private async Task LoadListsAsync()
+    {
+        // A reload that overtakes an earlier one: only the newest answer counts.
+        var generation = ++_listsGeneration;
+        var live = Scenes.GetActiveScenesAsync();
+        var recent = Scenes.GetRecentScenesAsync();
+        var running = await live is IReadOnlyList<SceneSummary> active ? active : null;
+        var latest = await recent is IReadOnlyList<SceneSummary> ended ? ended : null;
+        if (generation != _listsGeneration) return;
+        (_live, _recent) = (running, latest);
+    }
+
+    /// <summary>"Your scenes" belongs to the character this tab acts as; with none there is no row at all.</summary>
+    private async Task LoadMineAsync()
+    {
+        // A switch of character while the previous one's list is in flight: only the newest answer counts.
+        var generation = ++_mineGeneration;
+        await AccountAuth.InitAsync();
+        var acting = AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
+        var mine = acting is not null
+            && await Scenes.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize) is IReadOnlyList<SceneSummary> scenes
+                ? scenes
+                : null;
+        if (generation != _mineGeneration) return;
+        (_acting, _mine) = (acting, mine);
+    }
+
+    private bool IsFilter(string filter) => _path == "/scenes" && _filter == filter;
+
+    private bool IsScene(SceneSummary scene)
+    {
+        var href = $"/scenes/{Uri.EscapeDataString(scene.Id)}";
+        return _path == href || _path == href + "/live";
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Locate();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The lists changed under the sidebar — a scene started on /scenes, which neither navigates nor
+    /// remounts this layout — so every count it shows is read again.
+    /// </summary>
+    private void OnScenesChanged() => _ = InvokeAsync(async () =>
+    {
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// Every list here is the acting character's view: the server lists a private scene only to its owner
+    /// and members, so the live and recent lists change with the character as much as "Your scenes" does.
+    /// </summary>
+    private void OnActingChanged() => _ = InvokeAsync(async () =>
+    {
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
+        StateHasChanged();
+    });
+
+    private void Locate()
+    {
+        var relative = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var cut = relative.IndexOfAny(['?', '#']);
+        _path = (cut >= 0 ? relative[..cut] : relative).TrimEnd('/');
+        if (_path.Length == 0) _path = "/";
+        _filter = ScenesFilter.FromUri(Nav.Uri);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+        Scenes.Changed -= OnScenesChanged;
+    }
+}

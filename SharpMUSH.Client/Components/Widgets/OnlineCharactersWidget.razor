@@ -3,9 +3,13 @@
 @inject CharacterDirectoryService CharacterDirectory
 @inject IStringLocalizer<SharedResource> Loc
 
-<div class="online-characters-widget">
-    <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-        <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidOnlineNow"]</MudText>
+@* D1 §6.5 "Online now · N" (board 30) as an aside card: avatar rows linking each profile, then
+   "See everyone" to the directory's online filter. Everyone here came from lwho(), so the row's
+   dot is always the connected one. Placed in a page's main column (a pre-D1 home layout) it takes
+   the main card, See everyone in its header and the rows across the width. *@
+<div class="online-characters-widget @(InMain ? "online-characters-widget--main" : null)">
+    <KitCard Aside="@(!InMain)" Title="@(_characters is { Count: > 0 } ? Loc.Plural("WidOnlineNowCount", "count", _characters.Count) : Loc["WidOnlineNow"].Value)"
+             Controls="@(InMain && _characters is { Count: > 0 } ? SeeEveryone : null)">
         @if (_loading)
         {
             @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
@@ -14,42 +18,43 @@
            and saying the latter for the former is the more damaging of the two mistakes. *@
         else if (_characters is null)
         {
-            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidUnavailable"]</MudText>
+            <div class="online-characters-note">@Loc["WidUnavailable"]</div>
         }
         else if (_characters is { Count: > 0 })
         {
-            @foreach (var c in _characters.Take(8))
+            <div class="online-characters-rows @(InMain ? "online-characters-rows--main" : null)">
+                @foreach (var c in _characters.Take(Shown))
+                {
+                    var row = c;
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@row.Image" Name="@row.Name" Label="@row.Name"
+                                Class="online-characters-row" Href="@($"/character/{Uri.EscapeDataString(row.Name)}")" />
+                }
+            </div>
+            @if (!InMain)
             {
-                <div class="online-characters-row">
-                    <div style="position:relative;">
-                        <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(c.Name.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:28px;height:28px;")">
-                            @c.Name[0].ToString().ToUpper()
-                        </MudAvatar>
-                        @* Everyone in this list came from lwho(), so the dot is always the connected
-                           colour. It used to be painted faint over the full roster, which made the
-                           whole widget read as presence data it never had. *@
-                        <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);"></span>
-                    </div>
-                    <MudLink Href="@($"/characters/{c.Objid}")" Style="color:var(--text);font-size:0.8125rem;">@c.Name</MudLink>
-                </div>
-            }
-            @if (_characters.Count > 8)
-            {
-                <MudButton Variant="Variant.Text" Href="/characters" Size="Size.Small" Color="Color.Primary" Class="mt-1">
-                    @Loc["WidViewAllCount", _characters.Count]
-                </MudButton>
+                @SeeEveryone
             }
         }
         else
         {
-            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNobodyConnected"]</MudText>
+            <div class="online-characters-note">@Loc["WidNobodyConnected"]</div>
         }
-    </MudPaper>
+    </KitCard>
 </div>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private const int Shown = 8;
+
+    /// <summary>In a page's main column the widget takes the main card rather than the aside one.</summary>
+    private bool InMain => Zone == nameof(WidgetZone.MainContent);
+
+    private RenderFragment SeeEveryone => __builder =>
+    {
+        <a class="online-characters-all" href="/characters?online=1">@Loc["WidSeeEveryone"]</a>
+    };
 
     /// <summary>The connected characters, or null when the fetch failed. Empty means nobody is on.</summary>
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _characters;

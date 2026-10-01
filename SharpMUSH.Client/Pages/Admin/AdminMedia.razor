@@ -9,191 +9,157 @@
 
 <PageTitle>@Loc["WkImageLibrary"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">@Loc["WkImageLibrary"]</MudText>
-    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">@Loc["WkImageLibraryDescription"]</MudText>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1.25rem;">
-        @foreach (var tile in new[] {
-            (_assets.Count.ToString(),                             "WkTotalAssets",           Icons.Material.Filled.Image,        "var(--accent)"),
-            (Loc.FormatBytes(TotalSizeBytes),                      "WkStorageUsed",           Icons.Material.Filled.Storage,      "#5aa9ff"),
-            (_assets.Count(a => AssetKind(a.ContentType) == "image").ToString(), "WkKindImagePlural", Icons.Material.Filled.PhotoLibrary, "#6cde9a"),
-            (_assets.Count(a => AssetKind(a.ContentType) != "image").ToString(), "WkKindOther", Icons.Material.Filled.Attachment,  "#b39cff"),
-        })
-        {
-            var (val, labelKey, icon, color) = tile;
-            <MudPaper Elevation="0" Style="@($"padding:1rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:1.375rem;")" />
-                    <div>
-                        <MudText Style="@($"font-size:1.375rem;font-weight:700;color:{color};line-height:1.1;")">
-                            @(_isLoading ? "—" : val)
-                        </MudText>
-                        <MudText Class="section-kicker" Style="opacity:0.7;">@Loc[labelKey]</MudText>
-                    </div>
-                </div>
-            </MudPaper>
-        }
-    </div>
-
-    <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;margin-bottom:0.875rem;">
-        <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection"
-                    SelectedValue="_kindFilter"
-                    SelectedValueChanged="@(v => { _kindFilter = v ?? "all"; StateHasChanged(); })">
-            @foreach (var kind in new[] { "all", "image", "video", "document" })
+<div class="adm-media">
+    <PlainPageHeader Kicker="@Loc["WkStaffMedia"]" Title="@Loc["WkImageLibrary"]" Description="@Loc["WkImageLibraryDescription"]">
+        <Actions>
+            @if (_isUploading)
             {
-                <MudChip T="string" Value="@kind"
-                         Size="Size.Small"
-                         Style="@(_kindFilter == kind ? "border:1px solid var(--accent);color:var(--accent);background:rgba(var(--glow),0.08);" : "border:1px solid var(--border);")">
-                    @Loc[KindLabelKey(kind)]
-                </MudChip>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
             }
-        </MudChipSet>
-        <MudSpacer />
-        <MudToggleGroup T="string" Value="_viewMode" ValueChanged="@(v => _viewMode = v ?? "grid")"
-                        Color="Color.Primary" Style="gap:0;">
-            <MudToggleItem Value="@("grid")" Text="@Loc["WkViewGrid"]" />
-            <MudToggleItem Value="@("list")" Text="@Loc["WkViewList"]" />
-        </MudToggleGroup>
-        <MudFileUpload T="IBrowserFile"
-                       Accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.pdf,.txt"
-                       FilesChanged="@OnFileSelected"
-                       MaximumFileCount="1"
-                       MaxFileSize="52428800"
-                       Disabled="_isUploading" />
-        @if (_isUploading)
-        {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
-        }
-    </div>
+            <MudFileUpload T="IBrowserFile"
+                           Accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.pdf,.txt"
+                           FilesChanged="@OnFileSelected"
+                           MaximumFileCount="1"
+                           MaxFileSize="52428800"
+                           Disabled="_isUploading" />
+        </Actions>
+    </PlainPageHeader>
 
-    @if (_isLoading)
-    {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="80px" Class="mb-2" /> }
-    }
-    else if (FilteredAssets.Count == 0)
-    {
-        <EmptyState>@Loc["WkNoAssetsFound"]</EmptyState>
-    }
-    else if (_viewMode == "grid")
-    {
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;">
-            @foreach (var asset in FilteredAssets)
-            {
-                var a = asset;
-                <MudPaper Elevation="0" Class="asset-card"
-                          Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;background:var(--surface);position:relative;">
-                    <div style="@($"height:120px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);overflow:hidden;")">
-                        @if (AssetKind(a.ContentType) == "image")
+    <AdminStats>
+        <AdminStat Key="total" Icon="@Icons.Material.Filled.Image" Label="@Loc["WkTotalAssets"]"
+                   Value="@(_isLoading ? "—" : _assets.Count.ToString())" />
+        <AdminStat Key="storage" Icon="@Icons.Material.Filled.Storage" Label="@Loc["WkStorageUsed"]"
+                   Value="@(_isLoading ? "—" : Loc.FormatBytes(TotalSizeBytes))" />
+        <AdminStat Key="images" Icon="@Icons.Material.Filled.PhotoLibrary" Label="@Loc["WkKindImagePlural"]"
+                   Value="@(_isLoading ? "—" : _assets.Count(a => AssetKind(a.ContentType) == "image").ToString())" />
+        <AdminStat Key="other" Icon="@Icons.Material.Filled.Attachment" Label="@Loc["WkKindOther"]"
+                   Value="@(_isLoading ? "—" : _assets.Count(a => AssetKind(a.ContentType) != "image").ToString())" />
+    </AdminStats>
+
+    <KitCard>
+        <Controls>
+            <TypeChips Items="@KindItems" Selected="@_kindFilter" SelectedChanged="@(v => _kindFilter = v)"
+                       AriaLabel="@Loc["AdmMediaKindFilter"]" />
+            <TypeChips Items="@ViewItems" Selected="@_viewMode" SelectedChanged="@(v => _viewMode = v)"
+                       AriaLabel="@Loc["AdmMediaViewMode"]" />
+        </Controls>
+        <ChildContent>
+            <div class="adm-media-body">
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    @for (var i = 0; i < 4; i++) { <MudSkeleton Height="80px" Class="mb-2" /> }
+                }
+                else if (FilteredAssets.Count == 0)
+                {
+                    <EmptyState>@Loc["WkNoAssetsFound"]</EmptyState>
+                }
+                else if (_viewMode == "grid")
+                {
+                    <div class="adm-media-grid">
+                        @foreach (var asset in FilteredAssets)
                         {
-                            <img src="@ApiUrl.Resolve(a.Url)" alt="@a.FileName"
-                                 style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@KindIcon(AssetKind(a.ContentType))"
-                                     Style="font-size:3rem;color:var(--text-faint);" />
-                        }
-                    </div>
-                    <div style="padding:0.5rem 0.625rem;">
-                        <MudText Style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="@a.FileName">
-                            @a.FileName
-                        </MudText>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.25rem;">
-                            <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@Loc.FormatBytes(a.SizeBytes)</MudText>
-                            <div style="display:flex;gap:0.125rem;">
-                                <MudTooltip Text="@Loc["WkCopyUrl"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
-                                                   Style="padding:0.125rem;min-width:0;"
-                                                   OnClick="@(() => CopyUrlAsync(a.Url))" />
-                                </MudTooltip>
-                                <MudTooltip Text="@Loc["Delete"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                                   Color="Color.Error"
-                                                   Style="padding:0.125rem;min-width:0;"
-                                                   OnClick="@(() => ConfirmDeleteAsync(a))" />
-                                </MudTooltip>
+                            var a = asset;
+                            <div class="adm-media-card" @key="a.Id">
+                                <div class="adm-media-thumb">
+                                    @if (AssetKind(a.ContentType) == "image")
+                                    {
+                                        <img src="@ApiUrl.Resolve(a.Url)" alt="@a.FileName" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@KindIcon(AssetKind(a.ContentType))" Class="adm-media-kind-icon" />
+                                    }
+                                </div>
+                                <div class="adm-media-card-body">
+                                    <div class="adm-media-name" title="@a.FileName">@a.FileName</div>
+                                    <div class="adm-media-card-foot">
+                                        <span class="adm-media-size">@Loc.FormatBytes(a.SizeBytes)</span>
+                                        <span class="adm-media-actions">
+                                            <MudTooltip Text="@Loc["WkCopyUrl"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                                               aria-label="@Loc["WkCopyUrl"]"
+                                                               OnClick="@(() => CopyUrlAsync(a.Url))" />
+                                            </MudTooltip>
+                                            <MudTooltip Text="@Loc["Delete"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                               Color="Color.Error" aria-label="@Loc["Delete"]"
+                                                               OnClick="@(() => ConfirmDeleteAsync(a))" />
+                                            </MudTooltip>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        }
                     </div>
-                </MudPaper>
-            }
-        </div>
-    }
-    else
-    {
-        <div style="overflow-x:auto;min-width:0;">
-        <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
-                     Dense="true" Hover="true"
-                     Class="mush-dark-grid"
-                     Elevation="0">
-            <Columns>
-                <TemplateColumn Title="@Loc["WkColPreview"]" Sortable="false" CellStyle="width:48px;">
-                    <CellTemplate>
-                        @if (AssetKind(context.Item.ContentType) == "image")
-                        {
-                            <img src="@ApiUrl.Resolve(context.Item.Url)" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@KindIcon(AssetKind(context.Item.ContentType))"
-                                     Style="font-size:1.25rem;color:var(--text-faint);" />
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="@Loc["WkColFileName"]" Sortable="false">
-                    <CellTemplate>
-                        <MudText Style="font-size:0.8125rem;">@context.Item.FileName</MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="@Loc["WkColKind"]" Sortable="false" CellStyle="width:80px;">
-                    <CellTemplate>
-                        <MudChip T="string" Size="Size.Small"
-                                 Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                            @Loc[KindLabelKey(AssetKind(context.Item.ContentType))]
-                        </MudChip>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="@Loc["WkColSize"]" Sortable="false" CellStyle="width:80px;">
-                    <CellTemplate>
-                        <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-faint);">
-                            @Loc.FormatBytes(context.Item.SizeBytes)
-                        </MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="@Loc["WkColUploaded"]" Sortable="false" CellStyle="width:130px;">
-                    <CellTemplate>
-                        <MudText Style="font-size:0.75rem;color:var(--text-dim);">
-                            @context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")
-                        </MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="@Loc["WkColUploader"]" Sortable="false">
-                    <CellTemplate>
-                        <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-dim);">
-                            @context.Item.UploaderDbref
-                        </MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Sortable="false" CellStyle="width:80px;">
-                    <CellTemplate>
-                        <div style="display:flex;gap:0.125rem;">
-                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
-                                           title="@Loc["WkCopyUrl"]" OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" title="@Loc["Delete"]"
-                                           OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
-                        </div>
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <NoRecordsContent>
-                <MudText Color="Color.Secondary">@Loc["WkNoAssetsFound"]</MudText>
-            </NoRecordsContent>
-        </MudDataGrid>
-        </div>
-    }
+                }
+                else
+                {
+                    <div class="adm-media-list">
+                        <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
+                                     Dense="true" Hover="true"
+                                     Class="mush-dark-grid"
+                                     Elevation="0">
+                            <Columns>
+                                <TemplateColumn Title="@Loc["WkColPreview"]" Sortable="false" CellStyle="width:48px;">
+                                    <CellTemplate>
+                                        @if (AssetKind(context.Item.ContentType) == "image")
+                                        {
+                                            <img class="adm-media-list-thumb" src="@ApiUrl.Resolve(context.Item.Url)" alt="" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@KindIcon(AssetKind(context.Item.ContentType))" Size="Size.Small" Class="adm-media-list-icon" />
+                                        }
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@Loc["WkColFileName"]" Sortable="false">
+                                    <CellTemplate>
+                                        <span class="adm-media-list-name">@context.Item.FileName</span>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@Loc["WkColKind"]" Sortable="false" CellStyle="width:80px;">
+                                    <CellTemplate>
+                                        <Pill Tag="true">@Loc[KindLabelKey(AssetKind(context.Item.ContentType))]</Pill>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@Loc["WkColSize"]" Sortable="false" CellStyle="width:80px;">
+                                    <CellTemplate>
+                                        <span class="adm-media-list-mono">@Loc.FormatBytes(context.Item.SizeBytes)</span>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@Loc["WkColUploaded"]" Sortable="false" CellStyle="width:130px;">
+                                    <CellTemplate>
+                                        <span class="adm-media-list-dim">@context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")</span>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@Loc["WkColUploader"]" Sortable="false">
+                                    <CellTemplate>
+                                        <span class="adm-media-list-mono">@context.Item.UploaderDbref</span>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Sortable="false" CellStyle="width:80px;">
+                                    <CellTemplate>
+                                        <span class="adm-media-actions">
+                                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                                           title="@Loc["WkCopyUrl"]" aria-label="@Loc["WkCopyUrl"]"
+                                                           OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                           Color="Color.Error" title="@Loc["Delete"]" aria-label="@Loc["Delete"]"
+                                                           OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
+                                        </span>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                            <NoRecordsContent>
+                                <MudText Color="Color.Secondary">@Loc["WkNoAssetsFound"]</MudText>
+                            </NoRecordsContent>
+                        </MudDataGrid>
+                    </div>
+                }
+            </div>
+        </ChildContent>
+    </KitCard>
 </div>
 
 <MudDialog @bind-Visible="_showDeleteConfirm">
@@ -219,6 +185,12 @@
     private WikiAssetInfo? _deleteTarget;
 
     private long TotalSizeBytes => _assets.Sum(a => a.SizeBytes);
+
+    private IReadOnlyList<(string Key, string Label)> KindItems =>
+        [.. new[] { "all", "image", "video", "document" }.Select(kind => (kind, Loc[KindLabelKey(kind)].Value))];
+
+    private IReadOnlyList<(string Key, string Label)> ViewItems =>
+        [("grid", Loc["WkViewGrid"].Value), ("list", Loc["WkViewList"].Value)];
 
     private List<WikiAssetInfo> FilteredAssets => _kindFilter == "all"
         ? _assets

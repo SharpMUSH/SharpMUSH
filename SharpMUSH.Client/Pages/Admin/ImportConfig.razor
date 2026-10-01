@@ -7,77 +7,83 @@
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
+<PageTitle>@Loc["ImportConfiguration"] - @Loc["Configuration"]</PageTitle>
+
 <div class="config-section-page">
-	<PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["ImportConfiguration"]" Description="@Loc["ImportConfigDescription"]" />
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["ImportConfiguration"]" Description="@Loc["ImportConfigDescription"]" />
 
-	<div class="config-field-card config-dropzone">
-		<MudFileUpload T="IBrowserFile"
-		               Accept=".cnf,.conf,.txt"
-		               FilesChanged="OnFileSelected"
-		               MaximumFileCount="1"
-		               MaxFileSize="1048576" />
-		<div class="config-dropzone-inner">
-			<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
-			<div class="config-dropzone-title">@Loc["DropFilesOrClick"]</div>
-			<div class="config-dropzone-sub">@Loc["SupportedFormatsConfig"]</div>
-		</div>
-	</div>
+    @* D1 frame, as the database import beside it: the drop zone and the chosen file are kit cards,
+       the preview a read-only MudBlazor field, and Import the page's one primary capsule. *@
+    <div class="impcfg-stack">
+        <KitCard Class="impcfg-dropzone">
+            <div class="impcfg-body">
+                <MudFileUpload T="IBrowserFile"
+                               Accept=".cnf,.conf,.txt"
+                               FilesChanged="OnFileSelected"
+                               MaximumFileCount="1"
+                               MaxFileSize="1048576" />
+                <div class="impcfg-dropzone-inner">
+                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="impcfg-dropzone-icon" />
+                    <span class="impcfg-dropzone-title">@Loc["DropFilesOrClick"]</span>
+                    <span class="impcfg-dropzone-hint">@Loc["SupportedFormatsConfig"]</span>
+                </div>
+            </div>
+        </KitCard>
 
-	@if (_selectedFile != null)
-	{
-		<div class="config-field-card config-pad mt-4">
-			<div class="config-group-title">@Loc["SelectedFile"]</div>
-			<div class="config-file-row">
-				<MudIcon Icon="Icons.Material.Filled.Description" Style="font-size:1.125rem;" />
-				<span class="config-list-name">@_selectedFile.Name</span>
-				<span class="config-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
-			</div>
+        @if (_selectedFile != null)
+        {
+            <KitCard Title="@Loc["SelectedFile"]">
+                <div class="impcfg-body">
+                    <div class="impcfg-file-row">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Class="impcfg-file-icon" />
+                        <span class="impcfg-file-name">@_selectedFile.Name</span>
+                        <span class="impcfg-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
+                    </div>
 
-			@if (!string.IsNullOrEmpty(_fileContent))
-			{
-				<MudExpansionPanels Class="config-preview mt-4">
-					<MudExpansionPanel MaxHeight="400">
-						<TitleContent>
-							<div style="display: flex; align-items: center; gap: 0.5rem;">
-								<MudIcon Icon="Icons.Material.Filled.Visibility" Style="font-size:1.125rem;" />
-								<span>@Loc["PreviewFileContent"]</span>
-							</div>
-						</TitleContent>
-						<ChildContent>
-							<textarea class="config-input config-preview-text" rows="15" readonly>@_fileContent</textarea>
-						</ChildContent>
-					</MudExpansionPanel>
-				</MudExpansionPanels>
-			}
+                    @if (!string.IsNullOrEmpty(_fileContent))
+                    {
+                        <MudExpansionPanels Elevation="0" Class="impcfg-preview">
+                            <MudExpansionPanel MaxHeight="400">
+                                <TitleContent>
+                                    <div class="impcfg-preview-title">
+                                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+                                        <span>@Loc["PreviewFileContent"]</span>
+                                    </div>
+                                </TitleContent>
+                                <ChildContent>
+                                    <MudTextField T="string" Value="@_fileContent" ReadOnly="true" Lines="15"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                  aria-label="@Loc["PreviewFileContent"]"
+                                                  Class="impcfg-preview-text" />
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
 
-			@if (_error is not null)
-			{
-				<MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">@Loc["ConfigImportFailed", _error].Value</MudAlert>
-			}
+                    @if (_error is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">@Loc["ConfigImportFailed", _error].Value</MudAlert>
+                    }
 
-			<div class="config-actions mt-4">
-				<button type="button" class="config-ghost-btn" @onclick="ClearSelection">
-					<MudIcon Icon="Icons.Material.Filled.Clear" Style="font-size:1rem;" />
-					@Loc["ClearSelection"]
-				</button>
-
-				<button type="button" class="config-primary-btn"
-				        @onclick="ImportConfiguration"
-				        disabled="@_isImporting">
-					@if (_isImporting)
-					{
-						<MudProgressCircular Size="Size.Small" Indeterminate="true" />
-						<span>@Loc["Importing"]</span>
-					}
-					else
-					{
-						<MudIcon Icon="Icons.Material.Filled.Upload" Style="font-size:1rem;" />
-						<span>@Loc["ImportConfiguration"]</span>
-					}
-				</button>
-			</div>
-		</div>
-	}
+                    <div class="impcfg-actions">
+                        <CapsuleButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
+                        <CapsuleButton Icon="@(_isImporting ? null : Icons.Material.Filled.Upload)" Primary="true"
+                                       OnClick="ImportConfiguration" Disabled="_isImporting">
+                            @if (_isImporting)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                @Loc["Importing"]
+                            }
+                            else
+                            {
+                                @Loc["ImportConfiguration"]
+                            }
+                        </CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+    </div>
 </div>
 
 @code {
@@ -90,14 +96,14 @@
 	{
 		_selectedFile = file;
 		_error = null;
-		
+
 		if (file != null)
 		{
 			try
 			{
-                await using var stream = file.OpenReadStream(maxAllowedSize: 1048576); // 1MB
-                using var reader = new StreamReader(stream);
-                _fileContent = await reader.ReadToEndAsync();
+				await using var stream = file.OpenReadStream(maxAllowedSize: 1048576); // 1MB
+				using var reader = new StreamReader(stream);
+				_fileContent = await reader.ReadToEndAsync();
 			}
 			catch (Exception ex)
 			{

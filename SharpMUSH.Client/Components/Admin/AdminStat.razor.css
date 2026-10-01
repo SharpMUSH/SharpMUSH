@@ -1,0 +1,53 @@
+.adm-stat {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	padding: 14px 16px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+}
+
+.adm-stat-icon {
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-row);
+	background: rgba(var(--glow), 0.10);
+	color: var(--accent);
+}
+
+.adm-stat--warn .adm-stat-icon {
+	background: var(--warn-tint);
+	color: var(--warn);
+}
+
+.adm-stat-text {
+	min-width: 0;
+}
+
+.adm-stat-value {
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--text);
+	font-variant-numeric: tabular-nums;
+}
+
+.adm-stat-label {
+	margin-top: 2px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.adm-stat-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+}

@@ -4,23 +4,24 @@
 @inject CharacterDirectoryService CharacterDirectory
 @inject WikiService WikiService
 @inject SceneService SceneService
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
+@* D1 §6.5 stat tiles (board 31's count pills, at desktop size): one card per count, a mono label
+   over the value in accent. The tiles wrap to fit the column rather than stepping at a width. *@
 <div class="stats-widget">
-    <MudGrid Spacing="3">
+    <div class="stats-tiles">
         @foreach (var tile in Tiles)
         {
-            <MudItem xs="6" sm="3">
-                <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-                    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);">@Loc[tile.LabelKey]</MudText>
-                    @* The placeholder is the same dash whether the value is still loading or could not
-                       be fetched; the title says which, without a banner or a spinner that never ends. *@
-                    <MudText title="@(tile.Failed ? Loc["WidUnavailable"].Value : null)"
-                             Style="font-size:1.75rem;font-weight:700;color:var(--accent);line-height:1.2;margin-top:0.25rem;">@tile.Value</MudText>
-                </MudPaper>
-            </MudItem>
+            <div class="stats-tile">
+                <div class="stats-tile-label">@Loc[tile.LabelKey]</div>
+                @* The placeholder is the same dash whether the value is still loading or could not
+                   be fetched; the title says which, without a banner or a spinner that never ends. *@
+                <div class="stats-tile-value" title="@(tile.Failed ? Loc["WidUnavailable"].Value : null)">@tile.Value</div>
+            </div>
         }
-    </MudGrid>
+    </div>
 </div>
 
 @code {
@@ -46,15 +47,23 @@
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
 
+    /// <summary>
+    /// Only the active-scenes count depends on who is asking — the server counts the private scenes the
+    /// acting character may see — so a switch, or a scene this tab started, recounts that tile alone.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
+
     protected override async Task OnInitializedAsync()
     {
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadActiveScenesAsync(); StateHasChanged(); }), SceneService);
+
         // AsTask() up front, once: these return ValueTask, which may be consumed only once, and
         // both WhenAll and the reads below need to await them. Converting at the call site keeps
         // each result awaitable twice regardless of how the services back their ValueTask.
         var recentTask = WikiService.GetRecentChangesAsync(10).AsTask();
         var charsTask = CharacterDirectory.ListAsync();
         var onlineTask = CharacterDirectory.ListOnlineAsync();
-        var scenesTask = SceneService.GetActiveScenesAsync();
+        var scenesTask = LoadActiveScenesAsync();
         await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
 
         _recent = (await recentTask).Count;
@@ -70,7 +79,13 @@
             ? online.Count
             : null;
         _onlineFailed = _online is null;
-        _activeScenes = await scenesTask is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
-        _activeScenesFailed = _activeScenes is null;
     }
+
+    private Task LoadActiveScenesAsync() => _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
+    {
+        _activeScenes = result is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
+        _activeScenesFailed = _activeScenes is null;
+    });
+
+    public void Dispose() => _reload.Dispose();
 }

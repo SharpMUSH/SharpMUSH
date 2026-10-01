@@ -88,12 +88,26 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		return auth;
 	}
 
-	private IRenderedComponent<QuickstartWidget> RenderWidget(AccountAuthService auth)
+	private IRenderedComponent<QuickstartWidget> RenderWidget(AccountAuthService auth, WidgetZone zone = WidgetZone.RightSidebar)
 	{
 		Services.AddSingleton(auth);
 		return Render<QuickstartWidget>(p => p
 			.Add(c => c.Config, null)
-			.Add(c => c.Zone, WidgetZone.RightSidebar.ToString()));
+			.Add(c => c.Zone, zone.ToString()));
+	}
+
+	/// <summary>
+	/// A home layout saved before D1 keeps this widget in MainContent. There it takes the main card
+	/// and lays its ways in across the width.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InTheMainColumn_TakesTheMainCard()
+	{
+		var cut = RenderWidget(BuildAuth([]), WidgetZone.MainContent);
+
+		await Assert.That(cut.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-card-head .kit-card-title").TextContent).IsEqualTo("WidNewHere");
+		await Assert.That(cut.Find(".quickstart-links").ClassList).Contains("quickstart-links--main");
 	}
 
 	[TUnit.Core.Test]
@@ -105,6 +119,20 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).Contains("WidReadTheWiki");
 		await Assert.That(cut.Markup).Contains("WidBrowseCharacters");
 		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
+	}
+
+	/// <summary>D1 §6.5: an aside card whose ways in are sidebar rows and whose one offer is the primary capsule.</summary>
+	[TUnit.Core.Test]
+	public async Task IsAnAsideCard_WithRowLinks_AndOnePrimaryOffer()
+	{
+		var auth = BuildAuth([]);
+		var cut = RenderWidget(auth);
+
+		await Assert.That(cut.Find(".kit-card.kit-card--aside .kit-card-title").TextContent).IsEqualTo("WidNewHere");
+		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/wiki", "/characters", "/scenes" });
+		await Assert.That(cut.FindAll("a.kit-capsule--primary").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/login?tab=register" });
 	}
 
 	[TUnit.Core.Test]

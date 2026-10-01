@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>A nyitóoldal fő tartalma.</value>
+    <value>A kezdőlap: a fő oszlopa és az oldalsávja.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3228,6 +3228,14 @@
     <value>Bárki nézheti</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>A lap terminálja ezzel a karakterrel játszik: {0}, nem ezzel: {1}. Indítsd a jelenetet egy olyan lapról, amely ezzel játszik: {1}, vagy válts vissza erre: {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Nem sikerült megállapítani, melyik karakterrel játszik a lap terminálja. Próbáld újra egy pillanat múlva.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Jelenet indítása</value>
     <comment>MT</comment>
@@ -3914,10 +3922,6 @@
   </data>
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Nem ellenőrzött forrás — alkalmazás előtt vizsgáljon át mindent</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Mind a(z) {0} megtekintése →</value>
     <comment>MT</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
@@ -4841,6 +4845,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>„{0}” nevű karakter keresése</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Bejelentkezve mint {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Áttekintés</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Fiók</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Beállítások</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>A fiókod, a karaktereid és a portál megjelenése.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# üzenet} other {# üzenet}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Olvasatlan</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Továbbított üzenet tőle: {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Vissza ide: {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Mi történik</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Most online} other {Most online · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Mindenki megtekintése</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Éppen zajló jelenetek</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# találat} other {# találat}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Összes jelenet</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Most élőben</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Saját jelenetek</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Ütemezett</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Befejezett</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# élő} other {# élő}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# friss} other {# friss}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Jelenetarchívum</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Azok a jelenetek, amelyekben {0} részt vett.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Későbbre tervezett jelenetek, a legközelebbi elöl.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Jelenetek, amelyeket a tulajdonosuk lezárt.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Jelentkezz be, és válassz karaktert, hogy lásd a jeleneteket, amelyekben részt vettél.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privát</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Ütemezve: {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Pózok szűrése címke szerint</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Részletek</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Kezdés</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Utolsó aktivitás</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Indította</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Hossz</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Szereplők · #} other {Szereplők · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# téma} other {# téma}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Keresés a súgóban</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Súgó tartalomjegyzéke</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Első lépések</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Új a MUSH-ban</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Témák</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Nincs találat} one {# találat} other {# találat}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Adminisztrátori súgó</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Adminisztrátori tartalomjegyzék</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Adminisztráció · Helyesírás</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Adatbázis</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Kezelés · Diagnosztika</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Kezelés · Automatizálás</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Építés · Helyreállítás</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Szűrés típus szerint</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Megjelenítés</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Szerepkörök vagy hozzárendelések</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>A kezelő attribútumai</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Kép feltöltése</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Ehhez a játékhoz nincsenek súgótémák telepítve.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>{0} README megjelenítése</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Csatlakozva: {0}</value>

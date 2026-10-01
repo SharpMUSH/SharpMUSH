@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>O conteúdo principal da página inicial.</value>
+    <value>A página inicial: sua coluna principal e sua coluna lateral.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3228,6 +3228,14 @@
     <value>Deixar qualquer um assistir</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>O terminal desta aba está jogando como {0}, não como {1}. Inicie a cena em uma aba que jogue como {1} ou volte para {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Não foi possível confirmar com qual personagem o terminal desta aba está jogando. Tente novamente em instantes.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Iniciar uma cena</value>
     <comment>MT</comment>
@@ -3915,10 +3923,6 @@
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Fonte não revisada — inspecione tudo antes de aplicar</value>
     <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Ver todos os {0} →</value>
-    <comment>MT — masculine plural assumed; the widget lists items of varying type</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Aguardando o servidor ficar online…</value>
@@ -4841,6 +4845,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Encontrar um personagem chamado “{0}”</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Conectado como {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Visão geral</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Conta</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Preferências</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Sua conta, seus personagens e a aparência deste portal.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# mensagem} other {# mensagens}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Não lida</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Mensagem encaminhada de {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Voltar para {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>O que está acontecendo</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online agora} other {Online agora · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Ver todos</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Cenas acontecendo agora</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# encontrado} other {# encontrados}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Navegar</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Todas as cenas</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Ao vivo agora</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Suas cenas</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Agendadas</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Encerradas</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# ao vivo} other {# ao vivo}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# recente} other {# recentes}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Arquivo de cenas</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>As cenas de que {0} participou.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Cenas planejadas para depois, as mais próximas primeiro.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Cenas que seus donos encerraram.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Entre e jogue com um personagem para ver as cenas de que você participou.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privada</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Agendada para {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrar poses por etiqueta</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detalhes</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Iniciada</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Última atividade</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Iniciada por</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Extensão</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Elenco · #} other {Elenco · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# tópico} other {# tópicos}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Pesquisar na ajuda</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Navegar</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Índice da ajuda</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Primeiros passos</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Novo em MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Tópicos</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Nenhum resultado} one {# resultado} other {# resultados}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Ajuda de administração</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Índice de administração</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administração · Ortografia</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Banco de dados</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Gerenciar · Diagnóstico</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Gerenciar · Automação</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Construir · Recuperação</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrar por tipo</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Mostrar como</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Funções ou atribuições</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Atributos do manipulador</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Enviar uma imagem</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Este jogo não tem tópicos de ajuda instalados.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Mostrar o README de {0}</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Conectado como {0}</value>

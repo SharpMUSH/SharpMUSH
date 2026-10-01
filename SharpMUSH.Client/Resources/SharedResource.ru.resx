@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Основное содержимое главной страницы.</value>
+    <value>Главная страница: основная колонка и боковая колонка.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3228,6 +3228,14 @@
     <value>Разрешить всем смотреть</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Терминал в этой вкладке играет за {0}, а не за {1}. Начните сцену во вкладке, где играет {1}, или переключитесь обратно на {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Не удалось подтвердить, за какого персонажа играет терминал в этой вкладке. Повторите попытку через мгновение.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Начать сцену</value>
     <comment>MT</comment>
@@ -3915,10 +3923,6 @@
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Непроверенный источник — изучите всё перед применением</value>
     <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Показать все ({0}) →</value>
-    <comment>MT — count moved into parentheses; a bare numeral before «все» would need case agreement.</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Ожидание запуска сервера…</value>
@@ -4841,6 +4845,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Найти персонажа по имени «{0}»</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Вы вошли как {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Учётная запись</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Предпочтения</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Ваша учётная запись, ваши персонажи и внешний вид портала.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# сообщение} few {# сообщения} many {# сообщений} other {# сообщения}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Непрочитано</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Пересланное сообщение от {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Назад в {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Что происходит</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Сейчас в сети} other {Сейчас в сети · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Показать всех</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Сцены, которые идут сейчас</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# найден} few {# найдено} many {# найдено} other {# найдено}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Все сцены</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Сейчас в эфире</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Ваши сцены</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Запланированные</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Завершённые</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# в эфире} few {# в эфире} many {# в эфире} other {# в эфире}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# недавняя} few {# недавние} many {# недавних} other {# недавней}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Архив сцен</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Сцены, в которых участвовал(а) {0}.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Сцены, запланированные на потом, ближайшие первыми.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Сцены, которые их владельцы завершили.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Войдите и выберите персонажа, чтобы увидеть сцены, в которых вы участвовали.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>закрытая</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Запланирована на {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Фильтр поз по тегу</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Начата</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Последняя активность</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Начал(а)</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Объём</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Участники · #} few {Участники · #} many {Участники · #} other {Участники · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# тема} few {# темы} many {# тем} other {# темы}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Поиск по справке</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Оглавление справки</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>С чего начать</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Впервые в MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Темы</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Нет совпадений} one {# совпадение} few {# совпадения} many {# совпадений} other {# совпадения}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Справка администратора</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Оглавление для администраторов</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Администрирование · Орфография</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Админ · База данных</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Управление · Диагностика</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Управление · Автоматизация</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Строительство · Восстановление</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Фильтр по типу</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Показать как</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Роли или назначения</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Атрибуты обработчика</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Загрузить изображение</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>В этой игре не установлены разделы справки.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Показать README для {0}</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Вы подключены как {0}</value>

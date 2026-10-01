@@ -13,24 +13,18 @@
 <PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="layedit full-bleed">
-    <div class="layedit-head">
-        <div>
-            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> @Loc["LayAllLayouts"]</a>
-            <h1 class="layedit-title">@ScopeLabel</h1>
-            <p class="layedit-blurb">@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)</p>
-        </div>
-        <div class="layedit-actions">
-            <button type="button" class="le-btn @(_showPreview ? "le-btn--on" : "")" @onclick="@(() => _showPreview = !_showPreview)">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;" /> @Loc["LayPreview"]
-            </button>
-            <button type="button" class="le-btn" @onclick="ResetAsync" disabled="@_saving">
-                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:0.875rem;" /> @Loc["ResetToDefault"]
-            </button>
-            <button type="button" class="le-btn le-btn--primary" @onclick="SaveAsync" disabled="@(_saving || !_dirty)">
-                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
-            </button>
-        </div>
-    </div>
+    <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="layedit-back-icon" /> @Loc["LayAllLayouts"]</a>
+    <PlainPageHeader Kicker="@Loc["LayLayoutsKicker"]" Title="@ScopeLabel"
+                     Description="@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)">
+        <Actions>
+            <CapsuleButton Icon="@Icons.Material.Filled.Visibility" Pressed="@_showPreview" Primary="@_showPreview"
+                           OnClick="@(() => _showPreview = !_showPreview)">@Loc["LayPreview"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.RestartAlt" OnClick="ResetAsync" Disabled="@_saving">@Loc["ResetToDefault"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.Save" Primary="true" OnClick="SaveAsync" Disabled="@(_saving || !_dirty)">
+                @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
+            </CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
 
     @if (_scopeInfo is null)
     {
@@ -191,11 +185,15 @@
         public int Span { get; set; } = 12;
     }
 
-    // Vertical zones lay widgets out in a 12-column grid (per-placement width). The top bar is
-    // horizontal, so it stays a simple list with no column-width control.
-    private static bool IsGridZone(WidgetZone zone) => zone != WidgetZone.TopBar;
+    // A zone is a grid (per-placement column width) exactly where it is rendered as one. The global
+    // scope's chrome zones are grids in MainLayout except the horizontal top bar; a page scope renders
+    // only its MainContent as a grid and its RightSidebar aside as a plain stack (Grid="false").
+    private bool IsGridZone(WidgetZone zone) =>
+        string.Equals(Scope, LayoutScopes.Global, StringComparison.OrdinalIgnoreCase)
+            ? zone != WidgetZone.TopBar
+            : zone == WidgetZone.MainContent;
 
-    private static bool IsGridZoneName(string zone)
+    private bool IsGridZoneName(string zone)
         => Enum.TryParse<WidgetZone>(zone, out var z) && IsGridZone(z);
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;

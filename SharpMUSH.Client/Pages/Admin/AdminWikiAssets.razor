@@ -8,28 +8,24 @@
 
 <PageTitle>@Loc["WkWikiAssets"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div class="assets-head">
-        <div>
-            <div class="assets-kicker">@Loc["WkStaffMedia"]</div>
-            <h1 class="assets-title">@Loc["WkWikiAssets"]</h1>
-        </div>
-    </div>
+<div class="assets-page">
+    <PlainPageHeader Kicker="@Loc["WkStaffMedia"]" Title="@Loc["WkWikiAssets"]" />
 
-    <div class="assets-upload">
-        <MudFileUpload T="IBrowserFile"
-                       Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
-                       FilesChanged="OnFileSelected"
-                       MaximumFileCount="1"
-                       MaxFileSize="10485760"
-                       Disabled="_isUploading" />
-        @if (_isUploading)
-        {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
-            <span class="assets-upload-status">@Loc["Uploading"]</span>
-        }
-        <span class="assets-upload-hint">@Loc["WkAssetUploadHint"]</span>
-    </div>
+    <KitCard Title="@Loc["AdmAssetsUploadTitle"]" Sub="@Loc["WkAssetUploadHint"]">
+        <div class="assets-upload">
+            <MudFileUpload T="IBrowserFile"
+                           Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                           FilesChanged="OnFileSelected"
+                           MaximumFileCount="1"
+                           MaxFileSize="10485760"
+                           Disabled="_isUploading" />
+            @if (_isUploading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                <span class="assets-upload-status">@Loc["Uploading"]</span>
+            }
+        </div>
+    </KitCard>
 
     @if (_isLoading)
     {
@@ -37,40 +33,42 @@
     }
     else if (_assets.Count == 0)
     {
-        <div class="assets-empty">@Loc["WkNoAssets"]</div>
+        <KitCard><div class="assets-empty">@Loc["WkNoAssets"]</div></KitCard>
     }
     else
     {
-        <div class="assets-grid">
-            @foreach (var asset in _assets)
-            {
-                <div class="assets-card" @key="asset.Id">
-                    <div class="assets-thumb">
-                        <img src="@ApiUrl.Resolve(asset.Url)" alt="@asset.FileName" />
-                        <span class="assets-thumb-type">@ShortType(asset.ContentType)</span>
+        <KitCard>
+            <div class="assets-grid">
+                @foreach (var asset in _assets)
+                {
+                    <div class="assets-card" @key="asset.Id">
+                        <div class="assets-thumb">
+                            <img src="@ApiUrl.Resolve(asset.Url)" alt="@asset.FileName" />
+                            <span class="assets-thumb-type">@ShortType(asset.ContentType)</span>
+                        </div>
+                        <div class="assets-card-body">
+                            <div class="assets-card-name" title="@asset.FileName">@asset.FileName</div>
+                            <div class="assets-card-meta">
+                                <span>@Loc.FormatBytes(asset.SizeBytes)</span>
+                                <span>@asset.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                            </div>
+                            <div class="assets-card-meta">
+                                <span class="assets-card-uploader" title="@asset.UploaderDbref">@asset.UploaderDbref</span>
+                            </div>
+                            <div class="assets-card-actions">
+                                <button type="button" class="assets-btn" @onclick="@(() => CopyMarkdown(asset))">
+                                    <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Class="assets-btn-icon" /> @Loc["WkCopyMarkdown"]
+                                </button>
+                                <button type="button" class="assets-icon-btn assets-icon-btn--danger"
+                                        title="@Loc["Delete"]" aria-label="@Loc["Delete"]" @onclick="@(() => DeleteAsset(asset))">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Class="assets-btn-icon" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="assets-card-body">
-                        <div class="assets-card-name" title="@asset.FileName">@asset.FileName</div>
-                        <div class="assets-card-meta">
-                            <span>@Loc.FormatBytes(asset.SizeBytes)</span>
-                            <span>@asset.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
-                        </div>
-                        <div class="assets-card-meta">
-                            <span class="assets-card-uploader" title="@asset.UploaderDbref">@asset.UploaderDbref</span>
-                        </div>
-                        <div class="assets-card-actions">
-                            <button type="button" class="assets-btn" @onclick="@(() => CopyMarkdown(asset))">
-                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Style="font-size:0.875rem;" /> @Loc["WkCopyMarkdown"]
-                            </button>
-                            <button type="button" class="assets-icon-btn assets-icon-btn--danger"
-                                    title="@Loc["Delete"]" @onclick="@(() => DeleteAsset(asset))">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        </KitCard>
     }
 </div>
 

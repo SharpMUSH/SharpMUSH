@@ -10,6 +10,7 @@
 @inject GalleryService Gallery
 @inject SceneService Scenes
 @inject AccountAuthService AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@DisplayName — @Loc["AppTitle"]</PageTitle>
@@ -127,6 +128,11 @@ else
 
     private string? PortraitUrl => _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
 
+    protected override void OnInitialized() =>
+        _liveSceneReload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadLiveSceneAsync(); StateHasChanged(); }), Scenes);
+
+    public void Dispose() => _liveSceneReload.Dispose();
+
     protected override async Task OnParametersSetAsync()
     {
         var user = AuthState is null ? null : (await AuthState).User;
@@ -142,6 +148,8 @@ else
 
         _loadedFor = Name;
         var generation = ++_generation;
+        // The previous character's live-scene read, still in flight, is not this one's.
+        _liveSceneReload.Begin();
         (_profile, _gallery, _liveScene, _online, _missing, _unreadable, _viewerItems, _viewerOpen) = (null, [], null, false, false, false, [], false);
 
         var profile = Profiles.GetAsync(Name);
@@ -174,13 +182,19 @@ else
                 : string.Equals(r.Name, DisplayName, StringComparison.OrdinalIgnoreCase));
         _viewerItems = ViewerItems();
 
-        if (_profile?.Dbref is { } dbref)
-        {
-            var scenes = await Scenes.GetParticipantScenesAsync(dbref, 5);
-            if (generation != _generation) return;
-            _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null;
-        }
+        await LoadLiveSceneAsync();
     }
+
+    /// <summary>
+    /// The scene the character is in, from the scenes the acting character may see: a switch of
+    /// character, or a scene this tab started, reads it again.
+    /// </summary>
+    private readonly ViewerScopedReload _liveSceneReload = new();
+
+    private Task LoadLiveSceneAsync() => _profile?.Dbref is { } dbref
+        ? _liveSceneReload.LoadAsync(() => Scenes.GetParticipantScenesAsync(dbref, 5),
+            scenes => _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null)
+        : Task.CompletedTask;
 
     /// <summary>The banner, the portrait, then the rest of the gallery, each once and each renderable.</summary>
     private IReadOnlyList<ImageViewer.Item> ViewerItems()

@@ -1,30 +1,10 @@
-.appadmin { padding: var(--cpad); }
-
-.appadmin-head {
+.appadmin {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.25rem;
+    flex-direction: column;
+    gap: 16px;
+    padding: var(--main-pad);
+    min-width: 0;
 }
-.appadmin-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.375rem;
-}
-.appadmin-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--text);
-}
-.appadmin-actions { display: flex; gap: 0.625rem; }
 
 .aa-btn {
     display: inline-flex;
@@ -52,40 +32,17 @@
 }
 .aa-btn--primary:hover { filter: brightness(1.08); }
 
-.appadmin-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.125rem;
-}
-.aa-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.125rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-soft);
-    background: var(--surface);
-    box-shadow: var(--shadow);
-}
-.aa-stat-val { font-size: 1.375rem; font-weight: 700; line-height: 1.1; }
-.aa-stat-label {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-top: 0.125rem;
-}
-.aa-stat-sub { font-family: var(--font-ui); font-size: 0.6875rem; color: var(--text-faint); }
-
 .appadmin-grid {
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
+/* README §3: list and detail stay side by side at the medium tier (the design size); only narrow stacks */
 @container page (max-width: 64rem) {
-    .appadmin-grid { grid-template-columns: 1fr; }
+    .appadmin-grid { grid-template-columns: 280px minmax(0, 1fr); }
+}
+@container page (max-width: 48rem) {
+    .appadmin-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* List */
@@ -108,13 +65,24 @@
 .aa-search input::placeholder { color: var(--text-faint); }
 .aa-empty-list { padding: 1rem; color: var(--text-faint); font-size: 0.8125rem; text-align: center; }
 
+.aa-grow { flex: 1; min-width: 0; }
+.aa-detail-titles { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
+
+/* icon sizes (MudIcon renders an svg this page does not scope, hence ::deep) */
+.appadmin ::deep .aa-ico { font-size: 0.875rem; }
+.appadmin ::deep .aa-ico--faint { color: var(--text-faint); }
+.appadmin ::deep .aa-ico--card { font-size: 1.0625rem; }
+.appadmin ::deep .aa-ico--btn { font-size: 1rem; }
+.appadmin ::deep .aa-ico--detail { font-size: 1.375rem; }
+.appadmin ::deep .aa-ico--empty { font-size: 2.5rem; color: var(--text-faint); opacity: 0.4; }
+
 .aa-card {
     text-align: left;
     padding: 0.875rem;
     cursor: pointer;
     background: var(--surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border);
     transition: border-color 0.12s, box-shadow 0.12s;
 }
 .aa-card:hover { border-color: rgba(var(--glow), 0.3); }
@@ -137,17 +105,18 @@
     font-family: var(--font-mono); font-size: 0.5625rem; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 0.125rem 0.4375rem; border-radius: 99px; flex-shrink: 0;
 }
+.aa-kind--page { background: rgba(0, 200, 100, 0.12); color: #6cde9a; }
+.aa-kind--widget { background: rgba(90, 169, 255, 0.12); color: #5aa9ff; }
+.aa-kind--form { background: rgba(179, 156, 255, 0.12); color: #b39cff; }
+.aa-kind--other { background: rgba(255, 255, 255, 0.06); color: var(--text-dim); }
 .aa-role {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 0.125rem 0.4375rem; border-radius: 99px; color: var(--text-dim);
     background: var(--surface-2); border: 1px solid var(--border);
 }
 
-/* Detail */
-.appadmin-detail {
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
+/* Detail: a KitCard, so its root carries the card's scope, not this page's */
+.appadmin-grid ::deep .appadmin-detail {
     overflow: hidden;
     align-self: start;
 }

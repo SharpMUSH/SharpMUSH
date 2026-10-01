@@ -40,8 +40,9 @@ public class MailRefusalTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
+			.AddSingleton(Substitute.For<IAccountAuthState>())
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
-			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>()));
+			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IAccountAuthState>()));
 
 		this.AddAuthorization().SetAuthorized("headwiz");
 		JSInterop.Mode = JSRuntimeMode.Loose;

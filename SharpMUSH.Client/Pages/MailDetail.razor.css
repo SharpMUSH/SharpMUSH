@@ -1,54 +1,56 @@
 .mail-detail-page {
-    padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
+	max-width: 56rem;
 }
 
-.md-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-.md-title {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--text);
-}
-.md-card {
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    padding: 1.5rem;
-}
-.md-urgent {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(var(--glow),0.3);
-    border-radius: 999px;
-    padding: 0.125rem 0.5rem;
+.md-missing {
+	padding: 16px;
+	font-size: 14px;
+	color: var(--text-dim);
 }
 
-/* Mobile: trim padding, wrap long monospace body tokens so they don't force
-   horizontal scroll, and make the Reply/Delete buttons full-width & tappable. */
+.md-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--border-soft);
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.md-from strong {
+	color: var(--text);
+	font-weight: 600;
+}
+
+.md-date {
+	margin-left: auto;
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.md-body {
+	padding: 16px;
+	white-space: pre-wrap;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--text);
+}
+
+/* Narrow: long monospace tokens wrap rather than forcing a horizontal scroll. */
 @container page (max-width: 48rem) {
-    .mail-detail-page {
-        padding: var(--cpad-mobile);
-    }
-    .mail-detail-page .md-body {
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
-    .mail-detail-page .md-actions {
-        flex-direction: column;
-    }
-    .mail-detail-page .md-actions ::deep .mud-button-root {
-        width: 100%;
-        min-height: 44px;
-    }
+	.md-body {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
+	.md-date {
+		margin-left: 0;
+	}
 }

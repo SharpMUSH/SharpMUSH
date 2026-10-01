@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Mail
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Mail section (/mail, a message, compose): the D1 page sidebar with Compose and the folders
+   beside the page body. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="mail" Class="mail-shell" NavLabel="@Loc["Mail"]">
+    <Nav Context="collapsed"><MailSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

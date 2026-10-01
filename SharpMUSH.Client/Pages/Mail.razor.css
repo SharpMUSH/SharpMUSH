@@ -1,82 +1,233 @@
-::deep .active-folder .mud-nav-link-text {
-    color: var(--accent);
-}
-
 .mail-page {
-    display: flex;
-    height: 100%;
-    overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
 }
 
-.mail-folders {
-    width: 180px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    background: var(--surface-3);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+.mail-page.full-height {
+	height: 100%;
+	min-height: 0;
+	box-sizing: border-box;
 }
 
-.mail-list {
-    width: 320px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--surface);
+.mail-note {
+	padding: 14px 16px;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.mail-note p {
+	margin: 0 0 12px;
+}
+
+.mail-list-error {
+	color: var(--link-missing);
+}
+
+/* the folder's list beside the message; both cards fill the page's remaining height */
+.mail-panes {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: grid;
+	grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+	gap: 12px;
+}
+
+.mail-panes ::deep .mail-list,
+.mail-panes ::deep .mail-reading {
+	min-height: 0;
+	overflow: hidden;
+}
+
+.mail-panes ::deep .mail-list .kit-card-body,
+.mail-panes ::deep .mail-reading .kit-card-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 }
 
 .mail-list-body {
-    flex: 1;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 6px;
 }
 
-.mail-reading {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.mail-row {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	width: 100%;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background var(--motion-pop);
+}
+
+.mail-row:hover {
+	background: var(--surface-2);
+}
+
+.mail-row:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.mail-row--selected {
+	background: var(--surface-2);
+}
+
+.mail-row--unread {
+	color: var(--text);
+}
+
+.mail-row-top {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.mail-row-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+	flex-shrink: 0;
+}
+
+.mail-row-from {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+}
+
+.mail-row--unread .mail-row-from {
+	font-weight: 700;
+}
+
+.mail-row--selected .mail-row-from {
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.mail-row-date {
+	flex-shrink: 0;
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.mail-row-subject {
+	font-size: 12px;
+	color: var(--text-dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mail-reading-none {
+	flex: 1 1 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 12rem;
+	font-size: 14px;
+	color: var(--text-faint);
+}
+
+.mail-reading-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 16px;
+	border-bottom: 1px solid var(--border-soft);
+	flex-shrink: 0;
+}
+
+.mail-reading-avatar {
+	width: 40px;
+	height: 40px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.mail-reading-meta {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.mail-reading-subject {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.mail-reading-from {
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.mail-reading-date {
+	font-size: 12px;
+	color: var(--text-faint);
 }
 
 .mail-reading-body {
-    flex: 1;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 1.25rem var(--cpad);
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 16px;
 }
 
-/* Mobile: collapse the three-column master-detail (folders | list | reading)
-   into a single scrolling column. Each pane spans full width, swaps its
-   right border for a bottom divider, and lets the page scroll. */
+.mail-reading-text {
+	white-space: pre-wrap;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--text);
+}
+
+.mail-reading-missing {
+	font-size: 13px;
+	color: var(--text-faint);
+}
+
+.mail-reading-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 12px 16px;
+	border-top: 1px solid var(--border-soft);
+	flex-shrink: 0;
+}
+
+/* Narrow: the list and the message stack and the page scrolls as one column. */
 @container page (max-width: 48rem) {
-    .mail-page {
-        flex-direction: column;
-        height: auto;
-        min-height: 100%;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-    .mail-folders {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        overflow: visible;
-    }
-    .mail-list {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        overflow: visible;
-        max-height: 45vh;
-        max-height: 45svh;
-    }
-    .mail-reading {
-        width: 100%;
-        overflow: visible;
-        min-height: 240px;
-    }
+	.mail-page.full-height {
+		height: auto;
+	}
+
+	.mail-panes {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.mail-list-body {
+		max-height: 45svh;
+	}
 }

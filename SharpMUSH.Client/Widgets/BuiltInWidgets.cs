@@ -48,7 +48,7 @@ public static class BuiltInWidgets
 		new("WelcomeText", "LayWidgetWelcomeText", WidgetSize.Large, MainOnly,
 			typeof(WelcomeTextWidget), typeof(WelcomeTextConfig)),
 
-		// Lists every character with search and links to their profiles; powers /characters.
+		// Every character as portrait tiles, with search and category chips, linking each profile.
 		new("CharacterDirectory", "LayWidgetCharacterDirectory", WidgetSize.Large, Content,
 			typeof(CharacterDirectoryWidget)),
 

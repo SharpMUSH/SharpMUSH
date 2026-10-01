@@ -1,12 +1,33 @@
-.home-dash {
-    padding: var(--cpad);
+.home-page {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 14px;
+	align-items: start;
+	padding: var(--main-pad);
 }
 
-/* On phones the widget grid (composed by the layout scope) collapses to one
-   column via the shell's responsive rules; here we just tighten the page gutter
-   so stacked widgets get the full width. */
+/* the aside column exists only when the layout places something in it */
+.home-page--aside {
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+}
+
+.home-main {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
+}
+
+.home-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+/* README §3: main and aside stay side by side at the medium tier; only narrow stacks them */
 @container page (max-width: 48rem) {
-    .home-dash {
-        padding: var(--cpad-mobile);
-    }
+	.home-page--aside {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

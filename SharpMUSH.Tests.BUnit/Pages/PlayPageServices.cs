@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Components;
 
@@ -24,7 +25,7 @@ internal static class PlayPageServices
 			.AddSingleton<IConnectionStateService>(hub)
 			.AddSingleton<ISceneHubControl>(hub)
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
-			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 			.AddSingleton(sp => new CharacterProfileService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>()))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))

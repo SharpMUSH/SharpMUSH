@@ -158,7 +158,7 @@ file static class WikiServiceSetup
 				.AddSingleton(sp => new CharacterProfileService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<CharacterDirectoryService>()))
-				.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+				.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 				// The profile page offers edit controls to the character's own account; nobody signs in here.
 				.AddSingleton(sp => new AccountAuthService(sp.GetRequiredService<IHttpClientFactory>(), ctx.JSInterop.JSRuntime,
 						NullLogger<AccountAuthService>.Instance, []))

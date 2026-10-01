@@ -1,54 +1,51 @@
-.mc-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-.mc-title {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--text);
-}
 .mail-compose-page {
-    padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
+	max-width: 48rem;
 }
 
-.mc-card {
-    max-width: 720px;
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    padding: 1.5rem;
-}
-.mc-card ::deep .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
-    background: var(--surface-3);
-}
-.mc-card ::deep .mc-field .mud-input-outlined-border {
-    border-color: var(--border);
-}
-.mc-card ::deep .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
-    border-color: var(--accent);
+.mc-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px;
 }
 
-.mc-card ::deep .mc-field textarea {
-    field-sizing: content;
+.mc-fields ::deep .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
+	background: var(--surface-3);
 }
 
-/* Mobile: trim the page padding and make the Send/Cancel buttons full-width,
-   comfortably tappable, stacked rows. */
+.mc-fields ::deep .mc-field .mud-input-outlined-border {
+	border-color: var(--border);
+}
+
+.mc-fields ::deep .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
+	border-color: var(--accent);
+}
+
+/* grows with the text, from a message-sized box rather than one line */
+.mc-fields ::deep .mc-field textarea {
+	field-sizing: content;
+	min-height: 12rem;
+}
+
+.mc-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.mc-spacer {
+	flex: 1 1 auto;
+}
+
+/* Narrow: Cancel and Send take the whole row under the Urgent box. */
 @container page (max-width: 48rem) {
-    .mail-compose-page {
-        padding: var(--cpad-mobile);
-    }
-    .mail-compose-page .mc-actions {
-        flex-direction: column;
-    }
-    .mail-compose-page .mc-actions ::deep .mud-button-root {
-        width: 100%;
-        min-height: 44px;
-    }
+	.mc-spacer {
+		flex-basis: 100%;
+		height: 0;
+	}
 }

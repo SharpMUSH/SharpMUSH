@@ -7,21 +7,27 @@
 
 <PageTitle>@Loc["ProfileHandler"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div class="ph-header">
-        <div class="ph-kicker">@Loc["AdmKicker"]</div>
-        <h1 class="ph-title">@Loc["ProfileHandler"]</h1>
-        <p class="ph-subtitle">
+<div class="adm-profiles">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["ProfileHandler"]">
+        <DescriptionContent>
             @((MarkupString)Loc["AdmProfilesSubtitle",
                 "<code>http_handler</code>",
                 "<code>HTTP`PROFILE`*</code>",
                 "<code>&amp;HTTP`PROFILE`GET …</code>"].Value)
-        </p>
-    </div>
+        </DescriptionContent>
+        <Actions>
+            @if (_status?.HandlerExists == true)
+            {
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.RestartAlt" Disabled="_resetting" OnClick="ResetAsync">
+                    @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
+                </CapsuleButton>
+            }
+        </Actions>
+    </PlainPageHeader>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Style="color:var(--accent);" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
     }
     else if (_status is null)
     {
@@ -29,58 +35,53 @@
     }
     else
     {
-        <div class="ph-card ph-status">
-            <div class="ph-status-row">
-                <span class="ph-status-label">@Loc["AdmProfilesConfigured"]</span>
-                <span class="ph-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
-            </div>
-            @if (_status.Configured)
-            {
-                <div class="ph-status-row">
-                    <span class="ph-status-label">@Loc["AdmProfilesHandler"]</span>
-                    <span class="ph-status-value">
-                        @(_status.HandlerExists
-                            ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
-                            : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
-                    </span>
+        <KitCard Title="@Loc["AdmStatus"]">
+            <div class="adm-profiles-status">
+                <div class="adm-profiles-status-row">
+                    <span class="adm-profiles-status-label">@Loc["AdmProfilesConfigured"]</span>
+                    <span class="adm-profiles-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
                 </div>
-            }
-        </div>
+                @if (_status.Configured)
+                {
+                    <div class="adm-profiles-status-row">
+                        <span class="adm-profiles-status-label">@Loc["AdmProfilesHandler"]</span>
+                        <span class="adm-profiles-status-value">
+                            @(_status.HandlerExists
+                                ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
+                                : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
+                        </span>
+                    </div>
+                }
+            </div>
+        </KitCard>
 
         @if (_status.HandlerExists)
         {
-            <div class="ph-card ph-attrs">
-                <div class="ph-attrs-head">
+            <KitCard Title="@Loc["AdmProfilesAttributesTitle"]">
+                <div class="adm-profiles-attrs-head">
                     <span>@Loc["AdmAttribute"]</span>
                     <span>@Loc["AdmStatus"]</span>
                 </div>
                 @foreach (var attr in _status.Attributes)
                 {
-                    <div class="ph-attrs-row">
+                    <div class="adm-profiles-attrs-row">
                         <code>@attr.Attribute</code>
                         @if (attr.Present)
                         {
-                            <span class="ph-chip ph-chip-ok">@Loc["AdmPresent"]</span>
+                            <Pill Tag="true" Class="adm-profiles-present">@Loc["AdmPresent"]</Pill>
                         }
                         else
                         {
-                            <span class="ph-chip ph-chip-warn">@Loc["AdmMissing"]</span>
+                            <Pill Tag="true" Warn="true">@Loc["AdmMissing"]</Pill>
                         }
                     </div>
                 }
-            </div>
-
-            <MudButton Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Filled.RestartAlt"
-                       OnClick="ResetAsync" Disabled="_resetting"
-                       Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
-                @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
-            </MudButton>
-            <p class="ph-caption">
-                @((MarkupString)Loc["AdmProfilesResetCaption",
-                    "<code>HTTP`PROFILE`*</code>",
-                    "<code>FN`*</code>"].Value)
-            </p>
+                <p class="adm-profiles-caption">
+                    @((MarkupString)Loc["AdmProfilesResetCaption",
+                        "<code>HTTP`PROFILE`*</code>",
+                        "<code>FN`*</code>"].Value)
+                </p>
+            </KitCard>
         }
     }
 </div>
@@ -117,7 +118,7 @@
         try
         {
             var http = HttpClientFactory.CreateClient("api");
-            var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+            using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ResetResult>();

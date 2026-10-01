@@ -6,9 +6,10 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.1 "Recently changed" as an aside card: image rows with the page's first image as the
-   thumbnail, the editor and when. Placeable in any zone; it is the wiki home's default aside. *@
-<div class="recent-wiki-widget">
-    <KitCard Aside="true" Title="@Loc["WidRecentWikiActivity"]">
+   thumbnail, the editor and when. Placeable in any zone; it is the wiki home's default aside. In a
+   page's main column (the home page) it takes the main card, with All changes in its header. *@
+<div class="recent-wiki-widget @(InMain ? "recent-wiki-widget--main" : null)">
+    <KitCard Aside="@(!InMain)" Title="@Loc["WidRecentWikiActivity"]" Controls="@(InMain ? AllChanges : null)">
         @if (_loading)
         {
             @for (var i = 0; i < 4; i++)
@@ -37,6 +38,14 @@
 @code {
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
+
+    /// <summary>In a page's main column the widget takes the main card rather than the aside one.</summary>
+    private bool InMain => Zone == nameof(WidgetZone.MainContent);
+
+    private RenderFragment AllChanges => __builder =>
+    {
+        <a class="recent-wiki-all" href="/wiki/recent">@Loc["NavWikiRecentChanges"]</a>
+    };
 
     private IReadOnlyList<WikiPageSummary>? _recentChanges;
     private bool _loading = true;

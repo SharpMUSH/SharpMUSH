@@ -1,0 +1,12 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Scenes
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Scenes pages (/scenes and its filters, /scenes/active, a scene's log): the page sidebar beside
+   the page body. The live view (/scenes/{id}/live) is not one of them; it keeps the whole column.
+   The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="scenes" Class="scenes-shell" NavLabel="@Loc["SceneArchive"]">
+    <Nav Context="collapsed"><ScenesSidebar Collapsed="@collapsed" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

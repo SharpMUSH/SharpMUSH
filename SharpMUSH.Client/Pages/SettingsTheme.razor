@@ -1,17 +1,14 @@
 @page "/settings/theme"
+@layout SettingsLayout
 @attribute [Authorize]
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="settings-page">
-    <header class="settings-header">
-        <div class="settings-kicker">@Loc["AppTitle"] · @Loc["Settings"]</div>
-        <h1 class="settings-title">@Loc["NavTheme"]</h1>
-    </header>
+<div class="settings-theme-page">
+    <PlainPageHeader Kicker="@($"{Loc["AppTitle"]} · {Loc["Settings"]}")" Title="@Loc["NavTheme"]" Description="@Loc["NavSettingsThemeDescription"]" />
 
-    <section class="settings-card">
-        <div class="settings-card-section-label">@Loc["ComingSoon"]</div>
-        <p class="settings-card-text">@Loc["NavThemeComingSoon"]</p>
-    </section>
+    <KitCard Title="@Loc["ComingSoon"]">
+        <p class="settings-theme-text">@Loc["NavThemeComingSoon"]</p>
+    </KitCard>
 </div>

@@ -96,6 +96,26 @@ public class LayoutEditorTests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// D1 §6.5: the editor opens with the kit's plain header (a way back, the scope as the title, its
+	/// actions as capsules with Preview a pressed toggle) and keeps its board full-bleed.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task OpensWithThePlainHeader_AndKeepsTheBoardFullBleed()
+	{
+		var cut = await RenderEditorAsync();
+
+		await Assert.That(cut.FindAll(".kit-page-head h1").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".layedit").ClassList).Contains("full-bleed");
+		await Assert.That(cut.Find(".kit-page-actions").TextContent).Contains("LayPublish");
+		var preview = cut.Find(".kit-page-actions [aria-pressed]");
+		await Assert.That(preview.TextContent).Contains("LayPreview");
+		await Assert.That(preview.GetAttribute("aria-pressed")).IsEqualTo("true").Because("the preview starts open");
+		preview.Click();
+		await Assert.That(cut.Find(".kit-page-actions [aria-pressed]").GetAttribute("aria-pressed")).IsEqualTo("false");
+		await Assert.That(cut.Find("a.layedit-back[href='/admin/layout']").TextContent).Contains("LayAllLayouts");
+	}
+
+	/// <summary>
 	/// The zone drop targets must set <c>AllowReorder</c>. Without it MudBlazor renders no
 	/// <c>mud-dropitem-placeholder</c> — so a drag shows no landing skeleton — and, worse,
 	/// <c>CommitTransaction</c> hands <c>ItemDropped</c> an index of <c>-1</c>, which clamps to 0 and
@@ -236,6 +256,37 @@ public class LayoutEditorTests : TrackingBunitContext
 	/// <summary>Names of the widgets placed in a zone, in render order. Joined so the assertion is order-sensitive.</summary>
 	private static string PlacedNames(IRenderedComponent<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor> cut)
 		=> string.Join(",", cut.FindAll(".le-zone-drop .le-item-name").Select(e => e.TextContent.Trim()));
+
+	/// <summary>
+	/// A page renders its RightSidebar zone as a plain stack (<c>ScopedZone Grid="false"</c>), so the
+	/// editor must not offer it column widths or preview it as a 12-column grid. The global scope's
+	/// chrome zones are grids (MainLayout renders them with <c>Grid="true"</c>) and stay so.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task APagesAsideZone_IsAFlowZone_NotAGrid()
+	{
+		var cut = Render<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>(p => p.Add(x => x.Scope, LayoutScopes.WikiIndex));
+		cut.WaitForAssertion(() => cut.Find(".le-zone-drop"), TimeSpan.FromSeconds(5));
+
+		var drops = cut.FindAll(".mud-drop-zone.le-zone-drop");
+		await Assert.That(drops.Count).IsEqualTo(2);
+		await Assert.That(drops[0].ClassList).Contains("le-zone-drop--grid").Because("MainContent is the page's grid");
+		await Assert.That(drops[1].ClassList).DoesNotContain("le-zone-drop--grid").Because("the page renders RightSidebar with Grid=false");
+		await Assert.That(cut.FindAll(".le-zone-hint")[1].TextContent).IsEqualTo("LayFlowZoneHint");
+	}
+
+	[TUnit.Core.Test]
+	public async Task TheGlobalScopesSidebars_StayGrids()
+	{
+		_layout.GetLayoutAsync(LayoutScopes.Global).Returns(Task.FromResult(new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>(), new LayoutSettings(LeftSidebarEnabled: true, RightSidebarEnabled: true))));
+		var cut = Render<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>(p => p.Add(x => x.Scope, LayoutScopes.Global));
+		cut.WaitForAssertion(() => cut.Find(".le-zone-drop"), TimeSpan.FromSeconds(5));
+
+		var hints = cut.FindAll(".le-zone-hint").Select(h => h.TextContent).ToList();
+		await Assert.That(hints).IsEquivalentTo(new[] { "LayFlowZoneHint", "LayGridZoneHint", "LayGridZoneHint", "LayGridZoneHint" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("TopBar, LeftSidebar, RightSidebar, Footer");
+	}
 
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>> RenderEditorAsync(
 		params WidgetPlacement[] placements)

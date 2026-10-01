@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Der Hauptinhalt der Startseite.</value>
+    <value>Die Startseite: ihre Hauptspalte und ihre Seitenleiste.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3228,6 +3228,14 @@
     <value>Alle zusehen lassen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Das Terminal in diesem Tab spielt {0}, nicht {1}. Starte die Szene in einem Tab, der {1} spielt, oder wechsle zurück zu {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Es ließ sich nicht bestätigen, welchen Charakter das Terminal in diesem Tab spielt. Versuche es gleich noch einmal.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Szene starten</value>
     <comment>MT</comment>
@@ -3914,10 +3922,6 @@
   </data>
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Ungeprüfte Quelle — vor dem Anwenden alles kontrollieren</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Alle {0} anzeigen →</value>
     <comment>MT</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
@@ -4841,6 +4845,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Charakter namens „{0}“ suchen</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Angemeldet als {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Dein Konto, deine Charaktere und wie dieses Portal aussieht.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# Nachricht} other {# Nachrichten}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Ungelesen</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Weitergeleitete Nachricht von {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Zurück zu {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Was gerade passiert</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Jetzt online} other {Jetzt online · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Alle anzeigen</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Szenen, die gerade laufen</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# gefunden} other {# gefunden}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Alle Szenen</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Jetzt live</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Deine Szenen</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Geplant</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Beendet</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# live} other {# live}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# kürzlich} other {# kürzlich}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Szenenarchiv</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Die Szenen, an denen {0} teilgenommen hat.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Für später geplante Szenen, die nächsten zuerst.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Szenen, die ihre Besitzer beendet haben.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Melde dich an und spiele als Charakter, um die Szenen zu sehen, an denen du teilgenommen hast.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privat</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Geplant für {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Posen nach Tag filtern</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Begonnen</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Letzte Aktivität</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Begonnen von</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Umfang</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Besetzung · #} other {Besetzung · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# Thema} other {# Themen}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Hilfe durchsuchen</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Hilfeübersicht</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Erste Schritte</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Neu im MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Themen</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Keine Treffer} one {# Treffer} other {# Treffer}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Admin-Hilfe</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Admin-Übersicht</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Verwaltung · Rechtschreibprüfung</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Datenbank</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Verwalten · Diagnose</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Verwalten · Automatisierung</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bauen · Wiederherstellung</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Nach Art filtern</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Anzeigen als</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Rollen oder Zuweisungen</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Handler-Attribute</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Bild hochladen</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Dieses Spiel hat keine Hilfethemen installiert.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>README für {0} anzeigen</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Verbunden als {0}</value>

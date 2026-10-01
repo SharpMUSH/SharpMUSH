@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Hovedinnholdet på forsiden.</value>
+    <value>Forsiden: hovedkolonnen og sidekolonnen.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3228,6 +3228,14 @@
     <value>La alle se på</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
+    <value>Terminalen i denne fanen spiller {0}, ikke {1}. Start scenen fra en fane som spiller {1}, eller bytt tilbake til {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
+    <value>Kunne ikke bekrefte hvilken karakter terminalen i denne fanen spiller. Prøv igjen om et øyeblikk.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolStartScene" xml:space="preserve">
     <value>Start en scene</value>
     <comment>MT</comment>
@@ -3914,10 +3922,6 @@
   </data>
   <data name="WidTrustUnknownTooltip" xml:space="preserve">
     <value>Ukontrollert kilde — undersøk alt før du tar det i bruk</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Vis alle {0} →</value>
     <comment>MT</comment>
   </data>
   <data name="WidWaitingForServer" xml:space="preserve">
@@ -4841,6 +4845,180 @@
   </data>
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Finn en figur som heter «{0}»</value>
+  </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Logget inn som {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Oversikt</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Innstillinger</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Kontoen din, figurene dine og hvordan portalen ser ut.</value>
+  </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# melding} other {# meldinger}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Ulest</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Videresendt melding fra {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Tilbake til {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Hva skjer</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Pålogget nå} other {Pålogget nå · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scener som pågår akkurat nå</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# funnet} other {# funnet}}</value>
+  </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Alle scener</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Direkte nå</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Dine scener</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Planlagte</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Avsluttede</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# direkte} other {# direkte}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# nylig} other {# nylige}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Scenearkiv</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scenene {0} har vært med i.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scener planlagt til senere, de nærmeste først.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scener eierne har avsluttet.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Logg inn og spill som en karakter for å se scenene du har vært med i.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privat</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Planlagt til {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrer poser etter merke</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Startet</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Siste aktivitet</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Startet av</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Lengde</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Medvirkende · #} other {Medvirkende · #}}</value>
+  </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# emne} other {# emner}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Søk i hjelpen</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Hjelpeoversikt</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Kom i gang</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Ny i MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Emner</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Ingen treff} one {# treff} other {# treff}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Administratorhjelp</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Administratoroversikt</value>
+  </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administrasjon · Stavekontroll</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Database</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Administrer · Diagnostikk</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Administrer · Automatisering</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bygg · Gjenoppretting</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrer etter type</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Vis som</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roller eller tildelinger</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Håndtererens attributter</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Last opp et bilde</value>
+  </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Dette spillet har ingen hjelpeemner installert.</value>
+  </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Vis README for {0}</value>
   </data>
   <data name="NavPlayConnectedAs" xml:space="preserve">
     <value>Tilkoblet som {0}</value>

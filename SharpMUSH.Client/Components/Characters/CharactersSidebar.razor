@@ -137,10 +137,7 @@
 
     private void Locate()
     {
-        var uri = new Uri(Nav.Uri);
-        _path = uri.AbsolutePath.TrimEnd('/');
-        if (_path.Length == 0) _path = "/";
-        _query = uri.Query;
+        (_path, _query) = SectionPath.Of(Nav);
     }
 
     private void Search(string term) =>

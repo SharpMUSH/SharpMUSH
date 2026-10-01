@@ -187,8 +187,32 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Account>();
 
-		await Assert.That(cut.Markup).DoesNotContain("acct-card");
+		await Assert.That(cut.Markup).DoesNotContain("kit-card");
 		await Assert.That(cut.Markup).DoesNotContain("AuthDebugMode");
+	}
+
+	/// <summary>
+	/// D1 §6.5: the account page is a Settings page — the plain header names the account and carries
+	/// Log out, the profile and the characters are cards, and the characters card is the
+	/// <c>#characters</c> anchor the Settings sidebar's Characters row lands on.
+	/// </summary>
+	[Test]
+	public async Task Render_LoggedIn_UsesThePlainHeaderAndCards_WithTheCharactersAnchor()
+	{
+		Auth.SetAuthorized("headwiz");
+		SeedAuthState(loggedIn: true);
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#characters .kit-card"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("headwiz");
+		await Assert.That(cut.Find(".kit-page-head .kit-page-actions .acct-btn-danger").TextContent.Trim()).IsEqualTo("AuthLogOutOfAccount");
+		await Assert.That(cut.FindAll(".kit-card .kit-card-title").Select(t => t.TextContent).ToList())
+			.IsEquivalentTo(["AuthProfile", "Characters"]);
+		await Assert.That(cut.Find("#characters a[href='/characters/new']")).IsNotNull();
+		var layout = typeof(SharpMUSH.Client.Pages.Account).GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.LayoutAttribute), false)
+			.Cast<Microsoft.AspNetCore.Components.LayoutAttribute>().Single();
+		await Assert.That(layout.LayoutType).IsEqualTo(typeof(SharpMUSH.Client.Layout.SettingsLayout));
 	}
 
 	/// <summary>

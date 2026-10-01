@@ -27,15 +27,36 @@ public class SettingsRoutesTests : BunitContext
 	}
 
 	[Test]
-	public async Task Settings_characters_row_navigates_to_account()
+	public async Task Settings_characters_row_links_to_the_account_pages_characters_card()
 	{
 		var cut = Render<Settings>();
-		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
-		// Rows are Account / Characters / Theme, in markup order.
-		cut.FindAll("button.settings-nav-item")[1].Click();
+		// Cards are Account / Characters / Theme, in markup order, and are real links.
+		var hrefs = cut.FindAll("a.settings-link").Select(a => a.GetAttribute("href")).ToList();
 
-		await Assert.That(nav.Uri).IsEqualTo($"{nav.BaseUri}account");
+		await Assert.That(hrefs).IsEquivalentTo(["/account", "/account#characters", "/settings/theme"]);
+	}
+
+	[Test]
+	public async Task Settings_uses_the_plain_header_and_the_settings_section()
+	{
+		var cut = Render<Settings>();
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("Settings");
+		foreach (var page in new[] { typeof(Settings), typeof(SettingsTheme), typeof(Account) })
+		{
+			var layout = page.GetCustomAttributes(typeof(LayoutAttribute), false).Cast<LayoutAttribute>().Single();
+			await Assert.That(layout.LayoutType).IsEqualTo(typeof(SharpMUSH.Client.Layout.SettingsLayout)).Because(page.Name);
+		}
+	}
+
+	[Test]
+	public async Task Theme_is_a_card_under_the_plain_header()
+	{
+		var cut = Render<SettingsTheme>();
+
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("NavTheme");
+		await Assert.That(cut.Find(".kit-card .kit-card-title").TextContent).IsEqualTo("ComingSoon");
 	}
 
 	[Test]
