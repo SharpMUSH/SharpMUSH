@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -12,13 +14,24 @@ public class ExpandedDataTests
 
 	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
+	/// <summary>
+	/// A thing of the test's own. Expanded data is one document per object, so these writes on God
+	/// would land beside whatever every other test keeps there.
+	/// </summary>
+	private async Task<AnyOptionalSharpObject> FreshObjectAsync()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(), "ExpandedData");
+		return await _database.GetObjectNodeAsync(thing, CancellationToken.None);
+	}
+
 	private record ExpandedDataExample(string Word);
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SetAndGetExpandedData()
 	{
 		var obj = new ExpandedDataExample("Dog");
-		var one = await _database.GetObjectNodeAsync(new DBRef(1), CancellationToken.None);
+		var one = await FreshObjectAsync();
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "ExpandedDataExample", obj, CancellationToken.None);
 
 		var result = await _database.GetExpandedObjectData<ExpandedDataExample>(one.Object()!.Id!, "ExpandedDataExample", CancellationToken.None);
@@ -30,10 +43,10 @@ public class ExpandedDataTests
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites only the values set.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task OverwritePartialAndGetExpandedData()
 	{
-		var one = await _database.GetObjectNodeAsync(new DBRef(1));
+		var one = await FreshObjectAsync();
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedDataExample", new OverwritePartialAndGetExpandedDataExample("Dog", "Bark"));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedDataExample", new OverwritePartialAndGetExpandedDataExample("Cat", null));
 
@@ -48,10 +61,10 @@ public class ExpandedDataTests
 	/// null fields in the update are not applied to the stored value, so existing values are preserved.
 	/// To explicitly clear a field to null, use SetExpandedServerData instead.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task OverwritePartialNullAndGetExpandedData()
 	{
-		var one = await _database.GetObjectNodeAsync(new DBRef(1));
+		var one = await FreshObjectAsync();
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample("Dog", "Bark"));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
 
@@ -66,10 +79,10 @@ public class ExpandedDataTests
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData safely sets unrelated Keys without wiping the other.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task OverwriteUnrelatedTypesAndGetExpandedData()
 	{
-		var one = await _database.GetObjectNodeAsync(new DBRef(1));
+		var one = await FreshObjectAsync();
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedDataExample", new OverwriteUnrelatedTypesAndGetExpandedDataExample("Dog", "Bark"));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedDataExample2", new OverwriteUnrelatedTypesAndGetExpandedDataExample2("Cat", null));
 

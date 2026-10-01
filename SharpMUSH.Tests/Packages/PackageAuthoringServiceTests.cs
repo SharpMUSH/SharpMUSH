@@ -20,7 +20,7 @@ public class PackageAuthoringServiceTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IPackageAuthoringService Authoring => WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>();
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ScanAndExport_RoundTripsToValidManifest()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
@@ -72,7 +72,7 @@ public class PackageAuthoringServiceTests
 	/// accepted backticked names — the install path splits the path on a backtick — so the loss
 	/// was only ever on the way out.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task Export_CarriesNestedAttributes()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
@@ -101,7 +101,7 @@ public class PackageAuthoringServiceTests
 	}
 
 	/// <summary>The engine-managed PM` tree is recreated by the apply engine and must never be carried.</summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task Export_OmitsTheReservedRefTree()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
@@ -127,7 +127,8 @@ public class PackageAuthoringServiceTests
 		await Assert.That(attributes.Keys.Any(k => k.StartsWith("PM`", StringComparison.OrdinalIgnoreCase))).IsFalse();
 	}
 
-	[Test, NotInParallel]
+	[Test]
+	[NotInParallel] // installs into the shared world, as the serialized package install suites do
 	public async Task FullRoundTrip_AuthorExportInstall_VerifyState()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
@@ -173,7 +174,7 @@ public class PackageAuthoringServiceTests
 		await installer.UninstallAsync("roundtrip-pkg");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Export_FailsOnUnclassifiedDbrefs()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
@@ -194,7 +195,7 @@ public class PackageAuthoringServiceTests
 		await Assert.That(error.Value).Contains("#4242");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Export_BlankAndWhitespaceAttributeValues_ProduceValidManifest()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();

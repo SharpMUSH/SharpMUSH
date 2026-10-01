@@ -34,7 +34,7 @@ public class JsonGroupByFunctionTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GroupsByEvaluatedKey()
 	{
 		var objNum = await CreateObjectWithAttribute("jgroupby_obj", "KEYLEN", "strlen(%0)");
@@ -45,7 +45,7 @@ public class JsonGroupByFunctionTests
 		await Check($"json_group_by(#{objNum}/KEYLEN, a|bb|d, |)", "{\"1\":[\"a\",\"d\"],\"2\":[\"bb\"]}");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GroupsByFirstLetter()
 	{
 		var objNum = await CreateObjectWithAttribute("jgroupby_fl_obj", "FIRSTLETTER", "left(%0,1)");

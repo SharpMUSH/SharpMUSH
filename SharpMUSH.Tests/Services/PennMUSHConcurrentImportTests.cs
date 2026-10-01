@@ -15,7 +15,6 @@ namespace SharpMUSH.Tests.Services;
 /// <para>Both imports run against one <see cref="IsolatedImportWorld"/>'s converter, so they share its
 /// singleton as they would in the server, and nothing they create lands in the shared session world.</para>
 /// </remarks>
-[NotInParallel]
 public class PennMUSHConcurrentImportTests
 {
 	private const int ObjectCount = 20;

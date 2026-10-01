@@ -89,7 +89,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
 	[Arguments("create({0})", "locate(%#,{0},*)")]
 	// TODO: Enable when tel() is implemented
 	// [Arguments("tel(create(content-object),create(container-object))", "locate(%#,container-object's content-object,*)")]
@@ -360,7 +359,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	[NotInParallel] // two searches over every player, which other tests create concurrently
 	public async Task Lsearchr_BehavesLikeLsearch_WhenNoRegexNeeded()
 	{
 		var lsearchResult = (await Parser.FunctionParse(MarkupText.Plain("lsearch(%#,TYPE=PLAYER)")))?.Message!;

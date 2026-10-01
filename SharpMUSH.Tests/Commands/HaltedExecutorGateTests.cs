@@ -34,8 +34,10 @@ namespace SharpMUSH.Tests.Commands;
 /// <para><see cref="QueuedHaltTests"/> pins the admission half that #1086 owns — that the queue
 /// exempts players, so the entry is admitted rather than dropped. This class pins what happens once
 /// that admitted entry starts.</para>
+///
+/// <para>Every refused command is waited for by its refusal, which names the test's own object, rather
+/// than by draining the session-wide queue.</para>
 /// </summary>
-[NotInParallel]
 public class HaltedExecutorGateTests : ServerTestBase
 {
 	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
@@ -51,11 +53,11 @@ public class HaltedExecutorGateTests : ServerTestBase
 	private static long RequirePid(QueueAdmissionResult admission) =>
 		admission.Pid ?? throw new InvalidOperationException($"Fixture admission rejected: {admission.Reason}");
 
-	/// <summary>Brings <paramref name="pid"/> due and waits for it and anything it queued.</summary>
-	private async Task Run(long pid)
+	/// <summary>Brings <paramref name="pid"/> due and waits until <paramref name="told"/> hears <paramref name="executor"/> refused.</summary>
+	private async Task RunUntilRefused(long pid, DBRef told, int start, DBRef executor)
 	{
 		await Scheduler.ReleaseScheduledWork(pid);
-		await Scheduler.DrainImmediateQueueForTests();
+		await Notifications.WaitForAsync(told, Refusal(executor), startIndex: start);
 	}
 
 	private static string Refusal(DBRef executor) =>
@@ -78,11 +80,10 @@ public class HaltedExecutorGateTests : ServerTestBase
 		var job = await Wait(thing, $"@set {thing}=HALT;&RAN {thing}=yes");
 		await Assert.That(job.Accepted).IsTrue().Because("the object was not halted when the list was queued");
 
-		await Run(RequirePid(job));
+		await RunUntilRefused(RequirePid(job), owner, start, thing);
 
 		await Assert.That(await Eval($"get({thing}/RAN)")).IsEqualTo("")
 			.Because("the second command's executor was halted by the first");
-		await Assert.That(Notifications.For(owner).Skip(start)).Contains(Refusal(thing));
 	}
 
 	/// <summary>
@@ -103,11 +104,10 @@ public class HaltedExecutorGateTests : ServerTestBase
 			var job = await Wait(who, $"&QUEUED {who}=queuedran");
 			await Assert.That(job.Accepted).IsTrue().Because("insert_que exempts players (src/cque.c:530)");
 
-			await Run(RequirePid(job));
+			// A player owns itself, so the refusal lands in its own window.
+			await RunUntilRefused(RequirePid(job), who, start, who);
 
 			await Assert.That(await Eval($"get({who}/QUEUED)")).IsEqualTo("");
-			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who))
-				.Because("a player owns itself, so the refusal lands in its own window");
 
 			await CmdAs(who, player.Handle, $"&TYPED {who}=typedok");
 
@@ -147,9 +147,8 @@ public class HaltedExecutorGateTests : ServerTestBase
 			var typedState = WebAppFactoryArg.CommandParserFor(who, player.Handle).CurrentState;
 			var job = await Scheduler.AdmitCommandList(MString.Plain("WHO"), typedState, TimeSpan.FromHours(1));
 			await Assert.That(job.Accepted).IsTrue();
-			await Run(RequirePid(job));
+			await RunUntilRefused(RequirePid(job), who, start, who);
 
-			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
 			// By the listing's header, not by emptiness: a logged-in handle also hears every @wall
 			// another test makes, so "nothing reached this connection" is not a claim it can make.
 			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings))
@@ -187,11 +186,10 @@ public class HaltedExecutorGateTests : ServerTestBase
 			var start = Notifications.CountFor(who);
 
 			await CmdAs(who, player.Handle, $"teach &TAUGHT {who}=lessonran");
-			await Scheduler.DrainImmediateQueueForTests();
+			await Notifications.WaitForAsync(who, Refusal(who), startIndex: start);
 
 			await Assert.That(await Eval($"get({who}/TAUGHT)")).IsEqualTo("")
 				.Because("the lesson carries no QUEUE_SOCKET, so the gate refuses it");
-			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
 			await Assert.That(Notifications.For(who).Skip(start).Any(m => m.Contains("types -->"))).IsTrue()
 				.Because("TEACH itself was typed, so it ran and announced the lesson");
 		}
@@ -222,11 +220,10 @@ public class HaltedExecutorGateTests : ServerTestBase
 			var start = Notifications.CountFor(who);
 
 			await Cmd($"look {who}");
-			await Scheduler.DrainImmediateQueueForTests();
+			// The action was queued, then refused by the gate.
+			await Notifications.WaitForAsync(who, Refusal(who), startIndex: start);
 
-			await Assert.That(await Eval($"get({who}/LOOKED)")).IsEqualTo("")
-				.Because("the action was queued, then refused by the gate");
-			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
+			await Assert.That(await Eval($"get({who}/LOOKED)")).IsEqualTo("");
 		}
 		finally
 		{

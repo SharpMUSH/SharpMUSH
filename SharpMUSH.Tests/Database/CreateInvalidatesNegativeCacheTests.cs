@@ -21,7 +21,6 @@ namespace SharpMUSH.Tests.Database;
 /// Anything that probes a dbref before it exists hits this. The portal's Softcode Editor does it on
 /// every create: it makes the object, then immediately selects it, and the select 404'd.
 /// </summary>
-[NotInParallel]
 public class CreateInvalidatesNegativeCacheTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -35,6 +34,7 @@ public class CreateInvalidatesNegativeCacheTests
 		=> await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, prefix);
 
 	[Test]
+	[NotInParallel] // predicts the next dbref, which every concurrently creating test races for
 	public async ValueTask ObjectIsVisible_WhenItsDbrefWasLookedUpBeforeItExisted()
 	{
 		// The test has to poison the key for a dbref that does not exist yet, which means predicting
