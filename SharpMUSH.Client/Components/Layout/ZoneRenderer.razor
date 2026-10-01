@@ -1,5 +1,6 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
 @using SharpMUSH.Client.Components.Widgets
+@using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Widgets
 @using SharpMUSH.Library.Authorization
@@ -63,6 +64,12 @@
 
     private IReadOnlyList<WidgetPlacement> _placements = [];
 
+    /// <summary>
+    /// Applications the catalog did not have, fetched by slug to check their minimum role, and handed to the
+    /// widget that renders them so it does not fetch them again. Kept across parameter sets.
+    /// </summary>
+    private Dictionary<string, PortalApplication> _fetched = new(StringComparer.Ordinal);
+
     /// <summary>Bumped per parameter set, so a resolution that finishes after a newer one is dropped.</summary>
     private int _generation;
 
@@ -97,47 +104,44 @@
             return;
         }
 
-        var resolved = await MinimumRolesAsync(unresolved);
+        var resolved = await ApplicationsAsync(unresolved);
         if (generation == _generation)
         {
+            _fetched = resolved;
             _placements = Visible(ordered, role, resolved);
         }
     }
 
     private IReadOnlyList<WidgetPlacement> Visible(
-        List<WidgetPlacement> ordered, PortalRole role, IReadOnlyDictionary<string, PortalRole>? resolved) =>
+        List<WidgetPlacement> ordered, PortalRole role, IReadOnlyDictionary<string, PortalApplication>? resolved) =>
         ordered.Where(p => Registry?.GetWidget(p.WidgetName) switch
         {
             ApplicationPortalWidget app => role >= app.MinimumRole,
             UnresolvedApplicationWidget => resolved is not null
-                && resolved.TryGetValue(p.WidgetName, out var minimum) && role >= minimum,
+                && resolved.TryGetValue(p.WidgetName, out var app) && role >= app.MinimumRoleEnum,
             _ => true
         }).ToList().AsReadOnly();
 
     /// <summary>
-    /// Each slug's application minimum role, looked up the way <see cref="SchemaWidget"/> finds the application:
-    /// the catalog once it is in, else a fetch by slug. A slug with no application is absent from the result.
+    /// Each slug's application, found the way <see cref="SchemaWidget"/> finds it: the catalog once it is in,
+    /// else a fetch by slug. The fetches run together, and a slug fetched for an earlier parameter set is not
+    /// fetched again. A slug with no application, or whose fetch failed, is absent, so its placement stays out.
     /// </summary>
     /// <remarks>
     /// The two services are asked for here rather than injected: only an unresolved placement reaches this, and
     /// it renders <see cref="SchemaWidget"/>, which injects both, so any host that gets here registers them.
     /// Injecting them would make every host of a zone register them whether or not it places an application.
     /// </remarks>
-    private async Task<Dictionary<string, PortalRole>> MinimumRolesAsync(IReadOnlyList<string> slugs)
+    private async Task<Dictionary<string, PortalApplication>> ApplicationsAsync(IReadOnlyList<string> slugs)
     {
         var catalog = Services.GetRequiredService<ApplicationCatalog>();
         var registryClient = Services.GetRequiredService<ApplicationRegistryClient>();
         await catalog.Loaded;
-        var roles = new Dictionary<string, PortalRole>(StringComparer.Ordinal);
-        foreach (var slug in slugs)
-        {
-            if ((catalog.Get(slug) ?? await registryClient.GetAsync(slug)) is { } app)
-            {
-                roles[slug] = app.MinimumRoleEnum;
-            }
-        }
-
-        return roles;
+        var found = await Task.WhenAll(slugs.Select(async slug => (Slug: slug,
+            App: _fetched.GetValueOrDefault(slug) ?? catalog.Get(slug) ?? await registryClient.GetAsync(slug))));
+        return found
+            .Where(f => f.App is not null)
+            .ToDictionary(f => f.Slug, f => f.App!, StringComparer.Ordinal);
     }
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
@@ -155,6 +159,10 @@
         if (descriptor.ComponentType == typeof(SchemaWidget))
         {
             parameters["WidgetName"] = placement.WidgetName;
+            if (_fetched.TryGetValue(placement.WidgetName, out var application))
+            {
+                parameters["Application"] = application;
+            }
         }
 
         return parameters;

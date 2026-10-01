@@ -45,6 +45,12 @@ else
     /// <summary>Placement's widget name (slug). For application-backed widgets this resolves the app's routes.</summary>
     [Parameter] public string WidgetName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The application ZoneRenderer already fetched by slug to check its minimum role, when the catalog did not
+    /// have it. Rendering from it spares a second fetch that could answer differently from the one the gate used.
+    /// </summary>
+    [Parameter] public PortalApplication? Application { get; set; }
+
     [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
 
     private bool _loading = true;
@@ -112,6 +118,11 @@ else
 
         // The catalog loads alongside the first render; waiting for it costs no more than the fetch
         // below would, and spares the request when it has the app.
+        if (Application is { } resolved)
+        {
+            return (resolved.SchemaUrl, resolved.DataUrl, string.IsNullOrWhiteSpace(resolved.OobPackage) ? null : resolved.OobPackage);
+        }
+
         await Catalog.Loaded;
         var app = Catalog.Get(WidgetName) ?? await RegistryClient.GetAsync(WidgetName);
         return app is null
