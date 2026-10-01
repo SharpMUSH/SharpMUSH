@@ -5199,4 +5199,7 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Приложения</value>
   </data>
+  <data name="RolScenesNotEnabled" xml:space="preserve">
+    <value>Система сцен в этой игре не включена.</value>
+  </data>
 </root>

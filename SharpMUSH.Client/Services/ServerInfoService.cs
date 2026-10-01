@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models.Portal.Setup;
+
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
@@ -12,11 +14,11 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
-	public record ServerInfoResponse(bool GuestsEnabled, string MudName);
+	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null);
 
 	private const string DefaultMudName = "SharpMUSH";
 
-	private static readonly ServerInfoResponse Fallback = new(true, DefaultMudName);
+	private static readonly ServerInfoResponse Fallback = new(true, DefaultMudName, GameFeatures.Defaults);
 
 	private Task<ServerInfoResponse?>? _info;
 
@@ -32,6 +34,26 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// config default, <c>"SharpMUSH"</c>.
 	/// </summary>
 	public virtual async Task<string> GameNameAsync() => (await FetchAsync()).MudName;
+
+	/// <summary>
+	/// Whether the game has the optional application <paramref name="feature"/> (a <see cref="GameFeatures"/>
+	/// id) on. On any fetch failure this degrades to what a new game has, <see cref="GameFeatures.Defaults"/>.
+	/// </summary>
+	public virtual async Task<bool> HasFeatureAsync(string feature)
+		=> (await FetchAsync()).Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) ?? false;
+
+	/// <summary>Raised after <see cref="Refresh"/>: what a reader asked before may have changed.</summary>
+	public event Action? Changed;
+
+	/// <summary>
+	/// Forgets the remembered answer and tells readers to ask again — after the setup wizard switched an
+	/// application on or off, so the navigation follows without a reload.
+	/// </summary>
+	public void Refresh()
+	{
+		_info = null;
+		Changed?.Invoke();
+	}
 
 	private async Task<ServerInfoResponse> FetchAsync()
 	{

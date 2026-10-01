@@ -35,14 +35,48 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// When true, api/setup/status errors, which is what makes <c>NeedsSetupAsync</c> return null. That
 /// answer must NOT bounce the visitor away: /setup is the only place first-run setup can happen.
 /// </param>
+/// <param name="wizard">
+/// What api/setup/wizard answers once the game is claimed: null is a refusal (not the administrator),
+/// otherwise whether the wizard is pending, with the scenes application on and the wiki reader off.
+/// </param>
 file sealed class SetupApiHandler(
 		bool needsSetup, HttpStatusCode completeStatus, string? completeBody, string completeSessionToken = "test-session-token",
-		Task? statusGate = null, bool statusUnavailable = false)
+		Task? statusGate = null, bool statusUnavailable = false, bool? wizard = null)
 		: HttpMessageHandler
 {
+	private bool? _wizardPending = wizard;
+	private readonly HashSet<string> _enabled = ["scenes"];
+
+	/// <summary>The bodies PUT to api/setup/wizard/applications, in order.</summary>
+	public List<string> ApplicationChoices { get; } = [];
+
+	public int FinishCalls { get; private set; }
+
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+
+		if (path == "api/setup/wizard" && request.Method == HttpMethod.Get)
+		{
+			return _wizardPending is { } pending ? Json(Wizard(pending)) : new HttpResponseMessage(HttpStatusCode.Forbidden);
+		}
+
+		if (path == "api/setup/wizard/applications" && request.Method == HttpMethod.Put)
+		{
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+			ApplicationChoices.Add(body);
+			using var document = JsonDocument.Parse(body);
+			_enabled.Clear();
+			_enabled.UnionWith(document.RootElement.GetProperty("enabled").EnumerateArray().Select(e => e.GetString()!));
+			return Json(Wizard(_wizardPending ?? true));
+		}
+
+		if (path == "api/setup/wizard/finish" && request.Method == HttpMethod.Post)
+		{
+			FinishCalls++;
+			_wizardPending = false;
+			return new HttpResponseMessage(HttpStatusCode.NoContent);
+		}
 
 		if (request.Method == HttpMethod.Get && path == "api/setup/status")
 		{
@@ -62,6 +96,8 @@ file sealed class SetupApiHandler(
 				using var requestBody = JsonDocument.Parse(requestJson);
 				var username = requestBody.RootElement.GetProperty("username").GetString() ?? "headwiz";
 
+				// The claim leaves the rest of the wizard pending, as SetupService does.
+				_wizardPending ??= true;
 				return Json(new
 				{
 					accountId = "test-account-id",
@@ -88,6 +124,16 @@ file sealed class SetupApiHandler(
 		return new HttpResponseMessage(HttpStatusCode.NotFound);
 	}
 
+	private object Wizard(bool pending) => new
+	{
+		pending,
+		applications = new[]
+		{
+			new { id = "scenes", enabled = _enabled.Contains("scenes"), available = true },
+			new { id = "wiki-reader", enabled = _enabled.Contains("wiki-reader"), available = true },
+		},
+	};
+
 	private static HttpResponseMessage Json<T>(T value) =>
 			new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 }
@@ -106,10 +152,19 @@ file static class SetupTestServices
 	public static HttpClient AddSetupTestServices(
 			this TrackingBunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK,
 			string? completeBody = null, string completeSessionToken = "test-session-token",
-			Task? statusGate = null, bool statusUnavailable = false)
+			Task? statusGate = null, bool statusUnavailable = false, bool? wizard = null)
+		=> ctx.AddSetupTestServices(out _, needsSetup, completeStatus, completeBody, completeSessionToken, statusGate,
+			statusUnavailable, wizard);
+
+	public static HttpClient AddSetupTestServices(
+			this TrackingBunitContext ctx, out SetupApiHandler handler, bool needsSetup,
+			HttpStatusCode completeStatus = HttpStatusCode.OK, string? completeBody = null,
+			string completeSessionToken = "test-session-token", Task? statusGate = null, bool statusUnavailable = false,
+			bool? wizard = null)
 	{
-		var apiClient = ctx.Track(new HttpClient(
-				new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken, statusGate, statusUnavailable))
+		handler = new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken, statusGate,
+			statusUnavailable, wizard);
+		var apiClient = ctx.Track(new HttpClient(handler)
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -124,7 +179,9 @@ file static class SetupTestServices
 				.AddSingleton(sp => new AccountAuthService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-						NullLogger<AccountAuthService>.Instance, []));
+						NullLogger<AccountAuthService>.Instance, []))
+				.AddSingleton<ServerInfoService>()
+				.AddSingleton<SetupWizardService>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		return apiClient;
@@ -218,10 +275,14 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(nav.History).IsEmpty();
 	}
 
+	/// <summary>
+	/// The claim hands straight over to the rest of the wizard as the new administrator: the database step
+	/// first, then the applications, whose choice is what gets sent, then the finished state.
+	/// </summary>
 	[TUnit.Core.Test]
-	public async Task Setup_Success_ShowsAdministratorStateInsteadOfRedirect()
+	public async Task Setup_Success_WalksTheAdministratorThroughImportAndApplications()
 	{
-		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.Find("#setup-username").Change("headwiz");
@@ -231,27 +292,89 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("AuthSetupComplete"))
-				throw new InvalidOperationException("success view not rendered yet");
+			if (!cut.Markup.Contains("AdmSetupImportTitle"))
+				throw new InvalidOperationException("import step not rendered yet");
 		});
 
-		await Assert.That(cut.Markup).Contains("AuthSetupComplete");
-		await Assert.That(cut.Markup).Contains("headwiz");
-
-		// Auto-login after first-run setup: the claimer is signed in immediately (no separate
-		// "Sign in" step), so the success copy reflects that and offers a portal button instead.
+		// Auto-login after the claim: signed in already, and told so.
 		await Assert.That(cut.Markup).Contains("AuthSetupSignedInAs");
-		var enterPortalButton = cut.Find("button.setup-signin");
-		await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
-
+		await Assert.That(cut.Markup).Contains("headwiz");
 		var accountAuth = Services.GetRequiredService<AccountAuthService>();
 		await Assert.That(accountAuth.IsLoggedIn).IsTrue();
 		await Assert.That(accountAuth.Username).IsEqualTo("headwiz");
 		await Assert.That(accountAuth.Role).IsEqualTo("God");
+		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/database/import?setup=1");
+
+		cut.Find("button.setup-fresh").Click();
+
+		// What the game has now is what is ticked: a new game installs the Scene System at first boot.
+		await Assert.That(cut.Find("#setup-app-scenes").HasAttribute("checked")).IsTrue();
+		await Assert.That(cut.Find("#setup-app-wiki-reader").HasAttribute("checked")).IsFalse();
+
+		cut.Find("#setup-app-scenes").Change(false);
+		cut.Find("#setup-app-wiki-reader").Change(true);
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+
+		await Assert.That(handler.ApplicationChoices).HasSingleItem();
+		using (var sent = JsonDocument.Parse(handler.ApplicationChoices[0]))
+		{
+			var enabled = sent.RootElement.GetProperty("enabled").EnumerateArray().Select(e => e.GetString()!).ToList();
+			await Assert.That(enabled).IsEquivalentTo(["wiki-reader"]);
+		}
+		await Assert.That(handler.FinishCalls).IsEqualTo(1);
 
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		var enterPortalButton = cut.Find("button.setup-signin");
+		await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
 		enterPortalButton.Click();
 		await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
+	}
+
+	/// <summary>
+	/// An administrator who closed the tab after the claim comes back to the wizard, not the home page —
+	/// and the database import page's way back lands them on the applications step.
+	/// </summary>
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments("/setup", "AdmSetupImportTitle")]
+	[TUnit.Core.Arguments("/setup?step=applications", "AdmSetupAppsTitle")]
+	public async Task Setup_ClaimedWithTheWizardPending_ResumesIt(string address, string heading)
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: false, wizard: true));
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo(address);
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains(heading))
+				throw new InvalidOperationException("wizard step not rendered yet");
+		});
+		await Assert.That(cut.FindAll("#setup-username")).IsEmpty();
+		await Assert.That(nav.Uri).IsEqualTo(nav.ToAbsoluteUri(address).ToString());
+	}
+
+	[TUnit.Core.Test]
+	public async Task Setup_ClaimedWithTheWizardFinished_RedirectsHome()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: false, wizard: false));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.History.Count == 0)
+				throw new InvalidOperationException("not redirected yet");
+		});
+		await Assert.That(nav.History.Single().Uri).IsEqualTo("/");
+		await Assert.That(cut.Markup).DoesNotContain("AdmSetupImportTitle");
 	}
 
 	[TUnit.Core.Test]
@@ -280,7 +403,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("AuthSetupSignedInAs");
 
 		var signInLink = cut.Find("a.setup-signin");
-		await Assert.That(signInLink.GetAttribute("href")).IsEqualTo("/login");
+		await Assert.That(signInLink.GetAttribute("href")).IsEqualTo("/login?returnUrl=%2Fsetup");
 		await Assert.That(signInLink.TextContent).Contains("AuthSignIn");
 
 		var accountAuth = Services.GetRequiredService<AccountAuthService>();

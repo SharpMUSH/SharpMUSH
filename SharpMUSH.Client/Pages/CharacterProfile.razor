@@ -56,9 +56,11 @@ else
                 <div class="char-profile-pills">
                     @if (_liveScene is { } scene)
                     {
-                        <a class="char-profile-pill--scene" href="/play">
-                            <Pill Dot="var(--accent)">@string.Format(Loc["NavCharInScene"], SceneTitle(scene))</Pill>
-                        </a>
+                        <FeatureGate Feature="@GameFeatures.Scenes">
+                            <a class="char-profile-pill--scene" href="/play">
+                                <Pill Dot="var(--accent)">@string.Format(Loc["NavCharInScene"], SceneTitle(scene))</Pill>
+                            </a>
+                        </FeatureGate>
                     }
                     @if (_online)
                     {

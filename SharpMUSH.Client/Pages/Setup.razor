@@ -3,128 +3,208 @@
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
+@inject SetupWizardService Wizard
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
 
+@* The first-run wizard: claim the administrator account, then — as that administrator — bring in a
+   PennMUSH database or start fresh, then choose the optional applications. Everything after the claim
+   is pending on the server until the last step, so an administrator who closes the tab comes back here
+   to the step they left (the database import page links back with ?step=applications). *@
 <div class="setup-page">
     <div class="setup-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="setup-logo" />
         <h1 class="setup-brand-title">@Loc["AuthSetupWelcome", Loc["AppTitle"]]</h1>
     </div>
 
-    @if (!_statusResolved || _alreadyClaimed)
+    @switch (_step)
     {
-        @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
-           claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
-           an already-claimed game told every visitor it was unclaimed and invited them to become
-           its administrator (the POST was safely rejected with a 409, but the copy was a lie).
-           _alreadyClaimed is the same "don't render the form" case: the redirect below has
-           fired and this component is on its way out. *@
-        <div class="setup-card setup-card--resolving">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            <p class="setup-lead">@Loc["Loading"]</p>
-        </div>
-    }
-    else if (_success)
-    {
-        <div class="setup-card">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
-            @if (_autoLoggedIn)
-            {
-                <p class="setup-lead">
-                    @Loc["AuthSetupAdminLinked", _completedUsername]
-                    @Loc["AuthSetupSignedInAs", _completedUsername]
-                </p>
-                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
-            }
-            else
-            {
+        case Step.Resolving:
+            @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
+               claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
+               an already-claimed game told every visitor it was unclaimed and invited them to become
+               its administrator (the POST was safely rejected with a 409, but the copy was a lie).
+               It is also what shows while a claimed game's redirect is on its way out. *@
+            <div class="setup-card setup-card--resolving">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <p class="setup-lead">@Loc["Loading"]</p>
+            </div>
+            break;
+
+        case Step.SignIn:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
                 <!-- Claim succeeded but post-claim auto-login enrichment degraded server-side
                      (see SetupController.Complete's try/catch) — no session was minted, so send
-                     the claimer to a normal sign-in instead of pretending they're logged in. -->
+                     the claimer to a normal sign-in, which brings them back here to finish. -->
                 <p class="setup-lead">
                     @Loc["AuthSetupAdminLinked", _completedUsername]
                     @Loc["AuthSetupSignInToManage"]
                 </p>
-                <a class="setup-submit setup-signin" href="/login">@Loc["AuthSignIn"]</a>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="setup-card">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
-            <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
+                <a class="setup-submit setup-signin" href="/login?returnUrl=%2Fsetup">@Loc["AuthSignIn"]</a>
+            </div>
+            break;
 
-            @if (_error is not null)
-            {
-                <div class="setup-error" role="alert">@_error</div>
-            }
+        case Step.Import:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 3]</div>
+                @if (_completedUsername.Length > 0)
+                {
+                    <p class="setup-claimed" role="status">
+                        @Loc["AuthSetupAdminLinked", _completedUsername]
+                        @Loc["AuthSetupSignedInAs", _completedUsername]
+                    </p>
+                }
+                <h2 class="setup-title">@Loc["AdmSetupImportTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupImportLead"]</p>
 
-            @* Same field treatment as /login, which is one click away inside the same
-               OnboardingLayout: outlined + dense MudTextField, floating label, leading adornment
-               icon, real password inputs. These three were the portal's only hand-rolled <input>
-               elements, with uppercase micro-labels stacked above them — a visible inconsistency
-               rather than a deliberate variation. *@
-            <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                          Disabled="_busy" autocomplete="username" />
+                <a class="setup-submit setup-import" href="/admin/database/import?setup=1">@Loc["AdmSetupImportPenn"]</a>
+                <button class="setup-secondary setup-fresh" type="button" @onclick="StartFresh">@Loc["AdmSetupStartFresh"]</button>
+            </div>
+            break;
 
-            <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
-                          InputType="InputType.Password"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                          Disabled="_busy" autocomplete="new-password" />
+        case Step.Applications:
+            <div class="setup-card setup-card--wide">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 3]</div>
+                <h2 class="setup-title">@Loc["AdmSetupAppsTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupAppsLead"]</p>
 
-            <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
-                          InputType="InputType.Password"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                          Disabled="_busy" autocomplete="new-password" />
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
 
-            <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
-                @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
-            </button>
-        </div>
+                <ul class="setup-apps">
+                    @foreach (var app in _applications)
+                    {
+                        var id = app.Id;
+                        <li class="setup-app @(app.Available ? null : "setup-app--unavailable")" @key="id">
+                            <label class="setup-app-label">
+                                <input id="setup-app-@id" class="setup-app-check" type="checkbox"
+                                       checked="@_chosen.Contains(id)" disabled="@(_busy || !app.Available)"
+                                       @onchange="@(e => Choose(id, e.Value is true))" />
+                                <span class="setup-app-text">
+                                    <span class="setup-app-title">@Title(id)</span>
+                                    <span class="setup-app-desc">@Description(id)</span>
+                                    @if (!app.Available)
+                                    {
+                                        <span class="setup-app-note">@Loc["AdmSetupAppUnavailable"]</span>
+                                    }
+                                </span>
+                            </label>
+                        </li>
+                    }
+                </ul>
+
+                <button class="setup-submit setup-save" type="button" disabled="@_busy" @onclick="SaveApplicationsAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupSaveContinue"])
+                </button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Import">@Loc["AdmSetupBack"]</button>
+            </div>
+            break;
+
+        case Step.Done:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupDoneLead"]</p>
+                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
+            </div>
+            break;
+
+        case Step.Claim:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 3]</div>
+                <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
+                <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
+
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
+
+                @* Same field treatment as /login, which is one click away inside the same
+                   OnboardingLayout: outlined + dense MudTextField, floating label, leading adornment
+                   icon, real password inputs. *@
+                <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                              Disabled="_busy" autocomplete="username" />
+
+                <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Disabled="_busy" autocomplete="new-password" />
+
+                <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Disabled="_busy" autocomplete="new-password" />
+
+                <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
+                    @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
+                </button>
+            </div>
+            break;
     }
 </div>
 
 @code {
+    private enum Step { Resolving, Claim, SignIn, Import, Applications, Done }
+
+    /// <summary><c>?step=applications</c>: where the database import sends the administrator back to.</summary>
+    [SupplyParameterFromQuery(Name = "step")] public string? StepParameter { get; set; }
+
+    private Step _step = Step.Resolving;
+
     private string _username = string.Empty;
     private string _password = string.Empty;
     private string _confirm = string.Empty;
     private string? _error;
     private bool _busy;
-    private bool _success;
-    private bool _autoLoggedIn;
     private string _completedUsername = string.Empty;
 
-    // "Have we asked yet?" and "what did the server say?" are separate questions, and the markup
-    // above needs both. NeedsSetupAsync answers the second one three ways — needed / not needed /
-    // couldn't ask — so it cannot also carry "not asked yet"; conflating the two is what rendered
-    // the claim form during the wait.
-    private bool _statusResolved;
-    private bool _alreadyClaimed;
+    private IReadOnlyList<OptionalApplicationState> _applications = [];
+    private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
-        // Only a definitive "setup already done" navigates away. The failed arm means the status
-        // check couldn't reach or parse the server — stay on the page rather than bounce the user
-        // away from the only place they can complete first-run setup; the submit button's own error
-        // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
-        // form, but a check that came back and failed still shows it.
-        var status = await AccountAuth.NeedsSetupAsync();
-        _alreadyClaimed = status is bool needsSetup && !needsSetup;
-        _statusResolved = true;
+        // "Have we asked yet?" and "what did the server say?" are separate questions: NeedsSetupAsync
+        // answers the second three ways — needed / not needed / couldn't ask — and Resolving is the
+        // first. Only a definitive "already claimed" leaves the claim form; a check that came back and
+        // failed still shows it, since this is the only place first-run setup can be completed and the
+        // submit's own error handling surfaces a real server problem.
+        if (await AccountAuth.NeedsSetupAsync() is not bool needsSetup || needsSetup)
+        {
+            _step = Step.Claim;
+            return;
+        }
 
-        if (_alreadyClaimed)
+        // Claimed. Only the administrator with the wizard still pending has anything left to do here;
+        // for anyone else (signed out, not staff, or finished) the server refuses or says not pending.
+        if (await Wizard.GetAsync() is not SetupWizardResponse { Pending: true } wizard)
+        {
             Nav.NavigateTo("/", replace: true);
+            return;
+        }
+
+        Resume(wizard);
+    }
+
+    private void Resume(SetupWizardResponse wizard)
+    {
+        _applications = wizard.Applications;
+        _chosen.Clear();
+        _chosen.UnionWith(wizard.Applications.Where(a => a.Enabled).Select(a => a.Id));
+        _step = string.Equals(StepParameter, "applications", StringComparison.OrdinalIgnoreCase)
+            ? Step.Applications
+            : Step.Import;
     }
 
     private async Task SubmitAsync()
@@ -138,10 +218,10 @@
         _busy = true;
 
         var (success, error, autoLoggedIn) = await AccountAuth.CompleteSetupAsync(_username, _password);
-        _busy = false;
 
         if (!success)
         {
+            _busy = false;
             _error = error switch
             {
                 not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
@@ -154,9 +234,80 @@
         }
 
         _completedUsername = _username;
-        _success = true;
-        _autoLoggedIn = autoLoggedIn;
+        if (!autoLoggedIn)
+        {
+            _busy = false;
+            _step = Step.SignIn;
+            return;
+        }
+
+        // Signed in as the new administrator: the rest of the wizard is theirs. If its state cannot be
+        // read, the claim still stands and the remaining steps are optional — finish rather than strand them.
+        var wizard = await Wizard.GetAsync();
+        _busy = false;
+        if (wizard is SetupWizardResponse state)
+        {
+            Resume(state);
+        }
+        else
+        {
+            _step = Step.Done;
+        }
     }
+
+    private void StartFresh()
+    {
+        _error = null;
+        _step = Step.Applications;
+    }
+
+    private void Choose(string id, bool on)
+    {
+        if (on) _chosen.Add(id);
+        else _chosen.Remove(id);
+    }
+
+    private async Task SaveApplicationsAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        switch (await Wizard.SetApplicationsAsync(_chosen.ToList()))
+        {
+            case SetupWizardResponse state:
+                _applications = state.Applications;
+                await Wizard.FinishAsync();
+                _step = Step.Done;
+                break;
+            case ApiFailure failure:
+                // Some changes may have gone through; show what the game has now beside the reason.
+                if (await Wizard.GetAsync() is SetupWizardResponse current)
+                {
+                    _applications = current.Applications;
+                    _chosen.Clear();
+                    _chosen.UnionWith(current.Applications.Where(a => a.Enabled).Select(a => a.Id));
+                }
+
+                _error = Loc["AdmSetupAppsFailed", failure.Message];
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private string Title(string id) => id switch
+    {
+        GameFeatures.Scenes => Loc["AdmSetupAppScenesTitle"],
+        GameFeatures.WikiReader => Loc["AdmSetupAppWikiReaderTitle"],
+        _ => id,
+    };
+
+    private string Description(string id) => id switch
+    {
+        GameFeatures.Scenes => Loc["AdmSetupAppScenesDesc"],
+        GameFeatures.WikiReader => Loc["AdmSetupAppWikiReaderDesc"],
+        _ => string.Empty,
+    };
 
     private void EnterPortal() => Nav.NavigateTo("/");
 }

@@ -70,6 +70,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<BannedNamesService>()
 			.AddSingleton<RestrictionsService>()
 			.AddSingleton<AdminConfigService>()
+			.AddSingleton<SetupWizardService>()
 			.AddSingleton<ILayoutService, LayoutService>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []));
@@ -265,6 +266,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(Dashboard));
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/accounts']"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// An administrator who left the first-run wizard after the claim is pointed back to it; nobody else
+	/// is, and nobody is once it is finished.
+	/// </summary>
+	[Test]
+	[Arguments("server.admin", true, true)]
+	[Arguments("server.admin", false, false)]
+	[Arguments("players.view", true, false)]
+	public async Task Dashboard_PointsTheAdministratorBackToAnUnfinishedSetup(string policy, bool pending, bool shown)
+	{
+		Auth.SetPolicies("players.view", policy);
+		_api.Bodies["api/setup/wizard"] = $$"""{"pending":{{(pending ? "true" : "false")}},"applications":[]}""";
+		var cut = RenderPage(typeof(Dashboard));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-setup-link[href='/setup']").Count).IsEqualTo(shown ? 1 : 0);
 	}
 
 	[Test]

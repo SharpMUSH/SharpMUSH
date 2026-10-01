@@ -20,6 +20,7 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inject IJSRuntime JS
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 
 <PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
@@ -93,7 +94,7 @@ else
                         </Controls>
                         <ChildContent>
                             <div class="play-views">
-                                @if (Room.Info?.Scene is { } scene)
+                                @if (SceneHere is { } scene)
                                 {
                                     <div class="play-view play-story @(View == PlayView.Story ? null : "play-view--off")" inert="@(View != PlayView.Story)">
                                         @if (StoryLiveUnavailable)
@@ -207,7 +208,7 @@ else
         </MudOverlay>
     }
 
-    <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@Room.Info?.Scene?.Id" OnClose="CloseSheet"
+    <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@SceneHere?.Id" OnClose="CloseSheet"
                     OnCommand="SendAsync" OnPage="StartPageAsync" Details="SheetDetails" />
 }
 
@@ -245,7 +246,15 @@ else
     /// <summary>The sheet's variant of the page context: sheet mode, and a send that closes the sheet.</summary>
     private PlayPageContext _sheetContext = null!;
 
-    private bool InScene => Room.Info?.Scene is not null;
+    /// <summary>
+    /// The room's scene, while the game has the Scene System: a game that turned it off has no story view and
+    /// no In scene row, whatever the room's last push said.
+    /// </summary>
+    private RoomScene? SceneHere => _scenesOn ? Room.Info?.Scene : null;
+
+    private bool _scenesOn = true;
+
+    private bool InScene => SceneHere is not null;
 
     /// <summary>What the play-scope widgets may do on this page: open the sheet, send a command.</summary>
     private PlayPageContext _pageContext = null!;
@@ -261,7 +270,7 @@ else
     /// the Story says so and its composer does not send, as on the live scene page — a pose sent from
     /// here would be posted and never appear. The terminal view still takes commands.
     /// </summary>
-    private bool StoryLiveUnavailable => Room.Info?.Scene?.Id is { } id && id == _liveRefusedFor;
+    private bool StoryLiveUnavailable => SceneHere?.Id is { } id && id == _liveRefusedFor;
 
     private void OnLiveUnavailable(string sceneId, bool unavailable)
     {
@@ -279,13 +288,13 @@ else
     private string? _commKey;
 
     private string CardTitle =>
-        Room.Info?.Scene?.Title is { Length: > 0 } title ? title
+        SceneHere?.Title is { Length: > 0 } title ? title
         : Room.Info?.Name is { Length: > 0 } room ? room
         : Loc["NavPlayTerminal"];
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@Room.Info" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
+                      Room="@(Room.Info is { } info ? info with { Scene = SceneHere } : null)" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">
@@ -405,6 +414,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
         await ResolveRosterAsync();
         await LoadAsideAsync();
     }

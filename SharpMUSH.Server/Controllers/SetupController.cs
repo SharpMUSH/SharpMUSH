@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
@@ -17,6 +19,10 @@ namespace SharpMUSH.Server.Controllers;
 /// pre-generated admin account (renames it and sets its password). On success, the claimer
 /// is minted an account session exactly like <see cref="AuthController.AccountLogin"/> does,
 /// so they're auto-logged-in as the new administrator.
+///
+/// <para>The claim is the wizard's first step. The rest — importing a PennMUSH database, choosing which
+/// optional applications the game runs — is the administrator's (<c>api/setup/wizard</c>), and stays
+/// pending until they finish it, so closing the tab after the claim does not lose it.</para>
 /// </summary>
 [ApiController]
 [Route("api/setup")]
@@ -26,6 +32,7 @@ public class SetupController(
 	IAccountSessionStore accountSessionStore,
 	AccountClaimsService accountClaims,
 	SitelockGuard sitelockGuard,
+	GameFeatureService features,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -56,6 +63,38 @@ public class SetupController(
 			Error<string> error => Conflict(error.Value),
 		};
 	}
+
+	/// <summary>Whether the wizard is unfinished, and the optional applications it offers.</summary>
+	[HttpGet("wizard")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<ActionResult<SetupWizardResponse>> GetWizard()
+		=> Ok(await WizardAsync());
+
+	/// <summary>
+	/// Turns on the listed optional applications and off the rest, then answers with what the game has
+	/// afterwards. 409 with the reason when some could not be switched; the others still were.
+	/// </summary>
+	[HttpPut("wizard/applications")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> SetApplications([FromBody] SetupApplicationsRequest request,
+		CancellationToken cancellationToken)
+		=> await features.ApplyAsync(request.Enabled ?? [], cancellationToken) switch
+		{
+			Success => Ok(await WizardAsync()),
+			Error<string> error => Conflict(error.Value),
+		};
+
+	/// <summary>Closes the wizard. What it set up stays as it is.</summary>
+	[HttpPost("wizard/finish")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> FinishWizard()
+	{
+		await features.SetWizardPendingAsync(false);
+		return NoContent();
+	}
+
+	private async Task<SetupWizardResponse> WizardAsync()
+		=> new(await features.WizardPendingAsync(), await features.ApplicationsAsync());
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

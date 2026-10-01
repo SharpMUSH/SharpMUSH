@@ -1,0 +1,46 @@
+@inject ServerInfoService ServerInfo
+@implements IDisposable
+
+@* Renders its content only while the game has the optional application Feature on (api/server-info's
+   Features) — a link, a widget or a page that has nothing behind it otherwise. Nothing renders until the
+   answer is in, so a link to an application the game does not have never flashes up first. Otherwise, if
+   given, renders once the answer is "off": a page says why it is empty where a link just disappears. *@
+@if (_enabled)
+{
+    @ChildContent
+}
+else if (_known && Otherwise is not null)
+{
+    @Otherwise
+}
+
+@code {
+    /// <summary>A <c>GameFeatures</c> id.</summary>
+    [Parameter, EditorRequired] public string Feature { get; set; } = string.Empty;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>What to show instead once the game is known not to have <see cref="Feature"/>.</summary>
+    [Parameter] public RenderFragment? Otherwise { get; set; }
+
+    private bool _enabled;
+    private bool _known;
+
+    protected override void OnInitialized() => ServerInfo.Changed += OnChanged;
+
+    protected override async Task OnParametersSetAsync() => await CheckAsync();
+
+    private async Task CheckAsync()
+    {
+        _enabled = await ServerInfo.HasFeatureAsync(Feature);
+        _known = true;
+    }
+
+    private void OnChanged() => _ = InvokeAsync(async () =>
+    {
+        await CheckAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnChanged;
+}

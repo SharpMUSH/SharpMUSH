@@ -9,14 +9,15 @@ namespace SharpMUSH.Server.Services;
 /// <summary>
 /// First-run setup: while ServerState.SetupCompleted is false, the game is unclaimed and
 /// the web wizard may claim it — first visitor wins. Claiming renames the pre-generated
-/// #1-linked admin account, sets its password AND the same password on character #1, and
-/// flips SetupCompleted.
+/// #1-linked admin account, sets its password AND the same password on character #1, flips
+/// SetupCompleted, and leaves the rest of the wizard pending for the new administrator.
 /// </summary>
 public class SetupService(
 	IServerStateStore database,
 	IObjectStore objects,
 	IAccountService accountService,
 	IPasswordService passwordService,
+	GameFeatureService features,
 	ILogger<SetupService> logger)
 {
 	private readonly SemaphoreSlim _claimLock = new(1, 1);
@@ -65,6 +66,7 @@ public class SetupService(
 			await SetGodCharacterPasswordAsync(password, ct);
 
 			await database.SetServerSetupCompletedAsync(true, ct);
+			await MarkWizardPendingAsync();
 
 			// Reload: ChangeUsernameAsync/SetPasswordAsync mutate the DB by accountId, not the
 			// in-memory `account` reference, so its Username can be stale after a rename.
@@ -74,6 +76,23 @@ public class SetupService(
 		finally
 		{
 			_claimLock.Release();
+		}
+	}
+
+	/// <summary>
+	/// Opens the rest of the wizard (importing a database, choosing applications) to the new administrator,
+	/// so it is still there if they close the tab before finishing it. Not fatal to the claim: the claim has
+	/// already been recorded, and the portal shows the wizard to the claimer in this session either way.
+	/// </summary>
+	private async ValueTask MarkWizardPendingAsync()
+	{
+		try
+		{
+			await features.SetWizardPendingAsync(true);
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "First-run setup: could not record that the setup wizard is unfinished.");
 		}
 	}
 

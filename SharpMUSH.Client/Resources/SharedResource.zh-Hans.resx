@@ -5199,4 +5199,7 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>应用</value>
   </data>
+  <data name="RolScenesNotEnabled" xml:space="preserve">
+    <value>本游戏未启用场景系统。</value>
+  </data>
 </root>

@@ -30,7 +30,9 @@
         <nav class="quickstart-links @(InMain ? "quickstart-links--main" : null)" aria-label="@Loc["WidNewHere"]">
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["WidReadTheWiki"]" Href="/wiki" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Groups" Label="@Loc["WidBrowseCharacters"]" Href="/characters" />
-            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["WidBrowseScenes"]" Href="/scenes" />
+            <FeatureGate Feature="@GameFeatures.Scenes">
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["WidBrowseScenes"]" Href="/scenes" />
+            </FeatureGate>
             @if (ShowQuietCreate)
             {
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Add" Label="@Loc["WidNewCharacter"]" Href="/characters/new" />

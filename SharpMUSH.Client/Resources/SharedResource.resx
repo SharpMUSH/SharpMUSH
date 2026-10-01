@@ -4544,4 +4544,64 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Apps</value>
   </data>
+  <data name="RolScenesNotEnabled" xml:space="preserve">
+    <value>The Scene System is not enabled on this game.</value>
+  </data>
+  <data name="AdmSetupStepOf" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+  </data>
+  <data name="AdmSetupImportTitle" xml:space="preserve">
+    <value>Bring an existing game?</value>
+  </data>
+  <data name="AdmSetupImportLead" xml:space="preserve">
+    <value>Moving from PennMUSH? Import its database now, before anyone else connects. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
+  </data>
+  <data name="AdmSetupImportPenn" xml:space="preserve">
+    <value>Import a PennMUSH database</value>
+  </data>
+  <data name="AdmSetupStartFresh" xml:space="preserve">
+    <value>Start a new game</value>
+  </data>
+  <data name="AdmSetupAppsTitle" xml:space="preserve">
+    <value>Choose your applications</value>
+  </data>
+  <data name="AdmSetupAppsLead" xml:space="preserve">
+    <value>These parts of the game are optional. What you turn off here is removed from the game and from the portal's menus; you can turn it back on later under Packages.</value>
+  </data>
+  <data name="AdmSetupAppScenesTitle" xml:space="preserve">
+    <value>Scene System</value>
+  </data>
+  <data name="AdmSetupAppScenesDesc" xml:space="preserve">
+    <value>Records poses, says and emits into scene logs and adds the +scene commands. The portal gets a scene archive, live scenes players can watch and join from the browser, and the scene panels on the home page and character profiles.</value>
+  </data>
+  <data name="AdmSetupAppWikiReaderTitle" xml:space="preserve">
+    <value>In-game wiki reader</value>
+  </data>
+  <data name="AdmSetupAppWikiReaderDesc" xml:space="preserve">
+    <value>Adds a +wiki command, on an object in the master room, so players can list and read the portal's wiki articles from their MU* client. The wiki itself is part of the portal either way.</value>
+  </data>
+  <data name="AdmSetupAppUnavailable" xml:space="preserve">
+    <value>Not available on this server: the plugin it runs on is not installed.</value>
+  </data>
+  <data name="AdmSetupSaveContinue" xml:space="preserve">
+    <value>Save and finish</value>
+  </data>
+  <data name="AdmSetupSaving" xml:space="preserve">
+    <value>Saving…</value>
+  </data>
+  <data name="AdmSetupDoneLead" xml:space="preserve">
+    <value>Everything here can be changed later: applications under Packages, imports under Database.</value>
+  </data>
+  <data name="AdmSetupBack" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="AdmSetupContinue" xml:space="preserve">
+    <value>Continue setup</value>
+  </data>
+  <data name="AdmSetupAppsFailed" xml:space="preserve">
+    <value>Some applications could not be changed: {0}</value>
+  </data>
+  <data name="AdmSetupUnfinished" xml:space="preserve">
+    <value>First-run setup is not finished.</value>
+  </data>
 </root>

@@ -95,7 +95,7 @@ Under `lightning`, `@backup` (wizard-only) copies the live world into a timestam
 
 The Lightning copy is point-in-time by construction.
 
-First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
+First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game. After the claim the wizard stays pending (`api/setup/wizard`, expanded server data `SetupWizardState`) until the admin finishes it: optionally import a PennMUSH database, then choose the optional applications (`GameFeatureService.All`: the Scene System, the in-game wiki reader). An application is on exactly when its bundled package is installed (and its plugin loaded); turning off a first-boot package records it in `DeclinedBundledPackages` so bootstrap does not reinstall it. `api/server-info` reports the enabled ids as `Features`, and the portal shows an application's links and pages only through `<FeatureGate Feature="@GameFeatures.X">`.
 
 ## Architecture
 

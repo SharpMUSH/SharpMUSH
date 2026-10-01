@@ -5,8 +5,14 @@
 
 @* The Scenes pages (/scenes and its filters, /scenes/active, a scene's log): the page sidebar beside
    the page body. The live view (/scenes/{id}/live) is not one of them; it keeps the whole column.
-   The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
-<SectionShell Key="scenes" Class="scenes-shell" NavLabel="@Loc["SceneArchive"]">
-    <Nav Context="collapsed"><ScenesSidebar Collapsed="@collapsed" /></Nav>
-    <ChildContent>@Body</ChildContent>
-</SectionShell>
+   The sidebar renders in the shell's page-sidebar slot and collapses to its strip. A game without the
+   Scene System gets a notice in their place, for anyone who arrives by an old link. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
+    <ChildContent>
+        <SectionShell Key="scenes" Class="scenes-shell" NavLabel="@Loc["SceneArchive"]">
+            <Nav Context="collapsed"><ScenesSidebar Collapsed="@collapsed" /></Nav>
+            <ChildContent>@Body</ChildContent>
+        </SectionShell>
+    </ChildContent>
+    <Otherwise><ScenesNotEnabled /></Otherwise>
+</FeatureGate>

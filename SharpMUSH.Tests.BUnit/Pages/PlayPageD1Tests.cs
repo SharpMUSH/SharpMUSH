@@ -120,6 +120,22 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".test-pagebar .kit-side-sub").TextContent).Contains("Connected as Ilsa Varn");
 	}
 
+	/// <summary>
+	/// A game with the Scene System off shows no In scene row and no story view, even if the room still
+	/// reports a scene from before it was turned off: there would be nothing behind either.
+	/// </summary>
+	[Test]
+	public async Task WithoutTheSceneSystem_TheRoomsSceneIsNotOffered()
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, features: []));
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
+		await Assert.That(cut.Markup).DoesNotContain("Salt Market at Dusk");
+	}
+
 	[Test]
 	public async Task PushedRooms_DrawTheBanner_HereAndExits_AndAnExitGoes()
 	{

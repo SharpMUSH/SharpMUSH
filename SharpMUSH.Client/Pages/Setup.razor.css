@@ -125,6 +125,108 @@
 	cursor: not-allowed;
 }
 
+/* The applications step lists a description per application, which reads poorly at the claim form's width. */
+.setup-card--wide {
+	max-width: 560px;
+}
+
+/* The claim's confirmation, carried onto the first step it hands over to. */
+.setup-claimed {
+	margin: 0 0 1rem;
+	padding: 0.625rem 0.75rem;
+	border-radius: var(--radius);
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	color: var(--text-dim);
+	font-family: var(--font-ui);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+
+/* The quieter of a step's two choices: same footprint as .setup-submit, no fill. */
+.setup-secondary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 100%;
+	height: 44px;
+	margin-top: 0.625rem;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--text);
+	font-family: var(--font-ui);
+	font-size: 0.875rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.setup-secondary:hover:not(:disabled) {
+	background: var(--surface-2);
+}
+
+.setup-secondary:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.setup-apps {
+	list-style: none;
+	margin: 0 0 0.75rem;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+}
+
+.setup-app-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 0.75rem 0.875rem;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	cursor: pointer;
+}
+
+.setup-app--unavailable .setup-app-label {
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.setup-app-check {
+	margin-top: 0.2rem;
+	width: 1rem;
+	height: 1rem;
+	accent-color: var(--accent);
+	flex-shrink: 0;
+}
+
+.setup-app-text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-family: var(--font-ui);
+}
+
+.setup-app-title {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.setup-app-desc,
+.setup-app-note {
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--text-dim);
+}
+
+.setup-app-note {
+	font-style: italic;
+}
+
 /* Unnamed: under OnboardingLayout there is no .phosphor-page, so this queries .onboarding-shell. */
 @container (max-width: 48rem) {
     .setup-page {

@@ -199,16 +199,26 @@ public class PackagesController(
 		};
 	}
 
-	/// <summary>Uninstalls a package; 409 when dependents exist and force is not set.</summary>
+	/// <summary>
+	/// Uninstalls a package; 409 when dependents exist and force is not set. A bundled package that
+	/// installs at first boot is recorded as turned off, so the next restart does not put it back.
+	/// </summary>
 	[HttpDelete("{id}")]
 	[Authorize]
-	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, CancellationToken cancellationToken)
+	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, [FromServices] GameFeatureService features,
+		CancellationToken cancellationToken)
 	{
 		return await installer.UninstallAsync(id, force, cancellationToken) switch
 		{
-			Success => NoContent(),
+			Success => await UninstalledAsync(),
 			Error<string> error => Conflict(error.Value)
 		};
+
+		async Task<IActionResult> UninstalledAsync()
+		{
+			await features.SetDeclinedAsync(id, declined: true);
+			return NoContent();
+		}
 	}
 
 	/// <summary>

@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = "players.view")]
 @inject IStringLocalizer<SharedResource> Loc
 @inject IAuthorizationService Authorization
+@inject SetupWizardService SetupWizard
 
 <PageTitle>@Loc["AdmDashboardTitle"] — @Loc["AppTitle"]</PageTitle>
 
@@ -10,6 +11,16 @@
    the tools they can actually use. *@
 <div class="adm-dash">
     <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmDashboardTitle"]" />
+
+    @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
+       finds the way back here, since nothing else sends them to /setup once the game is claimed. *@
+    @if (_setupPending)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="adm-dash-setup">
+            @Loc["AdmSetupUnfinished"]
+            <a href="/setup" class="adm-dash-setup-link">@Loc["AdmSetupContinue"]</a>
+        </MudAlert>
+    }
 
     <div class="adm-dash-grid">
         @foreach (var card in _visible)
@@ -54,18 +65,25 @@
 
     private IReadOnlyList<AdminCard> _visible = [];
 
+    /// <summary>The viewer administers the server and the first-run wizard is unfinished.</summary>
+    private bool _setupPending;
+
     protected override async Task OnInitializedAsync()
     {
         // Every card used to render for anyone who could open /admin, so a viewer with players.view
         // alone was offered configuration, roles and the database import, and met a refusal on each.
         if (AuthState is null) return;
         var user = (await AuthState).User;
+        var setup = (await Authorization.AuthorizeAsync(user, "server.admin")).Succeeded
+            ? SetupWizard.GetAsync()
+            : null;
         var visible = new List<AdminCard>();
         foreach (var card in Cards)
         {
             if (await MayOpenAsync(user, card)) visible.Add(card);
         }
         _visible = visible;
+        _setupPending = setup is not null && await setup is SetupWizardResponse { Pending: true };
     }
 
     private async Task<bool> MayOpenAsync(System.Security.Claims.ClaimsPrincipal user, AdminCard card)

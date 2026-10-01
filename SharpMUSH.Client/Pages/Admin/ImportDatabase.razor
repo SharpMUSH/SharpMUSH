@@ -12,7 +12,18 @@
 <PageTitle>@Loc["ImportPennMUSHDatabase"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="dbimport-page">
-    <PlainPageHeader Kicker="@Loc["AdmDatabaseKicker"]" Title="@Loc["ImportPennMUSHDatabase"]" Description="@Loc["ImportDatabaseDescription"]" />
+    <PlainPageHeader Kicker="@Loc["AdmDatabaseKicker"]" Title="@Loc["ImportPennMUSHDatabase"]" Description="@Loc["ImportDatabaseDescription"]">
+        <Actions>
+            @* Reached from the first-run wizard: the way back to its next step, once the import is done or
+               the administrator decides against it. Hidden while converting — leaving then abandons the
+               progress view, not the conversion. *@
+            @if (FromSetup && !_isConverting)
+            {
+                <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Filled.ArrowForward"
+                               Href="/setup?step=applications">@Loc["AdmSetupContinue"]</CapsuleButton>
+            }
+        </Actions>
+    </PlainPageHeader>
 
     @if (_error is not null)
     {
@@ -245,6 +256,9 @@
 </div>
 
 @code {
+    /// <summary><c>?setup=1</c>: opened from the first-run wizard, which this page hands back to.</summary>
+    [SupplyParameterFromQuery(Name = "setup")] public bool FromSetup { get; set; }
+
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _selectedMailFile;
     private IBrowserFile? _selectedChatFile;

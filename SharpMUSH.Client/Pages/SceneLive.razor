@@ -11,6 +11,10 @@
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
 
+@* Nothing to watch on a game with the Scene System off: say so instead of failing to load. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
+<ChildContent>
+
 @if (_loading)
 {
     <div style="padding:var(--cpad);">
@@ -107,6 +111,9 @@ else
         </div>
     </div>
 }
+</ChildContent>
+<Otherwise><ScenesNotEnabled /></Otherwise>
+</FeatureGate>
 
 @code {
     [Parameter] public required string Id { get; set; }
