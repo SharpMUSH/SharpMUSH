@@ -168,6 +168,29 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(live[0].TextContent.Trim()).IsEqualTo("Join");
 	}
 
+	/// <summary>
+	/// Switching character on /scenes/active lists what the new character may see. The page read the
+	/// live list once, so the previous character's private scenes stayed and the new one's were missing.
+	/// </summary>
+	[Test]
+	public async Task LiveCards_SwitchingCharacter_ListsWhatTheNewCharacterMaySee()
+	{
+		var auth = await CharactersApiFake.SignedInAsync(this,
+			new AccountCharacter(313, 1, "Ilsa Varn", "PLAYER", IsActing: true),
+			new AccountCharacter(314, 1, "Wren Halloway", "PLAYER"));
+		var cut = RenderAt<ScenesActive>("/scenes/active", auth);
+		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
+		_api.Extra[SceneJson.Active] = SceneJson.List(SceneJson.Scene("S5", "Wren's Private Errand"));
+
+		auth.SetActiveCharacter(auth.Characters.Single(c => c.Name == "Wren Halloway"));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Wren's Private Errand", StringComparison.Ordinal)) throw new InvalidOperationException("still the previous character's list");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task LiveCards_OfferWatch_ToAnAnonymousVisitor()
 	{

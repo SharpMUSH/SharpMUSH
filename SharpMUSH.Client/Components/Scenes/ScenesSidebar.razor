@@ -140,9 +140,13 @@
         StateHasChanged();
     });
 
+    /// <summary>
+    /// Every list here is the acting character's view: the server lists a private scene only to its owner
+    /// and members, so the live and recent lists change with the character as much as "Your scenes" does.
+    /// </summary>
     private void OnActingChanged() => _ = InvokeAsync(async () =>
     {
-        await LoadMineAsync();
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
         StateHasChanged();
     });
 

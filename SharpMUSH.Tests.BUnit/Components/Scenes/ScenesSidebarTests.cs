@@ -67,6 +67,29 @@ public class ScenesSidebarTests : TrackingBunitContext
 			.Because("Wren has two scenes; Ilsa's one answered last");
 	}
 
+	/// <summary>
+	/// Switching character re-reads the live and recent lists, not only "Your scenes". The server lists
+	/// a private scene only to its owner and members, so the previous character's counts and private
+	/// live rows stayed on screen, and the new character's private scenes were missing.
+	/// </summary>
+	[Test]
+	public async Task SwitchingCharacter_ReloadsTheLiveAndRecentLists()
+	{
+		var auth = await CharactersApiFake.SignedInAsync(this,
+			new AccountCharacter(313, 1, "Ilsa Varn", "PLAYER", IsActing: true),
+			new AccountCharacter(314, 1, "Wren Halloway", "PLAYER"));
+		var cut = RenderAt("/scenes", auth);
+		_api.Extra[SceneJson.Active] = SceneJson.List(
+			SceneJson.Scene("S1", "Salt Market at Dusk", image: "/api/wiki-assets/s/salt.jpg"),
+			SceneJson.Scene("S2", "Lamplighters' Vigil"),
+			SceneJson.Scene("S5", "Wren's Private Errand"));
+
+		auth.SetActiveCharacter(auth.Characters.Single(c => c.Name == "Wren Halloway"));
+
+		cut.WaitForAssertion(() => cut.Find(".scenes-side-live a.kit-row[href='/scenes/S5/live']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("3 live");
+	}
+
 	[Test]
 	public async Task Header_CountsLiveAndRecent()
 	{
