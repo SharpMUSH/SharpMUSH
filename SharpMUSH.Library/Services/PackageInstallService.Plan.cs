@@ -248,7 +248,7 @@ public partial class PackageInstallService
 		await AddAsync(WellKnownRefs.God, 1, 1);
 		await AddAsync(WellKnownRefs.MasterRoom, options.MasterRoom, 2);
 		await AddAsync(WellKnownRefs.PlayerStart, options.PlayerStart, 0);
-		await AddAsync(WellKnownRefs.PackageManager, options.PackageManager, 3);
+		await AddAsync(WellKnownRefs.PackageManager, options.PackageManager, DatabaseOptions.SeededPackageManager);
 
 		// http_handler and event_handler are optional (nullable, no fixed fallback) — only
 		// mapped when configured, so a package targeting {{$http_handler}} or
