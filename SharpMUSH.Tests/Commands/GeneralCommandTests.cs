@@ -307,8 +307,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_ListsControlledObjectsByWordPrefix()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindMortal");
+		var mortal = await MortalInARoomOfItsOwnAsync("FindMortal");
 		var token = TestIsolationHelpers.GenerateUniqueName("FindTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create Red {token}"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}Blue"));
@@ -325,8 +324,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_RejectsARangeThatIsNotAnObject()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindRange");
+		var mortal = await MortalInARoomOfItsOwnAsync("FindRange");
 
 		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain("@find x=#999999999")).AsTask());
@@ -351,8 +349,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_ReportsByTypeWithOwnersAndTotals()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchMortal");
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchMortal");
 		var token = TestIsolationHelpers.GenerateUniqueName("SearchTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}"));
 
@@ -371,8 +368,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_ShowsAnExitsEnds()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchExit");
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchExit");
 		var token = TestIsolationHelpers.GenerateUniqueName("SearchExitTok");
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@dig/teleport {token}Room"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@open {token}Out"));
@@ -433,6 +429,19 @@ public class GeneralCommandTests
 	private int HeardBy(DBRef who, string message, DBRef sender, INotifyService.NotificationType type)
 		=> WebAppFactoryArg.Notifications.DeliveriesFor(who).Count(delivery =>
 			delivery.Message == message && delivery.Sender == sender && delivery.Type == type);
+
+	/// <summary>
+	/// A connected mortal standing in a fresh room, so the window <see cref="MessagesWhile"/> reads holds
+	/// only what its own command produced — not, say, another test's player connecting in the default home.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> MortalInARoomOfItsOwnAsync(string prefix)
+	{
+		var dig = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
+	}
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{

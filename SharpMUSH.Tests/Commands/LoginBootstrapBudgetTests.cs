@@ -27,8 +27,12 @@ public class LoginBootstrapBudgetTests
 		var services = Factory.Services;
 		var connections = services.GetRequiredService<IConnectionService>();
 		var mediator = services.GetRequiredService<IMediator>();
-		// A wizard of this test's own, so logging in announces nothing in God's room and the wizard MOTD applies.
+		// A wizard of this test's own, standing in a room of its own: the wizard MOTD applies, and its
+		// connect announcement reaches nobody else's players.
 		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "LoginBudget");
+		var room = await Factory.CommandParser.CommandParse(1, connections,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("LoginBudgetRoom")}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {playerRef}=WIZARD"));
 		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
