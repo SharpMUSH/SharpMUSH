@@ -28,7 +28,7 @@ public sealed class ViewerScopedReload : IDisposable
 	/// </summary>
 	public void Watch(IAccountAuthState auth, Action reload, SceneService? scenes = null)
 	{
-		Dispose();
+		Unwatch();
 		(_auth, _reload, _scenes) = (auth, reload, scenes);
 		_auth.ActiveCharacterChanged += _reload;
 		if (_scenes is not null) _scenes.Changed += _reload;
@@ -48,7 +48,17 @@ public sealed class ViewerScopedReload : IDisposable
 		if (IsCurrent(ticket)) apply(value);
 	}
 
+	/// <summary>
+	/// Stops the reloads and retires every load in flight: a read answering after its component is gone
+	/// writes nothing.
+	/// </summary>
 	public void Dispose()
+	{
+		Begin();
+		Unwatch();
+	}
+
+	private void Unwatch()
 	{
 		if (_auth is not null && _reload is not null) _auth.ActiveCharacterChanged -= _reload;
 		if (_scenes is not null && _reload is not null) _scenes.Changed -= _reload;

@@ -72,4 +72,20 @@ public class ViewerScopedReloadTests
 
 		await Assert.That(applied).IsEquivalentTo(["Wren's"]);
 	}
+
+	/// <summary>A read still in flight when its component is disposed is not applied to the dead component.</summary>
+	[Test]
+	public async Task AReadInFlightAtDisposal_IsNotApplied()
+	{
+		var reload = new ViewerScopedReload();
+		var pending = new TaskCompletionSource<string>();
+		var applied = new List<string>();
+
+		var load = reload.LoadAsync(() => pending.Task, applied.Add);
+		reload.Dispose();
+		pending.SetResult("late");
+		await load;
+
+		await Assert.That(applied).IsEmpty();
+	}
 }
