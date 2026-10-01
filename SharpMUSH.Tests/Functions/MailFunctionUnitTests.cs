@@ -26,16 +26,12 @@ public class MailFunctionUnitTests
 
 	/// <summary>
 	/// Every test gets a fresh player who has mailed itself three messages. God's mailbox is the one
-	/// every other mail test writes to, so counting it was only ever exact when nothing else ran. The
-	/// player is a wizard, as God was: <c>mail(&lt;player&gt;)</c> is refused to a mortal here, even
-	/// for their own name.
+	/// every other mail test writes to, so counting it was only ever exact when nothing else ran.
 	/// </summary>
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
 	{
 		_player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "MailFunctions");
-		await WebAppFactoryArg.CommandParser.CommandParse(1, WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
-			MarkupText.Plain($"@set {_player}=WIZARD"));
 		var executor = (await Mediator.Send(new GetObjectNodeQuery(_player))).Expect<AnySharpObject>();
 		var testPlayer = executor.Expect<SharpPlayer>();
 
