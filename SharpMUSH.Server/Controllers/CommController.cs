@@ -91,12 +91,17 @@ public class CommController(
 		var markers = await mediator.Send(new GetReadMarkersQuery(character), ct);
 		var byScope = markers.ToDictionary(marker => marker.Scope, StringComparer.Ordinal);
 
-		// The channels the character is on, under their names now: a marker follows its channel through a
-		// rename, and one for a channel they have left says nothing the portal shows.
+		// Every channel with a marker that the character may still read — the gate a marker is set behind,
+		// so a joinable channel they are not on (a game listing those with "joined": false) is included —
+		// under its name now, since a marker follows its channel through a rename. One they can no longer
+		// see or join says nothing the portal may show.
 		var channels = new List<ChannelReadMarker>();
-		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player), ct))
+		await foreach (var channel in mediator.CreateStream(new GetChannelListQuery(), ct))
 		{
-			if (channel.Id is { } id && byScope.TryGetValue(ReadMarkerScope.Channel(id), out var marker))
+			if (channel.Id is { } id
+				&& byScope.TryGetValue(ReadMarkerScope.Channel(id), out var marker)
+				&& await ChannelHelper.CanSeeChannel(permissionService, player, channel)
+				&& await ChannelRecall.MayRecallAsync(permissionService, player, channel))
 			{
 				channels.Add(new ChannelReadMarker(channel.Name.ToPlainText(), marker.LastReadId, marker.LastReadAt));
 			}

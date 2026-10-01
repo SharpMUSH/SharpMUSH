@@ -232,6 +232,29 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await Assert.That(beyond.LastReadId).IsEqualTo(issued + 10).Because("no line has an id past the last one issued");
 	}
 
+	/// <summary>
+	/// A channel the character is not on but may read (a game listing joinable channels with
+	/// <c>"joined": false</c>) keeps its marker too; one they can no longer see or join does not come back.
+	/// </summary>
+	[Test]
+	public async Task Markers_IncludeAJoinableChannelTheCharacterIsNotOn_AndNotOneTheyCannotRead()
+	{
+		var passerby = await NewPlayerAsync("CommMarkPasserby");
+		var open = await ChannelAsync("CommMarkOpen");
+		var closing = await ChannelAsync("CommMarkClosing");
+
+		var controller = await As(passerby);
+		Value(await controller.MarkChannel(open, new ReadMarkerUpdate(11, DateTimeOffset.UtcNow), CancellationToken.None));
+		Value(await controller.MarkChannel(closing, new ReadMarkerUpdate(12, DateTimeOffset.UtcNow), CancellationToken.None));
+		await God($"@clock/join {closing}=#1");
+
+		var markers = Value(await controller.Markers(CancellationToken.None));
+
+		await Assert.That(markers.Channels.Single(m => m.Channel == open).LastReadId).IsEqualTo(11);
+		await Assert.That(markers.Channels.Any(m => m.Channel == closing)).IsFalse()
+			.Because("@channel/recall would refuse it now, so its marker says nothing the portal may show");
+	}
+
 	/// <summary>A marker follows the channel, not its name.</summary>
 	[Test]
 	public async Task AChannelMarker_SurvivesARename()

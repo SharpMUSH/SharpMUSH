@@ -96,7 +96,7 @@ public class ChannelMessageIdTests
 
 		for (var i = 0; i < 100; i++)
 		{
-			clock.Now = At.AddMilliseconds(i * 100);
+			clock.Now = At.AddMilliseconds(i * 100.0);
 			await ids.NextAsync();
 		}
 
