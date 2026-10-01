@@ -3652,18 +3652,18 @@
       "file": "lock-evaluation-command.md",
       "corpus": "help",
       "names": [
-        "@lock-evaluation evaluation lock example"
+        "@lock-evaluation evaluation lock"
       ],
-      "canonical": "@lock-evaluation evaluation lock example",
+      "canonical": "@lock-evaluation evaluation lock",
       "section": true
     },
     {
       "file": "lock-evaluation-command.md",
       "corpus": "help",
       "names": [
-        "@lock-evaluation evaluation lock"
+        "@lock-evaluation evaluation lock example"
       ],
-      "canonical": "@lock-evaluation evaluation lock",
+      "canonical": "@lock-evaluation evaluation lock example",
       "section": true
     },
     {

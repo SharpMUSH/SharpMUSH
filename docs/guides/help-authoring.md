@@ -154,7 +154,10 @@ search another corpus. Administrator access gates remain unchanged.
 body hashes. `help-inventory.json` records the resulting canonical entries,
 aliases, and deprecated redirects. Intentional edits include the contradictory
 attribute flag propagation text, the Unicode claim, removal of duplicate channel
-function aliases, and moving drop-cap prose out of its code fence. The IANA 2011n
+function aliases, and moving drop-cap prose out of its code fence. Review corrections
+also distinguish C# hardcode from PennMUSH's C, explain recycled dbrefs and durable
+objids, label inert queue economy settings, repair JSON modification examples, and
+give the economy and evaluation-lock articles useful overviews. The IANA 2011n
 catalog is retained as a complete, explicitly historical section.
 
 ## Validation

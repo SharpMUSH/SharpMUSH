@@ -32,15 +32,13 @@ You can see which commands are currently queued with the `@ps` command, and with
 
 ## Queue configuration
 
-There are several `@config` options which affect queueing.
+The `player_queue_limit` and `owner_queues` options affect queue admission.
 
 The option 'player_queue_limit' controls how many action lists can be queued by one object at any given time. Wizards and objects with the Queue `@power` can queue more commands (equal to the player_queue_limit plus the current number of objects in the database, including garbage). An object that tries to queue past its limit is halted: its pending commands are wiped, it is set HALT, and its owner is told "Runaway object: `<name>`(`<dbref>`). Commands halted." A player's own typed commands are never counted against the limit, so a player whose objects have exhausted it can still act.
 
 Normally each object has its own queue count, but if the 'owner_queues' option is enabled, objects share a queue count with their owner.
 
-'queue_chunk' controls how many commands SharpMUSH runs before checking again for incoming socket commands or connections.
-
-It costs a certain number of pennies to queue an action list; the exact amount is set in the 'queue_cost' `@config` option. These pennies are returned after the action list is run. Sometimes, you'll lose a penny when queueing a command; the chance of this happening is controlled by the 'queue_loss' option.
+`queue_chunk`, `queue_cost`, and `queue_loss` are accepted compatibility settings, but the SharpMUSH scheduler does not read them. PennMUSH uses them for command batches and refundable or occasional lost penny charges; SharpMUSH has no built-in penny balance and does not charge for queueing. See [compatibility economy].
 
 
 **See Also:**
