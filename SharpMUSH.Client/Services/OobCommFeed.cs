@@ -426,7 +426,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <summary>
 	/// What the page log gave the feed, taken back out now the server says the log is off (it hides the log
 	/// then): each pulled line never pushed, and each conversation known only from the listing that has no
-	/// line left. Pages pushed live stay. The next list asks for the conversations again, so turning logging
+	/// line left, unless it is the one being viewed. Pages pushed live stay. The next list asks for the
+	/// conversations again, so turning logging
 	/// back on brings them back. Answers whether anything went.
 	/// </summary>
 	private bool ForgetLoggedHistory()
@@ -443,7 +444,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		_pulledOnly.Clear();
-		foreach (var key in _listedOnly.Where(key => !_history.TryGetValue(key, out var lines) || lines.Count == 0).ToArray())
+		// The conversation being viewed stays: the view needs it to remain a conversation, to say why it has no
+		// history and to page its people.
+		foreach (var key in _listedOnly
+			.Where(key => !string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase))
+			.Where(key => !_history.TryGetValue(key, out var lines) || lines.Count == 0).ToArray())
 		{
 			_conversations.Remove(key);
 			_history.Remove(key);
@@ -632,7 +637,10 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var excess = _conversations.Count - ConversationLimit;
 		if (excess <= 0) return;
 
-		foreach (var key in _conversations.OrderBy(pair => pair.Value.Recency).Take(excess).Select(pair => pair.Key).ToArray())
+		// The conversation being viewed is never the one dropped: the view needs it to stay a conversation.
+		foreach (var key in _conversations
+			.Where(pair => !string.Equals(pair.Key, _viewing, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(pair => pair.Value.Recency).Take(excess).Select(pair => pair.Key).ToArray())
 		{
 			_conversations.Remove(key);
 			_history.Remove(key);
