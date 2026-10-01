@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -47,7 +48,8 @@ public partial class Functions
 	private async ValueTask NotifyOfSet(AnySharpObject executor, AnySharpObject thing, string attribute,
 		bool succeeded, bool wasSet)
 	{
-		if (!succeeded || await thing.Object().AreQuietAsync(executor))
+		// A player's alias list was reported by the write itself (PlayerAliases).
+		if (!succeeded || PlayerAliases.Applies(thing, attribute) || await thing.Object().AreQuietAsync(executor))
 		{
 			return;
 		}

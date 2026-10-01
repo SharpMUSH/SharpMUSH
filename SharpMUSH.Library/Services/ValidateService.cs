@@ -23,8 +23,6 @@ public partial class ValidateService(
 	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
 	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
 
-	private static readonly HashSet<string> MagicCookiesIgnoreCase = new(MagicCookies, StringComparer.OrdinalIgnoreCase);
-
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		ValidationTarget target)
 		=> type switch
@@ -38,8 +36,6 @@ public partial class ValidateService(
 				=> await ValidPlayerName(value, player, player),
 			IValidateService.ValidationType.PlayerName when target is None
 				=> await ValidPlayerName(value, new None(), new None()),
-			IValidateService.ValidationType.PlayerAlias when target is AnySharpObject player
-				=> ValidatePlayerAlias(value, player),
 			IValidateService.ValidationType.AttributeName
 				=> ValidateAttributeName(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is SharpAttributeEntry entry
@@ -158,31 +154,6 @@ public partial class ValidateService(
 	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]
 	private static partial Regex ValidCommandNameRegex();
 
-	private static bool ValidatePlayerAlias(MString value, AnySharpObject target)
-	{
-		// Player aliases should be non-empty and contain valid characters
-		// They're less strict than full player names but still need basic validation
-		var plainAlias = value.ToPlainText();
-
-		if (string.IsNullOrWhiteSpace(plainAlias))
-		{
-			return false;
-		}
-
-		// Aliases cannot be magic cookies
-		if (MagicCookiesIgnoreCase.Contains(plainAlias))
-		{
-			return false;
-		}
-
-		if (plainAlias.Any(char.IsControl))
-		{
-			return false;
-		}
-
-		return plainAlias.EnumerateRunes().All(x => x.IsAscii);
-	}
-
 	public async ValueTask<bool> ValidPlayerName(MString name, AnyOptionalSharpObject player, AnyOptionalSharpObject thing)
 	{
 		var plainName = name.ToPlainText();
@@ -198,9 +169,10 @@ public partial class ValidateService(
 			return false;
 		}
 
+		// lookup_player: the player list holds every player's name and every alias, so a name another
+		// player answers to by alias is as taken as one it is called.
 		DBRef? carrier = thing is AnySharpObject named ? named.Object().DBRef : null;
 		var holders = await mediator.CreateStream(new GetPlayerQuery(plainName))
-			.Where(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase))
 			.Select(x => x.Object.DBRef)
 			.ToArrayAsync();
 

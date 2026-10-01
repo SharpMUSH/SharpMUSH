@@ -272,12 +272,12 @@ public partial class Commands
 				successfulRecipients.Select(r => r.Object().Name).ToArray());
 			var recipientRefs = string.Join(" ",
 				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
-			var pageAlias = executor is SharpPlayer executorPlayer
-				? executorPlayer.Aliases?.FirstOrDefault() ?? string.Empty
-				: string.Empty;
-			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
-				? $"{executor.Object().Name} ({pageAlias})"
-				: executor.Object().Name;
+			// speech.c:1040-1047: the short alias, unless it is only the name spelled differently.
+			var pageAlias = executor is SharpPlayer { Aliases: [var shortAlias, ..] } ? shortAlias : string.Empty;
+			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && pageAlias.Length > 0
+				&& !pageAlias.Equals(executor.Object().Name, StringComparison.OrdinalIgnoreCase)
+					? $"{executor.Object().Name} ({pageAlias})"
+					: executor.Object().Name;
 			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
 
 			// The page's id comes first, before anyone is told: taking one can write (the id source reserves

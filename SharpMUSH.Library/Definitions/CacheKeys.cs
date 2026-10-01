@@ -154,6 +154,21 @@ public static class CacheKeys
 		keys[next++] = AncestorCommands(dbref.Number);
 		keys[next] = AncestorListens(dbref.Number);
 
-		return keys;
+		// A player's aliases load with its node, which the provider rewrites in the same transaction as
+		// the ALIAS attribute (Services.PlayerAliases).
+		return WritesAliases(attribute) ? [.. keys, Object(dbref)] : keys;
 	}
+
+	/// <summary>
+	/// Every tag a write to <paramref name="attribute"/> on <paramref name="dbref"/> expires: the object's
+	/// own attribute reads, the inherited ones game-wide (see <see cref="AttributesTag"/>), and, for the
+	/// ALIAS attribute, every lookup of a player by name — the write changes which names find the player.
+	/// </summary>
+	public static string[] AttributeWriteTags(DBRef dbref, params IEnumerable<string[]> attributes)
+		=> attributes.Any(WritesAliases)
+			? [AttributesTag(dbref.Number), CacheTags.InheritedAttributes, CacheTags.PlayerNames]
+			: [AttributesTag(dbref.Number), CacheTags.InheritedAttributes];
+
+	private static bool WritesAliases(string[] attribute)
+		=> attribute.Length > 0 && Services.PlayerAliases.IsAliasAttribute(attribute[0]);
 }

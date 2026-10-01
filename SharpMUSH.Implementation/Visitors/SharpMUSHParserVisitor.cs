@@ -17,6 +17,7 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -1946,7 +1947,8 @@ public class SharpMUSHParserVisitor(
 
 			var clearHandle = prs.CurrentState.Handle;
 
-			if (!clearHandle.HasValue)
+			// A player's alias list was reported by the write itself (PlayerAliases).
+			if (!clearHandle.HasValue || PlayerAliases.Applies(clearTargetObject, matchedEntry.Name))
 			{
 				return CallState.Empty;
 			}
@@ -1991,7 +1993,7 @@ public class SharpMUSHParserVisitor(
 
 		var handle2 = prs.CurrentState.Handle;
 
-		if (!handle2.HasValue)
+		if (!handle2.HasValue || PlayerAliases.Applies(targetObject, matchedEntry.Name))
 		{
 			return CallState.Empty;
 		}

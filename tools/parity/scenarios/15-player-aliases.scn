@@ -1,0 +1,75 @@
+# A player's ALIAS attribute is its alias list, and the player list follows it (#1499): every way
+# of writing ALIAS updates what *name, page and lookups find, and alias()/fullalias() read it back.
+# Aliases here are never a prefix of a connected player's name, so a miss is a miss and not
+# visible_short_page's partial match of who is online.
+::case alias.set  @alias makes the player findable by the alias
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as alice
+@alias me=Wonder
+think [alias(me)]/[fullalias(me)]/[get(me/ALIAS)]
+think [strmatch(num(*Wonder),num(me))] [strmatch(num(*wonder),num(me))]
+::as bob
+page Wonder=Are you Alice?
+think [name(*Wonder)]
+
+::case alias.multiple  several aliases, the short alias, too many, an empty one
+::as alice
+&ALIAS me=Wonder;Dreamer
+think [alias(me)]/[fullalias(me)]
+think [strmatch(num(*Dreamer),num(me))]
+&ALIAS me=Wa;Wb;Wc;Wd
+think [get(me/ALIAS)]
+&ALIAS me=Wonder;;Dreamer
+think [get(me/ALIAS)]
+
+::case alias.taken  an alias another player's name or alias holds is refused
+::as bob
+@alias me=Alice
+@alias me=Dreamer
+@alias me=WONDER
+think [get(me/ALIAS)]
+@alias me=Builder
+::as alice
+@alias me=builder
+@name me=Builder
+think [name(me)] [get(me/ALIAS)]
+::as bob
+@alias me
+
+::case alias.case  a player may recase their own alias
+::as alice
+@alias me=WONDER;dreamer
+think [fullalias(me)]
+
+::case alias.set-forms  @set and alias() write it too
+@set me=ALIAS:Rabbit
+think [strmatch(num(*Rabbit),num(me))] [strmatch(num(*Wonder),#-1*)]
+think [alias(me,Hatter)]
+think [alias(me)] [strmatch(num(*Rabbit),#-1*)]
+
+::case alias.clear  clearing it removes the alias from lookups
+@alias me
+think [strmatch(num(*Hatter),#-1*)]/[alias(me)]/[hasattr(me,ALIAS)]
+@alias me=Hatter
+&ALIAS me=
+think [get(me/ALIAS)]
+&ALIAS me
+think [strmatch(num(*Hatter),#-1*)]/[hasattr(me,ALIAS)]
+
+::case alias.name  @name with an alias list
+@name me=Alice;Queen;Knave
+think [fullalias(me)] [strmatch(num(*Knave),num(me))]
+@name me=Alice;
+think [hasattr(me,ALIAS)] [strmatch(num(*Knave),#-1*)]
+@name me=Alice;Qa;Qb;Qc
+@name me=Alice;Bob
+think [name(me)] [hasattr(me,ALIAS)]
+
+::case alias.rename  renaming to one's own alias, and back
+@alias me=Duchess
+@name me=Duchess
+think [name(me)] [strmatch(num(*Duchess),num(me))]
+@name me=Alice
+think [name(me)] [strmatch(num(*Duchess),num(me))] [fullalias(me)]
+@alias me

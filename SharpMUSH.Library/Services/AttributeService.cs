@@ -31,7 +31,7 @@ public class AttributeService(
 	private readonly AttributeFlagWriter _flagWriter = new(mediator, ps, notifyService);
 
 	/// <summary>Writes and <c>@wipe</c> — PennMUSH's <c>do_set_atr</c>/<c>do_wipe</c>. See <see cref="AttributeWriter"/>.</summary>
-	private readonly AttributeWriter _writer = new(mediator, ps, notifyService, serviceProvider);
+	private readonly AttributeWriter _writer = new(mediator, ps, notifyService, validateService, configuration, serviceProvider);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,

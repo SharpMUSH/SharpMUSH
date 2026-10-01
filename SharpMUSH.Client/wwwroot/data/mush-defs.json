@@ -3186,7 +3186,8 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameterNames": [
-        "object"
+        "object",
+        "new alias"
       ]
     },
     "align": {
