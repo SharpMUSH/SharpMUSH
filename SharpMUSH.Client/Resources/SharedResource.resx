@@ -4307,4 +4307,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Nobody else is here.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layout scope</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layout scope (optional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>The page this widget belongs to, e.g. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB package</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB package (optional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live data pushed by the game, e.g. weather.now; replaces the data URL</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Yesterday</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Message {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Private pages</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Nothing here yet.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Back to the scene</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>The play page's right column: who is here, the exits, and game panels.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Here</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Exits</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
 </root>

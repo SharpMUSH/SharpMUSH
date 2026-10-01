@@ -4962,4 +4962,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Rajtad kívül senki sincs itt.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Elrendezési hatókör</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Elrendezési hatókör (nem kötelező)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Az oldal, amelyhez a widget tartozik, pl. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-csomag</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-csomag (nem kötelező)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>A játék által küldött élő adatok, pl. weather.now; az adat-URL helyett</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Ma</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Tegnap</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Új</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Üzenet ide: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Csatorna</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privát üzenetek</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Még nincs itt semmi.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Vissza a jelenethez</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Játék</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>A játékoldal jobb oszlopa: ki van itt, a kijáratok és a játék paneljei.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Itt</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Kijáratok</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Alkalmazások</value>
+  </data>
 </root>

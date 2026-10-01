@@ -11,7 +11,9 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Play;
+using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Tests.BUnit.Components;
 using PlayPage = SharpMUSH.Client.Pages.Play;
 
@@ -25,6 +27,20 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class PlayPageD1Tests : TrackingBunitContext
 {
 	private readonly OobChannelStore _store = new();
+	private readonly TestCommFeed _comms = new();
+
+	/// <summary>A game panel shipped for the Play scope (board 13), fed by an OOB package.</summary>
+	private static readonly SharpMUSH.Client.Models.Applications.PortalApplication[] Apps =
+	[
+		new("weather", "Weather", null, "Widget", "http/weather/schema", null, null, "Guest", null, ["RightSidebar"], 30,
+			Scope: "play", OobPackage: "weather.now"),
+		// Staff-only: never offered to a visitor below its minimum role.
+		new("staffboard", "Staff board", null, "Widget", "http/staff/schema", null, null, "Wizard", null, ["RightSidebar"], 40,
+			Scope: "play"),
+		// Declares it runs only in the main content zone: never appended to the aside.
+		new("ledger", "Ledger", null, "Widget", "http/ledger/schema", null, null, "Guest", null, ["MainContent"], 50,
+			Scope: "play"),
+	];
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
 	private readonly FakeSceneHub _hub;
 
@@ -57,7 +73,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
 
-		_hub = PlayPageServices.Install(Services);
+		_hub = PlayPageServices.Install(Services, _comms, Apps);
 	}
 
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
@@ -219,11 +235,79 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(sheet.GetAttribute("aria-modal")).IsEqualTo("true");
 		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("align-items: flex-end")
 			.Because("MudOverlay centres a zero-size content box; the sheet sits on the bottom edge instead");
+		var sheetTabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList();
+		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the Room sheet is the play layout, then the scope panels, as the desktop aside is");
 		await Assert.That(cut.FindAll(".play-sheet .exits--rows .exit").Count).IsEqualTo(1);
 		cut.Find(".play-sheet .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
 		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task APanelAboveTheViewersRole_IsNotShown()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-aside .play-panel .kit-card-title").Select(t => t.TextContent).ToList())
+			.IsEquivalentTo(new[] { "Weather" });
+	}
+
+	[Test]
+	public async Task PlacingAPanelInTheLayout_WhilePlayIsOpen_DoesNotShowItTwice()
+	{
+		var layouts = Substitute.For<ILayoutService>();
+		var withoutWeather = PlayLayout("Here", "Exits");
+		var withWeather = PlayLayout("Here", "Exits", "weather");
+		var current = withoutWeather;
+		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(_ => Task.FromResult(current));
+		Services.AddSingleton(layouts);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+
+		current = withWeather;
+		layouts.OnLayoutChanged += Raise.Event<Action<string>>(LayoutScopes.Play);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".play-aside .play-panel").Count != 0) throw new InvalidOperationException("the panel is still listed apart");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task APanelAboveTheViewersRole_StaysHidden_WhenTheLayoutPlacesIt()
+	{
+		var layouts = Substitute.For<ILayoutService>();
+		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(Task.FromResult(PlayLayout("Here", "Exits", "staffboard")));
+		Services.AddSingleton(layouts);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.SchemaWidget>()
+				.Select(w => w.Instance.WidgetName).ToList())
+			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
+		cut.FindAll(".play-tab")[1].Click();
+		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
+			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task APanelThatDoesNotAllowTheRightSidebar_IsNotAppended()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-aside .play-panel .kit-card-title").Select(t => t.TextContent).ToList())
+			.DoesNotContain("Ledger").Because("the ledger declares MainContent only");
+	}
+
+	private static LayoutConfiguration PlayLayout(params string[] names) =>
+		new(new Dictionary<WidgetZone, List<WidgetPlacement>>
+		{
+			[WidgetZone.RightSidebar] = names.Select((n, i) => new WidgetPlacement(n, i, null)).ToList(),
+		}, new LayoutSettings(false, false));
 
 	[Test]
 	public async Task TheInSceneRow_IsCurrentOnlyWhileTheStoryIsShown()
@@ -248,6 +332,44 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".sheet"), TimeSpan.FromSeconds(5));
 		cut.FindAll(".sheet-actions > *")[1].Click();
 		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsEqualTo("page #312=");
+	}
+
+	[Test]
+	public async Task AChannelRow_OpensTheChannelViewInMain_AndCloseReturnsToTheScene()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		_comms.Lines["Public"] = [new CommMessage("channel", "Public", [], "Wren Halloway", null, "anyone up for a scene?", DateTimeOffset.Now)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-channels .kit-row"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+
+		await Assert.That(cut.Find(".comm-title").TextContent).IsEqualTo("# Public");
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsTrue();
+		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1).Because("the terminal keeps its connection and output");
+		await Assert.That(cut.Find(".test-pagebar .play-side-channels .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
+
+		cut.Find(".comm-compose input").Input("I'm in");
+		cut.Find(".comm-compose button.comm-send").Click();
+		await _play.Received(1).SendAsync("@chat Public=I'm in");
+
+		cut.Find("button.comm-close").Click();
+		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsFalse();
+		await Assert.That(_comms.Viewing).IsNull();
+	}
+
+	[Test]
+	public async Task TheAside_IsThePlayLayout_ThenTheGamesPlayPanels()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		var order = cut.FindAll(".play-aside .kit-card-title").Select(t => t.TextContent).ToList();
+		await Assert.That(order).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.HereWidget>().Count).IsEqualTo(1)
+			.Because("Here and Exits come from the play layout scope, not markup in the page");
 	}
 
 	[Test]

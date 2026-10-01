@@ -2,6 +2,8 @@
 @using SharpMUSH.Client.Services
 @inject ICommFeed Feed
 @inject CharacterDirectoryService Directory
+@inject ApplicationRegistryClient Registry
+@using SharpMUSH.Client.Models.Applications
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -65,6 +67,20 @@
             }
         </nav>
     }
+    @if (_apps.Count > 0)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavPlayApps"]</SectionLabel>
+        }
+        <nav class="play-side-apps" aria-label="@Loc["NavPlayApps"]">
+            @foreach (var app in _apps)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Outlined.Apps : app.Icon)"
+                            Label="@app.DisplayName" Href="@($"/apps/{Uri.EscapeDataString(app.Slug)}")" Collapsed="@Collapsed" />
+            }
+        </nav>
+    }
 </div>
 
 @code {
@@ -89,6 +105,11 @@
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>README §7.4: page apps whose NavPlacement is "Play", as the viewer's role allows.</summary>
+    private IReadOnlyList<PortalApplication> _apps = [];
+
     private IReadOnlyList<CommChannel> Channels => Feed.Channels.Where(c => c.Joined).ToList();
 
     protected override async Task OnInitializedAsync()
@@ -100,6 +121,10 @@
         {
             _directory = rows;
         }
+        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, "Play")
+            .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Page)
+            .ToList();
     }
 
     private void OnFeedChanged() => _ = InvokeAsync(StateHasChanged);

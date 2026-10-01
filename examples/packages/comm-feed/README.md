@@ -1,0 +1,39 @@
+# comm-feed
+
+The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE`` and ``PLAYER`CHANNELS`` event
+handlers, delivered as an attach-mode package (decision 20.3). They are what
+fills the web portal's Play sidebar **Channels** and **Pages** groups and its
+channel view, as `room-contents` fills *Here* and *Exits*.
+
+- **`comm.channels`** — `{"v": 2, "viewer": {…}, "channels": [ … ]}`, the
+  channels the player is on, sent to that player on connect and whenever
+  their list changes (join, leave, their own channel flags, a rename or
+  deletion).
+- **`comm.message`** — `{"v": 2, "kind": "channel" | "page", …}`, one channel
+  line or page, sent only to the players who received it: the engine names
+  them, after every channel lock, gag, mute, `@chatformat`, page lock, HAVEN
+  and interaction check has run. The package never widens that list.
+
+There are no unread counts: the engine does not know what a player has read,
+so the portal counts lines as they arrive.
+
+It manages only these attributes (and its ``FN`COMM`*`` helpers) on the
+configured `event_handler` object (`{{$event_handler}}`, `#9` by default). It
+never creates or destroys the object, and uninstalling leaves the object's
+other softcode untouched.
+
+The payload shapes, the event arguments and the tests are in
+[`docs/softcode/comm-feed-handler.md`](../../../docs/softcode/comm-feed-handler.md).
+
+## Customising
+
+| Attribute | Decides |
+|---|---|
+| ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to (default: a connected player) |
+| ``FN`COMM`RECIPIENTS`` (`%0` objids) | who a `comm.message` goes to — it can narrow the engine's list, never widen it |
+| ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | the `text` of a line |
+| ``FN`COMM`CHANNELROW`` / ``FN`COMM`CHANNELS`` | the `comm.channels` rows and payload |
+| ``FN`COMM`MESSAGE`` | the `comm.message` payload |
+
+To silence one of them, blank its event attribute (`&PAGE`MESSAGE #9=`); to
+remove them all, `@package uninstall comm-feed`.

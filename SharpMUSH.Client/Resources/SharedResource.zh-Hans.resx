@@ -4962,4 +4962,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>这里没有其他人。</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>布局范围</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>布局范围（可选）</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>此小组件所属的页面，例如 play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB 包</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB 包（可选）</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>游戏推送的实时数据，例如 weather.now；替代数据 URL</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>今天</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>昨天</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>新消息</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>发送给 {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>这里还没有内容。</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>返回场景</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>游戏页面右栏：在场者、出口和游戏面板。</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>在场</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>出口</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>应用</value>
+  </data>
 </root>

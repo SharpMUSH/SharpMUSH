@@ -4962,4 +4962,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Больше здесь никого нет.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Область макета</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Область макета (необязательно)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Страница, к которой относится виджет, например play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-пакет</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-пакет (необязательно)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Данные в реальном времени от игры, например weather.now; заменяет URL данных</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Вчера</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Новые</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Сообщение: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Личные сообщения</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Пока ничего нет.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Вернуться к сцене</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Игра</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Правая колонка страницы игры: кто здесь, выходы и панели игры.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Здесь</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Выходы</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
 </root>

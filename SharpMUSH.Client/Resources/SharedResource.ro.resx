@@ -4962,4 +4962,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Nu mai este nimeni aici.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Domeniul aspectului</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Domeniul aspectului (opțional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Pagina căreia îi aparține widgetul, de ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Pachet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Pachet OOB (opțional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Date în timp real trimise de joc, de ex. weather.now; înlocuiește URL-ul de date</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Astăzi</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Ieri</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nou</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Mesaj către {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Mesaje private</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Încă nimic aici.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Înapoi la scenă</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Joc</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Coloana din dreapta a paginii de joc: cine este aici, ieșirile și panourile jocului.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Aici</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Ieșiri</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplicații</value>
+  </data>
 </root>

@@ -1,7 +1,8 @@
-﻿using Mediator;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Notifications;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
@@ -11,6 +12,15 @@ public class CreateChannelCommandHandler(IChannelStore database) : ICommandHandl
 		=> await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner, cancellationToken);
 }
 
+/// <summary>
+/// A rename changes every member's channel list too, but it is announced by <c>ChannelRename</c> once
+/// this has returned, not from here. <c>CacheInvalidationBehavior</c> clears the cached channel list
+/// before this handler and again after it; a read that lands between the first pass and the write (any
+/// other command listing channels meanwhile) caches the pre-rename list again, and only the second pass
+/// removes it. A listener run from inside this handler runs before that pass and can be handed the old
+/// name — which is what the rename test in <c>CommFeedPackageTests</c> saw when the announcement was
+/// published here.
+/// </summary>
 public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelCommand request, CancellationToken cancellationToken)
@@ -30,38 +40,64 @@ public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandl
 	}
 }
 
-public class DeleteChannelCommandHandler(IChannelStore database) : ICommandHandler<DeleteChannelCommand>
+/// <summary>
+/// The members are read before the channel goes, since afterwards there is nothing to read them from.
+/// Announcing from inside the handler is safe here, unlike a rename: a cached channel list that still
+/// holds the deleted channel yields nothing for it, because membership is read from the store.
+/// </summary>
+public class DeleteChannelCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<DeleteChannelCommand>
 {
 	public async ValueTask<Unit> Handle(DeleteChannelCommand request, CancellationToken cancellationToken)
 	{
+		var members = await request.Channel.Members.Value
+			.Select(member => member.Member)
+			.ToListAsync(cancellationToken);
+
 		await database.DeleteChannelAsync(request.Channel, cancellationToken);
+
+		foreach (var member in members)
+		{
+			await publisher.Publish(
+				new ChannelMembershipChangedNotification(member, request.Channel.Name.ToPlainText(), "delete"),
+				cancellationToken);
+		}
+
 		return Unit.Value;
 	}
 }
 
-public class AddUserToChannelCommandHandler(IChannelStore database) : ICommandHandler<AddUserToChannelCommand>
+public class AddUserToChannelCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<AddUserToChannelCommand>
 {
 	public async ValueTask<Unit> Handle(AddUserToChannelCommand request, CancellationToken cancellationToken)
 	{
 		await database.AddUserToChannelAsync(request.Channel, request.Object, cancellationToken);
+		await publisher.Publish(
+			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "join"),
+			cancellationToken);
 		return Unit.Value;
 	}
 }
 
-public class RemoveUserFromChannelCommandHandler(IChannelStore database) : ICommandHandler<RemoveUserFromChannelCommand>
+public class RemoveUserFromChannelCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<RemoveUserFromChannelCommand>
 {
 	public async ValueTask<Unit> Handle(RemoveUserFromChannelCommand request, CancellationToken cancellationToken)
 	{
 		await database.RemoveUserFromChannelAsync(request.Channel, request.Object, cancellationToken);
+		await publisher.Publish(
+			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "leave"),
+			cancellationToken);
 		return Unit.Value;
 	}
 }
 
-public class UpdateChannelUserStatusCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelUserStatusCommand>
+public class UpdateChannelUserStatusCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<UpdateChannelUserStatusCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelUserStatusCommand request, CancellationToken cancellationToken)
 	{
 		await database.UpdateChannelUserStatusAsync(request.Channel, request.Object, request.Status, cancellationToken);
+		await publisher.Publish(
+			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "status"),
+			cancellationToken);
 		return Unit.Value;
 	}
 }

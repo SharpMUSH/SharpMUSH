@@ -11,6 +11,12 @@
 @inject IPlayTerminalService PlayTerminal
 @inject AccountAuthService AccountAuth
 @inject ICommFeed Comms
+@inject ILayoutService Layouts
+@inject ApplicationCatalog Catalog
+@inject IWidgetRegistry Widgets
+@using SharpMUSH.Client.Components.Layout
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Models.Portal.Widgets
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -67,7 +73,14 @@ else
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
                                 Minimised="@_bannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
                 }
-                <div class="play-card">
+                @if (_commKey is { } commKey)
+                {
+                    <div class="play-comm">
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" />
+                    </div>
+                }
+                @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
+                <div class="play-card" hidden="@(_commKey is not null)">
                     <PlaySceneCard Title="@CardTitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Controls>
                             @if (View == PlayView.Terminal)
@@ -107,8 +120,23 @@ else
             </div>
             @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. *@
             <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
-                <HereCard Occupants="@Room.Occupants" OnCharacter="OpenSheet" OnCommand="SendAsync" />
-                <ExitsCard Exits="@Room.Exits" OnCommand="SendAsync" />
+                @* README §7.4: the aside is the "play" layout scope (Here, then Exits, by default), then the game's
+                   panels registered for the Play scope that the layout does not already place. The same entries
+                   as the Room sheet, so the role and zone rules hold in both. *@
+                <CascadingValue Value="_pageContext" IsFixed="true">
+                    @foreach (var entry in _asideEntries.Where(e => e.Placed))
+                    {
+                        <WidgetErrorBoundary WidgetName="@entry.Name">
+                            <DynamicComponent Type="@entry.Widget.ComponentType" Parameters="@EntryParameters(entry)" />
+                        </WidgetErrorBoundary>
+                    }
+                    @foreach (var app in _scopePanels)
+                    {
+                        <KitCard Aside="true" Title="@app.DisplayName" Class="play-panel">
+                            <SchemaWidget WidgetName="@app.Slug" Zone="@nameof(WidgetZone.RightSidebar)" />
+                        </KitCard>
+                    }
+                </CascadingValue>
             </aside>
             <nav class="play-tabs" aria-label="@Loc["NavPlayTabs"]">
                 <button type="button" class="play-tab @(_mobileSheet is null ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet is null ? "true" : "false")"
@@ -142,25 +170,26 @@ else
                     <div class="play-sheet-grip" aria-hidden="true"></div>
                     @if (sheet == MobileSheet.Room)
                     {
+                        @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
+                           scope panels, each rendered as the aside renders it but in sheet mode. *@
                         <div class="play-sheet-tabs" role="tablist">
-                            <button type="button" role="tab" id="play-tab-here" aria-controls="play-panel-room" aria-selected="@(!_roomExits ? "true" : "false")"
-                                    class="play-sheet-tab @(!_roomExits ? "play-sheet-tab--on" : null)" @onclick="() => _roomExits = false">
-                                @($"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}")
-                            </button>
-                            <button type="button" role="tab" id="play-tab-exits" aria-controls="play-panel-room" aria-selected="@(_roomExits ? "true" : "false")"
-                                    class="play-sheet-tab @(_roomExits ? "play-sheet-tab--on" : null)" @onclick="() => _roomExits = true">
-                                @($"{Loc["NavExits"]} · {Room.Exits.Count}")
-                            </button>
+                            @foreach (var entry in _asideEntries)
+                            {
+                                var e = entry;
+                                var on = e.Name == _sheetEntry;
+                                <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
+                                        class="play-sheet-tab @(on ? "play-sheet-tab--on" : null)" @onclick="() => _sheetEntry = e.Name">
+                                    @TabLabel(e)
+                                </button>
+                            }
                         </div>
-                        <div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@(_roomExits ? "play-tab-exits" : "play-tab-here")">
-                            @if (_roomExits)
-                            {
-                                <ExitsCard Exits="@Room.Exits" Rows="true" Bare="true" AliasKeys="false" OnCommand="SendFromSheetAsync" />
-                            }
-                            else
-                            {
-                                <HereCard Occupants="@Room.Occupants" Bare="true" OnCharacter="OpenSheetFromRoom" OnCommand="SendFromSheetAsync" />
-                            }
+                        <div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@($"play-tab-{_sheetEntry}")">
+                            <CascadingValue Value="_sheetContext" IsFixed="true">
+                                @if (_asideEntries.FirstOrDefault(e => e.Name == _sheetEntry) is { } shown)
+                                {
+                                    <DynamicComponent Type="@shown.Widget.ComponentType" Parameters="@EntryParameters(shown)" />
+                                }
+                            </CascadingValue>
                         </div>
                     }
                     else
@@ -195,9 +224,26 @@ else
     private enum MobileSheet { Room, Channels, Pages }
 
     private MobileSheet? _mobileSheet;
-    private bool _roomExits = true;
+    /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
+    /// <param name="Placed">From the play layout; otherwise a scope panel the page appends.</param>
+    private sealed record AsideEntry(string Name, IPortalWidget Widget, System.Text.Json.JsonElement? Config, bool Placed);
+
+    /// <summary>The play layout's aside, then the scope panels it does not place, as the Room sheet's tabs.</summary>
+    private IReadOnlyList<AsideEntry> _asideEntries = [];
+
+    /// <summary>The Room sheet's current tab: Exits when there is one (board 11), else the first.</summary>
+    private string? _sheetEntry;
+
+    /// <summary>The sheet's variant of the page context: sheet mode, and a send that closes the sheet.</summary>
+    private PlayPageContext _sheetContext = null!;
 
     private bool InScene => Room.Info?.Scene is not null;
+
+    /// <summary>What the play-scope widgets may do on this page: open the sheet, send a command.</summary>
+    private PlayPageContext _pageContext = null!;
+
+    /// <summary>Widget apps registered for the Play scope that the play layout does not place itself.</summary>
+    private IReadOnlyList<PortalApplication> _scopePanels = [];
 
     /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
     private string? _liveRefusedFor;
@@ -219,7 +265,10 @@ else
     private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;
 
     /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
-    private string? SidebarCurrent => View == PlayView.Story ? null : string.Empty;
+    private string? SidebarCurrent => _commKey ?? (View == PlayView.Story ? null : string.Empty);
+
+    /// <summary>The channel or conversation main is showing (board 06), or null for the scene card.</summary>
+    private string? _commKey;
 
     private string CardTitle =>
         Room.Info?.Scene?.Title is { Length: > 0 } title ? title
@@ -336,9 +385,82 @@ else
         PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
         Comms.Changed += OnCommsChanged;
         Room = PlayTerminal.OobChannels.Room;
+        _pageContext = new PlayPageContext(
+            occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
+            SendAsync);
+        _sheetContext = new PlayPageContext(
+            occupant => InvokeAsync(() => { OpenSheetFromRoom(occupant); StateHasChanged(); }),
+            command => InvokeAsync(async () => { await SendFromSheetAsync(command); StateHasChanged(); }),
+            InSheet: true);
+        Layouts.OnLayoutChanged += OnLayoutChanged;
     }
 
-    protected override Task OnInitializedAsync() => ResolveRosterAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await ResolveRosterAsync();
+        await LoadAsideAsync();
+    }
+
+    /// <summary>
+    /// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
+    /// layout does not place, that allow the right sidebar, and that the viewer's role allows. An application
+    /// the layout places keeps its minimum role too: placing it is not granting it. Re-read when an admin
+    /// changes the layout.
+    /// </summary>
+    private async Task LoadAsideAsync()
+    {
+        var layout = await Layouts.GetLayoutAsync(LayoutScopes.Play);
+        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var placements = (layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list : [])
+            .OrderBy(p => p.Order)
+            .ToList();
+        var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _scopePanels = Catalog.ForScope(LayoutScopes.Play)
+            .Where(a => role >= a.MinimumRoleEnum)
+            .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Widget && !placed.Contains(a.Slug))
+            .Where(a => a.ZoneEnums.Contains(WidgetZone.RightSidebar))
+            .ToList();
+
+        var entries = new List<AsideEntry>();
+        foreach (var placement in placements.Where(p => Catalog.Get(p.WidgetName) is not { } app || role >= app.MinimumRoleEnum))
+        {
+            if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config, Placed: true));
+        }
+        foreach (var app in _scopePanels)
+        {
+            if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new AsideEntry(app.Slug, widget, null, Placed: false));
+        }
+        _asideEntries = entries;
+        if (_sheetEntry is null || entries.All(e => e.Name != _sheetEntry))
+        {
+            _sheetEntry = entries.FirstOrDefault(e => e.Name == "Exits")?.Name ?? entries.FirstOrDefault()?.Name;
+        }
+    }
+
+    private void OnLayoutChanged(string scope)
+    {
+        if (!string.Equals(scope, LayoutScopes.Play, StringComparison.OrdinalIgnoreCase)) return;
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsideAsync();
+            StateHasChanged();
+        });
+    }
+
+    private string TabLabel(AsideEntry entry) => entry.Name switch
+    {
+        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}",
+        "Exits" => $"{Loc["NavExits"]} · {Room.Exits.Count}",
+        _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
+    };
+
+    /// <summary>The parameters ZoneRenderer passes a widget; application widgets also get their slug.</summary>
+    private static Dictionary<string, object> EntryParameters(AsideEntry entry)
+    {
+        var parameters = new Dictionary<string, object> { ["Config"] = entry.Config!, ["Zone"] = nameof(WidgetZone.RightSidebar) };
+        if (entry.Widget.ComponentType == typeof(SchemaWidget)) parameters["WidgetName"] = entry.Name;
+        return parameters;
+    }
 
     private async Task ResolveRosterAsync()
     {
@@ -437,17 +559,16 @@ else
         }
     }
 
-    private void OpenScene() => _chosenView = PlayView.Story;
-
-    /// <summary>
-    /// A channel or conversation. Until the channel view exists (README §5.1, board 06) its lines are in
-    /// the terminal, which is where this goes.
-    /// </summary>
-    private void OpenComm(string key)
+    private void OpenScene()
     {
-        _chosenView = PlayView.Terminal;
-        Comms.MarkRead(key);
+        _commKey = null;
+        _chosenView = PlayView.Story;
     }
+
+    /// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
+    private void OpenComm(string key) => _commKey = key;
+
+    private void CloseComm() => _commKey = null;
 
     private void OpenSceneFromSheet()
     {
@@ -487,8 +608,11 @@ else
         catch (InvalidOperationException) { }
     }
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     public void Dispose()
     {
+        Layouts.OnLayoutChanged -= OnLayoutChanged;
         PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
         Comms.Changed -= OnCommsChanged;

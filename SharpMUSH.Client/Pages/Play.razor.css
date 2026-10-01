@@ -40,14 +40,16 @@
     min-height: 0;
 }
 
-.play-card {
+.play-card,
+.play-comm {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
-/* A scoped display rule outranks the user agent's [hidden]; focus mode hides the aside this way. */
+/* A scoped display rule outranks the user agent's [hidden]; say it again. */
+.play-card[hidden],
 .play-aside[hidden] {
     display: none;
 }

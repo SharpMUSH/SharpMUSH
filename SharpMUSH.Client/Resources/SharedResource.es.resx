@@ -4962,4 +4962,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>No hay nadie más aquí.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Ámbito de diseño</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Ámbito de diseño (opcional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>La página a la que pertenece el widget, p. ej. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Paquete OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Paquete OOB (opcional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Datos en vivo enviados por el juego, p. ej. weather.now; sustituye a la URL de datos</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Hoy</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Ayer</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nuevo</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Mensaje a {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Mensajes privados</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Aún no hay nada.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Volver a la escena</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Jugar</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>La columna derecha de la página de juego: quién está aquí, las salidas y los paneles del juego.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Aquí</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Salidas</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplicaciones</value>
+  </data>
 </root>

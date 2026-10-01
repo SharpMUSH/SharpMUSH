@@ -4215,4 +4215,61 @@
   <data name="NavPlayNobodyElseHere" xml:space="preserve">
     <value>Personne d'autre n'est ici.</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Portée de mise en page</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Portée de mise en page (facultatif)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>La page à laquelle appartient le widget, p. ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Paquet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Paquet OOB (facultatif)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Données en direct envoyées par le jeu, p. ex. weather.now ; remplace l’URL de données</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nouveau</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Message à {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Messages privés</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Rien pour l'instant.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Retour à la scène</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Jouer</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>La colonne de droite de la page de jeu : qui est là, les sorties et les panneaux du jeu.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Ici</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Sorties</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Applications</value>
+  </data>
 </root>
