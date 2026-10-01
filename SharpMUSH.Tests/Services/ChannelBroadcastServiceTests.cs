@@ -29,7 +29,7 @@ public class ChannelBroadcastServiceTests
 
 	/// <summary>
 	/// CHANNEL`MESSAGE names the members the line was delivered to, as parts: the channel, the speaker
-	/// (empty for a sourceless line), the style word, the name, the message and the time.
+	/// (empty for a sourceless line), the style word, the name, the message, the time and the line's id.
 	/// </summary>
 	[Test]
 	public async Task DeliveredLine_RaisesChannelMessageNamingItsRecipients()
@@ -47,14 +47,49 @@ public class ChannelBroadcastServiceTests
 			SharpEvents.ChannelMessage,
 			null,
 			Arg.Is<string[]>(args =>
-				args.Length == 7
+				args.Length == 8
 				&& args[0] == "Public"
 				&& args[1] == string.Empty
 				&& args[2] == "say"
 				&& args[3] == "System"
 				&& args[4] == "The server is restarting."
 				&& args[5] == member.Object().DBRef.ToString()
-				&& long.Parse(args[6]) >= before));
+				&& long.Parse(args[6]) >= before
+				&& args[7] == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+	}
+
+	/// <summary>
+	/// The id the event passes on (the <c>comm.message</c> payload's <c>id</c>) is the id the line is
+	/// buffered under, which is what the portal's recall endpoint returns: a pulled and a pushed copy of
+	/// one line are known to be one. The buffered line keeps its parts for the same endpoint.
+	/// </summary>
+	[Test]
+	public async Task BufferedLine_CarriesTheIdTheEventPassedOn_AndItsParts()
+	{
+		var eventService = Substitute.For<IEventService>();
+		var mediator = Substitute.For<IMediator>();
+		var permissions = Substitute.For<IPermissionService>();
+		permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), IPermissionService.InteractType.Hear)
+			.Returns(true);
+		var service = Service(Substitute.For<INotifyService>(), eventService, mediator, permissions);
+		var member = new AnySharpObject(Thing(340, "Speaker"));
+		var line = Line(Channel(member, gagged: false), INotifyService.NotificationType.Pose) with { Source = member };
+
+		await service.BroadcastAsync(line, CancellationToken.None);
+
+		var raised = eventService.ReceivedCalls()
+			.Single(call => call.GetMethodInfo().Name == nameof(IEventService.TriggerEventAsync))
+			.GetArguments()[3] as string[];
+		var buffered = mediator.ReceivedCalls()
+			.Select(call => call.GetArguments()[0])
+			.OfType<AddChannelMessageCommand>()
+			.Single().Message;
+
+		await Assert.That(buffered.Id).IsGreaterThan(0);
+		await Assert.That(raised![7]).IsEqualTo(buffered.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		await Assert.That(buffered.Style).IsEqualTo("pose");
+		await Assert.That(buffered.SpeakerName).IsEqualTo("System");
+		await Assert.That(buffered.MessageText).IsEqualTo("The server is restarting.");
 	}
 
 	/// <summary>A line nobody was sent — here, its one member gagged the channel — raises nothing.</summary>
@@ -100,6 +135,16 @@ public class ChannelBroadcastServiceTests
 			Arg.Is<string[]>(args => args[5] == member.Object().DBRef.ToString()));
 	}
 
+	/// <summary>Hands out a fixed id, so a test can name the one the next line will carry.</summary>
+	private sealed class FixedIds : IChannelMessageIdSource
+	{
+		public long Peek { get; } = 1_790_780_182_950_000;
+		public long Latest => Peek;
+		public ValueTask<long> NextAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult(Peek);
+	}
+
+	private static readonly FixedIds Ids = new();
+
 	private static ChannelBroadcastService Service(INotifyService notifyService, IEventService eventService,
 		IMediator? mediator = null, IPermissionService? permissions = null) =>
 		new(
@@ -109,6 +154,7 @@ public class ChannelBroadcastServiceTests
 			Substitute.For<IAttributeService>(),
 			Substitute.For<IMUSHCodeParser>(),
 			eventService,
+			Ids,
 			NullLogger<ChannelBroadcastService>.Instance);
 
 	private static SharpChannel Channel(AnySharpObject member, bool gagged) => new()

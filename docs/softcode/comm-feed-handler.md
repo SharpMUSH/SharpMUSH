@@ -58,11 +58,11 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 
 ## Event arguments
 
-| Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` |
-|---|---|---|---|---|---|---|---|
-| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms |
-| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | |
-| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | |
+| Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` | `%7` |
+|---|---|---|---|---|---|---|---|---|
+| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms | line id |
+| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | | |
+| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
@@ -71,6 +71,10 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
   channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
   `@chatformat` changes only their terminal line.
 - Cause is `connect`, `join`, `leave`, `status`, `rename` or `delete`.
+- The line id is the id the channel's recall buffer holds the line under, which
+  the portal's recall endpoint returns too. Ids are one sequence for every
+  channel, taken from the clock in microseconds, so a later line has a larger
+  id, also across a restart.
 - `%#` is the speaker or pager. For ``PLAYER`CHANNELS`` it is the player on
   connect, and `#1` otherwise: the change is reported by the database write,
   which does not know who asked.
@@ -86,7 +90,7 @@ comments every attribute; every helper is under ``FN`COMM`` so it cannot
 collide with `room-contents`' ``FN`*``.
 
 ```mushcode
-&CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,)))
+&CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7)))
 &PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1)))
 &PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
 ```
@@ -98,7 +102,7 @@ collide with `room-contents`' ``FN`*``.
 | ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
 | ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
 | ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
-| ``FN`COMM`MESSAGE`` (`%0` kind … `%7` page recipients) | the whole `comm.message` payload |
+| ``FN`COMM`MESSAGE`` (`%0` kind … `%7` page recipients, `%8` line id) | the whole `comm.message` payload |
 
 The idioms are the ones `room-contents` uses (see its handler document):
 `think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
@@ -137,9 +141,11 @@ The channels the viewer is **on**, and who the list was built for:
 - `gagged: true` marks a channel the viewer is still on but hears nothing
   from; absent otherwise.
 - There is **no `unread`**. The engine has no notion of what a player has
-  read — the terminal shows every line — so the client counts lines as they
-  arrive (below). A game that does track it can add `"unread": <n>` to a row
-  and the portal takes it.
+  read — the terminal shows every line — so the portal counts for itself
+  (below): from the character's read markers where it has one for the channel,
+  which the portal keeps on the server so the count survives a reload, and by
+  counting lines as they arrive where it has none. A game that does track it
+  can add `"unread": <n>` to a row and the portal takes it.
 - `viewer` tells the client whose list it is, which is how it recognises its
   own lines and leaves them out of the unread counts and a conversation's
   "with".
@@ -150,7 +156,8 @@ A channel line:
 
 ```json
 {"v":2,"kind":"channel","to":[],"from":"Wren Halloway","text":"anyone up for a scene?",
- "style":"say","ts":1790780182950,"channel":"Public","fromObjid":"#12:1790741467794"}
+ "style":"say","ts":1790780182950,"channel":"Public","fromObjid":"#12:1790741467794",
+ "id":1790780182950412}
 ```
 
 A page (here a group pose-page):
@@ -173,6 +180,10 @@ A page (here a group pose-page):
   page prefix: a pose carries the name (`Ilsa Varn nods`), because that is how
   a pose reads; `style` says which it was.
 - `ts` is milliseconds since 1970, taken when the line was sent.
+- `id` appears only on a channel line: the line's id, the one
+  `GET api/comm/channels/<channel>/recall` returns for the same line, so the
+  portal keeps one copy of a line it both pulled and was pushed. A page has
+  none; the engine keeps no page history to read it back from.
 
 ## What the portal does with them
 
@@ -189,11 +200,32 @@ of a missing `v` and of any malformed member):
   never be a channel name (those cannot hold a space).
 - 200 lines are kept per key, and the 100 most recent conversations.
 - A line from someone else arriving for a key that is not `Viewing` is
-  unread until `MarkRead`. A count a `comm.channels` row carries, 0 included,
+  unread until `MarkRead`, unless the key's read marker is already past it
+  (markers below). A count a `comm.channels` row carries, 0 included,
   replaces the feed's own; a channel a new list no longer carries is
   forgotten, history and count.
 - A new connection or a character switch clears it all, `Viewing` included,
   as it clears the room.
+- Once a `comm.channels` says whose feed it is, the feed reads that
+  character's read markers (`GET api/comm/markers`) and each channel's recall
+  buffer (`GET api/comm/channels/<channel>/recall`), and the channel view pulls
+  its channel again when it opens. A line with an `id` is kept once, however it
+  arrived. A channel or conversation with a marker counts as unread only what
+  came after it from someone else, so the count survives a reload and a change
+  of device; one without a marker counts lines as they arrive. `MarkRead`, and
+  a line arriving while `Viewing`, move the marker to the last line
+  (`PUT api/comm/markers/channels/<channel>` with the line's id and time;
+  `PUT api/comm/markers/conversations` with the others' objids and the time).
+  A marker never moves back. The endpoints act as the session's acting
+  character, and a feed whose viewer is someone else uses none of it.
+- The recall endpoint refuses what `@channel/recall` refuses: a channel the
+  character may not see answers 404, as a missing one does, and one they are
+  not on and could not join answers 403. A line only See_All members were sent
+  stays hidden from everyone else. Its `text` goes through the installed
+  ``FN`COMM`TEXT`` on the handler, with the handler as executor, the speaker as
+  enactor and the same arguments as the push, so a game that redefines it gets
+  the same text pulled as pushed. The bundled default is used only when the
+  attribute is absent.
 
 ## Testing
 
@@ -217,8 +249,9 @@ connecting.
 
 ## Differences from §7.3
 
-- **No unread counts from the server.** The proposal has `comm.channels`
-  carry them; nothing in the engine knows them, so the client counts.
+- **No unread counts in `comm.channels`.** The proposal has the list carry
+  them; the engine does not know them. The portal keeps per-character read
+  markers on the server instead (`api/comm/markers`) and counts from those.
 - **`to` is empty on a channel line** rather than naming the channel, which is
   in `channel`.
 - **Added keys:** `viewer` on `comm.channels`, `gagged` on a row, and

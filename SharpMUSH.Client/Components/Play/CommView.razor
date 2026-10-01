@@ -8,7 +8,8 @@
    by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
    a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
-   objid). While open, the feed's Viewing is this key, so its lines do not count as unread. *@
+   objid). While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
+   pulls its recent lines from the server; live lines then append, a line already held kept once. *@
 <section class="comm" aria-labelledby="comm-title">
     <header class="comm-head">
         <div class="comm-titles">
@@ -125,6 +126,8 @@
         _newAt = FirstUnreadIndex();
         Feed.Viewing = Key;
         Feed.MarkRead(Key);
+        // The channel's recent lines from the server; they arrive through Changed, filed with the live ones.
+        _ = Feed.LoadHistoryAsync(Key);
     }
 
     private int FirstUnreadIndex() => _firstUnread is null ? -1 : IndexOf(_lines, _firstUnread);

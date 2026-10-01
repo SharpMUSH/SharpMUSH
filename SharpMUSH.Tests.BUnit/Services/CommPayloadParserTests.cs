@@ -48,6 +48,26 @@ public class CommPayloadParserTests
 		});
 	}
 
+	/// <summary>The id the recall endpoint returns for the same line, so a pulled and a pushed copy are one.</summary>
+	[Test]
+	public async Task A_channel_lines_id_is_read()
+	{
+		var entry = CommPayloadParser.ParseMessage(ChannelLine.Replace("\"v\":2,", "\"v\":2,\"id\":1790780182950123,"), Received)!;
+
+		await Assert.That(entry.Message.Id).IsEqualTo(1790780182950123);
+	}
+
+	[Test]
+	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi"}""")]
+	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi","id":"soon"}""")]
+	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi","id":1.5}""")]
+	public async Task A_line_without_a_whole_number_id_has_none(string json)
+	{
+		var entry = CommPayloadParser.ParseMessage(json, Received)!;
+
+		await Assert.That(entry.Message.Id).IsNull();
+	}
+
 	[Test]
 	public async Task A_missing_v_is_read_the_same()
 	{

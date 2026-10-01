@@ -20,6 +20,7 @@ public interface ISharpDatabase :
 	IChannelStore,
 	IAccountStore,
 	IServerStateStore,
-	ISessionRecordStore
+	ISessionRecordStore,
+	IReadMarkerStore
 {
 }

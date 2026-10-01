@@ -523,7 +523,9 @@ stream.
 The proposal is built, pending Q4: the bundled `comm-feed` package on engine events that name who received
 each line (``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS``), and `OobCommFeed` behind
 `ICommFeed`. `docs/softcode/comm-feed-handler.md` has the shapes as sent and where they differ from the
-above (no server-side unread counts; `viewer`, `style` and `toObjids` added).
+above (no unread counts in `comm.channels`; `viewer`, `style`, `toObjids` and a channel line's `id`
+added). Unread counts come from per-character read markers on the server, and a channel's history from
+its recall buffer, both under `api/comm` (#1451).
 
 ### 7.4 Play as a layout scope (board `13`)
 - Add `LayoutScopes.Play` (`"play"`, zones: RightSidebar) to `LayoutScopes.All` and `GetDefaultLayout`, with

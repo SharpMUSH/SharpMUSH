@@ -44,6 +44,7 @@ builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<MailService>();
+builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService
 // implementation — reads go through this HTTP service, writes go through a game command.
 builder.Services.AddSingleton<SceneService>();

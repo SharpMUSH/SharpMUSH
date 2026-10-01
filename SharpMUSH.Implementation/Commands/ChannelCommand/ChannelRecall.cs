@@ -92,6 +92,20 @@ public static class ChannelRecall
 		};
 	}
 
+	/// <summary>
+	/// The access gate, past the channel being visible at all: whether <paramref name="viewer"/> may read
+	/// <paramref name="channel"/>'s buffer. The portal's recall endpoint asks the same question.
+	/// </summary>
+	/// <remarks>
+	/// extchat.c:4050 — membership is not required; being ABLE to join is. A player who could join the
+	/// channel may read its history, which is what makes recall usable for deciding whether to join. A
+	/// Guest who is not a member may not, whatever the join lock says.
+	/// </remarks>
+	public static async ValueTask<bool> MayRecallAsync(IPermissionService permissionService, AnySharpObject viewer,
+		SharpChannel channel)
+		=> await ChannelHelper.IsMemberOfChannel(viewer, channel)
+			|| (!await viewer.IsGuest() && await permissionService.ChannelCanJoin(viewer, channel));
+
 	/// <summary>Applies the access gate to the resolved channel and takes the window of its buffer.</summary>
 	private static async ValueTask<RecallSelection> SelectWindowAsync(
 		IPermissionService permissionService,
@@ -104,10 +118,7 @@ public static class ChannelRecall
 		bool hasStart,
 		bool notify)
 	{
-		// extchat.c:4050 — membership is not required; being ABLE to join is. A player who could join the
-		// channel may read its history, which is what makes recall usable for deciding whether to join.
-		if (!await ChannelHelper.IsMemberOfChannel(executor, channel)
-				&& (await executor.IsGuest() || !await permissionService.ChannelCanJoin(executor, channel)))
+		if (!await MayRecallAsync(permissionService, executor, channel))
 		{
 			return await Refuse(notifyService, executor, notify,
 				ErrorMessages.Notifications.ChatMustBeAbleToJoinToRecall, ErrorMessages.Returns.NotAMember);
