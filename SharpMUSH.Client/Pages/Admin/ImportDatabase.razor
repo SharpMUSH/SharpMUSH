@@ -303,7 +303,10 @@
         }
         catch (Exception ex)
         {
-            // Reading the chosen file failed in the browser (too large, or gone), before anything was sent.
+            // The boundary of a click handler, kept wide on purpose. The service turns every transport and
+            // read failure into an ApiFailure, and the picker refuses a file over the limit before this
+            // runs, so what reaches here is unforeseen — and an exception escaping a handler takes the
+            // whole portal down to its error bar, where this keeps the page and says why.
             Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
             _error = Loc["DatabaseImportFailed", ex.Message].Value;
         }
@@ -321,9 +324,12 @@
             {
                 await UpdateProgressAsync();
             }
+            // The only observer of this fire-and-forget task, so it takes everything: an exception left
+            // here goes unobserved and the timer keeps firing into it every second. The service already
+            // answers transport and server failures as values, so this is the unforeseen kind.
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Progress update failed");
+                Logger.LogError(ex, "Error updating conversion progress");
                 _progressTimer?.Dispose();
                 _isConverting = false;
                 await InvokeAsync(StateHasChanged);
@@ -376,13 +382,6 @@
                 }
             }
 
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error updating conversion progress");
-            _progressTimer?.Dispose();
-            _isConverting = false;
             await InvokeAsync(StateHasChanged);
         }
         finally
