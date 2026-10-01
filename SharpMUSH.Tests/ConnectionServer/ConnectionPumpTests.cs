@@ -410,6 +410,27 @@ public class ConnectionPumpTests
 
 		// The resume frame is not published as a game command.
 		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
+
+		// The engine is told, so it re-sends the session's current state (docs/design/d1/README.md §7.1):
+		// a reloaded page has none of it, and replay covers only what came after its lastSeq.
+		await bus.Received(1).Publish(
+			Arg.Is<SessionResumedMessage>(m => m.Handle == 9 && m.SessionId == session9), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task A_refused_resume_does_not_announce_a_resumed_session()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var resume = new ResumeTokenService();
+		var deadToken = await resume.MintAsync(5, "dead-incarnation");
+		var pump = MakePump(bus, conn, desc, resume: resume);
+		var transport = new FakeTransport($"{{\"type\":\"resume\",\"token\":\"{deadToken}\",\"lastSeq\":1}}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 5, CancellationToken.None);
+
+		await bus.DidNotReceive().Publish(Arg.Any<SessionResumedMessage>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

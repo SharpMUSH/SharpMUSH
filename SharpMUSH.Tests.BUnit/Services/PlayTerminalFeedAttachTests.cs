@@ -45,6 +45,8 @@ public class PlayTerminalFeedAttachTests
 
 		var services = new ServiceCollection();
 		services.AddLogging();
+		// The resume store the websocket clients keep their point in talks to the page.
+		services.AddSingleton(Substitute.For<Microsoft.JSInterop.IJSRuntime>());
 		services.AddTerminalServices();
 		// The real play host opens a websocket; this one wraps a terminal whose OOB store the test fills.
 		services.AddSingleton(new PlayTerminalServiceHost(() => playTerminal));

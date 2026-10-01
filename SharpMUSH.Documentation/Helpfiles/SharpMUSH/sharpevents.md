@@ -135,7 +135,7 @@ To mimic old behaviour:
 - Triggered when idle players are disconnected. Only run if at least one player gets idlebooted (Or auto-hidden), not at every inactivity check.
 
 - **player\`channels** (*objid*, *cause*, *channel*)
-- Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect. Not triggered for a player who is not connected: they are sent their whole list when they connect.
+- Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, resume, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect and resume. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection), and is sent the list again. Not triggered for a player who is not connected: they are sent their whole list when they connect.
 
 # EVENT SOCKET
 - **socket\`connect** (*descriptor*, *ip*)
@@ -166,7 +166,7 @@ To mimic old behaviour:
 
 # EVENT ROOM
 - **room\`contents** (*room objid*, *cause*)
-- Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect or disconnect. %# is whoever caused it — the mover, or the wizard who `@tel`'d them.
+- Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect, disconnect or resume. %# is whoever caused it — the mover, or the wizard who `@tel`'d them. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection): nothing in the room changed, %# is that player, and only they need the room again.
 
 # EVENT CHANNEL
 - **channel\`message** (*channel*, *speaker objid*, *style*, *speaker name*, *message*, *recipients*, *time*)

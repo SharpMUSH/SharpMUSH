@@ -37,7 +37,8 @@ events name the result:
 - ``PAGE`MESSAGE`` fires once per page that reached anyone, naming only the
   recipients it reached: one who is not connected, is HAVEN, refuses pages
   from the pager, or whose page lock the pager fails is not among them.
-- ``PLAYER`CHANNELS`` fires for a **connected** player on connect and when
+- ``PLAYER`CHANNELS`` fires for a **connected** player on connect, on resume
+  (a web session rebound to its socket, a reload above all), and when
   their channel list may have changed: joining or leaving (including
   `addcom`/`delcom`, `@channel/wipe`, and being joined by someone who controls
   them), a change to their own channel flags (`gag`, `hide`, `mute`,
@@ -62,7 +63,7 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 |---|---|---|---|---|---|---|---|
 | ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms |
 | ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | |
-| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | |
+| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect and resume) | | | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
@@ -70,9 +71,9 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 - The name and message are **plain text**, and for a channel, what the
   channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
   `@chatformat` changes only their terminal line.
-- Cause is `connect`, `join`, `leave`, `status`, `rename` or `delete`.
+- Cause is `connect`, `resume`, `join`, `leave`, `status`, `rename` or `delete`.
 - `%#` is the speaker or pager. For ``PLAYER`CHANNELS`` it is the player on
-  connect, and `#1` otherwise: the change is reported by the database write,
+  connect and resume, and `#1` otherwise: the change is reported by the database write,
   which does not know who asked.
 
 `help event channel`, `help event page` and `help event player` carry the
@@ -225,5 +226,5 @@ connecting.
   `style` and `toObjids` on `comm.message` — the first so the client knows
   whose list and lines these are, the last so a conversation is keyed by
   identity rather than by names that can change.
-- **Pushed on change and on connect**, where the proposal says "on change":
-  a fresh connection has nothing until then.
+- **Pushed on change, on connect and on resume**, where the proposal says "on
+  change": a fresh connection, or a reloaded page, has nothing until then.

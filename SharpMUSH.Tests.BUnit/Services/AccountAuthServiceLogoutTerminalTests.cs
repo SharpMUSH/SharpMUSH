@@ -42,7 +42,7 @@ public class AccountAuthServiceLogoutTerminalTests : BunitContext
 		terminal.IsConnected.Returns(true);
 		playTerminal.IsConnected.Returns(true);
 
-		await CreateService(new TerminalSessionTeardown(terminal, playTerminal)).LogoutAsync();
+		await CreateService(new TerminalSessionTeardown(terminal, playTerminal, new TerminalResumeStore(JSInterop.JSRuntime))).LogoutAsync();
 
 		await terminal.Received(1).SendAsync("QUIT");
 		await terminal.Received(1).DisconnectAsync();
@@ -58,12 +58,28 @@ public class AccountAuthServiceLogoutTerminalTests : BunitContext
 		terminal.IsConnected.Returns(false);
 		playTerminal.IsConnected.Returns(false);
 
-		await CreateService(new TerminalSessionTeardown(terminal, playTerminal)).LogoutAsync();
+		await CreateService(new TerminalSessionTeardown(terminal, playTerminal, new TerminalResumeStore(JSInterop.JSRuntime))).LogoutAsync();
 
 		await terminal.DidNotReceive().SendAsync(Arg.Any<string>());
 		await terminal.DidNotReceive().DisconnectAsync();
 		await playTerminal.DidNotReceive().SendAsync(Arg.Any<string>());
 		await playTerminal.DidNotReceive().DisconnectAsync();
+	}
+
+	/// <summary>
+	/// A shared browser: whoever reloads the tab after a logout must not resume the session that was
+	/// logged out, even an idle terminal's, so every stored resume point goes with the session.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task LogoutAsync_ForgetsEveryStoredResumePoint()
+	{
+		var terminal = Substitute.For<ITerminalService>();
+		var playTerminal = Substitute.For<IPlayTerminalService>();
+
+		await CreateService(new TerminalSessionTeardown(terminal, playTerminal, new TerminalResumeStore(JSInterop.JSRuntime))).LogoutAsync();
+
+		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
+		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
 	}
 
 	/// <summary>
@@ -80,7 +96,7 @@ public class AccountAuthServiceLogoutTerminalTests : BunitContext
 		terminal.IsConnected.Returns(true);
 		playTerminal.IsConnected.Returns(true);
 
-		var service = CreateService(faulty, new TerminalSessionTeardown(terminal, playTerminal));
+		var service = CreateService(faulty, new TerminalSessionTeardown(terminal, playTerminal, new TerminalResumeStore(JSInterop.JSRuntime)));
 
 		await service.LogoutAsync();
 

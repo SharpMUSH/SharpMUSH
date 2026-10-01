@@ -247,7 +247,11 @@
                     if (debugOtt?.Token is not null)
                     {
                         SetPlayerName(debugOtt.PlayerName);
-                        await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
+                        // The debug OTT is always for #1, so its name stands in for the character here.
+                        var identity = debugOtt.AccountUsername is { } account
+                            ? new TerminalIdentity(account, debugOtt.PlayerName)
+                            : (TerminalIdentity?)null;
+                        await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token, identity);
                     }
                 }
                 else if (AccountAuth.IsLoggedIn)
@@ -356,7 +360,7 @@
 
         AccountAuth.SetActiveCharacter(character);
         SetPlayerName(character.Name);
-        await Terminal.ConnectWithOttAsync(_serverUri, ott);
+        await Terminal.ConnectWithOttAsync(_serverUri, ott, TerminalIdentity.Of(AccountAuth.Username, character));
         return true;
     }
 
