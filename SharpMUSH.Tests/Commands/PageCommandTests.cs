@@ -336,6 +336,36 @@ public class PageCommandTests
 		}
 	}
 
+	/// <summary>
+	/// The portal replies to a conversation by objid (<c>#N:created</c>), so a page to the full objid reaches
+	/// that player, and one whose creation stamp no longer matches (the dbref was recycled) reaches nobody.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_ByObjid_ReachesThatPlayer_AndAStaleObjidReachesNobody()
+	{
+		var sender = await CreatePlayerAsync("PageObjidSender");
+		var recipient = await CreatePlayerAsync("PageObjidRecipient");
+		try
+		{
+			var live = TestIsolationHelpers.GenerateUniqueName("PageObjidLive");
+			var stale = TestIsolationHelpers.GenerateUniqueName("PageObjidStale");
+			var staleObjid = new DBRef(recipient.DbRef.Number, recipient.DbRef.CreationMilliseconds!.Value + 1);
+			var start = Notifications.CountFor(recipient.DbRef);
+
+			await PageAsync(sender, recipient.DbRef.ToString(), live);
+			await PageAsync(sender, staleObjid.ToString(), stale);
+
+			var heard = Notifications.For(recipient.DbRef).Skip(start).ToList();
+			await Assert.That(heard).Contains($"{sender.Name} pages: {live}");
+			await Assert.That(heard.Any(line => line.Contains(stale, StringComparison.Ordinal))).IsFalse();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
 	[Test]
 	public async ValueTask PageList_MixedLiveAndStaleObjidsOnlyReportsLiveRecipients()
 	{
