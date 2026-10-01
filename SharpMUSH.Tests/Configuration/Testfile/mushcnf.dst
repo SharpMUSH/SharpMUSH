@@ -134,7 +134,7 @@ event_handler 9
 
 # Package manager. Wizard object that owns softcode-package-managed objects.
 # Defaults to #7, the "Package Manager" object seeded at database creation.
-# Leave empty to disable the package manager.
+# Left empty, the seeded Package Manager (#7) is used all the same.
 package_manager 7
 
 # The ancestor room. This dbref serves as an 'ultimate parent' to

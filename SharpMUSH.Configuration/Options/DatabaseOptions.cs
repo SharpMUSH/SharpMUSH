@@ -140,7 +140,7 @@ public record DatabaseOptions(
 		Group = "Handlers",
 		Order = 4,
 		Min = 0,
-		Tooltip = "Leave empty to disable the package manager")]
+		Tooltip = "Leave empty to use the seeded Package Manager, #7")]
 	uint? PackageManager,
 
 	[property: SharpConfig(

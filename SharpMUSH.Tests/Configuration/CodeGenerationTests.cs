@@ -126,6 +126,30 @@ public class CodeGenerationTests
 		await Assert.That(sslPort.Tooltip).IsEqualTo("Set to 0 to disable SSL");
 	}
 
+	/// <summary>
+	/// An empty <c>package_manager</c> does not disable package management: the installer and the
+	/// profile-handler reset fall back to the seeded Package Manager (<see cref="DatabaseOptions.PackageManagerOrSeeded"/>).
+	/// The admin page's tooltip and every shipped <c>mushcnf.dst</c> say so, rather than promising "disable".
+	/// </summary>
+	[Test]
+	[Arguments("SharpMUSH.Configuration")]
+	[Arguments("SharpMUSH.Tests/Configuration/Testfile")]
+	[Arguments("SharpMUSH.Benchmarks")]
+	public async Task AnEmptyPackageManager_IsDescribedAsTheSeededFallback_NotAsDisabled(string mushcnfDirectory)
+	{
+		var tooltip = ConfigMetadata.PropertyMetadata["PackageManager"].Tooltip;
+		await Assert.That(tooltip).IsNotNull();
+		await Assert.That(tooltip!).DoesNotContain("disable");
+		await Assert.That(tooltip!).Contains($"#{DatabaseOptions.SeededPackageManager}");
+
+		var lines = File.ReadAllLines(Path.Join(TestPaths.RepositoryRoot, mushcnfDirectory, "mushcnf.dst"));
+		var start = Array.FindIndex(lines, line => line.StartsWith("# Package manager.", StringComparison.Ordinal));
+		var end = Array.FindIndex(lines, start, line => line.StartsWith("package_manager ", StringComparison.Ordinal));
+		var comment = string.Join('\n', lines[start..end]);
+		await Assert.That(comment).DoesNotContain("disable");
+		await Assert.That(comment).Contains("empty");
+	}
+
 	#endregion
 
 	#region ConfigAccessor Tests
