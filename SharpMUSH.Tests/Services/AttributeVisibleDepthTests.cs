@@ -66,21 +66,29 @@ public class AttributeVisibleDepthTests
 	[Test]
 	public async ValueTask LazilyGetVisibleAttributesAsync_DeeperThanOne_TerminatesAtDepth()
 	{
-		// Cancelling as well as giving up, so a walk that never ends does not keep running after the test.
-		using var deadline = new CancellationTokenSource(ReadBound);
 		var obj = await CreateTreeAsync("LazyVisibleDepth");
 
 		var full = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 3);
 		await Assert.That(full.IsAttribute).IsTrue();
 
-		var names = await full.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(deadline.Token).AsTask().WaitAsync(ReadBound);
+		var names = await ReadNamesAsync(full.Expect<IAsyncEnumerable<LazySharpAttribute>>());
 		await Assert.That(names).Contains("TREE");
 		await Assert.That(names).Contains("TREE`BRANCH");
 		await Assert.That(names).Contains("TREE`BRANCH`LEAF");
 
 		var shallow = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 2);
-		var shallowNames = await shallow.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(deadline.Token).AsTask().WaitAsync(ReadBound);
+		var shallowNames = await ReadNamesAsync(shallow.Expect<IAsyncEnumerable<LazySharpAttribute>>());
 		await Assert.That(shallowNames).Contains("TREE`BRANCH");
 		await Assert.That(shallowNames).DoesNotContain("TREE`BRANCH`LEAF");
+	}
+
+	/// <summary>
+	/// Enumerates under a deadline of its own, started here rather than before the fixture, and cancels
+	/// the walk when it runs out so one that never ends does not keep running after the test.
+	/// </summary>
+	private static async Task<List<string>> ReadNamesAsync(IAsyncEnumerable<LazySharpAttribute> attributes)
+	{
+		using var deadline = new CancellationTokenSource(ReadBound);
+		return await attributes.Select(a => a.LongName).ToListAsync(deadline.Token).AsTask().WaitAsync(deadline.Token);
 	}
 }
