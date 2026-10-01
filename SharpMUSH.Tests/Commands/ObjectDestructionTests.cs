@@ -34,7 +34,7 @@ namespace SharpMUSH.Tests.Commands;
 /// destructive by nature. PennMUSH's purge walks the whole database, so these free every
 /// GOING_TWICE object in the shared session database, not just their own — including fixtures
 /// another test created, destroyed and has not finished asserting on. They run alone for that
-/// reason, as do the tests that move God or hook the global OBJECT`DESTROY event.
+/// reason, as does the test that hooks the global OBJECT`DESTROY event.
 /// </para>
 /// </summary>
 public class ObjectDestructionTests
@@ -149,22 +149,18 @@ public class ObjectDestructionTests
 	/// of its source room, so this is <c>empty_contents()</c>'s "if holding exits, destroy it" branch.
 	/// </summary>
 	[Test]
-	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Destroy_Room_DestroysTheExitsItSources()
 	{
 		var room = await DigRoomAsync("DestroySourceRoom");
 		var elsewhere = await DigRoomAsync("DestroyExitTarget");
 
-		await RunAsync($"@tel {elsewhere}");
 		var exitName = TestIsolationHelpers.GenerateUniqueName("DoomedExit");
-		var openResult = await RunAsync($"@open {exitName}={room}");
+		var openResult = await RunAsync($"@open {exitName}={room},,{elsewhere}");
 		var exit = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 
-		// Move the exit into the room that is about to die, so the room is its source.
-		await RunAsync($"@tel {room}");
-		var relocated = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("RoomExit")}={elsewhere}");
+		// An exit whose source is the room that is about to die.
+		var relocated = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("RoomExit")}={elsewhere},,{room}");
 		var roomExit = DBRef.Parse(relocated.Message!.ToPlainText().Trim());
-		await RunAsync($"@tel {elsewhere}");
 
 		await RunAsync($"@destroy {room}");
 		await RunAsync($"@destroy {room}");
@@ -181,16 +177,13 @@ public class ObjectDestructionTests
 	/// room (so that the exit can't be stolen)."
 	/// </summary>
 	[Test]
-	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Destroy_Room_RelinksTheExitsThatLedThere()
 	{
 		var doomed = await DigRoomAsync("DestroyEntranceTarget");
 		var source = await DigRoomAsync("DestroyEntranceSource");
 
-		await RunAsync($"@tel {source}");
-		var openResult = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("Entrance")}={doomed}");
+		var openResult = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("Entrance")}={doomed},,{source}");
 		var entrance = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
-		await RunAsync("@tel #0");
 
 		await RunAsync($"@destroy {doomed}");
 		await RunAsync($"@destroy {doomed}");
@@ -319,7 +312,6 @@ public class ObjectDestructionTests
 	/// object that no longer exists. A fresh probate judge makes that stray edge countable.
 	/// </summary>
 	[Test]
-	[NotInParallel] // moves God, whose location other tests build in
 	public async Task Nuke_Twice_SkipsPossessionsAnEarlierFreeAlreadyTook()
 	{
 		var judge = await TestIsolationHelpers.CreateTestPlayerAsync(
@@ -334,14 +326,12 @@ public class ObjectDestructionTests
 		var room = await DigRoomAsync("NukeCascadeRoom");
 
 		// The probate walks possessions in dbref order; the exit has to come after its room.
-		await RunAsync($"@tel {room}");
 		DBRef exit;
 		do
 		{
-			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}");
+			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}=,,{room}");
 			exit = DBRef.Parse(opened.Message!.ToPlainText().Trim());
 		} while (exit.Number < room.Number);
-		await RunAsync("@tel #0");
 
 		await RunAsync($"@chown {room}={player}");
 		await RunAsync($"@chown {exit}={player}");
