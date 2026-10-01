@@ -36,10 +36,18 @@ public class QueuedUserCommandTests : ServerTestBase
 	[After(Test)]
 	public async Task DisconnectActor()
 	{
-		// A loop that outlived a failed assertion must not keep running in the shared server.
-		await Cmd($"@set {_commands}=halt");
-		await Cmd($"@halt {_commands}");
-		await ConnectionService.Disconnect(_actor.Handle);
+		// A loop that outlived a failed assertion must not keep running in the shared server. Setup can
+		// also fail part-way, leaving _commands at #0 and _actor unset; halting #0 would reach the world.
+		if (_commands.Number > 0)
+		{
+			await Cmd($"@set {_commands}=halt");
+			await Cmd($"@halt {_commands}");
+		}
+
+		if (_actor is not null)
+		{
+			await ConnectionService.Disconnect(_actor.Handle);
+		}
 	}
 
 	private Task<string> Run(string command) => CmdAs(_actor.DbRef, _actor.Handle, command);
