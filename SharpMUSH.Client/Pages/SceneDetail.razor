@@ -3,6 +3,8 @@
 @using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 
 @* A scene's log in the D1 kit: the plain header (the room as kicker, the title, LIVE and the meta
    line, Watch Live and Back), the tag chips, the log in a card, and an aside with the scene's details
@@ -139,8 +141,21 @@
     private IReadOnlyList<(string Key, string Label)> TagChips =>
         [(AllTags, Loc["All"].Value), .. _allTags.Select(t => (t, t))];
 
-    protected override async Task OnParametersSetAsync()
+    /// <summary>
+    /// Whether the scene can be read at all depends on who asks — a private scene is shown only to its
+    /// owner and members — so a switch of character reads it again.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
+
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }));
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    public void Dispose() => _reload.Dispose();
+
+    private async Task LoadAsync()
     {
+        var ticket = _reload.Begin();
         _loading = true;
         _error = null;
         _posesError = null;
@@ -150,7 +165,9 @@
         _activeTag = null;
         _scene = null;
 
-        switch (await SceneService.GetSceneAsync(Id))
+        var found = await SceneService.GetSceneAsync(Id);
+        if (!_reload.IsCurrent(ticket)) return;
+        switch (found)
         {
             case SceneSummary scene:
                 _scene = scene;
@@ -165,6 +182,7 @@
         }
 
         var poses = await SceneService.GetPosesAsync(Id);
+        if (!_reload.IsCurrent(ticket)) return;
         (_poses, _posesError) = poses switch
         {
             IReadOnlyList<ScenePoseView> read => (read, (string?)null),

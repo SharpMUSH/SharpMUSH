@@ -4,6 +4,8 @@
 @inject CharacterDirectoryService CharacterDirectory
 @inject WikiService WikiService
 @inject SceneService SceneService
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.5 stat tiles (board 31's count pills, at desktop size): one card per count, a mono label
@@ -45,15 +47,23 @@
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
 
+    /// <summary>
+    /// Only the active-scenes count depends on who is asking — the server counts the private scenes the
+    /// acting character may see — so a switch, or a scene this tab started, recounts that tile alone.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
+
     protected override async Task OnInitializedAsync()
     {
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadActiveScenesAsync(); StateHasChanged(); }), SceneService);
+
         // AsTask() up front, once: these return ValueTask, which may be consumed only once, and
         // both WhenAll and the reads below need to await them. Converting at the call site keeps
         // each result awaitable twice regardless of how the services back their ValueTask.
         var recentTask = WikiService.GetRecentChangesAsync(10).AsTask();
         var charsTask = CharacterDirectory.ListAsync();
         var onlineTask = CharacterDirectory.ListOnlineAsync();
-        var scenesTask = SceneService.GetActiveScenesAsync();
+        var scenesTask = LoadActiveScenesAsync();
         await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
 
         _recent = (await recentTask).Count;
@@ -69,7 +79,13 @@
             ? online.Count
             : null;
         _onlineFailed = _online is null;
-        _activeScenes = await scenesTask is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
-        _activeScenesFailed = _activeScenes is null;
     }
+
+    private Task LoadActiveScenesAsync() => _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
+    {
+        _activeScenes = result is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
+        _activeScenesFailed = _activeScenes is null;
+    });
+
+    public void Dispose() => _reload.Dispose();
 }

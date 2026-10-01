@@ -6,6 +6,8 @@
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject MailService Mail
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
@@ -61,16 +63,30 @@
     private string? _error;
     private bool _loading = true;
 
-    private string FolderName => string.IsNullOrWhiteSpace(Folder) ? MailSidebar.Inbox : Folder!;
+    private string FolderName => string.IsNullOrWhiteSpace(Folder) ? MailSidebar.Inbox : Folder;
 
-    protected override async Task OnParametersSetAsync()
+    /// <summary>
+    /// A number names a message only within the acting character's mailbox, so a switch of character
+    /// reads the new character's message of that number.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
+
+    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }));
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    public void Dispose() => _reload.Dispose();
+
+    private Task LoadAsync()
     {
         _loading = true;
-        var result = await Mail.ReadAsync(FolderName, Id);
-        _message = result is MailService.MailMessage message ? message : null;
-        // A missing message keeps the page's own wording; anything else is the server's reason.
-        _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
-        _loading = false;
+        return _reload.LoadAsync(() => Mail.ReadAsync(FolderName, Id), result =>
+        {
+            _message = result is MailService.MailMessage message ? message : null;
+            // A missing message keeps the page's own wording; anything else is the server's reason.
+            _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
+            _loading = false;
+        });
     }
 
     private static MailService.MailSummary Summary(MailService.MailMessage m) =>

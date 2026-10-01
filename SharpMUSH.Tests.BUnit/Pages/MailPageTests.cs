@@ -242,6 +242,29 @@ public class MailPageD1Tests : TrackingBunitContext
 			.IsEqualTo("/mail/compose?to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");
 	}
 
+	/// <summary>
+	/// A message's number names it only within one character's mailbox, so switching character on
+	/// /mail/{n} shows the new character's message n, not the previous character's message kept on
+	/// screen under the new one.
+	/// </summary>
+	[Test]
+	public async Task Detail_SwitchingCharacter_ReadsTheNewCharactersMessage()
+	{
+		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/1");
+		var cut = Render<SharpMUSH.Client.Pages.MailDetail>(p => p.Add(x => x.Id, 1));
+		cut.WaitForAssertion(() => cut.Find(".md-body"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("The ledger");
+
+		fake.SwitchCharacter();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".kit-page-head .kit-page-title").TextContent != "Second bell") throw new InvalidOperationException("still the previous character's message");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".md-from").TextContent).Contains("Mara Quill");
+	}
+
 	[Test]
 	public async Task Detail_Delete_ReturnsToTheFolderTheMessageWasIn()
 	{

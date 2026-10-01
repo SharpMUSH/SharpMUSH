@@ -46,24 +46,26 @@
     private bool _loading = true;
     private bool _canJoin;
 
-    /// <summary>Bumped by every load; only the newest load's answer is shown.</summary>
-    private int _generation;
+    /// <summary>
+    /// The list is the acting character's view — the server lists a private scene only to its owner and
+    /// members — so a switch of character re-reads it, as does a scene this tab started.
+    /// </summary>
+    private readonly ViewerScopedReload _reload = new();
 
     protected override async Task OnInitializedAsync()
     {
-        AccountAuth.ActiveCharacterChanged += OnListChanged;
-        SceneService.Changed += OnListChanged;
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }), SceneService);
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        var generation = ++_generation;
+        var ticket = _reload.Begin();
         var pending = SceneService.GetActiveScenesAsync();
         await AccountAuth.InitAsync();
         var canJoin = AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null;
         var result = await pending;
-        if (generation != _generation) return;
+        if (!_reload.IsCurrent(ticket)) return;
         _canJoin = canJoin;
         (_scenes, _error) = result switch
         {
@@ -73,19 +75,5 @@
         _loading = false;
     }
 
-    /// <summary>
-    /// The list is the acting character's view — the server lists a private scene only to its owner and
-    /// members — so a switch of character re-reads it, as does a scene this tab started.
-    /// </summary>
-    private void OnListChanged() => _ = InvokeAsync(async () =>
-    {
-        await LoadAsync();
-        StateHasChanged();
-    });
-
-    public void Dispose()
-    {
-        AccountAuth.ActiveCharacterChanged -= OnListChanged;
-        SceneService.Changed -= OnListChanged;
-    }
+    public void Dispose() => _reload.Dispose();
 }

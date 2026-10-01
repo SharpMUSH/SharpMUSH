@@ -2,6 +2,8 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject SceneService SceneService
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.1 "Live now · N" as an aside card: a tile per live scene (up to three) linking to its live
@@ -22,8 +24,7 @@
                 <div class="active-scene-tiles @(InMain ? "active-scene-tiles--main" : null)">
                     @foreach (var scene in _activeScenes.Take(InMain ? 6 : 3))
                     {
-                        var s = scene;
-                        <ImageTile Label="@SceneTitle(s)" Sub="@s.RoomName" Count="@s.PoseCount" Icon="@Icons.Material.Outlined.Theaters" Href="@($"/scenes/{s.Id}/live")" />
+                        <ImageTile Label="@SceneTitle(scene)" Sub="@scene.RoomName" Count="@scene.PoseCount" Icon="@Icons.Material.Outlined.Theaters" Href="@($"/scenes/{scene.Id}/live")" />
                     }
                 </div>
             }
@@ -64,16 +65,26 @@
     private string? _error;
     private bool _loading = true;
 
+    /// <summary>The list is the acting character's view; a switch, or a scene this tab started, reads it again.</summary>
+    private readonly ViewerScopedReload _reload = new();
+
     protected override async Task OnInitializedAsync()
     {
-        var result = await SceneService.GetActiveScenesAsync();
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }), SceneService);
+        await LoadAsync();
+    }
+
+    private Task LoadAsync() => _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
+    {
         (_activeScenes, _error) = result switch
         {
             IReadOnlyList<SceneSummary> scenes => (scenes, (string?)null),
             ApiFailure failure => (null, failure.Message),
         };
         _loading = false;
-    }
+    });
+
+    public void Dispose() => _reload.Dispose();
 
     private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
