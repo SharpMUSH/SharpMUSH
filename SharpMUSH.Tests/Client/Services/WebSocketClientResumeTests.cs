@@ -34,6 +34,14 @@ public class WebSocketClientResumeTests
 
 	private static bool IsResume(string frame) => frame.Contains("\"type\":\"resume\"");
 
+	/// <summary>The token and lastSeq a resume frame asked for.</summary>
+	private static TerminalResumePoint ResumePointOf(string frame)
+	{
+		using var document = JsonDocument.Parse(frame);
+		var root = document.RootElement;
+		return new TerminalResumePoint(root.GetProperty("token").GetString()!, root.GetProperty("lastSeq").GetInt64());
+	}
+
 	[Test]
 	public async Task A_reload_resumes_from_the_stored_point_and_drops_frames_already_shown()
 	{
@@ -297,14 +305,8 @@ public class WebSocketClientResumeTests
 		await terminal.SendAsync("marker");
 
 		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("marker"))).IsTrue();
-		var firsts = server.FirstFrames.ToArray();
-		await Assert.That(firsts.Length).IsEqualTo(2);
-		foreach (var first in firsts)
-		{
-			using var frame = JsonDocument.Parse(first);
-			await Assert.That(frame.RootElement.GetProperty("token").GetString()).IsEqualTo("tok-1");
-			await Assert.That(frame.RootElement.GetProperty("lastSeq").GetInt64()).IsEqualTo(5L);
-		}
+		var resumedFrom = server.FirstFrames.Select(ResumePointOf).ToArray();
+		await Assert.That(resumedFrom).IsEquivalentTo([new TerminalResumePoint("tok-1", 5), new TerminalResumePoint("tok-1", 5)]);
 		await Assert.That(server.LaterFrames.Any(f => f.StartsWith("connect token", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "six"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(await Eventually.TrueAsync(() => js.StoredValue(AliceKey) == Point("tok-2", 6))).IsTrue();
