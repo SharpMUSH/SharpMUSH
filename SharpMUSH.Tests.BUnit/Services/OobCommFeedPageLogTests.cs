@@ -358,6 +358,48 @@ public class OobCommFeedPageLogTests
 		await Assert.That(history.ConversationMarks.Last().LastReadId).IsEqualTo(101);
 	}
 
+	/// <summary>
+	/// Ids keep rising when the clock steps back, so a conversation's recency is its latest page's id: the
+	/// one whose last page has the higher id is the more recent, whatever the times say.
+	/// </summary>
+	[Test]
+	public async Task Conversations_are_ordered_by_their_latest_page_id()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true,
+		[
+			new PageConversationSummary([Dace], ["Dace"], 100, T0.AddSeconds(60)),
+			WithTomas(200, 0)
+		]);
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Conversations.Select(conversation => conversation.With.Single()))
+			.IsEquivalentTo(new[] { "Tomas", "Dace" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// With the conversation limit reached, the one dropped is the least recent by id: a new page whose time
+	/// is earlier than the rest (the clock stepped back) but whose id is the highest stays.
+	/// </summary>
+	[Test]
+	public async Task A_new_page_stamped_before_the_rest_is_not_the_one_dropped()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true,
+			Enumerable.Range(0, OobCommFeed.ConversationLimit)
+				.Select(n => new PageConversationSummary([$"#{1000 + n}:1"], [$"P{n}"], 1000 + n, T0.AddSeconds(100 + n)))
+				.ToArray());
+		await LoadAsync(store, feed);
+
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(5000, "newest by id", 0));
+
+		await Assert.That(feed.Conversations.Count).IsEqualTo(OobCommFeed.ConversationLimit);
+		await Assert.That(feed.Conversations[0].Key).IsEqualTo(TomasKey).Because("its page has the highest id");
+		await Assert.That(feed.Conversations.Any(conversation => conversation.WithObjIds.Contains("#1000:1"))).IsFalse()
+			.Because("the conversation with the lowest last id is the least recent");
+	}
+
 	/// <summary>Once listed, a later list does not ask for the conversations again: pushes keep it current.</summary>
 	[Test]
 	public async Task The_conversations_are_listed_once_per_sync()

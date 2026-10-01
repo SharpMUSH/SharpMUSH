@@ -178,6 +178,63 @@ public class PageLogCommandTests
 		}
 	}
 
+	/// <summary>
+	/// The page's id is taken before anyone is told of the page: taking one can write (the id source
+	/// reserves a block), and a failure there must not leave a page shown in the terminal that the portal
+	/// never hears of. Here taking the id fails, and neither side is told.
+	/// </summary>
+	[Test]
+	public async ValueTask APageWhoseIdCannotBeTaken_IsNotDelivered()
+	{
+		var sender = await CreatePlayerAsync("PageLogNoIdSender");
+		var recipient = await CreatePlayerAsync("PageLogNoIdRecipient");
+		var message = TestIsolationHelpers.GenerateUniqueName("noid");
+		try
+		{
+			var pageLog = new FailingIdPageLog(WebAppFactoryArg.Services.GetRequiredService<IPageLogService>());
+			var commands = Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+				WebAppFactoryArg.Services, (IPageLogService)pageLog);
+			var parser = WebAppFactoryArg.CommandParserWith(
+				((ILibraryProvider<SharpMUSH.Library.Definitions.CommandDefinition>)commands).Get(), sender.DbRef, sender.Handle);
+
+			using (var budget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+			using (budget.Enter())
+			{
+				try
+				{
+					await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"page {recipient.Name}={message}"));
+				}
+				catch (IOException)
+				{
+					// The command may fail outright; what matters is what reached the terminals.
+				}
+			}
+
+			await Assert.That(WebAppFactoryArg.Notifications.For(recipient.DbRef).Any(line => line.Contains(message))).IsFalse()
+				.Because("a page that cannot be given an id is not delivered, so it is never shown without its push");
+			await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef).Any(line => line.Contains(message))).IsFalse();
+		}
+		finally
+		{
+			await DisconnectAsync(sender, recipient);
+		}
+	}
+
+	private sealed class FailingIdPageLog(IPageLogService inner) : IPageLogService
+	{
+		public bool Enabled => inner.Enabled;
+
+		public ValueTask<SharpPage> PageAsync(AnySharpObject sender, string senderName, IReadOnlyList<AnySharpObject> recipients,
+			string style, string message, CancellationToken cancellationToken = default) =>
+			throw new IOException("MDB_MAP_FULL reserving page ids");
+
+		public ValueTask RecordAsync(SharpPage page, IReadOnlyList<AnySharpObject> participants,
+			CancellationToken cancellationToken = default) => inner.RecordAsync(page, participants, cancellationToken);
+
+		public ValueTask<int> PurgeExpiredAsync(CancellationToken cancellationToken = default) =>
+			inner.PurgeExpiredAsync(cancellationToken);
+	}
+
 	private sealed class RecordingEvents(IEventService inner) : IEventService
 	{
 		public int PageEvents;

@@ -118,10 +118,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 					var others = pair.Value.Participants
 						.Where(participant => viewer is null || !IsSame(participant, viewer))
 						.ToArray();
-					return new CommConversation(pair.Key, others.Select(other => other.Name).ToArray(),
-						others.Select(other => other.ObjId).ToArray(), UnreadFor(pair.Key), pair.Value.LastAt);
+					return (pair.Value.Recency, Conversation: new CommConversation(pair.Key,
+						others.Select(other => other.Name).ToArray(), others.Select(other => other.ObjId).ToArray(),
+						UnreadFor(pair.Key), pair.Value.LastAt));
 				})
-				.OrderByDescending(conversation => conversation.LastAt)
+				.OrderByDescending(entry => entry.Recency)
+				.Select(entry => entry.Conversation)
 				.ToArray();
 		}
 	}
@@ -378,8 +380,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				.ToList();
 			var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Distinct().Order(StringComparer.Ordinal));
 			_conversations[key] = _conversations.GetValueOrDefault(key) is { } known
-				? known with { LastAt = known.LastAt > summary.LastAt ? known.LastAt : summary.LastAt }
-				: new Conversation(participants, summary.LastAt);
+				? known.Recency >= summary.LastId ? known : known with { LastAt = summary.LastAt, Recency = summary.LastId }
+				: new Conversation(participants, summary.LastAt, summary.LastId);
 
 			if (_markers.TryGetValue(key, out var marker) && marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
 				behind.Add(key);
@@ -550,11 +552,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Order(StringComparer.Ordinal));
-		var lastAt = _conversations.TryGetValue(key, out var known) && known.LastAt > entry.Message.Timestamp
-			? known.LastAt
-			: entry.Message.Timestamp;
-
-		_conversations[key] = new Conversation(participants, lastAt);
+		// Who it is with comes from this page; when it last spoke, from whichever page is the later by id.
+		var recency = OrderKey(entry.Message);
+		_conversations[key] = _conversations.GetValueOrDefault(key) is { } known && known.Recency > recency
+			? new Conversation(participants, known.LastAt, known.Recency)
+			: new Conversation(participants, entry.Message.Timestamp, recency);
 		return key;
 	}
 
@@ -563,7 +565,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var excess = _conversations.Count - ConversationLimit;
 		if (excess <= 0) return;
 
-		foreach (var key in _conversations.OrderBy(pair => pair.Value.LastAt).Take(excess).Select(pair => pair.Key).ToArray())
+		foreach (var key in _conversations.OrderBy(pair => pair.Value.Recency).Take(excess).Select(pair => pair.Key).ToArray())
 		{
 			_conversations.Remove(key);
 			_history.Remove(key);
@@ -646,6 +648,10 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			Id is { } mine && id is { } theirs ? theirs > mine : at > At;
 	}
 
-	/// <summary>A conversation's participants as its latest page named them, the viewer included.</summary>
-	private sealed record Conversation(IReadOnlyList<CommParticipant> Participants, DateTimeOffset LastAt);
+	/// <summary>
+	/// A conversation's participants as its latest page named them, the viewer included, and its latest
+	/// page: when it was sent, and its <see cref="OrderKey"/> (the id, which keeps rising when the clock steps
+	/// back), by which conversations are ordered and the least recent dropped.
+	/// </summary>
+	private sealed record Conversation(IReadOnlyList<CommParticipant> Participants, DateTimeOffset LastAt, long Recency);
 }

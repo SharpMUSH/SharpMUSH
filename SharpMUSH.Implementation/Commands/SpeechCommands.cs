@@ -280,6 +280,20 @@ public partial class Commands
 				: executor.Object().Name;
 			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
 
+			// The page's id comes first, before anyone is told: taking one can write (the id source reserves
+			// a block), and a failure must not leave a page shown in a terminal that PAGE`MESSAGE never
+			// carries. The id goes out with PAGE`MESSAGE and is the one the page log keeps the page under, so
+			// the portal knows a pushed page and its logged copy for one. Then delivery, then the event, and
+			// the log write last.
+			var delivered = await PageLog.PageAsync(executor, senderName, successfulRecipients,
+				pageType switch
+				{
+					PageMessageType.Pose => "pose",
+					PageMessageType.SemiPose => "semipose",
+					_ => "say"
+				},
+				message.ToPlainText());
+
 			var incomingDefault = pageType switch
 			{
 				PageMessageType.Speech => MarkupText.Concat([
@@ -358,17 +372,6 @@ public partial class Commands
 						pageFormatArgs, incomingDefault, checkParents: true));
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
-
-			// The page's id. It goes out with PAGE`MESSAGE and is the id the page log keeps the page under,
-			// so the portal knows a pushed page and its logged copy for one.
-			var delivered = await PageLog.PageAsync(executor, senderName, successfulRecipients,
-				pageType switch
-				{
-					PageMessageType.Pose => "pose",
-					PageMessageType.SemiPose => "semipose",
-					_ => "say"
-				},
-				message.ToPlainText());
 
 			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
 			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
