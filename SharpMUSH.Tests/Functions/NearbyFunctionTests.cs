@@ -33,7 +33,6 @@ public class NearbyFunctionTests
 		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
 
 	[Test]
-	[NotInParallel]
 	public async Task NestedContentsAreNotNearbyTheirRoomsOccupants()
 	{
 		// Tavern
@@ -69,7 +68,6 @@ public class NearbyFunctionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task ACarriedObjectIsNearbyItsCarrier()
 	{
 		// nearby()'s second and third arms: where_is(a) == b, or where_is(b) == a.
@@ -82,7 +80,6 @@ public class NearbyFunctionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task AnExitIsNearbyWhatStandsInItsSourceRoom()
 	{
 		// where_is(exit) is Home(exit), and Home/Source/Exits are the same field in PennMUSH
@@ -93,15 +90,15 @@ public class NearbyFunctionTests
 		var godRoom = (await EvalAs(new DBRef(1), "loc(%#)")).Split(':')[0];
 		var standing = DBRef.Parse((await God("@create NearbyExitWitness")).Trim());
 		await God($"@tel #{standing.Number}={godRoom}");
-		await God($"@open NearbyDoor=#{there.Number}");
+		var door = TestIsolationHelpers.GenerateUniqueName("NearbyDoor");
+		await God($"@open {door}=#{there.Number}");
 
-		await Assert.That(await EvalAs(new DBRef(1), $"nearby(NearbyDoor,#{standing.Number})"))
+		await Assert.That(await EvalAs(new DBRef(1), $"nearby({door},#{standing.Number})"))
 			.IsEqualTo("1")
 			.Because("where_is(exit) is the room it sits in, which is where the witness is standing");
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task AMortalWithNoStandingGetsTheControlRefusal()
 	{
 		// Penn refuses unless the executor controls one side, is See_All, or is near one of them:
@@ -127,7 +124,6 @@ public class NearbyFunctionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task AnExecutorWithStandingStillAnswersForItsOwnSurroundings()
 	{
 		// The gate passes on nearby(executor, obj) as well as on control, so an ordinary player can
@@ -143,7 +139,6 @@ public class NearbyFunctionTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task AnUnresolvableArgumentAnswersTheMatchError()
 	{
 		// fun_nearby gates before it tests GoodObject, then writes a bare "#-1"; this answers the
