@@ -1,36 +1,28 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class TelDiagnosticTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private static string? ExtractMessage(ICall call)
+	/// <summary>A wizard of the test's own, so its moves and the errors it hears touch nobody else.</summary>
+	private TestIsolationHelpers.TestPlayer _player = null!;
+
+	[Before(Test)]
+	public async Task CreateWizard()
 	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify)) return null;
-		var args = call.GetArguments();
-		if (args.Length < 2) return null;
-		if (args[1] is SharpMessage { Value: MString markup })
-			return markup.ToString();
-		if (args[1] is SharpMessage { Value: string text })
-			return text;
-		if (args[1] is string str2) return str2;
-		if (args[1] is MString mstr2) return mstr2.ToString();
-		return null;
+		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService, "TelDiag");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
 	}
 
 	/// <summary>
@@ -38,7 +30,7 @@ public class TelDiagnosticTests
 	/// </summary>
 	private async ValueTask<string> Eval(string expression)
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think {expression}"));
+		var result = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result.Message?.ToPlainText()?.Trim() ?? "";
 	}
 
@@ -47,12 +39,13 @@ public class TelDiagnosticTests
 	/// </summary>
 	private async ValueTask<List<string>> ExecAndCollectErrors(string command)
 	{
-		var preCount = NotifyService.ReceivedCalls().Count();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		return NotifyService.ReceivedCalls().Skip(preCount)
-			.Select(ExtractMessage)
-			.Where(m => m != null && (m.Contains("#-1") || m.Contains("can't see") || m.Contains("don't see") || m.Contains("can't go")))
-			.ToList()!;
+		var before = WebAppFactoryArg.Notifications.CountFor(_player.DbRef);
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(command));
+		return
+		[
+			.. WebAppFactoryArg.Notifications.For(_player.DbRef).Skip(before)
+				.Where(m => m.Contains("#-1") || m.Contains("can't see") || m.Contains("don't see") || m.Contains("can't go"))
+		];
 	}
 
 	private async ValueTask WaitUntilAsync(Func<ValueTask<bool>> condition, string failureMessage, int attempts = 20, int delayMs = 100)
@@ -76,13 +69,13 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelThingIntoThingByName()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("telobj");
 		var destName = TestIsolationHelpers.GenerateUniqueName("teldst");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {destName}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {destName}"));
 
 		var numObj = await Eval($"num({objName})");
 		var numDest = await Eval($"num({destName})");
@@ -106,9 +99,9 @@ public class TelDiagnosticTests
 	{
 		var objName = TestIsolationHelpers.GenerateUniqueName("telobj2");
 		var destName = TestIsolationHelpers.GenerateUniqueName("teldst2");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
 		var obj = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {destName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {destName}"));
 		var dest = r2.Message!.ToPlainText()!.Trim();
 
 		var errors = await ExecAndCollectErrors($"@tel {obj}={dest}");
@@ -124,25 +117,19 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelSelfIntoThing()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var containerName = TestIsolationHelpers.GenerateUniqueName("telcont");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {containerName}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {containerName}=ENTER_OK"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {containerName}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {containerName}=ENTER_OK"));
 
 		// @create leaves the container in the creator's inventory, and stepping into something you are
 		// carrying is a containment loop - PennMUSH refuses it with "Bad destination."
 		// (recursive_member, src/wiz.c:440). Put the container in the room first so this test is about
 		// entering a container rather than about the loop guard.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {containerName}=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@tel {containerName}=#0"));
 
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
-
-		// Put God back before asserting. ServerWebAppFactory is shared for the whole session, and this
-		// is the one test that moves God and does not open by undoing it: an @emit later in the session
-		// speaks into the emitter's outermost room, which is this container for as long as God carries
-		// nothing else, so the audience a room-scoped assertion expects is simply not there.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		foreach (var e in errors) TestDiagnostics.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
@@ -155,12 +142,12 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetFunctions()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ngobj");
-		var r = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var r = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
 		var dbref = r.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&last_mod {dbref}=2024-01-01"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&last_mod {dbref}=2024-01-01"));
 
 		TestDiagnostics.WriteLine($"Created {objName} = {dbref}");
 
@@ -201,14 +188,14 @@ public class TelDiagnosticTests
 	{
 		var containerName = TestIsolationHelpers.GenerateUniqueName("diagcont");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diaginn");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {containerName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {containerName}"));
 		var containerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {innerName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=test_value"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=test_value"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={containerDbref}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={containerDbref}"));
 
 		var nameResult = await Eval($"name({innerDbref})");
 		TestDiagnostics.WriteLine($"name({innerDbref}) [inside container] = {nameResult}");
@@ -229,18 +216,18 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetOnObjectInsideContainerByName()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var outerName = TestIsolationHelpers.GenerateUniqueName("diagout");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diagitm");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {outerName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {outerName}"));
 		var outerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {innerName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=inner_value"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=inner_value"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={outerDbref}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={outerDbref}"));
 
 		var nameResult = await Eval($"name({innerName})");
 		TestDiagnostics.WriteLine($"name({innerName}) [inside container, by name] = {nameResult}");
@@ -269,13 +256,13 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelByNameWithObjectsInInventory()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var srcName = TestIsolationHelpers.GenerateUniqueName("telsrc");
 		var dstName = TestIsolationHelpers.GenerateUniqueName("teldst");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {srcName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {srcName}"));
 		var srcDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {dstName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {dstName}"));
 		var dstDbref = r2.Message!.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"Created {srcName} = {srcDbref}");
@@ -305,20 +292,20 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask BBSStyleEditAndTelFlow()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbspkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsbrd");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boardName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"Created {pocketName} = {pocketDbref}");
 		TestDiagnostics.WriteLine($"Created {boardName} = {boardDbref}");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&test_ref {pocketDbref}=Object is #222"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&test_ref {pocketDbref}=Object is #222"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
 
 		// num() returns bare #N format (PennMUSH behavior), while @create returns #N:timestamp.
 		var pocketBareDbref = pocketDbref.Contains(':') ? pocketDbref[..pocketDbref.IndexOf(':')] : pocketDbref;
@@ -334,7 +321,7 @@ public class TelDiagnosticTests
 		await Assert.That(numBoard).IsEqualTo(boardBareDbref)
 			.Because("num() should find the board object by name and return bare #N format");
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(_player.Handle, ConnectionService,
 			MarkupText.Plain($"@edit {pocketDbref}/*=#222,{pocketDbref}"));
 
 		var testRef = await Eval($"get({pocketDbref}/test_ref)");
@@ -395,7 +382,7 @@ public class TelDiagnosticTests
 
 		// Create a unique object and set an empty attribute on it to avoid mutating shared state
 		var emptyAttrObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IterEmpty");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&empty_attr {emptyAttrObj}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&empty_attr {emptyAttrObj}="));
 		var r2 = await Eval($"iter(get({emptyAttrObj}/empty_attr),name(##))");
 		TestDiagnostics.WriteLine($"iter(get({emptyAttrObj}/empty_attr),name(##)) = '{r2}'");
 
@@ -422,19 +409,19 @@ public class TelDiagnosticTests
 	{
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbsrpkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsrbrd");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boardName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"pocket = {pocketDbref}");
 		TestDiagnostics.WriteLine($"board = {boardDbref}");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService,
 			MarkupText.Plain($"&valid_groups {pocketDbref}=iter(v(groups),switch(1,1,##))"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {pocketDbref}={boardDbref}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@tel {pocketDbref}={boardDbref}"));
 
 		var validGroups = await Eval($"u({pocketDbref}/valid_groups)");
 		TestDiagnostics.WriteLine($"u({pocketDbref}/valid_groups) = '{validGroups}'");
@@ -481,7 +468,7 @@ public class TelDiagnosticTests
 
 		// Create a unique object and set empty attribute to avoid mutating shared state
 		var emptyObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WordsEmpty");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&wordstest_empty {emptyObj}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&wordstest_empty {emptyObj}="));
 		var r4 = await Eval($"words(get({emptyObj}/wordstest_empty))");
 		TestDiagnostics.WriteLine($"words(get({emptyObj}/wordstest_empty)) = {r4}");
 		await Assert.That(r4).IsEqualTo("0")
@@ -495,18 +482,18 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelAfterForceEdit()
 	{
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		var aName = TestIsolationHelpers.GenerateUniqueName("frcda");
 		var bName = TestIsolationHelpers.GenerateUniqueName("frcdb");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {aName}"));
+		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {aName}"));
 		var aDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {bName}"));
+		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {bName}"));
 		var bDbref = r2.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ref {aDbref}=#222"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&ref {aDbref}=#222"));
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(_player.Handle, ConnectionService,
 			MarkupText.Plain($"@force me=@edit {aDbref}/*=#222,{aDbref}"));
 
 		var refVal = await Eval($"get({aDbref}/ref)");
