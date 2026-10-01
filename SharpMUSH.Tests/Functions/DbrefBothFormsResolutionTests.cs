@@ -17,7 +17,6 @@ namespace SharpMUSH.Tests.Functions;
 /// invalidation — keyed by the object's full objid — never clears). The move itself is correct; only
 /// <c>loc()</c>-by-bare is stale. That case is captured (skipped) below.
 /// </summary>
-[NotInParallel]
 public class DbrefBothFormsResolutionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -76,8 +75,6 @@ public class DbrefBothFormsResolutionTests
 	{
 		var tag = Guid.NewGuid().ToString("N")[..8];
 
-		// Park in a known room so each fresh thing lands in our inventory (local) when we @tel it.
-		await Cmd("@tel me=#0");
 		var roomA = Short(await CmdOut($"@dig DualRoomA_{tag}"));
 		var roomB = Short(await CmdOut($"@dig DualRoomB_{tag}"));
 
@@ -100,7 +97,6 @@ public class DbrefBothFormsResolutionTests
 	public async ValueTask Loc_ByBareDbref_IsFreshAfterMove()
 	{
 		var tag = Guid.NewGuid().ToString("N")[..8];
-		await Cmd("@tel me=#0");
 		var room = Short(await CmdOut($"@dig StaleLocRoom_{tag}"));
 		var thingFull = await CmdOut($"@create StaleLocThing_{tag}");
 		var thing = Short(thingFull);
