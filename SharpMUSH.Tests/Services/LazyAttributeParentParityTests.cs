@@ -228,9 +228,10 @@ public class LazyAttributeParentParityTests
 		await Mediator.Send(new SetObjectParentCommand(b, a));
 		await AttributeService.SetAttributeAsync(a, a, "LAZYCYCLE_HERE", MarkupText.Plain("hello"));
 
-		// Only the read is bounded: a cycle the walk fails to cut never returns, while the fixture above
-		// can take a while on a loaded runner and proves nothing by being slow.
-		var names = await ReadCycleAsync().WaitAsync(TimeSpan.FromSeconds(30));
+		// Only the read is bounded, and cancelled when it runs out: a cycle the walk fails to cut never
+		// returns, while the fixture above can take a while on a loaded runner and proves nothing by being slow.
+		using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		var names = await ReadCycleAsync().WaitAsync(deadline.Token);
 		await Assert.That(names).Contains("LAZYCYCLE_HERE");
 
 		async Task<string[]> ReadCycleAsync()
@@ -238,7 +239,7 @@ public class LazyAttributeParentParityTests
 			var result = await AttributeService.LazilyGetAttributePatternAsync(
 				a, a, "LAZYCYCLE_*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
 			await Assert.That(result.IsError).IsFalse();
-			return await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(x => x.LongName).ToArrayAsync();
+			return await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(x => x.LongName).ToArrayAsync(deadline.Token);
 		}
 	}
 }

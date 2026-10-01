@@ -85,7 +85,8 @@ public class AttributeReadParentCycleTests
 	{
 		var (a, _) = await BuildDirectParentCycleAsync("CmdCycle");
 
-		var result = await Mediator.Send(new GetCommandAttributesQuery(a)).AsTask().WaitAsync(ReadBound);
+		using var deadline = new CancellationTokenSource(ReadBound);
+		var result = await Mediator.Send(new GetCommandAttributesQuery(a), deadline.Token).AsTask().WaitAsync(deadline.Token);
 
 		await Assert.That(result).IsNotNull();
 	}
