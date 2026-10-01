@@ -12,7 +12,6 @@ namespace SharpMUSH.Tests.Commands;
 /// flag is removed. The flag was already seeded and settable (by <c>@halt</c> and by <c>@chown</c>,
 /// which sets it to break ownership loops) but nothing enforced it.
 /// </summary>
-[NotInParallel]
 public class HaltFlagTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
