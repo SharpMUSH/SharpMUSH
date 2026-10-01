@@ -171,9 +171,10 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private string ConversationFor(CommEntry entry)
 	{
 		var participants = new List<CommParticipant> { new(entry.Message.From, entry.Message.FromObjId) };
-		foreach (var recipient in entry.Recipients)
+		// Where is lazy, so each recipient is checked against the list as it stands, repeats included.
+		foreach (var recipient in entry.Recipients.Where(recipient => !participants.Any(known => IsSame(known, recipient))))
 		{
-			if (!participants.Any(known => IsSame(known, recipient))) participants.Add(recipient);
+			participants.Add(recipient);
 		}
 
 		var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Order(StringComparer.Ordinal));
