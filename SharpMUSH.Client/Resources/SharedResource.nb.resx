@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Nylig wiki-aktivitet</value>
+    <value>Nylig endret</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4574,5 +4574,104 @@
   </data>
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# ulest} other {# uleste}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# side} other {# sider}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-forside</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Siste endringer</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Ny side</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Sidetittel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Søk i wikien</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De siste redigeringene i wikien, nyeste først.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Ingen sider i denne kategorien ennå.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>utkast</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>låst</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>akkurat nå</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minutt siden} other {# minutter siden}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# time siden} other {# timer siden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag siden} other {# dager siden}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Verdens-wiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Alt du trenger for å spille</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Bakgrunn, regler og nybegynnerguider, redigert av staben og spillerne. Ingen konto trengs for å lese.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Alle # side} other {Alle # sider}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Ingen wiki-sider ennå.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Ingen sider samsvarer med «{0}».</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Direkte nå} one {Direkte nå · #} other {Direkte nå · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Sist redigert av {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>redigert {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Nevnt · #} other {Nevnt · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Mer i {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Alle #} other {Alle #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Også på</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Oversikt</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Hovednavnerom</value>
   </data>
 </root>

@@ -3869,7 +3869,7 @@
     <comment>MT — `Wiki` kept untranslated, case copied from source</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Скорошна активност в Wiki</value>
+    <value>Наскоро променени</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4574,5 +4574,104 @@
   </data>
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# непрочетено} other {# непрочетени}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# страница} other {# страници}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Преглед</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Начало на уикито</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Последни промени</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Категории</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Нова страница</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Заглавие на страницата</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Търсене в уикито</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Последните редакции в уикито, най-новите първи.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Все още няма страници в тази категория.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>чернова</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>заключена</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>току-що</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # минута} other {преди # минути}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # час} other {преди # часа}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # ден} other {преди # дни}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Уики на света</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Всичко, което ви трябва, за да играете</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>История, правила и ръководства за начинаещи, редактирани от екипа и играчите. За четене не е нужен акаунт.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Всички # страница} other {Всички # страници}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Все още няма уики страници.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Няма страници, съответстващи на „{0}“.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {На живо сега} one {На живо сега · #} other {На живо сега · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Последно редактирано от {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>редактирано {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Споменати · #} other {Споменати · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Още в {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Всички #} other {Всички #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Също на</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Общ преглед</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Основно пространство от имена</value>
   </data>
 </root>

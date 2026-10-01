@@ -49,8 +49,9 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	private static WikiArticle Home() =>
-		new("Home", "## Welcome\n\nbody", null, "<h2 id=\"welcome\">Welcome</h2><p>body</p>")
+	private static WikiArticle Home(string? image = null) =>
+		new("Home", "## Welcome\n\nbody", image,
+			(image is null ? "" : $"<p><img class=\"wiki-img\" src=\"{image}\" alt=\"Home\" /></p>") + "<h2 id=\"welcome\">Welcome</h2><p>body</p>")
 		{
 			Id = "1",
 			Slug = "home",
@@ -60,12 +61,12 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 			AvailableLocales = ["en"],
 		};
 
-	private IRenderedComponent<WikiDisplay> RenderHome(bool embedded) =>
+	private IRenderedComponent<WikiDisplay> RenderHome(bool embedded, string? image = null) =>
 		Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, "home")
 			.Add(c => c.Namespace, "main")
 			.Add(c => c.Category, "general")
-			.Add(c => c.Article, Home())
+			.Add(c => c.Article, Home(image))
 			.Add(c => c.Embedded, embedded)
 			.Add(c => c.ActivateEditMode, () => Task.CompletedTask));
 
@@ -74,7 +75,7 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 	{
 		var cut = RenderHome(embedded: false);
 
-		var hrefs = cut.FindAll("a.wiki-btn").Select(a => a.GetAttribute("href")).ToList();
+		var hrefs = cut.FindAll("a.kit-capsule").Select(a => a.GetAttribute("href")).ToList();
 
 		await Assert.That(hrefs).Contains("/wiki/main/general/home/history");
 	}
@@ -87,7 +88,7 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 
 		var cut = RenderHome(embedded: false);
 
-		await Assert.That(cut.FindAll("button.wiki-btn--solid")).IsNotEmpty();
+		await Assert.That(cut.FindAll("button.kit-capsule--primary")).IsNotEmpty();
 	}
 
 	[Test]
@@ -95,7 +96,8 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 	{
 		var cut = RenderHome(embedded: false);
 
-		await Assert.That(cut.FindAll(".wiki-article-title")).IsNotEmpty();
+		// the home page has no image, so the D1 frame is the plain header with the page's heading
+		await Assert.That(cut.FindAll(".kit-page-head h1")).IsNotEmpty();
 		await Assert.That(cut.FindAll(".WikiContent--hero")).IsEmpty();
 	}
 
@@ -108,8 +110,17 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		var cut = RenderHome(embedded: true);
 
 		await Assert.That(cut.FindAll(".WikiContent--hero")).IsNotEmpty();
-		await Assert.That(cut.FindAll(".wiki-btn")).IsEmpty();
-		await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+		await Assert.That(cut.FindAll(".kit-capsule")).IsEmpty();
+		await Assert.That(cut.FindAll(".kit-banner-back, .wiki-back")).IsEmpty();
+	}
+
+	[Test]
+	public async Task Embedded_theHomeHero_ShowsItsImageOnce()
+	{
+		// The article's Image used to be null on the client; now that it is filled, the hero must not
+		// add a copy above the body's own <img>.
+		var cut = RenderHome(embedded: true, image: "/api/wiki-assets/h/home.jpg");
+		await Assert.That(cut.FindAll(".WikiContent--hero img").Count).IsEqualTo(1);
 	}
 
 	[Test]

@@ -1,0 +1,28 @@
+.wiki-index-page {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+	gap: 14px;
+	align-items: start;
+}
+
+/* a layout saved before the right zone existed renders it empty: give the column back */
+.wiki-index-page:has(.wiki-index-aside:empty) {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.wiki-index-main {
+	min-width: 0;
+}
+
+.wiki-index-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+@container page (max-width: 64rem) {
+	.wiki-index-page {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

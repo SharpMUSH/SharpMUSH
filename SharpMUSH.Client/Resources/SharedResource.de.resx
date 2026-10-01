@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Neueste Wiki-Aktivität</value>
+    <value>Zuletzt geändert</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4574,5 +4574,104 @@
   </data>
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# ungelesen} other {# ungelesen}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# Seite} other {# Seiten}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-Startseite</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Letzte Änderungen</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorien</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Neue Seite</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Seitentitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Wiki durchsuchen</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Die neuesten Bearbeitungen im Wiki, neueste zuerst.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Noch keine Seiten in dieser Kategorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>Entwurf</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>gesperrt</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>gerade eben</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Minute} other {vor # Minuten}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Stunde} other {vor # Stunden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Tag} other {vor # Tagen}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Welt-Wiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Alles, was du zum Spielen brauchst</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Hintergrund, Regeln und Einstiegshilfen, gepflegt von Team und Spielern. Zum Lesen ist kein Konto nötig.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Alle # Seite} other {Alle # Seiten}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Noch keine Wiki-Seiten.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Keine Seiten passen zu „{0}“.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Jetzt live} one {Jetzt live · #} other {Jetzt live · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Zuletzt bearbeitet von {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>bearbeitet {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Erwähnt · #} other {Erwähnt · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Mehr in {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Alle #} other {Alle #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Auch auf</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Überblick</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Hauptnamensraum</value>
   </data>
 </root>

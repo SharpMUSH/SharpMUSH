@@ -30,7 +30,8 @@ public class WikiRevisionsController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
 	IPrerenderCacheService prerenderCache,
-	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, logger)
+	IWikiNameResolver names,
+	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=
@@ -51,7 +52,7 @@ public class WikiRevisionsController(
 		var stream = await ResolveRevisionStreamAsync(page, lang);
 
 		var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
-		return Ok(revisions.Select(ToDto));
+		return Ok(await ToDtosAsync(revisions));
 	}
 
 	/// <summary>
@@ -77,7 +78,7 @@ public class WikiRevisionsController(
 		var stream = await ResolveRevisionStreamAsync(page, lang);
 
 		return await Wiki.GetRevisionForLocaleAsync(page.Id, stream, number) is WikiRevision revision
-			? Ok(ToDto(revision))
+			? Ok(await ToDtoAsync(revision))
 			: NotFound();
 	}
 
@@ -111,6 +112,6 @@ public class WikiRevisionsController(
 		Logger.LogInformation("Wiki page rolled back: slug={Slug} to r{Target} (now r{Rev}) by={Editor}",
 			LogSanitizer.Sanitize(slug), request.RevisionNumber, updated.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
 		prerenderCache.InvalidatePrefix("/wiki/");
-		return Ok(ToDto(updated));
+		return Ok(await ToDtoAsync(updated));
 	}
 }

@@ -1,0 +1,39 @@
+.wiki-shell {
+	display: grid;
+	grid-template-columns: var(--side-w) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+	min-height: 100%;
+}
+
+.wiki-shell-nav {
+	min-width: 0;
+	background: var(--surface-3);
+	border-right: 1px solid var(--border-soft);
+	position: sticky;
+	top: 0;
+	max-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-clearance, 0px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	align-self: stretch;
+}
+
+.wiki-shell-body {
+	min-width: 0;
+	padding: var(--main-pad);
+}
+
+@container page (max-width: 64rem) {
+	.wiki-shell {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 12px;
+	}
+
+	.wiki-shell-nav {
+		position: static;
+		max-height: 17.5rem;
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-card);
+		margin: 12px 12px 0;
+	}
+}

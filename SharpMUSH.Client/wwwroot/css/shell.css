@@ -823,7 +823,7 @@
 
 /* Links inside wiki content — themed color, underline on hover */
 .WikiContent .mud-card-content a {
-    color: var(--mud-palette-secondary, #80cbc4);
+    color: var(--accent);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 120ms ease, color 120ms ease;
@@ -831,7 +831,7 @@
 
 .WikiContent .mud-card-content a:hover,
 .WikiContent .mud-card-content a:focus-visible {
-    color: var(--mud-palette-secondary-lighten, #b2dfdb);
+    color: var(--accent-dim);
     border-bottom-color: currentColor;
 }
 
@@ -840,14 +840,32 @@
     font-style: italic;
 }
 
+/* D1 §4.8: a character link reads as a mention — body colour, a thin underline in the faint colour */
+.WikiContent .mud-card-content a.mention {
+    color: inherit;
+    border-bottom: 0;
+    text-decoration: underline 1px color-mix(in srgb, var(--name, var(--text-faint)) var(--mention-alpha), transparent);
+    text-underline-offset: var(--mention-offset);
+}
+
+.WikiContent .mud-card-content a.mention:hover,
+.WikiContent .mud-card-content a.mention:focus-visible {
+    color: inherit;
+    text-decoration-color: var(--name, var(--text-faint));
+}
+
 /* Redlinks — wiki links to pages that don't exist yet */
 .WikiContent .mud-card-content a.wiki-redlink {
-    color: var(--mud-palette-error, #f44336);
+    color: var(--link-missing);
+}
+
+/* the dashed border is the redlink's underline; a mention already has one */
+.WikiContent .mud-card-content a.wiki-redlink:not(.mention) {
     border-bottom: 1px dashed currentColor;
 }
 
 .WikiContent .mud-card-content a.wiki-redlink:hover {
-    color: var(--mud-palette-error-lighten, #e57373);
+    color: var(--link-missing);
 }
 
 /* Headings */

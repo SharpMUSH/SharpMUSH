@@ -1,9 +1,17 @@
 @page "/wiki"
+@layout WikiLayout
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["Wiki"] — SharpMUSH</PageTitle>
+<PageTitle>@Loc["Wiki"] — @Loc["AppTitle"]</PageTitle>
 
-@* The wiki landing page is composed from the "wiki-index" layout scope, so admins can recompose it
-   in the layout editor. Its default layout is a single WikiIndex widget; admins may add sidebars,
-   quick links, recent-changes widgets, etc. around it. *@
-<ScopedZone Scope="@LayoutScopes.WikiIndex" Zone="WidgetZone.MainContent" />
+@* D1 §6.1: the wiki home is the admin-composed wiki-index scope — MainContent (the WikiIndex widget)
+   beside a RightSidebar zone (Recently changed, Live now) rendered inside the page, as the profile
+   already does with its own right zone. *@
+<div class="wiki-index-page">
+    <div class="wiki-index-main">
+        <ScopedZone Scope="@LayoutScopes.WikiIndex" Zone="WidgetZone.MainContent" />
+    </div>
+    <aside class="wiki-index-aside">
+        <ScopedZone Scope="@LayoutScopes.WikiIndex" Zone="WidgetZone.RightSidebar" Grid="false" />
+    </aside>
+</div>

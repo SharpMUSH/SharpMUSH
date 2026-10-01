@@ -50,13 +50,16 @@ internal static class WikiControllerTestHarness
 		var localization = new WikiLocalizationService(
 			storage, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
 		var cache = Substitute.For<IPrerenderCacheService>();
+		// No engine behind these tests: every editor resolves to no name, which the DTOs allow.
+		var names = Substitute.For<IWikiNameResolver>();
+		names.NameOfAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<string?>(null));
 
 		var endpoints = new WikiEndpoints(
-			new WikiController(storage, localization, cache, NullLogger<WikiController>.Instance),
-			new WikiBrowseController(storage, localization, NullLogger<WikiBrowseController>.Instance),
-			new WikiRevisionsController(storage, localization, cache, NullLogger<WikiRevisionsController>.Instance),
-			new WikiTranslationsController(storage, localization, cache, NullLogger<WikiTranslationsController>.Instance),
-			new WikiAdminController(storage, localization, cache, NullLogger<WikiAdminController>.Instance));
+			new WikiController(storage, localization, cache, names, NullLogger<WikiController>.Instance),
+			new WikiBrowseController(storage, localization, names, NullLogger<WikiBrowseController>.Instance),
+			new WikiRevisionsController(storage, localization, cache, names, NullLogger<WikiRevisionsController>.Instance),
+			new WikiTranslationsController(storage, localization, cache, names, NullLogger<WikiTranslationsController>.Instance),
+			new WikiAdminController(storage, localization, cache, names, NullLogger<WikiAdminController>.Instance));
 
 		// An identity without an authentication type reports IsAuthenticated == false.
 		var identity = authenticated

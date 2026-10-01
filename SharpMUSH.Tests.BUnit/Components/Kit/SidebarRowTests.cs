@@ -43,6 +43,20 @@ public class SidebarRowTests : BunitContext
 	}
 
 	[Test]
+	public async Task ImageLead_WithoutImage_ShowsTheIconWhenGiven_ElseInitials()
+	{
+		// Board 21/23: a wiki page or category with no picture leads with a document icon, not initials.
+		var icon = Render<SidebarRow>(p => p.Add(x => x.Label, "Code of Conduct").Add(x => x.Lead, SidebarRow.SidebarLead.Image)
+			.Add(x => x.Name, "Code of Conduct").Add(x => x.Icon, MudBlazor.Icons.Material.Outlined.Description));
+		var fb = icon.Find(".kit-row-img.kit-row-fallback");
+		await Assert.That(fb.QuerySelector("svg")).IsNotNull();
+		await Assert.That(fb.TextContent.Trim()).IsEmpty();
+
+		var initials = Render<SidebarRow>(p => p.Add(x => x.Label, "Code of Conduct").Add(x => x.Lead, SidebarRow.SidebarLead.Image).Add(x => x.Name, "Code of Conduct"));
+		await Assert.That(initials.Find(".kit-row-img.kit-row-fallback").TextContent.Trim()).IsEqualTo("CO");
+	}
+
+	[Test]
 	public async Task AvatarLead_WithoutImage_ShowsInitialsOnATintedFill()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Dace Kellan").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar).Add(x => x.Name, "Dace Kellan"));
@@ -85,6 +99,15 @@ public class SidebarRowTests : BunitContext
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 3));
 		await Assert.That(cut.Find(".kit-row-unread").TextContent).IsEqualTo("3");
 		await Assert.That(cut.Find(".kit-row").ClassList).Contains("kit-row--unread");
+	}
+
+	[Test]
+	public async Task Sub_RendersADimSecondLine_AndClassLandsOnTheRow()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Harbour Ward").Add(x => x.Sub, "Wren · 2h ago").Add(x => x.Class, "wiki-recent-row").Add(x => x.Href, "/wiki/main/lore/harbour"));
+		await Assert.That(cut.Find(".kit-row-sub").TextContent).IsEqualTo("Wren · 2h ago");
+		await Assert.That(cut.Find(".kit-row").ClassList).Contains("wiki-recent-row");
+		await Assert.That(cut.Find(".kit-row").ClassList).Contains("kit-row--two-line");
 	}
 
 	[Test]

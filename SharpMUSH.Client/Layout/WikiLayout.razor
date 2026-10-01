@@ -1,0 +1,14 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Wiki
+
+@* The wiki pages (/wiki, a page, its history): the D1 page sidebar beside the page body, the same
+   shape as ConfigLayout. Phase 1 moves the sidebar into the shell's page-sidebar slot. *@
+<div class="wiki-shell">
+    <aside class="wiki-shell-nav">
+        <WikiSidebar />
+    </aside>
+    <div class="wiki-shell-body">
+        @Body
+    </div>
+</div>

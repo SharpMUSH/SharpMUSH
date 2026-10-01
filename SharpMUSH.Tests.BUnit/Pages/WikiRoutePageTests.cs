@@ -196,15 +196,16 @@ public class WikiPageRouteTests : TrackingBunitContext
 	{
 		// The index composes from the "wiki-index" layout scope; its default layout is the
 		// WikiIndex widget — a hero + auto-generated category grid sourced from WikiService.
+		// The localizer here echoes keys, so the hero title renders as its resx key.
 		var cut = Render<SharpMUSH.Client.Pages.WikiIndex>();
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Everything you need to play"))
+			if (!cut.Markup.Contains("NavWikiHeroTitle"))
 				throw new InvalidOperationException("wiki-index layout not resolved yet");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("Everything you need to play");
+		await Assert.That(cut.Markup).Contains("NavWikiHeroTitle");
 		await Assert.That(cut.Markup).Contains("wiki-hero");
 	}
 
@@ -266,6 +267,28 @@ public class WikiPageRouteTests : TrackingBunitContext
 		await Assert.That(editor.Instance.Article).IsNotNull();
 		await Assert.That(editor.Instance.Article!.Content).IsEqualTo("Content here.");
 		await Assert.That(cut.Markup).Contains("wiki-edit-title");
+	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_MissingPage_StartsFromTheTitleTheCreatorEntered()
+	{
+		// The sidebar's New page asks for a title and opens the editor at its slug; the slug alone
+		// ("salt_market") is not what the creator typed.
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/wiki/main/general/salt_market/edit?title=Salt%20Market");
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, "salt_market")
+						.Add(c => c.Ns, "main")
+						.Add(c => c.Category, "general")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindComponents<WikiEdit>().Count == 0)
+				throw new InvalidOperationException("editor not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindComponent<WikiEdit>().Instance.Article!.Title).IsEqualTo("Salt Market");
 	}
 }
 
