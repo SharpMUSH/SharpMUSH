@@ -63,6 +63,19 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(_feed.Viewing).IsNull();
 	}
 
+	/// <summary>The view pulls the channel's recent lines when it opens; live lines then append to them.</summary>
+	[Test]
+	public async Task Opening_PullsTheHistory_OncePerKey()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("OOC", 0)];
+		var cut = RenderView("Public");
+		cut.Render(p => p.Add(x => x.Key, "Public"));
+		cut.Render(p => p.Add(x => x.Key, "OOC"));
+
+		await Assert.That(_feed.Loaded).IsEquivalentTo(new[] { "Public", "OOC" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	[Test]
 	public async Task Bodies_AreText_NeverMarkup()
 	{

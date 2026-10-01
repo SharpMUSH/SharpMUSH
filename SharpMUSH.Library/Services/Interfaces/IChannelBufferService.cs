@@ -33,6 +33,12 @@ public interface IChannelBufferService
 	ValueTask<int> CountMessagesAsync(string channelId);
 
 	/// <summary>
+	/// Re-files a channel's buffer under the channel's new id after a rename. PennMUSH keeps the buffer
+	/// on the channel itself, so a rename keeps its history.
+	/// </summary>
+	ValueTask MoveBufferAsync(string fromChannelId, string toChannelId);
+
+	/// <summary>
 	/// Clears all messages from a channel's buffer
 	/// </summary>
 	/// <param name="channelId">The channel ID</param>

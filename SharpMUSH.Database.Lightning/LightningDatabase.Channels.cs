@@ -27,6 +27,12 @@ public partial class LightningDatabase
 {
 	private static byte[] ChanKey(string name) => Keys.Upper(name);
 
+	/// <summary>
+	/// A channel's <see cref="SharpChannel.Id"/>. It is the name as stored, so it changes with a rename,
+	/// case included, and whatever is keyed by it (the recall buffer, read markers) is moved then.
+	/// </summary>
+	private static string ChannelId(string name) => $"Channel/{name}";
+
 	private static byte[] ChanMemberKey(string upperName, long memberDbref) => Keys.Composite(upperName, memberDbref);
 
 	private static byte[] ChanMemberPrefix(byte[] upperNameKey) => Keys.Concat(upperNameKey, Keys.Sep);
@@ -38,7 +44,7 @@ public partial class LightningDatabase
 
 		return new SharpChannel
 		{
-			Id = $"Channel/{channelName}",
+			Id = ChannelId(channelName),
 			Name = MarkupTextSerializer.Deserialize(record.MarkedUpName),
 			Description = MarkupTextSerializer.Deserialize(record.Description),
 			Privs = record.Privs,
@@ -239,6 +245,11 @@ public partial class LightningDatabase
 				Mogrifier = mogrifier ?? record.Mogrifier
 			};
 
+			if (!string.Equals(oldName, newName, StringComparison.Ordinal))
+			{
+				MoveChannelReadMarkers(tx, ChannelId(oldName), ChannelId(newName));
+			}
+
 			if (oldKey.AsSpan().SequenceEqual(newKey))
 			{
 				tx.Put(Tables.Chan, oldKey, Codec.Serialize(updated));
@@ -261,6 +272,25 @@ public partial class LightningDatabase
 				tx.Put(Tables.RevChanMember, Keys.Dbref(memberDbref), newKey);
 			}
 		}, cancellationToken);
+	}
+
+	/// <summary>
+	/// Re-files every character's read marker for a renamed channel under its new id. A rename is rare
+	/// and markers are keyed by character, so this walks the table rather than keeping an index by scope.
+	/// </summary>
+	private static void MoveChannelReadMarkers(ITx tx, string oldId, string newId)
+	{
+		var oldScope = ReadMarkerScope.Channel(oldId);
+		var newScope = ReadMarkerScope.Channel(newId);
+		foreach (var (key, value) in tx.Range(Tables.ReadMarker, []).ToList())
+		{
+			var record = Codec.Deserialize<ReadMarkerRecord>(value);
+			if (!string.Equals(record.Scope, oldScope, StringComparison.Ordinal)) continue;
+
+			tx.Delete(Tables.ReadMarker, key);
+			tx.Put(Tables.ReadMarker, Keys.Composite(Keys.ReadDbref(key), newScope),
+				Codec.Serialize(record with { Scope = newScope }));
+		}
 	}
 
 	public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner, CancellationToken cancellationToken = default)

@@ -12,10 +12,12 @@ channel view, as `room-contents` fills *Here* and *Exits*.
 - **`comm.message`** — `{"v": 2, "kind": "channel" | "page", …}`, one channel
   line or page, sent only to the players who received it: the engine names
   them, after every channel lock, gag, mute, `@chatformat`, page lock, HAVEN
-  and interaction check has run. The package never widens that list.
+  and interaction check has run. The package never widens that list. A
+  channel line carries `id`, the id the portal's recall endpoint returns for
+  the same line.
 
-There are no unread counts: the engine does not know what a player has read,
-so the portal counts lines as they arrive.
+There are no unread counts in the payloads: the engine does not know what a
+player has read. The portal works them out from its own read markers.
 
 It manages only these attributes (and its ``FN`COMM`*`` helpers) on the
 configured `event_handler` object (`{{$event_handler}}`, `#9` by default). It

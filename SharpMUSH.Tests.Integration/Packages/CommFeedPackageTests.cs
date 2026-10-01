@@ -213,6 +213,29 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		}
 	}
 
+	/// <summary>
+	/// A line's <c>id</c> is the id the recall endpoint returns for it, so the portal can tell a line it
+	/// pulled from one pushed to it and keep one copy.
+	/// </summary>
+	[Test]
+	public async Task ChannelLine_CarriesTheIdTheRecallEndpointReturnsForIt()
+	{
+		var speaker = await ViewerAsync("CommIdSpeaker");
+		var member = await ViewerAsync("CommIdMember");
+		var channel = await ChannelAsync("CommId", speaker, member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("id");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(speaker, $"@chat {channel}={marker}"), Run, member);
+
+		var pushed = Frames(sent[member.Handle], "comm.message").Single();
+		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
+			.Recall(channel, null, CancellationToken.None);
+		var pulled = recall.Value!.Single(line => line.Text == marker);
+
+		await Assert.That(pushed["id"]!.GetValue<long>()).IsEqualTo(pulled.Id);
+	}
+
 	[Test]
 	public async Task ChannelPose_TextIsThePoseAsTheTerminalReadsIt()
 	{

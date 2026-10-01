@@ -11,6 +11,7 @@ public sealed class TestCommFeed : ICommFeed
 	public IReadOnlyList<CommConversation> ConversationList { get; set; } = [];
 	public Dictionary<string, List<CommMessage>> Lines { get; } = new(StringComparer.Ordinal);
 	public List<string> MarkedRead { get; } = [];
+	public List<string> Loaded { get; } = [];
 
 	public IReadOnlyList<CommChannel> Channels => ChannelList;
 	public IReadOnlyList<CommConversation> Conversations => ConversationList;
@@ -20,6 +21,12 @@ public sealed class TestCommFeed : ICommFeed
 	public IReadOnlyList<CommMessage> Messages(string key) => Lines.TryGetValue(key, out var lines) ? lines : [];
 
 	public void MarkRead(string key) => MarkedRead.Add(key);
+
+	public Task LoadHistoryAsync(string key)
+	{
+		Loaded.Add(key);
+		return Task.CompletedTask;
+	}
 
 	public void Raise() => _changed?.Invoke();
 

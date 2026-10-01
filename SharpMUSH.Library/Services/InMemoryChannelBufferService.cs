@@ -8,13 +8,20 @@ namespace SharpMUSH.Library.Services;
 /// In-memory implementation of channel message recall buffer service
 /// Messages are stored in memory and lost on server restart
 /// </summary>
-public class InMemoryChannelBufferService : IChannelBufferService
+/// <param name="ids">Gives a line that arrives without an id (<c>cbufferadd()</c> writes straight here) the
+/// next one. A broadcast line already has the id its <c>CHANNEL`MESSAGE</c> event passed on.</param>
+public class InMemoryChannelBufferService(IChannelMessageIdSource ids) : IChannelBufferService
 {
 	private readonly ConcurrentDictionary<string, CircularBuffer<SharpChannelMessage>> _buffers = new();
 	private const int DefaultBufferSize = 100;
 
 	public ValueTask AddMessageAsync(SharpChannelMessage message)
 	{
+		if (message.Id == 0)
+		{
+			message.Id = ids.Next();
+		}
+
 		var buffer = _buffers.GetOrAdd(message.ChannelId, _ => new CircularBuffer<SharpChannelMessage>(DefaultBufferSize));
 		buffer.Add(message);
 		return ValueTask.CompletedTask;
@@ -38,6 +45,22 @@ public class InMemoryChannelBufferService : IChannelBufferService
 
 	public ValueTask<int> CountMessagesAsync(string channelId)
 		=> ValueTask.FromResult(_buffers.TryGetValue(channelId, out var buffer) ? buffer.Count : 0);
+
+	public ValueTask MoveBufferAsync(string fromChannelId, string toChannelId)
+	{
+		if (!string.Equals(fromChannelId, toChannelId, StringComparison.Ordinal)
+			&& _buffers.TryRemove(fromChannelId, out var buffer))
+		{
+			foreach (var message in buffer.GetRecent(int.MaxValue))
+			{
+				message.ChannelId = toChannelId;
+			}
+
+			_buffers[toChannelId] = buffer;
+		}
+
+		return ValueTask.CompletedTask;
+	}
 
 	public ValueTask ClearBufferAsync(string channelId)
 	{

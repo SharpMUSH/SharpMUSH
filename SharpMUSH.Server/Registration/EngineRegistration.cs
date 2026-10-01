@@ -186,6 +186,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
 		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();
+		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();

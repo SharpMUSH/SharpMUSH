@@ -715,6 +715,9 @@ public partial class LightningDatabase
 			// Expanded per-object data (dbref + 0x00 + type).
 			tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));
 
+			// A character's read markers (dbref + 0x00 + scope).
+			tx.DeletePrefix(Tables.ReadMarker, Keys.Composite(n, ""));
+
 			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
 			// mail row, its sent-index entry (found directly via the row's own Sender field rather than
 			// a full-table scan), and the box entry itself. Mail it sent to others survives with a
