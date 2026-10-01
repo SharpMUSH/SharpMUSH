@@ -23,7 +23,7 @@
         <KitCard Title="@Text.AddTitle">
             <div class="kvl-add @(HasValues ? "kvl-add--pair" : null)">
                 <MudTextField T="string" Value="@_newKey" ValueChanged="@(v => _newKey = v ?? string.Empty)"
-                              Label="@Text.KeyLabel" Placeholder="@KeyPlaceholder"
+                              Label="@Text.KeyLabel" Placeholder="@Text.KeyPlaceholder"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
                               Class="kvl-field kvl-field--key"
                               OnKeyDown="HandleKeyDown" />
@@ -99,9 +99,6 @@
     /// nothing to label them with.
     /// </summary>
     private bool HasValues => Text.ValuesLabel is not null;
-
-    /// <summary>The key field's placeholder, left off where it would only repeat the label (a banned name).</summary>
-    private string? KeyPlaceholder => Text.KeyPlaceholder == Text.KeyLabel ? null : Text.KeyPlaceholder;
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey)
         && (!HasValues || !string.IsNullOrWhiteSpace(_newValues));

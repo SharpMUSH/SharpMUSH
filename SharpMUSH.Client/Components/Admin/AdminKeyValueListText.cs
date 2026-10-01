@@ -6,6 +6,10 @@ namespace SharpMUSH.Client.Components.Admin;
 /// Every string an <c>AdminKeyValueList</c> renders. The page supplies them, already localized, so
 /// each config section keeps its own <c>SharedResource</c> keys while sharing the behaviour.
 /// </summary>
+/// <param name="KeyPlaceholder">
+/// The key field's placeholder, or <see langword="null"/> where it would only repeat the label (a
+/// banned name).
+/// </param>
 /// <param name="ValuesLabel">
 /// The label over the comma-separated value input, or <see langword="null"/> for a key-only list
 /// such as banned names. Null is what tells the component there is no second field.
@@ -24,7 +28,7 @@ namespace SharpMUSH.Client.Components.Admin;
 public sealed record AdminKeyValueListText(
 	string AddTitle,
 	string KeyLabel,
-	string KeyPlaceholder,
+	string? KeyPlaceholder,
 	string AddButton,
 	string ListTitle,
 	string Empty,

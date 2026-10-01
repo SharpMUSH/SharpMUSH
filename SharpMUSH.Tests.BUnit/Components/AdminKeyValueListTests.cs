@@ -131,6 +131,30 @@ public class AdminKeyValueListTests : TrackingBunitContext
 		await Assert.That(component.FindAll(".config-list-sub")).IsEmpty();
 	}
 
+	/// <summary>
+	/// A page that has no placeholder for the key says so. The banned-name page used to pass its label a
+	/// second time, and the component dropped any placeholder whose text equalled the label.
+	/// </summary>
+	[Test]
+	public async Task AKeyWithoutAPlaceholderRendersNone()
+	{
+		var component = Render(KeyOnlyText() with { KeyPlaceholder = null }, () => Entries());
+
+		await Assert.That(component.Find("input").HasAttribute("placeholder")).IsFalse();
+	}
+
+	/// <summary>
+	/// A placeholder is shown whatever its text. Inferring "no placeholder" from text equal to the label
+	/// hid one wherever a translation happened to word the two alike.
+	/// </summary>
+	[Test]
+	public async Task APlaceholderWordedLikeItsLabelIsStillShown()
+	{
+		var component = Render(KeyOnlyText() with { KeyPlaceholder = "Host pattern" }, () => Entries());
+
+		await Assert.That(component.Find("input").GetAttribute("placeholder")).IsEqualTo("Host pattern");
+	}
+
 	[Test]
 	public async Task AddSplitsTheValueListAndReloads()
 	{
