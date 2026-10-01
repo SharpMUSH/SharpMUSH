@@ -12,7 +12,6 @@ namespace SharpMUSH.Tests.Commands;
 /// reached from softcode is queued by <c>parse_que_attr</c> as a new entry (<c>src/attrib.c:2056-2093</c>).
 /// The expected output is what PennMUSH 1.8.8 (<c>95ad3511d</c>) printed for the same softcode.
 /// </summary>
-[NotInParallel]
 public class QueuedUserCommandTests : ServerTestBase
 {
 	private TestIsolationHelpers.TestPlayer _actor = null!;
@@ -414,6 +413,8 @@ public class QueuedUserCommandTests : ServerTestBase
 	}
 
 	[Test]
+	// Its loop keeps the shared queue busy until halted, so no other test's drain could finish meanwhile.
+	[NotInParallel]
 	public async Task HaltStopsAMatchThatKeepsQueueingItself()
 	{
 		// PennMUSH: `$+loop:@pemit *One=tick;@force Pup=+loop` ticks without end, each match a new queue
