@@ -3,14 +3,14 @@ Help is available for the following MUSH commands:
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|  
-| [+]          | [:]          | ["]          | [;]          | [\]]         |
-| [ahelp]      | [anews]      | [brief]      | [DOING]      | [drop]       |
-| [enter]      | [events]     | [examine]    | [follow]     | [get]        |
+| [@chat]          | [:]          | ["]          | [:]          | [@emit]]         |
+| [ahelp]      | [ahelp]      | [brief]      | [who]      | [drop]       |
+| [enter]      | [EVENTS]     | [examine]    | [follow]     | [get]        |
 | [give]       | [go]         | [index]      | [leave]      | [look]       |
-| [LOGOUT]     | [move]       | [news]       | [page]       | [pose]       |
-| [QUIT]       | [read]       | [rules]      | [say]        | [score]      |
+| [LOGOUT]     | [go]       | [news]       | [page]       | [:]       |
+| [QUIT]       | [look]       | [rules]      | ["]        | [score]      |
 | [teach]      | [think]      | [unfollow]   | [use]        | [whisper]    |
-| [WHO]        | [with]       |              |              |              |
+| [who]        | [with]       |              |              |              |
 
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
@@ -28,28 +28,28 @@ These '@' commands set standard message/action sets on objects. Each comes in 3 
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|  
-| [@describe]  | [@drop]      | [@efail]     | [@enter]     | [@failure]   |
+| [@describe]  | [@adrop]      | [@aefail]     | [@aenter]     | [@afailure]   |
 | [@follow]    | [@give]      | [@idescribe] | [@leave]     | [@lfail]     |
-| [@move]      | [@payment]   | [@receive]   | [@success]   | [@tport]     |
-| [@ufail]     | [@unfollow]  | [@use]       | [@zenter]    | [@zleave]    |
+| [@move]      | [@apayment]   | [@receive]   | [@asuccess]   | [@atport]     |
+| [@aufail]     | [@unfollow]  | [@ause]       | [@zenter]    | [@zleave]    |
 
 
 These '@' command set other standard attributes on objects that don't follow the pattern above:
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [@aahear]        | [@aclone]        | [@aconnect]      | [@adisconnect]   |
-| [@amail]         | [@amhear]        | [@away]          | [@charges]       |
+| [@ahear]        | [@aclone]        | [@aconnect]      | [@adisconnect]   |
+| [@amail]         | [@ahear]        | [@away]          | [@charges]       |
 | [@conformat]     | [@cost]          | [@descformat]    | [@ealias]        |
 | [@exitformat]    | [@filter]        | [@forwardlist]   | [@haven]         |
 | [@idescformat]   | [@idle]          | [@infilter]      | [@inprefix]      |
-| [@lalias]        | [@listen]        | [@nameformat]    | [@oxenter]       |
-| [@oxleave]       | [@oxmove]        | [@oxtport]       | [@prefix]        |
-| [@runout]        | [@sex]           | [@startup]       |                  |
+| [@ealias]        | [@listen]        | [@nameformat]    | [@aenter]       |
+| [@leave]       | [@move]        | [@atport]       | [@prefix]        |
+| [@charges]        | [@sex]           | [@startup]       |                  |
 
 
 **See Also:**
-- [ATTRIBUTES]
+- [attributes]
 - [NON-STANDARD ATTRIBUTES]
 
 # @-BUILDING
@@ -59,106 +59,45 @@ These '@' commands are building-related (they create or modify objects):
 |--------------|--------------|--------------|--------------|--------------|  
 | [@atrchown]  | [@atrlock]   | [@chown]     | [@chzone]    | [@clone]     |
 | [@cpattr]    | [@create]    | [@destroy]   | [@dig]       | [@elock]     |
-| [@eunlock]   | [@firstexit] | [@link]      | [@lock]      | [@moniker]   |
-| [@mvattr]    | [@name]      | [@nuke]      | [@open]      | [@parent]    |
-| [@recycle]   | [@set]       | [@undestroy] | [@ulock]     | [@unlink]    |
-| [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
+| [@elock]   | [@firstexit] | [@link]      | [LOCKING]      | [@moniker]   |
+| [@cpattr]    | [@name]      | [@destroy]      | [@open]      | [@parent]    |
+| [@destroy]   | [@set]       | [@undestroy] | [@ulock]     | [@unlink]    |
+| [@unlock]    | [@ulock]   | [@wipe]      |              |              |
 
 # @-GENERAL
 These '@' commands are general utility and programming commands:
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|  
-| [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
+| [@@]         | [@alias]     | [@break]     | [@CEMIT]     | [@channel]   |
 | [@chat]      | [@command]   | [@config]    | [@decompile] | [@doing]     |
 | [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@entrances] |
-| [@find]      | [@force]     | [@function]  | [@gedit]     | [@grep]      |
-| [@halt]      | [@if]        | [@lemit]     | [@listmotd]  | [@mail]      |
-| [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   |
-| [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  |
+| [@find]      | [@force]     | [@function]  | [@edit]     | [@grep]      |
+| [@halt]      | [@if]        | [@lemit]     | [@motd]  | [MAIL]      |
+| [@notify]    | [@nspemit]    | [@nspemit]   | [@nspemit]   | [@nspemit]   |
+| [@nspemit]  | [@nspemit]   | [@nspemit]   | [@oemit]     | [@password]  |
 | [@profile]   |              |              |              |              |
 | [@pemit]     | [@prompt]    | [@ps]        | [@remit]     | [@restart]   |
-| [@scan]      | [@search]    | [@select]    | [@stats]     | [@sweep]     |
+| [@scan]      | [@search]    | [@switch]    | [@stats]     | [@sweep]     |
 | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      | [@version]   |
-| [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     | [@input]     |
+| [@wait]      | [@whereis]   | [wiki]      | [@zemit]     | [@input]     |
 
 # @-WIZARD
 These '@' commands are only usable by wizards or privileged players:
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [@allhalt]       | [@allquota]      | [@boot]          | [@chownall]      |
-| [@chzoneall]     | [@comment]       | [@dbck]          | [@disable]       |
+| [@halt]       | [@quota administrative quota changes]      | [@boot]          | [@chownall]      |
+| [@chzoneall]     | [@comment]       | [@dbck]          | [@enable]       |
 | [@dump]          | [@enable]        | [@flag]          | [@hide]          |
-| [@hook]          | [@http]          | [@kick]          | [@log]           |
+| [@hook]          | [@HTTP]          | [@kick]          | [@log]           |
 | [@motd]          | [@newpassword]   | [@pcreate]       | [@poll]          |
 | [@poor]          | [@power]         | [@purge]         | [@quota]         |
-| [@readcache]     | [@rejectmotd]    | [@respond]       | [@shutdown]      |
-| [@sitelock]      | [@sql]           | [@squota]        | [@suggest]       |
-| [@uptime]        | [@wall]          | [@wizmotd]       | [@wizwall]       |
-| [cd]             | [ch]             | [cv]             |                  |
+| [@readcache]     | [@motd]    | [@respond]       | [@shutdown]      |
+| [@sitelock]      | [@sql]           | [@quota administrative quota changes]        | [@SUGGEST]       |
+| [@uptime]        | [@wall]          | [@motd]       | [@wall]       |
+| [cd]             | [cd]             | [cd]             |                  |
 
-# ]
-"]" is a special prefix which can be used before any command. It instructs the MUSH that it shouldn't evaluate the arguments to the command (similar to the "/noeval" switch available on some commands). For example:
-
-```sharp
-> say [add(1,1)]
-You say, "2"
-```
-
-```sharp
-> say \[add(1,1)\]
-You say, "[add(1,1)]"
-```
-
-```sharp
-> ]say [add(1,1)]
-You say, "[add(1,1)]"
-```
-
-```sharp
-> ]"[add(1,1)]
-You say, "[add(1,1)]"
-```
-
-This can be used to pass unevaluated MUSHcode to softcoded commands without having to escape every special character, or to help objects set attributes to contain unevaluated code.
-
-See []2] for more examples.
-
-
-**See Also:**
-- [lit()]
-- [decompose()]
-- [escape()]
-- [@command]
-- [}]
-# ]2
-Using ']' with $-commands:
-
-```sharp
-> &test Tester=$test *: @pemit %#=I got: %0
-```
-
-Normal evaluation:
-```sharp
-> test My name is %n.
-I got: My name is Wiggles.
-```
-
-Preventing the user input from being evaluated:
-```sharp
-> ]test My name is %n.
-I got: My name is %n.
-```
-
-Preventing evaluation of code inside the $-command:
-```sharp
-> &test Tester=$test *: ]@pemit %#=I got: %0
-> test My name is %n.
-I got: %0
-```
-
-In the last example, '%0' would evaluate to 'My name is Wiggles.' (because the string entered by the user was evaluated), but the @pemit has been told not to evaluate its arguments.
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
 
@@ -166,7 +105,7 @@ In order for debug to be shown for triggered $-commands, you must either control
 
 
 **See Also:**
-- [DEBUG]
+- [debug]
 - []
 # @@
 `@@ [<text>]`
@@ -181,7 +120,7 @@ The "@@" command does nothing; it does not evaluate its input or show any messag
 
 **See Also:**
 - [@@()]
-- [null()]
+- [@@()]
 # @aclone
 `@aclone <object>=<action list>`
 
@@ -193,7 +132,7 @@ Please note that there are no @clone or @oclone attributes.
 **See Also:**
 - [@clone]
 - [@create]
-- [ACTION LISTS]
+- [action lists]
 # @aconnect
 `@aconnect <object>=<action list>`
 
@@ -211,7 +150,7 @@ One argument is passed to @aconnect:<br>
 
 **See Also:**
 - [@adisconnect]
-- [ACTION LISTS]
+- [action lists]
 - [EVENTS]
 # @amail
 `@amail <object>=<action list>`
@@ -220,7 +159,7 @@ Sets the actions to be taken by `<object>` whenever it receives @mail. Admin-onl
 
 
 **See Also:**
-- [@mail]
+- [MAIL]
 # @adescribe
 # @odescribe
 `@odescribe <object>[=<message>]`<br>
@@ -239,7 +178,7 @@ These attributes contain the message shown to others in the enactor's location w
 - [look]
 - [@describe]
 - [@idescribe]
-- [ACTION LISTS]
+- [action lists]
 # @adestroy
 `@adestroy <object>[=<action list>]`
 
@@ -271,10 +210,10 @@ Several arguments are passed to @adisconnect:<br>
 
 **See Also:**
 - [@aconnect]
-- [ACTION LISTS]
-- [recv()]
-- [sent()]
-- [cmds()]
+- [action lists]
+- [RECV()]
+- [SENT()]
+- [CMDS()]
 - [EVENTS]
 # @adrop
 # @odrop
@@ -300,9 +239,9 @@ When `<object>` is an exit, @drop is shown to objects going through `<object>`, 
 **See Also:**
 - [drop]
 - [empty]
-- [ACTION LISTS]
-- [VERBS]
-- [@success]
+- [action lists]
+- [verbs]
+- [@asuccess]
 # @aefail
 # @oefail
 # @efail
@@ -315,10 +254,10 @@ These attributes contain the message shown to someone who fails to enter `<objec
 
 **See Also:**
 - [enter]
-- [@enter]
-- [FAILURE]
-- [ACTION LISTS]
-- [VERBS]
+- [@aenter]
+- [failure]
+- [action lists]
+- [verbs]
 # @aufail
 # @oufail
 # @ufail
@@ -334,10 +273,10 @@ Although the Use @lock also restricts who can trigger $-commands or ^-listens on
 
 **See Also:**
 - [use]
-- [@use]
-- [FAILURE]
-- [ACTION LISTS]
-- [VERBS]
+- [@ause]
+- [failure]
+- [action lists]
+- [verbs]
 # @afailure
 # @ofailure
 # @failure
@@ -352,11 +291,11 @@ For players and things, this means failure to get/take. For exits, it means fail
 
 **See Also:**
 - [get]
-- [move]
-- [@lock]
-- [ACTION LISTS]
-- [VERBS]
-- [@success]
+- [go]
+- [LOCKING]
+- [action lists]
+- [verbs]
+- [@asuccess]
 # @follow
 # @ofollow
 # @afollow
@@ -370,9 +309,9 @@ Sets the message shown to someone who begins following `<object>`, the message s
 - [follow]
 - [unfollow]
 - [@unfollow]
-- [followers()]
-- [ACTION LISTS]
-- [VERBS]
+- [FOLLOWERS()]
+- [action lists]
+- [verbs]
 # @unfollow
 # @ounfollow
 # @aunfollow
@@ -386,9 +325,9 @@ Sets the message shown to someone who stops following `<object>`, the message sh
 - [follow]
 - [unfollow]
 - [@follow]
-- [followers()]
-- [ACTION LISTS]
-- [VERBS]
+- [FOLLOWERS()]
+- [action lists]
+- [verbs]
 # @ahear
 # @amhear
 # @aahear
@@ -401,8 +340,8 @@ Sets the actions to be taken after the object's @listen is matched. @ahear will 
 
 **See Also:**
 - [@listen]
-- [LISTENING]
-- [ACTION LISTS]
+- [listening]
+- [action lists]
 # @leave
 # @oleave
 # @oxleave
@@ -419,10 +358,10 @@ The leaver's new location is passed in %0, if `<object>` has permission to see i
 
 **See Also:**
 - [leave]
-- [@oxleave]
+- [@leave]
 - [@lfail]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @lfail
 # @olfail
 # @alfail
@@ -440,8 +379,8 @@ Such a failure usually occurs because `<object>` is set NO_LEAVE, or because the
 - [@leave]
 - [NO_LEAVE]
 - [locktypes]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @alias
 `@alias <player>[=<name1>[;<name2>[;...;<nameN>]]]`<br>
 `@alias <object>[=<string>]`
@@ -459,8 +398,8 @@ For other types of object, @alias has no special meaning.
 
 **See Also:**
 - [@name]
-- [alias()]
-- [fullalias()]
+- [ALIAS()]
+- [ALIAS()]
 # @move
 # @omove
 # @oxmove
@@ -483,10 +422,10 @@ The `<object>`'s new location is in %0 and the old location it moved from in %1.
 
 
 **See Also:**
-- [goto]
-- [@oxmove]
-- [ACTION LISTS]
-- [VERBS]
+- [go]
+- [@move]
+- [action lists]
+- [verbs]
 # @aenter
 # @enter
 # @oenter
@@ -513,8 +452,8 @@ The old location of the entering object is passed in %0, if `<object>` had permi
 - [enter]
 - [@ealias]
 - [leave]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @apayment
 # @payment
 # @opayment
@@ -537,8 +476,8 @@ These attributes contain the messages shown to someone who pays `<object>` penni
 - [@cost]
 - [buy]
 - [MONEY]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @atport
 # @tport
 # @otport
@@ -562,8 +501,8 @@ In all of these attributes, %0 is the object which teleported `<object>`, and %1
 
 **See Also:**
 - [@teleport]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @atrchown
 # @attrchown
 `@atrchown <object>/<attribute>=<new owner>`
@@ -574,8 +513,8 @@ This command changes the ownership of the attribute `<attribute>` on `<object>` 
 **See Also:**
 - [@atrlock]
 - [@chown]
-- [owner()]
-- [ATTRIBUTES]
+- [OWNER()]
+- [attributes]
 - [NON-STANDARD ATTRIBUTES]
 # @atrlock
 # @attrlock
@@ -590,9 +529,9 @@ If you wish to lock an attribute without gaining ownership, you can set it "lock
 
 
 **See Also:**
-- [atrlock()]
+- [ATRLOCK()]
 - [@atrchown]
-- [ATTRIBUTES]
+- [attributes]
 - [NON-STANDARD ATTRIBUTES]
 # @asuccess
 # @success
@@ -621,64 +560,13 @@ In all cases, %0 is the dbref of the moving object's original location.
 
 **See Also:**
 - [get]
-- [goto]
-- [@lock]
+- [go]
+- [LOCKING]
 - [SUCCESS]
-- [FAILURE]
-- [@odrop]
-- [ACTION LISTS]
-- [VERBS]
-# @attribute
-`@attribute <attrib>`
-
-The @attribute command displays and modifies the MUSH's standard attributes (see "@list/attribs" for a list of them).
-
-Since 1.8.5p1, changes to the attribute table are saved across reboots and shutdowns, and don't need to be placed in an @startup.
-
-The first form of the command displays the full name of the attribute `<attrib>`, along with the its attribute flags, and the dbref of the object which added it to the attribute table.
-
-See [@attribute2].
-# @attribute2
-`@attribute/access[/retroactive] <attrib>=<flag list>`<br>
-`@attribute/delete <attrib>`<br>
-`@attribute/rename <attrib>=<new name>`<br>
-`@attribute/decompile[/retroactive] [<pattern>]`
-
-`@attribute/access` adds `<attrib>` as a new standard attribute, with the default attribute flags `<flag list>`. If `<attrib>` is already a standard attribute, this command modifies its default attribute flags. Use "none" for `<flag list>` if you don't want any default attribute flags.
-
-If the `/retroactive` switch is given with `/access`, all existing copies of the attribute will be @atrchown'd to the player running the command, and will have its flags changed to `<flag list>`. A copy's `branch` flag, which marks that it has attributes below it, is kept. The command reports how many copies it changed; if it runs out of time before reaching every object, or some copies cannot be changed, it says how far it got, and running it again finishes the job.
-
-`@attribute/delete` removes a standard attribute from the table.<br>
-`@attribute/rename` renames a standard attribute.
-
-Only Wizards can modify the attribute table.
-
-`@attribute/decompile` prints out a list of @attribute/access commands needed to recreate the attribute table on another MUSH. If `/retroactive` is given, that switch will be included in the output. If `<pattern>` is given, only attributes matching `<pattern>` are decompiled.
-
-See [@attribute3].
-# @attribute3
-`@attribute/limit <attrib>=<regexp pattern>`<br>
-`@attribute/enum [<delim>] <attrib>=<list of choices>`
-
-`@attribute/limit` lets you restrict all _new_ values for an attribute to those that match a regexp pattern. Case insensitive. (Use (?-i) to make your regexp case-sensitive.)
-
-`@attribute/enum` lets you restrict all _new_ values for an attribute to match an item in a list. It will also perform partial matching on the list, much like a grab. Delimiter is optional, and defaults to a space.
-
-### Examples
-```sharp
-@attribute/enum sex=male female   <-- requires 'male' or 'female' as @sex
-@attribute/enum | race=Wookie|Indy 500 <- Your race can be 'wookie' or 'Indy 500'
-@attribute/limit score=^\\d+$    <-- @score can only contain digits. (Remember, Penn's parser eats a \)
-```
-
-
-**See Also:**
-- [ATTRIBUTES]
-- [attribute flags]
-- [@set]
-- [@atrchown]
-- [@atrlock]
-- [@list]
+- [failure]
+- [@adrop]
+- [action lists]
+- [verbs]
 # @ause
 # @use
 # @ouse
@@ -702,9 +590,9 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 **See Also:**
 - [use]
 - [@charges]
-- [@runout]
-- [ACTION LISTS]
-- [VERBS]
+- [@charges]
+- [action lists]
+- [verbs]
 # @away
 `@away <player>[=<message>]`
 
@@ -763,94 +651,6 @@ Only admin and those with the "boot" power can @boot other players.
 **See Also:**
 - [QUIT]
 - [LOGOUT]
-# @break
-# @assert
-`@break[/queued] <boolean>[=<action list>]`<br>
-`@assert[/queued] <boolean>[=<action list>]`
-
-`@break` stops the execution of further commands in the current action list if `<boolean>` is a true value. It doesn't affect new queue entries made by previous commands in the action list. It can be useful for doing error checking without having to nest @switches.
-
-If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on SharpMUSH.
-
-`@assert` does the inverse: it stops execution if `<boolean>` evaluates to false.
-
-See [@break2] for examples.
-
-**See Also:**
-- [ACTION LISTS]
-- [QUEUE]
-- [BOOLEAN VALUES]
-- [@switch]
-- [@if]
-# @break2
-# @assert2
-### Examples
-```sharp
-> @va obj=$testme *: @pemit %#=You try a test ; @break lt(%0,10)=@pemit %#=But you're too low! ; @pemit %#=And you succeed!
-> testme 0
-You try a test
-But you're too low!
-```
-
-```sharp
-> testme 10
-You try a test
-And you succeed!
-```
-
-```sharp
-> @force me={@switch 1=1, think Third; think First; @break 1; think Second}
-First
-Third
-(The @switch is run, which queues 'think Third', think First is run, displaying 'First', command execution is broken (so we never think Second), and then the queued 'think Third' is run, displaying Third. If you figured that out, you have a very good understanding of the SharpMUSH queue. :)
-```
-# @charges
-# @runout
-`@charges <object>[=<integer>]`<br>
-`@runout <object>[=<action list>]`
-
-These attributes can limit how many times an object can be successfully "use"d. When you "use" an object with a CHARGES attribute set, the object's AUSE attribute is only triggered if CHARGES is a positive integer. When CHARGES is less than 1 (or not a number), the object's RUNOUT attribute is triggered instead.
-
-When the CHARGES attribute is present and AUSE is triggered, the value of the CHARGES attribute is automatically decreased by 1. When no CHARGES attribute is set, AUSE is always triggered.
-
-See [charges2] for an example.
-
-
-**See Also:**
-- [use]
-- [@ause]
-- [ACTION LISTS]
-# charges2
-# runout2
-### Example
-```sharp
-> @create Revolver
-> @use Revolver=You pull the trigger.
-> @ouse Revolver=pulls the trigger.
-> @charges Revolver=6
-> @ause Revolver=POSE fires into the air.
-> @runout Revolver=POSE clicks, but is out of bullets.
-```
-
-```sharp
-> use revolver
-You pull the trigger.
-Revolver fires into the air.
-> ex revolver/charges
-CHARGES [#6$]: 5
-```
-
-The next 5 "use revolver"s work the same way, decrementing CHARGES each time.
-
-```sharp
-> ex revolver/charges
-CHARGES [#6$]: 0
-> use revolver
-You pull the trigger.
-Revolver clicks, but is out of bullets.
-> ex revolver/charges
-CHARGES [#6$]: 0
-```
 # @chown
 `@chown[/preserve] <object>=<player>`<br>
 `@chown <object>/<attribute>=<player>`
@@ -870,9 +670,9 @@ If `/<attribute>` is specified, it acts as an alias for @atrchown; see [@atrchow
 
 **See Also:**
 - [CHOWN_OK]
-- [Zone Masters]
+- [zone masters]
 - [@chownall]
-- [owner()]
+- [OWNER()]
 - [@atrchown]
 # @chownall
 `@chownall[/preserve][/<types>] <player>[=<new owner>]`
@@ -886,31 +686,6 @@ This command can only be used by Wizards.
 
 **See Also:**
 - [@chown]
-# @chzone
-`@chzone[/preserve] <object>=<zone>`<br>
-`@chzone <object>=none`
-
-The first form of this command changes the zone of `<object>` to `<zone>`. This puts the object on that zone and may (if the zone_control_zmp_only @config option is off) allow anyone who passes the Zone @lock of `<zone>` to control `<object>`. Any kind of object can be @chzoned, and any kind of object can be used as a zone.
-
-The second form of this command removes `<object>` from its current zone, leaving it unzoned.
-
-If a player is @chzoned, any objects he creates from that point on will automatically be on the same zone. Objects the player already owns are not affected.
-
-You must control `<object>`, and either control `<zone>` or pass its @lock/chzone.
-
-See [@chzone2].
-# @chzone2
-To see the Zone of an object, you can use either 'brief' or 'examine' to examine it. The Zone is listed on the same line as the Owner of the object.
-
-If `<zone>` does not have a Zone @lock when something is @chzoned to it, the lock is automatically set to `_`<zone>` (see [@lock] for more info).
-
-Whenever an object besides a player is @chzoned to a zone object, the WIZARD, ROYALTY, and TRUST flags will be reset, as will all @power's (for security purposes). For similar reasons, it is strongly recommended that you do not @chzone admin- or wizard-owned objects to any zone that less privileged players have access to. Wizards can use the `/preserve` switch to prevent this reset.
-
-
-**See Also:**
-- [ZONES]
-- [@chzoneall]
-- [zone()]
 # @chzoneall
 `@chzoneall[/preserve] <player>=<zone object>`
 
@@ -919,7 +694,7 @@ Changes the zone of all objects owned by `<player>` to `<zone object>`. If `<zon
 
 **See Also:**
 - [@chzone]
-- [ZONES]
+- [zones]
 # @clone
 `@clone <object>[=<new name>[, <dbref>]]`<br>
 `@clone/preserve <object>[=<new name>[, <dbref>]]`
@@ -945,81 +720,9 @@ Note: If @create is restricted or disabled, it will also restrict or disable thi
 
 **See Also:**
 - [@create]
-- [clone()]
-- [create()]
+- [CLONE()]
+- [CREATE()]
 - [@cpattr]
-# @command
-`@command <command>`<br>
-`@command/<switch> <command>`<br>
-`@command/alias <command>=<alias>`<br>
-`@command/clone <command>=<clone>`<br>
-`@command/restrict <command>=<restriction> [" <error message>]`
-
-@command can be used for adding new built-in commands, altering the way a built-in command works, and displaying information about how commands currently work.
-
-With no switches, @command shows all sorts of interesting information about how a command is parsed. Any player can use @command with no switch, while the switches are Wizard-only.
-
-The `/alias` switch creates an alias for `<command>`, allowing players to type `<alias>` to run `<command>`. The `/clone` switch creates a separate copy of `<command>`, which works the same initially but can be restricted, @hooked, etc, separately.
-
-`@command/restrict` can be used to restrict who can use `<command>`. See [restrict] for more information.
-
-Switches include:
-- /add : Add a new command that does nothing, but can be @hook'd.
-- /delete : Delete a command added with @command/add or /alias. God only.
-- /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
-- /enable : Re-enable a command disabled with @command/disable.
-
-`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. A `<error message>` after a `"` is shown instead of "Permission denied." to anyone the restriction refuses; a bare `"` clears it.
-
-The `/quiet` switch can be used to suppress output from @command.
-
-Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option, and a permanent restriction in `command_restrictions`. Changing `command_restrictions` takes effect at once, and puts every command it names, before or after the change, back to the restriction it was made with before applying the new setting, so a live `@command/restrict` on one of those commands lasts only until the next restart or change to `command_restrictions`. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
-
-See [@command2].
-# @command2
-`@command/add` is a powerful tool that lets you create new commands which are matched before normal $-commands, and which can be set not to parse their arguments, but (via @hook) can still execute softcode like an $-command.
-
-You can use these additional switches, along with `@command/add`, to control how the new command parses its arguments:
-
-- /noparse : The command does not evaluate the leftside arg(s).
-- /eqsplit : The parser parses leftside and rightside around =
-- /lsargs : Comma-separated arguments on the left side are parsed.
-- /rsargs : When used with /eqsplit, the right-side arguments are comma-separated and are parsed individually
-- /rsnoparse : The command does not evaluate the rightside arg(s).
-
-Any command added without both `/noparse` and `/rsnoparse` is provided with a `/noeval` switch automatically, so if you `@command/add` foo, then foo's arguments are parsed by default, but you can call foo/noeval. Note: when you @hook/override foo, its $-command pattern must be able to match "foo/noeval" as well for the switch to actually be used.
-
-Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
-
-See [@command3] for examples.
-
-**See Also:**
-- [@hook]
-- [RESTRICT]
-- [EVALUATION ORDER]
-# @command3
-### Examples
-```sharp
-> @create Dining Machine
-> &eat dining=$eat *:@remit %L=%n takes a bite of %0.
-> @command/add/noparse eat
-> @hook/override eat=dining machine,eat
-> eat meat loaf
-Walker takes a bite of meat loaf.
-> eat randword(apple tomato pear)
-Walker takes a bite of randword(apple tomato pear)
-```
-
-```sharp
-> &drink dining=$^drink(/noeval)? (.*)$:@remit %L=%n drinks %2.
-> @set dining/drink=regexp
-> @command/add drink
-> @hook/override drink=dining machine,drink
-> drink reverse(tea)
-Walker drinks aet.
-> drink/noeval reverse(tea)
-Walker drinks reverse(tea).
-```
 # @comment
 `@comment <object>[=<comment>]`
 
@@ -1109,72 +812,6 @@ Show just the object names (with no ansi) in a table:
 - [@trigger]
 - [@include]
 
-# @include
-`@include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]`
-
-@include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
-
-### Example
-```sharp
-&CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
-&CMD1 me=$cmd *: @include me/CHECKS; @pemit %#=You passed.
-&CMD2 me=$othercmd *: @include me/CHECKS; @@ Do something else...
-```
-
-When including attribute contents, @include ignores any ^...: or $...: at the start, so the CHECKS attribute above could also be written like this, to allow for "unit testing":
-```sharp
-&CHECKS me=$testchk *: @assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
-```
-
-The including environment (%0-%9) is available to the included actions. If arguments are provided to @include, they are substituted for the environment's %0, %1, etc. while the included action list is running. The environment is then restored after the @include.
-
-See [@include2].
-# @include2
-@include takes the following switches to alter its behaviour:
-- /chain: Include several attributes in sequence, as a pipeline. See [@include3].
-- /nobreak: Prevents an @break/@assert in the included attribute from breaking the including action list.
-- /localize: Saves all q-registers before including the attribute, and restores them after including the attribute.
-- /clearregs: Clears all q-registers before including the attribute.
-
-
-**See Also:**
-- [@include3]
-- [@trigger]
-- [ufun()]
-- [@break]
-# @include3
-# @include/chain
-`@include/chain[/<switches>] <object>/<attribute> [<object>/<attribute> ...][=<arg0>[, <arg1>, ...]]`
-
-The /chain switch turns @include into a pipeline. Instead of a single attribute, it takes a space-separated list of `<object>/<attribute>` targets and includes each in turn, left to right, in-place (no new queue entries). It is meant for splitting a command into a sequence of small, single-purpose steps that hand off to one another.
-
-Three things set a chain apart from writing several separate @includes:
-- **The same arguments reach every link.** Any `<arg0>, <arg1>, ...` given after the `=` are passed as %0, %1, ... to *each* attribute in the chain, not just the first.
-- **The links share q-registers.** A value stored with setq() (readable as `%q<name>`) in one link is visible to the next. This is how a chain passes results from one step to the next.
-- **The chain short-circuits on @break.** Each link runs until one calls @break (or a failing @assert); the remaining links are then skipped. This lets an early step reject bad input and stop the pipeline cleanly.
-
-The /nobreak, /localize and /clearregs switches behave as they do for a single @include. /nobreak confines an @break/@assert to the link it fires in, so instead of short-circuiting, the chain simply continues to the next link. /localize and /clearregs save and restore, or clear, the q-registers around the whole chain — within the chain the links still share registers.
-
-### Example
-A `+set <number>` command that validates its input through a three-step chain:
-```sharp
-&CMD`SET obj=$+set *: @include/chain me/INC`VALIDATE me/INC`RANGE me/INC`APPLY=%0
-&INC`VALIDATE obj=@assert isnum(%0)=@pemit %#=That is not a number.; think setq(n, %0)
-&INC`RANGE obj=@assert lte(%q<n>, 100)=@pemit %#=The maximum is 100.
-&INC`APPLY obj=@pemit %#=Accepted: %q<n>.
-```
-
-`+set 40` walks all three links: VALIDATE confirms `40` is a number and stores it in `%q<n>`; RANGE reads `%q<n>` and confirms it is at most 100; APPLY reads `%q<n>` and reports it back.
-
-`+set high` stops at the first link: VALIDATE's @assert fails, so it @pemits the error and @breaks — RANGE and APPLY never run.
-
-
-**See Also:**
-- [@include]
-- [@include2]
-- [@break]
-- [@dolist]
-- [@trigger]
 # @invformat
 `@invformat <object>[=<format>]`
 
@@ -1254,9 +891,9 @@ If a container has both a @nameaccent and a @nameformat, the @nameformat is used
 **See Also:**
 - [accent()]
 - [@nameformat]
-- [accname()]
-- [stripaccents()]
-- [iname()]
+- [ACCNAME()]
+- [STRIPACCENTS()]
+- [INAME()]
 # @nameformat
 `@nameformat <object>[=<format>]`
 
@@ -1281,7 +918,7 @@ Show the room's zone after its name.
 - [@nameaccent]
 - [@invformat]
 - [@idescformat]
-- [iname()]
+- [INAME()]
 # @cost
 `@cost <object>[=<amount>]`
 
@@ -1312,7 +949,7 @@ Your exit has been created.
 - [give]
 - [MONEY]
 - [@pay]
-- [money()]
+- [MONEY()]
 - [buy]
 # @cpattr
 # @mvattr
@@ -1337,7 +974,7 @@ would copy the TEST attribute from "box" to TEST on "cube".
 
 
 **See Also:**
-- [ATTRIBUTES]
+- [attributes]
 - [NON-STANDARD ATTRIBUTES]
 - [@set]
 # @create
@@ -1355,7 +992,7 @@ Wizards and objects with the pick_dbref power can also specify the `<dbref>` of 
 - [@quota]
 - [MONEY]
 - [@clone]
-- [create()]
+- [CREATE()]
 - [@dig]
 - [@open]
 - [@pcreate]
@@ -1371,65 +1008,6 @@ This is a wizard only command. It forces the database to perform a series of int
 5. Check that objects being used as zones have a @lock/zone.
 
 @dbck no longer performs an @purge. The results of @dbck are written to the game's error log, and not reported to the Wizard.
-# @decompile
-`@decompile[/<switches>] <object>[=<prefix>]`<br>
-`@decompile[/<switches>] <object>/<attribute patterns>[=<prefix>]`
-
-@decompile outputs a list of the commands that you would have to enter in order to recreate `<object>`. Useful for either copying objects from one MUSH to another, or for making logs of important objects to protect against an accidental @nuke or a crash.
-
-All output lines are prefixed with `<prefix>`, if one is given. This is useful for creating client-side scripts for editing code.
-
-You can either @decompile an entire object, or just certain parts of it. To @decompile just a few attributes, for example, you could type:
-```sharp
-@decompile <object>/<attribute pattern> [ ... <attribute patternN>]
-```
-including each attribute. Attribute patterns can be wildcards.
-
-See [@decompile2].
-# @decompile2
-@decompile takes the following switches, which can be combined:
-
-`@decompile/name`<br>
-This switch causes @decompile to use the object's name, instead of its dbref. This is the default.<br>
-`@decompile/db`<br>
-This switch makes @decompile use the object's dbref instead of its name, which is useful for editing code off-MUSH.<br>
-`@decompile/flags`<br>
-Only the code to @create the object and set flags/powers/locks is printed. When an `<attribute pattern>` is given, this switch is ignored, and @decompile only prints the matching attributes.<br>
-`@decompile/attribs`<br>
-Only the code to set the object's attributes is printed. Same as `@decompile <object>/**`<br>
-`@decompile/skipdefaults`<br>
-Don't output commands to set attribute flags if those flags are the defaults for that attribute on that MUSH.<br>
-`@decompile/tf`<br>
-Explained in [@decompile3].
-
-See [@decompile3].
-# @decompile3
-`@decompile/tf <object>[/<attribute>]`
-
-The /tf works the same as if you'd typed:<br>
-`@decompile/db <obj>[/<attrs>]=[default(me/TFPREFIX, FugueEdit >%b)]`
-
-with the exception that `@decompile/tf` does not include commands for setting attribute flags. If you have a TFPREFIX attribute set, the (unevaluated) contents of that attribute is used as the prefix. Otherwise, the string "FugueEdit > " is used. It's useful for automatically copying @decompile output into your client to alter. It is highly recommended that you set a TFPREFIX attribute, to prevent others from maliciously placing code in your client's command line.
-
-To set up `@decompile/tf`:
-
-In TinyFugue:
-```text
-/def -ag -mglob -p100 -t"FugueEdit > *" fe = /grab %-2
-```
-
-In SimpleMU:
-```sharp
-Set your Options -> Grab Password
-@set me=tfprefix:<grabpassword>FugueEdit >%b
-```
-
-
-**See Also:**
-- [CLIENTS]
-- [ATTRIBUTES]
-- [WILDCARDS]
-- [MUSHCODE]
 # @describe
 # @desc
 `@describe <object>[=<description>]`
@@ -1448,41 +1026,6 @@ When inside a thing or player, you will see its @idescribe instead, if one is se
 - [@adescribe]
 - [@idescribe]
 - [@descformat]
-# @destroy
-# @recycle
-# @nuke
-`@destroy[/override] <object>` or `@recyle[/override] <object>`<br>
-`@nuke <object>`
-
-The @destroy command marks `<object>` for destruction, or destroys `<object>` instantly if it was already marked for destruction. You must either control `<object>`, control its source or destination room (for exits), or it must be set DESTROY_OK and you must pass its @lock/destroy.
-
-To destroy objects set SAFE, you must use `@destroy/override` or @nuke. If the really_safe @config option is on, even @nuke can't destroy SAFE objects, and you must clear the SAFE flag first.
-
-@recycle is an alias for @destroy. Some MUSHes disable @destroy and only use @recycle, to avoid players mistyping. @nuke is an alias for `@destroy/override`.
-
-See [@destroy2] for a description of the destruction process.
-
-**See Also:**
-- [@undestroy]
-- [@create]
-- [@dig]
-- [@open]
-- [DESTROY_OK]
-- [SAFE]
-# @destroy2
-# DESTRUCTION
-When an object is marked for destruction, the GOING flag is set on it and its @adestroy attribute is triggered (if the 'adestroy' @config option is true). If `<object>` is a room, all the exits in the room are marked for destruction as well. If `<object>` is a player, and the @config option destroy_possessions is on, everything he owns is marked for destruction as well. (If really_safe is also on, his SAFE objects are spared.)
-
-The MUSH checks for GOING objects every ten minutes or so (see '@config purge_interval'); each one is set with the GOING_TWICE flag, and will be destroyed totally on the next cycle. You can save it from destruction during this period using the @undestroy command, or @destroy it again to destroy it instantly. The GOING and GOING_TWICE flags cannot be set or removed manually.
-
-When an object is destroyed, any commands, @waits and semaphores it has queued are drained, and the object's owner has the quota for the object, and the initial cost of creating it, refunded. The OBJECT`DESTROY event is also queued.
-
-Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels the player owned.
-
-
-**See Also:**
-- [SAFE]
-- [EVENTS]
 # @undestroy
 # @unrecycle
 `@undestroy <object>`
@@ -1500,39 +1043,6 @@ If `<object>` is a player and the 'destroy_possessions' @config option is on, al
 - [@destroy]
 - [GOING]
 - [@startup]
-# @dig
-`@dig[/teleport] <room name>[=<exit to>, <exit from>, <room dbref>, <to dbref>, <from dbref>]`
-
-This command creates a new room named `<room name>`. Creating a room costs some pennies (see '@config room_cost' for exactly how many). If the `/teleport` switch is given, you will be teleported to the room after it's created, as per the @teleport command.
-
-If `<exit to>` is given, the MUSH will automatically open an exit from your current location to the new room named `<exit to>`, if you have permission. You can also specify `<exit from>`, to create an exit from the new room back to your current location. Opening exists also costs pennies; see '@config exit_cost'. The exit names may contain multiple aliases, separated with semicolons, as per [@name].
-
-Wizards and objects with the pick_dbref power can also specify the dbrefs of garbage objects to use when creating the room and the to and from exits.
-
-See [@dig2] for examples.
-# @dig2
-### Examples
-```sharp
-> @dig Kitchen
-```
-This command will create a new room named 'Kitchen'. You will be informed what the dbref of this room is.
-```sharp
-> @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k
-```
-This will create the room as above, and also open an exit leading to it named `Kitchen \<N\>` with the aliases n, north, kitchen and k. It will NOT create an exit coming back from the Kitchen room.
-```sharp
-> @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k, Out \<S\>;s;south;out;o
-```
-This will do just the same as the above, except it will also create an exit named `Out \<S\>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
-
-
-**See Also:**
-- [@open]
-- [@link]
-- [EXITS]
-- [@create]
-- [DBREF]
-- [dig()]
 # @doing
 `@doing <object>[=<message>]`
 
@@ -1545,72 +1055,8 @@ To change the message shown above player @doings in WHO, use @poll.
 
 **See Also:**
 - [@poll]
-- [WHO]
-- [doing()]
-# @dolist
-`@dolist[/<switches>][/notify][/delimit <delim>] <list>=<action list>`
-
-@dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list.
-
-The %i0 substitution, or the function itext(0), can be used in the `<action list>` to get the current element of the `<list>`, and the inum(0) function returns the position of the current element. ilev() returns the nesting depth of @dolists. The %iL substitution returns the itext() for the outermost @dolist, and is equivilent to itext(ilev()).
-
-For backwards compatability, the string "##" is also replaced with the current element of the list, and "#@" the current position. However, these replacements occur BEFORE evaluation, which means that they always return the values for the outermost @dolist, and are thus unsuitable for nesting. It also makes them unsafe for use on user-input or strings which may contain special characters; using the %i* sub or itext() instead is very strongly recommended.
-
-See [@dolist2].
-# @dolist2
-If the `/notify` switch is given, the command "@notify me" is queued after all copies of `<action list>` have been queued. This is useful for object synchronization with semaphores.
-
-If the `/inline` switch is given, @dolist will run the new action lists instantly, instead of queueing them to be run later.
-
-When using `@dolist/inline`, an @break in an `<action list>` will stop the calling action list (and any further `<action list>`s) from running. Each `<action list>` will also be able to see/alter the q-registers for the calling action list. The following switches can be used with `/inline` to alter this behaviour:
-- /nobreak: @breaks in `<action list>` do not effect to the calling action list
-- /localize: q-registers are saved before each `<action>` is run, and restored after it completes
-- /clearreg: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize.
-
-`@dolist/inplace` is an alias for `@dolist/inline/nobreak/localize`.
-
-See [@dolist3] for examples.
-
-**See Also:**
-- [iter()]
-- [itext()]
-- [map()]
-- [@notify]
-- [SEMAPHORES]
-- [ACTION LISTS]
-# @dolist3
-### Examples
-```sharp
-> @dolist a b c=say %i0 is number [inum(0)]
-You say, "a is number 1"
-You say, "b is number 2"
-You say, "c is number 3"
-```
-
-```sharp
-> &test me=$test: say Starting ; @wait me={say Done} ;
-                  @dolist/notify a b c=say %i0 is [inum(0)]
-> test
-You say, "Starting"
-You say, "a is 1"
-You say, "b is 2"
-You say, "c is 3"
-Notified.
-You say, "Done"
-```
-
-```sharp
-> @dolist a b c=@dolist 1 2 3=say %iL/%i0
-You say, "a/1"
-You say, "a/2"
-You say, "a/3"
-You say, "b/1"
-You say, "b/2"
-You say, "b/3"
-You say, "c/1"
-You say, "c/2"
-You say, "c/3"
-```
+- [who]
+- [DOING()]
 # @drain
 `@drain[/any][/all] <object>[/<attribute>][=<number>]`
 
@@ -1626,7 +1072,7 @@ You may not specify both the `/any` switch and a specific attribute. Similarly, 
 
 
 **See Also:**
-- [SEMAPHORES]
+- [semaphores]
 - [@wait]
 - [@notify]
 - [@halt]
@@ -1669,55 +1115,8 @@ These attributes only have meaning for players and things (as rooms/exits cannot
 **See Also:**
 - [enter]
 - [leave]
-- [goto]
+- [go]
 - [ENTER_OK]
-# @edit
-# @gedit
-`@edit[/first][/check][/quiet] <object>/<attributes>=<search>, <replace>`<br>
-`@edit[/check][/quiet] <object>/<attributes>=$, <string to append>`<br>
-`@edit[/check][/quiet] <object>/<attributes>=^, <string to prepend>`
-
-This command allows you to edit the contents of attributes, without having to retype the entire attribute.
-
-All the attributes on `<object>` whose names match the wildcard pattern `<attributes>` will be searched for the string `<search>`, and each occurrence of it will be replaced with the string `<replace>`.
-
-If `<search>` is "$", then `<replace>` will be added to the end of the attributes. When `<search>` is "^", `<replace>` will be added to the beginning of the attributes. (If you need to replace a single $ or ^, consider using @edit/regexp (see help @edit2) or the edit() function.)
-
-If the `/first` switch is given, only the first occurrence of `<search>` in each attribute is replaced. If the `/check` switch is given, the attributes are not altered, you'll just be shown what would be changed (with the changes ansi-highlighted).
-
-If the `/quiet` switch is given, you won't be shown the modified text, you'll just be told how many of the matching attributes were/weren't edited. Useful when edited a lot of large/spammy attributes.
-
-`<search>` and `<replace>` are not evaluated, so you don't need to escape special characters. If either contains commas, however, you may need to wrap the string in {curly braces}.
-
-See [@edit2].
-# @edit2
-`@edit/regexp[/all][/nocase][/check][/quiet] <object>/<attributes>=<regexp>,<replace>`
-
-When the `/regexp` switch is given, @edit performs a regular expression replacement, similar to the regedit() function. Normally, only the first match per attribute will be replaced; if the `/all` switch is given, all possible matches in each attribute are replaced (as per regeditall()).
-
-Regexp matches are case-sensitive by default, but the `/nocase` switch can be given to make them case-insensitive (as per regediti()/regeditalli()).
-
-The `/check` and `/quiet` switches work the same as for non-regexp @edits.
-
-Note that, unlike normal @edits, the `<replace>` for an `@edit/regexp` WILL be evaluated, once for each replacement made, with the $0 token being replaced with the overall matching text, $1 with the first subexpression, and so on. Named subexpressions are also possible via `$<name>`.
-
-### Example
-```sharp
-> &foo me=Block of text/Wed Feb 22 22:54:02 2012/#10010
-> @edit/regexp me/foo=^(.+)/([^/]+)/(#[0-9]+(?::[0-9]+)?)$, ucstr($1) -- [convtime($2)] -- [name($3)]
-FOO - Set: BLOCK OF TEXT -- 1329951242 -- Minion
-```
-Replace a literal '^' with 'v'
-```sharp
-> @edit/regexp me/bar=\^, v
-```
-
-
-**See Also:**
-- [edit()]
-- [regedit()]
-- [ATTRIBUTES]
-- [WILDCARDS]
 # @elock
 # @eunlock
 `@elock <object>[=<key>]`<br>
@@ -1732,7 +1131,7 @@ and<br>
 
 
 **See Also:**
-- [@lock]
+- [LOCKING]
 - [locktypes]
 - [enter]
 - [ENTER_OK]
@@ -1749,15 +1148,15 @@ The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof`
 
 
 **See Also:**
-- [@nsemit]
-- [emit()]
+- [@nspemit]
+- [EMIT()]
 - [@pemit]
 - [@remit]
 - [@oemit]
 - [@lemit]
 - [@zemit]
-- [@cemit]
-- [@speechmod]
+- [@CEMIT]
+- [@SPEECHMOD]
 - [NOSPOOF]
 - [SPOOFING].]
 # @enable
@@ -1791,10 +1190,10 @@ Zone entry is assumed to occur before room entry, so these are triggered before 
 
 **See Also:**
 - [@zleave]
-- [ZONES]
+- [zones]
 - [@zemit]
-- [zwho()]
-- [VERBS]
+- [ZWHO()]
+- [verbs]
 # @zleave
 # @ozleave
 # @azleave
@@ -1811,10 +1210,10 @@ Zone leaving is assumed to occur after room leaving, so these are triggered afte
 
 **See Also:**
 - [@zenter]
-- [ZONES]
+- [zones]
 - [@zemit]
-- [zwho()]
-- [VERBS]
+- [ZWHO()]
+- [verbs]
 # @entrances
 `@entrances[/<switch>] [<object>][=<begin>[, <end>]]`
 
@@ -1832,7 +1231,7 @@ If you control `<object>`, or have the Search or See_All powers, all objects lin
 **See Also:**
 - [@link]
 - [@search]
-- [entrances()]
+- [ENTRANCES()]
 # @exitformat
 `@exitformat <object>[=<format>]`
 
@@ -1869,8 +1268,8 @@ Note: The response body has the same 8k limit as other MUSH strings. Anything lo
 
 
 **See Also:**
-- [urlencode()]
-- [urldecode()]
+- [URLENCODE()]
+- [URLDECODE()]
 # @firstexit
 `@firstexit <exit1>[, ... , <exitN>]`
 
@@ -1896,53 +1295,6 @@ One, Two, and Three
 - [EXITS]
 - [@open]
 - [@link]
-# @filter
-`@filter <object>[=<pattern1>[, <pattern2>[, ..., <patternN>]]`
-
-The filter attribute is used in conjunction with the AUDIBLE flag. When set, sound which matches any of the comma-separated list of wildcard patterns in this attribute is not propagated through the audible object.
-
-@filter uses the type of matching described in HELP SWITCH WILDCARDS.
-
-If you need to use a comma in one of the patterns, put a \ before it, do not use {} curly braces.
-
-You can set the regexp flag on the filter attribute to use regular expressions instead of wildcard patterns, and can set the case flag to make the patterns case-sensitive.
-
-Sounds are only forwarded if the speaker also passes `<object>`'s @lock/filter, which receives the sound heard as %0.
-
-See [@filter2] for an example.
-
-
-**See Also:**
-- [AUDIBLE]
-- [@infilter]
-- [attribute flags]
-- [LISTENING]
-- [@forwardlist]
-- [@prefix]
-- [WILDCARDS]
-# @filter2
-### Example
-An audible exit leads from the room where Wizard is standing to another room where the puppet "Wiztoy" is standing.
-```sharp
-> @prefix exit=From inside,
-> :tests.
-Wizard tests.
-Wiztoy> From inside, Wizard tests.
-```
-
-```sharp
-> @filter exit=* jumps.,* tests.
-> :jumps.
-Wizard jumps.
-> :tests.
-Wizard tests.
-```
-
-```sharp
-> :tests again.
-Wizard tests again.
-Wiztoy> From inside, Wizard tests again.
-```
 # @find
 `@find [<name>][=<begin>, <end>]`
 
@@ -1970,7 +1322,7 @@ In order to forward to an object, you must either control it, have the pemit_all
 - [AUDIBLE]
 - [PUPPET]
 - [@debugforwardlist]
-- [@lock]
+- [LOCKING]
 # @debugforwardlist
 # debugforwardlist
 `@debugforwardlist <object>[=<list of dbrefs>]`
@@ -1981,111 +1333,9 @@ The @debugforwardlist must be a space-seperated list of dbrefs. In order to forw
 
 
 **See Also:**
-- [DEBUG]
+- [debug]
 - [@forwardlist]
-- [@lock]
-# @force
-`@force[/noeval][/inline] <object>=<action list>`
-
-This command forces `<object>` to queue the given action list, as if the object had entered the action list itself. You must control `<object>` to @force it. @force is useful for manipulating puppets.
-
-If `/inline` is given, `<object>` will run `<action list>` _now_, instead of being queued for execution later. By default, `<action list>` will be able to see/alter q-registers in the calling action list, and any @breaks in `<action list>` will also stop the calling action list. The following switches alter that behaviour:
-- /nobreak: @breaks in `<action list>` will not stop the calling action list.
-- /localize: q-registers will be saved before `<action list>` is run, and restored after.
-- /clearregs: q-registers will all be reset before `<action list>` is run. You'll usually want to use /localize as well with this.
-
-`@force/inplace` is an alias for `@force/inline/nobreak/localize`.
-
-@force can be abbreviated as<br>
-`<dbref> <action list>`
-
-See [@force2].
-# @force2
-Normally, the action list is evaluated twice - once when @force is run, and again when `<object>` runs the action list. If the `/noeval` switch is given, `<action list>` is not evaluated until it is run by `<object>`.
-
-### Examples
-```sharp
-> @create Lackey
-Created: Object #103
-> @force Lackey=go east
-Lackey goes east.
-Lackey has left.
-> @force #103=page Cyclonus=Hi there!
-Lackey pages: Hi there!
-> #103 page Cyclonus=Whee
-Lackey pages: Whee
-```
-
-See [@force3].
-# @force3
-Normally, @force creates a new queue entry. `@force/inline` does not.
-
-### Examples
-```sharp
-> @create Lackey
-Created: Object #103
-> &order me=$order *:say Lackey, %0 ; @force Lackey=%0 ; say Done?
-> order pose salutes!
-You say, "Lackey, pose salutes!"
-You say, "Done?"
-Lackey salutes!
-```
-
-```sharp
-> &order me=$order *:say Lackey, %0 ; @force/inline Lackey=%0 ; say Done?
-> order pose salutes!
-You say, "Lackey, pose salutes!"
-Lackey salutes!
-You say, "Done?"
-```
-
-
-**See Also:**
-- [PUPPET]
-- [DBREF]
-- [objeval()]
-# @flag
-`@flag <flag name>`<br>
-`@flag/list [<flag name pattern>]`<br>
-`@flag/add <flag name>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`<br>
-`@flag/delete <flag name>`<br>
-`@flag/alias <flag name>=<alias>`<br>
-`@flag/letter <flag name>[=<letter>]`<br>
-`@flag/restrict <flag name>=[<setperms>], [<unsetperms>]`<br>
-`@flag/type <flag name>=<type(s)>`<br>
-`@flag/enable <flag name>`<br>
-`@flag/disable <flagname>`<br>
-`@flag/decompile [<pattern>]`
-
-This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show.
-
-All other switches to this command are restricted to God:
-- /disable disables a flag, making it invisible and unusable
-- /enable re-enables a disabled flag
-- /alias adds a new alias for an existing flag; use !`<alias>` to delete one.
-- /letter changes or removes a single-letter alias for an existing flag.
-- /restrict changes flag permissions (see help @flag2)
-- /type changes flag type(s) (see help @flag2)
-- /delete deletes a flag completely, removing it from all objects in the database and then removing it permanently from the flag table. It requires the exact flag name or alias to be used. Be very very careful with this.
-- /decompile prints out a list of @flag/add commands needed to recreate the flag table on another MUSH. If `<pattern>` is given, only flags whose names match that wildcard pattern are shown.
-
-See [@flag2] for information on `@flag/add`.
-
-
-**See Also:**
-- [FLAGS]
-- [@set]
-- [@power]
-- [flag permissions]
-# @flag2
-`@flag/add` is used to add a new flag with the given name. Arguments other than the flag name are optional:
-
-`<letter>` gives the flag's one-letter abbreviation, which must not conflict with the one-letter abbreviation of another flag that could be applied to the same object type(s). It defaults to none, which means it won't appear in a list of flag characters but can still be tested for with hasflag(), andlflags(), and orlflags().<br>
-`<type>` specifies the space-separated list of types to which the flag applies, and may be 'any' (the default) or one or more of 'room', 'thing', 'player', or 'exit'.<br>
-`<setperms>` specifies the space-separated list of permissions for who can set and/or see the flag. See [flag permissions] for details. It defaults to 'any'<br>
-`<unsetperms>` specifies the space-separated list of permissions for who can clear the flag on an object they control. It defaults to whatever `<setperms>` is given, or 'any'.
-
-Flags added with `@flag/add` are saved with the database when it is dumped, and do not need to be re-added at startup. They are treated exactly as any other flag in the server.
+- [LOCKING]
 # flag permissions
 The following permissions can be used when specifying whether `<actor>` may set or clear a flag on an `<object>` they control:
 
@@ -2103,88 +1353,7 @@ The following permissions can be used to specify whether `<looker>` can see the 
 The following permissions control other behavior related to the flag:
 
 log Log when the flag is set or cleared. Only meaningful in `<setperms>`.<br>
-event Trigger the OBJECT`FLAG event when this flag is set or cleared. Only meaningful in `<setperms>`. See [events] for more information.
-# @function
-`@function [<function name>]`<br>
-`@function[/preserve] <name>=<obj>, <attrib>[, <min args>, <max args>[, <restrictions>]]`<br>
-`@function <function name>=<object>/<attribute>`<br>
-`@function/<switch> <function name>`<br>
-`@function/restrict[/builtin] <function name>=<restrictions>`<br>
-`@function/alias <function name>=<alias>`<br>
-`@function/clone <function name>=<clone>`
-
-When used without any arguments, this command lists all global user-defined functions. For wizards and others with the Functions power, it also lists the dbref number and attribute corresponding to the listed functions.
-
-When used with a function name, it displays some information about how that function is parsed, and how many arguments it takes.
-
-`<switch>` can be one of:
-- /disable, to disable a function.
-- /enable, to re-enable it.
-- /delete, to remove a user-defined or cloned function, or allow a built-in function to be overriden by a user-defined one.
-- /restrict, to change the restriction flags on an existing function.
-
-`@function/alias` creates an alias for the built-in function `<function name>` so that it can also be called as `<alias>`. `@function/clone` creates a new copy of `<function name>` named `<clone>`, which works the same initially but can be restricted separately. You cannot alias or clone @functions, or alias cloned functions.
-
-Otherwise, this command defines a global function with the name `<function name>`, which evaluates to `<attribute>` on `<object>`.
-
-See [@function2].
-# @function2
-`<object>` can be anything that the player using the @function command controls (if safer_ufun is enabled) or can examine (if not). `<function name>` must be 30 characters or less.
-
-A function defined using @function works just like any of the normal MUSH functions, from the user's perspective. The functions are executed by the object, with its powers.
-
-Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. If the maximum arguments is negative, any additional arguments are treated as part of the text of the last argument. Note that this behaviour is deprecated, and will be removed in the near future.
-
-An optional fifth argument will set restriction flags.
-
-The `/preserve` switch, for MUX compability, does the same thing as the 'localize' restriction - treats the attribute that's evaluated as if it were called with ulocal() instead of u().
-
-### Example
-```sharp
-> &WORD_CONCAT #10=%0 %1
-> say u(#10/word_concat, foo, bar)
-You say, "foo bar"
-```
-
-```sharp
-> @function word_concat=#10, word_concat
-> say word_concat(foo,bar)
-You say, "foo bar"
-```
-
-See [@function3].
-# @function3
-Global user-defined functions are not automatically loaded when the game is restarted. In order to avoid objects which attempt to use functions that have not been loaded, a @startup containing @function commands should be set on a wizard object with as low a dbref number as possible; God (#1) is suggested for this use. You can also create functions from the alias.cnf file.
-
-For example, if you have one object that stores all your global functions, you could set the following command (the object is #100 in the example):
-```sharp
-@startup #1=@dolist lattr(#100)=@function ##=#100,##
-```
-
-And then store each function as an attribute of the same name on object #100.
-
-See [@function4].
-# @function4
-Normally, built in functions cannot be overriden by @functions. However, if a built-in function is deleted with `@function/delete`, you can then make a @function with the same name. "Deleted" built-ins can still be called through the FN() function, and can have restrictions applied with `@function/restrict/builtin`. `@function/restore` will delete the @function and turn the built in version back on.
-
-Using @function on an already-added @function will delete the old one and install a new function with none of the settings of the old one kept.
-
-### Example
-```sharp
-> @function/delete ansi
-> &ansi_fun #1234=%1
-> @function ansi=#1234, ansi_fun, 2, -2, noguest
-```
-
-This creates a new version of ansi() that doesn't do any colorization, and that needs two arguments, like the built-in version. It will be restricted to non-guest players.
-
-
-**See Also:**
-- [RESTRICT]
-- [FUNCTIONS]
-- [@startup]
-- [fn()]
-- [valid()]
+event Trigger the OBJECT`FLAG event when this flag is set or cleared. Only meaningful in `<setperms>`. See [EVENTS] for more information.
 # @grep
 `@grep[/<switches>] <object>[/<attrs>]=<pattern>`
 
@@ -2202,9 +1371,9 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 
 
 **See Also:**
-- [grep()]
-- [wildgrep()]
-- [regrep()]
+- [GREP()]
+- [GREP()]
+- [GREP()]
 - [WILDCARDS]
 # @halt
 # @allhalt
@@ -2229,7 +1398,7 @@ A cancelled delayed entry remains reserved until its scheduled trigger is confir
 **See Also:**
 - [@wait]
 - [@ps]
-- [SEMAPHORES]
+- [semaphores]
 - [@drain]
 - [@notify]
 # @haven
@@ -2247,7 +1416,7 @@ When someone attempts to page `<player>` and is unable to, either because `<play
 **See Also:**
 - [HAVEN]
 - [page]
-- [@lock]
+- [LOCKING]
 - [@away]
 - [@idle]
 # @hide
@@ -2262,11 +1431,11 @@ The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide co
 
 
 **See Also:**
-- [hidden()]
-- [WHO]
-- [lwho()]
-- [lports()]
-- [ports()]
+- [HIDDEN()]
+- [who]
+- [LWHO()]
+- [LPORTS()]
+- [LPORTS()]
 # @idescribe
 # @oidescribe
 # @aidescribe
@@ -2283,131 +1452,12 @@ If there is no IDESCRIBE set for an object, those who enter or look inside it wi
 
 **See Also:**
 - [enter]
-- [@enter]
+- [@aenter]
 - [ENTER_OK]
 - [@describe]
 - [look]
 - [@idescformat]
-- [VERBS]
-# @hook
-`@hook/<switch> <command>[=<object>[, <attribute>]]`<br>
-`@hook/list [<command>]`
-
-@hook makes the command parser evaluate given attributes at certain points in command evaluation. The possible points, indicated by the proper switch:
-
-- @hook/ignore: The attribute is evaluated before the built-in command is run. If it returns a false value, the command is skipped (the input is still matched against softcoded commands)
-- @hook/override: The object/attribute is matched for a $-command, and if it matches, it is run instead of the built-in command, but with the precedence of the built-in command (thus overriding not only the built-in command but any local $-commands that might match). If the match fails, normal built-in command processing continues. Note that all locks and flags on the object (HALT, etc.) still apply.
-- @hook/override/inline: Same as `@hook/override`, but the resulting matches are run immediately - not queued for later execution!
-- @hook/before: The attribute is evaluated before the built-in command is run.
-- @hook/after: The attribute is evaluated after the built-in command is run.
-- @hook/extend: If an invalid switch is given to the command, attempt to run a matching $-command in `<object>[/<attribute>]` instead of giving an error. Allows extending built-in commands in softcode without having to rewrite the core functionality.
-- @hook/extend/inline: As above, but the $-command won't be queued.
-
-See [@hook2].
-# @hook2
-In all cases, %# is the dbref of the object doing the command, and all hooks share the same set of q-registers. With `/before` and `/after`, the results of the evaluated attribute is thrown away like it was wrapped in a call of null(). Also, in cases where a command and function do the same thing (e.g., @pemit and pemit()), only the command gets the hooks.
-
-A number of named registers are available in @hooks, accessible via `r(<name>, args)`, containing the arguments passed to the command. The exact registers available depend on the command type and the arguments passed; see [@hook7] for a description of all possible registers.
-
-Hooks can also be set in the alias.cnf file.
-
-Leaving out the object and attribute clears an existing hook. Wizards can see existing hooks with @command or `@hook/list`.
-
-See [@hook3] for more information about `@hook/override/inline`, [@hook4] for information on `@hook/extend`, [@hook5] for examples, and 'help @hook7' for an list of available named registers.
-# @hook3
-`@hook/override/inline` and `@hook/extend/inline` allow you to write softcoded commands which act exactly like built-in commands - because they're run immediately, instead of being queued, output from the command appears in the right order relative to other commands in the action list. By default, commands hooked with `/inline` have access to the q-registers of the calling action list, and @breaks in the hooked command propagate to the calling action list, allowing you to write your own control structures.
-
-For example, this adds a new command, @qbreak, which works like @break but stops command execution when %q0 contains a true value:
-```sharp
-> &qbreak #123=$@qbreak: @break %q0=@pemit/silent %#=Stopping.
-> @command/add @qbreak
-> @hook/override/inline @qbreak=#123, qbreak
-```
-
-This behaviour can be altered by adding the following switches to `@hook/inline`:
-- /nobreak: @breaks in the hooked command do not stop the calling action list from running
-- /localize: q-registers are saved before the hooked command is run, and restored after it completes
-- /clearregs: All q-registers are reset before the hooked command is run. Most useful when used with /localize.
-
-`@hook/inplace` is an alias for `@hook/inline/localize/clearregs/nobreak`.
-
-See [@hook6] for some examples of using `@hook/override/inline`.
-# @hook4
-`@hook/extend` can be used to add new features to a built-in command, via additional switches, without forcing you to also rewrite the existing functionality like `@hook/override` would. For example:
-```sharp
-> &who`active #123=$who/active*: @nspemit %#=ufun(fun_who, lwho(%#), switch(%0, ?*, stringsecs(%0)))
-> &who`staff #123=$who/staff: @nspemit %#=ufun(fun_who, setunion(lwho(%#), lsearch(all, elock, type^player&(flag^wizard|flag^royalty)))
-> @hook/extend WHO=#123
-```
-
-This leaves the built-in WHO command working as normal, but adds two new switches for filtering the output in different ways.
-
-`@hook/igswitch` is an alias for `@hook/extend`, for Rhost compatability.
-# @hook5
-An example of @hook:
-```sharp
-> &top_line #3=pemit(%#, What follows is the results of a look)
-> &bottom_line #3=pemit(%#, You're done looking.)
-> @hook/before look=#3, top_line
-> @hook/after look=#3, bottom_line
-> look
-What follows is the results of a look
-Room Zero
-You are in Room Zero. It's very dark here.
-You're done looking.
-```
-
-```sharp
-> &cmd.say #3=$say *: @remit %L=if(hasflag(%#,OOC),<OOC>%b)%n says, "%0"
-> @hook/override say=#3, cmd.say
-> @set me=OOC
-> "test
-<OOC> Robert says, "test"
-```
-
-See [@hook6] for /inplace examples.
-# @hook6
-```sharp
-> &dance me=$dance:pose sticks his right foot in ; say Do the hokey pokey ; pose sticks his right foot out
-> dance
-Walker sticks his right foot in
-You say, "Do the hokey pokey"
-Walker sticks his right foot out
-```
-
-```sharp
-> &cmd.say #3=$say *:@remit %l=%n declares, "%0"
-> @hook/override say=#3,cmd.say
-> dance
-Walker sticks his right foot in
-Walker sticks his right foot out
-Walker declares, "Do the hokey pokey"
-```
-
-```sharp
-> @hook/override/inplace say=#3,cmd.say
-> dance
-Walker sticks his right foot in
-Walker declares, "Do the hokey pokey"
-Walker sticks his right foot out
-```
-# @hook7
-The following named registers may be available (via `r(<name>,args)`) in your @hook, depending on the command hooked and the arguments given when run; use `registers(,args)` to get the available registers. `/before`, `/after` and `/ignore` hooks can also use the %u substitution to access the entire command string entered.
-
-| Register | Description |
-| --- | --- |
-| **Always available:** | |
-| ARGS | The entire argument string, before evaluation. Always available. |
-| LS | If the command doesn't have multiple left-side args, LS is set to the entire left-side arg (before the = for EQSPLIT commands) |
-| LSAC | For commands with multiple left-side-args, the number of left-side args given |
-| LSAx | The xth left-side-arg, where x is between 1 and LSAC |
-| **Available for EQSPLIT commands:** | |
-| EQUALS | If the = was given, this is set to "=" |
-| RS | For commands without multiple right-side args, this is the entire right-side arg (after the =) |
-| RSAC | For commands with multiple right-side-args, the number of right-side args given |
-| RSAx | The xth right-side-arg, where x is between 1 and RSAC |
-| **Available for SWITCHES commands (such as @lock):** | |
-| SWITCHES | The switch string given. (Note: Currently, switches given to normal commands are not available here, but can be accessed via the %u substitution.) |
+- [verbs]
 # HUH_COMMAND
 This internal command is run whenever someone attempts to run a command which doesn't match any built-in or softcoded commands. The huh_command command cannot be run directly, but it can be @hook'd to perform custom actions when an invalid command is entered.
 
@@ -2435,9 +1485,9 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 
 **See Also:**
 - [@hook]
-- [EVALUATION ORDER]
-- [warn_on_missing]
-- [unimplemented_command]
+- [evaluation order]
+- [WARN_ON_MISSING]
+- [UNIMPLEMENTED_COMMAND]
 # @idle
 `@idle <player>[=<message>]`
 
@@ -2454,53 +1504,6 @@ Players paging me will only see the "I'm idle" message if I've been idle for ove
 **See Also:**
 - [@away]
 - [@haven]
-# @if
-# @ifelse
-# @skip
-`@if <boolean>=<true>[, <false>]`<br>
-`@skip <boolean>=<false>`
-
-If `<boolean>` is true, the action list `<true>` is run, otherwise the action list `<false>` is run. The action list is not queued, it is run immediately, in the same action list as @if.
-
-For RhostMUSH compatability, @skip runs the action list `<false>` when `<boolean>` is false, and does nothing for true values.
-
-@ifelse and `@skip/ifelse` are aliases for @if.
-
-See [@if2] for examples.
-
-**See Also:**
-- [@break]
-- [@switch]
-- [if()]
-- [BOOLEAN VALUES]
-# @if2
-### Examples
-```sharp
-> @if 1=say Yes, say No
-You say, "Yes"
-```
-
-```sharp
-> @if 0=say Yes, say No
-You say, "No"
-```
-
-```sharp
-> &foo me=$foo *: say Checking... ; @if %0=say Yes, {say No ; say Sorry!}
-```
-
-```sharp
-> foo 1
-You say, "Checking..."
-You say, "Yes"
-```
-
-```sharp
-> foo 0
-You say, "Checking..."
-You say, "No"
-You say, "Sorry!"
-```
 # @infilter
 `@infilter <object>[=<pattern 1>[, <pattern 2>[, ..., <pattern N>]]]`
 
@@ -2516,7 +1519,7 @@ For an explanation of infilter patterns, see the help for "@filter".
 - [@listen]
 - [@inprefix]
 - [AUDIBLE]
-- [LISTENING]
+- [listening]
 # @inprefix
 `@inprefix <object>[=<message>]`
 
@@ -2548,7 +1551,7 @@ This wizard-only command forces the immediate execution of `<number>` items from
 
 **See Also:**
 - [@ps]
-- [QUEUE]
+- [queue]
 # @lemit
 `@lemit[/<switch>] <message>`
 
@@ -2561,7 +1564,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 
 **See Also:**
 - [@remit]
-- [@nslemit]
+- [@nspemit]
 # @list
 `@list/<switch>`<br>
 `@list[/lowercase] <switch>`
@@ -2586,17 +1589,17 @@ By default, information is shown in upper-case. Add the `/lowercase` switch to s
 
 
 **See Also:**
-- [list()]
+- [LIST()]
 - [@config]
-- [config()]
-- [functions()]
+- [CONFIG()]
+- [FUNCTIONS()]
 - [@stats]
 - [@command]
 - [@function]
 - [@flag]
 - [@power]
 - [@attribute]
-- [@listmotd]
+- [@motd]
 - [@motd]
 - [locktypes]
 # @link
@@ -2618,7 +1621,7 @@ LINK_OK objects can also be used as semaphores, and any object can be @parented 
 - [@open]
 - [@dig]
 - [DROP-TO]
-- [HOME]
+- [HOMES]
 # @destination
 # @exitto
 # Variable Exits
@@ -2648,54 +1651,6 @@ Note that, unlike most attributes, @destination cannot be abbreviated and must b
 - [@open]
 - [LINK_OK]
 - [Link_Anywhere Power]
-# @listen
-`@listen <object>[=<pattern>]`
-
-Sets the object's listen pattern to `<pattern>`, which can have wildcards. Whenever something the object hears matches the pattern, the object's ahear/amhear/aahear attribute will be triggered. In addition, anything inside the object will hear it as well, if the speaker passes @lock/infilter.
-
-Rather than using @listen, it's recommended you use ^-listening patterns, which can be set in any attribute similar to $-commands. This allows for descriptive attribute names, and also allows multiple patterns per object. See [^] for more information.
-
-For example:
-```sharp
-> @listen Chair=*
-```
-Since the wildcard (*) matches anything, anyone inside the object will hear anything said outside it.
-```sharp
-> @listen Butler=* has arrived.
-> @ahear Butler=:walks over to the new arrival and takes %p coat.
-```
-In this case, the listen pattern is met whenever someone 'arrives' in the room, and then the object does whatever is inside its @ahear attribute.
-```text
-Cyclonus has arrived.
-Butler walks over to the new arrival and takes his coat.
-```
-
-See [@listen2].
-# @listen2
-An object "hears" anything that another player standing in the same room would hear. For example, if you type in a command, the object does NOT hear it. If the command has a result that people in the room hear, the object will hear it.
-
-For example:
-```sharp
-> @listen Recorder=@emit *
-> @ahear Recorder=:records %0
-> @emit Whee!
-Whee!
-```
-In this example, the Recorder's listen-pattern is NOT matched, because it doesn't hear the '@emit Whee!', it only hears the 'Whee!' part, which doesn't match.
-```sharp
-> @listen Recorder=Cyclonus says, "*"
-> say Whee!
-Cyclonus says, "Whee!"
-Recorder records: Whee!
-```
-
-
-**See Also:**
-- [LISTENING]
-- [@ahear]
-- [@amhear]
-- [@aahear]
-- [WILDCARDS]
 # LOCKING
 # LOCKS
 # @lock
@@ -2707,26 +1662,26 @@ Whenever you "pass" the basic lock, you succeed in doing something with the obje
 
 Just like attributes, locks can be inherited from parents. By default, locks are set no_inherit, but this flag can be cleared using @lset. More details and a list of flags can be found in [@lset].
 
-A listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lockkeys].
+A listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lock keys].
 
 
 **See Also:**
-- [@lock-simple]
+- [@LOCK-SIMPLE]
 - [locktypes]
-- [lockkeys]
-- [@clock]
+- [lock keys]
+- [@CHANNEL CLOCK]
 - [failure]
-- [success]
-- [elock()]
-- [lock()]
+- [SUCCESS]
+- [ELOCK()]
+- [LOCK()]
 - [@lset]
-- [@clock]
-- [testlock()]
-- [locks()]
-- [lockflags()]
-- [lockowner()]
+- [@CHANNEL CLOCK]
+- [TESTLOCK()]
+- [LLOCKS()]
+- [LOCKFLAGS()]
+- [LOCKOWNER()]
 - [clock()]
-- [llocks()]
+- [LLOCKS()]
 # @lset
 `@lset <object>/<lock type>=[!]<flag>`
 
@@ -2741,10 +1696,10 @@ Valid flags include:
 
 
 **See Also:**
-- [@lock]
-- [lockflags()]
-- [llockflags()]
-- [lset()]
+- [LOCKING]
+- [LOCKFLAGS()]
+- [LLOCKFLAGS()]
+- [LSET()]
 # @log
 `@log[/<switch>] <message>`<br>
 `@log/recall/<switch> [<number>]`
@@ -2766,87 +1721,6 @@ SharpMUSH owns no log files. Its logs go to the logging sinks named in its confi
 
 **See Also:**
 - [@log]
-# @message
-`@message[/<switches>] <recipients>=<defmsg>,[<obj>/]<attr>[,<arg0>[, ... , <arg29>]]]`
-
-@message is designed for the use of *format messages, such as @pageformat or @chatformat. It is intended for use with @hooking page, @chat, or say/pose/emit, or for coding language systems.
-
-For each of the given `<recipients>`, `<obj>/<attr>` is evaluated (with up to 30 arguments, as if it was ufun()'d), and the object is shown the result via @pemit. If the attribute does not exist, or you do not have permission to evaluate it, they are shown `<defmsg>` instead.
-
-If `<obj>` is not given, or is given as "#-2", the attribute will be checked on the recipient.
-
-If one of the arguments matches "##", it will be replaced with the dbref of the recipient.
-
-Switches:
-- /noeval -- none of @message's arguments will be evaluated
-- /spoof -- the message will appear to be from the enactor, not the executor. Requires the Can_Spoof @power
-- /remit -- works like @remit, treating `<recipients>` as a list of rooms to send the message to
-- /oemit -- works like @oemit, with `<recipients>` as a list of objects not to emit to. See [@oemit] for more info
-- /nospoof -- don't show nospoof info, as per @nspemit/@nsremit/@nsoemit
-- /silent -- don't show a confirmation message
-- /noisy -- show a confirmation message; default depends on the silent_pemit @config option
-
-See [@message2] for examples.
-
-**See Also:**
-- [message()]
-- [@chatformat]
-- [@pageformat]
-- [@oemit]
-- [@remit]
-- [speak()]
-# @message2
-### Example
-```sharp
-> &sayformat *Mike=%n sez, '%0'
-> &sayformat *Walker=From %n: %0
-> &cmd.fsay me=$fsay *: @message/spoof *Mike *Walker *Javelin=%n says\, "%0", SAYFORMAT, %0
-> fsay This is a test
-```
-
-Mike sees:
-```text
-Player sez, 'This is a test'
-```
-Walker sees:
-```text
-From Player: This is a test
-```
-Javelin sees:
-```text
-Player says, "This is a test"
-```
-
-A rough implementation of @chatformat:
-```sharp
-> &cmd.chat Globals=$^@chat (.+?)=([\:;]?)(.+?)$: @message/spoof cwho(%1)=setr(0,<%1> [speak(&[squish(ctitle(%#, %1) %n)], %2%3)]), CHATFORMAT, firstof(%2, "), %1, %3, %n, ctitle(%#, %1), %q0
-> @set Globals/cmd.chat=regexp
-```
-
-See [@message3] for more examples.
-# @message3
-A (very) basic language system:
-```sharp
-> &skill`spanish Juan=2
-> &skill`spanish Bob=1
-> &cmd.spanish Globals=$+spanish *: @nspemit %#=You say (Spanish), "%0"; @message/oemit/spoof %#=setr(0,%n says (Spanish)\, "%0"), %!/TRANSLATE, ##, SPANISH, %q0
-> &translate Globals=switch(default(%0/skill`%1, 2), 2, %2, speak(%#, |%2,, %!/translate`some))
-> &translate`some Globals="[iter(%0,if(rand(2),%i0,...))]"
-> +spanish The rain in Spain falls mainly on the plain
-```
-
-You see:
-```text
-You say (Spanish), "The rain in Spain falls mainly on the plain"
-```
-Bob sees (something like):
-```text
-Mike says (Spanish), "The rain ... ... falls ... ... ... ..."
-```
-Juan sees:
-```text
-Mike says (Spanish), "The rain in Spain falls mainly on the plain"
-```
 # @moniker
 `@moniker <object>[=<moniker>]`
 
@@ -2867,12 +1741,12 @@ Show the first letter in orange, and the rest with no color
 
 
 **See Also:**
-- [MONIKERS]
-- [moniker()]
+- [monikers]
+- [MONIKER()]
 - [ansi()]
 - [@nameformat]
 - [@nameaccent]
-- [MONIKER]
+- [MONIKER()]
 # @motd
 # @listmotd
 # @wizmotd
@@ -2905,7 +1779,7 @@ Players can change their name to anything valid which is not currently in use by
 
 You can change the alias for a player or exit while renaming it, by giving the alias(es) after the new name, each separated by a semicolon. If the name is followed by a semicolon with no aliases, the existing alias will be cleared instead.
 
-When `<object>`'s name is changed, its ONAME and ANAME verb attributes will be triggered. See [@oname] for details.
+When `<object>`'s name is changed, its ONAME and ANAME verb attributes will be triggered. See [@ONAME] for details.
 
 ### Examples
 ```sharp
@@ -2922,9 +1796,9 @@ Name set.
 
 **See Also:**
 - [@alias]
-- [@oname]
-- [name()]
-- [fullname()]
+- [@ONAME]
+- [NAME()]
+- [FULLNAME()]
 Config options: player_name_spaces, player_name_len, only_ascii_in_names
 # @ONAME
 # @ANAME
@@ -2942,8 +1816,8 @@ Whenever `<object>`'s name is changed (via @name), others in the same location w
 
 **See Also:**
 - [@name]
-- [name()]
-- [VERBS]
+- [NAME()]
+- [verbs]
 # @newpassword
 `@newpassword <player>=<password>`<br>
 `@newpassword/generate <player>`
@@ -2958,42 +1832,7 @@ The `<password>` must not contain whitespace, unprintable characters, or '='.
 
 **See Also:**
 - [@password]
-- [checkpass()]
-# @notify
-`@notify[/any][/all] <object>[/<attribute>][=<number>]`<br>
-`@notify/setq <object>[/<attribute>]=<qreg1>,<qval1>[,...]`
-
-This command notifies a semaphore, allowing commands queued for that semaphore to be executed.
-
-The semaphore counter is stored before waiting commands are released. If the database cannot confirm a counter change, affected work stays reserved and further semaphore changes are refused until reconciliation succeeds. A later attempt verifies the stored count before completing or abandoning the uncertain operation. Conflicting counts or incomplete semaphore flags require administrator repair.
-
-If the `/any` switch is given, then all semaphores associated with `<object>` are @notified. Otherwise, only the specified semaphore `<attribute>` (or SEMAPHORE if no attribute is specified) is @notified.
-
-If the `/all` switch is given, then all queue entries associated with the selected semaphore(s) are executed. Otherwise, only the first `<number>` of queue entries are run. If no `<number>` is given, then only one queue entry is run.
-
-If the `/all` switch was not used, and there were not enough queue entries waiting to satisfy the requested `<number>`, then the semaphore becomes negative, and subsequent @waits will not block until it reaches 0 again.
-
-You may not specify both the `/any` switch and a specific attribute. Similarly, you may not specify both the `/all` switch and a number.
-
-See [@notify2].
-# @notify2
-`@notify/setq` is a special form of @notify: It requires that a queue entry exists and is waiting on `<object>[/<attr>]`. When this is the case, then `@notify/setq` will modify the Q-registers of the extant queue entry.
-
-`/setq` supercedes all other switches: You cannot `@notify/all/setq` or `@notify/any/setq` - it deals with just one queue entry.
-
-### Example
-```sharp
-> @wait me=think Hello, %q0!
-> @notify/setq me=0,Walker
-Hello, Walker!
-```
-
-
-**See Also:**
-- [SEMAPHORES]
-- [@drain]
-- [@wait]
-- [@halt]
+- [CHECKPASS()]
 # @nspemit
 # @nsemit
 # @nslemit
@@ -3020,50 +1859,14 @@ These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @ze
 - [@remit]
 - [@oemit]
 - [@zemit]
-- [nsemit()]
-- [nslemit()]
-- [nspemit()]
-- [nsprompt()]
-- [nsremit()]
-- [nsoemit()]
-- [nszemit()]
+- [EMIT()]
+- [NSLEMIT()]
+- [PEMIT()]
+- [PEMIT()]
+- [REMIT()]
+- [OEMIT()]
+- [ZEMIT()]
 - [PROMPT_NEWLINES]
-# @oemit
-`@oemit[/<switch>] [<room>/]<object> [... <object>]=<message>`
-
-This command shows `<message>` to everyone in the location of `<object>` EXCEPT `<object>`. A list of objects can be given, in which case the message is shown in the locations of each, to everyone but those objects. If `<object>` contains a space, it should be enclosed in double-quotes.
-
-If `<room>` is specified (usually as a dbref), this command shows `<message>` to everyone in `<room>` except for the given `<object>`s. In this case, each `<object>` is matched relative to `<room>`. If no matching `<object>`s are found in `<room>`, this is the equivilent of `@remit <room>=<message>`.
-
-The `/noeval` switch prevents the MUSH from evaluating `<message>`.<br>
-The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
-
-See [@oemit2] for examples.
-
-**See Also:**
-- [@emit]
-- [@pemit]
-- [@nsoemit]
-- [oemit()]
-- [nsoemit()]
-- [NOSPOOF]
-- [SPOOFING]
-# @oemit2
-### Examples
-Show a message in the locations of players Bob and Fred, to everyone except those two players:
-```sharp
-> @oemit *Bob *Fred=Bob throws a paper aeroplane at Fred.
-```
-
-Show a message in #50 to everyone except the object 'Spy'.
-```sharp
-> @oemit #50/Spy=Sssh!
-```
-
-Show a message to everyone in your current location, except the 2nd object called 'foo'.
-```sharp
-> @oemit %L/"2nd foo"=bar
-```
 # @open
 `@open <exit name>[=<destination>,<return exit name>,<source room>,<dbref>,<return dbref>]`
 
@@ -3087,7 +1890,7 @@ To open an exit in a room, you must control the room, have the Open_Anywhere @po
 - [EXITS]
 - [@link]
 - [@dig]
-- [open()]
+- [OPEN()]
 # @parent
 `@parent <object>[=<parent>]`
 
@@ -3095,9 +1898,9 @@ This command sets the parent of `<object>` to `<parent>`. If no `<parent>` is gi
 
 
 **See Also:**
-- [PARENTS]
-- [parent()]
-- [lparent()]
+- [parent]
+- [PARENT()]
+- [LPARENT()]
 - [ANCESTORS]
 # @package
 `@package/scan <objects>`<br>
@@ -3126,47 +1929,7 @@ The `<new password>` must not contain whitespace, unprintable characters, or '='
 
 **See Also:**
 - [@newpassword]
-- [checkpass()]
-# @pageformat
-# @outpageformat
-`@outpageformat <object>[=<message>]`<br>
-`@pageformat <object>[=<message>]`
-
-`@pageformat` changes the message seen by `<object>` when it receives a page.<br>
-`@outpageformat` sets the message seen by `<object>` when it sends a page.
-
-%0 will be set to the page message (not including :, ; or ").<br>
-%1 will be set to ':' ';' or '"' for pose, semipose and normal page, respectively.<br>
-%2 will be set to the alias of the pager, if any.<br>
-%3 will be a space-separated list of recipient dbrefs.<br>
-%4 will be set to the default message.
-
-See [@pageformat2] for examples.
-
-
-**See Also:**
-- [page]
-- [speak()]
-- [@chatformat]
-- [@speechmod]
-- [@message]
-# @pageformat2
-# @outpageformat2
-For simple page timestamps:
-```sharp
-> @pageformat me=\[[time()]\] %4
-> @outpageformat me=\[[time()]\] %4
-```
-
-To obtain 'page_aliases' behavior:
-```sharp
-> @pageformat me=[setq(0,%n[if(%2,%b(%2))],1,switch(%3,%!,,itemize(iter(%3, name(##),%b,|),|)))][switch(%1,",%q0 pages[if(%q1,%b%q1)]: %0,:,From afar[if(%q1,%b(to %q1))]\, %q0 %0,From afar[if(%q1,%b(to %q1))]\, %q0%0)]
-```
-
-To obtain no 'page_aliases' behavior:
-```sharp
-> @pageformat me=[setq(1,switch(%3,%!,,itemize(iter(%3,name(##),%b,|),|)))][switch(%1,",%n pages[if(%q1,%b%q1)]: %0,:,From afar[if(%q1,%b(to %q1))]\, %n %0,From afar[if(%q1,%b(to %q1))]\, %n%0)]
-```
+- [CHECKPASS()]
 # @receive
 # @oreceive
 # @areceive
@@ -3183,9 +1946,9 @@ In all cases, %0 is the dbref of the object received. If the object was 'give'n,
 - [give]
 - [get]
 - [@give]
-- [@success]
-- [ACTION LISTS]
-- [VERBS]
+- [@asuccess]
+- [action lists]
+- [verbs]
 # @give
 # @ogive
 # @agive
@@ -3201,8 +1964,8 @@ In all cases, %0 is the dbref of the object being given, and %1 is the dbref of 
 **See Also:**
 - [give]
 - [@receive]
-- [ACTION LISTS]
-- [VERBS]
+- [action lists]
+- [verbs]
 # @pcreate
 `@pcreate <name>=<password>[, <dbref>]`
 
@@ -3210,7 +1973,7 @@ This wizard-only command creates a player with the given name and password. If s
 
 
 **See Also:**
-- [pcreate()]
+- [PCREATE()]
 # @prompt
 `@prompt[/<switch>] <dbref list>[=<message>]`
 
@@ -3223,9 +1986,9 @@ If `<message>` is omitted, an empty prompt is sent.
 
 **See Also:**
 - [@pemit]
-- [@nsprompt]
-- [prompt()]
-- [nsprompt()]
+- [@nspemit]
+- [PEMIT()]
+- [PEMIT()]
 - [PROMPT_NEWLINES]
 # PROMPT_NEWLINES
 `PROMPT_NEWLINES [1|0]`
@@ -3237,41 +2000,9 @@ Some clients, like TinyFugue, are smart enough to interpret GOAHEAD and treat pr
 
 **See Also:**
 - [@prompt]
-- [prompt()]
-- [terminfo()]
-- [@sockset]
-# @pemit
-`@pemit[/<switches>] <object>=<message>`<br>
-`@pemit/list[/<switches>] <object list>=<message>`<br>
-`@pemit/port[/silent] <descriptor>=<message>`<br>
-`@pemit/port/list[/silent] <descriptor list>=<message>`
-
-The basic form of this command sends `<message>` to `<object>` directly. It is very similar in its effects to @emit except only one object will see the message.
-
-`@pemit/list` sends the message to multiple objects. You will not get a confirmation message when using this switch.
-
-`@pemit/port` can only be used by Wizards/Royalty and sends `<message>` to one connection. Add `/list` to send to a space-separated list of descriptors. Without `/list`, the target must be one complete positive descriptor number; a list or other trailing text is rejected. These forms can send to connections still at the login screen or to selected connections of a player logged in multiple times.
-
-See [@pemit2] for more.
-# @pemit2
-The @pemit command can take the following additional switches:
-- /contents -- equivalent to @remit.
-- /silent -- does not tell the @pemit'ing object a confirmation message.
-- /noisy -- tells the @pemit'ing object a confirmation message.
-- /noeval -- `<message>` will not be evaluated for substitutions
-- /spoof -- the enactor's dbref will be used for nospoof notifications instead of the executor's dbref. Requires control over enactor or Can_spoof power.
-
-You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not pass, unless you are set WIZARD or have the pemit_all @power.
-
-
-**See Also:**
-- [@emit]
-- [@nspemit]
-- [@oemit]
-- [@remit]
-- [NOSPOOF]
-- [SPOOFING]
-- [page]
+- [PEMIT()]
+- [TERMINFO()]
+- [@SOCKSET]
 # @poll
 `@poll`<br>
 `@poll <message>`<br>
@@ -3282,8 +2013,8 @@ This command manipulate the message at the top of WHO/DOING. By itself, it displ
 
 **See Also:**
 - [@doing]
-- [WHO]
-- [DOING]
+- [who]
+- [who]
 # @poor
 `@poor <value>`
 
@@ -3293,57 +2024,6 @@ This command sets the pennies of every player on the MUSH to `<value>`. It can o
 **See Also:**
 - [MONEY]
 - [give]
-# @power
-`@power/list [<power name pattern>]`<br>
-`@power <power>`<br>
-`@power <object>=[!]<power> [[!]<power>...]`
-
-`@power/list` lists the defined powers (see [powers]), optionally restricted to those whose names match `<power name pattern>`, a wildcard pattern; each is shown with its one-character abbreviation, if it has one. A list of standard powers with explanations is given in [powers list]. When given a power name as an argument, @power displays information about that power — its name, its character, its aliases, the object types it applies to, and the permissions needed to set and reset it. It does *not* list the powers held by an object; use powers() for that.
-
-The third form manipulates powers on objects, and is limited to Wizards. `@power <object>=<power>` grants the given power; `@power <object>=!<power>` revokes it. Several powers may be given at once, separated by spaces, and each may independently carry the `!` prefix. Powers cannot be granted to players set UNREGISTERED, and only God may alter God's powers.
-
-God can add, delete, and otherwise manipulate power definitions. See help @power2 for these commands.
-
-
-**See Also:**
-- [powers()]
-- [@flag]
-# @power2
-`@power/add <power>=<alias>`<br>
-`@power/delete <power>`<br>
-`@power/alias <power>=<alias>`<br>
-`@power/letter <power>[=<letter>]`<br>
-`@power/restrict <power>=<permissions>`<br>
-`@power/type <power>=<type(s)>`<br>
-`@power/enable <power>`<br>
-`@power/disable <power>`<br>
-`@power/decompile <power>`
-
-These commands manipulate power definitions. Only God may use them, with the exception of `/decompile`, which only reads.
-- /disable disables a power, making it invisible and unusable
-- /enable re-enables a disabled power
-- /alias replaces the alias of an existing power
-- /letter changes or removes the single-letter abbreviation of an existing power (see below)
-- /restrict changes power permissions (see help @power3)
-- /type changes power type(s) (see help @power3)
-- /delete deletes a power completely, removing it from all objects in the database and the removing it permanently from the power table. It requires the exact power name or alias to be used. Be very very careful with this.
-- /decompile shows a power's full definition
-
-`@power/letter <power>=<letter>` gives `<power>` a one-character abbreviation, which is shown beside its name in `@power/list` and on the `Character:` line of `@power <power>`. `@power/letter <power>`, with no `=`, clears it again. The letter must be a single character, and it is case sensitive: `W` and `w` are different letters. Two powers that could apply to the same type of object may not share a letter — `@power/letter` will name the power that already holds it and change nothing. Two powers with no type in common may share one.
-
-System powers cannot be deleted, disabled, or redefined, and that includes their letters: all of the built-in powers start out with no letter and keep it that way. `/letter` applies to powers you added yourself with `@power/add`.
-
-See help @power3 for information on `@power/add`
-# @power3
-`@power/add <power>=<alias>` adds a new power with the given name and alias. Both are required.
-
-A new power starts out applying to players only, with no single-letter abbreviation, settable and resettable by Wizards. Adjust it afterwards with:
-
-`@power/letter <power>=<letter>` — the power's one-character abbreviation, which must not collide with that of another power applying to the same object type(s). A power with no letter does not appear in a list of power characters, but can still be tested for by name.<br>
-`@power/type <power>=<type(s)>` — the comma- or space-separated list of types the power applies to: one or more of 'room', 'thing', 'player', 'exit'.<br>
-`@power/restrict <power>=<permissions>` — the list of permissions governing who can set, see and reset the power. See [flag permissions] for details.
-
-Powers added with `@power/add` are stored in the database, and do not need to be re-added at startup. They are treated exactly as any other power in the server, except that they are never system powers and so remain deletable and disableable.
 # @prefix
 `@prefix <object>[=<message>]`
 
@@ -3356,34 +2036,6 @@ For example, if you have an audible exit "Outside" leading from a room Garden to
 - [@inprefix]
 - [AUDIBLE]
 - [@listen]
-# @ps
-
-See [@ps/history] for recent outcomes and [@profile] for temporary invocation timing.
-`@ps[/<switch>] [<player>]`<br>
-`@ps[/debug] <pid>`
-
-@ps lists all commands currently on your 'to be executed' queue, thus allowing you to identify infinite (or unnecessary) loops with-out putting in says or poses. It gives a count of the total commands in each of the queues (Command, Wait, and Semaphore), displayed in the format:<br>
-`<Number of your queued commands> / <Total number of queued commands>`.
-
-Some of the queues also include a [Ndel] after the total. That number is the number of entries made by objects that have been halted but haven't been removed from the queue yet.
-
-It also shows a running load average of the number of queue entries executed per second for the last 1, 5 and 15 minutes.
-
-@ps with no arguments will show you your own queue. Wizards may specify the `/all` switch, and see the full queue. They may also specify a player. `@ps/summary` just displays the queue totals for the whole queue. `@ps/quick` displays the queue totals for just your queue.
-
-See [@ps2].
-# @ps2
-With a `<pid>` argument, @ps shows information on a single queue entry. The `/debug` switch will also display the queue entry's environment: Arguments, q registers, executor, enactor and caller dbrefs.
-
-Each line includes the process id of the queue entry, the object and attribute being used as a semaphore (if any), the number of seconds left before it executes (for waits and semaphores), the object that is going to execute the entry, and the command. To halt a specific queue entry, use `@halt/pid`.
-
-
-**See Also:**
-- [@wait]
-- [@halt]
-- [@notify]
-- [@drain]
-- [SEMAPHORES]
 # @purge
 @purge is a wizard only command that calls the internal purge routine to advance the clock of each object scheduled to be destroyed, and destroy those things whose time is up. The internal purge routine is normally run automatically approximately every 10 minutes.
 
@@ -3392,33 +2044,6 @@ The @purge command should almost never need to be performed manually. If you do 
 
 **See Also:**
 - [@dbck]
-# @quota
-`@quota [<player>]`
-
-These commands are only meaningful if the Quota system is enabled (check the use_quota @config option).
-
-@quota shows the current quota for `<player>`, or for the executor if no `<player>` is given. You must control `<player>`, or have either the See_All or Quotas @power.
-
-See [@quota2].
-# @quota2
-# @squota
-# @allquota
-`@squota <player>=[+|-]<amount>`<br>
-`@allquota[/quiet] [<limit>]`
-
-@squota is a Wizard-only command which adjusts the quota of `<player>`. If `<amount>` is prefixed by + or -, their current quota will be incremented or decremented by `<amount>`, respectively. Otherwise, their total quota is set to `<amount>`.
-
-@allquota can only be used by God. With no `<limit>` argument, it reports the quotas of all players. If a `<limit>` is given, the quotas of all players is reset to `<limit>`. The `/quiet` switch stops @allquota reporting the current quotas before changing them.
-
-Players always have enough quota for the objects they currently own; if you attempt to set their quota to a lower number (with @squota or @allquota), it will be set to the number of objects they own instead.
-
-`@quota/set` and `@quota/all` are equivilent to @squota and @allquota, respectively.
-
-
-**See Also:**
-- [QUOTAS]
-- [Quotas Power]
-- [No_Quota Power]
 # @readcache
 `@readcache`
 
@@ -3453,44 +2078,6 @@ The `/noeval` switch causes `<message>` to not be evaluated.
 - [SPOOFING]
 - [NOSPOOF]
 - [CONTROL].]
-# @retry
-`@retry <boolean>`<br>
-`@retry <boolean>=<arg0>[,...[,<argN>]]`
-
-The @retry command restarts the current queue entry, enabling people to loop their command without requiring a wait for the next queue entry. It can be a little tricky to understand at first. It basically tells the parser: "If `<boolean>` is true, then go back to the beginning." It can also replace %0-%9 with the arguments passed to it. (`<arg0>`,...).
-
-Please note: @retry only restarts the action list it is currently in. If you have: "`@break 1=@retry 1=hello`", then the action list is only "`@retry 1=hello`" - which would thus create an infinite loop.
-
-Watch out for infinite loops! @retry does respect all the limits (cpu_limit, function_invocation_limit, etc). But because @retry causes the queue parser to repeat itself _without_ invoking a new function, it doesn't risk hitting any issues other than infinite loops.
-
-See [@retry2] for examples.
-
-
-**See Also:**
-- [ACTION LISTS]
-- [BOOLEAN VALUES]
-- [@break]
-- [@include]
-# @retry2
-
-### Example: 'while'
-```sharp
-> &sing me=$sing *:say %0 bottles of beer! ; @retry gt(%0,0)=dec(%0) ; say Go get some more!
-> sing 3
-You say, "3 bottles of beer!"
-You say, "2 bottles of beer!"
-You say, "1 bottles of beer!"
-You say, "0 bottles of beer!"
-You say, "Go get some more!"
-```
-
-Implementing a folding algorithm:<br>
-(Yes, I know lmath is better, but this is just an example! :D)
-```sharp
-> &add me=$add *:@retry words(%0)=rest(%0),add(first(%0),0%1) ; think %1
-> add 4 3 2 1
-10
-```
 # @restart
 `@restart <object>`<br>
 `@restart/all`
@@ -3518,70 +2105,7 @@ If no switch is given, all locations are checked. `<command>` must be entered ex
 
 **See Also:**
 - [$-commands]
-- [EVALUATION ORDER]
-# @search
-`@search [<player>] [<classN>=<restrictionN>[,...]][,<begin>,<end>]`
-
-This command searches the database and lists objects which meet user specified search criteria. You can limit the scope of the search by specifying `<begin>` and `<end>` as the first and last dbrefs to search.
-
-If a `<player>` argument is supplied, only objects owned by that player will be listed, or all objects if "all" is used. Mortals attempting to match other players (aside from ZMPs whose @lock/zone they pass) or "all" will only get objects which they can examine.
-
-`<class>` and `<restriction>` arguments can be given to filter the match results. Possible `<class>`es include TYPE, NAME, ZONE, PARENT, EXITS, THINGS (or OBJECTS), ROOMS, PLAYERS, FLAGS, LFLAGS, POWERS, ELOCK, COMMAND, LISTEN, EVAL, EPLAYER, EROOM, EEXIT, and ETHING (or EOBJECT).
-
-If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT, PLAYER, GARBAGE. This shows all objects of the specified type.
-
-If `<class>`=NAME, only objects whose name begin with the string `<restriction>` will be listed. If `<class>`=EXITS, OBJECTS, ROOMS or PLAYERS, only objects of that type whose name begins with `<restriction>` are listed.
-
-If `<class>`=ZONE, only objects in the zone `<restriction>` will be listed.<br>
-If `<class>`=PARENT, only children of parent `<restriction>` will be listed.<br>
-For ZONE and PARENT, `<restriction>` must be specified as a dbref number.
-
-See [@search2].
-# @search2
-If `<class>`=FLAGS or LFLAGS, only objects with the list of flags specified by `<restriction>` will be listed. For FLAGS, flags to match should be given as a string of single flag letters, with appropriate case. For LFLAGS, flags to match should be given as a space-separated list of flag names.
-
-If `<class>`=POWERS, only objects with the given powers are listed. `<restriction>` should be a space-separated list of power names.
-
-If `<class>`=ELOCK, only objects that pass the given lock string (as in help @lock) are listed. For purposes of indirect locks (@#123), 'search' is the name of the lock.
-
-If `<class>`=EVAL, only objects for which `<restriction>` evaluates to a true boolean value will be listed. The token '##' in `<restriction>`, which is a function, is replaced by each dbref sequentially. Classes EPLAYER, EROOM, EEXIT, and ETHING work like EVAL but are restricted to a single type.
-
-See [@search3]. for more.
-# @search3
-If `<class>`=MINDB, only objects with dbrefs of `<restriction>` or higher will be listed. If `<class>`=MAXDB, only objects with dbrefs of `<restriction>` or lower will be listed.
-
-If `<class>`=START, then @search will start returning results at the `<restriction>`th result.
-
-If `<class>`=COUNT, then @search will only return up to `<restriction>` results.
-
-If `<class>`=COMMAND, then @search will only return objects that respond to `<restriction>` as an $-command.
-
-If `<class>`=LISTEN, then @search will only return objects that respond to `<restriction>` through a listen.
-
-See [@search4].
-# @search4
-For the class TYPE=PLAYER, and for PLAYER=`<player-name>`, anyone may obtain information on any player. In all other cases, wizards may obtain information about other players, and players who pass a ZMP's zone-lock may obtain information about the ZMP.
-
-If multiple `<class>` and `<restrictions>` are given, objects must meet all criteria in order to match successfully. The exception to this is that if multiple 'type' searches (PLAYER, EROOM, etc) are used, only the last type given is used in the search.
-
-@search is only mildly computationally expensive for most of the search classes. Computationally expensive searches are the evaluating searches (EVAL, EPLAYER, ETHING, EROOM, EEXIT), the attribute pattern searches (COMMAND, LISTEN), and ELOCK searches which perform evaluation searches (attr/value) or indirect locks (@obj/lock). These searches all cost a number of pennies (the exact amount is configurable; see @config find_cost).
-
-See [@search5] for some examples.
-
-**See Also:**
-- [lsearch()]
-- [@find]
-# @search5
-### Examples
-```sharp
-@search all type=player,flags=W <-- list all Wizard players
-@search type=room <-- list all rooms owned by me.
-@search zone=#50 <-- list all objects belong to zone #50.
-@search Joe eval=1,100,200 <-- list objects from #100-#200 owned by Joe.
-@search eval=gt(money(##),10) <-- list all objects owned by me worth more than 10 coins.
-@search all elock=FLAG^WIZARD|FLAG^ROYALTY <-- list all objects with wizard or royalty flags.
-@search wizard_bc command=+who <-- Forgot what object has your +who?
-```
+- [evaluation order]
 # &
 `&<attribute> <object>[=<value>]`
 
@@ -3592,7 +2116,7 @@ The attribute name is evaluated before the attribute is set, so `&hdr_%q1 me=...
 
 **See Also:**
 - [@set]
-- [ATTRIBUTES]
+- [attributes]
 - [~]
 # ~
 `~<command>`
@@ -3632,8 +2156,8 @@ The fourth form sets (or unsets) an attribute flag on the specified attribute. S
 
 **See Also:**
 - [ATTRIB_SET]
-- [attrib_set()]
-- [set()]
+- [ATTRIB_SET()]
+- [SET()]
 # ATTRIB_SET
 # @_
 `&<attr> <object>[=<value>]`<br>
@@ -3647,7 +2171,7 @@ ATTRIB_SET is the internal command which powers &attr and @_attr setting; it can
 
 **See Also:**
 - [@set]
-- [attrib_set()]
+- [ATTRIB_SET()]
 # @sex
 `@sex <player>[=<gender>]`
 
@@ -3666,10 +2190,10 @@ You can use this command to set yourself or any of your objects to be male, fema
 
 **See Also:**
 - [GENDER]
-- [subj()]
-- [poss()]
-- [aposs()]
-- [obj()]
+- [SUBJ()]
+- [POSS()]
+- [APOSS()]
+- [OBJ()]
 # @shutdown
 `@shutdown[/panic][/reboot][/paranoid]`
 
@@ -3680,67 +2204,6 @@ You can use this command to set yourself or any of your objects to be male, fema
 `@shutdown/reboot` restarts the game without disconnecting the users. This is necessary to load changes to the MUSH's configuration files (mush.cnf, restrict.cnf, etc), though not changes to names.cnf, which take effect without a reboot.
 
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
-# @sitelock
-`@sitelock`<br>
-`@sitelock/name [[!]<pattern>]`<br>
-`@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
-`@sitelock[/<ban|register>][/player] <host-pattern>`<br>
-`@sitelock/check <host>`<br>
-`@sitelock/remove[/player] <string>`
-
-The @sitelock command adds rules to the access.cnf file, controlling a host's level of access to the MUSH, or adds banned player names to the names.cnf file. Only Wizards may use @sitelock.
-
-@sitelock without arguments lists all sites in access.cnf. Rules are processed in the order listed, and the first matching rule is applied. `@sitelock/check` tells you which rule will match for a given `<host>`.
-
-`@sitelock/name <pattern>` bans player names matching `<pattern>`, which may use the wildcards "*" and "?" and is matched without regard to case. `@sitelock/name !<pattern>` lifts that ban, and `@sitelock/name` with no argument lists the banned patterns. A banned name is refused as a player name for anyone but a wizard or the player who already has it; `valid(playername, ...)` reports it. The list is kept with the game's configuration, so it survives a restart and is the same list the web portal's banned-names page edits.
-
-`@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock2 for the list of options, and help @sitelock3 for an explanation about the name argument.
-
-For backward compatibility, `@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
-
-If the `/player` switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
-
-See [@sitelock2].
-
-**See Also:**
-- [WILDCARDS]
-- [REGEXPS]
-- [ipaddr()]
-- [hostname()]
-# @sitelock2
-Sitelock allow/deny options:
-- connect -- allow this site to connect to non-guest players
-- !connect -- don't allow this site to connect to non-guest players
-- guest -- allow this site to connect to guest players
-- !guest -- don't allow this site to connect to guest players
-- create -- allow this site to create players
-- !create -- don't allow this site to create players
-- default -- allow any of the above
-- none -- don't allow any of the above
-- !god -- God can't connect from this site.
-- !wizard -- Wizards can't connect from this site.
-- !admin -- Wizards and Royalty can't connect from this site.
-
-Allow/deny options not set are assumed to be allowed.
-
-Sitelock special options:
-- register -- allow this site to use 'register `<name>` `<email>`' at the connection screen to register players. Players will be emailed their character's password. This should be used with !create to be effective.
-- suspect -- set all players who connect from this site SUSPECT.
-- deny_silent -- don't log failed access attempts from this site.
-- regexp -- Treat the hostname pattern as a regular expression instead of a wildcard pattern.
-
-See [@sitelock3].
-# @sitelock3
-If you specify a character name after the options, the options are only checked if the host pattern matches, AND the character being checked for connect support matches the one you gave. Use it only with connect and !connect options, since they're the only ones where an existing character is used.
-
-For example, to disallow anyone from connecting to 'Twink' from one domain, but to allow connections to the character from others, use something like:
-```sharp
-> @sitelock *.somesite.com=!connect,Twink
-```
-
-If you want to disallow connections to a character from anywhere, use @newpassword or `@sitelock *=!connect,Twink`.
-
-`@sitelock/remove` will delete entries that were added with @sitelock if their host-pattern matches `<string>` exactly. If the `/player` switch is given, `<string>` is treated as a player name, and entries whose host-patterns match the player's LASTIP or LASTSITE addresses exactly will be deleted.
 # @SLAVE
 `@slave/restart [info|ssl]`
 
@@ -3762,7 +2225,7 @@ With no args, SOCKSET shows the current value of the socket options. With an `<o
 @sockset is a similar in-game command, but can specify which descriptor to change options for, and can set multiple options at once. Only Wizards can change the options for other players' descriptors. `<descriptor>` defaults to your least-idle descriptor, when used by a player; for non-players, it has no default.
 
 Options:
-- colorstyle: See [colorstyle]
+- colorstyle: See [COLORSTYLE]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
@@ -3778,10 +2241,10 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 
 
 **See Also:**
-- [SOCKET COMMANDS]
-- [terminfo()]
-- [Pueblo]
-- [colorstyle]
+- [socket commands]
+- [TERMINFO()]
+- [pueblo]
+- [COLORSTYLE]
 - [@prompt]
 # COLORSTYLE
 `SOCKSET colorstyle=<value>`<br>
@@ -3807,7 +2270,7 @@ In the event that your client receives a color that it is unable to display, Sha
 - [ANSI]
 - [COLOR]
 - [XTERM256]
-- [@sockset]
+- [@SOCKSET]
 # @SPEECHMOD
 `@speechmod <object>[=<modifier>]`
 
@@ -3836,8 +2299,8 @@ Test
 
 
 **See Also:**
-- [say]
-- [pose]
+- ["]
+- [:]
 - [@emit]
 - [@chatformat]
 - [@pageformat]
@@ -3877,9 +2340,9 @@ Prepared statement example:
 
 **See Also:**
 - [@sql]
-- [sql()]
-- [sqlescape()]
-- [mapsql()]
+- [SQL()]
+- [SQLESCAPE()]
+- [MAPSQL()]
 # @sql
 `@sql[/prepare] <query>[, <param1>[, <param2>[, ...]]]`
 
@@ -3907,9 +2370,9 @@ Prepared statement examples:
 
 
 **See Also:**
-- [sql()]
-- [sqlescape()]
-- [mapsql()]
+- [SQL()]
+- [SQLESCAPE()]
+- [MAPSQL()]
 - [@mapsql]
 # @startup
 `@startup <object>[=<action list>]`
@@ -3924,7 +2387,7 @@ Note that @startups are NEVER inherited from parent objects.
 **See Also:**
 - [@restart]
 - [@undestroy]
-- [ACTION LISTS]
+- [action lists]
 - [@function]
 - [@command]
 - [@hook]
@@ -3953,197 +2416,6 @@ The four command options can also be used as switches (i.e., you can use "`@swee
 
 **See Also:**
 - [@scan]
-# @switch
-# @sw
-# @select
-`@switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`<br>
-`@select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
-
-For those of you familiar with programming, these command acts like if/then/else or switch/case. It compares `<string>` against whatever each `<expr>` evaluates to. If `<string>` and `<expr>` match, the action list associated with that `<expr>` is carried out. If no match is found, the `<default>` action list is carried out. @switch runs `<action>`s for all matching `<expr>`s by default, while @select only runs the `<action>` for the first matching `<expr>`.
-
-If `<expr>` is a regexp or a wildcard glob, then $0-$9 will be set with capture data. (In wildcard globbing, every wildcard captures.)
-
-The string "#$" in `<action>`'s will be replaced with the evaluated result of `<string>` before it is acted on. Note that this replacement happens BEFORE the `<action>` is queued and executed, and does not work well in nested switches. It is recommended that you use the %$N substitution, or the stext() function, instead.
-
-`@switch/all` runs `<action>`s for all matching `<expr>`s. Default for @switch.<br>
-`@switch/first` runs `<action>` for the first matching `<expr>` only. Same as @select, and often the desired behaviour.<br>
-`@switch/notify` queues "@notify me" after the last `<action>`.<br>
-`@switch/inline` runs all actions in place, instead of creating a new queue entry for them.<br>
-`@switch/regexp` makes `<expr>`s case-insensitive regular expressions, not wildcard/glob patterns.
-
-See [@switch2].
-# @switch2
-When using `@switch/inline`, an @break in an `<action>` will stop the calling action list (and any further `<action>`s) from running. Each `<action>` will also be able to see/alter the q-registers for the calling action list. The following switches can be used with `/inline` to alter this behaviour:
-- /nobreak: @breaks in `<action>` do not effect to the calling action list
-- /localize: q-registers are saved before each `<action>` is run, and restored after it completes
-- /clearreg: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize.
-
-`@switch/inplace` is an alias for `@switch/inline/nobreak/localize`.
-
-See [@switch3] for examples.
-
-**See Also:**
-- [SWITCH WILDCARDS]
-- [switch()]
-- [@if]
-- [@break]
-- [stext()]
-- [slev()]
-# @switch3
-### Examples
-```sharp
-> &SWITCH_EX thing=$foo *: @switch %0=*a*, :acks, *b*, :bars, :glurps
-> foo abc
-thing acks
-thing bars
-> foo xxx
-thing glurps
-```
-
-```sharp
-> &SWITCH_EX thing=$foo *: @switch/first %0=*a*, :acks,*b*, :bars, :glurps
-> foo abc
-thing acks
-```
-
-```sharp
-> &SWITCH_EX thing=$test: @switch hasflag(%#,PUPPET)=1, say Puppet!, say Not Puppet!
-> test
-thing says, "Not Puppet!"
-```
-
-```sharp
-> &SWITCH_EX thing=$foo *: @switch %0=*a*,say Before: '$0'. After: '$1'
-> foo foobarbaz
-thing says, "Before: 'foob'. After: 'rbaz'
-```
-
-See [@switch4].
-# @switch4
-### Examples
-```sharp
-> &SWITCH_EX me=$foo *:think before ; @switch %0=1,think one ; think after
-> foo 1
-thing before
-thing after
-thing one
-```
-
-```sharp
-> &SWITCH_EX me=$foo *:think before ; @switch/inline %0=1,think one ; think after
-> foo 1
-thing before
-thing one
-thing after
-```
-# @teleport
-`@teleport[/<switches>] [<object>=]<destination>`<br>
-`@teleport/list[/<switches>] <object-list>=<destination>`
-
-Teleports `<object>` to `<destination>`. `<object>` can be a player, thing or exit, and defaults to yourself. (Exits must be specified by dbref, things or players can be specified by name.) The destination must be either JUMP_OK or controlled by you, and you must either control `<object>` or `<object>`'s current location. Also, the destination, if a room, cannot be teleport-locked against `<object>`. Mortals cannot teleport HEAVY objects. If the destination is a room with a drop-to, `<object>` may go to the drop-to room instead.
-
-If the `/list` switch is given, each object specified in `<object-list>` will be teleported to `<destination>` instead. Names containing spaces should be enclosed in "double quotes".
-
-Admin and those with the tport_anything power can teleport an object even if they don't control it. Those with tport_anywhere can teleport objects to any destination. You can also teleport an exit to any room if you have the Open_Anywhere power.
-
-Privileged players who teleport a player to another player send them to the location of the target, unless the `/inside` switch is used, in which case they are sent to the inventory of the target.
-
-See [@teleport2].
-# @teleport2
-Teleporting to an exit works the same as using "goto". If you don't control the exit and don't have the tport_anywhere power, either you or `<object>` must be nearby the exit.
-
-Teleportation from a room can be stopped by setting the NO_TEL flag. Royalty and Wizards can _always_ teleport to any location, regardless of NO_TEL or teleport locks.
-
-Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<room>` is an exit or the `/silent` switch is given. With @oxtport, %0 is the dbref of the object causing the dbref. The others, in addition to %0, get the former location of the object that was teleported passed in %1.
-
-`/silent` suppresses exactly two things: the @tport/@otport/@atport (and @oxtport) attributes above, and the @move/@omove/@amove attributes the move itself would trigger. It does not suppress the @enter/@oenter/@aenter and @leave/@oleave/@aleave attributes, the arrival and departure messages, or the automatic look at the destination.
-
-As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
-
-
-**See Also:**
-- [JUMP_OK]
-- [NO_TEL]
-- [Z_TEL]
-- [@tport]
-- [@lock]
-# @trigger
-`@trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]`<br>
-`@trigger/match[/<switches>] <object>/<attribute>=<string>`
-
-@trigger queues an action list stored in an attribute. It can also pass values to that attribute on the stack, as %0 to %9 and `r(0,args)` to `r(29,args)`.
-
-Switches:
-- /spoof: If you control `<object>`, enactor is preserved.
-- /inline: Run @triggered attribute immediately, rather than queueing it.
-- /clearregs: Clear Q-registers before @triggering.
-
-If `/inline` is given, the following switches can be used:
-- /nobreak: If the @triggered attribute has @break or @assert, it won't propagate up.
-- /localize: Don't let the @triggered attribute override your Q-registers.
-
-`/inplace` is an alias for `/inline/localize/nobreak`.
-
-The `/match` switch is explained in [@trigger2]
-
-You must control `<object>`, or it must be Link_OK and you must have the same owner, to trigger an attribute on it.
-
-The triggered attribute is queued - the new action list is not run instantly. The action list is executed by `<object>`, not by the object using @trigger.
-
-See [@trigger2].
-# @trigger2
-By default, the object using @trigger will be the enactor (%#) for the triggered attribute. However, if you control `<object>`, the `/spoof` switch can be used to preserve the current enactor. This is useful for global commands with @a* verb attributes.
-
-Q-registers set at the time @trigger is run will be copied and made available in the triggered attribute, unless the `/clearregs` switch is given.
-
-@trigger can execute obj/attrs that are $-commands or ^-listens. e.g:
-```sharp
-> &SLAP object=$slap *=*:@emit %n slaps %0 around with a %1
-> slap himself=trout
-Walker slaps himself around with a trout
-> @trigger object/slap=himself,trout
-Walker slaps himself around with a trout
-```
-
-Note that you have to pass %0 and %1 yourself. For some $-commands or listens, the pattern can get complex (especially with regexps!), so `/match` allows you to pass a command to match the pattern.
-```sharp
-> @trigger/match object/slap=slap himself=trout
-Walker slaps himself around with a trout
-```
-
-See [@trigger3] for examples.
-
-**See Also:**
-- [@include]
-- [ufun()]
-- [VERBS]
-# @trigger3
-### Examples
-```sharp
-> &GREET me=POSE waves hi.
-> @trigger me/GREET
-Cyclonus waves hi.
-```
-
-```sharp
-> &GREET me=POSE waves to %0! ; say Hi there, %1.
-> @trigger me/GREET=Gears, Arcee
-Cyclonus waves to Gears.
-You say, "Hi there, Arcee."
-```
-
-```sharp
-> &foo Globals=$foo *: @assert setr(0,locate(%#,%0,*))=@nspemit %#=Who? ; @nspemit %#=You foo [name(%q0)]. ; @trigger %q0/AFOO
-> &AFOO Bar=:is foo'd by %n!
-> FOO BAR
-Bar is foo'd by Globals!
-```
-
-```sharp
-> &foo Globals=$foo *: @assert setr(0,locate(%#,%0,*))=@nspemit %#=Who? ; @nspemit %#=You foo [name(%q0)]. ; @trigger/spoof %q0/AFOO
-> FOO BAR
-Bar is foo'd by Cyclonus!
-```
 # @ulock
 # @uunlock
 `@ulock <object>[=<key>]`<br>
@@ -4163,24 +2435,9 @@ Example: if I want everyone but Bob to be able to use my toy, I would "`@lock/us
 
 
 **See Also:**
-- [@lock]
+- [LOCKING]
 - [use]
 - [locktypes]
-# @uptime
-`@uptime[/mortal]`
-
-This command, for mortals, gives the time until the next database dump. For wizards, it also gives the system uptime (just as if 'uptime' had been typed at the shell prompt) and process statistics, some of which are explained in the next help entry. Wizards can use the `/mortal` switch to avoid seeing the extra process statistics.
-
-See [@uptime2].
-# @uptime2
-While the exact statistics displayed depends on the operating system of the game's server, typical things might include the process ID, the machine page size, the maximum resident set size utilized (in K), "integral" memory (in K x seconds-of-execution), the number of page faults ("hard" ones require I/O activity, "soft" ones do not), the number of times the process was "swapped" out of main memory, the number of times the process had to perform disk I/O, the number of network packets sent and received, the number of context switches, and the number of signals delivered to the process.
-
-Under Linux, memory usage is split into a number of different categories including shared libraries, resident set size, stack size, and some other figures. Also under linux, more information on signals is printed.
-
-
-**See Also:**
-- [@stats]
-- [@list]
 # @unlink
 `@unlink <exit>`<br>
 `@unlink <room>`
@@ -4200,7 +2457,7 @@ Removes the lock on `<object>`. It can take as many switches as @lock can.
 
 
 **See Also:**
-- [@lock]
+- [LOCKING]
 - [locktypes]
 # @account
 `@account <name>`<br>
@@ -4243,13 +2500,13 @@ Runs an attribute once for each element of `<list>`, as [@dolist] does, but pass
 
 Switches are the queue-control set shared with [@dolist] and [@include]: `/inline`, `/inplace`, `/localize`, `/clearregs`, `/nobreak`, `/notify` and `/delimit`.
 
-This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [map()].
+This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [MAP()].
 
 
 **See Also:**
 - [@dolist]
 - [@include]
-- [map()]
+- [MAP()]
 - [QUEUE CONTROL]
 # @version
 `@version`
@@ -4258,104 +2515,8 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 
 
 **See Also:**
-- [version()]
-- [numversion()]
-# @verb
-`@verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>,<args>`
-
-This command provides a way to do user-defined verbs with associated @attr/@oattr/@aattr groups. Invoking it does the following:
-
-`<actor>` sees the contents of `<victim>`'s `<what>` attribute, or `<whatd>` if `<victim>` doesn't have a `<what>`.<br>
-Everyone in the same room as `<actor>` sees the contents of `<victim>`'s `<owhat>` attribute, with `<actor>`'s name prepended, or `<owhatd>`, also with `<actor>`'s name prepended, if `<victim>` doesn't have an `<owhat>`.<br>
-`<victim>` executes the contents of his `<awhat>` attribute.
-
-By supplying up to 29 `<args>`, you may pass those values on the stack (i.e. %0, %1, %2, etc. up through %9, and `r(0,args)` to `r(29,args)`).
-
-See [@verb2].
-# @verb2
-In order to use this command, at least one of the following criterion must apply:
-1. The object which did the @verb is a wizard.
-2. The object which did the @verb controls both `<actor>` and `<victim>`
-3. The thing which triggered the @verb (such as through a $-command on the object which did the @verb) must be `<actor>`, AND the object which did the @verb must be either privileged or control `<victim>` or `<victim>` must be VISUAL.
-
-See [@verb3] for examples.
-
-**See Also:**
-- [USER-DEFINED COMMANDS]
-- [STACK]
-- [VERBS]
-- [@trigger]
-# @verb3
-### Examples
-```sharp
-> &VERB_EXAMPLE Test Object=$test:@verb me=%#,TEST,You just tested.,OTEST,just tested the example.,ATEST,%n
-> test
-You just tested.
-[others see] Cyclonus just tested the example.
-```
-
-```sharp
-> &TEST Test Object=You have just tested this object!
-> &ATEST Test Object=@emit %0 has failed!
-> &OTEST Test Object=tests test object.
-> test
-You have just tested this object!
-[others see] Cyclonus tests test object.
-Cyclonus has failed!
-```
-
-See [@verb4] for another example.
-# @verb4
-In order to make this into a global command that anyone can use, we need to put it on a WIZARD object in the Master Room.
-```sharp
-> &DO_TEST Global=$test *: @assert setr(0,locate(%#,%0,n))=@pemit %#=I don't see that here. ; @verb %q0=%#, TEST, You test [capstr(%0)]., OTEST,tests [capstr(%0)]. ,ATEST
-```
-
-```sharp
-> &TEST Example=You test this fun example.
-> &ATEST Example=POSE has been tested!
-> test example
-You test this fun example.
-[others see] You test Example.
-Example has been tested!
-```
-# @wait
-`@wait[/until] <time>=<command_list>`<br>
-`@wait <object>=<command_list>`<br>
-`@wait[/until] <object>/<time>=<command_list>`
-
-The basic form of this command puts the command list (a semicolon-separated list of commands) into the wait queue to execute in `<time>` seconds. If the `/until` switch is given, the time is taken to be an absolute value in seconds, not an offset.
-
-The second form sets up a semaphore wait on `<object>`. The enactor will execute `<command_list>` when `<object>` is @notified.
-
-The third form combines the first two: the enactor will execute `<command_list>` when `<object>` is @notified or when `<time>` passes, whichever happens first.
-
-More forms that support semaphores on arbitrary attributes are described in [@wait2].
-
-
-**See Also:**
-- [SEMAPHORES]
-- [@drain]
-- [@notify]
-# @wait2
-Normally, a semaphore wait depends on the SEMAPHORE attribute of the object in question. However, it is useful to be able to use other attributes as semaphores, so one object can be used as the blocker for multiple different things at once. Possible attribute names aren't completely arbitrary. See 'HELP SEMAPHORES5' for details.
-
-The syntax for these are:
-
-`@wait <object>/<attribute>=<command list>`<br>
-`@wait[/until] <object>/<attribute>/<time>=<command list>`
-
-You cannot do a non-timed semaphore on an attribute with a numeric name, as that is taken as a timeout instead.
-
-See [@wait3].
-# @wait3
-`@wait/pid <pid>=<seconds>`<br>
-`@wait/pid <pid>=[+-]<adjustment>`<br>
-`@wait/pid/until <pid>=<time>`
-
-The `/pid` switch can be used to alter the timeout of entries in the wait and semaphore queues. You can set a new wait time, increase or decrease the current time, or set a new absolute time in seconds.
-
-You must control the object doing the wait, or have the halt @power.
+- [VERSION()]
+- [VERSION()]
 # @wall
 # @rwall
 # @wizwall
@@ -4371,36 +2532,8 @@ The message is prefixed with the value of the wall_prefix, rwall_prefix or wizwa
 
 
 **See Also:**
-- [@wizwall]
-- [@rwall]
-# @warnings
-`@warnings <object>=<warning list>`
-
-This command will set the types of warnings which should be reported on an object or to a player. You must control the object to use this command.
-
-When an object is checked for warnings (via @wcheck by the owner, or automatically), only warnings which are set to be reported on the object will be reported. If no warnings are set on the object, the owner's warning settings will be used. When admin use @wcheck to check non-owned objects, their personal warnings are always used.
-
-For a list of warnings, see [warnings list].<br>
-For examples, see [@warnings2].
-
-
-**See Also:**
-- [@wcheck]
-- [NO_WARN]
-# @warnings2
-Example 1: Normal building situations<br>
-Most people will simply want to leave their @warnings set to "normal" and their objects' @warnings set to "none". They will then receive normal warnings for all their objects.
-
-Example 2: Warning-lover<br>
-People who find warnings very helpful (like heavy builders) may want to set their personal @warnings to "extra" or "all", and keep their objects' warnings at "none". If a specific object should be treated less strictly, set that object's @warnings differently. If an object shouldn't be warned on at all, set the NO_WARN flag on the object.
-
-See [@warnings3].
-# @warnings3
-Example 3: Warning-hater<br>
-People who prefer not to be warned except for specific object may set their personal @warnings to "none" and set the @warnings on those objects to appropriate levels.
-
-Example 4: I need some peace!<br>
-Players who @set themselves NO_WARN will receive no warnings ever until they unset the flag.
+- [@wall]
+- [@wall]
 # @wcheck
 `@wcheck <object>`<br>
 `@wcheck/all`<br>
@@ -4432,7 +2565,7 @@ To avoid being found this way, just do: `@set me=UNFINDABLE`
 
 **See Also:**
 - [UNFINDABLE]
-- [loc()]
+- [LOC()]
 # @wipe
 `@wipe <object>[/<attribute pattern>]`
 
@@ -4450,11 +2583,11 @@ The `/silent` switch suppresses the confirmation message, and `/noisy` causes it
 
 
 **See Also:**
-- [@nszemit]
-- [zemit()]
-- [zone()]
-- [zwho()]
-- [ZONES]
+- [@nspemit]
+- [ZEMIT()]
+- [ZONE()]
+- [ZWHO()]
+- [zones]
 # ahelp
 # anews
 `ahelp [<topic>]`<br>
@@ -4557,7 +2690,7 @@ Used to enter a thing or player. You can only enter an object if you own it or i
 
 Insides of objects are best used for vehicles, or storage spaces when you don't have a home. You can describe the interior of an object differently from its exterior by using @idescribe.
 
-See: [@enter], [@efail], [@ealias], [leave], [@lock], [@idescribe], [INTERIORS]
+See: [@aenter], [@aefail], [@ealias], [leave], [LOCKING], [@idescribe], [interiors]
 # examine
 `examine[/<switches>] <object>[/<attribute>]`
 
@@ -4576,9 +2709,9 @@ The `/opaque` switch omits contents listings.
 
 
 **See Also:**
-- [ATTRIBUTE TREES]
+- [attribute trees]
 - [brief]
-- [lattr()]
+- [LATTR()]
 - [WILDCARDS]
 # follow
 `follow <object>`
@@ -4590,11 +2723,11 @@ If you pass the object's follow lock, you begin following it. As the object move
 - [unfollow]
 - [dismiss]
 - [desert]
-- [followers()]
-- [following()]
+- [FOLLOWERS()]
+- [FOLLOWING()]
 - [@follow]
-- [@ofollow]
-- [@afollow]
+- [@follow]
+- [@follow]
 # dismiss
 `dismiss <object>`<br>
 `dismiss`
@@ -4606,7 +2739,7 @@ The dismiss command stops `<object>` from following you. If no object is given, 
 - [follow]
 - [unfollow]
 - [desert]
-- [followers()]
+- [FOLLOWERS()]
 # desert
 `desert <object>`<br>
 `desert`
@@ -4618,8 +2751,8 @@ The desert command stops `<object>` from following you and stops you from follow
 - [follow]
 - [unfollow]
 - [dismiss]
-- [followers()]
-- [following()]
+- [FOLLOWERS()]
+- [FOLLOWING()]
 # empty
 `empty <object>`
 
@@ -4646,11 +2779,11 @@ To get an object from someone else's inventory, the possessive_get @config optio
 
 
 **See Also:**
-- [@lock]
+- [LOCKING]
 - [ENTER_OK]
 - [give]
 - [drop]
-- [@success]
+- [@asuccess]
 - [inventory]
 # @buy
 # @abuy
@@ -4673,8 +2806,8 @@ These attributes contain the message shown to a player who successfully buys som
 - [buy]
 - [@pricelist]
 - [MONEY]
-- [@lock]
-- [VERBS]
+- [LOCKING]
+- [verbs]
 - [@cost]
 - [give]
 # @pricelist
@@ -4700,7 +2833,7 @@ A player must pass `<object>`'s @lock/pay in order to purchase from it.
 - [MONEY]
 - [@cost]
 - [give]
-- [@lock]
+- [LOCKING]
 # buy
 `buy <item>[ from <vendor>][ for <cost>]`
 
@@ -4720,10 +2853,10 @@ You enjoy a delicious coke.
 
 
 **See Also:**
-- [@BUY]
-- [@PRICELIST]
+- [@buy]
+- [@pricelist]
 - [give]
-- [@COST]
+- [@cost]
 # give
 `give[/silent] <recipient>=<number>`<br>
 `give[/silent] <number> to <recipient>`<br>
@@ -4738,12 +2871,12 @@ The last two forms of this command give an `<object>` from your inventory to `<r
 **See Also:**
 - [@pay]
 - [@cost]
-- [@lock]
+- [LOCKING]
 - [inventory]
 - [@receive]
 - [@give]
 - [buy]
-- [@success]
+- [@asuccess]
 # go
 # goto
 # move
@@ -4758,10 +2891,10 @@ Goes in the specified direction. `<Direction>` can be the name or alias of an ex
 
 
 **See Also:**
-- [HOME]
+- [HOMES]
 - [@link]
 - [@ealias]
-- [@lalias]
+- [@ealias]
 - [EXITS]
 - [movement]
 # movement
@@ -4791,11 +2924,11 @@ After every move, the object looks at where it arrived. This look always happens
 silent move; a TERSE player sees the room's name and contents but not its description.
 
 **See Also:**
-- [goto]
+- [go]
 - [@teleport]
 - [enter]
 - [leave]
-- [HOME]
+- [HOMES]
 - [TERSE]
 - [@listen]
 # INFO
@@ -4817,10 +2950,10 @@ Note that on some MUSHes it is possible to take things that are in someone else'
 
 **See Also:**
 - [score]
-- [take]
+- [get]
 - [drop]
 - [OPAQUE]
-- [@lock]
+- [LOCKING]
 - [@invformat]
 # leave
 `leave`
@@ -4834,128 +2967,17 @@ The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cann
 - [enter]
 - [@leave]
 - [@lfail]
-- [@lalias]
-- [@lock]
-- [INTERIORS]
+- [@ealias]
+- [LOCKING]
+- [interiors]
 # LOGOUT
 `LOGOUT`
 
 LOGOUT is similar to QUIT, but instead of disconnecting you from the game completely, it merely disconnects you from your current character and returns you to the opening welcome screen. This is useful if you want to disconnect and then reconnect to another character. Unlike most commands, it is case-sensitive and must be typed in all caps.
-# look
-# l
-# read
-`look [<object>]`<br>
-`look <container>'s <object>`<br>
-`look <exit>'s <object>`<br>
-`look/outside [<object>]`
-
-Displays the description of `<object>`, or the room you're in if you don't name a specific object. You can also look at objects inside others, as long as the `<container>` is not set OPAQUE, or at objects on the other side of an exit, if the exit is set TRANSPARENT or CLOUDY.
-
-If you're inside a container, `look/outside` allows you to look at the room the container is in, or at other objects in your container's location, as long as your container is not set OPAQUE.
-
-See [look2].
-# look2
-If you look at an object that is not set OPAQUE, you will see any non-DARK items in its inventory. You can look at DARK items in your location if you know what their name is by typing 'look `<object>`', but they will not show up in the list of contents.
-
-When you type 'look' alone, you look at your current location. For a room, this normally shows you the room's description, the list of contents, and any obvious exits from the room. For an object, it shows you the interior description (@idescribe) instead, if one is set.
-
-If a room is set DARK, when you look you will not see any of the exits or contents of the room, unless they are set LIGHT.
-
-'look' may be abbreviated 'l', and is sometimes aliased as 'read'.
-
-
-**See Also:**
-- [OPAQUE]
-- [FLAGS]
-- [@describe]
-- [@adescribe]
-- [@odescribe]
-- [DARK]
-- [LIGHT]
-- [TRANSPARENT]
-- [CLOUDY]
 # news
 `news [<topic>]`
 
 The news system works just like the help system. Many MUSHes use it to provide standard information on the rules, theme, and customized commands of the particular MUSH. It is highly recommended that you read it regularly.
-# page
-# p
-`page[/<switch>] [<player-list>=]<message>`
-
-This command sends a message to a player or list of players. If the player's name contains spaces, surround it with double-quotes. If you have already paged someone since connecting, just typing:
-
-'`page <message>`' or '`page =<message>`'
-
-will send the message to the last person paged. You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's PAGE_LOCK`FAILURE, PAGE_LOCK`OFAILURE, and PAGE_LOCK`AFAILURE attributes will be activated if set.
-
-### Examples
-```sharp
-> page airwolf=hi there!
-You paged Airwolf with 'hi there!'.
-> page see, I don't have to retype the name.
-You paged Airwolf with 'see, I don't have to retype the name.'.
-> page "John Lennon" Ringo=Paul's fine!
-```
-
-See [page2].
-# page2
-Page will attempt a partial match on the name, checking both for an @alias and to see if the name matches someone connected. If the first character of `<message>` is a : or a ;, it will send the page in pose format.
-
-Objects may page players, but not vice versa. If an object pages a NOSPOOF player, that player will see the object's number in square brackets, in front of the message, in a fashion similar to the way NOSPOOF flags emits.
-
-When a player is paged, their PAGEFORMAT attribute is checked, and if exists, the page as viewed by the player is set to the results of calling PAGEFORMAT. See help @pageformat.
-
-Page takes three switches: `/noeval`, `/override`, and `/port`.
-
-The `/noeval` switch prevents the MUSH from evaluating the message.<br>
-The `/override` switch is admin-only, and overrides pagelocks and HAVEN.<br>
-The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.
-
-
-**See Also:**
-- [@lock]
-- [@alias]
-- [@pageformat]
-- [pose]
-- [:]
-- [;]
-- [HAVEN]
-- [NOSPOOF]
-- [FLAGS]
-# :
-# ;
-# pose
-# semipose
-`pose[/noeval] <action>`<br>
-`:<action>`
-
-`pose/nospace[/noeval] <action>`<br>
-`semipose[/noeval] <action>`<br>
-`;<action>`
-
-The pose and semipose commands allow you to perform actions. Pose shows your name, a space, and then `<action>`; semipose omits the space. They can be abbreviated to ':' and ';' respectively. The `/noeval` switch stops `<action>` from being evaluated.
-
-If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %0 and either : (for pose) or ; (for semipose) as %1. The result is used instead of `<action>`, as long as it returns a non-empty string.
-
-See [pose2] for examples.
-
-**See Also:**
-- [say]
-- [@emit]
-- [@speechmod]
-# pose2
-### Examples
-```sharp
-> pose waves.
-Bob waves.
-```
-
-```sharp
-> :laughs out loud.
-Bob laughs out loud.
-> ;'s laughing on the inside.
-Bob's laughing on the inside.
-```
 # "
 # say
 `say[/noeval] <message>`<br>
@@ -4969,9 +2991,9 @@ If `<message>` begins with a double-quote and the chat_strip_quote @config optio
 
 
 **See Also:**
-- [pose]
+- [:]
 - [whisper]
-- [@speechmod]
+- [@SPEECHMOD]
 - [@emit]
 - [page]
 # score
@@ -4983,7 +3005,7 @@ Displays how many pennies you have. Helpful to see if any machines are looping. 
 **See Also:**
 - [LOOPING]
 - [@ps]
-- [QUEUE]
+- [queue]
 - [MONEY]
 - [TRACK_MONEY]
 # think
@@ -5004,14 +3026,14 @@ One possible use: `@adesc me=think %n just looked at you.`
 
 Connects you to a character from the login screen. Quote a name that contains spaces. A character with no password takes no password argument, and `connect guest` takes the next free guest character if the game offers them.
 
-See [cd] and [cv] to connect with your `DARK` flag forced on or off.
+See [cd] and [cd] to connect with your `DARK` flag forced on or off.
 
 
 **See Also:**
 - [QUIT]
 - [login]
 - [register]
-- [WHO]
+- [who]
 # register
 `register <name> [<email>] <password>`
 
@@ -5090,10 +3112,10 @@ This command stops you from following an object that you were formerly following
 - [follow]
 - [dismiss]
 - [desert]
-- [followers()]
+- [FOLLOWERS()]
 - [@follow]
-- [@ofollow]
-- [@afollow]
+- [@follow]
+- [@follow]
 # use
 `use <object>`
 
@@ -5103,10 +3125,10 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 
 
 **See Also:**
-- [@use]
+- [@ause]
 - [@charges]
-- [@lock]
-- [@ufail]
+- [LOCKING]
+- [@aufail]
 # WARN_ON_MISSING
 This internal command is run when someone attempts to run a command which starts with a function, for example:
 ```sharp
@@ -5126,17 +3148,17 @@ By default it sends the owner of the offending object a message, so they can fix
 
 
 **See Also:**
-- [huh_command]
-- [unimplemented_command]
+- [HUH_COMMAND]
+- [UNIMPLEMENTED_COMMAND]
 # UNIMPLEMENTED_COMMAND
 This command shows the message "This command has not been implemented." It can be typed directly and @hooked like any other command.
 
-A command added with @command/add and not @hooked shows the same message, but it does so itself: it does not run UNIMPLEMENTED_COMMAND, so a hook on UNIMPLEMENTED_COMMAND does not change it. To change what an added command does, @hook the added command. This differs from PennMUSH; see [COMPATIBILITY COMMANDS].
+A command added with @command/add and not @hooked shows the same message, but it does so itself: it does not run UNIMPLEMENTED_COMMAND, so a hook on UNIMPLEMENTED_COMMAND does not change it. To change what an added command does, @hook the added command. This differs from PennMUSH; see [compatibility commands].
 
 
 **See Also:**
-- [huh_command]
-- [warn_on_missing]
+- [HUH_COMMAND]
+- [WARN_ON_MISSING]
 - [@command]
 - [@hook]
 # whisper
@@ -5158,38 +3180,8 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 
 **See Also:**
 - [page]
-- [pose]
+- [:]
 - [@pemit]
-# WHO
-# DOING
-`WHO [<pattern>]`<br>
-`DOING [<pattern>]`
-
-For mortals, the WHO command displays a list of players currently connected to the MUSH, the amount of time they've been connected, their idle time, and their @doing. Hidden players are not shown.
-
-For admin, WHO shows the names of online players, their location, connection/idle times, the number of commands typed through the connection, the descriptor/port number, and the host the player is connected from. A letter after the descriptor marks the connection type: `S` (SSL), `L` (local), or `W` (WebSocket). It also includes hidden players, and connections which are at the login screen, but have not yet connected to a player.
-
-Admin can use the DOING command to see the same output mortals see with WHO, with the exception that dark/hidden players are included.
-
-If a `<pattern>` is given for either command, only connected players whose names start with `<pattern>` are shown. If `<pattern>` is a wildcard, only players whose names or aliases match the pattern are shown.
-
-See [who2].
-# WHO2
-Existing games which have softcoded 'who' commands can maintain separation from 'WHO' by using an @hook/ignore on the WHO command, such as:
-```sharp
-> &HOOK`WHO <object>=not(comp(left(%c,3),WHO))
-> @hook/ignore WHO=<object>,HOOK`WHO
-```
-
-@hooks are not maintained across reboots, and should be placed into an @startup on a low-dbref object.
-
-Note: The WHO command available at the login screen is totally separate from the in-game WHO command, and is not affected by any changes to the in-game WHO. To alter that, use the WHO_FILE @config option.
-
-
-**See Also:**
-- [@doing]
-- [@poll]
-- [SESSION]
 # SESSION
 `SESSION [<pattern>]`
 
@@ -5197,7 +3189,7 @@ The SESSION command is the same as the admin WHO, but instead of showing the hos
 
 
 **See Also:**
-- [WHO]
+- [who]
 # with
 `with[/room] <obj>=<command>`
 
@@ -5207,8 +3199,8 @@ Attempts to run a user-defined command on a specific object. If the `/room` swit
 
 
 **See Also:**
-- [USER-DEFINED COMMANDS]
-- [EVALUATION ORDER]
+- [$-commands]
+- [evaluation order]
 # socket commands
 These commands can only be entered through a client, on the connection they are typed into. They act on that connection rather than on a game object, so they work whether or not you have connected to a character, and would be meaningless if run by an object or from a queued action.
 
@@ -5279,7 +3271,7 @@ BIRD
 
 
 **See Also:**
-- [suggest()]
+- [SUGGEST()]
 
 
 # @ps/history
@@ -5355,3 +3347,4 @@ think add(2,3)
 The profile can include the `ADD` and `THINK` invocations in their visible context.
 Commands submitted directly through the game produce queue history; inspecting or
 profiling does not change their execution order or admission limits.
+

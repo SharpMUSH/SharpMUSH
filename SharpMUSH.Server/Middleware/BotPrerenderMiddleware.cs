@@ -121,9 +121,10 @@ public sealed class BotPrerenderMiddleware(
 				var resolution = await resolver.ResolveAsync(HelpCorpora.Help, topic);
 				if (resolution is HelpEntry entry)
 				{
+					// Every section lookup renders the full article, with stable anchors in its TOC and headings.
 					html = HelpController.GeneratePrerenderHtml(
 						entry,
-						$"{canonicalBase}{HelpController.PublicTopicHref(entry.Topic)}");
+						$"{canonicalBase}{HelpController.PublicTopicHref(entry.Article?.Lookup ?? entry.Topic)}");
 				}
 			}
 		}

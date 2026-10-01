@@ -25,15 +25,15 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 
 
 **See Also:**
-- [- [mail-sending]
-- [mail-reading]
-- [mail-folders]
+- [- [MAIL-SENDING]
+- [MAIL-READING]
+- [MAIL-FOLDERS]
 - [mail-forward]
-- [mail-other]
-- [mail-admin]
+- [MAIL-OTHER]
+- [MAIL-ADMIN]
 - [@malias]
-- [mail-reviewing]
-- [@mailquota]
+- [MAIL-REVIEWING]
+- [@MAILQUOTA]
 
 # MAIL-READING
 # @MAIL/READ
@@ -145,7 +145,7 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 
 
 **See Also:**
-- [@mailfilter]
+- [@MAILFILTER]
 
 # MAIL-REVIEWING
 # @MAIL/REVIEW
@@ -192,7 +192,7 @@ Filter urgent messages into folder 1
 
 
 **See Also:**
-- [mail-folders]
+- [MAIL-FOLDERS]
 
 # @MAILSIGNATURE
 # MAILSIGNATURE
@@ -208,8 +208,8 @@ When set, this attribute is evaluated and appended to any @mail messages sent by
 
 
 **See Also:**
-- [@mail]
-- [mail-sending]
+- [MAIL]
+- [MAIL-SENDING]
 
 # MAIL-ADMIN
 
@@ -231,94 +231,13 @@ The /debug switch does sanity checking on the mail database, and may only be use
 
 The /nuke switch destroys the post office, erasing all @mail everywhere. It may only be used by God.
 
-# @MALIAS
-
-- `@malias [<alias>]`
-
-The @malias command is used to create, view, and manipulate @mail aliases, or lists. An alias is a shorthand way of specifying a list of players for @mail. Aliases begin with the '+' (plus) prefix, and represent a list of dbrefs; aliases may not include other aliases.
-
-`@malias` with no arguments lists aliases available for your use, and is equivalent to `@malias/list`
-
-`@malias` with a single argument (the name of an alias) lists the members of that alias, if you're allowed to see them. Other forms of the same command are `@malias/members <alias>` or `@malias/who <alias>`
-
-
-**See Also:**
-- [@malias2]
-
-# @MALIAS2
-
-- `@malias[/create] <alias>=<player list>`
-- `@malias/desc <alias>=<description>`
-- `@malias/rename <alias>=<newalias>`
-- `@malias/destroy <alias>`
-
-The first form above creates a new alias for the given list of players.
-
-`@malias/desc` sets the alias's description, which is shown when aliases are listed.
-
-`@malias/rename` renames an alias.
-
-`@malias/destroy` destroys the alias completely.
-
-
-**See Also:**
-- [@malias3]
-
-# @MALIAS3
-
-- `@malias/set <alias>=<player list>`
-- `@malias/add <alias>=<player list>`
-- `@malias/remove <alias>=<player list>`
-
-`@malias/set` resets the list of players on the alias to *<player list>*.
-
-`@malias/add` adds players to the alias. Note that the same player may be on an alias multiple times.
-
-`@malias/remove` removes players from the alias. If a player is on the alias more than once, a single remove will remove only one instance of that player.
-
-
-**See Also:**
-- [@malias4]
-
-# @MALIAS4
-
-- `@malias/use <alias>=<perm list>`
-- `@malias/see <alias>=<perm list>`
-
-`@malias/use` controls who may use an alias. Players who may use an alias will see it in their @malias list, and can @mail to the alias.
-
-`@malias/see` controls who may list the members of an alias.
-
-An empty permission list allows any player. The permission list may also be a space-separated list of one or more of "owner", "members" (of the alias), and "admin".
-
-By default, the owner and alias members may see and use the alias, but only the owner may list the members. Note that admin may always list aliases and their members, regardless of these settings, but are treated like anyone else when trying to @mail with an alias.
-
-
-**See Also:**
-- [@malias5]
-
-# @MALIAS5
-
-- `@malias/all`
-- `@malias/stat`
-- `@malias/chown <alias>=<player>`
-- `@malias/nuke`
-
-`@malias/all` is an admin-only command that lists all aliases in the MUSH.
-
-`@malias/stat` is an admin-only command that displays statistics about the number of aliases and members of aliases in use.
-
-`@malias/chown` is a wizard-only command that changes the owner of an alias.
-
-`@malias/nuke` is a God-only command that destroys all aliases.
-
 # Mail Functions
 
 Mail functions work with @mail.
 
 Available functions:
 * [folderstats]
-* [mail]
+* [MAIL]
 * [maildstats]
 * [mailfrom]
 * [mailfstats]
@@ -369,7 +288,7 @@ When given numeric arguments, mail() returns the text of the corresponding messa
 
 - `maillist([<player>, ]<message-list>)`
 
-maillist() returns a list of all *<player>*'s @mail messages which match the given *<message-list>* (the same as @mail/list *<message-list>*). If no *<player>* is given, the executor's mail is matched. The *<message-list>* argument is described in [mail].
+maillist() returns a list of all *<player>*'s @mail messages which match the given *<message-list>* (the same as @mail/list *<message-list>*). If no *<player>* is given, the executor's mail is matched. The *<message-list>* argument is described in [MAIL].
 
 ### Examples
 ```sharp
@@ -383,7 +302,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 
 **See Also:**
-- [mail]
+- [MAIL]
 - [mailfrom]
 
 # MAILFROM()
@@ -403,7 +322,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 
 **See Also:**
-- [mail]
+- [MAIL]
 - [maillist]
 
 # MAILSTATS()

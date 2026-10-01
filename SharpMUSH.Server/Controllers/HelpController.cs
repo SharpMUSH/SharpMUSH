@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Markdig.Syntax;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
@@ -56,7 +57,12 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 		string? Topic,
 		string? Markdown,
 		string? Html,
-		IReadOnlyList<string> Candidates);
+		IReadOnlyList<string> Candidates)
+	{
+		public string? ArticleId { get; init; }
+		public string? SectionId { get; init; }
+		public string? CanonicalHref { get; init; }
+	}
 
 	/// <summary>Portal URL for a topic in the general corpus.</summary>
 	public static string PublicTopicHref(string topic) => $"/help/{Uri.EscapeDataString(topic)}";
@@ -73,6 +79,11 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 	[AllowAnonymous]
 	public Task<ActionResult<HelpEntryDto>> Entry([FromQuery] string? topic) =>
 		BuildEntryAsync(HelpCorpora.Help, topic, PublicTopicHref);
+
+	/// <summary>Shared article manifest for documentation exporters. No separate content source.</summary>
+	[HttpGet("articles")]
+	[AllowAnonymous]
+	public Task<IReadOnlyList<HelpArticle>> Articles() => BuildArticlesAsync(HelpCorpora.Help);
 
 	/// <summary>
 	/// The admin gate. Pinned to the account-session scheme rather than the default one: in
@@ -92,6 +103,23 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 	public Task<ActionResult<HelpEntryDto>> AdminEntry([FromQuery] string? topic) =>
 		BuildEntryAsync(HelpCorpora.Admin, topic, AdminTopicHref);
 
+	[HttpGet("admin/articles")]
+	[Authorize(AuthenticationSchemes = AdminScheme, Roles = "Wizard,God")]
+	public Task<IReadOnlyList<HelpArticle>> AdminArticles() => BuildArticlesAsync(HelpCorpora.Admin);
+
+	private async Task<IReadOnlyList<HelpArticle>> BuildArticlesAsync(string corpus)
+	{
+		var articles = new Dictionary<string, HelpArticle>(StringComparer.OrdinalIgnoreCase);
+		foreach (var topic in await resolver.ListTopicsAsync(corpus))
+		{
+			if ((await resolver.GetExactAsync(corpus, topic))?.Article is { } article)
+			{
+				articles.TryAdd(article.Id, article);
+			}
+		}
+		return articles.Values.ToList();
+	}
+
 	/// <summary>
 	/// Bot-facing static HTML for one help entry, served by <c>BotPrerenderMiddleware</c> so
 	/// crawlers see the text instead of an empty SPA shell. Help files carry no locale dimension,
@@ -100,7 +128,8 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 	public static string GeneratePrerenderHtml(HelpEntry entry, string canonicalUrl, string siteName = "SharpMUSH")
 	{
 		var title = HttpUtility.HtmlEncode($"{entry.Topic} - {siteName} Help");
-		var description = HttpUtility.HtmlEncode(HelpHtmlRenderer.ExtractPlainText(entry.Markdown, 200));
+		var markdown = entry.Article?.Markdown ?? entry.Markdown;
+		var description = HttpUtility.HtmlEncode(HelpHtmlRenderer.ExtractPlainText(markdown, 200));
 		var canonical = HttpUtility.HtmlEncode(canonicalUrl);
 
 		var sb = new StringBuilder();
@@ -118,7 +147,7 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 		sb.AppendLine("</head>");
 		sb.AppendLine("<body>");
 		sb.AppendLine($"  <h1>{HttpUtility.HtmlEncode(entry.Topic)}</h1>");
-		sb.AppendLine($"  {HelpHtmlRenderer.RenderToHtml(entry.Markdown, PublicTopicHref)}");
+		sb.AppendLine($"  {HelpHtmlRenderer.RenderToHtml(markdown, PublicTopicHref, entry.Article)}");
 		sb.AppendLine("</body>");
 		sb.AppendLine("</html>");
 		return sb.ToString();
@@ -153,13 +182,33 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 
 		if (resolution is HelpEntry entry)
 		{
+			var markdown = entry.Article?.Markdown ?? entry.Markdown;
+			var targets = Markdig.Markdown.Parse(markdown,
+				RecursiveMarkdownHelper.ConfigureHelpSyntax(new Markdig.MarkdownPipelineBuilder()).Build())
+				.Descendants<Markdig.Syntax.Inlines.LinkInline>()
+				.Where(link => link.Url?.StartsWith("help ", StringComparison.Ordinal) == true)
+				.Select(link => link.Url![5..]).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+			var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			foreach (var target in targets)
+			{
+				var resolved = await resolver.GetExactAsync(corpus, target);
+				links[target] = resolved?.Article is { } article
+					? href(article.Lookup) + (resolved.SectionId is null ? string.Empty : "#" + resolved.SectionId)
+					: href(resolved?.Topic ?? target);
+			}
 			return Ok(new HelpEntryDto(
 				corpus,
 				topic,
 				entry.Topic,
-				entry.Markdown,
-				HelpHtmlRenderer.RenderToHtml(entry.Markdown, href),
-				[]));
+				markdown,
+				HelpHtmlRenderer.RenderToHtml(markdown, target => links.GetValueOrDefault(target, href(target)), entry.Article),
+				[])
+			{
+				ArticleId = entry.Article?.Id,
+				SectionId = entry.SectionId,
+				CanonicalHref = href(entry.Article?.Lookup ?? entry.Topic)
+					+ (entry.SectionId is null ? string.Empty : "#" + entry.SectionId)
+			});
 		}
 
 		// Several topics matched. That is an answer, not a failure — the reader picks one — so it

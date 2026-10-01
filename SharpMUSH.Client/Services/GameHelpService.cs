@@ -15,6 +15,10 @@ public record GameHelpEntry(
 	string? Html,
 	IReadOnlyList<string> Candidates)
 {
+	public string? ArticleId { get; init; }
+	public string? SectionId { get; init; }
+	public string? CanonicalHref { get; init; }
+
 	/// <summary>True when nothing in the corpus answered to the requested topic.</summary>
 	public bool IsMiss => Topic is null && Candidates.Count == 0;
 }

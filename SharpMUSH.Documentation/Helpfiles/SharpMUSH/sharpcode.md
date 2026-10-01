@@ -46,17 +46,19 @@ always the prefix, and the rest is always valid JSON.
 # internationalization
 # locale
 # translation
-Internationalization support in SharpMUSH includes:
-* Support for (8-bit) locale-based character sets, including translation of iso-8859-1 accented characters to html entities for Pueblo, the `accent()` and `stripaccents()` functions, and the NOACCENTS flag.
-* Support for UTF-8 and UTF-16
-* Support for locale-based date/time formats
-* Support for locale-based message sets for translations of server messages. There are active translation teams (and you can join!) and several languages have practically complete translation files available.
-* Some support for locale-based string collation
-* The ability to alias command and function names, so you can generate a set of translated commands/functions.
+SharpMUSH supports Unicode: server strings use UTF-16 internally, and network
+text supports UTF-8. The `accent()` and `stripaccents()` functions and the
+NOACCENTS flag provide compatibility with older clients.
 
-Most of these features get enabled by setting an appropriate environment variable in the SharpMUSH config.
+Server messages use the existing locale-based resource system. The portal has
+its own translated resources and language picker. Help translations use
+locale-specific corpus directories, falling back to the neutral help source
+when a translated lookup is unavailable. Command and function aliases can
+provide translated names without duplicating their implementation.
 
-Unicode is not currently supported.
+Date/time formatting and string collation use the applicable locale facilities.
+Choose a locale through the existing player and portal preferences; do not assume
+that setting a process environment variable translates every presentation.
 
 # copyright
 # copyrite

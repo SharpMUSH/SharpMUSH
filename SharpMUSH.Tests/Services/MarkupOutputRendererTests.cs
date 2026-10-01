@@ -216,7 +216,7 @@ public partial class MarkupOutputRendererTests
 		foreach (var line in lines)
 		{
 			await Assert.That(line.StartsWith(MxpSecureLineFramer.SecureLine)).IsTrue();
-			await Assert.That(line).Contains("<SEND HREF=\"help newbie\">newbie</SEND>");
+			await Assert.That(line).Contains("<SEND HREF=\"help newbie\">help newbie</SEND>");
 		}
 	}
 

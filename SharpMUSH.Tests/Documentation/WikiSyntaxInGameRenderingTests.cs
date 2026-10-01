@@ -143,8 +143,8 @@ public class WikiSyntaxInGameRenderingTests
 	/// cannot show.
 	/// </summary>
 	[Test]
-	[Arguments("sharpwiki.md", "[[Page Name]]")]
-	[Arguments("markdown.md", "[[Page Name]]")]
+	[Arguments("wiki.md", "[[Page Name]]")]
+	[Arguments("render-markdown-custom.md", "[[Page Name]]")]
 	public async Task Helpfile_DocumentingWikiLinkSyntax_KeepsItsBrackets(string file, string expected)
 	{
 		var helpDir = FindHelpfilesDirectory();

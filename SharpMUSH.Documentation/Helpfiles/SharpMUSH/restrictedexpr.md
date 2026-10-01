@@ -1,3 +1,45 @@
+<!-- help-article
+{
+  "corpus": "help",
+  "id": "restrictedexpr",
+  "lookup": "restrictedexpr()",
+  "aliases": [
+    "restrictedexpr"
+  ],
+  "sections": [
+    {
+      "id": "examples",
+      "heading": "Examples",
+      "lookup": "restrictedexpr examples"
+    },
+    {
+      "id": "allowed-operations",
+      "heading": "Allowed operations",
+      "lookup": "restrictedexpr allowed operations"
+    },
+    {
+      "id": "substitutions-and-isolation",
+      "heading": "Substitutions and isolation",
+      "lookup": "restrictedexpr substitutions and isolation"
+    },
+    {
+      "id": "permission-boundary",
+      "heading": "Permission boundary",
+      "lookup": "restrictedexpr permission boundary"
+    },
+    {
+      "id": "limits",
+      "heading": "Limits",
+      "lookup": "restrictedexpr limits"
+    },
+    {
+      "id": "invocation-rules",
+      "heading": "Invocation rules",
+      "lookup": "restrictedexpr invocation rules"
+    }
+  ]
+}
+-->
 # restrictedexpr()
 
 `restrictedexpr(<allowlist>,<expression>[,<input0>,...,<input9>])`
@@ -7,7 +49,10 @@ The allowlist is a space-separated list of supported function names. An empty li
 allows literal text and input substitutions only. Inputs are not evaluated: `%0`
 through `%9` insert the corresponding supplied text. Unspecified inputs are empty.
 
+## Examples
+
 Examples:
+```sharp
 
     restrictedexpr(add,add(%0,%1),2,3)
     5
@@ -17,6 +62,9 @@ Examples:
 
     restrictedexpr(,%0%b%1,hello,world)
     hello world
+```
+
+## Allowed operations
 
 The initial profile supports `add`, `sub`, `mul`, `div`, `cat`, `strcat`, `strlen`,
 `ucstr`, `lcstr`, `trim`, `space`, `first`, `rest`, `extract`, `words`, `fn`, and
@@ -25,6 +73,8 @@ clones resolve to the original operation before the allowlist is checked. A
 nested `restrictedexpr()` intersects its requested operations with the caller's
 allowlist; it cannot enable an operation the caller omitted. `fn()` checks the
 resolved target under the same restrictions and cannot use its attribute fallback.
+
+## Substitutions and isolation
 
 Only `%0` through `%9`, `%b` (space), `%r` (newline), `%t` (tab), and `%%` are
 available as substitutions. Ordinary quoting and literal text still work. Parent
@@ -37,6 +87,8 @@ restricted scope starts. Function-metadata logging and error notifications are
 suppressed during restricted calls. Malformed wrapper input is not forwarded by
 debug output, and parser tracing is suppressed before the wrapper is parsed.
 
+## Permission boundary
+
 An unsupported operation or substitution returns `#-1 RESTRICTED EXPRESSION`.
 Object reads, attribute evaluation (`u()`), global and local user-defined
 functions, plugin functions, commands, SQL, HTTP, queueing, and other side effects
@@ -45,6 +97,8 @@ names to the allowlist does not grant access. Operation permission and object
 access are separate: this profile grants no object-data access. Audited calls do
 not resolve the executor. Disabled functions remain disabled; functions requiring
 identity-based permissions or an explicit restriction are denied in this profile.
+
+## Limits
 
 Restrictions apply to this evaluation and its nested calls; they do not modify server-
 wide function permissions or other concurrent evaluations. The existing invocation,
@@ -61,6 +115,8 @@ limit. Excess arguments are rejected before argument arrays and maps are allocat
 
 This is a boundary for softcode expressions using the supported core operations.
 Native plugins and server code remain trusted code and are not isolated by it.
+
+## Invocation rules
 
 Call this wrapper with direct function syntax. `#apply` entry, including aliases
 and `fn` indirection, is rejected because those arguments have already been

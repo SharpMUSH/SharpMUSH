@@ -17,7 +17,7 @@ public class TerminalFrameRendererTests
 
 		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
 		await Assert.That(frame.Html).Contains("xch_cmd=\"help newbie\"");
-		await Assert.That(frame.Plain).IsEqualTo("newbie");
+		await Assert.That(frame.Plain).IsEqualTo("help newbie");
 	}
 
 	[Test]

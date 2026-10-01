@@ -3,11 +3,76 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
 public class TextFileServiceTests
 {
+	[Test]
+	public async Task CanonicalResolutionSearchScopeLocalizationAndRevision()
+	{
+		var (service, root) = BuildServiceOverTempFiles(0, 0);
+		Directory.CreateDirectory(Path.Join(root, "help"));
+		Directory.CreateDirectory(Path.Join(root, "ahelp"));
+		var path = Path.Join(root, "help", "align.md");
+		const string article = """
+			<!-- help-article
+			{"corpus":"help","id":"align","lookup":"align()","aliases":["lalign()"],
+			 "sections":[{"id":"examples","heading":"Examples","lookup":"align examples"}],
+			 "redirects":{"ALIGN2":"align examples"}}
+			-->
+			# align()
+			Overview.
+			## Examples
+			Needle example.
+			""";
+		try
+		{
+			await File.WriteAllTextAsync(path, article);
+			await File.WriteAllTextAsync(Path.Join(root, "ahelp", "security.md"), "# security\nAdministrator only.");
+			await service.ReindexAsync();
+			var resolver = new HelpTopicResolver(service);
+			var alias = await resolver.GetExactAsync("help", "LALIGN()");
+			await Assert.That(alias?.Topic).IsEqualTo("align()");
+			await Assert.That(alias?.Article?.Id).IsEqualTo("align");
+			await Assert.That(alias?.Markdown).DoesNotContain("Needle");
+			var redirect = await resolver.GetExactAsync("help", "ALIGN2");
+			await Assert.That(redirect?.Topic).IsEqualTo("align examples");
+			await Assert.That(redirect?.SectionId).IsEqualTo("examples");
+			await Assert.That(await resolver.ListTopicsAsync("help"))
+				.IsEquivalentTo(new[] { "align()", "align examples" });
+			await Assert.That(await resolver.SearchTopicsAsync("help", "lalign*"))
+				.IsEquivalentTo(new[] { "align()" });
+			await Assert.That(await resolver.SearchTopicsAsync("help", "*align*"))
+				.IsEquivalentTo(new[] { "align()", "align examples" });
+			var fuzzy = (await resolver.ResolveAsync("help", "al examples")).Expect<HelpEntry>();
+			await Assert.That(fuzzy.Topic).IsEqualTo("align examples");
+			await Assert.That(await resolver.SearchContentAsync("help", "Needle"))
+				.IsEquivalentTo(new[] { "align examples" });
+			await Assert.That(await resolver.GetExactAsync("help", "security")).IsNull();
+			await Assert.That(await resolver.GetExactAsync("help.fr", "security")).IsNull();
+			var localized = new LocalizedTextFileService(service);
+			await Assert.That(await localized.GetEntryAsync("help", "align()", "fr")).IsEqualTo(alias?.Markdown);
+			await File.WriteAllTextAsync(path, article.Replace("Overview.", "Revised overview."));
+			await Assert.That((await service.GetEntryAsync("help", "align()"))!).DoesNotContain("Revised");
+			await service.ReindexAsync();
+			await Assert.That((await service.GetEntryAsync("help", "align()"))!).Contains("Revised");
+			Directory.CreateDirectory(Path.Join(root, "help.fr"));
+			await File.WriteAllTextAsync(Path.Join(root, "help.fr", "align.md"), article.Replace("Overview.", "Vue française."));
+			await File.WriteAllTextAsync(Path.Join(root, "help", "prefix.md"), "# zulu\n# a0alias\nAlpha.\n# a1topic\nBeta.");
+			await service.ReindexAsync();
+			var prefix = (await resolver.ResolveAsync("help", "a")).Expect<HelpEntry>();
+			await Assert.That(prefix.Topic).IsEqualTo("zulu");
+			await Assert.That(await localized.GetEntryAsync("help", "align()", "fr")).Contains("Vue française");
+			await Assert.That((await service.GetHelpEntryAsync("help.fr", "align()"))?.Article?.Id).IsEqualTo("align");
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
 	/// <summary>
 	/// The build copies the help files next to the server binary (TextFiles/ under bin/), and the default
 	/// setting is the relative "TextFiles". Resolved against the working directory it only worked where

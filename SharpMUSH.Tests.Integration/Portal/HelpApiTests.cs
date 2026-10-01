@@ -24,6 +24,28 @@ namespace SharpMUSH.Tests.Integration.Portal;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class HelpApiTests(ServerWebAppFactory factory)
 {
+	[Test]
+	public async Task NamedSectionShowsCompleteWebArticleAndFocusedTerminalEntry()
+	{
+		var resolver = factory.Services.GetRequiredService<IHelpTopicResolver>();
+		var terminal = await resolver.GetExactAsync("help", "align examples");
+		await Assert.That(terminal?.Article?.Id).IsEqualTo("align");
+		await Assert.That(terminal?.Markdown).DoesNotContain("&haiku");
+		await Assert.That(terminal?.Markdown).Contains("Ashen-Shug");
+		var http = CreateClient();
+		var entry = await http.GetFromJsonAsync<HelpEntryDto>("api/help/entry?topic=align%20examples");
+		await Assert.That(entry?.Markdown).Contains("&haiku");
+		await Assert.That(entry?.Html).Contains("id=\"examples\"");
+		await Assert.That(entry?.Html).Contains("href=\"/help/align%28%29#examples\"");
+		var index = await http.GetFromJsonAsync<HelpIndexDto>("api/help");
+		await Assert.That(index!.Topics).DoesNotContain("ALIGN2");
+		await Assert.That(index.Topics).DoesNotContain("LALIGN()");
+		var manifest = await http.GetFromJsonAsync<List<HelpArticle>>("api/help/articles");
+		await Assert.That(manifest!.Count(article => article.Id == "align")).IsEqualTo(1);
+		await Assert.That((await http.GetAsync("api/help/admin/articles")).StatusCode)
+			.IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
 	private record HelpIndexDto(string Corpus, string? Topic, string? Html, IReadOnlyList<string> Topics);
 
 	private record HelpEntryDto(
@@ -32,7 +54,12 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		string? Topic,
 		string? Markdown,
 		string? Html,
-		IReadOnlyList<string> Candidates);
+		IReadOnlyList<string> Candidates)
+	{
+		public string? ArticleId { get; init; }
+		public string? SectionId { get; init; }
+		public string? CanonicalHref { get; init; }
+	}
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 
@@ -51,6 +78,23 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var http = factory.CreateHttpClient();
 		http.BaseAddress = new Uri("https://localhost/");
 		return http;
+	}
+
+	[Test]
+	public async Task SectionDeepLinksKeepIdentityAndShareTheArticleSeoCanonical()
+	{
+		var http = CreateClient();
+		var entry = await http.GetFromJsonAsync<HelpEntryDto>("api/help/entry?topic=align%20examples");
+		await Assert.That(entry?.SectionId).IsEqualTo("examples");
+		await Assert.That(entry?.CanonicalHref).IsEqualTo("/help/align%28%29#examples");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "help/align%20examples");
+		request.Headers.UserAgent.ParseAdd("Googlebot/2.1 (+http://www.google.com/bot.html)");
+		var response = await http.SendAsync(request);
+		var html = await response.Content.ReadAsStringAsync();
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(html).Contains("<link rel=\"canonical\" href=\"https://localhost/help/align%28%29\"");
+		await Assert.That(html).Contains("id=\"examples\"");
+		await Assert.That(html).Contains("href=\"/help/align%28%29#examples\"");
 	}
 
 	[Test]
@@ -81,11 +125,11 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var index = await http.GetFromJsonAsync<HelpIndexDto>("api/help");
 
 		await Assert.That(index!.Html!).Contains("href=\"/help/newbie\"");
-		await Assert.That(index.Html!).Contains("href=\"/help/getting%20started\"");
+		await Assert.That(index.Html!).Contains("href=\"/help/Getting%20Started\"");
 	}
 
 	[Test]
-	[Arguments("@mail", "@MAIL")]
+	[Arguments("@mail", "MAIL")]
 	[Arguments("mail-sending", "MAIL-SENDING")]
 	[Arguments("getting started", "Getting Started")]
 	[Arguments("NEWBIE", "newbie")]
@@ -125,15 +169,16 @@ public class HelpApiTests(ServerWebAppFactory factory)
 
 		var entry = await response.Content.ReadFromJsonAsync<HelpEntryDto>();
 		await Assert.That(entry!.Topic).IsNull();
-		await Assert.That(entry.Candidates).Contains("helpfile");
+		await Assert.That(entry.Candidates).Contains("help search");
+		await Assert.That(entry.Candidates).DoesNotContain("helpfile");
 		await Assert.That(entry.Candidates.Count).IsGreaterThan(1);
 	}
 
 	/// <summary>
 	/// The whole point of the change: <c>help @mail</c> at a telnet prompt and
 	/// <c>GET /api/help/entry?topic=@mail</c> must be the same entry, not two systems that happen to
-	/// look similar. Asserted by rendering the API's markdown through the game's own ASCII renderer
-	/// and comparing it to what the command actually notified.
+	/// look similar. They share canonical identity while the web composes the full article and the
+	/// terminal renders the focused lookup returned by the common resolver.
 	/// </summary>
 	[Test]
 	[Arguments("@mail")]
@@ -145,12 +190,17 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var entry = await http.GetFromJsonAsync<HelpEntryDto>(
 			$"api/help/entry?topic={Uri.EscapeDataString(topic)}");
 		await Assert.That(entry!.Markdown).IsNotNull();
+		var resolver = factory.Services.GetRequiredService<IHelpTopicResolver>();
+		var focused = (await resolver.ResolveAsync("help", topic)).Expect<HelpEntry>();
+		await Assert.That(entry.Topic).IsEqualTo(focused.Topic);
+		await Assert.That(entry.ArticleId).IsEqualTo(focused.Article?.Id);
+		await Assert.That(entry.SectionId).IsEqualTo(focused.SectionId);
 
 		var before = NotifyCount();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"help {topic}"));
 		var notified = NotifiedSince(before);
 
-		var expected = RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown!).ToString();
+		var expected = RecursiveMarkdownHelper.RenderMarkdown(focused.Markdown).ToString();
 
 		await Assert.That(notified).Contains(expected)
 			.Because($"'help {topic}' in game and /help/{topic} in the portal must reach the same entry");

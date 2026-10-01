@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Utilities;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -9,6 +10,11 @@ namespace SharpMUSH.Documentation;
 public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logger = null)
 {
 	public Dictionary<string, string> IndexedHelp { get; } = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, HelpEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
+	private readonly HashSet<string> _redirects = new(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>Retrieves canonical article and section identity for exporters.</summary>
+	public HelpEntry? FindHelpEntry(string topic) => _entries.GetValueOrDefault(topic);
 
 	/// <summary>
 	/// Finds a help entry by exact match or wildcard pattern
@@ -30,7 +36,8 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	public IEnumerable<string> FindMatchingTopics(string pattern)
 	{
 		var regex = SoftcodeRegex.Wildcard(pattern);
-		return IndexedHelp.Keys.Where(k => SoftcodeRegex.IsMatch(regex, k));
+		return _entries.Where(pair => !_redirects.Contains(pair.Key) && SoftcodeRegex.IsMatch(regex, pair.Key))
+			.Select(pair => pair.Value.Topic).Distinct(StringComparer.OrdinalIgnoreCase);
 	}
 
 	/// <summary>
@@ -38,52 +45,65 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// </summary>
 	public IEnumerable<string> SearchContent(string searchTerm)
 	{
-		return IndexedHelp
-			.Where(kv => kv.Value.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-			.Select(kv => kv.Key);
+		return _entries.Where(pair => !_redirects.Contains(pair.Key)).Select(pair => pair.Value)
+			.DistinctBy(entry => entry.Topic, StringComparer.OrdinalIgnoreCase)
+			.Where(entry => (entry.Article is { } article
+				? entry.SectionId is null ? article.Overview : article.Sections.First(section => section.Id == entry.SectionId).Markdown
+				: entry.Markdown).Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+			.Select(entry => entry.Topic);
 	}
 
 	public void Index()
 	{
+		IndexedHelp.Clear();
+		_entries.Clear();
+		_redirects.Clear();
 		IndexMarkdownFilesRecursive(directory);
 	}
 
 	private void IndexMarkdownFilesRecursive(DirectoryInfo dir)
 	{
-		var mdFiles = dir.GetFiles("*.md");
-		foreach (var file in mdFiles)
+		foreach (var file in dir.GetFiles("*.md").OrderBy(file => file.Name, StringComparer.Ordinal))
 		{
-			switch (IndexMarkdown(file))
+			var corpus = dir.Name.Split('.')[0] is "ahelp" or "news" ? dir.Name.Split('.')[0] : "help";
+			foreach (var parsed in HelpArticleParser.Parse(File.ReadAllText(file.FullName), corpus))
 			{
-				case Dictionary<string, string> indexedFile:
-					AddToIndex(indexedFile, file);
-					break;
-				case Error<string> error:
-					logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, error.Value);
-					break;
+				var article = parsed.Article;
+				void Add(string name, HelpEntry entry, bool redirect = false)
+				{
+					if (!_entries.TryAdd(name, entry))
+					{
+						logger?.LogWarning("Duplicate help index {Lookup} in {File}; keeping the first definition", name, file.FullName);
+						return;
+					}
+					IndexedHelp.Add(name, entry.Markdown);
+					if (redirect)
+					{
+						_redirects.Add(name);
+					}
+				}
+				Add(article.Lookup, article.Entry());
+				foreach (var alias in article.Aliases)
+				{
+					Add(alias, article.Entry());
+				}
+				foreach (var section in article.Sections)
+				{
+					Add(section.Lookup, article.Entry(section));
+					foreach (var alias in section.Aliases)
+					{
+						Add(alias, article.Entry(section));
+					}
+				}
+				foreach (var (alias, target) in parsed.Redirects)
+				{
+					Add(alias, _entries[target], true);
+				}
 			}
 		}
-
-		foreach (var subDir in dir.GetDirectories())
+		foreach (var subDir in dir.GetDirectories().OrderBy(dir => dir.Name, StringComparer.Ordinal))
 		{
 			IndexMarkdownFilesRecursive(subDir);
-		}
-	}
-
-	/// <summary>
-	/// Adds one file's entries to the index. An entry another file already claimed keeps its first
-	/// definition.
-	/// </summary>
-	private void AddToIndex(Dictionary<string, string> indexedFile, FileInfo file)
-	{
-		foreach (var kv in indexedFile)
-		{
-			if (IndexedHelp.ContainsKey(kv.Key))
-			{
-				logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
-				continue;
-			}
-			IndexedHelp.Add(kv.Key, kv.Value);
 		}
 	}
 
@@ -125,55 +145,39 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			return new Error<string>($"File {file.FullName} does not exist.");
 		}
 
-		var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-		using var openText = file.OpenText();
-		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
-
-		var matches = MarkdownHeaders().Matches(textBody);
-
-		// Track consecutive headers (aliases) that share the same content block.
-		// When a header has no content before the next header, it is treated as an
-		// alias for the next topic that does have content.
-		var pendingTopics = new List<string>();
-		var firstPendingHeaderText = (string?)null;
-
-		foreach (Match match in matches)
+		try
 		{
-			var topicName = match.Groups["Topic"].Value.Trim();
-			var startIndex = match.Index + match.Length;
-
-			var nextMatch = match.NextMatch();
-			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
-
-			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
-
-			pendingTopics.Add(topicName);
-			firstPendingHeaderText ??= match.Value;
-
-			if (!string.IsNullOrEmpty(content))
+			var markdown = File.ReadAllText(file.FullName);
+			var directoryName = file.Directory?.Name.Split('.')[0];
+			var corpus = directoryName is "ahelp" or "news" ? directoryName : "help";
+			var entries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			foreach (var parsed in HelpArticleParser.Parse(markdown, corpus))
 			{
-				// Include the first pending header in the content so that looking up any
-				// alias shows the primary topic name at the top.
-				var fullContent = firstPendingHeaderText + content;
-
-				foreach (var topic in pendingTopics)
+				var article = parsed.Article;
+				entries.TryAdd(article.Lookup, article.Entry().Markdown);
+				foreach (var alias in article.Aliases)
 				{
-					dict[topic] = fullContent;
+					entries.TryAdd(alias, article.Entry().Markdown);
 				}
-
-				pendingTopics.Clear();
-				firstPendingHeaderText = null;
+				foreach (var section in article.Sections)
+				{
+					entries.Add(section.Lookup, article.Entry(section).Markdown);
+					foreach (var alias in section.Aliases)
+					{
+						entries.Add(alias, article.Entry(section).Markdown);
+					}
+				}
+				foreach (var (alias, target) in parsed.Redirects)
+				{
+					entries.Add(alias, entries[target]);
+				}
 			}
+			return entries;
 		}
-
-		// Any remaining pending topics had no content; store just the header for them.
-		foreach (var topic in pendingTopics)
+		catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException)
 		{
-			dict[topic] = "# " + topic;
+			return new Error<string>(error.Message);
 		}
-
-		return dict;
 	}
 
 	/// <summary>
@@ -206,29 +210,33 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		for (var i = 0; i < textBody.Length; i++)
 		{
 			byteOffsets[i] = running;
-			running += Encoding.UTF8.GetByteCount(textBody.AsSpan(i, 1));
+			var charCount = char.IsHighSurrogate(textBody[i]) && i + 1 < textBody.Length && char.IsLowSurrogate(textBody[i + 1]) ? 2 : 1;
+			running += Encoding.UTF8.GetByteCount(textBody.AsSpan(i, charCount));
+			if (charCount == 2)
+			{
+				byteOffsets[++i] = byteOffsets[i - 1];
+			}
 		}
 		byteOffsets[textBody.Length] = running;
 
-		var matches = MarkdownHeaders().Matches(textBody);
+		var matches = HelpArticleParser.Headings(textBody).Where(heading => heading.Level == 1).ToList();
 
 		var pendingTopics = new List<string>();
 		var firstPendingCharIndex = -1;
 
-		foreach (Match match in matches)
+		for (var matchIndex = 0; matchIndex < matches.Count; matchIndex++)
 		{
-			var topicName = match.Groups["Topic"].Value.Trim();
-			var startIndex = match.Index + match.Length;
-
-			var nextMatch = match.NextMatch();
-			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
+			var match = matches[matchIndex];
+			var topicName = HelpArticleParser.HeadingText(textBody, match);
+			var startIndex = match.Span.End + 1;
+			var endIndex = matchIndex + 1 < matches.Count ? matches[matchIndex + 1].Span.Start : textBody.Length;
 
 			var content = textBody.AsSpan(startIndex, endIndex - startIndex).Trim();
 
 			pendingTopics.Add(topicName);
 			if (firstPendingCharIndex < 0)
 			{
-				firstPendingCharIndex = match.Index;
+				firstPendingCharIndex = match.Span.Start;
 			}
 
 			if (!content.IsEmpty)
@@ -258,6 +266,4 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		return dict;
 	}
 
-	[GeneratedRegex(@"^# (?<Topic>.+)$", RegexOptions.Compiled | RegexOptions.Multiline)]
-	private static partial Regex MarkdownHeaders();
 }

@@ -2,6 +2,9 @@ using Markdig;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Markdig.Renderers.Html;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Net;
 using System.Text;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -38,12 +41,26 @@ public static class HelpHtmlRenderer
 	/// Maps a topic name to the URL a reader should be sent to. Called for every <c>[topic]</c>
 	/// reference in the body; return <see langword="null"/> to leave the reference as plain text.
 	/// </param>
-	public static string RenderToHtml(string markdown, Func<string, string?> topicHref)
+	public static string RenderToHtml(string markdown, Func<string, string?> topicHref, HelpArticle? article = null)
 	{
 		ArgumentNullException.ThrowIfNull(markdown);
 		ArgumentNullException.ThrowIfNull(topicHref);
 
 		var document = Markdown.Parse(markdown, Pipeline);
+		var sectionLabels = new Dictionary<string, string>(StringComparer.Ordinal);
+		if (article is not null)
+		{
+			foreach (var heading in document.OfType<HeadingBlock>())
+			{
+				var section = article.Sections.FirstOrDefault(section =>
+					section.Heading == HelpArticleParser.HeadingText(markdown, heading));
+				if (section is not null)
+				{
+					heading.GetAttributes().Id = section.Id;
+					sectionLabels[section.Id] = HeadingLabel(heading.Inline?.FirstChild);
+				}
+			}
+		}
 
 		foreach (var link in document.Descendants<LinkInline>())
 		{
@@ -62,7 +79,29 @@ public static class HelpHtmlRenderer
 		renderer.Render(document);
 		writer.Flush();
 
-		return writer.ToString();
+		var toc = article is null || article.Sections.Count == 0 ? string.Empty
+			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
+				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>")) + "</ul></nav>";
+		return toc + writer;
+	}
+
+	private static string HeadingLabel(Inline? inline)
+	{
+		var text = new StringBuilder();
+		for (var child = inline; child is not null; child = child.NextSibling)
+		{
+			text.Append(child switch
+			{
+				LiteralInline literal => literal.Content.ToString(),
+				CodeInline code => code.Content,
+				HtmlEntityInline entity => entity.Transcoded.ToString(),
+				AutolinkInline link => link.Url,
+				LineBreakInline => " ",
+				ContainerInline container => HeadingLabel(container.FirstChild),
+				_ => string.Empty
+			});
+		}
+		return text.ToString();
 	}
 
 	/// <summary>
@@ -81,7 +120,7 @@ public static class HelpHtmlRenderer
 			{
 				sb.Append(' ');
 			}
-			sb.Append(literal.Content.ToString());
+			sb.Append(literal.Content);
 			if (sb.Length >= maxLength)
 			{
 				break;

@@ -1,43 +1,3 @@
-# FLAGS
-
-Flags give objects certain abilities or qualities. For example, a wizard player has wiz powers because s/he has the WIZARD flag set.
-
-Some flags can only be set on certain types of objects, such as just players or just rooms. Other flags, like VISUAL, can be set on any type of object (player, room, exit, thing).
-
-Flags can be set on an object with the `@set` command or `set()` function. To un-set a flag, use the exclamation point (`!`) before the flag name. For help on any particular flag, type **'help \<flag name\>'**.
-
-A descriptive list of default flags is available in [flag list]. A complete list of all flags is available through `@flag/list`.
-
-See [flags2].
-
-# FLAGS2
-
-You can see the list of flags set on an object in several ways:
-
-1. If you are allowed to examine the object. The flags are listed in expanded word format on the line just below the object's name, after the word "Flags:"
-2. Flag abbreviations are also visible after the object's name in the room description, if the object is not set OPAQUE and you are not set MYOPIC
-3. The `lflags()` and `flags()` function will return a list of flag names and abbreviations for an object, respectively
-
-Note: The object type (player, thing, room, exit or garbage) is not actually a flag. See [types of objects] for more information.
-
-
-**See Also:**
-- [examine]
-- [flags()]
-- [hasflag()]
-- [orflags()]
-- [andflags()]
-- [orlflags()]
-- [andlflags()]
-- [types of objects]
-- [type()]
-- [hastype()]
-- [@flag]
-- [FLAG LIST]
-- [@set]
-- [set()]
-- [attribute flags]
-
 # FLAG LIST
 # FLAGS LIST
 
@@ -102,7 +62,7 @@ ANSI highlight can also be enabled on a per-connection basis with `@sockset`.
 - [XTERM256]
 - [TRUECOLOR]
 - [@config]
-- [@sockset]
+- [@SOCKSET]
 
 # APPROVED
 
@@ -116,7 +76,7 @@ Systems built on top of it use `isapproved()` rather than testing the flag direc
 
 
 **See Also:**
-- [isapproved()]
+- [ISAPPROVED()]
 - [ROYALTY]
 - [@flag]
 
@@ -200,7 +160,7 @@ ANSI colors can also be enabled on a per-connection basis with `@sockset`.
 - [XTERM256]
 - [TRUECOLOR]
 - [ansi()]
-- [@sockset]
+- [@SOCKSET]
 
 
 # XTERM256
@@ -219,7 +179,7 @@ XTERM colors can also be enabled on a per-connection basis with `@sockset`.
 - [COLOR]
 - [TRUECOLOR]
 - [ansi()]
-- [@sockset]
+- [@SOCKSET]
 
 # TRUECOLOR
 
@@ -237,7 +197,7 @@ RGB colors can also be enabled on a per-connection basis with `@sockset`.
 - [COLOR]
 - [XTERM256]
 - [ansi()]
-- [@sockset]
+- [@SOCKSET]
 
 # CONNECTED
 
@@ -249,9 +209,9 @@ Prior to 1.8.5p6, mortal objects couldn't use `hasflag(<player>, connected)` to 
 
 
 **See Also:**
-- [conn()]
-- [lwho()]
-- [mwho()]
+- [CONN()]
+- [LWHO()]
+- [MWHO()]
 
 # DARK
 
@@ -271,53 +231,6 @@ In the past, players set DARK were automatically hidden from the WHO list via `@
 **See Also:**
 - [LIGHT]
 - [@hide]
-
-# DEBUG
-
-**Flag: DEBUG (all types)**
-
-The DEBUG flag is used for debugging MUSHcode. When an object is set DEBUG, all parser evaluation results will be shown to the object's owner and to any dbrefs in the object's DEBUGFORWARDLIST, in the format:
-
-```text
-#dbref! <string to evaluate> :
-#dbref!  recursive evaluation of functions in string
-#dbref! <string to evaluate> => <evaluated string>
-```
-
-Because the parser does recursive evaluations, you will see successive messages evaluating specific parts of an expression. This enables you to pinpoint exactly which evaluation is going wrong.
-
-Objects run under this flag are computationally expensive, and can generate large amounts of spam, so this flag should only be set when needed, and cleared afterwards.
-
-There's also a DEBUG attribute flag, which only affects a single attribute; see [attribute flags] for more information. You can also use the "}" command prefix to run a command with DEBUG output just once.
-
-See [debug2] for an example.
-
-
-**See Also:**
-- [VERBOSE]
-- [PUPPET]
-- [}]
-
-# DEBUG2
-
-```sharp
-> @create Test
-> @set Test=DEBUG
-> &cmd test=$wc *: say String %0 has [strlen(%0)] letters and [words(%0)] words.
-> wc This is my test string
-
-#14! String %0 has [strlen(%0)] letters and [words(%0)] words. :
-#14!  strlen(%0) :
-#14!   %0 => This is my test string
-#14!  strlen(%0) => 22
-#14!  words(%0) :
-#14!   %0 => This is my test string
-#14!  words(%0) => 5
-#14! String %0 has [strlen(%0)] letters and [words(%0)] words. =>
-String This is my test string has 22 letters and 5 words.
-
-Test says, "String This is my test string has 22 letters and 5 words."
-```
 
 # DESTROY_OK
 
@@ -353,7 +266,7 @@ ENTER_OK is often used in conjunction with AUDIBLE on vehicles and buildings.
 - [enter]
 - [give]
 - [@tel]
-- [@lock]
+- [LOCKING]
 
 # FIXED
 
@@ -379,8 +292,8 @@ A GAGGED player cannot speak, pose, emit, or whisper. They can still page and us
 
 
 **See Also:**
-- [say]
-- [pose]
+- ["]
+- [:]
 - [@emit]
 - [whisper]
 - [page]
@@ -615,7 +528,7 @@ There's also a VERBOSE attribute flag, which only affects a single attribute; se
 
 
 **See Also:**
-- [DEBUG]
+- [debug]
 
 # VISUAL
 
@@ -626,7 +539,7 @@ A VISUAL object's attributes can be examined by anyone in its location who passe
 
 **See Also:**
 - [examine]
-- [@lock]
+- [LOCKING]
 
 # WIZARD
 
@@ -648,3 +561,4 @@ With great power comes great responsibility!
 **See Also:**
 - [wizhelp]
 - [@admin]
+
