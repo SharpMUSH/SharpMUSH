@@ -24,18 +24,17 @@ namespace SharpMUSH.Tests.Services;
 ///
 /// The first tests record lcon(%0)/words(lcon(%0)) into scratch attributes on #9 instead of calling
 /// oob() — oob() requires WebSocket connections the unit harness lacks — so they assert fan-out
-/// targeting logic. The payload tests go further: they install the REAL package attributes from
-/// the embedded manifest and substitute only the handler, with one that records the payload a
-/// helper builds for a named viewer into LAST_PAYLOAD instead of sending it. That exercises the
-/// helpers exactly as the shipped handler calls them (executor #9, %0 the room), with the
-/// send replaced by a store.
+/// targeting logic. They replace the session-wide handler on #9, which every move in every test
+/// fires, so they run one at a time and each puts the package back in a finally block (via
+/// <see cref="RestorePackage"/>), reinstalling rather than blanking it because the package is
+/// bootstrapped onto #9 at first boot and the rest of the session expects it there.
 ///
-/// Each test cleans up in a finally block (via <see cref="RestorePackage"/>) so a failed assertion
-/// cannot leak handler state into the next test; that cleanup reinstalls the package's attributes
-/// rather than blanking them, because the package is bootstrapped onto #9 at first boot and the
-/// rest of the session expects it there.
+/// The payload tests go further: they install the REAL package attributes from the embedded
+/// manifest onto a WIZARD thing of their own — #9 is seeded WIZARD, and the helpers name only
+/// <c>me/</c> — and call a helper for a named viewer with u(), which keeps God as the enactor the
+/// way the event path does. That exercises the helpers as the shipped handler calls them (%0 the
+/// room, %1 the viewer) without touching #9, so they run in parallel.
 /// </summary>
-[NotInParallel]
 public class RoomContentsHandlerReferenceTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -68,22 +67,31 @@ public class RoomContentsHandlerReferenceTests
 			cause).AsTask();
 
 	/// <summary>
-	/// Installs (or reinstalls) every attribute the package manifest declares onto #9, verbatim: an
-	/// <c>&amp;</c> typed at a client stores without evaluating, which is what the package installer
-	/// does too.
+	/// Installs (or reinstalls) every attribute the package manifest declares onto
+	/// <paramref name="target"/>, verbatim: an <c>&amp;</c> typed at a client stores without
+	/// evaluating, which is what the package installer does too.
 	/// </summary>
-	private async Task InstallPackage()
+	private async Task InstallPackage(string target = "#9")
 	{
 		foreach (var (name, value) in PackageAttributes.Value)
 		{
-			await Cmd($"&{name} #9={value}");
+			await Cmd($"&{name} {target}={value}");
 		}
 	}
 
+	/// <summary>A WIZARD thing carrying the package's attributes, standing in for #9.</summary>
+	private async Task<string> BuildHandler(string token)
+	{
+		var handler = await Build($"create(RcHandler{token})");
+		await Cmd($"@set {handler}=WIZARD");
+		await InstallPackage(handler);
+		return handler;
+	}
+
 	/// <summary>
-	/// Clears every scratch attribute these tests write on #9 and puts the package's own attributes
-	/// back. Runs in each test's finally so a failed assertion never leaks handler state into a
-	/// later test (they run sequentially).
+	/// Clears every scratch attribute the event-path tests write on #9 and puts the package's own
+	/// attributes back. Runs in each test's finally so a failed assertion never leaks handler state
+	/// into a later test.
 	/// </summary>
 	private async Task RestorePackage()
 	{
@@ -100,6 +108,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask HandlerReceivesCorrectRoomDbrefInPercent0()
 	{
 		try
@@ -136,6 +145,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask HandlerCountsOccupantsMatchingIndependentLcon()
 	{
 		try
@@ -162,6 +172,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask HandlerCauseArgIsPassedAsPercent1()
 	{
 		try
@@ -186,6 +197,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask V1RowShape_StillBuildsValidJson()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
@@ -228,6 +240,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask HandlerDoesNotRunAfterAttributeIsCleared()
 	{
 		try
@@ -354,16 +367,14 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	/// <summary>
-	/// Runs the package's payload helper for <paramref name="viewer"/> through the real event path
-	/// with the send replaced by a store, and parses what it built. The handler is the package's own
-	/// but for the oob() call: FN`PREPARE first, then <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c>,
+	/// Runs the package's payload helper for <paramref name="viewer"/> on <paramref name="handler"/>
+	/// and parses what it built: FN`PREPARE first, then <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c>,
 	/// which is exactly what the shipped ROOM`CONTENTS hands to oob().
 	/// </summary>
-	private async Task<JsonDocument> Payload(string helper, string room, string viewer, string cause = "move-in")
+	private async Task<JsonDocument> Payload(string handler, string helper, string room, string viewer)
 	{
-		await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[null(u(me/FN`PREPARE,%0))][u(me/{helper},%0,{viewer})]");
-		await Trigger(room, cause);
-		var payload = await Eval("get(#9/LAST_PAYLOAD)");
+		await Cmd($"&FN`T`PAYLOAD {handler}=[null(u(me/FN`PREPARE,%0))][u(me/{helper},%0,%1)]");
+		var payload = await Eval($"u({handler}/FN`T`PAYLOAD,{room},{viewer})");
 		await Assert.That(payload).DoesNotContain("#-1").Because($"{helper} for {viewer} produced an error: {payload}");
 		return JsonDocument.Parse(payload);
 	}
@@ -377,13 +388,14 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var forMortal = await Payload("FN`PAYLOAD`CONTENTS", f.Room, f.Mortal);
-			using var forWizard = await Payload("FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
+			using var forMortal = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Mortal);
+			using var forWizard = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
 
 			foreach (var doc in new[] { forMortal, forWizard })
 			{
@@ -458,7 +470,7 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -468,13 +480,14 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var forMortal = await Payload("FN`PAYLOAD`EXITS", f.Room, f.Mortal);
-			using var forWizard = await Payload("FN`PAYLOAD`EXITS", f.Room, f.Wizard);
+			using var forMortal = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Mortal);
+			using var forWizard = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Wizard);
 
 			await Assert.That(forMortal.RootElement.GetProperty("v").GetInt32()).IsEqualTo(2);
 			var mortalSees = RowsByDbref(forMortal, "exits");
@@ -516,7 +529,7 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -526,12 +539,13 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var info = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			using var info = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
 			var root = info.RootElement;
 
 			await Assert.That(root.GetProperty("v").GetInt32()).IsEqualTo(2);
@@ -556,16 +570,16 @@ public class RoomContentsHandlerReferenceTests
 
 			// Once the room has a parent, FN`AREA names it.
 			await Cmd($"@parent {f.Room}={f.Dest}");
-			using var withArea = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			using var withArea = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
 			await Assert.That(withArea.RootElement.GetProperty("area").GetString()).IsEqualTo($"RcDest{token}");
 
 			// A room with no picture carries no image key.
-			using var plain = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
+			using var plain = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(plain.RootElement.TryGetProperty("image", out _)).IsFalse();
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -580,31 +594,32 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
 			await Cmd($"&IMAGE`BANNER {f.Room}=/assets/rooms/{token}-wide.jpg");
-			using var both = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			using var both = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
 			var image = both.RootElement.GetProperty("image");
 			await Assert.That(image.GetProperty("url").GetString()).IsEqualTo($"/assets/rooms/{token}-wide.jpg");
 			await Assert.That(image.GetProperty("alt").GetString()).IsEqualTo("The quay at dusk");
 
 			// A room with a banner and no IMAGE still gets a banner.
 			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-dest-wide.jpg");
-			using var bannerOnly = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
+			using var bannerOnly = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(bannerOnly.RootElement.GetProperty("image").GetProperty("url").GetString())
 				.IsEqualTo($"/assets/rooms/{token}-dest-wide.jpg");
 
 			// The exit's destination preview is a thumbnail: IMAGE only, so the banner-only room has none.
-			using var exits = await Payload("FN`PAYLOAD`EXITS", f.Room, f.Wizard);
+			using var exits = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Wizard);
 			var north = RowsByDbref(exits, "exits")[f.North];
 			await Assert.That(north.GetProperty("dest").TryGetProperty("image", out _)).IsFalse();
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -619,9 +634,10 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
 			// visual does not propagate down an attribute tree, and a private branch hides its leaves
@@ -632,24 +648,24 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-private.jpg");
 			await Cmd($"@set {f.Dest}/IMAGE`BANNER=!visual");
 
-			using var contents = await Payload("FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
+			using var contents = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
 			var rows = RowsByDbref(contents, "who");
 			await Assert.That(rows[f.Mortal].TryGetProperty("image", out _)).IsFalse()
 				.Because("a private IMAGE must not reach anyone's room.contents");
 			await Assert.That(rows[f.Bundle].GetProperty("image").GetProperty("url").GetString())
 				.IsEqualTo($"/assets/obj/{token}.jpg");
 
-			using var info = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			using var info = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
 			await Assert.That(info.RootElement.TryGetProperty("image", out _)).IsFalse()
 				.Because("a visual IMAGE`BANNER under a private IMAGE must not be published");
 
-			using var dest = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
+			using var dest = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(dest.RootElement.TryGetProperty("image", out _)).IsFalse()
 				.Because("a private IMAGE`BANNER must not be published either");
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -662,20 +678,23 @@ public class RoomContentsHandlerReferenceTests
 	/// in every scene-less room. With a real scene, public, every viewer gets id, title and cast.
 	/// </summary>
 	[Test]
+	// Defines session-wide @function globals.
+	[NotInParallel]
 	public async ValueTask V2Info_SceneBlock_RejectsNotFound_AndCarriesARealScene()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
 			await Cmd("&FN`T`NOTFOUND #9=#-1 NOT FOUND");
 			await Cmd("@function scenewhere=#9,FN`T`NOTFOUND");
 			await Cmd("@function scene=#9,FN`T`NOTFOUND");
 
-			using var none = await Payload("FN`PAYLOAD`INFO", f.Room, f.Wizard, "connect");
+			using var none = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard);
 			await Assert.That(none.RootElement.TryGetProperty("scene", out _)).IsFalse()
 				.Because("a Wizard viewer of a scene-less room must not get a phantom #-1 NOT FOUND scene");
 
@@ -688,7 +707,7 @@ public class RoomContentsHandlerReferenceTests
 
 			foreach (var viewer in new[] { f.Wizard, f.Mortal })
 			{
-				using var doc = await Payload("FN`PAYLOAD`INFO", f.Room, viewer, "connect");
+				using var doc = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, viewer);
 				var scene = doc.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("id").GetString()).IsEqualTo("42");
 				await Assert.That(scene.GetProperty("title").GetString()).IsEqualTo("Salt Market at Dusk");
@@ -707,7 +726,7 @@ public class RoomContentsHandlerReferenceTests
 				await Cmd($"&{attr} #9=");
 			}
 
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -723,14 +742,14 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[null(u(me/FN`PREPARE,%0))][r(w{f.Mortal[1..]})]%r[r(x{f.North[1..]})]%r[r(d{f.North[1..]})]%r[r(info{f.Room[1..]})]");
-			await Trigger(f.Room, "move-in");
-			var recorded = await Eval("get(#9/LAST_PAYLOAD)");
+			await Cmd($"&FN`T`PREPARED {handler}=[null(u(me/FN`PREPARE,%0))][r(w{f.Mortal[1..]})]%r[r(x{f.North[1..]})]%r[r(d{f.North[1..]})]%r[r(info{f.Room[1..]})]");
+			var recorded = await Eval($"u({handler}/FN`T`PREPARED,{f.Room})");
 			var parts = recorded.Split('\n');
 			await Assert.That(parts.Length).IsEqualTo(4).Because($"recorded: {recorded}");
 			await Assert.That(parts[0]).IsNotEmpty().Because($"the mortal's base row must be in w{f.Mortal[1..]}; recorded: {recorded}");
@@ -752,7 +771,7 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
@@ -765,6 +784,7 @@ public class RoomContentsHandlerReferenceTests
 	/// room.info goes to the causer alone when the causer is in the room, to everyone otherwise.
 	/// </summary>
 	[Test]
+	[NotInParallel]
 	public async ValueTask ShippedHandler_RunsEndToEnd_ForEveryCause_AndTargetsRoomInfo()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
