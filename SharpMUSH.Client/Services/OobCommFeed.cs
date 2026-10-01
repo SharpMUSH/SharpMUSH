@@ -69,6 +69,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <summary>The channels pulled since the markers were read.</summary>
 	private readonly HashSet<string> _pulled = new(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>The channels whose count the latest list carried: the game's own, which a marker does not recount.</summary>
+	private readonly HashSet<string> _serverCounted = new(StringComparer.OrdinalIgnoreCase);
+
 	/// <summary>The objid the markers were read for, or null while there are none to use.</summary>
 	private string? _syncedFor;
 
@@ -225,12 +228,19 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (CommPayloadParser.ParseChannels(json) is not { } list) return false;
 
 		var listed = list.Channels.Select(channel => channel.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		foreach (var key in _history.Keys.Concat(_unread.Keys).Where(key => !IsConversationKey(key) && !listed.Contains(key))
+		// A channel left is forgotten whole — pulled and marker too — so joining it again pulls it again.
+		foreach (var key in _history.Keys.Concat(_unread.Keys).Concat(_pulled).Concat(_markers.Keys)
+			.Where(key => !IsConversationKey(key) && !listed.Contains(key))
 			.ToArray())
 		{
 			_history.Remove(key);
 			_unread.Remove(key);
+			_pulled.Remove(key);
+			_markers.Remove(key);
 		}
+
+		_serverCounted.Clear();
+		_serverCounted.UnionWith(list.ServerUnread.Keys);
 
 		_channels = list.Channels;
 		if (list.Viewer is { } viewer && (_viewer is null || !IsSame(_viewer, viewer)))
@@ -294,11 +304,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var answer = await server.MarkersAsync();
 		if (generation != _generation || !string.Equals(_syncedFor, viewer, StringComparison.Ordinal)) return;
 
-		if (answer is CommReadMarkers markers && string.Equals(markers.Character, viewer, StringComparison.Ordinal))
-		{
-			ApplyMarkers(markers, viewer);
-		}
+		// Without the markers a pull would file the history uncounted and mark the channel done; leave it
+		// unpulled, so the next list tries again.
+		if (answer is not CommReadMarkers markers || !string.Equals(markers.Character, viewer, StringComparison.Ordinal)) return;
 
+		ApplyMarkers(markers, viewer);
 		await PullAsync(channels);
 		Changed?.Invoke();
 	}
@@ -401,10 +411,15 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		return true;
 	}
 
-	/// <summary>A key's unread count from its marker: the lines after it from someone else. A key without one keeps its count.</summary>
+	/// <summary>
+	/// A key's unread count from its marker: the lines after it from someone else. A key without one keeps
+	/// its count, and so does a channel whose count the list carried — the game's count stands, and the
+	/// bounded history here could not reach a larger one.
+	/// </summary>
 	private void Recount(string key)
 	{
-		if (!_markers.TryGetValue(key, out var marker) || !_history.TryGetValue(key, out var lines)) return;
+		if (_serverCounted.Contains(key)
+			|| !_markers.TryGetValue(key, out var marker) || !_history.TryGetValue(key, out var lines)) return;
 
 		var viewer = Viewer();
 		var unread = string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)
@@ -583,6 +598,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_generation++;
 		_markers.Clear();
 		_pulled.Clear();
+		_serverCounted.Clear();
 		_syncedFor = null;
 		_syncingFor = null;
 		_sync = Task.CompletedTask;
