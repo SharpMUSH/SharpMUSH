@@ -266,6 +266,45 @@ public class PackageManifestWriterTests
 		await Assert.That(application.Order).IsEqualTo(7);
 	}
 
+	private static PackageManifest ApplicationManifest(string? scope, string? oobPackage) => new(
+		PackageFormatVersion.Supported,
+		"weather-app",
+		Version("1.0.0"),
+		["Ada"],
+		"A game widget.",
+		null, null, [], null, null, null, [],
+		[new PackageDependencySpec("weather", Constraint(">=1.0"))],
+		new Dictionary<string, PackageConfigureSpec>(),
+		[],
+		PackageKind.Application,
+		new PackageApplicationSpec(
+			"weather", "Weather", null, PackageApplicationDisplay.Widget,
+			"http/weather/schema", null, null,
+			"player", null, ["RightSidebar"], 30, scope, oobPackage));
+
+	[Test]
+	public async Task ApplicationScopeAndOobPackageRoundTrip()
+	{
+		var again = RoundTrip(ApplicationManifest("play", "weather.now"));
+
+		await Assert.That(again.Application!.Scope).IsEqualTo("play");
+		await Assert.That(again.Application!.OobPackage).IsEqualTo("weather.now");
+	}
+
+	[Test]
+	public async Task ApplicationWithoutScopeOrOobPackage_WritesNeitherKey()
+	{
+		var manifest = ApplicationManifest(null, null);
+
+		var yaml = PackageManifestWriter.Write(manifest);
+		var again = RoundTrip(manifest);
+
+		await Assert.That(yaml).DoesNotContain("scope:");
+		await Assert.That(yaml).DoesNotContain("oob_package:");
+		await Assert.That(again.Application!.Scope).IsNull();
+		await Assert.That(again.Application!.OobPackage).IsNull();
+	}
+
 	[Test]
 	public async Task ManagedPackageRoundTrips()
 	{

@@ -87,7 +87,7 @@
                     <div style="@($"height:120px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);overflow:hidden;")">
                         @if (AssetKind(a.ContentType) == "image")
                         {
-                            <img src="@a.Url" alt="@a.FileName"
+                            <img src="@ApiUrl.Resolve(a.Url)" alt="@a.FileName"
                                  style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
                         }
                         else
@@ -133,7 +133,7 @@
                     <CellTemplate>
                         @if (AssetKind(context.Item.ContentType) == "image")
                         {
-                            <img src="@context.Item.Url" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
+                            <img src="@ApiUrl.Resolve(context.Item.Url)" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
                         }
                         else
                         {

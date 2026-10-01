@@ -1,0 +1,180 @@
+@inject IStringLocalizer<SharedResource> Loc
+@* D1 §4.3 glass banner. Only for a subject with an image: the image, three masked backdrop-blur
+   layers (2/6/12px) so the picture stays sharp above the text, then the scrim. Text bottom-left
+   with the on-image shadow; Back top-left; capsules top-right. Open (Play's Description) swaps in
+   the *-open masks and scrim and grows to OpenHeight. Minimised collapses to a 48px strip that keeps
+   the image, the title and one fact, with a restore button.
+
+   Minimise and restore swap the whole subtree, which would drop keyboard focus on <body>; after
+   the swap the banner moves focus to the counterpart button. HeadingLevel renders the title as
+   <hN> so a page hero can be the page's heading. *@
+@if (Minimised)
+{
+    <div class="kit-banner-strip">
+        @if (HasImage)
+        {
+            <img class="kit-banner-strip-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
+        }
+        <div class="kit-banner-strip-blur" aria-hidden="true"></div>
+        <div class="kit-banner-strip-scrim" aria-hidden="true"></div>
+        <div class="kit-banner-strip-row">
+            @Heading("kit-banner-strip-title")
+            @if (Fact is not null)
+            {
+                <span class="kit-banner-strip-fact">@Fact</span>
+            }
+            <span class="kit-banner-spacer"></span>
+            <CapsuleButton @ref="_restoreButton" Icon="@Icons.Material.Outlined.ExpandMore" AriaLabel="@Loc["NavBannerRestore"]" Expanded="false" Class="kit-banner-restore" OnClick="@(() => SetMinimisedAsync(false))" />
+        </div>
+    </div>
+}
+else
+{
+    <div class="kit-banner @(Open ? "kit-banner--open" : null) @(HasImage ? null : "kit-banner--noimage") @(UsesHue ? "kit-banner--hue" : null)" style="@BannerStyle">
+        @if (HasImage)
+        {
+            <img class="kit-banner-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@FocalStyle" />
+        }
+        <div class="kit-banner-blur kit-banner-blur--soft" aria-hidden="true"></div>
+        <div class="kit-banner-blur kit-banner-blur--mid" aria-hidden="true"></div>
+        <div class="kit-banner-blur kit-banner-blur--deep" aria-hidden="true"></div>
+        <div class="kit-banner-scrim" aria-hidden="true"></div>
+        @if (Open && OpenContent is not null)
+        {
+            <div class="kit-banner-open" tabindex="0">@OpenContent</div>
+        }
+        <div class="kit-banner-foot">
+            @if (Lead is not null)
+            {
+                <div class="kit-banner-lead">@Lead</div>
+            }
+            <div class="kit-banner-text kit-banner-text--@TitleSize">
+                @if (Kicker is not null)
+                {
+                    <div class="kit-banner-kicker">@Kicker</div>
+                }
+                @Heading("kit-banner-title")
+                @if (Secondary is not null)
+                {
+                    <div class="kit-banner-secondary">@Secondary</div>
+                }
+            </div>
+            @if (BottomActions is not null)
+            {
+                <div class="kit-banner-bottom-actions">@BottomActions</div>
+            }
+        </div>
+        @if (Back is not null)
+        {
+            <div class="kit-banner-back">@Back</div>
+        }
+        <div class="kit-banner-actions">
+            @Actions
+            @if (Minimisable)
+            {
+                <CapsuleButton @ref="_minimiseButton" Icon="@Icons.Material.Outlined.ExpandLess" AriaLabel="@Loc["NavBannerMinimise"]" Expanded="true" Class="kit-banner-minimise" OnClick="@(() => SetMinimisedAsync(true))" />
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>Focal point as fractions of width and height (0–1); drives object-position.</summary>
+    [Parameter] public (double X, double Y)? Focal { get; set; }
+    [Parameter] public string? Kicker { get; set; }
+
+    /// <summary>The secondary lines under the title ("area · N here · N exits").</summary>
+    [Parameter] public RenderFragment? Secondary { get; set; }
+
+    /// <summary>Capsules top-right. The minimise button is appended after them.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>The Back capsule, top-left.</summary>
+    [Parameter] public RenderFragment? Back { get; set; }
+    [Parameter] public int Height { get; set; } = 150;
+    [Parameter] public int OpenHeight { get; set; } = 200;
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Content shown over the image while Open (the room description).</summary>
+    [Parameter] public RenderFragment? OpenContent { get; set; }
+    [Parameter] public bool Minimised { get; set; }
+    [Parameter] public EventCallback<bool> MinimisedChanged { get; set; }
+
+    /// <summary>The one fact shown on the minimised strip.</summary>
+    [Parameter] public string? Fact { get; set; }
+    [Parameter] public bool Minimisable { get; set; } = true;
+
+    /// <summary>"play" (17px), "hero" (26px) or "character" (28px).</summary>
+    [Parameter] public string TitleSize { get; set; } = "play";
+
+    /// <summary>1–6 renders the title as that heading; null renders a div (the caller has its own heading).</summary>
+    [Parameter] public int? HeadingLevel { get; set; }
+
+    /// <summary>Beside the text, bottom-left: the character profile's 104px portrait.</summary>
+    [Parameter] public RenderFragment? Lead { get; set; }
+
+    /// <summary>The title's colour (a character's name colour). Applied only when it is <c>#rrggbb</c>.</summary>
+    [Parameter] public string? TitleColor { get; set; }
+
+    /// <summary>Capsules at the bottom right (the profile's Mail and Page).</summary>
+    [Parameter] public RenderFragment? BottomActions { get; set; }
+
+    /// <summary>With no image, a gradient on this hue (0–359) instead of the plain surface.</summary>
+    [Parameter] public int? Hue { get; set; }
+
+    private CapsuleButton? _minimiseButton;
+    private CapsuleButton? _restoreButton;
+    private bool _focusMinimise;
+    private bool _focusRestore;
+
+    private bool HasImage => ImageUrlPolicy.IsRenderable(ImageUrl);
+
+    private bool UsesHue => !HasImage && Hue is not null;
+
+    private string BannerStyle =>
+        $"height:{(Open ? OpenHeight : Height)}px;" + (UsesHue ? $"--banner-hue:{((Hue!.Value % 360) + 360) % 360};" : string.Empty);
+
+    private string? TitleStyle => TitleColor is { Length: 7 } c && c[0] == '#' && c.Skip(1).All(char.IsAsciiHexDigit)
+        ? $"color:{c};"
+        : null;
+
+    private string FocalStyle => Focal is { } f
+        ? $"object-position:{Math.Round(f.X * 100)}% {Math.Round(f.Y * 100)}%;"
+        : string.Empty;
+
+    private string HeadingTag => HeadingLevel is >= 1 and <= 6 ? $"h{HeadingLevel}" : "div";
+
+    private RenderFragment Heading(string cssClass) => builder =>
+    {
+        builder.OpenElement(0, HeadingTag);
+        builder.AddAttribute(1, "class", cssClass);
+        builder.AddAttribute(2, "style", TitleStyle);
+        builder.AddContent(3, Title);
+        builder.CloseElement();
+    };
+
+    private async Task SetMinimisedAsync(bool minimised)
+    {
+        _focusRestore = minimised;
+        _focusMinimise = !minimised;
+        await MinimisedChanged.InvokeAsync(minimised);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRestore && Minimised && _restoreButton is not null)
+        {
+            _focusRestore = false;
+            await _restoreButton.FocusAsync();
+        }
+        else if (_focusMinimise && !Minimised && _minimiseButton is not null)
+        {
+            _focusMinimise = false;
+            await _minimiseButton.FocusAsync();
+        }
+    }
+}

@@ -92,6 +92,43 @@ public class RegistriesTests
 	});
 
 	[Test]
+	public async Task Application_RoundTrips_ScopeAndOobPackage() => await WithDatabaseAsync(async db =>
+	{
+		IApplicationRegistryService registry = db;
+		var app = new RegisteredApplication(
+			"weather", "Weather", null, ApplicationKind.Widget, "http/weather/schema", null, null,
+			PortalRole.Player, null, [WidgetZone.RightSidebar], 30,
+			Scope: "play", OobPackage: "weather.now");
+
+		await registry.UpsertApplicationAsync(app);
+		var fetched = (await registry.GetApplicationAsync("weather")).Expect<RegisteredApplication>();
+
+		await Assert.That(fetched.Scope).IsEqualTo("play");
+		await Assert.That(fetched.OobPackage).IsEqualTo("weather.now");
+	});
+
+	[Test]
+	public async Task Application_StoredBeforeScopeExisted_LoadsWithoutScope() => await WithDatabaseAsync(async db =>
+	{
+		// The record exactly as a build without Scope/OobPackage wrote it: neither key is present.
+		const string legacy = """
+			{"Slug":"old-app","DisplayName":"Old App","Icon":null,"Kind":"Page","SchemaUrl":"http/old/schema",
+			 "DataUrl":null,"SubmitRoute":null,"MinimumRole":"Player","NavPlacement":"main","Zones":"",
+			 "SortOrder":4,"OwningPackage":null,"RenderKind":"Schema","ComponentAssemblyUrl":null,"ComponentTypeName":null}
+			""";
+		await db.Store.WriteAsync(tx =>
+			tx.Put(Tables.App, Keys.Str("old-app"), System.Text.Encoding.UTF8.GetBytes(legacy)));
+
+		IApplicationRegistryService registry = db;
+		var fetched = (await registry.GetApplicationAsync("old-app")).Expect<RegisteredApplication>();
+
+		await Assert.That(fetched.DisplayName).IsEqualTo("Old App");
+		await Assert.That(fetched.Order).IsEqualTo(4);
+		await Assert.That(fetched.Scope).IsNull();
+		await Assert.That(fetched.OobPackage).IsNull();
+	});
+
+	[Test]
 	public async Task Role_RoundTrips_WithAccountAssignment() => await WithDatabaseAsync(async db =>
 	{
 		IRoleRegistryService registry = db;

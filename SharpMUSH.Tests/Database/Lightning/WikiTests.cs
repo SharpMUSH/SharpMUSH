@@ -50,6 +50,37 @@ public class WikiTests
 		}
 	}
 
+	/// <summary>
+	/// A listing's visibility is applied before <c>skip</c>/<c>take</c>: hidden drafts that sort first
+	/// take no places on the page, and the caller's own drafts are part of it.
+	/// </summary>
+	[Test]
+	public async Task VisibilityIsAppliedBeforePaging() => await WithDatabaseAsync(async (_, wiki) =>
+	{
+		async Task<string> AddAsync(string title, string author, bool published)
+		{
+			var page = (await wiki.CreateAsync(title, "body", author, WikiNamespace.System)).Expect<WikiPage>();
+			await wiki.SetMetadataAsync(page.Id, "lore", ["harbour"], published);
+			return page.Id;
+		}
+
+		for (var i = 0; i < 10; i++)
+		{
+			await AddAsync($"A hidden {i}", "#1", published: false);
+		}
+
+		var visible = new[] { await AddAsync("B shown", "#1", true), await AddAsync("C shown", "#1", true) };
+		var own = await AddAsync("D own", "#42", published: false);
+		var reader = new WikiVisibility(IncludeDrafts: false, AuthorDbref: "#42");
+
+		await Assert.That((await wiki.GetAllPagesAsync(0, 2, WikiNamespace.System, WikiVisibility.PublishedOnly)).Select(p => p.Id)).IsEquivalentTo(visible);
+		await Assert.That((await wiki.GetByNamespaceAsync(WikiNamespace.System, 2, 5, reader)).Select(p => p.Id)).IsEquivalentTo(new[] { own });
+		await Assert.That((await wiki.GetByCategoryAsync("lore", 0, 2, WikiVisibility.PublishedOnly)).Select(p => p.Id)).IsEquivalentTo(visible);
+		await Assert.That((await wiki.GetByTagAsync("harbour", 0, 3, reader)).Select(p => p.Id)).IsEquivalentTo(visible.Append(own));
+		await Assert.That((await wiki.GetRecentChangesAsync(1, WikiVisibility.PublishedOnly)).Single().Id).IsEqualTo(visible[1]);
+		await Assert.That((await wiki.GetAllPagesAsync(0, 50, WikiNamespace.System, WikiVisibility.All)).Count).IsEqualTo(13);
+	});
+
 	/// <summary>The slug-index key the provider writes, rebuilt from the same shared helper it uses.</summary>
 	private static byte[] SlugKey(string ns, string? category, string slug)
 		=> Keys.Lower(WikiHelpers.SlugKey(ns, category, slug));
@@ -159,12 +190,12 @@ public class WikiTests
 	});
 
 	/// <summary>
-	/// Storage returns drafts to every reader — <c>IWikiService</c> puts visibility filtering above the DB
-	/// layer (<c>IWikiLocalizationService</c> and the controllers decide who sees an unpublished page or
-	/// translation, including the author-sees-own-draft rule). The one member that filters is
-	/// <c>CountPagesAsync</c>, and only because a count rendered beside a filtered listing would otherwise
-	/// be a disclosure channel. This pins both halves: a provider that quietly hid drafts would break the
-	/// editor, and one whose count ignored the flag would leak how many drafts a namespace holds.
+	/// Unless a listing passes a <see cref="WikiVisibility"/>, storage returns drafts to every reader —
+	/// <c>IWikiLocalizationService</c> and the controllers decide who sees an unpublished page or
+	/// translation, including the author-sees-own-draft rule, and hand listings that rule to apply. The count
+	/// filters too, because a count rendered beside a filtered listing would otherwise be a disclosure
+	/// channel. This pins both halves: a provider that quietly hid drafts would break the editor, and one
+	/// whose count ignored the flag would leak how many drafts a namespace holds.
 	/// </summary>
 	[Test]
 	public async Task DraftsAreReturnedToEveryReaderAndOnlyTheCountFiltersThem() => await WithDatabaseAsync(async (_, wiki) =>

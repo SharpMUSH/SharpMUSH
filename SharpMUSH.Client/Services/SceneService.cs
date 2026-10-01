@@ -12,6 +12,9 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
+	/// <summary>Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request.</summary>
+	private readonly SingleFlight<string, ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
+
 	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
 		string Id,
@@ -50,16 +53,68 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 		string? LastEditorDbref,
 		string? LastEditorName);
 
+	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
+
 
 	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
-	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
 	{
-		var result = await Client.GetApiAsync<List<SceneDto>>(
-			$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}", "The server returned no scene list.");
+		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
+		return _listFlight.RunAsync(url, () => FetchScenesAsync(url));
+	}
+
+	private async Task<ApiResult<IReadOnlyList<SceneSummary>>> FetchScenesAsync(string url)
+	{
+		var result = await Client.GetApiAsync<List<SceneDto>>(url, "The server returned no scene list.");
 
 		return result switch
 		{
 			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first.</summary>
+	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5)
+	{
+		var result = await Client.GetApiAsync<List<SceneDto>>(
+			$"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no scene list.");
+
+		return result switch
+		{
+			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>Who shares the most caller-visible scenes with <paramref name="dbref"/>, most first.</summary>
+	public async Task<ApiResult<IReadOnlyList<ScenePartner>>> GetPartnersAsync(string dbref, int count = 6)
+	{
+		var result = await Client.GetApiAsync<List<ScenePartner>>(
+			$"api/scenes/partners?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no partner list.");
+
+		return result switch
+		{
+			List<ScenePartner> partners => (IReadOnlyList<ScenePartner>)partners,
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>
+	/// The dbrefs (<c>#312</c>, without the creation stamp) of the scene's members — everyone who joined or
+	/// watched it — skipping edges held by a recycled dbref's former owner.
+	/// </summary>
+	public async Task<ApiResult<IReadOnlyList<string>>> GetMemberDbrefsAsync(string sceneId)
+	{
+		var result = await Client.GetApiAsync<List<SceneMemberDto>>(
+			$"api/scenes/{Uri.EscapeDataString(sceneId)}/members", "The server returned no member list.");
+
+		return result switch
+		{
+			List<SceneMemberDto> members => (IReadOnlyList<string>)[.. members
+				.Where(m => m.IsCurrent && !string.IsNullOrWhiteSpace(m.MemberDbref))
+				.Select(m => m.MemberDbref!.Split(':')[0])
+				.Distinct(StringComparer.Ordinal)],
 			ApiFailure failure => failure
 		};
 	}

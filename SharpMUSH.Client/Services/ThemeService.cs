@@ -89,11 +89,17 @@ public sealed class ThemeService : IThemeService
 		OnThemeChanged?.Invoke();
 	}
 
+	private Task? _initialized;
+
 	/// <summary>
-	/// Restores the persisted preset from localStorage on first mount.
-	/// Falls back to the default silently on any failure.
+	/// Restores the persisted preset from localStorage. Runs once: Program.cs awaits it before the
+	/// first render, so by the time <c>ThemeProvider</c> asks, the task is complete and the provider
+	/// renders the stored theme without a second pass. Falls back to the default silently on any
+	/// failure.
 	/// </summary>
-	public async Task InitializeAsync()
+	public Task InitializeAsync() => _initialized ??= RestoreAsync();
+
+	private async Task RestoreAsync()
 	{
 		var saved = await _js.GetItemAsync(BrowserStore.Local, LocalStorageKey);
 		var match = BuiltInPresets.FirstOrDefault(p => p.Name == saved);
@@ -125,7 +131,7 @@ public static class ThemePresetExtensions
 			DrawerBackground = preset.DrawerBackgroundColor,
 			TextPrimary = "#e9edf0",
 			TextSecondary = "#9aa3ab",
-			TextDisabled = "#5f6870",
+			TextDisabled = "#7d8790",
 			AppbarText = preset.PrimaryColor,
 			DrawerText = "#e9edf0",
 			DrawerIcon = preset.PrimaryColor,

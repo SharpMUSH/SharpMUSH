@@ -164,7 +164,7 @@ public static class WikiCommandHelper
 	public static string FormatPageLine(LocalizedWikiPage page)
 	{
 		var markers = $"{(page.Published ? "" : " (draft)")}{(page.Page.IsProtected ? " (protected)" : "")}";
-		return $"{DisplayReference(page.Page),-30} {page.Title} (rev {page.RevisionNumber}, {page.Page.UpdatedAt:yyyy-MM-dd}){markers}";
+		return $"{DisplayReference(page.Page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
 	}
 
 	/// <summary>

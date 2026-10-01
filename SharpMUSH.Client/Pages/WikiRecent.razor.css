@@ -1,0 +1,19 @@
+.wiki-recent {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 760px;
+}
+
+.wiki-recent-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px;
+}
+
+@container page (max-width: 48rem) {
+	.wiki-recent {
+		max-width: none;
+	}
+}

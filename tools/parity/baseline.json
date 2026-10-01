@@ -77,10 +77,6 @@
    "command": "@set Widget/COLOR=no_command"
   },
   {
-   "key": "10-player-commands/obj.attrs#5",
-   "command": "examine Widget/COLOR"
-  },
-  {
    "key": "10-player-commands/obj.attrs#6",
    "command": "@set Widget/COLOR=!no_command"
   },
@@ -111,10 +107,6 @@
   {
    "key": "10-player-commands/obj.inventory#1",
    "command": "look Widget"
-  },
-  {
-   "key": "10-player-commands/obj.inventory#2",
-   "command": "examine Widget"
   },
   {
    "key": "10-player-commands/perm.ufun#0",

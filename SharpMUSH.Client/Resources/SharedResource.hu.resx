@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Legutóbbi wiki-tevékenység</value>
+    <value>Nemrég módosítva</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4565,5 +4565,458 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Az átalakítást nem sikerült megszakítani: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Fejléckép összecsukása</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Fejléckép megjelenítése</value>
+  </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# olvasatlan} other {# olvasatlan}}</value>
+  </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# oldal} other {# oldal}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki kezdőlap</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Friss változtatások</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategóriák</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Új oldal</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Oldal címe</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Keresés a wikiben</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>A wiki legutóbbi szerkesztései, a legújabbak elöl.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategória</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Ebben a kategóriában még nincsenek oldalak.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>piszkozat</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>zárolt</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>épp most</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# perce} other {# perce}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# órája} other {# órája}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# napja} other {# napja}}</value>
+  </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Világ wiki</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Minden, ami a játékhoz kell</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Háttértörténet, szabályok és kezdő útmutatók, a stáb és a játékosok szerkesztésében. Olvasáshoz nem kell fiók.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Mind a # oldal} other {Mind a # oldal}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Még nincsenek wiki oldalak.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Egy oldal sem felel meg ennek: „{0}”.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Most élőben} one {Most élőben · #} other {Most élőben · #}}</value>
+  </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Utoljára szerkesztette: {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>szerkesztve: {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Említve · #} other {Említve · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Több itt: {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Mind a #} other {Mind a #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Más nyelven</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Áttekintés</value>
+  </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Fő névtér</value>
+  </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# karakter} other {# karakter}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Mind a # online} other {Mind a # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Karakter keresése</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Most online</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Senki sincs online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>te</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Karaktereid</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Összes karakter</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Legújabbak</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Karakterkategóriák</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Nincs {0} nevű karakter.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>Jelenetben · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Teljes kép</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Levél</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>{0} adatai</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Életrajz</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikioldal · szerkesztve {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Képnézegető</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Bezárás</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Előző kép</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Következő kép</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Ez a kép nem jeleníthető meg.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galéria · #} other {Galéria · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portré</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Legyen a borító</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Borító eltávolítása</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>A borító nem módosítható: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Még nincs jelenet.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>most zajlik</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Még nincs közös jelenet.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Kép hozzáadása</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>A karakter profilja most nem olvasható.</value>
+  </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>{0} oldalsáv összecsukása</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>{0} oldalsáv kinyitása</value>
+  </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Szakaszok</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Építés és kezelés</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Építő- és stábeszközök</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Keresés és ugrás…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Fiók: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Alkalmazások</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Nyelv</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Szakasz menüje</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ugrás egy oldalra vagy keresés…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>„{0}” keresése a wikiben</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>„{0}” nevű karakter keresése</value>
+  </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Csatlakozva: {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>Jelenetben</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Üzenetek</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# itt}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# kijárat} other {# kijárat}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Leírás</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Történet</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Nézet</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Jelenet · a jelenetarchívumba kerül</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Teljes kimenet · csatornákkal és üzenetekkel</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# ott}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zárva</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zárt</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Elhagyja a jelenetet</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Menj</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Nézd meg</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Maradok</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Nyomja meg: {0}</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Teljes kép</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>Ebben a jelenetben</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Tétlen {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Részletek</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galéria</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterlap: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Póz</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Beszéd</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Parancs</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Írd meg a pózodat…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Mondj valamit…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Szerepen kívül…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Írj be egy parancsot…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Üzenettípus</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Jelenet</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Helyszín</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Játékrészek</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Rajtad kívül senki sincs itt.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Elrendezési hatókör</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Elrendezési hatókör (nem kötelező)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Az oldal, amelyhez a widget tartozik, pl. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-csomag</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-csomag (nem kötelező)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>A játék által küldött élő adatok, pl. weather.now; az adat-URL helyett</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Ma</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Tegnap</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Új</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Üzenet ide: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Csatorna</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privát üzenetek</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Még nincs itt semmi.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Vissza a jelenethez</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Játék</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>A játékoldal jobb oszlopa: ki van itt, a kijáratok és a játék paneljei.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Itt</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Kijáratok</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Alkalmazások</value>
   </data>
 </root>

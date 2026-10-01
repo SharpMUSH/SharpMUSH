@@ -1,39 +1,37 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services
 @inject WikiService WikiService
 @inject IStringLocalizer<SharedResource> Loc
 
+@* D1 §6.1 "Recently changed" as an aside card: image rows with the page's first image as the
+   thumbnail, the editor and when. Placeable in any zone; it is the wiki home's default aside. *@
 <div class="recent-wiki-widget">
-    <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-        <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:var(--font-mono);margin-bottom:0.75rem;">@Loc["WidRecentWikiActivity"]</MudText>
+    <KitCard Aside="true" Title="@Loc["WidRecentWikiActivity"]">
         @if (_loading)
         {
             @for (var i = 0; i < 4; i++)
             {
-                <MudSkeleton Height="32px" Class="mb-1" />
+                <MudSkeleton Height="40px" Class="mb-1" />
             }
         }
         else if (_recentChanges is { Count: > 0 })
         {
-            @foreach (var wp in _recentChanges.Take(6))
-            {
-                <div style="display:flex;align-items:center;gap:0.625rem;padding:0.375rem 0;border-bottom:1px solid var(--border-soft);">
-                    <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:26px;height:26px;")">
-                        @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
-                    </MudAvatar>
-                    <div style="flex:1;min-width:0;">
-                        <MudLink Href="@WikiRoutes.PathFor(wp.Namespace, wp.Category, wp.Slug)" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
-                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
-                    </div>
-                </div>
-            }
+            <div class="recent-wiki-rows">
+                @foreach (var wp in _recentChanges.Take(6))
+                {
+                    var entry = wp;
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@entry.Image" Name="@entry.Title" Label="@entry.Title"
+                                Sub="@Meta(entry)" Href="@WikiRoutes.PathFor(entry.Namespace, entry.Category, entry.Slug)" />
+                }
+            </div>
         }
         else
         {
-            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Loc["WidNoRecentWikiActivity"]</MudText>
+            <div class="recent-wiki-empty">@Loc["WidNoRecentWikiActivity"]</div>
         }
-    </MudPaper>
+    </KitCard>
 </div>
 
 @code {
@@ -47,5 +45,11 @@
     {
         _recentChanges = await WikiService.GetRecentChangesAsync(10);
         _loading = false;
+    }
+
+    private string Meta(WikiPageSummary p)
+    {
+        var when = Loc.Format(p.UpdatedAt);
+        return p.LastEditedBy is null ? when : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, when);
     }
 }

@@ -1,36 +1,34 @@
 @using SharpMUSH.Client.Pages
 @inject IStringLocalizer<SharedResource> Loc
 <ThemeProvider>
-    <ServerStartupGate>
-        <CascadingAuthenticationState>
-            <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(NotFound)">
-                <Found Context="routeData">
-                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                        <NotAuthorized>
-                            @if (context.User.Identity?.IsAuthenticated != true)
-                            {
-                                <RedirectToLogin/>
-                            }
-                            else
-                            {
-                                <div class="not-authorized" role="alert">
-                                    <div class="not-authorized-card">
-                                        <div class="not-authorized-icon">
-                                            <MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:1.875rem;" />
-                                        </div>
-                                        <h1>@Loc["NotAuthorized"]</h1>
-                                        <p>@Loc["NotAuthorizedBody"]</p>
-                                        <a class="not-authorized-home" href="/">
-                                            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.9375rem;" /> @Loc["NotAuthorizedBackHome"]
-                                        </a>
+    <CascadingAuthenticationState>
+        <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(NotFound)">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        @if (context.User.Identity?.IsAuthenticated != true)
+                        {
+                            <RedirectToLogin/>
+                        }
+                        else
+                        {
+                            <div class="not-authorized" role="alert">
+                                <div class="not-authorized-card">
+                                    <div class="not-authorized-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:1.875rem;" />
                                     </div>
+                                    <h1>@Loc["NotAuthorized"]</h1>
+                                    <p>@Loc["NotAuthorizedBody"]</p>
+                                    <a class="not-authorized-home" href="/">
+                                        <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.9375rem;" /> @Loc["NotAuthorizedBackHome"]
+                                    </a>
                                 </div>
-                            }
-                        </NotAuthorized>
-                    </AuthorizeRouteView>
-                    <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
-                </Found>
-            </Router>
-        </CascadingAuthenticationState>
-    </ServerStartupGate>
+                            </div>
+                        }
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+            </Found>
+        </Router>
+    </CascadingAuthenticationState>
 </ThemeProvider>

@@ -13,7 +13,6 @@ using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using Slugify;
 
 // The markup layers this app can render: MarkupText resolves emitters and codecs through
 // MarkupRegistry.Default, which throws until something sets it.
@@ -31,11 +30,12 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
-builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
+builder.Services.AddScoped<CharacterProfileService>();
+builder.Services.AddScoped<SidebarCollapseService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
@@ -79,7 +79,8 @@ builder.Services.AddSingleton<IAccountSessionEndingHandler, TerminalSessionTeard
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();
-builder.Services.AddSingleton<IThemeService, ThemeService>();
+builder.Services.AddSingleton<ThemeService>();
+builder.Services.AddSingleton<IThemeService>(sp => sp.GetRequiredService<ThemeService>());
 
 var registry = new WidgetRegistry();
 foreach (var widget in BuiltInWidgets.All)
@@ -94,15 +95,21 @@ foreach (var widget in BuiltInWidgets.All)
 var apiBaseAddress = ApiBaseAddressResolver.Resolve(
 	builder.HostEnvironment.BaseAddress,
 	builder.Configuration[ApiBaseAddressResolver.ConfigurationKey]);
+// Server file paths (/api/wiki-assets/...) in an <img> resolve against the API, not the page.
+SharpMUSH.Client.Components.Kit.ApiUrl.UseBase(apiBaseAddress);
 
 // Bridge Widget-kind Dynamic Applications (Area 21) into the layout palette: load the registry once
-// at startup (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The
+// per page load (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The
 // catalog is also injected so SchemaWidget can resolve a placement's schema/data routes by slug.
-var applicationCatalog = await ApplicationCatalog.LoadAsync(apiBaseAddress);
-foreach (var widgetApp in applicationCatalog.WidgetApps)
+// Started, not awaited: it loads while the runtime renders, rather than holding up the first frame
+// for a round trip. See ApplicationCatalog's remarks for why nothing needs it sooner.
+var applicationCatalog = ApplicationCatalog.StartLoading(apiBaseAddress, catalog =>
 {
-	registry.Register(new ApplicationPortalWidget(widgetApp));
-}
+	foreach (var widgetApp in catalog.WidgetApps)
+	{
+		registry.Register(new ApplicationPortalWidget(widgetApp));
+	}
+});
 builder.Services.AddSingleton(applicationCatalog);
 builder.Services.AddSingleton<IWidgetRegistry>(registry);
 builder.Services.AddSingleton<ILayoutService, LayoutService>();
@@ -154,6 +161,16 @@ catch (CultureNotFoundException)
 }
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
+
+// Restore this tab's account session now, while the runtime renders, rather than when the first
+// authenticated request asks for it. InitAsync caches its task, so every later caller awaits this
+// same run. (No readiness check here: the server hands out the portal only once the game is ready —
+// see PortalStartupPage in SharpMUSH.Server.)
+_ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
+
+// The stored theme preset, read before the first render so ThemeProvider renders the right theme once
+// instead of rendering the default and then re-rendering the whole tree in the stored one.
+await app.Services.GetRequiredService<ThemeService>().InitializeAsync();
 
 // index.html is served with a static lang="en", so without this the document keeps
 // claiming English whichever locale was picked: custom.css selects the CJK mono stack on

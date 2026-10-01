@@ -37,6 +37,8 @@ public abstract class MudBlazorTestContext : BunitContext
 		// without a live API; application-specific tests register their own client.
 		Services.AddSingleton(new ApplicationRegistryClient(
 			StubFactoryReturningEmptyList(), NullLogger<ApplicationRegistryClient>.Instance));
+		// NavMenu lists applications from the startup catalog; empty unless a test registers its own.
+		Services.AddSingleton(new ApplicationCatalog([]));
 		// NavMenu's profile card injects AccountAuthService to show the signed-in display name.
 		// Its HTTP/JS dependencies are never exercised during a render (only properties are read),
 		// so stubs suffice; Username/Characters default to empty.

@@ -19,6 +19,8 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///
 /// Routes:
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
+///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
+///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered, non-deleted pose DTOs
 ///   GET /api/scenes/{id}/members          — member DTOs
@@ -76,6 +78,9 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		string? LastEditorDbref,
 		string? LastEditorName);
 
+	/// <summary>Someone who shares scenes with a character: how many of the caller-visible ones.</summary>
+	public record ScenePartnerDto(string Dbref, string Name, int Scenes);
+
 	/// <summary>A player's participation edge. Timestamp is UTC Unix-millis (long).</summary>
 	public record SceneMemberDto(
 		string SceneId,
@@ -123,18 +128,97 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// restricted to scenes the caller may see. <c>count</c> caps the number returned.
 	/// </summary>
 	[HttpGet]
-	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50)
+	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
+		[FromQuery] string? participant = null)
 	{
-		// The service applies its own viewer-scoped visibility filtering; we additionally gate each
-		// returned scene through CanSeeAsync so non-public scenes never leak to non-members.
-		var scenes = await sceneService.ListScenesAsync(filter, CallerDbref, count: count);
+		if (participant is not null)
+		{
+			return DBRef.TryParse(participant, out var member) && member is { } who
+				? Ok((await VisibleScenesOfAsync(who, count)).Select(ToDto))
+				: BadRequest(new { error = "participant must be a dbref such as #42." });
+		}
 
-		var visible = new List<SceneDto>(scenes.Count);
-		foreach (var scene in scenes)
-			if (await CanSeeAsync(scene))
-				visible.Add(ToDto(scene));
+		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count)).Select(ToDto));
+	}
 
-		return Ok(visible);
+	/// <summary>
+	/// GET /api/scenes/partners?participant=#42&amp;count=6
+	/// The characters who share the most of <paramref name="participant"/>'s last 50 caller-visible
+	/// scenes with them, most shared first (ties by name), without the character itself. The profile's
+	/// "Often plays with" card. Counted from membership edges, so a character who only watched is counted.
+	/// </summary>
+	[HttpGet("partners")]
+	public async Task<IActionResult> GetPartners([FromQuery] string participant, [FromQuery] int count = 6)
+	{
+		if (!DBRef.TryParse(participant, out var parsed) || parsed is not { } who)
+		{
+			return BadRequest(new { error = "participant must be a dbref such as #42." });
+		}
+
+		var shared = new Dictionary<int, (string Dbref, string Name, int Scenes)>();
+		foreach (var scene in await VisibleScenesOfAsync(who, 50))
+		{
+			if (await sceneService.GetMembersAsync(scene.Id) is not IReadOnlyList<SceneMember> members) continue;
+
+			foreach (var member in members.DistinctBy(m => m.MemberDbref))
+			{
+				if (!DBRef.TryParse(member.MemberDbref, out var memberRef) || memberRef is not { } other
+					|| other.SameObjectAs(who)) continue;
+
+				var entry = shared.TryGetValue(other.Number, out var seen)
+					? seen with { Scenes = seen.Scenes + 1 }
+					: ($"#{other.Number}", member.MemberName, 1);
+				shared[other.Number] = entry;
+			}
+		}
+
+		return Ok(shared.Values
+			.OrderByDescending(p => p.Scenes)
+			.ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+			.Take(Math.Max(0, count))
+			.Select(p => new ScenePartnerDto(p.Dbref, p.Name, p.Scenes)));
+	}
+
+	/// <summary>The scenes <paramref name="member"/> belongs to, newest first, that the caller may see.</summary>
+	private Task<List<Contracts.Scene>> VisibleScenesOfAsync(DBRef member, int count) =>
+		VisibleScenesAsync("mine", member.ToString(), count);
+
+	/// <summary>
+	/// The first <paramref name="count"/> scenes of <paramref name="filter"/> that the caller may see. The
+	/// service's own <c>count</c> cuts the list before visibility is known, so the window is widened until
+	/// it holds <paramref name="count"/> visible scenes or the service has no more to give — newer scenes
+	/// the caller cannot open never push the older ones it can out of the answer.
+	/// </summary>
+	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count)
+	{
+		var wanted = Math.Max(0, count);
+		var seen = new Dictionary<string, bool>(StringComparer.Ordinal);
+		var ask = Math.Max(1, wanted);
+		while (true)
+		{
+			var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
+			var visible = new List<Contracts.Scene>(Math.Min(scenes.Count, wanted));
+			foreach (var scene in scenes)
+			{
+				if (!seen.TryGetValue(scene.Id, out var canSee))
+				{
+					seen[scene.Id] = canSee = await CanSeeAsync(scene);
+				}
+
+				if (canSee && visible.Count < wanted)
+				{
+					visible.Add(scene);
+				}
+			}
+
+			if (visible.Count >= wanted || scenes.Count < ask || ask >= int.MaxValue / 2)
+			{
+				return visible;
+			}
+
+			ask *= 2;
+		}
 	}
 
 	/// <summary>

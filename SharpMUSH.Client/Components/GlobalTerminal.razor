@@ -65,7 +65,7 @@
     {
         <div class="sharp-terminal-input">
             <span class="term-prompt">›</span>
-            <input class="term-input"
+            <input class="term-input" @ref="_inputRef"
                    value="@_input"
                    @oninput="@(e => _input = e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="OnInputKeyDown"
@@ -401,6 +401,23 @@
     {
         _displayLines.Clear();
         StateHasChanged();
+    }
+
+    private ElementReference _inputRef;
+
+    /// <summary>Puts <paramref name="text"/> in the input line and focuses it, for the player to finish (Play's "page Name=").</summary>
+    public async Task SetInputAsync(string text)
+    {
+        _input = text;
+        StateHasChanged();
+        try
+        {
+            await _inputRef.FocusAsync();
+        }
+        catch (Exception e) when (e is InvalidOperationException or JSException)
+        {
+            // Not attached yet: the text is there, the focus stays where it was.
+        }
     }
 
     private Task ClearAsync()

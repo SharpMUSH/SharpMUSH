@@ -1,0 +1,9 @@
+@* D1 §4.11 bottom bar: one shape for the Play composer and the Config unsaved bar. --surface-2,
+   1px --border, radius 16, padding 10px 12px, at the bottom of main. Sticky, never fixed — a scoped
+   stylesheet may not position anything fixed (ResponsiveConventionsTests). *@
+<div class="kit-bottom-bar @Class">@ChildContent</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

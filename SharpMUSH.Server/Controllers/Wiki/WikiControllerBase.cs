@@ -27,8 +27,12 @@ namespace SharpMUSH.Server.Controllers;
 public abstract class WikiControllerBase(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiNameResolver names,
 	ILogger logger) : ControllerBase
 {
+	/// <summary>Resolves the author and editor dbrefs the store keeps to player names for the DTOs.</summary>
+	protected IWikiNameResolver Names { get; } = names;
+
 	/// <summary>Page storage. A property rather than a captured parameter so derived controllers,
 	/// which pass the same instance down, do not each capture a second copy of it.</summary>
 	protected IWikiService Wiki { get; } = wikiService;
@@ -82,14 +86,15 @@ public abstract class WikiControllerBase(
 	/// </summary>
 	protected string? CallerDbref => User.GetActingCharacter()?.ToString();
 
-	/// <summary>True when the caller is the original author of <paramref name="page"/>. Authors
-	/// always see their own drafts even without the <see cref="PortalPermission.WikiRead"/> scope.</summary>
-	protected bool IsAuthor(WikiPage page) =>
-		CallerDbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);
+	/// <summary>
+	/// The pages the caller may view: published ones, every draft with wiki.read, and the drafts the
+	/// caller authored (authors always see their own). Listings hand it to the store, which applies it
+	/// before paging, so a page of a listing is a page of rows this caller may see.
+	/// </summary>
+	protected WikiVisibility Visibility => new(CanSeeUnpublished, CallerDbref);
 
-	/// <summary>True when the caller may view <paramref name="page"/>: it is published, the caller
-	/// can see unpublished pages (wiki.read), or the caller authored it.</summary>
-	protected bool CanSee(WikiPage page) => page.Published || CanSeeUnpublished || IsAuthor(page);
+	/// <summary>True when the caller may view <paramref name="page"/> (<see cref="Visibility"/>).</summary>
+	protected bool CanSee(WikiPage page) => Visibility.Admits(page.Published, page.AuthorDbref);
 
 	/// <summary>Filters out unpublished (draft) pages the caller may not see (not published, no
 	/// wiki.read scope, and not their own authored draft).</summary>
@@ -102,7 +107,7 @@ public abstract class WikiControllerBase(
 
 	protected static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => new(
 		p.Page.Id, p.Page.Slug, p.Title, p.Page.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-		p.Page.CreatedAt, p.Page.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
+		p.Page.CreatedAt, p.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
 		p.Page.Category, p.Page.Tags, p.Published)
 	{
 		Locale = p.Locale,
@@ -113,6 +118,35 @@ public abstract class WikiControllerBase(
 
 	protected static WikiRevisionDto ToDto(WikiRevision r) => new(
 		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
+
+	/// <summary>The page DTO with the facts the D1 banner needs: the last editor's name and the first image.</summary>
+	protected async Task<WikiPageDto> ToDtoAsync(WikiPage p) => ToDto(p) with
+	{
+		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
+		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
+	};
+
+	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => ToDto(p, availableLocales) with
+	{
+		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
+		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
+	};
+
+	protected async Task<WikiRevisionDto> ToDtoAsync(WikiRevision r) => ToDto(r) with
+	{
+		EditorName = await Names.NameOfAsync(r.EditorDbref, HttpContext.RequestAborted),
+	};
+
+	protected async Task<List<WikiRevisionDto>> ToDtosAsync(IEnumerable<WikiRevision> revisions)
+	{
+		var list = new List<WikiRevisionDto>();
+		foreach (var revision in revisions)
+		{
+			list.Add(await ToDtoAsync(revision));
+		}
+
+		return list;
+	}
 
 	protected static WikiTranslationSummaryDto ToDto(WikiTranslationSummary t) =>
 		new(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber);
@@ -132,7 +166,7 @@ public abstract class WikiControllerBase(
 		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
 			Logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
 
-		return ToDto(localized, available);
+		return await ToDtoAsync(localized, available);
 	}
 
 	/// <summary>
@@ -149,7 +183,13 @@ public abstract class WikiControllerBase(
 	{
 		var visible = FilterVisible(pages).ToList();
 		var localized = await Localization.LocalizeAllAsync(visible, lang, IncludeDrafts);
-		return localized.Select(p => ToDto(p, []));
+		var dtos = new List<WikiPageDto>();
+		foreach (var page in localized)
+		{
+			dtos.Add(await ToDtoAsync(page, []));
+		}
+
+		return dtos;
 	}
 
 	/// <summary>

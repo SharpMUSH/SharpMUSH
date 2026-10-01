@@ -13,6 +13,8 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiService> logger)
 {
+	/// <summary>Concurrent reads of one recent-changes list (the stats tile and the activity widget) share a request.</summary>
+	private readonly SingleFlight<string, IReadOnlyList<WikiPageSummary>> _recentFlight = new();
 
 	public async ValueTask<Maybe<WikiArticle>> GetWikiArticle(
 		string slug, string? category = null, string? ns = null, string? lang = null)
@@ -40,12 +42,18 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Failures (network, server error) return an empty list — the index UI
 	/// simply shows nothing rather than breaking the whole page.
 	/// </summary>
-	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20, string? lang = null)
+	public ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20, string? lang = null)
+	{
+		var url = $"api/wiki/recent?count={count}{LangQuery(lang, first: false)}";
+		return new ValueTask<IReadOnlyList<WikiPageSummary>>(_recentFlight.RunAsync(url, () => FetchRecentChangesAsync(url)));
+	}
+
+	private async Task<IReadOnlyList<WikiPageSummary>> FetchRecentChangesAsync(string url)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}");
+			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(url);
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -53,6 +61,21 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			logger.LogError(ex, "GetRecentChangesAsync failed");
 			return [];
 		}
+	}
+
+	/// <summary>
+	/// The same list with the failure in the type: "no recent changes" and "the server would not say"
+	/// are different facts, and the recent-changes page tells them apart.
+	/// </summary>
+	public async ValueTask<ApiResult<IReadOnlyList<WikiPageSummary>>> GetRecentChangesResultAsync(int count = 20, string? lang = null)
+	{
+		var result = await httpClientFactory.CreateClient("api")
+			.GetApiAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}", "The server returned no recent changes.");
+		return result switch
+		{
+			List<WikiPageDto> dtos => dtos.Select(ToSummary).ToList(),
+			ApiFailure failure => failure,
+		};
 	}
 
 	/// <summary>
@@ -86,7 +109,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
+			using var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
 			response.EnsureSuccessStatusCode();
 
 			var dtos = await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? [];
@@ -120,6 +143,29 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			logger.LogError(ex, "GetByCategoryAsync failed for category={Category}", category);
 			return [];
+		}
+	}
+
+	/// <summary>Batch size for <see cref="GetAllByCategoryAsync"/>.</summary>
+	private const int CategoryBatch = 200;
+
+	/// <summary>
+	/// Every page in a category, read in batches. The server pages over stored rows and drops the
+	/// drafts this caller may not see afterwards, so a short batch does not mean the last one: only an
+	/// empty batch ends the listing. A failed request ends it too, with what was read so far.
+	/// </summary>
+	/// <remarks>
+	/// The one listing this reads short: a whole batch of stored rows that are all drafts hidden from
+	/// this caller comes back empty, as the end does. Paging over visible rows is the server's to fix.
+	/// </remarks>
+	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetAllByCategoryAsync(string category, string? lang = null)
+	{
+		var all = new List<WikiPageSummary>();
+		for (var skip = 0; ; skip += CategoryBatch)
+		{
+			var batch = await GetByCategoryAsync(category, skip, CategoryBatch, lang);
+			if (batch.Count == 0) return all;
+			all.AddRange(batch);
 		}
 	}
 
@@ -224,7 +270,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}",
 				new UpsertTranslationRequest(title, markdown, editSummary, published, expectedRevisionNumber));
 
@@ -252,7 +298,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync(
+			using var response = await http.DeleteAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}");
 
 			return response.IsSuccessStatusCode
@@ -279,7 +325,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
+			using var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
 
 			if (response.IsSuccessStatusCode)
 			{
@@ -314,7 +360,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}",
 				new UpdatePageRequest(markdown, editSummary));
 
@@ -352,7 +398,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			var http = httpClientFactory.CreateClient("api");
 			// The page is identified by its CURRENT category; `category` is the (possibly new) value to set.
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/metadata{KeyQuery(ns, currentCategory ?? category)}",
 				new SetMetadataRequest(category, tags.ToArray(), published));
 
@@ -388,7 +434,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{KeyQuery(ns, category)}",
 				new RollbackRequest(revisionNumber));
 
@@ -424,7 +470,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/wiki/exists", new ExistsRequest(refArray));
+			using var response = await http.PostAsJsonAsync("api/wiki/exists", new ExistsRequest(refArray));
 			if (!response.IsSuccessStatusCode)
 				return new Dictionary<string, bool>();
 
@@ -448,7 +494,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/protect",
 				new BatchProtectRequest(refs.ToArray(), isProtected));
 
@@ -480,7 +526,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/delete",
 				new BatchDeleteRequest(refs.ToArray()));
 
@@ -511,7 +557,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
+			using var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
 
 			if (response.IsSuccessStatusCode)
 				return new None();
@@ -530,11 +576,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		new(
 			title: dto.Title,
 			content: dto.MarkdownSource,
-			image: null,
+			image: dto.Image,
 			renderedHtml: dto.RenderedHtml
 		)
 		{
 			Id = dto.Id,
+			LastEditedBy = dto.LastEditedBy,
+			UpdatedAt = dto.UpdatedAt,
 			Slug = dto.Slug,
 			Category = dto.Category,
 			Tags = dto.Tags.ToList(),
@@ -580,6 +628,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			IsProtected = dto.IsProtected,
 			Locale = dto.Locale,
 			IsFallback = dto.IsFallback,
+			Image = dto.Image,
+			LastEditedBy = dto.LastEditedBy,
 		};
 
 	private static WikiRevisionInfo ToRevision(WikiRevisionDto dto) =>

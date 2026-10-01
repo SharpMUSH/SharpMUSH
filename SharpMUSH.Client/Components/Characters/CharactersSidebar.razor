@@ -1,0 +1,150 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Client.Services
+@inject CharacterDirectoryService Directory
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §6.3 Characters page sidebar (board 25): "Characters · ● N online · N characters", a search
+   that lands on the directory, Online now (up to eight, then "All N online"), Your characters
+   with Create a character for a signed-in account, and Browse (All characters, Newest). Collapsed
+   keeps the online avatars and the account's own. *@
+<div class="char-side @(Collapsed ? "char-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Characters"]">
+            <Sub>
+                @if (_online is not null)
+                {
+                    <span class="char-side-dot" aria-hidden="true"></span>
+                    <span>@Loc.Plural("NavCharOnlineCount", "count", _online.Count)</span>
+                }
+                @if (_all is not null)
+                {
+                    <span aria-hidden="true">·</span>
+                    <span>@Loc.Plural("NavCharCount", "count", _all.Count)</span>
+                }
+            </Sub>
+        </SidebarHead>
+        <SidebarSearch Placeholder="@Loc["NavCharSearch"]" OnSearch="Search" />
+        <SectionLabel>@Loc["NavCharOnlineNow"]</SectionLabel>
+    }
+    <nav class="char-side-online" aria-label="@Loc["NavCharOnlineNow"]">
+        @if (_online is { Count: 0 } && !Collapsed)
+        {
+            <div class="char-side-empty">@Loc["NavCharNoneOnline"]</div>
+        }
+        @foreach (var row in (_online ?? []).Take(OnlineShown))
+        {
+            var r = row;
+            <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@ImageOf(r.Name)" Name="@r.Name" Label="@r.Name"
+                        Trail="@(IsMine(r.Name) ? Loc["NavCharYou"].Value : null)"
+                        Href="@ProfileHref(r.Name)" IsCurrent="@IsCurrent(r.Name)" Collapsed="@Collapsed" />
+        }
+        @if (!Collapsed && _online is { Count: > 0 })
+        {
+            <a class="char-side-all-online" href="/characters?online=1">@Loc.Plural("NavCharAllOnline", "count", _online.Count)</a>
+        }
+    </nav>
+    @if (_mine.Count > 0 || AccountAuth.IsLoggedIn)
+    {
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavCharYourCharacters"]</SectionLabel>
+        }
+        <nav class="char-side-mine" aria-label="@Loc["NavCharYourCharacters"]">
+            @foreach (var mine in _mine)
+            {
+                var m = mine;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@ImageOf(m.Name)" Name="@m.Name" Label="@m.Name"
+                            Trail="@(m.IsActing ? Loc["NavCharYou"].Value : null)"
+                            Href="@ProfileHref(m.Name)" IsCurrent="@IsCurrent(m.Name)" Collapsed="@Collapsed" />
+            }
+            @if (Collapsed)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Add" Label="@Loc["NavCharCreate"]" Href="/characters/new" Collapsed="true" />
+            }
+            else
+            {
+                <a class="char-side-create" href="/characters/new">
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["NavCharCreate"]
+                </a>
+            }
+        </nav>
+    }
+    @if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavCharBrowse"]</SectionLabel>
+        <nav class="char-side-browse" aria-label="@Loc["NavCharBrowse"]">
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Groups" Label="@Loc["NavCharAll"]" Count="@_all?.Count"
+                        Href="/characters" IsCurrent="@(_path == "/characters" && _query.Length == 0)" />
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.StarBorder" Label="@Loc["NavCharNewest"]" Count="@_all?.Count(IsNew)"
+                        Href="/characters?new=1" IsCurrent="@(_path == "/characters" && _query == "?new=1")" />
+        </nav>
+    }
+</div>
+
+@code {
+    /// <summary>Only the leads, for the collapsed strip (board 26).</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    private const int OnlineShown = 8;
+
+    /// <summary>How recent "Newest" is: the board's "Recently approved", for a game with no approval step.</summary>
+    public static readonly TimeSpan NewWindow = TimeSpan.FromDays(14);
+
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _all;
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _online;
+    private IReadOnlyList<AccountAuthService.CharacterSummary> _mine = [];
+    private string _path = "/characters";
+    private string _query = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+        var all = Directory.ListAsync();
+        var online = Directory.ListOnlineAsync();
+        _all = await all is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : null;
+        _online = await online is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here ? here : null;
+        if (await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> mine)
+        {
+            _mine = mine;
+        }
+    }
+
+    /// <summary>A character created within <see cref="NewWindow"/>.</summary>
+    public static bool IsNew(CharacterDirectoryService.CharacterSummary row) =>
+        row.CreatedAt >= DateTimeOffset.UtcNow - NewWindow;
+
+    private string? ImageOf(string name) =>
+        _all?.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;
+
+    private bool IsMine(string name) =>
+        _mine.Any(m => m.IsActing && string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    private static string ProfileHref(string name) => $"/character/{Uri.EscapeDataString(name)}";
+
+    private bool IsCurrent(string name) => string.Equals(_path, ProfileHref(name), StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Uri.UnescapeDataString(_path), $"/character/{name}", StringComparison.OrdinalIgnoreCase);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Locate();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Locate()
+    {
+        var uri = new Uri(Nav.Uri);
+        _path = uri.AbsolutePath.TrimEnd('/');
+        if (_path.Length == 0) _path = "/";
+        _query = uri.Query;
+    }
+
+    private void Search(string term) =>
+        Nav.NavigateTo(term.Length == 0 ? "/characters" : $"/characters?q={Uri.EscapeDataString(term)}");
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}
