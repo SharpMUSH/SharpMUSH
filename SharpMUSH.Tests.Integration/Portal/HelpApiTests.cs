@@ -36,7 +36,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var entry = await http.GetFromJsonAsync<HelpEntryDto>("api/help/entry?topic=align%20examples");
 		await Assert.That(entry?.Markdown).Contains("&haiku");
 		await Assert.That(entry?.Html).Contains("id=\"examples\"");
-		await Assert.That(entry?.Html).Contains("href=\"#examples\"");
+		await Assert.That(entry?.Html).Contains("href=\"/help/align%28%29#examples\"");
 		var index = await http.GetFromJsonAsync<HelpIndexDto>("api/help");
 		await Assert.That(index!.Topics).DoesNotContain("ALIGN2");
 		await Assert.That(index.Topics).DoesNotContain("LALIGN()");
@@ -94,7 +94,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		await Assert.That(html).Contains("<link rel=\"canonical\" href=\"https://localhost/help/align%28%29\"");
 		await Assert.That(html).Contains("id=\"examples\"");
-		await Assert.That(html).Contains("href=\"#examples\"");
+		await Assert.That(html).Contains("href=\"/help/align%28%29#examples\"");
 	}
 
 	[Test]

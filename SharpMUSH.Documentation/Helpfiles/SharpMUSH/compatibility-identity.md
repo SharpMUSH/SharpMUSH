@@ -40,6 +40,11 @@
 -->
 # COMPATIBILITY IDENTITY
 
+SharpMUSH and PennMUSH differ in object identity and numeric representation.
+Object timestamps and objids use milliseconds here, automatic dbref allocation
+does not reuse purged objects, and some numeric results use a different textual
+form. The sections below explain these differences and the portable alternatives.
+
 ## Time precision
 
 SharpMUSH stores object creation and modification times to the millisecond. PennMUSH stores whole

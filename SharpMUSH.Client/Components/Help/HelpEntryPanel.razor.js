@@ -4,14 +4,14 @@ export function bindSections(article) {
     if (!article || sectionHandlers.has(article)) return;
     const handler = event => {
         if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        const link = event.target.closest?.("nav.help-toc a[href^='#']");
+        const link = event.target.closest?.("nav.help-toc a");
         if (!link || !article.contains(link)) return;
-        const fragment = link.getAttribute("href");
+        const view = article.ownerDocument.defaultView;
+        const fragment = new URL(link.getAttribute("href"), view.location.href).hash;
         const id = decodeURIComponent(fragment.slice(1));
         const section = article.ownerDocument.getElementById(id);
         if (!section || !article.contains(section)) return;
         event.preventDefault();
-        const view = article.ownerDocument.defaultView;
         const destination = new URL(view.location.href);
         destination.hash = fragment;
         view.history.pushState(view.history.state, "", destination);

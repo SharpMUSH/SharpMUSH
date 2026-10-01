@@ -18,7 +18,7 @@ test('TOC activation keeps the article route and moves keyboard focus', () => {
         addEventListener: (_, handler) => { blur = handler; },
         focus: () => calls.push('focus')
     };
-    const link = { getAttribute: () => '#examples' };
+    const link = { getAttribute: () => '/help/align%28%29#examples' };
     const article = {
         ownerDocument: {
             getElementById: id => id === 'examples' ? section : null,

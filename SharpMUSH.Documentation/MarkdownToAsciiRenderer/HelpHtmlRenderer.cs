@@ -79,8 +79,8 @@ public static class HelpHtmlRenderer
 
 		var toc = article is null || article.Sections.Count == 0 ? string.Empty
 			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
-				$"<li><a href=\"#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(section.Heading)}</a></li>")) + "</ul></nav>";
-		return toc + writer.ToString();
+				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(section.Heading)}</a></li>")) + "</ul></nav>";
+		return toc + writer;
 	}
 
 	/// <summary>
