@@ -68,5 +68,26 @@ public record ChatOptions(
 		Order = 3,
 		Min = 10,
 		Max = 500)]
-	uint ChannelTitleLength
+	uint ChannelTitleLength,
+
+	// SharpMUSH extension: PennMUSH keeps no page history. Off by default; see help page log.
+	[property: SharpConfig(
+		Name = "page_log",
+		Category = "Chat",
+		Description = "Keep each player's pages so the web portal can show their page history (SharpMUSH extension)",
+		Group = "Page log",
+		Order = 1,
+		Tooltip = "Each player can read only their own copy, through the portal. Staff cannot read anyone else's.")]
+	bool PageLog,
+
+	[property: SharpConfig(
+		Name = "page_log_retention_days",
+		Category = "Chat",
+		Description = "Days a logged page is kept before it is deleted (-1 never deletes)",
+		ValidationPattern = @"^(-1|\d+)$",
+		Group = "Page log",
+		Order = 2,
+		Min = -1,
+		Max = 36500)]
+	int PageLogRetentionDays
 );

@@ -52,7 +52,7 @@ Key differentiators over AresMUSH and other MU* web portals:
 │    /api/scenes           — scene list, join, pose                │
 │    /api/characters/{id}  — profile data                          │
 │    /api/mail             — inbox, send, folders                  │
-│    /api/comm             — channel recall, read markers          │
+│    /api/comm             — channel/page recall, read markers     │
 │    /api/bbs              — boards, threads, posts                │
 │    /api/events           — calendar CRUD + iCal feed             │
 │    /api/presence         — who's online                          │

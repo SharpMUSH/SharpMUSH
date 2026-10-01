@@ -91,7 +91,7 @@ public class ReadMarkersTests
 		await Assert.That((await _db.GetReadMarkersAsync(ilsa)).Single()).IsEqualTo(moved);
 	}
 
-	/// <summary>A page has no id yet (there is no page history), so its marker compares by time.</summary>
+	/// <summary>A marker without an id (a page pushed by a package older than page ids) compares by time.</summary>
 	[Test]
 	public async Task AMarkerWithoutAnId_MovesForwardByTime()
 	{

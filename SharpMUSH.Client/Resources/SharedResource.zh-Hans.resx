@@ -5178,6 +5178,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>这里还没有内容。</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>本游戏不保存私信记录，因此只显示本次访问期间的私信。</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>返回场景</value>
   </data>

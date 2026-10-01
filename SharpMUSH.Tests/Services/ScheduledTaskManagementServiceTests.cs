@@ -232,4 +232,40 @@ public class ScheduledTaskManagementServiceTests
 		// trigger from purging on every tick.
 		await destructionService.DidNotReceive().PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
 	}
+
+	/// <summary>
+	/// The page-log purge is scheduled whatever the options say, since it reads
+	/// <c>page_log_retention_days</c> on every run, and it runs hourly.
+	/// </summary>
+	[Test]
+	public async Task StartAsync_SchedulesThePageLogPurge()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var schedulerFactory = Substitute.For<ISchedulerFactory>();
+		schedulerFactory.GetScheduler(Arg.Any<CancellationToken>()).Returns(scheduler);
+		var service = new ScheduledTaskManagementService(schedulerFactory,
+			Microsoft.Extensions.Options.Options.Create(SharpMUSH.Configuration.Options.SharpMUSHOptions.Default()),
+			Substitute.For<ILogger<ScheduledTaskManagementService>>());
+
+		await service.StartAsync(CancellationToken.None);
+
+		await scheduler.Received(1).ScheduleJob(
+			Arg.Is<IJobDetail>(job => job.Key.Name == "PurgePageLog" && job.JobType == typeof(ScheduledTaskManagementService.PurgePageLogJob)),
+			Arg.Is<ITrigger>(trigger => trigger is ISimpleTrigger
+				&& ((ISimpleTrigger)trigger).RepeatInterval == ScheduledTaskManagementService.PageLogPurgeInterval),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task PurgePageLogJob_PurgesThroughThePageLogService()
+	{
+		var pageLog = Substitute.For<IPageLogService>();
+		pageLog.PurgeExpiredAsync(Arg.Any<CancellationToken>()).Returns(new ValueTask<int>(4));
+		var job = new ScheduledTaskManagementService.PurgePageLogJob(pageLog,
+			Substitute.For<ILogger<ScheduledTaskManagementService.PurgePageLogJob>>());
+
+		await job.Execute(Substitute.For<IJobExecutionContext>());
+
+		await pageLog.Received(1).PurgeExpiredAsync(Arg.Any<CancellationToken>());
+	}
 }

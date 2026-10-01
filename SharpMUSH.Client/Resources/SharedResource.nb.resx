@@ -5178,6 +5178,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ingenting her ennå.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>Dette spillet lagrer ikke historikk for private meldinger, så bare meldinger fra dette besøket vises.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Tilbake til scenen</value>
   </data>

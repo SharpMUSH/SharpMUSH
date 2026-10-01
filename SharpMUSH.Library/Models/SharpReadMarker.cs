@@ -5,8 +5,9 @@ namespace SharpMUSH.Library.Models;
 /// worked out from these, so they survive a reload and a change of device.
 /// </summary>
 /// <param name="Scope">What was read: <see cref="ReadMarkerScope.Channel"/> or <see cref="ReadMarkerScope.Conversation"/>.</param>
-/// <param name="LastReadId">The id of the last line read (<see cref="SharpChannelMessage.Id"/>), or null where
-/// lines have none — pages, which have no history yet.</param>
+/// <param name="LastReadId">The id of the last line read (<see cref="SharpChannelMessage.Id"/>, or
+/// <see cref="SharpPage.Id"/>), or null where the line had none — a page pushed by a <c>comm-feed</c> package
+/// older than page ids.</param>
 /// <param name="LastReadAt">When the last line read was sent.</param>
 public sealed record SharpReadMarker(string Scope, long? LastReadId, DateTimeOffset LastReadAt)
 {

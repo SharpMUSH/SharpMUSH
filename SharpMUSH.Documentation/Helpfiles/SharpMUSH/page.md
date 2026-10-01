@@ -11,6 +11,11 @@
       "id": "recipient-matching-and-poses",
       "heading": "Recipient matching and poses",
       "lookup": "page recipient matching and poses"
+    },
+    {
+      "id": "page-log",
+      "heading": "Page log",
+      "lookup": "page log"
     }
   ],
   "redirects": {
@@ -50,6 +55,17 @@ Page takes three switches: `/noeval`, `/override`, and `/port`.
 The `/noeval` switch prevents the MUSH from evaluating the message.<br>
 The `/override` switch is admin-only, and overrides pagelocks and HAVEN.<br>
 The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.
+
+## Page log
+
+PennMUSH keeps no record of pages, and neither does SharpMUSH unless the `page_log` @config option is on. It is a SharpMUSH extension, and it is off by default.
+
+While it is on, each page that is delivered is kept for the player who sent it and for each player it reached, as their own copy. A page refused by someone (HAVEN, a page lock, or not being connected) is not kept for them. A page to more than 32 other people is not kept at all. The web portal uses the copies to show a player their page conversations after a reload or on another device.
+
+- A player's copy can be read only by that player, through the web portal. Wizards and other staff cannot read another player's pages; they control only the two options.
+- `page_log_retention_days` is how many days a page is kept, counted from when it was sent. -1, the default, never deletes. Older pages are deleted every hour.
+- A player's copy is deleted when the player is destroyed, and a new player given the same dbref sees none of it.
+- Turning `page_log` off stops logging, and the portal shows no page history while it is off.
 
 
 **See Also:**

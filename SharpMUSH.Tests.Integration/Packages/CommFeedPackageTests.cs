@@ -237,6 +237,84 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// A page's <c>id</c> is the id the page log keeps it under, so the portal keeps one copy of a page it
+	/// both pulled from the log and was pushed. The pager's and the recipient's pushes carry the same one.
+	/// </summary>
+	[Test]
+	public async Task Page_CarriesTheIdThePageLogKeepsItUnder()
+	{
+		var pager = await ViewerAsync("CommIdPager");
+		var recipient = await ViewerAsync("CommIdPaged");
+		var marker = TestIsolationHelpers.GenerateUniqueName("pageid");
+		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = true } });
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {recipient.Name}={marker}"), Run, pager, recipient);
+
+		var pushedToRecipient = Frames(sent[recipient.Handle], "comm.message").Single();
+		var pushedToPager = Frames(sent[pager.Handle], "comm.message").Single();
+		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, recipient.DbRef))
+			.ConversationRecall(await Objid(pager), null, CancellationToken.None);
+		var pulled = recall.Value!.Lines.Single(line => line.Text == marker);
+
+		await Assert.That(pushedToRecipient["id"]!.GetValue<long>()).IsEqualTo(pulled.Id);
+		await Assert.That(pushedToPager["id"]!.GetValue<long>()).IsEqualTo(pulled.Id);
+	}
+
+	/// <summary>
+	/// A logged page's recalled <c>text</c> goes through the installed <c>FN`COMM`TEXT</c> as the push's
+	/// does, with the pager as enactor, so a game that redefined it gets the same page text pulled as pushed.
+	/// Like <see cref="ChannelLine_RecallComposesTextThroughTheInstalledFnCommText"/>, the redefinition
+	/// answers differently only for this test's marker.
+	/// </summary>
+	// Both FnCommText tests redefine and then restore the one attribute; run together, one restores it under the other.
+	[Test, NotInParallel("FnCommText")]
+	public async Task Page_RecallComposesTextThroughTheInstalledFnCommText()
+	{
+		var pager = await ViewerAsync("CommPageTextPager");
+		var recipient = await ViewerAsync("CommPageTextPaged");
+		var marker = TestIsolationHelpers.GenerateUniqueName("pagecustom");
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
+			.Message!.ToPlainText();
+		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = true } });
+
+		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
+		try
+		{
+			await using var watch = await OobWatch.OpenAsync(factory);
+			var sent = await watch.SentWhile(() => Run(pager, $"page {recipient.Name}=:nods {marker}"), Run, recipient);
+
+			var pushed = Frames(sent[recipient.Handle], "comm.message").Single();
+			var recall = await (await Portal.PortalControllers.CommControllerAs(factory, recipient.DbRef))
+				.ConversationRecall(await Objid(pager), null, CancellationToken.None);
+			var pulled = recall.Value!.Lines.Single(line => line.Id == pushed["id"]!.GetValue<long>());
+
+			await Assert.That(pushed["text"]!.GetValue<string>()).StartsWith("custom:")
+				.Because("the redefinition is what the push composed with");
+			await Assert.That(pulled.Text).IsEqualTo(pushed["text"]!.GetValue<string>());
+		}
+		finally
+		{
+			await God($"&FN`COMM`TEXT #{handler}={original}");
+		}
+	}
+
+	/// <summary>A page has an id with the page log off too: a resumed connection's replay is still kept once.</summary>
+	[Test]
+	public async Task Page_CarriesAnId_WithThePageLogOff()
+	{
+		var pager = await ViewerAsync("CommIdUnloggedPager");
+		var recipient = await ViewerAsync("CommIdUnloggedPaged");
+		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = false } });
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {recipient.Name}=unlogged"), Run, recipient);
+
+		await Assert.That(Frames(sent[recipient.Handle], "comm.message").Single()["id"]!.GetValue<long>()).IsGreaterThan(0);
+	}
+
+	/// <summary>
 	/// Recall composes a line's <c>text</c> through the installed <c>FN`COMM`TEXT</c>, as the push does, with
 	/// the same executor (the handler), enactor (the speaker) and arguments — so a game that redefined it
 	/// gets the same text pulled as pushed.
@@ -245,7 +323,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	/// The tests share one world and run in parallel, so the redefinition answers differently only for a
 	/// line carrying this test's marker and composes every other line exactly as the bundled default does.
 	/// </remarks>
-	[Test]
+	[Test, NotInParallel("FnCommText")]
 	public async Task ChannelLine_RecallComposesTextThroughTheInstalledFnCommText()
 	{
 		var speaker = await ViewerAsync("CommTextSpeaker");

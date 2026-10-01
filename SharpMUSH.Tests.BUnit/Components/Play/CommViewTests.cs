@@ -126,6 +126,43 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OpeningAConversation_PullsItsPages()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+
+		RenderView(key);
+
+		await Assert.That(_feed.Loaded).IsEquivalentTo(new[] { key });
+	}
+
+	/// <summary>A game that keeps no page log says so, so an empty history does not read as nobody having paged.</summary>
+	[Test]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(null, false)]
+	public async Task AConversation_SaysWhenTheGameKeepsNoPageHistory(bool? logging, bool shown)
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		_feed.PageLogging = logging;
+
+		var cut = RenderView(key);
+
+		await Assert.That(cut.FindAll(".comm-unlogged").Count).IsEqualTo(shown ? 1 : 0);
+	}
+
+	[Test]
+	public async Task AChannel_NeverSaysSoAboutPages()
+	{
+		_feed.PageLogging = false;
+
+		var cut = RenderView("Public");
+
+		await Assert.That(cut.FindAll(".comm-unlogged")).IsEmpty();
+	}
+
+	[Test]
 	public async Task APersonWithoutAnObjid_IsPagedByQuotedName()
 	{
 		var key = "page Wren Halloway";

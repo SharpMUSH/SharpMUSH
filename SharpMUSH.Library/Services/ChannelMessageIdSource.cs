@@ -35,18 +35,41 @@ public sealed class ChannelMessageIdSource(IExpandedObjectDataService serverData
 
 	public long Latest => Interlocked.Read(ref _last);
 
+	/// <remarks>
+	/// Loads the stored mark first if nothing has been handed out yet, which sets <see cref="Latest"/> to it:
+	/// every id the previous process handed out is at or below it, and every id this one hands out is above.
+	/// </remarks>
+	public async ValueTask<long> CeilingAsync(CancellationToken cancellationToken = default)
+	{
+		await _gate.WaitAsync(cancellationToken);
+		try
+		{
+			await LoadAsync();
+			return Interlocked.Read(ref _last);
+		}
+		finally
+		{
+			_gate.Release();
+		}
+	}
+
+	/// <summary>Reads the mark the previous process stored, once. Called holding the gate.</summary>
+	private async ValueTask LoadAsync()
+	{
+		if (_loaded) return;
+
+		// Everything the previous process handed out is at or below the mark it stored.
+		_reservedThrough = (await serverData.GetExpandedServerDataAsync<ChannelMessageIdReservation>())?.ReservedThrough ?? 0;
+		Interlocked.Exchange(ref _last, Math.Max(_last, _reservedThrough));
+		_loaded = true;
+	}
+
 	public async ValueTask<long> NextAsync(CancellationToken cancellationToken = default)
 	{
 		await _gate.WaitAsync(cancellationToken);
 		try
 		{
-			if (!_loaded)
-			{
-				// Everything the previous process handed out is at or below the mark it stored.
-				_reservedThrough = (await serverData.GetExpandedServerDataAsync<ChannelMessageIdReservation>())?.ReservedThrough ?? 0;
-				_last = Math.Max(_last, _reservedThrough);
-				_loaded = true;
-			}
+			await LoadAsync();
 
 			var next = Math.Max(_last + 1, (time.GetUtcNow() - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond);
 			if (next > _reservedThrough)

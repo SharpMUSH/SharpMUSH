@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
@@ -16,13 +17,16 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// Channel history and read markers for the portal's channel view, as the session's acting character.
+/// Channel history, page history and read markers for the portal's channel view, as the session's acting
+/// character.
 ///
 /// Routes:
 ///   GET /api/comm/channels/{channel}/recall?lines=N — the channel's recall buffer (the last N lines, or all)
 ///   GET /api/comm/markers                            — the character's read markers
 ///   PUT /api/comm/markers/channels/{channel}         — move a channel's marker on
 ///   PUT /api/comm/markers/conversations              — move a page conversation's marker on
+///   GET /api/comm/conversations                      — the character's logged page conversations
+///   GET /api/comm/conversations/{key}/recall?lines=N — one of them: its last N logged pages
 ///
 /// <para>The recall endpoint is <c>@channel/recall</c>'s buffer behind <c>@channel/recall</c>'s gates, both
 /// taken from the command rather than restated: the channel must be one the character may be told exists
@@ -35,6 +39,12 @@ namespace SharpMUSH.Server.Controllers;
 /// carries the same id, so the portal keeps one copy of a line it both pulled and was pushed. Its
 /// <c>text</c> goes through the game's installed <c>FN`COMM`TEXT</c> as the push's does
 /// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
+///
+/// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, off by
+/// default): the character's own copies only. Each route reads the session's character's log and takes no
+/// one else's name, so nobody, staff included, can read another character's pages here. With the option
+/// off they answer with nothing and <c>logging: false</c>, so the portal can say why there is no
+/// history. A page's <c>text</c> is composed through <c>FN`COMM`TEXT</c> as a channel line's is.</para>
 /// </summary>
 [ApiController]
 [Route("api/comm")]
@@ -45,10 +55,133 @@ public class CommController(
 	INotifyService notifyService,
 	IVisibleWorldProjection projection,
 	CommTextComposer textComposer,
-	IChannelMessageIdSource messageIds) : ControllerBase
+	IChannelMessageIdSource messageIds,
+	IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The most people one conversation marker may name; a page to more than this is not a conversation.</summary>
-	public const int ConversationLimit = 32;
+	public const int ConversationLimit = PageConversation.MaxOthers;
+
+	/// <summary>The most logged pages one conversation recall returns, and what it returns when not asked for fewer.</summary>
+	public const int PageRecallLimit = 500;
+
+	/// <summary>
+	/// The most conversations the listing returns, the latest: as many as the portal's feed keeps
+	/// (<c>OobCommFeed.ConversationLimit</c>), read without reading the rest.
+	/// </summary>
+	public const int PageConversationListLimit = 100;
+
+	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
+
+	/// <summary>
+	/// The character's own logged page conversations, the latest <see cref="PageConversationListLimit"/>, latest
+	/// first. Nobody else's: there is no way to
+	/// name another character's log here, and no staff variant of it.
+	/// </summary>
+	[HttpGet("conversations")]
+	public async Task<ActionResult<PageConversations>> Conversations(CancellationToken ct)
+	{
+		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+
+		var character = player.Object.DBRef;
+		if (!PageLogOn) return new PageConversations(character.ToString(), false, []);
+
+		var conversations = await mediator.Send(new GetPageConversationsQuery(character, PageConversationListLimit), ct);
+		return new PageConversations(character.ToString(), true, conversations
+			.Select(conversation => new PageConversationSummary(
+				conversation.With.Select(other => other.ToString()).ToArray(),
+				conversation.Names,
+				conversation.LastId,
+				conversation.LastAt))
+			.ToList());
+	}
+
+	/// <summary>
+	/// The last <paramref name="lines"/> pages (at most <see cref="PageRecallLimit"/>) of the character's own
+	/// conversation with the people <paramref name="key"/> names: their objids, separated by spaces or
+	/// commas, in any order, the character's own ignored (or alone, for pages to themselves). With
+	/// <c>page_log</c> off it answers with no lines and says so.
+	/// </summary>
+	[HttpGet("conversations/{key}/recall")]
+	public async Task<ActionResult<PageRecall>> ConversationRecall(string key, [FromQuery] int? lines, CancellationToken ct)
+	{
+		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
+
+		return ConversationWith(player, key.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries), selfAlone: true) switch
+		{
+			IReadOnlyList<DBRef> with => await ConversationRecallAsync(player, with,
+				lines is null or 0 ? PageRecallLimit : Math.Min(lines.Value, PageRecallLimit), ct),
+			ActionResult refusal => refusal
+		};
+	}
+
+	private async Task<ActionResult<PageRecall>> ConversationRecallAsync(SharpPlayer player, IReadOnlyList<DBRef> with,
+		int lines, CancellationToken ct)
+	{
+		if (!PageLogOn) return new PageRecall(false, []);
+
+		var pages = await mediator.Send(new GetPageLogQuery(player.Object.DBRef, with, lines), ct);
+		var handler = await textComposer.HandlerAsync(ct);
+		var recalled = new List<PageRecallLine>(pages.Count);
+		foreach (var page in pages)
+		{
+			recalled.Add(await ToRecallLineAsync(page, handler, ct));
+		}
+
+		return new PageRecall(true, recalled);
+	}
+
+	/// <summary>
+	/// The people a conversation names, by objid, without the character themselves; or the 400 refusing
+	/// it. With <paramref name="selfAlone"/>, naming only oneself is the conversation of pages to oneself.
+	/// </summary>
+	private ValueOrResponse<IReadOnlyList<DBRef>> ConversationWith(SharpPlayer player, IEnumerable<string> objids,
+		bool selfAlone)
+	{
+		var self = player.Object.DBRef;
+		var others = new List<DBRef>();
+		var namedSelf = false;
+		foreach (var objid in objids)
+		{
+			if (!DBRef.TryParse(objid, out var other) || other is not { IsObjid: true } parsed)
+			{
+				return BadRequest(new { error = $"'{objid}' is not an objid." });
+			}
+
+			if (parsed.Number == self.Number && parsed.CreationMilliseconds == self.CreationMilliseconds)
+			{
+				namedSelf = true;
+			}
+			else
+			{
+				others.Add(parsed);
+			}
+		}
+
+		if (others.Count is 0 && namedSelf && selfAlone)
+		{
+			others.Add(self);
+		}
+
+		if (others.Count is 0 or > ConversationLimit)
+		{
+			return BadRequest(new { error = $"A conversation names between 1 and {ConversationLimit} other people." });
+		}
+
+		return PageConversation.Normalize(others).ToArray();
+	}
+
+	/// <summary>A logged page shaped as its <c>comm.message</c>, <c>text</c> composed by <see cref="CommTextComposer"/>.</summary>
+	private async ValueTask<PageRecallLine> ToRecallLineAsync(SharpPage page, AnySharpObject? handler,
+		CancellationToken ct) => new(
+		page.Id,
+		page.RecipientNames,
+		page.Recipients.Select(recipient => recipient.ToString()).ToArray(),
+		page.SenderName,
+		page.Sender.ToString(),
+		await textComposer.ComposeAsync(handler, page, ct),
+		page.Style,
+		page.Timestamp.ToUnixTimeMilliseconds());
 
 	[HttpGet("channels/{channel}/recall")]
 	public async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> Recall(string channel, [FromQuery] int? lines,
@@ -149,26 +282,16 @@ public class CommController(
 	{
 		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
 
-		var self = player.Object.DBRef;
-		var others = new List<DBRef>();
-		foreach (var objid in update.With ?? [])
+		return ConversationWith(player, update.With ?? [], selfAlone: true) switch
 		{
-			if (!DBRef.TryParse(objid, out var other) || other is not { IsObjid: true } parsed)
-			{
-				return BadRequest(new { error = $"'{objid}' is not an objid." });
-			}
+			IReadOnlyList<DBRef> with => await MarkConversationAsync(player, with, update, ct),
+			ActionResult refusal => refusal
+		};
+	}
 
-			if (parsed.Number != self.Number || parsed.CreationMilliseconds != self.CreationMilliseconds)
-			{
-				others.Add(parsed);
-			}
-		}
-
-		if (others.Count is 0 or > ConversationLimit)
-		{
-			return BadRequest(new { error = $"A conversation names between 1 and {ConversationLimit} other people." });
-		}
-
+	private async Task<ActionResult<ConversationReadMarker>> MarkConversationAsync(SharpPlayer player,
+		IReadOnlyList<DBRef> others, ConversationReadMarkerUpdate update, CancellationToken ct)
+	{
 		var stored = await AdvanceAsync(player, ReadMarkerScope.Conversation(others), update.LastReadId,
 			update.LastReadAt, ct);
 		ReadMarkerScope.IsConversation(stored.Scope, out var with);
@@ -178,14 +301,17 @@ public class CommController(
 	/// <summary>
 	/// Moves the marker on. Neither part may be later than any real line: the time no later than now, and
 	/// the id no larger than the largest id issued — which can run ahead of the clock when it stops or is
-	/// set back, so the clock alone would cut a real marker down and bring read lines back as unread. A
-	/// marker set past every line would call every line until then read.
+	/// set back, so the clock alone would cut a real marker down and bring read lines back as unread. After
+	/// a restart that is the previous process's ids too, which <see cref="IChannelMessageIdSource.CeilingAsync"/>
+	/// loads before this process has handed out any. A marker set past every line would call every line
+	/// until then read.
 	/// </summary>
 	private async Task<SharpReadMarker> AdvanceAsync(SharpPlayer player, string scope, long? lastReadId,
 		DateTimeOffset lastReadAt, CancellationToken ct)
 	{
 		var now = DateTimeOffset.UtcNow;
-		var latestId = Math.Max((now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond, messageIds.Latest);
+		var latestId = Math.Max((now - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond,
+			await messageIds.CeilingAsync(ct));
 		var marker = new SharpReadMarker(scope,
 			lastReadId is { } id ? Math.Clamp(id, 0, latestId) : null,
 			lastReadAt > now ? now : lastReadAt);

@@ -4433,6 +4433,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Rien pour l'instant.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>Ce jeu ne conserve pas l'historique des messages privés : seuls ceux de cette visite sont affichés.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Retour à la scène</value>
   </data>

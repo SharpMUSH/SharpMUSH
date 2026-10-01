@@ -42,7 +42,7 @@ rule (`CacheEntryProfileTests`) is only possible because policy is data on the r
 **Decision:** `ISharpDatabase` is a composite of per-aggregate store interfaces in
 `SharpMUSH.Library/Stores`: `IDatabaseLifecycle`, `IObjectStore`, `IFlagAndPowerStore`,
 `INavigationStore`, `IAttributeStore`, `IMailStore`, `IExpandedDataStore`, `IChannelStore`,
-`IAccountStore`, `IServerStateStore`, `ISessionRecordStore`, `IReadMarkerStore`. Each provider implements the
+`IAccountStore`, `IServerStateStore`, `ISessionRecordStore`, `IReadMarkerStore`, `IPageLogStore`. Each provider implements the
 composite; each handler and service depends on the store it uses. The concrete provider is the
 one registered singleton, and every interface it serves (the stores, `IWikiStore`,
 `IRoleRegistryService`, the package, application and layout registries, the storage accessor)
@@ -143,6 +143,8 @@ these groups:
 - **Delegates:** `GetObjectNodeQuery` resolves through the cached `GetObjectNodeByNumberQuery`.
 - **Read markers:** `GetReadMarkersQuery`. A marker moves each time its character reads a line, and
   only the portal's load reads them back.
+- **Page log:** `GetPageLogQuery`, `GetPageConversationsQuery`. The log grows with every page while
+  `page_log` is on, and only the portal reads it, once per load and per conversation opened.
 
 Whether any of these should be cached is a measurement question. If one is, it gets
 `ICacheable` together with `ICacheInvalidating` on every write that can change its answer, and

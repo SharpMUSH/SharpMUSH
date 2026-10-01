@@ -4523,6 +4523,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Nothing here yet.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>This game doesn't keep page history, so only pages from this visit are shown.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Back to the scene</value>
   </data>

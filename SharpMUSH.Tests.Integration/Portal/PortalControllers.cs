@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -59,7 +60,8 @@ public static class PortalControllers
 			factory.Services.GetRequiredService<INotifyService>(),
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
 			factory.Services.GetRequiredService<CommTextComposer>(),
-			ids ?? factory.Services.GetRequiredService<IChannelMessageIdSource>())
+			ids ?? factory.Services.GetRequiredService<IChannelMessageIdSource>(),
+			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>())
 		{
 			ControllerContext = new ControllerContext
 			{

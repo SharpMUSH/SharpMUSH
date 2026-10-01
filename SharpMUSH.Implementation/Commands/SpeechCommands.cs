@@ -280,6 +280,20 @@ public partial class Commands
 				: executor.Object().Name;
 			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
 
+			// The page's id comes first, before anyone is told: taking one can write (the id source reserves
+			// a block), and a failure must not leave a page shown in a terminal that PAGE`MESSAGE never
+			// carries. The id goes out with PAGE`MESSAGE and is the one the page log keeps the page under, so
+			// the portal knows a pushed page and its logged copy for one. Then delivery, then the event, and
+			// the log write last.
+			var delivered = await PageLog.PageAsync(executor, senderName, successfulRecipients,
+				pageType switch
+				{
+					PageMessageType.Pose => "pose",
+					PageMessageType.SemiPose => "semipose",
+					_ => "say"
+				},
+				message.ToPlainText());
+
 			var incomingDefault = pageType switch
 			{
 				PageMessageType.Speech => MarkupText.Concat([
@@ -367,15 +381,16 @@ public partial class Commands
 				executor.Object().DBRef,
 				executor.Object().DBRef.ToString(),
 				string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString())),
-				pageType switch
-				{
-					PageMessageType.Pose => "pose",
-					PageMessageType.SemiPose => "semipose",
-					_ => "say"
-				},
+				delivered.Style,
 				senderName,
-				message.ToPlainText(),
-				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+				delivered.Message,
+				delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
+				delivered.Id.ToString(CultureInfo.InvariantCulture));
+
+			// Logged last, while page_log is on: for the pager and the recipients it reached, never one who
+			// refused it. The page is already delivered and pushed, so a slow or failed write holds up and
+			// loses nothing but its history; RecordAsync logs a failure rather than throwing it.
+			await PageLog.RecordAsync(delivered, [executor, .. successfulRecipients]);
 		}
 
 		return CallState.Empty;

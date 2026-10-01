@@ -28,9 +28,13 @@ namespace SharpMUSH.Client.Services;
 /// a reload and a change of device — and a key without one counts lines as they arrive, as before.
 /// <see cref="MarkRead"/>, and a line arriving for <see cref="Viewing"/>, move the server's marker to the
 /// key's last line. The markers are the session's acting character's: a feed whose viewer is someone else
-/// (the server says whose they are) uses none and writes none. A page has no id and no server history,
-/// so a conversation's marker is the time of its last page read, keyed by the others in it by objid; one
-/// with someone known only by name is not marked.</para>
+/// (the server says whose they are) uses none and writes none. A conversation's marker is keyed by the
+/// others in it by objid and holds its last page's id and time; one with someone known only by name is not
+/// marked.</para>
+/// <para><b>Page log.</b> When the game keeps one (<c>page_log</c>), the feed lists the viewer's conversations
+/// from it once the markers are read, so a reload keeps them, and pulls those whose last page is past their
+/// marker, so their unread counts survive too; a conversation is pulled again on <see cref="LoadHistoryAsync"/>.
+/// <see cref="PageLogging"/> says whether the game keeps one, for the view to say so.</para>
 /// <para><b>Clearing.</b> The store raises <see cref="IOobChannelStore.ChannelUpdated"/> for each package
 /// it drops, with nothing left to read (a new connection, or a character switch through
 /// <see cref="OobChannelStoreProxy"/>), and the feed drops everything with it, <see cref="Viewing"/>
@@ -79,6 +83,18 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private Task _sync = Task.CompletedTask;
 
+	/// <summary>By conversation, the ids of lines that came from the page log and have not been pushed.</summary>
+	private readonly Dictionary<string, HashSet<long>> _pulledOnly = new(StringComparer.Ordinal);
+
+	/// <summary>Conversations known only from the page log's listing: no page has been pushed for them.</summary>
+	private readonly HashSet<string> _listedOnly = new(StringComparer.Ordinal);
+
+	/// <summary>Whether the conversations have been listed from the page log since the markers were read.</summary>
+	private bool _conversationsListed;
+
+	/// <summary>Whether the game keeps a page log, as the server last said; null until it has.</summary>
+	private bool? _pageLogging;
+
 	public OobCommFeed(IOobChannelStore store, TimeProvider? time = null, ICommHistory? history = null)
 	{
 		_store = store;
@@ -108,10 +124,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 					var others = pair.Value.Participants
 						.Where(participant => viewer is null || !IsSame(participant, viewer))
 						.ToArray();
-					return new CommConversation(pair.Key, others.Select(other => other.Name).ToArray(),
-						others.Select(other => other.ObjId).ToArray(), UnreadFor(pair.Key), pair.Value.LastAt);
+					return (pair.Value.Recency, Conversation: new CommConversation(pair.Key,
+						others.Select(other => other.Name).ToArray(), others.Select(other => other.ObjId).ToArray(),
+						UnreadFor(pair.Key), pair.Value.LastAt));
 				})
-				.OrderByDescending(conversation => conversation.LastAt)
+				.OrderByDescending(entry => entry.Recency)
+				.Select(entry => entry.Conversation)
 				.ToArray();
 		}
 	}
@@ -141,18 +159,65 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// know that the session's character is the one this feed is for.</remarks>
 	public async Task LoadHistoryAsync(string key)
 	{
-		if (_server is null || _syncedFor is null || IsConversationKey(key)) return;
+		if (_server is null || _syncedFor is null) return;
+
+		if (IsConversationKey(key))
+		{
+			await LoadConversationAsync(_server, key);
+			return;
+		}
 
 		var generation = _generation;
 		var pulled = await _server.RecallAsync(key);
 		if (generation != _generation || pulled is not IReadOnlyList<ChannelRecallLine> lines) return;
 
 		_pulled.Add(key);
-		if (Merge(key, lines)) Changed?.Invoke();
+		if (Merge(key, lines.Select(line => new CommMessage(CommPayloadParser.ChannelKind, key, [], line.From,
+				line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList()))
+			Changed?.Invoke();
+	}
+
+	/// <summary>
+	/// Pulls a conversation's logged pages, and takes from the answer whether the game keeps a page log.
+	/// Nothing is asked for a conversation with someone known only by name: the log names people by objid.
+	/// </summary>
+	private async Task LoadConversationAsync(ICommHistory server, string key)
+	{
+		// Asked even after an earlier "off": page_log is a live option, and a game may have turned it on since.
+		if (_syncedFor is not { } viewer
+			|| !_conversations.TryGetValue(key, out var conversation) || OthersIn(conversation, viewer) is not { } others)
+			return;
+
+		var generation = _generation;
+		// As many as a conversation keeps: the server composes each line's text, so asking for more is waste.
+		var pulled = await server.ConversationRecallAsync(others, HistoryLimit);
+		if (generation != _generation || pulled is not PageRecall recall) return;
+
+		if (!recall.Logging)
+		{
+			var turnedOff = _pageLogging is not false;
+			_pageLogging = false;
+			if (ForgetLoggedHistory() || turnedOff) Changed?.Invoke();
+			return;
+		}
+
+		// Turning back on is news even when the pull adds no line: the view's logging-off note depends on it.
+		var turnedOn = _pageLogging is not true;
+		_pageLogging = true;
+		var lines = recall.Lines.Select(line => new CommMessage(CommPayloadParser.PageKind, null, line.To, line.From,
+			line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList();
+		var held = _history.TryGetValue(key, out var kept) ? kept.Select(line => line.Id).OfType<long>().ToHashSet() : [];
+		var fromTheLog = PulledOnly(key);
+		fromTheLog.UnionWith(lines.Select(line => line.Id).OfType<long>().Where(id => !held.Contains(id)));
+		var merged = Merge(key, lines);
+		if (merged || turnedOn) Changed?.Invoke();
 	}
 
 	/// <summary>The read of the markers and the pulls that follow it, once started; completed otherwise.</summary>
 	public Task Synced => _sync;
+
+	/// <inheritdoc/>
+	public bool? PageLogging => _pageLogging;
 
 	public void Dispose() => _store.ChannelUpdated -= OnChannelUpdated;
 
@@ -221,7 +286,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (string.Equals(_syncedFor, viewer, StringComparison.Ordinal))
 		{
 			var unpulled = _channels.Select(channel => channel.Name).Where(name => !_pulled.Contains(name)).ToArray();
-			if (unpulled.Length > 0) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
+			if (unpulled.Length > 0 || !_conversationsListed) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
 			return;
 		}
 
@@ -231,6 +296,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_syncedFor = null;
 		_markers.Clear();
 		_pulled.Clear();
+		_conversationsListed = false;
 		_sync = ReadMarkersAsync(_server, viewer, _generation);
 	}
 
@@ -245,10 +311,15 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_syncedFor = viewer;
 		ApplyMarkers(markers, viewer);
 		await PullAsync(_channels.Select(channel => channel.Name).ToArray());
+		await RebuildConversationsAsync(server, viewer, generation);
 		Changed?.Invoke();
 	}
 
-	/// <summary>Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>.</summary>
+	/// <summary>
+	/// Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>, and lists the
+	/// conversations if an earlier listing failed. A failed read of the markers does neither: the next list
+	/// tries again.
+	/// </summary>
 	private async Task RefreshAsync(ICommHistory server, string viewer, int generation, IReadOnlyList<string> channels)
 	{
 		var answer = await server.MarkersAsync();
@@ -260,6 +331,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		ApplyMarkers(markers, viewer);
 		await PullAsync(channels);
+		if (!_conversationsListed) await RebuildConversationsAsync(server, viewer, generation);
 		Changed?.Invoke();
 	}
 
@@ -290,6 +362,100 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (!_markers.TryGetValue(key, out var held) || held.IsBefore(marker)) _markers[key] = marker;
 	}
 
+	/// <summary>
+	/// Lists the viewer's page conversations from the server's page log, so a reload keeps them, and pulls
+	/// those whose last page is past the viewer's marker, so their unread counts survive too. One already read
+	/// to its end, or never marked, is pulled when it is opened.
+	/// </summary>
+	private async Task RebuildConversationsAsync(ICommHistory server, string viewer, int generation)
+	{
+		var answer = await server.ConversationsAsync();
+		if (generation != _generation || answer is not PageConversations list
+			|| !string.Equals(list.Character, viewer, StringComparison.Ordinal) || _viewer is not { } self)
+			return;
+
+		// A listing while page_log is off lists nothing and is not done: the next list asks again, so turning
+		// logging on brings the kept conversations back without a reconnect.
+		_conversationsListed = list.Logging;
+		_pageLogging = list.Logging;
+		if (!list.Logging)
+		{
+			ForgetLoggedHistory();
+			return;
+		}
+
+		var behind = new List<string>();
+		foreach (var summary in list.Conversations)
+		{
+			var participants = summary.With
+				.Select((objid, i) => new CommParticipant(i < summary.Names.Count ? summary.Names[i] : objid, objid))
+				.Where(other => other.ObjId != viewer)
+				.Prepend(self)
+				.ToList();
+			var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Distinct().Order(StringComparer.Ordinal));
+			if (_conversations.GetValueOrDefault(key) is { } known)
+			{
+				_conversations[key] = known.Recency >= summary.LastId
+					? known
+					: known with { LastAt = summary.LastAt, Recency = summary.LastId };
+			}
+			else
+			{
+				_conversations[key] = new Conversation(participants, summary.LastAt, summary.LastId);
+				_listedOnly.Add(key);
+			}
+
+			if (_markers.TryGetValue(key, out var marker) && marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
+				behind.Add(key);
+		}
+
+		DropLeastRecentConversations();
+		foreach (var key in behind.Where(_conversations.ContainsKey))
+		{
+			await LoadConversationAsync(server, key);
+		}
+	}
+
+	/// <summary>The ids of a conversation's lines that came from the page log and were never pushed.</summary>
+	private HashSet<long> PulledOnly(string key)
+	{
+		if (!_pulledOnly.TryGetValue(key, out var ids)) _pulledOnly[key] = ids = [];
+		return ids;
+	}
+
+	/// <summary>
+	/// What the page log gave the feed, taken back out now the server says the log is off (it hides the log
+	/// then): each pulled line never pushed, and each conversation known only from the listing that has no
+	/// line left. Pages pushed live stay. The next list asks for the conversations again, so turning logging
+	/// back on brings them back. Answers whether anything went.
+	/// </summary>
+	private bool ForgetLoggedHistory()
+	{
+		var changed = false;
+		foreach (var (key, ids) in _pulledOnly)
+		{
+			if (ids.Count > 0 && _history.TryGetValue(key, out var lines)
+				&& lines.RemoveAll(line => line.Id is { } id && ids.Contains(id)) > 0)
+			{
+				changed = true;
+				Recount(key);
+			}
+		}
+
+		_pulledOnly.Clear();
+		foreach (var key in _listedOnly.Where(key => !_history.TryGetValue(key, out var lines) || lines.Count == 0).ToArray())
+		{
+			_conversations.Remove(key);
+			_history.Remove(key);
+			_unread.Remove(key);
+			changed = true;
+		}
+
+		_listedOnly.Clear();
+		_conversationsListed = false;
+		return changed;
+	}
+
 	private async Task PullAsync(IReadOnlyList<string> channels)
 	{
 		foreach (var channel in channels)
@@ -303,22 +469,17 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// whole is put back in the order the lines were sent. Then the key's unread count is taken again from
 	/// its marker, if it has one, and a key being viewed has its marker moved to the new last line.
 	/// </summary>
-	private bool Merge(string key, IReadOnlyList<ChannelRecallLine> pulled)
+	private bool Merge(string key, IReadOnlyList<CommMessage> pulled)
 	{
 		if (!_history.TryGetValue(key, out var lines)) _history[key] = lines = [];
 
 		var held = lines.Select(line => line.Id).OfType<long>().ToHashSet();
-		var added = pulled
-			.Where(line => held.Add(line.Id))
-			.Select(line => new CommMessage(CommPayloadParser.ChannelKind, key, [], line.From, line.FromObjid, line.Text,
-				DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id))
-			.ToList();
+		var added = pulled.Where(line => line.Id is not { } id || held.Add(id)).ToList();
 		if (added.Count == 0) return false;
 
 		lines.AddRange(added);
-		// Stable: lines sent in the same millisecond keep the order of their ids, and those without one
-		// keep the order they arrived in.
-		var ordered = lines.OrderBy(line => line.Timestamp).ThenBy(line => line.Id ?? long.MaxValue).ToList();
+		// Stable: lines with the same key keep the order they arrived in.
+		var ordered = lines.OrderBy(OrderKey).ToList();
 		lines.Clear();
 		lines.AddRange(ordered.Skip(Math.Max(0, ordered.Count - HistoryLimit)));
 
@@ -326,6 +487,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)) AdvanceMarker(key);
 		return true;
 	}
+
+	/// <summary>
+	/// Where a line sorts: its id where it has one, since ids keep rising when the clock steps back; else the
+	/// microsecond it was sent, the scale ids are taken on, so a line without one falls among them by time.
+	/// </summary>
+	private static long OrderKey(CommMessage line) =>
+		line.Id ?? (line.Timestamp - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
 
 	/// <summary>
 	/// A key's unread count from its marker: the lines after it from someone else. A key without one keeps
@@ -370,13 +538,22 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			return;
 		}
 
-		if (!_conversations.TryGetValue(key, out var conversation)) return;
+		if (!_conversations.TryGetValue(key, out var conversation) || OthersIn(conversation, viewer) is not { } others) return;
 
+		_ = WriteConversationMarkerAsync(_server, key, new ConversationReadMarkerUpdate(others, last.Id, last.Timestamp),
+			_generation);
+	}
+
+	/// <summary>
+	/// The others in a conversation by objid, as the server names a conversation: the viewer alone for pages
+	/// to themselves; null when someone in it is known only by name.
+	/// </summary>
+	private static IReadOnlyList<string>? OthersIn(Conversation conversation, string viewer)
+	{
 		var others = conversation.Participants.Where(participant => participant.ObjId != viewer).ToArray();
-		if (others.Length == 0 || others.Any(participant => participant.ObjId is null)) return;
+		if (others.Length > CommLimits.ConversationMaxOthers || others.Any(participant => participant.ObjId is null)) return null;
 
-		_ = WriteConversationMarkerAsync(_server, key, new ConversationReadMarkerUpdate(
-			others.Select(participant => participant.ObjId!).ToArray(), null, last.Timestamp), _generation);
+		return others.Length == 0 ? [viewer] : others.Select(participant => participant.ObjId!).ToArray();
 	}
 
 	private async Task WriteChannelMarkerAsync(ICommHistory server, string key, ReadMarkerUpdate update, int generation)
@@ -406,12 +583,16 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var message = entry.Message;
 		var viewer = Viewer();
 
-		// Already held — pulled from the server, or pushed before and replayed on a resumed connection.
-		if (message.Id is { } id && message.Channel is { } channel
-			&& _history.TryGetValue(channel, out var held) && held.Any(line => line.Id == id))
-			return false;
-
 		var key = message.Channel ?? ConversationFor(entry);
+		if (message.Channel is null)
+		{
+			_listedOnly.Remove(key);
+			if (message.Id is { } pushed && _pulledOnly.TryGetValue(key, out var fromTheLog)) fromTheLog.Remove(pushed);
+		}
+
+		// Already held — pulled from the server, or pushed before and replayed on a resumed connection.
+		if (message.Id is { } id && _history.TryGetValue(key, out var held) && held.Any(line => line.Id == id))
+			return false;
 
 		if (!_history.TryGetValue(key, out var lines)) _history[key] = lines = [];
 		lines.Add(message);
@@ -438,11 +619,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Order(StringComparer.Ordinal));
-		var lastAt = _conversations.TryGetValue(key, out var known) && known.LastAt > entry.Message.Timestamp
-			? known.LastAt
-			: entry.Message.Timestamp;
-
-		_conversations[key] = new Conversation(participants, lastAt);
+		// Who it is with comes from this page; when it last spoke, from whichever page is the later by id.
+		var recency = OrderKey(entry.Message);
+		_conversations[key] = _conversations.GetValueOrDefault(key) is { } known && known.Recency > recency
+			? new Conversation(participants, known.LastAt, known.Recency)
+			: new Conversation(participants, entry.Message.Timestamp, recency);
 		return key;
 	}
 
@@ -451,11 +632,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var excess = _conversations.Count - ConversationLimit;
 		if (excess <= 0) return;
 
-		foreach (var key in _conversations.OrderBy(pair => pair.Value.LastAt).Take(excess).Select(pair => pair.Key).ToArray())
+		foreach (var key in _conversations.OrderBy(pair => pair.Value.Recency).Take(excess).Select(pair => pair.Key).ToArray())
 		{
 			_conversations.Remove(key);
 			_history.Remove(key);
 			_unread.Remove(key);
+			_pulledOnly.Remove(key);
+			_listedOnly.Remove(key);
 		}
 	}
 
@@ -499,7 +682,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private void Clear()
 	{
 		if (_channels.Count == 0 && _history.Count == 0 && _unread.Count == 0 && _conversations.Count == 0
-			&& _viewer is null && _viewing is null && _markers.Count == 0 && _syncedFor is null && _syncingFor is null)
+			&& _viewer is null && _viewing is null && _markers.Count == 0 && _syncedFor is null && _syncingFor is null
+			&& _pageLogging is null)
 			return;
 
 		_generation++;
@@ -509,6 +693,10 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_syncedFor = null;
 		_syncingFor = null;
 		_sync = Task.CompletedTask;
+		_pageLogging = null;
+		_conversationsListed = false;
+		_pulledOnly.Clear();
+		_listedOnly.Clear();
 
 		_channels = [];
 		_viewer = null;
@@ -531,6 +719,10 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			Id is { } mine && id is { } theirs ? theirs > mine : at > At;
 	}
 
-	/// <summary>A conversation's participants as its latest page named them, the viewer included.</summary>
-	private sealed record Conversation(IReadOnlyList<CommParticipant> Participants, DateTimeOffset LastAt);
+	/// <summary>
+	/// A conversation's participants as its latest page named them, the viewer included, and its latest
+	/// page: when it was sent, and its <see cref="OrderKey"/> (the id, which keeps rising when the clock steps
+	/// back), by which conversations are ordered and the least recent dropped.
+	/// </summary>
+	private sealed record Conversation(IReadOnlyList<CommParticipant> Participants, DateTimeOffset LastAt, long Recency);
 }

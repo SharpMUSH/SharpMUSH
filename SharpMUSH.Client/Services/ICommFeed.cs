@@ -4,8 +4,9 @@ namespace SharpMUSH.Client.Services;
 public sealed record CommChannel(string Name, int Unread, bool Joined = true);
 
 /// <summary>One channel line or page, as the viewer received it.</summary>
-/// <param name="Id">The line's id where it has one — a channel line from the server's buffer, pulled or
-/// pushed. Two copies of a line with the same id are one line. Pages have none.</param>
+/// <param name="Id">The line's id where it has one: a channel line or a page, pulled from the server or
+/// pushed. Two copies of a line with the same id are one line. A game whose comm-feed package predates ids
+/// sends none.</param>
 public sealed record CommMessage(string Kind, string? Channel, IReadOnlyList<string> To, string From, string? FromObjId, string Text, DateTimeOffset Timestamp, long? Id = null);
 
 /// <summary>A page conversation: the other people in it (one, or several for a group page).</summary>
@@ -23,10 +24,16 @@ public interface ICommFeed
 	void MarkRead(string key);
 
 	/// <summary>
-	/// Pulls a channel's recent lines from the server and files them with what has been pushed, keeping one
-	/// copy of a line known by its id. A conversation has no server history yet, and pulls nothing.
+	/// Pulls a channel's recent lines, or a conversation's logged pages, from the server and files them with
+	/// what has been pushed, keeping one copy of a line known by its id.
 	/// </summary>
 	Task LoadHistoryAsync(string key);
+
+	/// <summary>
+	/// Whether the game keeps a page log (<c>page_log</c>), as the server last said; null until it has. With
+	/// it off a conversation holds only the pages that arrived since the portal loaded.
+	/// </summary>
+	bool? PageLogging { get; }
 
 	/// <summary>
 	/// The key the viewer is looking at, or null. Its lines don't count as unread; setting it marks the

@@ -5178,6 +5178,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Aún no hay nada.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>Este juego no guarda el historial de mensajes privados, así que solo se muestran los de esta visita.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Volver a la escena</value>
   </data>

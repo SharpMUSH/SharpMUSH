@@ -20,6 +20,11 @@ public interface ITx
 	/// <summary>All entries whose key is greater than or equal to <paramref name="startKey"/>, in key order, with no
 	/// prefix restriction — the rest of the table from that point on.</summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey);
+	/// <summary>
+	/// All entries whose key starts with <paramref name="prefix"/>, in reverse key order (last first): a
+	/// caller wanting the newest few of a time-ordered prefix reads only those.
+	/// </summary>
+	IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix);
 	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
 	/// <summary>

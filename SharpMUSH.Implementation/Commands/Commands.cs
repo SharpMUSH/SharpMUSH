@@ -85,6 +85,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
 
+	private IPageLogService PageLog { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -134,6 +136,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
 		IBooleanExpressionParser booleanExpressionParser,
+		IPageLogService pageLog,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -175,6 +178,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
 		BooleanExpressionParser = booleanExpressionParser;
+		PageLog = pageLog;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

@@ -67,6 +67,27 @@ public class ChannelMessageIdTests
 	}
 
 	/// <summary>
+	/// The bound on a read marker's id after a restart: every id the old process handed out, which can be
+	/// ahead of this process's clock, and nothing this process hands out next.
+	/// </summary>
+	[Test]
+	public async Task TheCeiling_AfterARestart_CoversEveryIdTheOldProcessIssued_BeforeAnyNewOne()
+	{
+		var data = new ServerData();
+		var before = new ChannelMessageIdSource(data, new StoppedClock(At));
+		var issued = await before.NextAsync();
+
+		// A new process whose clock is behind, asked for the ceiling before it has issued anything: a
+		// marker on the old process's id must not be cut down to the clock.
+		var after = new ChannelMessageIdSource(data, new StoppedClock(At.AddMinutes(-10)));
+
+		var ceiling = await after.CeilingAsync();
+		await Assert.That(ceiling).IsGreaterThanOrEqualTo(issued);
+		await Assert.That(await after.NextAsync()).IsGreaterThan(ceiling)
+			.Because("a marker at the ceiling must not call a line issued after it read");
+	}
+
+	/// <summary>
 	/// The clock going back across a restart: the new process must not hand out ids below those the old
 	/// one did, or a persisted read marker calls every new line read.
 	/// </summary>

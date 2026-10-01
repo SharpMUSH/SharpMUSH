@@ -5178,6 +5178,9 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Пока ничего нет.</value>
   </data>
+  <data name="NavPlayPageLogOff" xml:space="preserve">
+    <value>Эта игра не хранит историю личных сообщений, поэтому показаны только сообщения за этот визит.</value>
+  </data>
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Вернуться к сцене</value>
   </data>
