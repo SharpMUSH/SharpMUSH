@@ -170,8 +170,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	}
 
 	/// <summary>
-	/// Pulls a conversation's logged pages. Nothing is asked while the game is known to keep no page log, or
-	/// for a conversation with someone known only by name: the log names people by objid.
+	/// Pulls a conversation's logged pages, and takes from the answer whether the game keeps a page log.
+	/// Nothing is asked for a conversation with someone known only by name: the log names people by objid.
 	/// </summary>
 	private async Task LoadConversationAsync(ICommHistory server, string key)
 	{
@@ -195,10 +195,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			return;
 		}
 
+		// Turning back on is news even when the pull adds no line: the view's logging-off note depends on it.
+		var turnedOn = _pageLogging is not true;
 		_pageLogging = true;
-		if (Merge(key, recall.Lines.Select(line => new CommMessage(CommPayloadParser.PageKind, null, line.To, line.From,
-				line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList()))
-			Changed?.Invoke();
+		var merged = Merge(key, recall.Lines.Select(line => new CommMessage(CommPayloadParser.PageKind, null, line.To,
+			line.From, line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList());
+		if (merged || turnedOn) Changed?.Invoke();
 	}
 
 	/// <summary>The read of the markers and the pulls that follow it, once started; completed otherwise.</summary>

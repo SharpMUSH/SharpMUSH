@@ -152,12 +152,30 @@ public partial class LightningDatabase
 			emptied.Add(Convert.ToBase64String(ConversationPrefix(logKey)));
 		}
 
-		// A conversation with no page left in it is no longer one of the character's conversations.
+		// A conversation with no page left in it is no longer one of the character's conversations. One with
+		// pages left is summarised again from the newest of them: ids keep rising when the clock steps back,
+		// so the page with the highest id can be the oldest by time, and be the one just purged.
 		foreach (var prefix in emptied.Select(Convert.FromBase64String))
 		{
-			if (!tx.Range(Tables.PageLog, prefix).Any())
+			var conversationKey = prefix.AsSpan(0, prefix.Length - 1);
+			var newest = tx.RangeReverse(Tables.PageLog, prefix).Select(entry => entry.Value).FirstOrDefault();
+			if (newest is null)
 			{
-				tx.Delete(Tables.PageConversation, prefix.AsSpan(0, prefix.Length - 1));
+				tx.Delete(Tables.PageConversation, conversationKey);
+			}
+			else if (tx.TryGet(Tables.PageConversation, conversationKey, out var bytes))
+			{
+				var summary = Codec.Deserialize<PageConversationRecord>(bytes);
+				var page = ToPage(Codec.Deserialize<PageLogRecord>(newest));
+				if (summary.LastId != page.Id)
+				{
+					tx.Put(Tables.PageConversation, conversationKey, Codec.Serialize(summary with
+					{
+						Names = summary.With.Select(other => page.NameOf(DBRef.Parse(other))).ToArray(),
+						LastId = page.Id,
+						LastAtMs = page.Timestamp.ToUnixTimeMilliseconds()
+					}));
+				}
 			}
 		}
 

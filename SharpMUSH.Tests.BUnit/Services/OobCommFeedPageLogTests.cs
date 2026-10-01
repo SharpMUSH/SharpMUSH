@@ -257,6 +257,30 @@ public class OobCommFeedPageLogTests
 	}
 
 	/// <summary>
+	/// The view starts the pull without awaiting it and redraws on <see cref="OobCommFeed.Changed"/>, so the
+	/// logging-off note goes away only if the feed says something changed, even when the pull added no line.
+	/// </summary>
+	[Test]
+	public async Task Page_logging_turning_back_on_raises_Changed_even_with_nothing_new()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, false, []);
+		history.PageLogging = false;
+		await LoadAsync(store, feed);
+		store.Set(CommPayloadParser.MessagePackage, PageFromTomas(21, "live", 21));
+		await feed.LoadHistoryAsync(TomasKey);
+
+		history.PageLogging = true;
+		history.PageLog[Tomas] = [Logged(21, "live", 21)];
+		var changes = 0;
+		feed.Changed += () => changes++;
+		await feed.LoadHistoryAsync(TomasKey);
+
+		await Assert.That(feed.PageLogging).IsTrue();
+		await Assert.That(changes).IsEqualTo(1);
+	}
+
+	/// <summary>
 	/// As for channels: without the markers, conversations would be filed uncounted, so a failed read of the
 	/// markers neither lists nor pulls any; the next list tries again.
 	/// </summary>

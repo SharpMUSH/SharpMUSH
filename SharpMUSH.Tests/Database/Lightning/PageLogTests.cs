@@ -250,6 +250,26 @@ public class PageLogTests
 	}
 
 	/// <summary>
+	/// Ids keep rising when the clock steps back, so the page with the highest id can be the oldest by time.
+	/// Purging it leaves the conversation, and its summary then names the newest page still kept.
+	/// </summary>
+	[Test]
+	public async Task Purging_TheLatestByIdButOldestByTime_RefreshesTheSummary()
+	{
+		var ilsa = await NewPlayer("Ilsa");
+		var wren = await NewPlayer("Wren");
+		var kept = await Send(Page(ilsa, "Ilsa", [wren], ["Wren"], "kept", At.AddDays(2)) with { Id = 10 });
+		await Send(Page(wren, "Wren Renamed", [ilsa], ["Ilsa"], "old by the clock", At) with { Id = 20 });
+
+		await _db.PurgePageLogAsync(At.AddDays(1));
+
+		var summary = (await _db.GetPageConversationsAsync(ilsa)).Single();
+		await Assert.That(summary.LastId).IsEqualTo(kept.Id);
+		await Assert.That(summary.LastAt).IsEqualTo(kept.Timestamp);
+		await Assert.That(summary.Names.Single()).IsEqualTo("Wren").Because("the names are the kept page's, not the purged one's");
+	}
+
+	/// <summary>
 	/// The recall reads a conversation from its newest page back, and stops at the lines asked for: the
 	/// store's reverse range yields a prefix's entries last first, and nothing either side of it.
 	/// </summary>
