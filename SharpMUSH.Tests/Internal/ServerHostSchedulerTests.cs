@@ -6,7 +6,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using ZiggyCreatures.Caching.Fusion;
+using SharpMUSH.Database.Lightning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -40,29 +40,26 @@ public class ServerHostSchedulerTests
 		await Assert.That(Standard.Services.GetRequiredService<ILoggerFactory>())
 			.IsSameReferenceAs(Reality.Services.GetRequiredService<ILoggerFactory>());
 	}
+
+	/// <summary>
+	/// No two hosts open one database. The Reality host once shared the session's world, and booting it
+	/// mid-run fired every object's @STARTUP under whatever tests were running (#1492).
+	/// </summary>
 	[Test]
-	public async Task ExistingHostVariantsShareWorldAndInvalidateEachOthersReads()
+	public async Task HostVariantsEachOpenAWorldOfTheirOwn()
 	{
-		await Assert.That(Standard.Services.GetRequiredService<ISharpDatabase>())
-			.IsSameReferenceAs(Reality.Services.GetRequiredService<ISharpDatabase>());
-		await Assert.That(Standard.Services.GetRequiredService<IFusionCache>())
-			.IsSameReferenceAs(Reality.Services.GetRequiredService<IFusionCache>());
-		await Assert.That(Standard.Services.GetRequiredService<ObjectVersions>())
-			.IsSameReferenceAs(Reality.Services.GetRequiredService<ObjectVersions>());
+		await Assert.That(Reality.Services.GetRequiredService<ISharpDatabase>())
+			.IsNotSameReferenceAs(Standard.Services.GetRequiredService<ISharpDatabase>());
+		await Assert.That(Reality.Services.GetRequiredService<LightningWorldPath>().Value)
+			.IsNotEqualTo(Standard.Services.GetRequiredService<LightningWorldPath>().Value);
 
 		var standard = Standard.Services.GetRequiredService<IMediator>();
-		var reality = Reality.Services.GetRequiredService<IMediator>();
 		var owner = (await standard.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
-		var roomId = await standard.Send(new CreateRoomCommand(
-			TestIsolationHelpers.GenerateUniqueName("SharedWorld"), owner));
-		var room = (await standard.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
-		var fromReality = (await reality.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
-		await Assert.That(fromReality.Object().Name).IsEqualTo(room.Object().Name);
+		var name = TestIsolationHelpers.GenerateUniqueName("OwnWorld");
+		var roomId = await standard.Send(new CreateRoomCommand(name, owner));
 
-		var renamed = TestIsolationHelpers.GenerateUniqueName("RenamedWorld");
-		await reality.Send(new SetNameCommand(fromReality, MarkupText.Plain(renamed)));
-		var refreshed = (await standard.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
-		await Assert.That(refreshed.Object().Name).IsEqualTo(renamed);
+		// The same dbref in the other world is something else or nothing at all.
+		var elsewhere = await Reality.Services.GetRequiredService<IMediator>().Send(new GetObjectNodeQuery(roomId));
+		await Assert.That(elsewhere is AnySharpObject other && other.Object().Name == name).IsFalse();
 	}
-
 }

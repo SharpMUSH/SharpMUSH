@@ -10,6 +10,7 @@ using Quartz;
 using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Services;
@@ -25,7 +26,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string configFile,
 	INotifyService? notifier,
 	string sqlPlatform = "mysql",
-	IServiceProvider? sharedWorldServices = null) :
+	string? worldPath = null) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	private readonly string _schedulerName = $"sharpmush-tests-{Guid.NewGuid():N}";
@@ -69,29 +70,14 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			options => options.EnableBestPracticesAdvisor = false));
 		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
 
-		if (sharedWorldServices is not null)
+		if (worldPath is not null)
 		{
+			// One database, one host: a host that needs a configuration of its own gets a world of its own
+			// rather than opening the session's.
 			builder.ConfigureTestServices(services =>
 			{
-				// Opening a second LMDB environment on one path in the same process is unsafe.
-				// Reuse every registered provider contract as an externally owned instance, so
-				// secondary-host disposal cannot close the primary host's database through an alias.
-				var database = sharedWorldServices.GetRequiredService<ISharpDatabase>();
-				var providerTypes = database.GetType().GetInterfaces().Append(database.GetType())
-					.Where(type => type != typeof(IApplicationRegistryService)
-						&& services.Any(descriptor => !descriptor.IsKeyedService && descriptor.ServiceType == type))
-					.ToArray();
-				foreach (var type in providerTypes)
-				{
-					services.RemoveAll(type);
-					services.AddSingleton(type, database);
-				}
-				// Keep the application-registry decorator host-local, wrapping the shared provider.
-				// All Mediator readers/writers must use one cache and invalidation version ledger.
-				services.RemoveAll<IFusionCache>();
-				services.AddSingleton(sharedWorldServices.GetRequiredService<IFusionCache>());
-				services.RemoveAll<ObjectVersions>();
-				services.AddSingleton(sharedWorldServices.GetRequiredService<ObjectVersions>());
+				services.RemoveAll<LightningWorldPath>();
+				services.AddSingleton(new LightningWorldPath(worldPath));
 			});
 		}
 

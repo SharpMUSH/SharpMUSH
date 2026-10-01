@@ -24,10 +24,6 @@ public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
-	// Shares the primary world, so a job runner in either host would fire the jobs these tests write,
-	// on the real clock and with real authorization.
-	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
-	public required RealityGameServerFactory SharedWorldHost { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 	private sealed class Clock : TimeProvider
 	{
