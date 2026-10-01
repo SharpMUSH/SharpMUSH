@@ -362,4 +362,26 @@ public class WikiServiceTests : TrackingTestContext
 		await service.GetRecentChangesAsync(10);
 		await Assert.That(handler.CallsTo("/api/wiki/recent?count=10")).IsEqualTo(2);
 	}
+
+	/// <summary>
+	/// The server pages over the rows this caller may see (#1478), so a batch shorter than the one
+	/// asked for is the last: the listing does not spend a request to learn that the next is empty.
+	/// </summary>
+	[Test]
+	public async Task GetAllByCategoryAsync_AShortBatchIsTheLast()
+	{
+		var calls = 0;
+		var handler = new CapturingHttpHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent(
+				calls++ == 0 ? $"[{PageDtoJson(slug: "a")},{PageDtoJson(slug: "b")}]" : "[]",
+				Encoding.UTF8, "application/json")
+		});
+		var service = BuildService(handler, out _);
+
+		var pages = await service.GetAllByCategoryAsync("General");
+
+		await Assert.That(pages.Select(p => p.Slug)).IsEquivalentTo(["a", "b"]);
+		await Assert.That(handler.Requests.Count).IsEqualTo(1);
+	}
 }

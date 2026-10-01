@@ -50,9 +50,21 @@ public class TextFileService : ITextFileService
 		}
 	}
 
+	/// <summary>The configured text-files directory, resolved (see <see cref="ResolveDirectory"/>).</summary>
+	private string BaseDirectory => ResolveDirectory(_options.Value.TextFile.TextFilesDirectory, AppContext.BaseDirectory);
+
+	/// <summary>
+	/// A relative <paramref name="configured"/> directory is the one beside the server binary, where the build
+	/// copies the help files — not the process's working directory, which is the repository root under
+	/// <c>dotnet run --project</c> and only happens to be the binary's folder in the Docker image. An absolute
+	/// setting is used as given.
+	/// </summary>
+	public static string ResolveDirectory(string configured, string serverDirectory) =>
+		Path.IsPathRooted(configured) ? configured : Path.Join(serverDirectory, configured);
+
 	public Task<IEnumerable<string>> ListCategoriesAsync()
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 		if (!Directory.Exists(baseDir))
 		{
 			_logger.LogWarning("Text files directory does not exist: {Directory}", baseDir);
@@ -131,12 +143,11 @@ public class TextFileService : ITextFileService
 
 	public Task<IEnumerable<string>> ListFilesAsync(string? category = null)
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (category != null)
 		{
-			var categoryPath = Path.Combine(baseDir, category);
-			if (!Directory.Exists(categoryPath))
+			if (PathInside(baseDir, category) is not { } categoryPath || !Directory.Exists(categoryPath))
 			{
 				return Task.FromResult(Enumerable.Empty<string>());
 			}
@@ -270,7 +281,7 @@ public class TextFileService : ITextFileService
 	/// </remarks>
 	public async Task ReindexAsync()
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (!Directory.Exists(baseDir))
 		{
@@ -309,10 +320,7 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
-		var categoryPath = Path.Combine(baseDir, category);
-
-		if (!Directory.Exists(categoryPath))
+		if (PathInside(BaseDirectory, category) is not { } categoryPath || !Directory.Exists(categoryPath))
 		{
 			return null;
 		}
@@ -463,25 +471,44 @@ public class TextFileService : ITextFileService
 			return null;
 		}
 
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (category != null)
 		{
-			var categoryPath = Path.Combine(baseDir, category);
-			var filePath = Path.Combine(categoryPath, fileName);
-			return File.Exists(filePath) ? filePath : null;
+			return PathInside(baseDir, category, fileName) is { } filePath && File.Exists(filePath) ? filePath : null;
 		}
 
 		var categories = Directory.GetDirectories(baseDir);
 		foreach (var cat in categories)
 		{
-			var filePath = Path.Combine(cat, fileName);
-			if (File.Exists(filePath))
+			if (PathInside(baseDir, Path.GetFileName(cat), fileName) is { } filePath && File.Exists(filePath))
 			{
 				return filePath;
 			}
 		}
 
 		return null;
+	}
+
+	/// <summary>
+	/// <paramref name="names"/> joined under <paramref name="baseDir"/>, or null when the result is not strictly
+	/// inside it. The names come from a caller's file reference (<c>textfile()</c>, help), so a <c>..</c> or a
+	/// rooted name must not reach a file beside the text-files directory. <see cref="Path.Combine(string[])"/>
+	/// would let a rooted name replace the directory outright, hence the rooted check before joining.
+	/// </summary>
+	internal static string? PathInside(string baseDir, params ReadOnlySpan<string> names)
+	{
+		foreach (var name in names)
+		{
+			if (Path.IsPathRooted(name))
+			{
+				return null;
+			}
+		}
+
+		var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(baseDir)) + Path.DirectorySeparatorChar;
+		var full = Path.GetFullPath(Path.Join(root, string.Join(Path.DirectorySeparatorChar, names)));
+		var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+		return full.Length > root.Length && full.StartsWith(root, comparison) ? full : null;
 	}
 }

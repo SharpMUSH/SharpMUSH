@@ -73,6 +73,22 @@ public class TextFileServiceTests
 		}
 	}
 
+	/// <summary>
+	/// The build copies the help files next to the server binary (TextFiles/ under bin/), and the default
+	/// setting is the relative "TextFiles". Resolved against the working directory it only worked where
+	/// the process starts in the binary's folder (the Docker image's /app): `dotnet run --project
+	/// SharpMUSH.Server` from the repository root found no help at all, and created an empty
+	/// TextFiles/ in the repository.
+	/// </summary>
+	[Test]
+	public async Task ARelativeDirectory_IsTheOneBesideTheServer_NotTheWorkingDirectory()
+	{
+		await Assert.That(TextFileService.ResolveDirectory("TextFiles", "/srv/sharpmush/bin"))
+			.IsEqualTo(Path.Join("/srv/sharpmush/bin", "TextFiles"));
+		await Assert.That(TextFileService.ResolveDirectory("/data/help", "/srv/sharpmush/bin"))
+			.IsEqualTo("/data/help").Because("an absolute setting is used as given");
+	}
+
 	// SharpMUSHOptions is a record with many required properties, so load the checked-in minimal fixture
 	// and override only what matters here — the same pattern as SitelockGuardTests.
 	private static readonly SharpMUSHOptions BaseConfig =
@@ -143,6 +159,37 @@ public class TextFileServiceTests
 		}
 		finally
 		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	/// <summary>
+	/// A file reference is a category and a file name joined under the text-files directory. Neither may
+	/// climb out of it with <c>..</c>, nor replace it by being rooted: the file sits beside the directory,
+	/// readable to the process, and must stay unreachable.
+	/// </summary>
+	[Test]
+	public async Task AReferenceOutsideTheTextFilesDirectory_IsNotFound()
+	{
+		var (service, root) = BuildServiceOverTempFiles(categories: 1, entriesPerCategory: 1);
+		var secretName = $"sharpmush-outside-{Guid.NewGuid():N}.txt";
+		var secret = Path.Join(Path.GetDirectoryName(root)!, secretName);
+		await File.WriteAllTextAsync(secret, "outside the text files");
+		try
+		{
+			await Assert.That(await service.GetFileContentAsync("cat0/entries.md")).IsNotNull()
+				.Because("a name inside the directory still resolves");
+
+			await Assert.That(await service.GetFileContentAsync($"../{secretName}")).IsNull();
+			await Assert.That(await service.GetFileContentAsync($"cat0/../../{secretName}")).IsNull();
+			await Assert.That(await service.GetFileContentAsync($"cat0/{secret}")).IsNull()
+				.Because("a rooted file name would replace the directory outright");
+			await Assert.That(await service.ListFilesAsync("..")).DoesNotContain(secretName);
+			await Assert.That(await service.ListFilesAsync(Path.GetDirectoryName(root)!)).DoesNotContain(secretName);
+		}
+		finally
+		{
+			File.Delete(secret);
 			Directory.Delete(root, recursive: true);
 		}
 	}
