@@ -27,9 +27,11 @@ public class CommandTextSubstitutionTests
 	[Before(Test)]
 	public async Task CreateActor()
 	{
-		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "CmdText");
+		// Created in its room, not teleported there: the look after a move is queued and could otherwise
+		// land among what a test counts.
 		_room = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
-		await God($"@tel {_actor.DbRef}={_room}");
+		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "CmdText",
+			DBRef.Parse(_room.Trim()));
 	}
 
 	[After(Test)]
