@@ -30,7 +30,7 @@ public partial class Commands
 			var mainNews = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, "news");
 			if (mainNews != null)
 			{
-				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainNews.Markdown), executor);
+				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainNews.Markdown, corpus: HelpCorpora.News), executor);
 			}
 			else
 			{
@@ -53,7 +53,7 @@ public partial class Commands
 				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, matches[0]);
 				if (searchContent != null)
 				{
-					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
+					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown, corpus: HelpCorpora.News), executor);
 				}
 			}
 			else
@@ -69,7 +69,7 @@ public partial class Commands
 
 		if (resolution is HelpEntry entry)
 		{
-			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown, corpus: HelpCorpora.News), executor);
 		}
 		else if (resolution is HelpCandidates candidates)
 		{
@@ -112,7 +112,7 @@ public partial class Commands
 			var mainAhelp = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, "ahelp");
 			if (mainAhelp != null)
 			{
-				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainAhelp.Markdown), executor);
+				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainAhelp.Markdown, corpus: HelpCorpora.Admin), executor);
 			}
 			else
 			{
@@ -135,7 +135,7 @@ public partial class Commands
 				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, matches[0]);
 				if (searchContent != null)
 				{
-					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
+					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown, corpus: HelpCorpora.Admin), executor);
 				}
 			}
 			else
@@ -151,7 +151,7 @@ public partial class Commands
 
 		if (resolution is HelpEntry entry)
 		{
-			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown, corpus: HelpCorpora.Admin), executor);
 		}
 		else if (resolution is HelpCandidates candidates)
 		{
@@ -177,3 +177,4 @@ public partial class Commands
 		return await Ahelp(parser, attr);
 	}
 }
+

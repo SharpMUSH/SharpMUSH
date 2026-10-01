@@ -110,6 +110,71 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  help-integrity:
+    needs: [build]
+    runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+
+      - name: Download test build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: SharpMUSH.Tests
+          path: ${{ runner.temp }}/test-build
+
+      - name: Download shared test build support
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
+
+      - name: Validate help article structure and corpus links
+        timeout-minutes: 5
+        run: >-
+          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/HelpArticleTests/*"
+
+      - name: Validate help lookup and presentation consumers
+        timeout-minutes: 5
+        run: |
+          for help_suite in RegexHelpExamplesTests TextFileServiceTests CompatibilityProfileStructureTests TerminalFrameRendererTests RecursiveMarkdownRendererTests WikiSyntaxInGameRenderingTests MarkupOutputRendererTests HelpCommandTests TextFunctionUnitTests; do
+            dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/$help_suite/*"
+          done
+
+      - name: Generate editor data from the shared article model
+        env:
+          SHARPMUSH_REGENERATE_CLIENT_DATA: "1"
+        run: >-
+          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/ClientDataGenerationTests/*"
+
+      - name: Upload generated editor data
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: generated-editor-data
+          path: SharpMUSH.Client/wwwroot/data/mush-*.json
+          retention-days: 7
+
+      - name: Verify checked-in editor data matches the articles
+        run: git diff --exit-code --stat -- SharpMUSH.Client/wwwroot/data
+
   test:
     needs: [build]
     runs-on: ubuntu-latest

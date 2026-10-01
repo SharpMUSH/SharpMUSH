@@ -40,9 +40,9 @@ public class CompatibilityProfileExampleTests
 	public sealed record ExampleStep(int Line, string Command, string? Expected);
 
 	/// <summary>One <c>```sharp</c> block, named by the line its fence is on.</summary>
-	public sealed record ExampleBlock(int Line, IReadOnlyList<string> Options, IReadOnlyList<ExampleStep> Steps)
+	public sealed record ExampleBlock(int Line, IReadOnlyList<string> Options, IReadOnlyList<ExampleStep> Steps, string Source = Profile)
 	{
-		public override string ToString() => $"{Profile}:{Line}";
+		public override string ToString() => $"{Source}:{Line}";
 	}
 
 	[Test]
@@ -65,11 +65,11 @@ public class CompatibilityProfileExampleTests
 					break;
 				case var prefix when prefix.EndsWith(Elision, StringComparison.Ordinal):
 					await Assert.That(output).StartsWith(prefix[..^Elision.Length])
-						.Because($"{Profile}:{step.Line} `{step.Command}`");
+						.Because($"{block.Source}:{step.Line} `{step.Command}`");
 					break;
 				case var expected:
 					await Assert.That(output).IsEqualTo(expected)
-						.Because($"{Profile}:{step.Line} `{step.Command}`");
+						.Because($"{block.Source}:{step.Line} `{step.Command}`");
 					break;
 			}
 		}
@@ -89,8 +89,17 @@ public class CompatibilityProfileExampleTests
 
 	private static IEnumerable<ExampleBlock> ReadBlocks()
 	{
-		var lines = File.ReadAllLines(Path.Combine(TestPaths.Helpfiles.FullName, Profile));
+		foreach (var source in CompatibilityProfileSources.All)
+		{
+			foreach (var block in ReadBlocks(source.Markdown.Split('\n'), source.FileName))
+			{
+				yield return block;
+			}
+		}
+	}
 
+	private static IEnumerable<ExampleBlock> ReadBlocks(string[] lines, string source)
+	{
 		for (var index = 0; index < lines.Length; index++)
 		{
 			if (!lines[index].StartsWith("```sharp", StringComparison.Ordinal))
@@ -104,7 +113,7 @@ public class CompatibilityProfileExampleTests
 			if (arguments.Contains(Unchecked))
 				continue;
 
-			yield return new ExampleBlock(fence + 1, arguments, ReadSteps(body, fence + 2).ToList());
+			yield return new ExampleBlock(fence + 1, arguments, ReadSteps(body, fence + 2).ToList(), source);
 		}
 	}
 
@@ -151,3 +160,4 @@ public class CompatibilityProfileExampleTests
 		return result;
 	}
 }
+

@@ -26,16 +26,18 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 			return await NarrowAsync(corpus, await SearchAsync(corpus, topic));
 		}
 
+		var exact = await GetExactAsync(corpus, topic);
+		if (exact is not null)
+		{
+			return exact;
+		}
+
 		// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
 		// falls back to the fuzzy pattern when that finds nothing.
-		var prefixMatches = await SearchAsync(corpus, topic + "*");
-		if (prefixMatches.Count > 0)
+		var prefix = await textFiles.GetPrefixEntryAsync(corpus, topic);
+		if (prefix is not null)
 		{
-			var entry = await GetExactAsync(corpus, prefixMatches[0]);
-			if (entry is not null)
-			{
-				return entry;
-			}
+			return prefix;
 		}
 
 		return await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));
@@ -44,8 +46,7 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 	/// <inheritdoc />
 	public async ValueTask<HelpEntry?> GetExactAsync(string corpus, string topic)
 	{
-		var content = await textFiles.GetEntryAsync(corpus, topic);
-		return content is null ? null : new HelpEntry(topic, content);
+		return await textFiles.GetHelpEntryAsync(corpus, topic);
 	}
 
 	/// <inheritdoc />

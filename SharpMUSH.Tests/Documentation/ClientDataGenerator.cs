@@ -52,16 +52,16 @@ public static class ClientDataGenerator
 			.ToList();
 
 		var commands = RegistryInventory.Commands
-			.Select(c => (c.Name, Help: help.FindEntry(c.Name), Entry: CommandEntry(c.Attribute)))
+			.Select(c => (c.Name, Help: FullHelp(help, c.Name), Entry: CommandEntry(c.Attribute)))
 			.Concat(Aliases(AliasOptions.Default.CommandAliases, RegistryInventory.Commands.Select(c => c.Name))
-				.Select(alias => (Name: alias.Alias, Help: help.FindEntry(alias.Alias) ?? help.FindEntry(alias.Target),
+				.Select(alias => (Name: alias.Alias, Help: FullHelp(help, alias.Alias) ?? FullHelp(help, alias.Target),
 					Entry: CommandEntry(RegistryInventory.Commands.First(c => c.Name.Equals(alias.Target, StringComparison.OrdinalIgnoreCase)).Attribute))))
 			.ToList();
 
 		var definitions = new JsonObject
 		{
-			["commands"] = Section(help, commands),
-			["functions"] = Section(help, functions)
+			["commands"] = Section(commands),
+			["functions"] = Section(functions)
 		};
 
 		return new Dictionary<string, string>
@@ -92,22 +92,19 @@ public static class ClientDataGenerator
 	};
 
 	private static string? FunctionHelp(Helpfiles help, string name)
-		=> help.FindEntry($"{name}()") ?? help.FindEntry(name);
+		=> FullHelp(help, $"{name}()") ?? FullHelp(help, name);
 
-	/// <summary>
-	/// A markdown entry comes back led by its topic's <c># HEADER</c>, run straight into the body. The
-	/// drawer shows its own title, so the header is dropped: the longest topic the text starts with.
-	/// </summary>
-	private static string WithoutHeader(Helpfiles help, string text)
+	private static string? FullHelp(Helpfiles help, string topic)
 	{
-		if (!text.StartsWith("# ", StringComparison.Ordinal))
-			return text;
+		var entry = help.FindHelpEntry(topic);
+		return entry?.Article?.Markdown ?? entry?.Markdown;
+	}
 
-		var header = help.IndexedHelp.Keys
-			.Where(topic => text.AsSpan(2).StartsWith(topic, StringComparison.OrdinalIgnoreCase))
-			.MaxBy(topic => topic.Length);
-
-		return header is null ? text : text[(2 + header.Length)..];
+	/// <summary>The drawer supplies its own title, so remove the structural article H1.</summary>
+	private static string WithoutHeader(string text)
+	{
+		var heading = HelpArticleParser.Headings(text).FirstOrDefault(heading => heading.Level == 1);
+		return heading?.Span.Start == 0 ? text[(heading.Span.End + 1)..] : text;
 	}
 
 	/// <summary>The shipped aliases whose target is registered and which are not registered names themselves.</summary>
@@ -120,14 +117,14 @@ public static class ClientDataGenerator
 			.Where(pair => !names.Contains(pair.Alias));
 	}
 
-	private static JsonObject Section(Helpfiles helpfiles, IEnumerable<(string Name, string? Help, JsonObject Entry)> entries)
+	private static JsonObject Section(IEnumerable<(string Name, string? Help, JsonObject Entry)> entries)
 	{
 		var section = new JsonObject();
 		foreach (var (name, help, entry) in entries
 							 .DistinctBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
 							 .OrderBy(e => e.Name, StringComparer.Ordinal))
 		{
-			var full = WithoutHeader(helpfiles, (help ?? string.Empty).Replace("\r\n", "\n")).Trim();
+			var full = WithoutHeader((help ?? string.Empty).Replace("\r\n", "\n")).Trim();
 			var ordered = new JsonObject
 			{
 				["helpFull"] = full,
@@ -157,3 +154,4 @@ public static class ClientDataGenerator
 	private static string Serialize(JsonNode node)
 		=> node.ToJsonString(Output).Replace("\r\n", "\n") + "\n";
 }
+

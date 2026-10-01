@@ -5,7 +5,11 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <summary>A single resolved help entry: the canonical topic name and its markdown body.</summary>
 /// <param name="Topic">The topic name as indexed, not as the caller spelled it.</param>
 /// <param name="Markdown">The raw markdown body, exactly as the engine hands it to the renderer.</param>
-public sealed record HelpEntry(string Topic, string Markdown);
+public sealed record HelpEntry(string Topic, string Markdown)
+{
+	public HelpArticle? Article { get; init; }
+	public string? SectionId { get; init; }
+}
 
 /// <summary>Several topics matched and none of them is the answer on its own.</summary>
 /// <param name="Topics">Candidate topic names, ordered case-insensitively.</param>

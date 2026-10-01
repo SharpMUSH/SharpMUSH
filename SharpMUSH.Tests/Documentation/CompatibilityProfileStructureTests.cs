@@ -66,11 +66,11 @@ public class CompatibilityProfileStructureTests
 		RegexOptions.Compiled);
 
 	/// <summary>One <c>## </c> entry: its section (the <c>#</c> heading above it), heading and text.</summary>
-	public sealed record ProfileEntry(int Line, string Section, string Heading, string Body)
+	public sealed record ProfileEntry(int Line, string Section, string Heading, string Body, string Source = Profile)
 	{
 		public bool IsChoice => Body.Contains(Choice, StringComparison.Ordinal);
 
-		public override string ToString() => $"{Profile}:{Line} {Heading}";
+		public override string ToString() => $"{Source}:{Line} {Heading}";
 	}
 
 	[Test]
@@ -199,6 +199,8 @@ public class CompatibilityProfileStructureTests
 	public async ValueTask ProfileHasDecidedDifferences()
 	{
 		await Assert.That(DecidedDifferences().Count()).IsGreaterThan(30);
+		await Assert.That(DecidedDifferences().Select(entry => entry().Heading))
+			.Contains("`render()` markup compatibility");
 	}
 
 	public static IEnumerable<Func<ProfileEntry>> DecidedDifferences() =>
@@ -208,34 +210,14 @@ public class CompatibilityProfileStructureTests
 
 	private static IEnumerable<ProfileEntry> ReadEntries()
 	{
-		var lines = File.ReadAllLines(Path.Combine(TestPaths.Helpfiles.FullName, Profile));
-		var section = string.Empty;
-		var inFence = false;
-
-		for (var index = 0; index < lines.Length; index++)
+		foreach (var source in CompatibilityProfileSources.All)
 		{
-			if (lines[index].StartsWith("```", StringComparison.Ordinal))
-				inFence = !inFence;
-			if (inFence)
-				continue;
-
-			if (lines[index].StartsWith("# ", StringComparison.Ordinal))
-				section = lines[index][2..].Trim();
-			if (!lines[index].StartsWith("## ", StringComparison.Ordinal))
-				continue;
-
-			var body = new List<string>();
-			var bodyInFence = false;
-			for (var next = index + 1; next < lines.Length; next++)
+			foreach (var section in source.Article.Sections)
 			{
-				if (lines[next].StartsWith("```", StringComparison.Ordinal))
-					bodyInFence = !bodyInFence;
-				if (!bodyInFence && lines[next].StartsWith('#'))
-					break;
-				body.Add(lines[next]);
+				var start = source.Markdown.IndexOf(section.Markdown, StringComparison.Ordinal);
+				var line = source.Markdown[..start].Count(character => character == '\n') + 1;
+				yield return new ProfileEntry(line, source.Article.Title, section.Heading, section.Markdown, source.FileName);
 			}
-
-			yield return new ProfileEntry(index + 1, section, lines[index][3..].Trim(), string.Join('\n', body));
 		}
 	}
 }

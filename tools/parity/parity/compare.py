@@ -39,8 +39,23 @@ PROFILE = (Path(__file__).resolve().parents[3]
 
 
 def profile_headings(path: Path = PROFILE) -> set[str]:
-    """The `## ` entry headings of the compatibility profile, which an allowlist entry must name."""
-    return {line[3:].strip() for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("## ")}
+    """Declared section headings across the compatibility articles, or a legacy profile."""
+    text = path.read_text(encoding="utf-8-sig")
+    marker = "<!-- help-article"
+    if not text.startswith(marker):
+        return {line[3:].strip() for line in text.splitlines() if line.startswith("## ")}
+
+    # The runtime corpus check validates each declared heading against its Markdown.
+    # Consume that same declaration instead of treating filenames as article identity.
+    headings = set()
+    for source in path.parent.glob("*.md"):
+        article = source.read_text(encoding="utf-8-sig")
+        if not article.startswith(marker):
+            continue
+        metadata = json.loads(article[len(marker):article.index("-->")])
+        if metadata.get("corpus") == "help" and metadata.get("id", "").startswith("compatibility-"):
+            headings.update(section["heading"] for section in metadata["sections"])
+    return headings
 
 
 def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
@@ -58,7 +73,7 @@ def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
             raise ValueError(f"{path}: entry {e['id']!r} pins one side's output; 'sharp' and 'penn' go together")
         if e["profile"] not in headings:
             raise ValueError(f"{path}: entry {e['id']!r} names profile entry {e['profile']!r}, "
-                             f"which is not a '## ' heading in {profile.name}")
+                             f"which is not a declared compatibility section in {profile.name}")
         out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"],
                          e.get("command"), e["profile"], e.get("sharp"), e.get("penn")))
     return out

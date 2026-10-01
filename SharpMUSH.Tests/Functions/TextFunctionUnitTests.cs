@@ -33,7 +33,7 @@ public class TextFunctionUnitTests
 	[Test]
 	[Arguments("textentries(help,strip*)", "STRIPACCENTS() STRIPANSI()")]
 	[Arguments("textentries(help,strip*,|)", "STRIPACCENTS()|STRIPANSI()")]
-	[Arguments("textentries(help,strallof*)", "STRALLOF()")]
+	[Arguments("textentries(help,strallof*)", "STRFIRSTOF()")]
 	[Arguments("textentries(help,zzznosuchtopic*)", "")]
 	public async Task TextentriesFiltersByPattern(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);

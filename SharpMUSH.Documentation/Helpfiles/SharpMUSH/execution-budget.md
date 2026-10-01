@@ -1,0 +1,35 @@
+<!-- help-article
+{
+  "corpus": "help",
+  "id": "execution-budget",
+  "lookup": "execution budget",
+  "aliases": [],
+  "sections": []
+}
+-->
+# execution budget
+
+`queue_entry_cpu_time` is the legacy configuration name for an **elapsed-time**
+limit in milliseconds. Its default is 2000 milliseconds (two seconds).
+Zero disables the deadline while keeping halt and shutdown cancellation active. It is not a measurement of
+CPU consumed by the process or by a thread. The clock starts when execution
+starts, so waiting on a delay or semaphore does not spend execution time.
+
+Nested evaluation shares one monotonic deadline. Time spent waiting on HTTP or
+SQL consumes the same budget. A separately queued job starts a fresh deadline.
+Expiry returns `#-1 EXECUTION TIME LIMIT EXCEEDED`; it does not reset at an
+attribute call or nested command list. Function invocation, recursion, output
+size and regex ceilings remain independent limits.
+
+Cancellation from halt or shutdown is distinct from deadline expiry.
+Cancellation is cooperative: parser checkpoints stop further evaluation, and
+HTTP/SQL operations receive the cancellation token. A database provider must
+honor cancellation to interrupt an operation already inside that provider.
+The scheduler never abandons an outstanding operation to run another command
+concurrently. Regex operations retain their existing finite timeout and use the
+remaining deadline when constructing a pattern near expiry.
+
+Quartz semaphore timeout bookkeeping has its own shutdown-linked deadline, using
+`queue_entry_cpu_time` when finite and one second when that setting is zero. A
+failed timeout update retains its reservation and retries after a one-second
+backoff, so an unavailable provider does not create a tight retry loop.
