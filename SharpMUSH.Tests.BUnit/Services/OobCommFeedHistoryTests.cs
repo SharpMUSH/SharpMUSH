@@ -171,6 +171,65 @@ public class OobCommFeedHistoryTests
 			.Because("a second MarkRead with nothing new sends nothing");
 	}
 
+	/// <summary>A marker write that failed is sent again on the next read; the feed only records what the server took.</summary>
+	[Test]
+	public async Task A_failed_marker_write_is_sent_again()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(publicId: 1);
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+		store.Set(CommPayloadParser.MessagePackage, Line(20, "one", second: 1));
+		history.FailMarks = 1;
+
+		feed.MarkRead("Public");
+		feed.MarkRead("Public");
+		feed.MarkRead("Public");
+
+		await Assert.That(history.ChannelMarks.Count).IsEqualTo(2)
+			.Because("the first write failed, the second succeeded, and the third had nothing new to send");
+	}
+
+	[Test]
+	public async Task A_failed_conversation_marker_write_is_sent_again()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+		await feed.Synced;
+		store.Set(CommPayloadParser.MessagePackage, Page("psst", 3));
+		history.FailMarks = 1;
+
+		var key = feed.Conversations.Single().Key;
+		feed.MarkRead(key);
+		feed.MarkRead(key);
+		feed.MarkRead(key);
+
+		await Assert.That(history.ConversationMarks.Count).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// A channel renamed while the viewer is connected: the server moved its marker to the new name, and
+	/// the new list names it. The feed reads the markers again, so the lines before the rename are still
+	/// counted from where the viewer had read to.
+	/// </summary>
+	[Test]
+	public async Task A_renamed_channel_keeps_its_marker()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(publicId: 5);
+		history.Recall["Public"] = [Pulled(5, "read")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		history.Markers = new CommReadMarkers(Viewer, [new ChannelReadMarker("Commons", 5, T0)], []);
+		history.Recall["Commons"] = [Pulled(4, "old"), Pulled(5, "read"), Pulled(6, "new")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Commons"));
+		await feed.Synced;
+
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(1).Because("only 6 is past the marker");
+	}
+
 	[Test]
 	public async Task A_line_arriving_while_viewing_moves_the_marker()
 	{

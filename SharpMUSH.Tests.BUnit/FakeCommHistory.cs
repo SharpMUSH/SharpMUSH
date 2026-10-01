@@ -15,6 +15,11 @@ public sealed class FakeCommHistory : ICommHistory
 	public List<(string Channel, ReadMarkerUpdate Update)> ChannelMarks { get; } = [];
 	public List<ConversationReadMarkerUpdate> ConversationMarks { get; } = [];
 
+	/// <summary>How many of the next marker writes fail, as a dropped connection or a 5xx would.</summary>
+	public int FailMarks { get; set; }
+
+	private bool Fails() => FailMarks-- > 0;
+
 	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel)
 	{
 		Recalled.Add(channel);
@@ -32,13 +37,16 @@ public sealed class FakeCommHistory : ICommHistory
 	public Task<ApiResult<ChannelReadMarker>> MarkChannelAsync(string channel, ReadMarkerUpdate update)
 	{
 		ChannelMarks.Add((channel, update));
-		return Task.FromResult<ApiResult<ChannelReadMarker>>(new ChannelReadMarker(channel, update.LastReadId, update.LastReadAt));
+		return Task.FromResult<ApiResult<ChannelReadMarker>>(Fails()
+			? new ApiFailure(ApiFailureKind.Transport, "connection dropped")
+			: new ChannelReadMarker(channel, update.LastReadId, update.LastReadAt));
 	}
 
 	public Task<ApiResult<ConversationReadMarker>> MarkConversationAsync(ConversationReadMarkerUpdate update)
 	{
 		ConversationMarks.Add(update);
-		return Task.FromResult<ApiResult<ConversationReadMarker>>(
-			new ConversationReadMarker(update.With, update.LastReadId, update.LastReadAt));
+		return Task.FromResult<ApiResult<ConversationReadMarker>>(Fails()
+			? new ApiFailure(ApiFailureKind.Transport, "connection dropped")
+			: new ConversationReadMarker(update.With, update.LastReadId, update.LastReadAt));
 	}
 }

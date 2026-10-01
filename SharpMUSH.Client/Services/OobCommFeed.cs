@@ -200,8 +200,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	}
 
 	/// <summary>
-	/// Reads the viewer's markers once the feed knows who the viewer is, then pulls every channel's history;
-	/// with the markers read, pulls only the channels not pulled yet (one just joined).
+	/// Reads the viewer's markers once the feed knows who the viewer is, then pulls every channel's history.
+	/// With the markers read, a list naming a channel not pulled yet — one just joined, or one renamed, whose
+	/// marker the server has moved to the new name — reads the markers again and pulls only those channels.
 	/// </summary>
 	private void SyncWithServer()
 	{
@@ -210,7 +211,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (string.Equals(_syncedFor, viewer, StringComparison.Ordinal))
 		{
 			var unpulled = _channels.Select(channel => channel.Name).Where(name => !_pulled.Contains(name)).ToArray();
-			if (unpulled.Length > 0) _sync = PullAsync(unpulled);
+			if (unpulled.Length > 0) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
 			return;
 		}
 
@@ -232,23 +233,51 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (answer is not CommReadMarkers markers || !string.Equals(markers.Character, viewer, StringComparison.Ordinal)) return;
 
 		_syncedFor = viewer;
-		// Lines pushed while the markers were on their way were counted one by one; count them again from
-		// the marker, here for a key the pull below adds nothing to.
+		ApplyMarkers(markers, viewer);
+		await PullAsync(_channels.Select(channel => channel.Name).ToArray());
+		Changed?.Invoke();
+	}
+
+	/// <summary>Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>.</summary>
+	private async Task RefreshAsync(ICommHistory server, string viewer, int generation, IReadOnlyList<string> channels)
+	{
+		var answer = await server.MarkersAsync();
+		if (generation != _generation || !string.Equals(_syncedFor, viewer, StringComparison.Ordinal)) return;
+
+		if (answer is CommReadMarkers markers && string.Equals(markers.Character, viewer, StringComparison.Ordinal))
+		{
+			ApplyMarkers(markers, viewer);
+		}
+
+		await PullAsync(channels);
+		Changed?.Invoke();
+	}
+
+	/// <summary>
+	/// Takes the server's markers, keeping a marker of this feed's that is further on (a write the server
+	/// has not answered yet). Lines pushed while the markers were on their way were counted one by one, so
+	/// each key is counted again from its marker — here, for a key the pull after adds nothing to.
+	/// </summary>
+	private void ApplyMarkers(CommReadMarkers markers, string viewer)
+	{
 		foreach (var channel in markers.Channels)
 		{
-			_markers[channel.Channel] = new Marker(channel.LastReadId, channel.LastReadAt);
+			Take(channel.Channel, new Marker(channel.LastReadId, channel.LastReadAt));
 			Recount(channel.Channel);
 		}
 
 		foreach (var conversation in markers.Conversations)
 		{
 			var key = ConversationKeyPrefix + string.Join(' ', conversation.With.Append(viewer).Distinct().Order(StringComparer.Ordinal));
-			_markers[key] = new Marker(conversation.LastReadId, conversation.LastReadAt);
+			Take(key, new Marker(conversation.LastReadId, conversation.LastReadAt));
 			Recount(key);
 		}
+	}
 
-		await PullAsync(_channels.Select(channel => channel.Name).ToArray());
-		Changed?.Invoke();
+	/// <summary>Records <paramref name="marker"/> for a key unless the one held is already as far on.</summary>
+	private void Take(string key, Marker marker)
+	{
+		if (!_markers.TryGetValue(key, out var held) || held.IsBefore(marker)) _markers[key] = marker;
 	}
 
 	private async Task PullAsync(IReadOnlyList<string> channels)
@@ -302,9 +331,14 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	}
 
 	/// <summary>
-	/// Moves the viewer's marker for a key to its last line, here and on the server, unless it is already
-	/// there or further on. Nothing is written for a feed whose markers were not read for its viewer.
+	/// Moves the viewer's marker for a key to its last line on the server, unless it is already there or
+	/// further on. Nothing is written for a feed whose markers were not read for its viewer.
 	/// </summary>
+	/// <remarks>
+	/// The feed records the marker only when the server has taken it, and records what the server answers
+	/// (which can be further on, moved from another device). A write that failed leaves the marker where
+	/// it was, so the next read sends it again rather than finding nothing new to send.
+	/// </remarks>
 	private void AdvanceMarker(string key)
 	{
 		if (_server is null || _syncedFor is not { } viewer
@@ -317,8 +351,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		if (!IsConversationKey(key))
 		{
-			_markers[key] = moved;
-			_ = _server.MarkChannelAsync(key, new ReadMarkerUpdate(last.Id, last.Timestamp));
+			_ = WriteChannelMarkerAsync(_server, key, new ReadMarkerUpdate(last.Id, last.Timestamp), _generation);
 			return;
 		}
 
@@ -327,9 +360,25 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var others = conversation.Participants.Where(participant => participant.ObjId != viewer).ToArray();
 		if (others.Length == 0 || others.Any(participant => participant.ObjId is null)) return;
 
-		_markers[key] = moved with { Id = null };
-		_ = _server.MarkConversationAsync(new ConversationReadMarkerUpdate(
-			others.Select(participant => participant.ObjId!).ToArray(), null, last.Timestamp));
+		_ = WriteConversationMarkerAsync(_server, key, new ConversationReadMarkerUpdate(
+			others.Select(participant => participant.ObjId!).ToArray(), null, last.Timestamp), _generation);
+	}
+
+	private async Task WriteChannelMarkerAsync(ICommHistory server, string key, ReadMarkerUpdate update, int generation)
+	{
+		if (await server.MarkChannelAsync(key, update) is ChannelReadMarker stored && generation == _generation)
+		{
+			Take(key, new Marker(stored.LastReadId, stored.LastReadAt));
+		}
+	}
+
+	private async Task WriteConversationMarkerAsync(ICommHistory server, string key, ConversationReadMarkerUpdate update,
+		int generation)
+	{
+		if (await server.MarkConversationAsync(update) is ConversationReadMarker stored && generation == _generation)
+		{
+			Take(key, new Marker(stored.LastReadId, stored.LastReadAt));
+		}
 	}
 
 	private static bool IsFrom(CommMessage line, CommParticipant? viewer) =>
