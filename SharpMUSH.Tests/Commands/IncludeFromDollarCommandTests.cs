@@ -1,7 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -22,42 +19,29 @@ namespace SharpMUSH.Tests.Commands;
 /// agent's rewrite to ';'-joined lines was the correct fix for malformed softcode, not a bug workaround.
 ///
 /// A $-command body runs with the OBJECT as executor and %# as the enactor (#1, co-located in #0). Each
-/// body @pemit's a unique marker to %#; we collect notifications and assert on them.
+/// body @pemit's a unique marker to %#; we collect what #1 was told and assert on the markers.
 /// </summary>
-[NotInParallel]
 public class IncludeFromDollarCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-
-	private static string? ExtractMessage(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify)) return null;
-		var args = call.GetArguments();
-		if (args.Length < 2) return null;
-		return args[1] switch
-		{
-			SharpMessage { Value: MString m } => m.ToString(),
-			SharpMessage { Value: string s } => s,
-			string s => s,
-			MString m => m.ToString(),
-			_ => null
-		};
-	}
 
 	private async ValueTask Cmd(string command)
 		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-	/// <summary>Trigger <paramref name="command"/> and return all notification texts it produced.</summary>
+	/// <summary>
+	/// Trigger <paramref name="command"/> and return what the enactor (#1) was told while it ran. Other
+	/// tests write to #1 too, so every assertion keys on its own tag.
+	/// </summary>
 	private async ValueTask<List<string>> TriggerAndCollect(string command)
 	{
-		var pre = NotifyService.ReceivedCalls().Count();
+		var recorder = WebAppFactoryArg.Notifications;
+		var pre = recorder.CountFor(WebAppFactoryArg.ExecutorDBRef);
 		await Cmd(command);
-		return NotifyService.ReceivedCalls().Skip(pre).Select(ExtractMessage).Where(m => m is not null).ToList()!;
+		return [.. recorder.For(WebAppFactoryArg.ExecutorDBRef).Skip(pre)];
 	}
 
 	[Test]
