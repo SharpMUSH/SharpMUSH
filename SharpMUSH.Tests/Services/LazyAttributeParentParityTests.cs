@@ -94,8 +94,7 @@ public class LazyAttributeParentParityTests
 	/// branch node. The <c>no_inherit</c> leaf and the <c>no_inherit</c> branch are both blocked.
 	/// </summary>
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazyWildcardReadWithCheckParents_MatchesTheEagerRead(CancellationToken ct)
+	public async ValueTask LazyWildcardReadWithCheckParents_MatchesTheEagerRead()
 	{
 		const string label = "PARITY";
 		var (child, _) = await BuildFixtureAsync(label);
@@ -123,8 +122,7 @@ public class LazyAttributeParentParityTests
 	/// neither leaf carries a flag of its own.
 	/// </summary>
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazyRegexReadWithCheckParents_MatchesTheEagerReadThroughTrees(CancellationToken ct)
+	public async ValueTask LazyRegexReadWithCheckParents_MatchesTheEagerReadThroughTrees()
 	{
 		const string label = "PARITYRX";
 		var (child, _) = await BuildFixtureAsync(label);
@@ -148,8 +146,7 @@ public class LazyAttributeParentParityTests
 	}
 
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazyPatternReadWithoutCheckParents_StaysOnTheObject(CancellationToken ct)
+	public async ValueTask LazyPatternReadWithoutCheckParents_StaysOnTheObject()
 	{
 		const string label = "PARITYSELF";
 		var (child, _) = await BuildFixtureAsync(label);
@@ -168,8 +165,7 @@ public class LazyAttributeParentParityTests
 	/// found, on the resolved root..leaf path.
 	/// </summary>
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazySingleAttributeRead_MatchesTheEagerRead(CancellationToken ct)
+	public async ValueTask LazySingleAttributeRead_MatchesTheEagerRead()
 	{
 		const string label = "PARITYONE";
 		var (child, _) = await BuildFixtureAsync(label);
@@ -209,8 +205,7 @@ public class LazyAttributeParentParityTests
 	/// a permission failure, and still throws now that it shares the eager read's gate.
 	/// </summary>
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazySingleAttributeRead_RejectsWriteModes(CancellationToken ct)
+	public async ValueTask LazySingleAttributeRead_RejectsWriteModes()
 	{
 		var obj = await CreateAsync("LazyWriteMode");
 
@@ -223,8 +218,7 @@ public class LazyAttributeParentParityTests
 	}
 
 	[Test]
-	[Timeout(30_000)]
-	public async ValueTask LazyPatternReadWithCheckParents_TerminatesOnAParentCycle(CancellationToken ct)
+	public async ValueTask LazyPatternReadWithCheckParents_TerminatesOnAParentCycle()
 	{
 		var a = await CreateAsync("LazyCycleA");
 		var b = await CreateAsync("LazyCycleB");
@@ -234,11 +228,17 @@ public class LazyAttributeParentParityTests
 		await Mediator.Send(new SetObjectParentCommand(b, a));
 		await AttributeService.SetAttributeAsync(a, a, "LAZYCYCLE_HERE", MarkupText.Plain("hello"));
 
-		var result = await AttributeService.LazilyGetAttributePatternAsync(
-			a, a, "LAZYCYCLE_*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
-
-		await Assert.That(result.IsError).IsFalse();
-		var names = await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(x => x.LongName).ToArrayAsync();
+		// Only the read is bounded: a cycle the walk fails to cut never returns, while the fixture above
+		// can take a while on a loaded runner and proves nothing by being slow.
+		var names = await ReadCycleAsync().WaitAsync(TimeSpan.FromSeconds(30));
 		await Assert.That(names).Contains("LAZYCYCLE_HERE");
+
+		async Task<string[]> ReadCycleAsync()
+		{
+			var result = await AttributeService.LazilyGetAttributePatternAsync(
+				a, a, "LAZYCYCLE_*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
+			await Assert.That(result.IsError).IsFalse();
+			return await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(x => x.LongName).ToArrayAsync();
+		}
 	}
 }

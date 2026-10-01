@@ -26,9 +26,9 @@ namespace SharpMUSH.Tests.Services;
 /// The cycle is built by sending <see cref="SetObjectParentCommand"/> directly in both directions -
 /// the same way <c>ZoneParentCycleTests.cs</c> bypasses <c>SafeToAddParent</c> to set up its
 /// fixtures - since going through <c>ManipulateSharpObjectService.SetParent</c> would (correctly)
-/// refuse to ever create the cycle in the first place. Each test carries a
-/// <see cref="TimeoutAttribute"/> so a regression here fails the test outright instead of hanging
-/// the whole suite.
+/// refuse to ever create the cycle in the first place. Each test bounds the read itself, not the
+/// fixture before it, so a regression here fails the test outright instead of hanging the whole
+/// suite, and a slow runner building the fixture does not.
 /// </remarks>
 public class AttributeReadParentCycleTests
 {
@@ -65,27 +65,27 @@ public class AttributeReadParentCycleTests
 		return (a, b);
 	}
 
+	private static readonly TimeSpan ReadBound = TimeSpan.FromSeconds(15);
+
 	[Test]
-	[Timeout(15_000)]
-	public async ValueTask GetAttributePatternAsync_WithParentCycle_Terminates(CancellationToken ct)
+	public async ValueTask GetAttributePatternAsync_WithParentCycle_Terminates()
 	{
 		var (a, _) = await BuildDirectParentCycleAsync("AttrCycle");
 		await AttributeService.SetAttributeAsync(a, a, "CYCLETEST", MarkupText.Plain("hello"));
 
 		var result = await AttributeService.GetAttributePatternAsync(
-			a, a, "*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
+			a, a, "*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard).AsTask().WaitAsync(ReadBound);
 
 		await Assert.That(result.IsError).IsFalse();
 		await Assert.That(result.Expect<SharpAttribute[]>().Any(attr => attr.LongName == "CYCLETEST")).IsTrue();
 	}
 
 	[Test]
-	[Timeout(15_000)]
-	public async ValueTask GetCommandAttributesQuery_WithParentCycle_Terminates(CancellationToken ct)
+	public async ValueTask GetCommandAttributesQuery_WithParentCycle_Terminates()
 	{
 		var (a, _) = await BuildDirectParentCycleAsync("CmdCycle");
 
-		var result = await Mediator.Send(new GetCommandAttributesQuery(a), ct);
+		var result = await Mediator.Send(new GetCommandAttributesQuery(a)).AsTask().WaitAsync(ReadBound);
 
 		await Assert.That(result).IsNotNull();
 	}
