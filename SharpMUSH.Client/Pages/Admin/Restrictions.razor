@@ -9,13 +9,7 @@
 <PageTitle>@Loc["Restrictions"] - @Loc["Configuration"]</PageTitle>
 
 <div class="config-section-page">
-    <div class="config-section-header">
-        <div>
-            <div class="config-kicker">Admin · server settings</div>
-            <h1 class="config-title">@Loc["CommandAndFunctionRestrictions"]</h1>
-            <p class="config-desc">@Loc["RestrictionsDescription"]</p>
-        </div>
-    </div>
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["CommandAndFunctionRestrictions"]" Description="@Loc["RestrictionsDescription"]" />
 
     <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" Class="config-tabs mb-4">
         <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">

@@ -27,7 +27,7 @@ public class LocalizedWikiPageTests
 		Locale: served,
 		RequestedLocale: requested,
 		Title: "T", MarkdownSource: "m", RenderedHtml: "<p>m</p>", PlainText: "m",
-		Published: true, RevisionNumber: 1);
+		Published: true, RevisionNumber: 1, LastEditorDbref: "#1", UpdatedAt: DateTimeOffset.UnixEpoch);
 
 	[Test]
 	[Arguments("fr", "fr", false)]

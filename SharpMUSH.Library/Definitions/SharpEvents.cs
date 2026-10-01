@@ -13,4 +13,30 @@ public static class SharpEvents
 	/// The handler is expected to fan out structured pushes to that room's connected occupants.
 	/// </summary>
 	public const string RoomContents = "ROOM`CONTENTS";
+
+	/// <summary>
+	/// Fired once per channel line, after it has been delivered, naming exactly the members who were
+	/// sent it (a gagged member, one whose <c>@chatformat</c> silenced the line, one the speaker may not
+	/// be heard by, and a mute member's presence line are all left out). Args: (channel name, speaker
+	/// objid or empty, style, speaker name, message, recipient objids, unix-ms). The style is
+	/// <c>say</c>, <c>pose</c>, <c>semipose</c>, <c>emit</c> or <c>presence</c>; the name and message are
+	/// plain text, after the channel's mogrifier.
+	/// </summary>
+	public const string ChannelMessage = "CHANNEL`MESSAGE";
+
+	/// <summary>
+	/// Fired once per page that reached at least one recipient. Args: (pager objid, recipient objids,
+	/// style, pager name, message, unix-ms). Only recipients who were paged are named: one who is not
+	/// connected, is HAVEN, or whose page lock refuses the pager is not. The style is <c>say</c>,
+	/// <c>pose</c> or <c>semipose</c>; the message is plain text.
+	/// </summary>
+	public const string PageMessage = "PAGE`MESSAGE";
+
+	/// <summary>
+	/// Fired (player-scoped) when a connected player's channel list may have changed: on connect, on
+	/// joining or leaving a channel, on a change to their own channel flags, and when one of their
+	/// channels is renamed or deleted. Args: (player objid, cause, channel name or empty). Cause is
+	/// <c>connect</c>, <c>join</c>, <c>leave</c>, <c>status</c>, <c>rename</c> or <c>delete</c>.
+	/// </summary>
+	public const string PlayerChannels = "PLAYER`CHANNELS";
 }

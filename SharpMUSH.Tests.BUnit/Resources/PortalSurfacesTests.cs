@@ -4,7 +4,7 @@ using SharpMUSH.Client.Resources;
 namespace SharpMUSH.Tests.BUnit.Resources;
 
 /// <summary>
-/// Keeps the two places that describe the portal's locale surface honest against each other. Both
+/// Keeps the places that describe the portal's locale surface honest against each other. The
 /// files are copied into the test output by <c>SharpMUSH.Tests.BUnit.csproj</c> so they can be read
 /// here without guessing at a repository root.
 /// </summary>
@@ -55,6 +55,26 @@ public class PortalSurfacesTests
 	{
 		await Assert.That(PortalSurfaces.SurfaceOf("MudTheme")).IsEqualTo(PortalSurfaces.Default);
 		await Assert.That(PortalSurfaces.IsPlayerFacing("MudTheme")).IsFalse();
+	}
+
+	[Test]
+	public async Task IndexHtml_boots_every_declared_locale_in_its_own_culture()
+	{
+		// index.html hands Blazor.start the stored locale only if it is on this list. A locale left off
+		// still renders translated — Program.cs applies it afterwards — but its satellite assemblies are
+		// then fetched one after another before the first render, instead of alongside the rest of the
+		// boot resources. Nothing fails; the portal is just slower to open in that language.
+		var html = File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "index.html"));
+		var match = Regex.Match(html, @"const portalLocales = \[(?<list>[^\]]*)\];");
+
+		await Assert.That(match.Success).IsTrue()
+			.Because("index.html must list the locales it boots in");
+
+		var listed = Regex.Matches(match.Groups["list"].Value, "\"(?<code>[^\"]+)\"")
+			.Select(m => m.Groups["code"].Value)
+			.ToArray();
+
+		await Assert.That(listed).IsEquivalentTo(PortalLocales.Codes.ToArray());
 	}
 
 	[Test]

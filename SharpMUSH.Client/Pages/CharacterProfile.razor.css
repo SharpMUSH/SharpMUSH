@@ -1,9 +1,107 @@
-.char-profile-banner {
-    height: 160px;
+.char-profile {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+/* the 104px portrait at the banner's bottom-left, radius 18 */
+.char-profile-portrait,
+.char-profile-initials {
+	display: block;
+	width: 104px;
+	height: 104px;
+	border-radius: 18px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	box-sizing: border-box;
+	object-fit: cover;
+}
+
+.char-profile-initials {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(140deg, hsl(var(--portrait-hue) 40% 34%), hsl(var(--portrait-hue) 34% 22%));
+	color: hsl(var(--portrait-hue) 45% 86%);
+	font-size: 34px;
+	font-weight: 700;
+	line-height: 1;
+	text-shadow: none;
+}
+
+.char-profile-role {
+	font-size: 13px;
+	color: var(--text-on-image);
+	margin-top: 2px;
+}
+
+.char-profile-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 10px;
+	text-shadow: none;
+}
+
+.char-profile-pill--scene {
+	text-decoration: none;
+	color: inherit;
+	border-radius: 13px;
+}
+
+.char-profile-pill--scene:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.char-profile-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+	gap: 14px;
+	align-items: start;
+}
+
+.char-profile-main,
+.char-profile-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.char-profile-unavailable {
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.char-profile-missing {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.char-profile-missing a {
+	color: var(--accent);
+	font-weight: 600;
+}
+
+/* README §3: main and aside stay side by side at the medium tier; only narrow stacks them */
+@container page (max-width: 48rem) {
+	.char-profile-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 @container page (max-width: 48rem) {
-    .char-profile-banner {
-        height: 110px;
-    }
+	.char-profile-portrait,
+	.char-profile-initials {
+		width: 72px;
+		height: 72px;
+		border-radius: 14px;
+		font-size: 24px;
+	}
 }

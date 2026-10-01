@@ -1,42 +1,102 @@
 @page "/character/{Name}"
+@layout CharactersLayout
 @using Microsoft.AspNetCore.Components.Authorization
+@using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject CharacterProfileService Profiles
+@inject CharacterDirectoryService Directory
+@inject GalleryService Gallery
+@inject SceneService Scenes
+@inject AccountAuthService AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Name — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@DisplayName — @Loc["AppTitle"]</PageTitle>
 
-<div>
-    @{
-        var hue = Math.Abs((Name ?? "").GetHashCode()) % 360;
-    }
-    <div class="char-profile-banner" style="@($"background:linear-gradient(135deg,hsl({hue},40%,14%) 0%,hsl({(hue+40)%360},30%,10%) 100%);position:relative;")">
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(var(--glow),0.12) 0%,transparent 60%);pointer-events:none;"></div>
+@* D1 §6.3 character profile (boards 25–26). The banner's picture is the profile's banner field
+   (IMAGE`BANNER), else the gallery's banner, else a gradient on the name's hue; the portrait is the
+   image field (IMAGE), else the gallery's icon, else initials. Below it the "profile" layout scope:
+   MainContent (the character-header application as Details, WikiBody as Biography) beside the
+   RightSidebar zone (Gallery, Recent scenes, Often plays with). *@
+@if (_missing)
+{
+    <div class="char-profile-missing">
+        <PlainPageHeader Title="@Name" Description="@string.Format(Loc["NavCharNotFound"], Name)" />
+        <a href="/characters">@Loc["NavCharAll"]</a>
     </div>
+}
+else
+{
+    <div class="char-profile">
+        @if (_unreadable)
+        {
+            @* The directory knows this name but its profile could not be read: say so, rather than
+               drawing a profile of nothing that looks like one with nothing in it. *@
+            <div class="char-profile-unavailable" role="status">@Loc["NavCharProfileUnavailable"]</div>
+        }
+        <GlassBanner Title="@DisplayName" ImageUrl="@BannerUrl" Alt="@DisplayName" Height="236" TitleSize="character" HeadingLevel="1"
+                     TitleColor="@_profile?.Color" Hue="@NameHue.Of(DisplayName)" Minimisable="false">
+            <Lead>
+                @if (ImageUrlPolicy.IsRenderable(PortraitUrl))
+                {
+                    <img class="char-profile-portrait" src="@ApiUrl.Resolve(PortraitUrl!)" alt="@DisplayName" />
+                }
+                else
+                {
+                    <span class="char-profile-initials" style="@($"--portrait-hue:{NameHue.Of(DisplayName)};")" aria-hidden="true">@Initials.From(DisplayName)</span>
+                }
+            </Lead>
+            <Secondary>
+                @if (_profile?.Role is { } role)
+                {
+                    <div class="char-profile-role">@role</div>
+                }
+                <div class="char-profile-pills">
+                    @if (_liveScene is { } scene)
+                    {
+                        <a class="char-profile-pill--scene" href="/play">
+                            <Pill Dot="var(--accent)">@string.Format(Loc["NavCharInScene"], SceneTitle(scene))</Pill>
+                        </a>
+                    }
+                    @if (_online)
+                    {
+                        <Pill Dot="var(--accent)" Class="char-profile-pill--online">@Loc["NavCharOnline"]</Pill>
+                    }
+                    @if (_profile?.Dbref is { } dbref)
+                    {
+                        <Pill Class="char-profile-pill--dbref">@dbref</Pill>
+                    }
+                </div>
+            </Secondary>
+            <Actions>
+                @if (_viewerItems.Count > 0)
+                {
+                    <CapsuleButton Class="char-profile-full" Icon="@Icons.Material.Outlined.OpenInFull" OnClick="@(() => _viewerOpen = true)">@Loc["NavCharFullImage"]</CapsuleButton>
+                }
+            </Actions>
+            <BottomActions>
+                <CapsuleButton Icon="@Icons.Material.Outlined.MailOutline" Href="@($"/mail/compose?to={Uri.EscapeDataString(DisplayName)}")">@Loc["NavCharMail"]</CapsuleButton>
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.ChatBubbleOutline" Href="@($"/play?page={Uri.EscapeDataString(DisplayName)}")">@Loc["NavCharPage"]</CapsuleButton>
+            </BottomActions>
+        </GlassBanner>
 
-    <div style="padding:0 var(--cpad) var(--cpad);">
-        <div style="margin-top:-2.5rem;margin-bottom:1rem;display:flex;align-items:flex-end;gap:1rem;">
-            <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-size:1.75rem;font-weight:700;width:80px;height:80px;border:3px solid var(--bg);flex-shrink:0;")" >
-                @(Name?.Length > 0 ? Name[0].ToString().ToUpper() : "?")
-            </MudAvatar>
-            <div style="padding-bottom:0.375rem;">
-                <MudText Typo="Typo.h5" Style="font-weight:700;line-height:1.2;">@Name</MudText>
-            </div>
-        </div>
-
-        @* Profile body and right rail compose from the "profile" layout scope. The cascading context
-           supplies the character (from the route) and edit rights to whatever widgets the admin places. *@
+        @* The cascading context supplies the character (from the route) and edit rights to whatever
+           widgets the admin places in the profile scope. *@
         <CascadingValue Value="_context" IsFixed="false">
-            <MudGrid Spacing="4">
-                <MudItem xs="12" md="8">
+            <div class="char-profile-body">
+                <div class="char-profile-main">
                     <ScopedZone Scope="@LayoutScopes.Profile" Zone="WidgetZone.MainContent" />
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <ScopedZone Scope="@LayoutScopes.Profile" Zone="WidgetZone.RightSidebar" />
-                </MudItem>
-            </MudGrid>
+                </div>
+                <aside class="char-profile-aside" aria-label="@string.Format(Loc["NavCharAbout"], DisplayName)">
+                    <ScopedZone Scope="@LayoutScopes.Profile" Zone="WidgetZone.RightSidebar" Grid="false" />
+                </aside>
+            </div>
         </CascadingValue>
     </div>
-</div>
+
+    <ImageViewer Items="@_viewerItems" @bind-Open="_viewerOpen" Label="@DisplayName" />
+}
 
 @code {
     [Parameter]
@@ -48,10 +108,94 @@
     private Task<AuthenticationState>? AuthState { get; set; }
 
     private ProfilePageContext _context = new(string.Empty, false);
+    private CharacterProfileData? _profile;
+    private IReadOnlyList<GalleryEntry> _gallery = [];
+    private SceneSummary? _liveScene;
+    private bool _online;
+    private bool _missing;
+    private bool _unreadable;
+    private string? _loadedFor;
+
+    /// <summary>Bumped on every load: an answer for an older load is dropped (A→B→C must show C).</summary>
+    private int _generation;
+    private bool _viewerOpen;
+    private IReadOnlyList<ImageViewer.Item> _viewerItems = [];
+
+    private string DisplayName => _profile?.Name is { Length: > 0 } name ? name : Name;
+
+    private string? BannerUrl => _profile?.Banner ?? _gallery.FirstOrDefault(g => g.IsBanner)?.Url;
+
+    private string? PortraitUrl => _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
 
     protected override async Task OnParametersSetAsync()
     {
-        var canEdit = AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
-        _context = new ProfilePageContext(Name, canEdit);
+        var user = AuthState is null ? null : (await AuthState).User;
+        var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
+            ? own
+            : [];
+        _context = new ProfilePageContext(Name, ProfileEditRights.CanEdit(user, mine, Name), _profile?.Dbref);
+
+        if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _loadedFor = Name;
+        var generation = ++_generation;
+        (_profile, _gallery, _liveScene, _online, _missing, _unreadable, _viewerItems, _viewerOpen) = (null, [], null, false, false, false, [], false);
+
+        var profile = Profiles.GetAsync(Name);
+        var gallery = Gallery.ListAsync(Name);
+        var online = Directory.ListOnlineAsync();
+
+        var profileResult = await profile;
+        if (generation != _generation) return;
+        switch (profileResult)
+        {
+            case CharacterProfileData found:
+                _profile = found;
+                _context = _context with { Dbref = found.Dbref };
+                break;
+            case ApiFailure { Kind: ApiFailureKind.NotFound }:
+                _missing = true;
+                return;
+            case ApiFailure:
+                _unreadable = true;
+                break;
+        }
+
+        var galleryResult = await gallery;
+        var onlineResult = await online;
+        if (generation != _generation) return;
+        _gallery = galleryResult is List<GalleryEntry> entries ? entries : [];
+        _online = onlineResult is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here
+            && here.Any(r => _profile is { } shown
+                ? string.Equals(r.Objid, shown.Objid, StringComparison.Ordinal)
+                : string.Equals(r.Name, DisplayName, StringComparison.OrdinalIgnoreCase));
+        _viewerItems = ViewerItems();
+
+        if (_profile?.Dbref is { } dbref)
+        {
+            var scenes = await Scenes.GetParticipantScenesAsync(dbref, 5);
+            if (generation != _generation) return;
+            _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null;
+        }
     }
+
+    /// <summary>The banner, the portrait, then the rest of the gallery, each once and each renderable.</summary>
+    private IReadOnlyList<ImageViewer.Item> ViewerItems()
+    {
+        var urls = new List<(string Url, string? Caption)>();
+        if (BannerUrl is { } banner) urls.Add((banner, null));
+        if (PortraitUrl is { } portrait) urls.Add((portrait, null));
+        urls.AddRange(_gallery.Select(g => (g.Url, g.Caption)));
+        return urls
+            .Where(u => ImageUrlPolicy.IsRenderable(u.Url))
+            .DistinctBy(u => u.Url)
+            .Select(u => new ImageViewer.Item(u.Url, DisplayName, u.Caption ?? _gallery.FirstOrDefault(g => g.Url == u.Url)?.Caption))
+            .ToList();
+    }
+
+    private string SceneTitle(SceneSummary scene) =>
+        scene.Meta.TryGetValue("title", out var title) && !string.IsNullOrWhiteSpace(title) ? title : scene.RoomName;
 }

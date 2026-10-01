@@ -1,0 +1,92 @@
+format: 1
+package: comm-feed
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Pushes comm.channels and comm.message OOB v2 updates — a player's channels, and each channel line or page to exactly the players who received it — the data source for the portal Play sidebar's Channels and Pages."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [oob, portal, play, channels, pages]
+requires_server: ">=0.1"
+
+# Attach mode (decision 20.3): manages three event handlers and their helpers on
+# the existing event_handler object ({{$event_handler}}, #9 by default). Every
+# helper is under FN`COMM` so it cannot collide with room-contents' FN`*.
+#
+# The engine decides who received what; this package never decides it again.
+# CHANNEL`MESSAGE fires after a channel line is delivered and names exactly the
+# members it was delivered to (a gagged member, a member the speaker may not be
+# heard by, one whose @chatformat silenced the line, and a muted member's
+# presence line are already left out). PAGE`MESSAGE fires after a page and
+# names only the recipients it reached (not connected, HAVEN, page lock and
+# interaction refusals are already left out). So comm.message goes to that
+# list, plus the pager for a page, and never to anyone the terminal did not
+# show it to. PLAYER`CHANNELS fires for a connected player on connect and when
+# their channel list changes (join, leave, a change to their own channel flags,
+# a rename or deletion of one of their channels).
+#
+# OOB v2 (docs/design/d1/README.md §7.1, §7.3): every payload carries "v": 2,
+# lists are sent whole, identity is the objid. There is no unread count: the
+# engine has no notion of what a player has read, so the client counts lines
+# as they arrive. Shapes: README.md and docs/softcode/comm-feed-handler.md.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # ── Predicates ───────────────────────────────────────────────────────
+      # Who is pushed to (%0 = an objid): a CONNECTED player. oob() skips
+      # everyone else anyway; filtering first keeps it from looking up things
+      # and disconnected players for nothing.
+      FN`COMM`VIEWER: |-
+        cand(hastype(%0,player),hasflag(%0,CONNECTED))
+      # The players a comm.message goes to (%0 = the objids the engine named).
+      # Narrow it to send less; it can never widen what the engine delivered.
+      FN`COMM`RECIPIENTS: |-
+        filter(me/FN`COMM`VIEWER,%0)
+
+      # ── Values ───────────────────────────────────────────────────────────
+      # A line's text as the terminal reads it after the channel name or the
+      # page prefix (%0 = style, %1 = the speaker's name, %2 = the message):
+      # a pose is "Name waves", a semipose "Name's here", anything else the
+      # message alone — the speaker's name is the payload's from.
+      FN`COMM`TEXT: |-
+        switch(%0,pose,%1 %2,semipose,%1%2,%2)
+      # One channel row (%0 = the channel's name, %1 = the viewer): joined is
+      # always true for the channels listed, and gagged appears only on a
+      # channel the viewer has gagged (it stays on the channel, hearing
+      # nothing). A game that lists joinable channels too redefines
+      # FN`COMM`CHANNELS and sends those rows with "joined": false.
+      # cstatus() takes the object first on SharpMUSH, the channel second.
+      FN`COMM`CHANNELROW: |-
+        json_mod(json(object,name,json(string,%0),joined,true),patch,json(object,gagged,if(match(cstatus(%1,%0),GAG),true,null)))
+
+      # ── Payloads ─────────────────────────────────────────────────────────
+      # comm.channels for a viewer (%0): who it is for, and the channels they
+      # are on. channels(<player>,on) as this wizard handler lists every
+      # channel the player is on.
+      FN`COMM`CHANNELS: |-
+        json(object,v,json(number,2),viewer,json(object,name,json(string,name(%0)),objid,json(string,objid(%0))),channels,json_array(iter(channels(%0,on),u(me/FN`COMM`CHANNELROW,%i0,%0),,%r),%r))
+      # comm.message. %0 kind (channel|page), %1 channel name (empty for a
+      # page), %2 speaker objid (empty for a sourceless line), %3 speaker name,
+      # %4 style, %5 message, %6 unix-ms, %7 page recipients' objids (empty for
+      # a channel). A key a line has no value for is absent, not null — a null
+      # in a json_mod() patch removes the key.
+      FN`COMM`MESSAGE: |-
+        json_mod(json(object,v,json(number,2),kind,json(string,%0),to,json_array(iter(%7,json(string,name(%i0)),,%r),%r),from,json(string,%3),text,json(string,u(me/FN`COMM`TEXT,%4,%3,%5)),style,json(string,%4),ts,json(number,%6)),patch,json(object,channel,if(strlen(%1),json(string,%1),null),fromObjid,if(strlen(%2),json(string,%2),null),toObjids,if(words(%7),json_array(iter(%7,json(string,%i0),,%r),%r),null)))
+
+      # ── The handlers ─────────────────────────────────────────────────────
+      # null() swallows oob()'s delivery count, which think would otherwise
+      # show the handler object.
+      #
+      # %0 channel, %1 speaker objid, %2 style, %3 speaker name, %4 message,
+      # %5 the members it was delivered to, %6 unix-ms.
+      CHANNEL`MESSAGE: |-
+        think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,)))
+      # %0 pager, %1 the recipients it reached, %2 style, %3 pager name,
+      # %4 message, %5 unix-ms. The pager is sent it too, as their terminal
+      # shows them their own page; setunion() keeps a self-page to one copy.
+      PAGE`MESSAGE: |-
+        think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1)))
+      # %0 player, %1 cause (connect, join, leave, status, rename, delete),
+      # %2 channel name (empty on connect). The whole list, to that player.
+      PLAYER`CHANNELS: |-
+        think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))

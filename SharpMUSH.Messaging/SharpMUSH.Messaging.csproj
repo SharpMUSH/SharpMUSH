@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="SharpMUSH.Tests" />
+    <InternalsVisibleTo Include="SharpMUSH.Tests.Integration" />
   </ItemGroup>
 
 </Project>

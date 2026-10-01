@@ -13,19 +13,28 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILogger<ApplicationRegistryClient> logger)
 {
+	// The rail, the drawer and the section sidebars all read this list, and the sidebars re-read on
+	// render; they share one read and a short memo. A write through this client refreshes it once the
+	// server has answered — a read made while the write was in flight saw the old catalog — and a
+	// failed read is not kept.
+	private readonly ShortMemo<(bool Ok, IReadOnlyList<PortalApplication> Apps)> _list =
+		new(TimeSpan.FromSeconds(60), r => r.Ok);
+
 	/// <summary>Lists all registered applications (caller filters by role for display).</summary>
-	public async Task<IReadOnlyList<PortalApplication>> ListAsync()
+	public async Task<IReadOnlyList<PortalApplication>> ListAsync() => (await _list.GetAsync(FetchAsync)).Apps;
+
+	private async Task<(bool Ok, IReadOnlyList<PortalApplication> Apps)> FetchAsync()
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var apps = await http.GetFromJsonAsync<List<PortalApplication>>("api/applications");
-			return apps ?? [];
+			return (true, apps ?? []);
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
 		{
 			logger.LogWarning(ex, "Failed to list applications.");
-			return [];
+			return (false, []);
 		}
 	}
 
@@ -46,11 +55,27 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 
 	/// <summary>Creates or updates an application; a refusal carries the server's reason.</summary>
 	public Task<ApiResult<Success>> UpsertAsync(PortalApplication application) =>
-		Client.PostApiAsync("api/applications", application);
+		ForgettingListAsync(Client.PostApiAsync("api/applications", application));
 
 	/// <summary>Deletes an application by slug.</summary>
 	public Task<ApiResult<Success>> DeleteAsync(string slug) =>
-		Client.DeleteApiAsync($"api/applications/{Uri.EscapeDataString(slug)}");
+		ForgettingListAsync(Client.DeleteApiAsync($"api/applications/{Uri.EscapeDataString(slug)}"));
+
+	/// <summary>
+	/// Awaits a write, then drops the memo. A failed write is forgotten too: it may have been applied
+	/// before the answer was lost, and one extra read is cheaper than a stale rail.
+	/// </summary>
+	private async Task<ApiResult<Success>> ForgettingListAsync(Task<ApiResult<Success>> write)
+	{
+		try
+		{
+			return await write;
+		}
+		finally
+		{
+			_list.Forget();
+		}
+	}
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 }

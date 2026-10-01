@@ -1,0 +1,160 @@
+/* MudOverlay owns the fixed, full-screen layer; the sheet sits at its right edge (§4.12). */
+.sheet {
+	position: relative;
+	height: 100%;
+	width: min(405px, 100vw);
+	background: var(--surface);
+	border-left: 1px solid var(--border);
+	box-shadow: var(--shadow);
+	overflow-y: auto;
+	outline: none;
+	text-align: left;
+	cursor: default;
+}
+
+.sheet-hero {
+	position: relative;
+	height: 272px;
+}
+
+.sheet-portrait {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 25%;
+	display: block;
+}
+
+.sheet-portrait--initials {
+	display: grid;
+	place-items: center;
+	font-size: 56px;
+	font-weight: 700;
+}
+
+.sheet-hero-scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to bottom, transparent 45%, var(--surface) 100%);
+}
+
+.sheet-hero-bar {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	right: 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.sheet-spacer {
+	flex: 1;
+}
+
+.sheet-hero-text {
+	position: absolute;
+	left: 20px;
+	right: 20px;
+	bottom: 12px;
+}
+
+.sheet-name {
+	margin: 0;
+	font-size: 24px;
+	font-weight: 700;
+	color: var(--text);
+	text-shadow: var(--on-image-shadow);
+}
+
+.sheet-role {
+	font-size: 13px;
+	color: var(--text);
+	text-shadow: var(--on-image-shadow);
+}
+
+.sheet-body {
+	padding: 12px 20px 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.sheet-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.sheet-actions {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.sheet-action {
+	height: 40px;
+	display: grid;
+	place-items: center;
+	border-radius: 20px;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.sheet-action--primary {
+	background: var(--accent);
+	color: var(--accent-on);
+	border-color: transparent;
+}
+
+.sheet-action:focus-visible,
+.sheet-gallery-item:focus-visible,
+.sheet-gallery-all:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.sheet-gallery-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+}
+
+.sheet-gallery-all {
+	font-size: 13px;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.sheet-gallery {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.sheet-gallery-item {
+	padding: 0;
+	border: 2px solid transparent;
+	border-radius: var(--radius-tile);
+	background: var(--surface-2);
+	height: 72px;
+	overflow: hidden;
+	cursor: pointer;
+}
+
+.sheet-gallery-item--icon {
+	border-color: var(--accent);
+}
+
+.sheet-gallery-item img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}

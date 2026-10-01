@@ -1,3 +1,5 @@
+using SharpMUSH.Client.Models;
+
 namespace SharpMUSH.Client.Models.Widgets;
 
 /// <summary>
@@ -8,5 +10,19 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// layout editor.
 /// </summary>
 /// <param name="CharacterName">The character whose profile is being viewed (from the route).</param>
-/// <param name="CanEdit">Whether the current viewer may edit this character's profile content.</param>
-public record ProfilePageContext(string CharacterName, bool CanEdit);
+/// <param name="CanEdit">Whether the current viewer may edit this character's profile content: the
+/// account that owns the character, or staff.</param>
+/// <param name="Dbref">The character's dbref once the page has resolved it, so widgets need not ask
+/// the directory again; null until then.</param>
+public record ProfilePageContext(string CharacterName, bool CanEdit, string? Dbref = null);
+
+/// <summary>
+/// What the Play page offers the widgets in its <c>"play"</c> layout scope (README §7.4): opening a
+/// character's sheet and sending a command down the play connection. A widget placed outside Play has
+/// no context and falls back to the row's own command.
+/// </summary>
+/// <param name="OpenCharacter">Opens the character sheet for a room row.</param>
+/// <param name="Send">Sends a command line through the play connection.</param>
+/// <param name="InSheet">Rendered in the phone Room sheet: no card chrome, exits as rows, and the page's
+/// exit keys stay with the aside.</param>
+public record PlayPageContext(Func<RoomOccupant, Task> OpenCharacter, Func<string, Task> Send, bool InSheet = false);

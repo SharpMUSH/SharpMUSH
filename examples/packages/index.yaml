@@ -31,6 +31,10 @@ packages:
     package: room-contents
     version: 2.0.0
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
+  - path: comm-feed/
+    package: comm-feed
+    version: 1.0.0
+    description: comm.channels/comm.message OOB v2 pushes — channels and pages, only to who received them — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
     version: 1.0.0

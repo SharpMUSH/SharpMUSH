@@ -112,6 +112,22 @@ public class ThemeServiceTests
 	}
 
 	[Test]
+	public async Task InitializeAsync_ReadsStorageOnce_SoALaterCallCompletesSynchronously()
+	{
+		// Program.cs awaits the restore before the first render. ThemeProvider asks again from
+		// OnInitializedAsync; if that second call went back to storage it would yield, and the provider
+		// would render the default theme first and the stored one after — the double render this avoids.
+		var js = MakeJs("Amber");
+		var svc = new ThemeService(js);
+		await svc.InitializeAsync();
+
+		var again = svc.InitializeAsync();
+
+		await Assert.That(again.IsCompletedSuccessfully).IsTrue();
+		await Assert.That(js.ReceivedCalls().Count()).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task InitializeAsync_WithStoredUnknownPreset_KeepsDefault()
 	{
 		var svc = new ThemeService(MakeJs("Does Not Exist"));
@@ -145,5 +161,14 @@ public class ThemeServiceTests
 		// MudColor.Value appends alpha (#rrggbbff) — compare only the 7-char hex
 		var mudPrimary = theme.PaletteDark.Primary.Value.ToLower()[..7];
 		await Assert.That(mudPrimary).IsEqualTo(preset.PrimaryColor.ToLower());
+	}
+
+	[Test]
+	public async Task ToMudTheme_TextDisabledMatchesTheFaintToken()
+	{
+		var theme = ThemeService.GetDefaultPreset().ToMudTheme();
+		var disabled = theme.PaletteDark.TextDisabled.Value.ToLower()[..7];
+		await Assert.That(disabled).IsEqualTo("#7d8790")
+			.Because("MudBlazor's disabled text must keep the same AA contrast as --text-faint in tokens.css");
 	}
 }

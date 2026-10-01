@@ -26,6 +26,17 @@ public interface ICommunicationService
 {
 	/// <summary>Admits and transforms local SAY/POSE/SEMIPOSE once before location delivery.</summary>
 	ValueTask<CallState> SpeechAsync(IMUSHCodeParser parser, MString message, string token);
+
+	/// <summary>
+	/// Local speech in a frame of the caller's own, such as a plugin's OOC line. Admission (the location's
+	/// Speech lock), SPEECHMOD (applied once, to <paramref name="message"/> alone, with
+	/// <paramref name="token"/>) and the speaker's name (as SAY/POSE name them) are exactly SpeechAsync's;
+	/// the room hears <paramref name="frame"/>(name, transformed message) instead of the built-in shape.
+	/// The outcome carries the name and the transformed message, so the caller can keep what was heard.
+	/// </summary>
+	ValueTask<SpeechOutcome> FramedSpeechAsync(IMUSHCodeParser parser, MString message, string token,
+		Func<MString, MString, MString> frame);
+
 	/// <summary>
 	/// Delivers private/prompt, immediate, outermost, named-location, omission or zone output.
 	/// The executor resolves targets and authorizes Spoof; the selected speaker owns Speech/Page

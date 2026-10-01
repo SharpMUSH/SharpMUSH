@@ -81,6 +81,8 @@ internal static class HostedServiceRegistration
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
 		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
 		services.AddHostedService<Services.StartupAttributeBootstrapService>();
+		// What the health endpoints and the portal's startup page read; the bridge reports into it.
+		services.AddSingleton<ServerReadiness>();
 		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();

@@ -1,0 +1,149 @@
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+
+@* D1 §4.12 portrait viewer (board 09): a modal over the page, one image at a time at its natural
+   aspect, its caption under it, "n of N", previous and next when there is more than one. Escape
+   closes and the arrow keys page, from anywhere in the dialog; the close button takes focus when
+   the viewer opens. An image whose URL the policy refuses shows only its caption. Owner actions
+   (make icon, make banner, delete) come in through Actions for the current item. A click outside
+   the frame closes it. *@
+@if (Open && Items.Count > 0)
+{
+    var item = Current;
+    @* MudOverlay owns the fixed, scroll-locking layer: scoped CSS may not position anything fixed. *@
+    <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-viewer-overlay" Style="@ScrimStyle">
+    <div class="kit-viewer" role="dialog" aria-modal="true" aria-label="@(Label ?? Loc["NavViewerLabel"])" tabindex="-1"
+         @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
+        @* Tab cycles inside the dialog; Close takes focus when it opens (see OnAfterRenderAsync). *@
+        <MudFocusTrap DefaultFocus="DefaultFocus.None">
+        <div class="kit-viewer-frame">
+            <div class="kit-viewer-bar">
+                <span class="kit-viewer-count">@Loc["NavViewerCount", _index + 1, Items.Count]</span>
+                <span class="kit-viewer-spacer"></span>
+                @if (Actions is not null)
+                {
+                    <div class="kit-viewer-actions">@Actions(item)</div>
+                }
+                <CapsuleButton @ref="_closeButton" Class="kit-viewer-close" Icon="@Icons.Material.Outlined.Close" AriaLabel="@Loc["NavViewerClose"]" OnClick="CloseAsync" />
+            </div>
+            <div class="kit-viewer-stage">
+                @if (Items.Count > 1)
+                {
+                    <CapsuleButton Class="kit-viewer-prev" Icon="@Icons.Material.Outlined.ChevronLeft" AriaLabel="@Loc["NavViewerPrevious"]" OnClick="@(() => StepAsync(-1))" />
+                }
+                @if (ImageUrlPolicy.IsRenderable(item.Url))
+                {
+                    <img class="kit-viewer-img" src="@ApiUrl.Resolve(item.Url)" alt="@(item.Alt ?? string.Empty)" />
+                }
+                else
+                {
+                    <div class="kit-viewer-missing">@Loc["NavViewerUnavailable"]</div>
+                }
+                @if (Items.Count > 1)
+                {
+                    <CapsuleButton Class="kit-viewer-next" Icon="@Icons.Material.Outlined.ChevronRight" AriaLabel="@Loc["NavViewerNext"]" OnClick="@(() => StepAsync(1))" />
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(item.Caption))
+            {
+                <div class="kit-viewer-caption">@item.Caption</div>
+            }
+        </div>
+        </MudFocusTrap>
+    </div>
+    </MudOverlay>
+}
+
+@code {
+    /// <summary>One image: URL (raw; the policy decides whether it renders), alt text and caption.</summary>
+    public sealed record Item(string Url, string? Alt, string? Caption, string? Key = null);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Item> Items { get; set; } = [];
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public int Index { get; set; }
+    [Parameter] public EventCallback<int> IndexChanged { get; set; }
+
+    /// <summary>The dialog's accessible name ("Tomas Reyes's gallery").</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Controls for the image on screen, in the top bar before Close.</summary>
+    [Parameter] public RenderFragment<Item>? Actions { get; set; }
+
+    private int _index;
+    private bool _wasOpen;
+    private bool _focusClose;
+    private bool _rememberFocus;
+    private CapsuleButton? _closeButton;
+
+    private Item Current => Items[Math.Clamp(_index, 0, Items.Count - 1)];
+
+    /// <summary>The scrim: MudOverlay's own dark background is too light to read a portrait against,
+    /// and scoped CSS cannot reach a child component's root, so the overlay takes it as a style.</summary>
+    private const string ScrimStyle = "background: rgba(8, 9, 10, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);";
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            _index = Items.Count == 0 ? 0 : Math.Clamp(Index, 0, Items.Count - 1);
+            _focusClose = true;
+            _rememberFocus = true;
+        }
+        else if (Items.Count > 0)
+        {
+            _index = Math.Clamp(_index, 0, Items.Count - 1);
+        }
+        _wasOpen = Open;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Remember what opened the viewer before focus moves into it, so closing can hand it back.
+        if (_rememberFocus)
+        {
+            _rememberFocus = false;
+            await RunFocusAsync("sharpmushLayout.rememberFocus");
+        }
+
+        if (_focusClose && Open && _closeButton is not null)
+        {
+            _focusClose = false;
+            await _closeButton.FocusAsync();
+        }
+    }
+
+    private async Task StepAsync(int delta)
+    {
+        if (Items.Count == 0) return;
+        _index = ((_index + delta) % Items.Count + Items.Count) % Items.Count;
+        await IndexChanged.InvokeAsync(_index);
+    }
+
+    private async Task CloseAsync()
+    {
+        _wasOpen = false;
+        await OpenChanged.InvokeAsync(false);
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
+
+    /// <summary>Focus hand-off through layout.js; a page without it (prerender, tests) just skips it.</summary>
+    private async Task RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+
+    // No preventDefault: it is decided when the dialog renders, so it would act on the key after this
+    // one (a swallowed Tab or Enter). The arrows' only default, scrolling, is locked by the overlay.
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape": await CloseAsync(); break;
+            case "ArrowLeft": await StepAsync(-1); break;
+            case "ArrowRight": await StepAsync(1); break;
+        }
+    }
+}

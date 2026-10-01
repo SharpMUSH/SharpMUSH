@@ -22,4 +22,6 @@ public sealed record ApplicationRecord
 	public string? RenderKind { get; init; }
 	public string? ComponentAssemblyUrl { get; init; }
 	public string? ComponentTypeName { get; init; }
+	public string? Scope { get; init; }
+	public string? OobPackage { get; init; }
 }

@@ -1,0 +1,57 @@
+@* D1 §4.6 image tile: rooms, exits, pages and scenes. Full-width image 52px tall (76 on category
+   covers), radius 10, a 13px label with an optional right-aligned dim count. No image → --surface-2
+   fill with a centred icon. Overlay content (pills, keycaps) sits over the image. *@
+@if (Href is not null)
+{
+    <a class="kit-tile" href="@Href">@Inner</a>
+}
+else
+{
+    <button type="button" class="kit-tile" @onclick="OnClick">@Inner</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public int? Count { get; set; }
+    [Parameter] public int Height { get; set; } = 52;
+
+    /// <summary>The fallback icon when there is no image; defaults to a picture outline.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>A second, dim line under the label (an exit's area or lock hint).</summary>
+    [Parameter] public string? Sub { get; set; }
+    [Parameter] public RenderFragment? Overlay { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private RenderFragment Inner => __builder =>
+    {
+        <span class="kit-tile-media" style="@($"height:{Height}px;")">
+            @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+            {
+                <img class="kit-tile-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+            }
+            else
+            {
+                <span class="kit-tile-fallback" aria-hidden="true"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Image)" Size="Size.Small" /></span>
+            }
+            @if (Overlay is not null)
+            {
+                <span class="kit-tile-overlay">@Overlay</span>
+            }
+        </span>
+        <span class="kit-tile-row">
+            <span class="kit-tile-label">@Label</span>
+            @if (Count is not null)
+            {
+                <span class="kit-tile-count">@Count</span>
+            }
+        </span>
+        @if (Sub is not null)
+        {
+            <span class="kit-tile-sub">@Sub</span>
+        }
+    };
+}

@@ -53,6 +53,9 @@ jobs:
       - name: Test portal startup helpers
         run: node --test tools/client-tests/*.test.mjs
 
+      - name: Test i18n tools
+        run: python3 -m unittest discover -s tools/i18n -p 'test_*.py' -v
+
       - name: Restore dependencies
         run: dotnet restore
 

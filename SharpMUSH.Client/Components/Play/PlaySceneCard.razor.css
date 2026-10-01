@@ -1,0 +1,112 @@
+.scene-card {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	height: 100%;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	overflow: hidden;
+}
+
+.scene-card-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px 10px 16px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.scene-card-lead {
+	flex-shrink: 0;
+}
+
+.scene-card-titles {
+	flex: 1;
+	min-width: 0;
+}
+
+.scene-card-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.scene-card-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.scene-card-switch {
+	display: flex;
+	padding: 3px;
+	gap: 2px;
+	border-radius: 20px;
+	background: var(--surface-3);
+	flex-shrink: 0;
+}
+
+.scene-card-radio {
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	padding: 6px 14px;
+	border: 0;
+	border-radius: 17px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.scene-card-radio--on {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.scene-card-radio:focus-visible,
+.scene-card-focus:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.scene-card-focus {
+	width: 36px;
+	height: 36px;
+	display: grid;
+	place-items: center;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.scene-card-focus:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.scene-card-focus--on {
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--accent);
+}
+
+.scene-card-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.scene-card-foot {
+	flex-shrink: 0;
+	padding: 0 12px 12px;
+}
