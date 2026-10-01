@@ -182,7 +182,13 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 					new WidgetPlacement("character-header", 0, null),
 					new WidgetPlacement("WikiBody", 1, null)
 				],
-				[WidgetZone.RightSidebar] = [new WidgetPlacement("CharacterGallery", 0, null)]
+				// README §6.3: Gallery, then Recent scenes, then Often plays with.
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("CharacterGallery", 0, null),
+					new WidgetPlacement("RecentScenes", 1, null),
+					new WidgetPlacement("OftenPlaysWith", 2, null)
+				]
 			},
 			SidebarsOff),
 

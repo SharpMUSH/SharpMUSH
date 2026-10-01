@@ -12,6 +12,7 @@
 @inject IJSRuntime JS
 @inject ILogger<WikiDisplay> Logger
 @inject NavigationManager Nav
+@inject CharacterDirectoryService Characters
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -108,8 +109,11 @@ else
             else
             {
                 <article class="wiki-article-main">
-                    <div class="wiki-article-kicker">@CategoryLabel</div>
-                    <h1 class="wiki-article-title">@Article.Title</h1>
+                    @if (ShowTitle)
+                    {
+                        <div class="wiki-article-kicker">@CategoryLabel</div>
+                        <h1 class="wiki-article-title">@Article.Title</h1>
+                    }
                     @LocaleBanner
                     <div class="WikiContent wiki-article-body">
                         <div class="mud-card-content">
@@ -158,7 +162,7 @@ else
                             @foreach (var person in _mentioned)
                             {
                                 var m = person;
-                                <PortraitTile Name="@m.Name" Href="@m.Href" />
+                                <PortraitTile Name="@m.Name" ImageUrl="@MentionImage(m.Name)" Alt="@m.Name" Href="@m.Href" />
                             }
                         </div>
                     </KitCard>
@@ -212,13 +216,12 @@ else
     [Parameter]
     public bool Embedded { get; init; }
 
+    /// <summary>False drops an embedded article's kicker and title (the host card's header names it).</summary>
+    [Parameter]
+    public bool ShowTitle { get; init; } = true;
+
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
-
-    /// <summary>Raised after a successful rollback (kept for API compatibility with WikiView;
-    /// restore now lives on the dedicated history page).</summary>
-    [Parameter]
-    public EventCallback<WikiArticle> OnArticleRestored { get; init; }
 
     /// <summary>
     /// One renderable chunk of the article body: either raw HTML, or a dynamic
@@ -257,6 +260,9 @@ else
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     private List<Mentioned> _mentioned = [];
+
+    /// <summary>Directory rows for the Mentioned tiles' pictures (profile-handler 1.5's image column).</summary>
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _characters = [];
     private List<WikiPageSummary> _more = [];
     private int _moreTotal;
     private bool _minimised;
@@ -442,7 +448,27 @@ else
         }
 
         await LoadMoreAsync();
+        await LoadMentionImagesAsync();
     }
+
+    /// <summary>
+    /// The pictures for the Mentioned tiles, from the character directory; a failed read shows initials.
+    /// </summary>
+    private async Task LoadMentionImagesAsync()
+    {
+        if (_mentioned.Count == 0 || _characters.Count > 0)
+        {
+            return;
+        }
+
+        if (await Characters.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _characters = rows;
+        }
+    }
+
+    private string? MentionImage(string name) =>
+        _characters.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;
 
     /// <summary>Up to three other pages in this category for the aside, plus the total for the "All N" link.</summary>
     private async Task LoadMoreAsync()

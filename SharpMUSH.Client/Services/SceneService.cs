@@ -72,6 +72,32 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 		};
 	}
 
+	/// <summary>The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first.</summary>
+	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5)
+	{
+		var result = await Client.GetApiAsync<List<SceneDto>>(
+			$"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no scene list.");
+
+		return result switch
+		{
+			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>Who shares the most caller-visible scenes with <paramref name="dbref"/>, most first.</summary>
+	public async Task<ApiResult<IReadOnlyList<ScenePartner>>> GetPartnersAsync(string dbref, int count = 6)
+	{
+		var result = await Client.GetApiAsync<List<ScenePartner>>(
+			$"api/scenes/partners?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no partner list.");
+
+		return result switch
+		{
+			List<ScenePartner> partners => (IReadOnlyList<ScenePartner>)partners,
+			ApiFailure failure => failure
+		};
+	}
+
 	/// <summary>Convenience: the currently running scenes.</summary>
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetActiveScenesAsync(int count = 50)
 		=> ListScenesAsync("active", count);

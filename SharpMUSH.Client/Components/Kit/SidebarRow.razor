@@ -42,6 +42,9 @@ else
     /// <summary>Extra classes on the row element, so a page can address its own rows.</summary>
     [Parameter] public string? Class { get; set; }
     [Parameter] public int? Count { get; set; }
+
+    /// <summary>A short dim word at the row's end when there is no count ("you", "in scene", "away").</summary>
+    [Parameter] public string? Trail { get; set; }
     [Parameter] public int Unread { get; set; }
     [Parameter] public bool IsCurrent { get; set; }
     [Parameter] public bool Dim { get; set; }
@@ -140,6 +143,10 @@ else
             else if (Count is not null)
             {
                 <span class="kit-row-count">@Count</span>
+            }
+            else if (Trail is not null)
+            {
+                <span class="kit-row-trail">@Trail</span>
             }
         }
         else if (Unread > 0)

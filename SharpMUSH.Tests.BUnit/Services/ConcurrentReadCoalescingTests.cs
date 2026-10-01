@@ -71,8 +71,9 @@ public class ConcurrentReadCoalescingTests : TrackingTestContext
 
 		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(1);
 
+		// Within its short memo (README §6.3's several readers per page) a later read is answered from it.
 		await service.ListOnlineAsync();
-		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(2);
+		await Assert.That(handler.CallsTo("/http/online")).IsEqualTo(1);
 	}
 
 	/// <summary>

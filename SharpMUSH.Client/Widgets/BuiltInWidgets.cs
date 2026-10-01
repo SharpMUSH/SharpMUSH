@@ -73,6 +73,13 @@ public static class BuiltInWidgets
 
 		new("Stats", "LayWidgetGameStats", WidgetSize.Large, MainOnly, typeof(StatsWidget)),
 		new("ActiveScene", "LayWidgetActiveScene", WidgetSize.Medium, Content, typeof(ActiveSceneWidget)),
+
+		// A character's last scenes and who they share the most scenes with (README §6.3). The character
+		// comes from the profile page context, or from the config when placed elsewhere.
+		new("RecentScenes", "LayWidgetRecentScenes", WidgetSize.Medium, Content,
+			typeof(RecentScenesWidget), typeof(CharacterTargetConfig)),
+		new("OftenPlaysWith", "LayWidgetOftenPlaysWith", WidgetSize.Medium, Content,
+			typeof(OftenPlaysWithWidget), typeof(CharacterTargetConfig)),
 		new("RecentWikiActivity", "LayWidgetRecentWikiActivity", WidgetSize.Medium, Content,
 			typeof(RecentWikiActivityWidget)),
 		new("OnlineCharacters", "LayWidgetOnlineCharacters", WidgetSize.Medium, Content,

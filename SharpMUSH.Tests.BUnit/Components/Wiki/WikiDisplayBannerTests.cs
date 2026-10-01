@@ -26,6 +26,7 @@ file sealed class PageAsideHandler : HttpMessageHandler
 		string? body = path switch
 		{
 			"/api/wiki/exists" => """{"character/general/tomas_reyes":true,"character/general/magister_oake":true,"main/theme/tidewater_chapel":false}""",
+			"/http/characters" => """[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":"","image":"/api/wiki-assets/t/tomas.jpg"},{"name":"Magister Oake","objid":"#316:1","created":1,"category":""}]""",
 			"/api/wiki/category/theme" => WikiApiFake.Paged(request, [
 				WikiApiFake.Page("1", "harbour_ward", "Harbour Ward", "theme", "/api/wiki-assets/h/ward.jpg", "Ilsa Varn"),
 				WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren"),
@@ -60,6 +61,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		Services.AddSingleton(factory);
 		Services.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 		Services.AddSingleton<WikiMarkdigPipeline>();
+		Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		Services.AddLocalization();
 		_auth = AddAuthorization();
 		_auth.SetAuthorized("reader");
@@ -169,6 +171,9 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		await Assert.That(mentioned.Length).IsEqualTo(2);
 		await Assert.That(mentioned[0].GetAttribute("href")).IsEqualTo("/character/tomas_reyes");
 		await Assert.That(mentioned[0].QuerySelector(".kit-portrait-label")!.TextContent).IsEqualTo("Tomas Reyes");
+		cut.WaitForAssertion(() => cut.Find(".wiki-mentioned img.kit-portrait-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wiki-mentioned img.kit-portrait-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg")
+			.Because("the directory row carries the character's IMAGE (profile-handler 1.5)");
 		await Assert.That(aside.QuerySelector(".wiki-mentioned .kit-card-title")!.TextContent).Contains("2");
 
 		var more = aside.QuerySelectorAll(".wiki-more a.kit-row");

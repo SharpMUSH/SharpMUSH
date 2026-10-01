@@ -1,4 +1,4 @@
-.wiki-shell {
+.kit-section {
 	display: grid;
 	grid-template-columns: var(--side-w) minmax(0, 1fr);
 	gap: 16px;
@@ -6,30 +6,39 @@
 	min-height: 100%;
 }
 
-.wiki-shell-nav {
+.kit-section-nav {
 	min-width: 0;
 	background: var(--surface-3);
 	border-right: 1px solid var(--border-soft);
 	position: sticky;
 	top: 0;
+	/* the scroll container starts under the topbar (and above the touch tab bar), so a
+	   100dvh box would hide its bottom rows — the pinned Maintenance links */
 	max-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-clearance, 0px));
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	align-self: stretch;
 }
 
-.wiki-shell-body {
+.kit-section-body {
 	min-width: 0;
 	padding: var(--main-pad);
 }
 
+/* The hand-built section pages (Banned names, Import, Restrictions, Sitelock) put the kit's plain
+   header straight into a .config-section-page block with no gap; the header carries no margin of
+   its own, so the space under it is set here once for all of them. */
+.kit-section-body ::deep .config-section-page > .kit-page-head {
+	margin-bottom: 1.25rem;
+}
+
 @container page (max-width: 64rem) {
-	.wiki-shell {
+	.kit-section {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 12px;
 	}
 
-	.wiki-shell-nav {
+	.kit-section-nav {
 		position: static;
 		max-height: 17.5rem;
 		border: 1px solid var(--border-soft);

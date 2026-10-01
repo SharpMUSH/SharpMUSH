@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@using SharpMUSH.Client.Components.Characters
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Characters section (/characters, a profile, character creation): the D1 page sidebar beside
+   the page body. Phase 1 moves the sidebar into the shell's page-sidebar slot. *@
+<SectionShell Class="char-shell" NavLabel="@Loc["Characters"]">
+    <Nav><CharactersSidebar /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>

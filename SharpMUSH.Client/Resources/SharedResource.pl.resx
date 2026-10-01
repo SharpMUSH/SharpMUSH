@@ -4674,4 +4674,133 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Główna przestrzeń nazw</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} few {# online} many {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# postać} few {# postacie} many {# postaci} other {# postaci}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Wszyscy # online} few {Wszyscy # online} many {Wszyscy # online} other {Wszyscy # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Znajdź postać</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Teraz online</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nikt nie jest online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>ty</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Twoje postacie</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Utwórz postać</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Przeglądaj</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Wszystkie postacie</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Najnowsze</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Kategorie postaci</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Żadna postać nie nazywa się {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>W scenie · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Pełny obraz</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Poczta</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>O postaci {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografia</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Strona wiki · edytowano {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Przeglądarka obrazów</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} z {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Zamknij</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Poprzedni obraz</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Następny obraz</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Nie można wyświetlić tego obrazu.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galeria · #} few {Galeria · #} many {Galeria · #} other {Galeria · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Zobacz wszystkie</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Ustaw jako baner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Usuń baner</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Nie udało się zmienić banera: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Ostatnie sceny</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Brak scen.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>trwa teraz</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Często gra z</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Brak wspólnych scen.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Ostatnie sceny</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Często gra z</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Dodaj obraz</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Nie można teraz odczytać profilu tej postaci.</value>
+  </data>
 </root>

@@ -161,6 +161,14 @@
 	text-overflow: ellipsis;
 }
 
+.kit-row-trail {
+	margin-left: auto;
+	flex-shrink: 0;
+	font-size: 12px;
+	color: var(--text-dim);
+	white-space: nowrap;
+}
+
 .kit-row-count {
 	font-size: 12px;
 	color: var(--text-dim);

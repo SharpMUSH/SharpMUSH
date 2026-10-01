@@ -11,50 +11,6 @@
 	padding: 12px 4px;
 }
 
-.wiki-side-head {
-	padding: 4px 10px 12px;
-}
-
-.wiki-side-title {
-	font-size: 18px;
-	font-weight: 700;
-	color: var(--text);
-}
-
-.wiki-side-sub {
-	font-size: 12px;
-	color: var(--text-dim);
-	margin-top: 2px;
-}
-
-.wiki-side-search {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	height: 40px;
-	margin: 0 0 10px;
-	padding: 0 12px;
-	border: 1px solid var(--border);
-	border-radius: var(--radius-row);
-	background: var(--surface);
-	color: var(--text-faint);
-}
-
-.wiki-side-search input {
-	flex: 1 1 auto;
-	min-width: 0;
-	border: 0;
-	background: transparent;
-	color: var(--text);
-	font: inherit;
-	font-size: 14px;
-	outline: none;
-}
-
-.wiki-side-search:focus-within {
-	border-color: var(--accent);
-}
-
 .wiki-side-browse,
 .wiki-side-cats {
 	display: flex;

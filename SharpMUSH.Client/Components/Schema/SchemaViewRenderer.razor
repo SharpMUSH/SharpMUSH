@@ -14,50 +14,42 @@
 }
 else
 {
-    @if (!string.IsNullOrWhiteSpace(Document.Title))
-    {
-        <MudText Typo="Typo.h5" Class="mb-4">@Document.Title</MudText>
-    }
-
-    @foreach (var page in Document.Pages.OrderBy(p => p.Order))
-    {
-        @if (!string.IsNullOrWhiteSpace(page.Title) && Document.Pages.Count > 1)
+    <div class="schema-view">
+        @if (!string.IsNullOrWhiteSpace(Document.Title))
         {
-            <MudText Typo="Typo.h6" Class="mt-2 mb-2">@(page.Title)</MudText>
+            <h2 class="schema-title">@Document.Title</h2>
         }
 
-        @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
+        @foreach (var page in Document.Pages.OrderBy(p => p.Order))
         {
-            var elements = VisibleElements(section).ToList();
-            @if (elements.Count > 0)
+            @if (!string.IsNullOrWhiteSpace(page.Title) && Document.Pages.Count > 1)
             {
-                <MudPaper Outlined="true" Class="pa-4 mb-4">
-                    @if (!string.IsNullOrWhiteSpace(section.Name))
-                    {
-                        <MudText Typo="Typo.h6" Class="mb-2">@section.Name</MudText>
-                    }
-                    @if (section.Columns > 1)
-                    {
-                        <MudGrid Spacing="3">
+                <h3 class="schema-page-title">@(page.Title)</h3>
+            }
+
+            @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
+            {
+                var elements = VisibleElements(section).ToList();
+                @if (elements.Count > 0)
+                {
+                    @* D1 §4.4: a section is a card titled with its name. Declared columns are a fixed
+                       grid; undeclared, short fields flow into as many columns as fit (board 25's
+                       Details row) and long content takes the whole row. *@
+                    <KitCard Title="@(string.IsNullOrWhiteSpace(section.Name) ? null : section.Name)" Class="schema-section">
+                        <div class="schema-grid @(section.Columns > 1 ? "schema-grid--cols" : "schema-grid--auto")"
+                             style="@(section.Columns > 1 ? $"--schema-cols:{section.Columns};" : null)">
                             @foreach (var element in elements)
                             {
-                                <MudItem xs="12" md="@ColumnWidth(section.Columns, element.Span)">
+                                <div class="schema-cell @(IsWide(element) ? "schema-cell--wide" : null)" style="@SpanStyle(section, element)">
                                     @RenderElement(element)
-                                </MudItem>
+                                </div>
                             }
-                        </MudGrid>
-                    }
-                    else
-                    {
-                        @foreach (var element in elements)
-                        {
-                            @RenderElement(element)
-                        }
-                    }
-                </MudPaper>
+                        </div>
+                    </KitCard>
+                }
             }
         }
-    }
+    </div>
 }
 
 @code {
@@ -74,9 +66,16 @@ else
     private IEnumerable<SchemaElement> VisibleElements(SchemaSection section)
         => (section.Elements ?? []).Where(IsVisible);
 
-    // Responsive width (out of 12) for one element in an N-column section, honoring its span.
-    private static int ColumnWidth(int columns, int span)
-        => Math.Clamp(12 / Math.Max(1, columns) * Math.Max(1, span), 1, 12);
+    // A declared span in a fixed grid, capped at the section's columns.
+    private static string? SpanStyle(SchemaSection section, SchemaElement element)
+        => section.Columns > 1 && element.Span > 1 ? $"--schema-span:{Math.Min(element.Span, section.Columns)};" : null;
+
+    // Content too long for a grid cell takes the whole row of an auto grid.
+    private static bool IsWide(SchemaElement element) => (element.Kind ?? "field").ToLowerInvariant() switch
+    {
+        "field" => string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase),
+        _ => true,
+    };
 
     // A field element shows only if its datum exists and the softcode marked it visible. Non-field
     // display elements (markdown/divider/etc.) always show — they carry no per-viewer policy.
@@ -129,9 +128,9 @@ else
 
             case "image":
                 var src = element.SrcField is not null ? ValueToString(Lookup(element.SrcField)) : element.Value;
-                @if (!string.IsNullOrWhiteSpace(src))
+                @if (ImageUrlPolicy.IsRenderable(src))
                 {
-                    <MudImage Src="@src" Alt="@(element.Alt ?? string.Empty)" Fluid="true" Class="rounded" />
+                    <img class="schema-image" src="@src!.Trim()" alt="@(element.Alt ?? string.Empty)" loading="lazy" />
                 }
                 break;
 
@@ -140,35 +139,33 @@ else
                 break;
 
             case "keyvalue":
-                <MudSimpleTable Dense="true" Bordered="false" Elevation="0">
-                    <tbody>
-                        @foreach (var key in (element.Fields ?? []).Where(IsKeyVisible))
-                        {
-                            <tr>
-                                <td class="mud-text-secondary" style="width: 35%;">@key</td>
-                                <td>@ValueToString(Lookup(key))</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
+                <dl class="schema-kv">
+                    @foreach (var key in (element.Fields ?? []).Where(IsKeyVisible))
+                    {
+                        <div class="schema-kv-row">
+                            <dt class="schema-label">@key</dt>
+                            <dd class="schema-value">@ValueToString(Lookup(key))</dd>
+                        </div>
+                    }
+                </dl>
                 break;
 
             default:
                 var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
                 var display = string.IsNullOrEmpty(raw) ? ValueToString(element.Default) : raw;
-                <div class="mb-2">
+                <div class="schema-field">
                     @if (!string.IsNullOrWhiteSpace(element.Label))
                     {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@element.Label</MudText>
+                        <div class="schema-label">@element.Label</div>
                     }
                     @if (string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase))
                     {
                         @* mstring fields carry ANSI/MXP markup — render it the way the terminal does. *@
-                        <div class="mud-typography mud-typography-body1">@((MarkupString)RenderMarkup(display))</div>
+                        <div class="schema-value schema-value--markup">@((MarkupString)RenderMarkup(display))</div>
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1">@display</MudText>
+                        <div class="schema-value">@display</div>
                     }
                 </div>
                 break;

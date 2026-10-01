@@ -3,18 +3,15 @@
 @using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Library.API
 @inject ConfigSchemaService SchemaService
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Every /admin/config page: the D1 page sidebar (ConfigSidebar) beside the page body. The sidebar
    gets per-section setting counts from the schema; when the schema cannot be read the tree still
    renders, just without counts. Phase 1 moves the sidebar into the shell's page-sidebar slot. *@
-<div class="config-shell">
-    <aside class="config-section-nav">
-        <ConfigSidebar SectionCounts="@_counts" />
-    </aside>
-    <div class="config-section-body">
-        @Body
-    </div>
-</div>
+<SectionShell Class="config-shell" NavLabel="@Loc["Configuration"]">
+    <Nav><ConfigSidebar SectionCounts="@_counts" /></Nav>
+    <ChildContent>@Body</ChildContent>
+</SectionShell>
 
 @code {
     private IReadOnlyDictionary<string, int>? _counts;

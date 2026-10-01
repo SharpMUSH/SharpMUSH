@@ -121,12 +121,12 @@ public class DesignTokensTests
 	}
 
 	[Test]
-	public async Task TheTopbarHeightIsATokenTheConfigStickyBoxSubtracts()
+	public async Task TheTopbarHeightIsATokenTheSectionStickyBoxSubtracts()
 	{
 		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
 		await Assert.That(shell).Contains("height: var(--topbar-h)")
 			.Because("a sticky box inside the scroll container must know how tall the topbar above it is");
-		var layout = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Layout", "ConfigLayout.razor.css"));
+		var layout = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components", "Kit", "SectionShell.razor.css"));
 		await Assert.That(layout).Contains("calc(100dvh - var(--topbar-h)")
 			.Because("a 100dvh sticky sidebar under a 60px topbar hides its bottom 60px — the pinned Maintenance rows");
 	}

@@ -65,7 +65,7 @@ public class ConfigLayoutTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a[href='/admin/config/chat'] .kit-row-count"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("a[href='/admin/config/chat'] .kit-row-count").TextContent).IsEqualTo(expectedChat.ToString());
-		await Assert.That(cut.Find(".config-section-body #body")).IsNotNull();
+		await Assert.That(cut.Find(".config-shell .kit-section-body #body")).IsNotNull();
 	}
 
 	[Test]

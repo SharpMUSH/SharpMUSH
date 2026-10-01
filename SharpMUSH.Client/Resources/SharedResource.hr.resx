@@ -4674,4 +4674,133 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Glavni imenski prostor</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# na mreži} few {# na mreži} other {# na mreži}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# lik} few {# lika} other {# likova}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Svi # na mreži} few {Svi # na mreži} other {Svi # na mreži}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Pronađi lika</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Sada na mreži</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nitko nije na mreži.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>vi</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Vaši likovi</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Stvori lika</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Pregledaj</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Svi likovi</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Najnoviji</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Kategorije likova</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Nijedan lik se ne zove {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>U sceni · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Na mreži</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Pošta</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>O liku {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Životopis</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki stranica · uređeno {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Preglednik slika</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} od {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Zatvori</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Prethodna slika</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Sljedeća slika</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Ova se slika ne može prikazati.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerija · #} few {Galerija · #} other {Galerija · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Postavi kao naslovnu</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Ukloni naslovnu</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Naslovna se nije mogla promijeniti: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Nedavne scene</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Još nema scena.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>uživo</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Često igra s</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Još nema zajedničkih scena.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Nedavne scene</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Često igra s</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Dodaj sliku</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Profil ovog lika trenutačno se ne može pročitati.</value>
+  </data>
 </root>

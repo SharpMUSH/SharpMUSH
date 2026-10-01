@@ -46,8 +46,8 @@ public class WikiSidebarTests : TrackingBunitContext
 	public async Task HeaderCountsThePages_AndBrowseLinksHomeAndRecent()
 	{
 		var cut = RenderAt("/wiki");
-		await Assert.That(cut.Find(".wiki-side-sub").TextContent).StartsWith("Main namespace").Because("board 21: \"Main namespace · N pages\"");
-		await Assert.That(cut.Find(".wiki-side-sub").TextContent).Contains("4");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).StartsWith("Main namespace").Because("board 21: \"Main namespace · N pages\"");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("4");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki/recent']")).IsNotNull();
 	}
@@ -64,8 +64,8 @@ public class WikiSidebarTests : TrackingBunitContext
 	public async Task SearchSubmitsToTheWikiHome()
 	{
 		var cut = RenderAt("/wiki/category/lore");
-		cut.Find(".wiki-side-search input").Input("harbour");
-		cut.Find(".wiki-side-search").Submit();
+		cut.Find(".kit-side-search input").Input("harbour");
+		cut.Find(".kit-side-search").Submit();
 		await Assert.That(_nav.Uri).EndsWith("/wiki?q=harbour");
 	}
 
@@ -97,6 +97,6 @@ public class WikiSidebarTests : TrackingBunitContext
 		var cut = Render<WikiSidebar>(p => p.Add(x => x.Collapsed, true));
 		cut.WaitForAssertion(() => cut.Find(".wiki-side-cats .kit-row--collapsed"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-row-label").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll(".wiki-side-search").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".kit-side-search").Count).IsEqualTo(0);
 	}
 }

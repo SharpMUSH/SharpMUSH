@@ -57,6 +57,19 @@ public class SidebarRowTests : BunitContext
 	}
 
 	[Test]
+	public async Task Trail_ShowsAtTheEnd_WhenThereIsNoCount()
+	{
+		var trail = Render<SidebarRow>(p => p.Add(x => x.Label, "Ilsa Varn").Add(x => x.Trail, "you"));
+		await Assert.That(trail.Find(".kit-row-trail").TextContent).IsEqualTo("you");
+
+		var counted = Render<SidebarRow>(p => p.Add(x => x.Label, "Theme").Add(x => x.Trail, "you").Add(x => x.Count, 3));
+		await Assert.That(counted.FindAll(".kit-row-trail").Count).IsEqualTo(0).Because("a count and a word would crowd the row");
+
+		var collapsed = Render<SidebarRow>(p => p.Add(x => x.Label, "Ilsa Varn").Add(x => x.Trail, "you").Add(x => x.Collapsed, true));
+		await Assert.That(collapsed.FindAll(".kit-row-trail").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task AvatarLead_WithoutImage_ShowsInitialsOnATintedFill()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Dace Kellan").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar).Add(x => x.Name, "Dace Kellan"));

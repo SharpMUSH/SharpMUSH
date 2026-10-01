@@ -4019,4 +4019,133 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Main namespace</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# character} other {# characters}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {All # online} other {All # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Find a character</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Online now</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nobody is online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>you</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Your characters</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Create a character</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>All characters</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Newest</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Character categories</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>No character is named {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>In a scene · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Full image</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>About {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biography</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki page · edited {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Image viewer</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} of {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Previous image</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Next image</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>This image cannot be shown.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Gallery · #} other {Gallery · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>View all</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portrait</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Use as banner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Remove banner</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Could not change the banner: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Recent scenes</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>No scenes yet.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>live now</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Often plays with</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>No shared scenes yet.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Recent scenes</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Often plays with</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Add image</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>This character's profile could not be read right now.</value>
+  </data>
 </root>

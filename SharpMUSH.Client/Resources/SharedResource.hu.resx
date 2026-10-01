@@ -4674,4 +4674,133 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Fő névtér</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# karakter} other {# karakter}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Mind a # online} other {Mind a # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Karakter keresése</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Most online</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Senki sincs online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>te</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Karaktereid</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Összes karakter</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Legújabbak</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Karakterkategóriák</value>
+  </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Nincs {0} nevű karakter.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>Jelenetben · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Teljes kép</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Levél</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>{0} adatai</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Életrajz</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikioldal · szerkesztve {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Képnézegető</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Bezárás</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Előző kép</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Következő kép</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Ez a kép nem jeleníthető meg.</value>
+  </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galéria · #} other {Galéria · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portré</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Legyen a borító</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Borító eltávolítása</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>A borító nem módosítható: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Még nincs jelenet.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>most zajlik</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Még nincs közös jelenet.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
+  <data name="NavGalleryAdd" xml:space="preserve">
+    <value>Kép hozzáadása</value>
+  </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>A karakter profilja most nem olvasható.</value>
+  </data>
 </root>

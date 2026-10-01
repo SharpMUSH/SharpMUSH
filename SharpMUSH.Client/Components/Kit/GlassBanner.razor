@@ -30,7 +30,7 @@
 }
 else
 {
-    <div class="kit-banner @(Open ? "kit-banner--open" : null) @(HasImage ? null : "kit-banner--noimage")" style="@($"height:{(Open ? OpenHeight : Height)}px;")">
+    <div class="kit-banner @(Open ? "kit-banner--open" : null) @(HasImage ? null : "kit-banner--noimage") @(UsesHue ? "kit-banner--hue" : null)" style="@BannerStyle">
         @if (HasImage)
         {
             <img class="kit-banner-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@FocalStyle" />
@@ -43,15 +43,25 @@ else
         {
             <div class="kit-banner-open" tabindex="0">@OpenContent</div>
         }
-        <div class="kit-banner-text kit-banner-text--@TitleSize">
-            @if (Kicker is not null)
+        <div class="kit-banner-foot">
+            @if (Lead is not null)
             {
-                <div class="kit-banner-kicker">@Kicker</div>
+                <div class="kit-banner-lead">@Lead</div>
             }
-            @Heading("kit-banner-title")
-            @if (Secondary is not null)
+            <div class="kit-banner-text kit-banner-text--@TitleSize">
+                @if (Kicker is not null)
+                {
+                    <div class="kit-banner-kicker">@Kicker</div>
+                }
+                @Heading("kit-banner-title")
+                @if (Secondary is not null)
+                {
+                    <div class="kit-banner-secondary">@Secondary</div>
+                }
+            </div>
+            @if (BottomActions is not null)
             {
-                <div class="kit-banner-secondary">@Secondary</div>
+                <div class="kit-banner-bottom-actions">@BottomActions</div>
             }
         </div>
         @if (Back is not null)
@@ -104,12 +114,33 @@ else
     /// <summary>1–6 renders the title as that heading; null renders a div (the caller has its own heading).</summary>
     [Parameter] public int? HeadingLevel { get; set; }
 
+    /// <summary>Beside the text, bottom-left: the character profile's 104px portrait.</summary>
+    [Parameter] public RenderFragment? Lead { get; set; }
+
+    /// <summary>The title's colour (a character's name colour). Applied only when it is <c>#rrggbb</c>.</summary>
+    [Parameter] public string? TitleColor { get; set; }
+
+    /// <summary>Capsules at the bottom right (the profile's Mail and Page).</summary>
+    [Parameter] public RenderFragment? BottomActions { get; set; }
+
+    /// <summary>With no image, a gradient on this hue (0–359) instead of the plain surface.</summary>
+    [Parameter] public int? Hue { get; set; }
+
     private CapsuleButton? _minimiseButton;
     private CapsuleButton? _restoreButton;
     private bool _focusMinimise;
     private bool _focusRestore;
 
     private bool HasImage => ImageUrlPolicy.IsRenderable(ImageUrl);
+
+    private bool UsesHue => !HasImage && Hue is not null;
+
+    private string BannerStyle =>
+        $"height:{(Open ? OpenHeight : Height)}px;" + (UsesHue ? $"--banner-hue:{((Hue!.Value % 360) + 360) % 360};" : string.Empty);
+
+    private string? TitleStyle => TitleColor is { Length: 7 } c && c[0] == '#' && c.Skip(1).All(char.IsAsciiHexDigit)
+        ? $"color:{c};"
+        : null;
 
     private string FocalStyle => Focal is { } f
         ? $"object-position:{Math.Round(f.X * 100)}% {Math.Round(f.Y * 100)}%;"
@@ -121,7 +152,8 @@ else
     {
         builder.OpenElement(0, HeadingTag);
         builder.AddAttribute(1, "class", cssClass);
-        builder.AddContent(2, Title);
+        builder.AddAttribute(2, "style", TitleStyle);
+        builder.AddContent(3, Title);
         builder.CloseElement();
     };
 

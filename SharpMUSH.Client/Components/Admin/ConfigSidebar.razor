@@ -14,10 +14,9 @@
 <div class="config-side @(Collapsed ? "config-side--collapsed" : null)">
     @if (!Collapsed)
     {
-        <div class="config-side-head">
-            <div class="config-side-title">@Loc["Configuration"]</div>
-            <div class="config-side-sub">@Loc["ResConfigSectionKicker"]</div>
-        </div>
+        <SidebarHead Title="@Loc["Configuration"]">
+            <Sub>@Loc["ResConfigSectionKicker"]</Sub>
+        </SidebarHead>
         <SectionLabel>@Loc["Settings"]</SectionLabel>
     }
     <nav class="config-side-tree" aria-label="@Loc["Settings"]">

@@ -34,6 +34,7 @@ builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
+builder.Services.AddScoped<CharacterProfileService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders

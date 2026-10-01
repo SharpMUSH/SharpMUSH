@@ -25,7 +25,8 @@ public class ConfigPageHeaderSpacingTests
 	[Test]
 	public async Task ConfigLayoutSpacesThePlainHeaderOfASectionPage()
 	{
-		var layoutCss = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Layout", "ConfigLayout.razor.css"));
+		// ConfigLayout renders through SectionShell, whose body the rule is anchored on.
+		var layoutCss = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components", "Kit", "SectionShell.razor.css"));
 
 		await Assert.That(HeaderSpacingRule.IsMatch(layoutCss)).IsTrue();
 	}
