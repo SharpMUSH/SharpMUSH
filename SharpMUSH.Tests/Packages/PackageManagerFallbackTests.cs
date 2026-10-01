@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Packages;
 
@@ -34,6 +35,21 @@ public class PackageManagerFallbackTests
 	public async Task AConfiguredPackageManager_IsUsedAsConfigured()
 	{
 		await Assert.That(DatabaseOptions.PackageManagerOrSeeded(42)).IsEqualTo(42u);
+	}
+
+	/// <summary>
+	/// A game that installed profile-handler 1.5.0 with <c>package_manager</c> unset has <c>#3</c> baked
+	/// into <c>FN`CHARVIS</c>, and its baseline says so. Bootstrap skips a same-version package and the
+	/// reset refuses a plan that differs from its baselines, so only a newer bundled version carries the
+	/// corrected reference to those games.
+	/// </summary>
+	[Test]
+	public async Task TheBundledProfileHandler_IsNewerThanTheVersionThatBakedInTheWrongFallback()
+	{
+		var match = System.Text.RegularExpressions.Regex.Match(
+			BundledPackages.ManifestYaml("profile-handler"), @"^version:\s*(?<v>\S+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+		await Assert.That(Version.Parse(match.Groups["v"].Value)).IsGreaterThan(new Version(1, 5, 0));
 	}
 
 	[Test]
