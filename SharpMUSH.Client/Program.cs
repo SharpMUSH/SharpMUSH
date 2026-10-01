@@ -145,6 +145,7 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 var app = builder.Build();
+app.Services.AttachPlayTerminalFeeds();
 
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, "locale");

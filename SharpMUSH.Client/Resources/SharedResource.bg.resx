@@ -5012,4 +5012,181 @@
   <data name="PkgShowReadme" xml:space="preserve">
     <value>Покажи README за {0}</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Свързан като {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>В сцена</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Канали</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Съобщения</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# тук}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# изход} other {# изхода}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Описание</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>История</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Изглед</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Сцена · записва се в архива на сцените</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Пълен изход · с каналите и съобщенията</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# там}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Заключено</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Затворено</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Напуска сцената</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Тръгни</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Огледай</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Остани</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Натиснете {0}, за да тръгнете</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Цялото изображение</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Профил</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>В тази сцена</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Неактивен {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Галерия</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Виж всички</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Лист на персонажа: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Поза</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Реплика</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Команда</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Напишете позата си…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Кажете нещо…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Говорете извън ролята…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Въведете команда…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Вид съобщение</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Сцена</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Стая</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Раздели на играта</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Няма никой друг тук.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Обхват на оформлението</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Обхват на оформлението (по избор)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Страницата, към която принадлежи уиджетът, напр. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB пакет</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB пакет (по избор)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Данни на живо от играта, напр. weather.now; заменя URL адреса за данни</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Днес</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Вчера</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Нови</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Съобщение до {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Лични съобщения</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Още няма нищо.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Обратно към сцената</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Игра</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Дясната колона на страницата за игра: кой е тук, изходите и панели на играта.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Тук</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Изходи</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
 </root>

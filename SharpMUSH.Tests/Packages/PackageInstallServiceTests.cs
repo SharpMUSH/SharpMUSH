@@ -656,6 +656,8 @@ public class PackageInstallServiceTests
 			  submit_route: http/appdep
 			  minimum_role: "{{?access}}"
 			  nav_placement: main
+			  scope: play
+			  oob_package: appdep.now
 			  order: 50
 			""");
 
@@ -683,6 +685,8 @@ public class PackageInstallServiceTests
 		await Assert.That(app.SchemaUrl).IsEqualTo("http/appdep/schema");
 		await Assert.That(app.MinimumRole).IsEqualTo(PortalRole.Wizard);
 		await Assert.That(app.OwningPackage).IsEqualTo("appdep-app");
+		await Assert.That(app.Scope).IsEqualTo("play");
+		await Assert.That(app.OobPackage).IsEqualTo("appdep.now");
 
 		// The dependency cannot be removed while the application depends on it.
 		var blockedUninstall = (await Installer.UninstallAsync("appdep-routes")).Expect<Error<string>>();

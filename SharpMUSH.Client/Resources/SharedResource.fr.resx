@@ -4266,4 +4266,181 @@
   <data name="PkgShowReadme" xml:space="preserve">
     <value>Afficher le README de {0}</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Connecté en tant que {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>En scène</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Canaux</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# ici}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# sortie} other {# sorties}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Récit</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vue</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scène · consignée dans les archives des scènes</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Sortie complète · canaux et messages inclus</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# là-bas}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Verrouillé</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Fermé</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Quitte la scène</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Aller</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Regarder</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Rester</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Appuyez sur {0} pour y aller</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Image entière</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>Dans cette scène</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactif {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerie</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Tout voir</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Fiche de personnage : {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Dire</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>HRP</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Commande</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Écrivez votre pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Dites quelque chose…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Parlez hors personnage…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Tapez une commande…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Type de message</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Lieu</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Sections du jeu</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Personne d'autre n'est ici.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Portée de mise en page</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Portée de mise en page (facultatif)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>La page à laquelle appartient le widget, p. ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Paquet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Paquet OOB (facultatif)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Données en direct envoyées par le jeu, p. ex. weather.now ; remplace l’URL de données</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nouveau</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Message à {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Messages privés</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Rien pour l'instant.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Retour à la scène</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Jouer</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>La colonne de droite de la page de jeu : qui est là, les sorties et les panneaux du jeu.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Ici</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Sorties</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Applications</value>
+  </data>
 </root>

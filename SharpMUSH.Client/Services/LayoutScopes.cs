@@ -21,6 +21,7 @@ public static class LayoutScopes
 	public const string Home = "home";
 	public const string WikiIndex = "wiki-index";
 	public const string Profile = "profile";
+	public const string Play = "play";
 
 	public static readonly IReadOnlyList<LayoutScope> All =
 	[
@@ -32,6 +33,9 @@ public static class LayoutScopes
 			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 		new(Profile, "LayScopeProfile", "LayScopeProfileDesc",
 			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
+		// README §7.4: the play page's aside; its main column is the scene card, not a zone.
+		new(Play, "LayScopePlay", "LayScopePlayDesc",
+			[WidgetZone.RightSidebar]),
 	];
 
 	public static LayoutScope? Find(string scope)

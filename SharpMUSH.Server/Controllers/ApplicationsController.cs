@@ -50,7 +50,9 @@ public class ApplicationsController(
 		string? OwningPackage = null,
 		string RenderKind = ApplicationRenderKind.Schema,
 		string? ComponentAssemblyUrl = null,
-		string? ComponentTypeName = null);
+		string? ComponentTypeName = null,
+		string? Scope = null,
+		string? OobPackage = null);
 
 	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
 	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
@@ -132,7 +134,9 @@ public class ApplicationsController(
 			owningPackage,
 			renderKind,
 			string.IsNullOrWhiteSpace(dto.ComponentAssemblyUrl) ? null : dto.ComponentAssemblyUrl.Trim(),
-			string.IsNullOrWhiteSpace(dto.ComponentTypeName) ? null : dto.ComponentTypeName.Trim());
+			string.IsNullOrWhiteSpace(dto.ComponentTypeName) ? null : dto.ComponentTypeName.Trim(),
+			string.IsNullOrWhiteSpace(dto.Scope) ? null : dto.Scope.Trim(),
+			string.IsNullOrWhiteSpace(dto.OobPackage) ? null : dto.OobPackage.Trim());
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", LogSanitizer.Sanitize(application.Slug), application.Kind);
@@ -226,5 +230,7 @@ public class ApplicationsController(
 		a.OwningPackage,
 		a.RenderKind,
 		a.ComponentAssemblyUrl,
-		a.ComponentTypeName);
+		a.ComponentTypeName,
+		a.Scope,
+		a.OobPackage);
 }

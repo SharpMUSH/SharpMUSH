@@ -301,6 +301,38 @@ fires, so there is **one capture path, no double-capture, no echo loop** (room
 emit and the `game.scene.{id}` broadcast are two renderings of one stored pose,
 keyed by pose id). `@EMIT` is **not** hooked — the editor must not pose via it.
 
+### Out of character — the plugin's `ooc` command
+
+`ooc <text>` ships in the Scene plugin (`Commands/OocCommand.cs`), not in the
+softcode package, because the portal's OOC band keys off a tag and something has
+to produce it. The room hears `<OOC> Name: text`; a leading `:` poses
+(`ooc :waves` → `<OOC> Name waves`) and a leading `;` semiposes (`ooc ;'s
+back` → `<OOC> Name's back`). It is spoken the way `say`/`pose` are, through
+`ICommunicationService.FramedSpeechAsync`: the room's Speech lock applies, the
+speaker's `SPEECHMOD` transforms the words once (with `"`, `:` or `;` as `%1`),
+the name is the speech name (`NAMEACCENT`, `MONIKER`, `Someone` for the
+invisible), and a gagged player cannot use it. `ooc` with nothing to say (a
+prefix alone included) says nothing.
+
+It records under the capture rule above — the speaker is focused on the active
+scene in the room they stand in — through `ISceneService.AddPoseAsync` with
+source `ooc` and tags `[ooc]`, and broadcasts like any pose. The stored text is
+exactly the line the room heard **without** the `<OOC>` marker (the tag carries
+it), so it has the speech name, not the `showas` persona. Anywhere else it is
+only said.
+The speaker must also be approved, re-checked on every line as the capture hooks
+do, since focus and membership survive a revoked `APPROVED` flag. The command
+evaluates the package's own `` FUN`IS`APPROVED `` on the Scene Logger (as the
+logger), so a redefined rule applies to OOC too; without the package installed it
+falls back to the package default, a player with the `APPROVED` flag.
+
+**A game with its own `ooc`.** Built-in commands are matched before `$`-commands,
+so this `ooc` shadows a master-room `$ooc *` a game already has. To keep the
+game's own, a wizard runs `@command/disable OOC`: the built-in leaves the command
+table and the line falls through to `$`-commands as if it did not exist. The
+disable lasts until the server restarts, so put it in a wizard object's
+`STARTUP`. (`@command/enable OOC` brings the built-in back.)
+
 ## Default Softcode (`#SCENELOGGER` bootstrap)
 
 Players use `+scene/*` (softcode) and pose natively; they never call `@scene`.
@@ -379,8 +411,14 @@ forwards `game.scene.*` to `GameHub.SceneGroupName(id)`; `IGameHubClient` gains
 
 `SceneEventMessage(SceneId, EventType ["pose"|"edit"|"delete"|"move"|"meta"],
 ActorName [= ShowAsName/AuthorName], PoseId, Content, Markup, Tags, Source,
-Location, Timestamp)`. Lives in a core-shared contract assembly so type identity
-survives ALC isolation.
+Location, Timestamp, ActorObjId)`. `ActorObjId` is the objid (`#N:ctime-ms`)
+of the current holder of the author's dbref, resolved from `AuthorDbref` when the
+event is sent (null when nothing holds it). Pose storage keeps only the dbref
+number, so after a recycle it names the new holder, not the original author. The
+record lives in the plugin; the client keeps its own copy of
+the same positional shape (`SharpMUSH.Client/Models/SceneEventMessage.cs`), because
+the plugin loads in a collectible ALC the client cannot reference. Contract tests in
+`SharpMUSH.Tests.ScenePlugin` and `SharpMUSH.Tests.BUnit` pin the same JSON.
 
 ## Portal UI + Tag Filtering
 

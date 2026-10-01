@@ -1,9 +1,11 @@
+using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -20,6 +22,7 @@ public class ChannelBroadcastService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IMUSHCodeParser parser,
+	IEventService eventService,
 	ILogger<ChannelBroadcastService> logger)
 	: IChannelBroadcastService
 {
@@ -41,6 +44,7 @@ public class ChannelBroadcastService(
 		}
 
 		var message = line.FormatOverride ?? BuildDefaultMessage(line);
+		var sentAt = DateTimeOffset.UtcNow;
 
 		using (logger.BeginScope(new Dictionary<string, string>
 		{
@@ -49,14 +53,64 @@ public class ChannelBroadcastService(
 			["Category"] = "logs"
 		}))
 		{
-			await DeliverAsync(notification, sender, line, message, cancellationToken);
+			var recipients = await DeliverAsync(notification, sender, line, message, cancellationToken);
+
+			// The event follows delivery, before the recall buffer: once the members have the terminal line,
+			// a buffer write that fails (or is cancelled) must not keep the comm feed from getting it too.
+			await RaiseChannelMessageEventAsync(notification, sender, line, recipients, sentAt);
 
 			if (!line.SkipBuffer)
 			{
-				await BufferAsync(notification, sender, message, cancellationToken);
+				await BufferAsync(notification, sender, message, sentAt, cancellationToken);
 			}
 		}
 	}
+
+	/// <summary>
+	/// <see cref="SharpEvents.ChannelMessage"/>: the line as parts, and exactly who it was delivered to, so
+	/// a handler can pass it on (the <c>comm-feed</c> package's <c>comm.message</c>) without deciding again
+	/// who may hear it. Nobody heard it, nothing fires. The parts are plain text after the mogrifier; a
+	/// member's own <c>@chatformat</c> changes only their terminal line.
+	/// </summary>
+	private async ValueTask RaiseChannelMessageEventAsync(
+		ChannelMessageNotification notification,
+		AnySharpObject? sender,
+		ChannelLine line,
+		IReadOnlyList<AnySharpObject> recipients,
+		DateTimeOffset sentAt)
+	{
+		if (recipients.Count == 0)
+		{
+			return;
+		}
+
+		// An @cemit line does not name its emitter: a member's terminal shows the message alone, and only
+		// a NOSPOOF member is told who sent it. The handler still runs with the emitter as %#.
+		var named = notification.MessageType is not (INotifyService.NotificationType.Emit
+			or INotifyService.NotificationType.NSEmit);
+
+		await eventService.TriggerEventAsync(
+			parser,
+			SharpEvents.ChannelMessage,
+			sender?.Object().DBRef,
+			notification.Channel.Name.ToPlainText(),
+			named ? sender?.Object().DBRef.ToString() ?? string.Empty : string.Empty,
+			StyleFor(line.ChatType),
+			named ? line.PlayerName.ToPlainText() : string.Empty,
+			line.Message.ToPlainText(),
+			string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString())),
+			sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+	}
+
+	/// <summary>The chat type character as the word <see cref="SharpEvents.ChannelMessage"/> passes.</summary>
+	private static string StyleFor(string chatType) => chatType switch
+	{
+		":" => "pose",
+		";" => "semipose",
+		"|" => "emit",
+		"@" => "presence",
+		_ => "say"
+	};
 
 	/// <summary>
 	/// The parts of one channel line, after the mogrifier has had its say. <see cref="ChanName"/> is the
@@ -230,7 +284,7 @@ public class ChannelBroadcastService(
 	/// Hands <paramref name="message"/> to each member who may hear it, through that member's own
 	/// <c>@chatformat</c> unless <c>MOGRIFY`OVERRIDE</c> switched that off.
 	/// </summary>
-	private async ValueTask DeliverAsync(
+	private async ValueTask<IReadOnlyList<AnySharpObject>> DeliverAsync(
 		ChannelMessageNotification notification,
 		AnySharpObject? sender,
 		ChannelLine line,
@@ -238,6 +292,7 @@ public class ChannelBroadcastService(
 		CancellationToken cancellationToken)
 	{
 		var sourceNumber = sender?.Object().DBRef.Number;
+		var recipients = new List<AnySharpObject>();
 
 		await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
 		{
@@ -298,7 +353,10 @@ public class ChannelBroadcastService(
 			}
 
 			await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
+			recipients.Add(member);
 		}
+
+		return recipients;
 	}
 
 	/// <summary>
@@ -309,6 +367,7 @@ public class ChannelBroadcastService(
 		ChannelMessageNotification notification,
 		AnySharpObject? sender,
 		MString message,
+		DateTimeOffset sentAt,
 		CancellationToken cancellationToken)
 	{
 		logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
@@ -321,7 +380,7 @@ public class ChannelBroadcastService(
 		var channelMessage = new SharpChannelMessage
 		{
 			ChannelId = notification.Channel.Id ?? string.Empty,
-			Timestamp = DateTimeOffset.UtcNow,
+			Timestamp = sentAt,
 			Sender = sender.Object().DBRef,
 			Message = message,
 			MessageType = notification.MessageType.ToString(),

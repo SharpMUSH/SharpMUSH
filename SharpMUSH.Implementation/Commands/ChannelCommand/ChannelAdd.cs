@@ -9,6 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -112,6 +113,12 @@ public static class ChannelAdd
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatChannelCreationFailed, executor);
 			return new CallState(ErrorMessages.Returns.ChannelCreationFailed);
 		}
+
+		// The store puts the owner on the channel it creates, which is a join like any other. Announced
+		// here rather than from the write's handler for the reason ChannelRename gives: the new channel is
+		// only certain to be in the cached channel list once the write's second invalidation pass has run.
+		await Mediator.Publish(new ChannelMembershipChangedNotification(
+			new AnySharpObject(executorOwner), channelName.ToPlainText(), "join"));
 
 		await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatChannelCreated, executor);
 		return new CallState(ErrorMessages.Notifications.ChatChannelCreated);

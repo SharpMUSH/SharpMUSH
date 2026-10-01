@@ -7,7 +7,8 @@ namespace SharpMUSH.Client.Models.Applications;
 /// <summary>
 /// Client view of a registered Dynamic Application, deserialized from the <c>/api/applications</c>
 /// DTO (enums travel as strings, zones as a string array). Parsed-enum helpers are provided for
-/// nav filtering and renderer selection.
+/// nav filtering and renderer selection. <see cref="Scope"/> names the layout scope a game panel belongs to
+/// (e.g. <c>"play"</c>); <see cref="OobPackage"/> names the OOB package whose latest payload is its data.
 /// </summary>
 public sealed record PortalApplication(
 	string Slug,
@@ -24,7 +25,9 @@ public sealed record PortalApplication(
 	string? OwningPackage = null,
 	string RenderKind = ApplicationRenderKind.Schema,
 	string? ComponentAssemblyUrl = null,
-	string? ComponentTypeName = null)
+	string? ComponentTypeName = null,
+	string? Scope = null,
+	string? OobPackage = null)
 {
 	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
 	public bool IsComponent =>

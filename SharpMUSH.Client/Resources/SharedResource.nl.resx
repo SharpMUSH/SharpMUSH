@@ -5012,4 +5012,181 @@
   <data name="PkgShowReadme" xml:space="preserve">
     <value>README van {0} tonen</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Verbonden als {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>In scène</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanalen</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Berichten</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# hier}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# uitgang} other {# uitgangen}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beschrijving</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Verhaal</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Weergave</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scène · vastgelegd in het scènearchief</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Volledige uitvoer · inclusief kanalen en berichten</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# daar}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Op slot</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Gesloten</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Verlaat de scène</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Ga</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Bekijk</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Blijf</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Druk op {0} om te gaan</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Volledige afbeelding</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profiel</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>In deze scène</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactief {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerij</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Personageblad: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Zeggen</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Commando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Schrijf je pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Zeg iets…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Spreek buiten je rol…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Typ een commando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Berichttype</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Kamer</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Speelonderdelen</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Er is hier verder niemand.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Lay-outbereik</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Lay-outbereik (optioneel)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>De pagina waar de widget bij hoort, bijv. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-pakket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-pakket (optioneel)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live gegevens die het spel stuurt, bijv. weather.now; vervangt de gegevens-URL</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Vandaag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Gisteren</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nieuw</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Bericht aan {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanaal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privéberichten</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Nog niets hier.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Terug naar de scène</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spelen</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>De rechterkolom van de speelpagina: wie er is, de uitgangen en spelpanelen.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Uitgangen</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
 </root>

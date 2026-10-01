@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -50,6 +51,29 @@ public class SchemaAppService(IHttpClientFactory httpClientFactory, ILogger<Sche
 		{
 			logger.LogWarning(ex, "Data response from {Url} was not valid JSON.", dataUrl);
 			return null;
+		}
+	}
+
+	/// <summary>
+	/// Reads a data payload that arrived by other means than a data route — an OOB package's latest push.
+	/// Absent, empty or malformed JSON, or JSON that is not a data payload, is <see cref="NotFound"/>.
+	/// </summary>
+	public static Found<SchemaData> ParseData(string? json)
+	{
+		if (string.IsNullOrWhiteSpace(json))
+		{
+			return new NotFound();
+		}
+
+		try
+		{
+			return JsonSerializer.Deserialize<SchemaData>(json, SchemaJson.Options) is SchemaData data
+				? data
+				: new NotFound();
+		}
+		catch (Exception ex) when (ex is JsonException or NotSupportedException)
+		{
+			return new NotFound();
 		}
 	}
 

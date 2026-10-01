@@ -464,14 +464,14 @@ The `room-contents` package pushes these (`examples/packages/room-contents`, `` 
 - Send whole lists, not diffs.
 - Images are references (URL, `alt`, `width`, `height`, optional `focal`), never inline data.
 - Use `objid` for identity so caches survive a recycled dbref.
-- **Per-viewer content:** today's handler builds one JSON and sends it to all of `lcon(%0)`. Privacy by
-  omission (dark exits, per-viewer lock hints) needs a per-target loop in softcode. That is v2 package work.
+- **Per-viewer content:** the handler builds each connected occupant's own `room.contents` and
+  `room.exits` and sends them to that player alone, so a dark exit, a lock hint and `you` differ per viewer.
 
 ```jsonc
 // room.info (NEW): on arrival and on connect (there is no attribute-change event, so an edit is not re-sent)
 { "v": 2, "dbref": "#1201", "objid": "#1201:1719500000", "name": "Lower Docks", "area": "Harbour Ward",
   "image": { "url": "/assets/rooms/1201.jpg", "alt": "The quay at dusk", "width": 1600, "height": 440, "focal": [0.5, 0.6] },
-  "desc": { "format": "markdown", "text": "Tarred pilings and stacked…" },
+  "desc": { "format": "text", "text": "Tarred pilings and stacked…" },
   "scene": { "id": "42", "title": "Salt Market at Dusk", "cast": 5 } }
 
 // room.contents (EXTENDED): rows gain identity, type, colour, image, status and actions
@@ -486,10 +486,14 @@ The `room-contents` package pushes these (`examples/packages/room-contents`, `` 
 { "v": 2, "exits": [
   { "dbref": "#1210", "name": "Harbour Row", "aliases": ["n", "north"], "cmd": "goto #1210", "state": "open",
     "dest": { "name": "Harbour Row", "area": "Harbour Ward", "image": { "url": "/assets/rooms/1210.jpg" }, "desc": "A lamplit street of…", "here": 2 } },
-  { "dbref": "#1211", "name": "Customs House", "aliases": ["w"], "state": "locked", "hint": "Closed after dusk" },
+  { "dbref": "#1211", "name": "Customs House", "aliases": ["w"], "cmd": "goto #1211", "state": "locked", "hint": "Closed after dusk" },
   { "dbref": "#1212", "name": "Ferry Steps", "aliases": ["e"], "cmd": "goto #1212", "confirm": "This leaves the scene." } ] }
 ```
 - `state` is `open | locked | closed`.
+- A locked exit keeps its `cmd` and has no `dest`: locks are dynamic, so the client may still send the
+  command, and the player then reads the exit's `@fail` message. A locked door does not describe what is
+  behind it.
+- `desc.format` is `text`: the handler sends the evaluated `DESCRIBE` (`` FN`DESC ``), not Markdown.
 - `scene.id` is a string, matching `SceneEventMessage.SceneId`. Board `12` shows a number; the string is
   correct.
 - `scene.cast` supplies the sidebar's participant count, because `SceneSummary` has none.
@@ -515,6 +519,11 @@ The proposal needs Harry's call (Q4): two OOB packages following §7.1's rules.
 
 Until then, build the sidebar against an interface with an empty implementation. Terminal stays the full
 stream.
+
+The proposal is built, pending Q4: the bundled `comm-feed` package on engine events that name who received
+each line (``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS``), and `OobCommFeed` behind
+`ICommFeed`. `docs/softcode/comm-feed-handler.md` has the shapes as sent and where they differ from the
+above (no server-side unread counts; `viewer`, `style` and `toObjids` added).
 
 ### 7.4 Play as a layout scope (board `13`)
 - Add `LayoutScopes.Play` (`"play"`, zones: RightSidebar) to `LayoutScopes.All` and `GetDefaultLayout`, with

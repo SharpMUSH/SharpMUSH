@@ -82,4 +82,56 @@ public class OobChannelStoreProxyTests
 		// The OLD store itself was cleared too — its own data doesn't linger in memory either.
 		await Assert.That(first.Get("room")).IsNull();
 	}
+
+	[Test]
+	public async Task Room_reads_through_to_the_current_inner()
+	{
+		var inner = new OobChannelStore();
+		inner.Set(OobEntryParser.RoomContentsPackage, """{"v":2,"who":[{"dbref":"#5","name":"Bob"}]}""");
+		var sut = new OobChannelStoreProxy();
+
+		await Assert.That(sut.Room.Occupants).IsEmpty();
+
+		sut.SetInner(inner);
+
+		await Assert.That(sut.Room.Occupants.Single().Name).IsEqualTo("Bob");
+	}
+
+	[Test]
+	public async Task RoomChanged_subscriber_taken_before_a_swap_hears_the_new_inner_only()
+	{
+		var first = new OobChannelStore();
+		var sut = new OobChannelStoreProxy();
+		sut.SetInner(first);
+		var second = new OobChannelStore();
+		sut.SetInner(second);
+
+		var heard = 0;
+		sut.RoomChanged += () => heard++;
+		first.Set(OobEntryParser.RoomContentsPackage, """{"v":2,"who":[]}""");
+		await Assert.That(heard).IsEqualTo(0);
+
+		second.Set(OobEntryParser.RoomContentsPackage, """{"v":2,"who":[]}""");
+		await Assert.That(heard).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The typed room follows the same rule as the raw payloads: a character switch must not leave the
+	/// previous character's room on screen, so the swap empties it and says so.
+	/// </summary>
+	[Test]
+	public async Task Swapping_to_a_new_inner_empties_the_room_and_announces_it()
+	{
+		var first = new OobChannelStore();
+		first.Set(OobEntryParser.RoomContentsPackage, """{"v":2,"who":[{"dbref":"#5","name":"OldChar"}]}""");
+		var sut = new OobChannelStoreProxy();
+		sut.SetInner(first);
+		var heard = 0;
+		sut.RoomChanged += () => heard++;
+
+		sut.SetInner(new OobChannelStore());
+
+		await Assert.That(heard).IsEqualTo(1);
+		await Assert.That(sut.Room.Occupants).IsEmpty();
+	}
 }

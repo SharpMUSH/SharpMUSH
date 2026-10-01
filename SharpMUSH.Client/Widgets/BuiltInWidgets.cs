@@ -86,6 +86,10 @@ public static class BuiltInWidgets
 			typeof(OnlineCharactersWidget)),
 		new("Quickstart", "LayWidgetQuickstart", WidgetSize.Medium, Content, typeof(QuickstartWidget)),
 
+		// Play's aside (README §5.6, §7.4): who is here and the exits, from the play connection's room.
+		new("Here", "LayWidgetHere", WidgetSize.Medium, [WidgetZone.RightSidebar], typeof(HereWidget)),
+		new("Exits", "LayWidgetExits", WidgetSize.Medium, [WidgetZone.RightSidebar], typeof(ExitsWidget)),
+
 		// Schema-driven (Area 21): its config carries { schemaUrl, dataUrl } pointing at softcode
 		// HTTP-handler routes, and it renders the returned Portal Schema Document.
 		new("SchemaWidget", "LayWidgetSchemaApplication", WidgetSize.Medium, Content,

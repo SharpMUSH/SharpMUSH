@@ -5012,4 +5012,181 @@
   <data name="PkgShowReadme" xml:space="preserve">
     <value>Vis README for {0}</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Forbundet som {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>I scene</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Beskeder</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# her}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# udgang} other {# udgange}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beskrivelse</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Historie</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Visning</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scene · logges i scenearkivet</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Fuldt output · kanaler og beskeder medtaget</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# der}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Låst</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Lukket</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Forlader scenen</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Gå</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Se</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Bliv</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Tryk {0} for at gå</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Fuldt billede</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>I denne scene</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inaktiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galleri</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterark: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Sig</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Skriv din pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Sig noget…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Tal uden for rollen…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Skriv en kommando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Beskedtype</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scene</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Rum</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Spilsektioner</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Der er ingen andre her.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Layoutområde</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Layoutområde (valgfrit)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Den side widgeten hører til, f.eks. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-pakke</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-pakke (valgfrit)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live-data sendt af spillet, f.eks. weather.now; erstatter data-URL'en</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>I går</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nye</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Skriv til {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Private beskeder</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Intet her endnu.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Tilbage til scenen</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spil</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Spilsidens højre kolonne: hvem der er her, udgangene og spillets paneler.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Her</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Udgange</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
 </root>

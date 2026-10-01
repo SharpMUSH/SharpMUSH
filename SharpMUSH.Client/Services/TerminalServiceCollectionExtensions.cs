@@ -52,10 +52,26 @@ public static class TerminalServiceCollectionExtensions
 				sp.GetRequiredService<ILogger<TerminalService>>())));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
 
+		// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
+		// package pushes to every connection a player has, and only the play connection is the one to
+		// count. Built by AttachPlayTerminalFeeds, not on first use — see there.
+		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels));
+
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();
 		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
 
 		return services;
 	}
+
+	/// <summary>
+	/// Builds the feeds that read the play terminal's OOB store, so they are listening before the play
+	/// terminal carries anything. The store keeps only the latest payload per package, so a
+	/// <c>comm.message</c> that arrives before <see cref="ICommFeed"/> subscribes is lost, unread count and
+	/// all — and a singleton factory builds nothing until something resolves it, which nothing on the way
+	/// to connecting the play terminal (a login, <see cref="CharacterUpgradeService"/>) does. Call once,
+	/// right after the host is built.
+	/// </summary>
+	public static void AttachPlayTerminalFeeds(this IServiceProvider services) =>
+		services.GetRequiredService<ICommFeed>();
 }

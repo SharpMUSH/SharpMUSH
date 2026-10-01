@@ -70,7 +70,7 @@ public class CommandPaletteTests : BunitContext
 		await Assert.That(cut.FindAll("[role='option']")[1].GetAttribute("aria-selected")).IsEqualTo("true");
 		cut.Find("[role='dialog']").KeyDown("Enter");
 		await Assert.That(Nav.Uri).EndsWith("/characters?q=tomas");
-		await Assert.That(open).IsEqualTo(false);
+		await Assert.That(open).IsFalse();
 	}
 
 	[Test]
@@ -99,6 +99,6 @@ public class CommandPaletteTests : BunitContext
 		bool? open = null;
 		var cut = RenderOpen(o => open = o);
 		cut.Find("[role='dialog']").KeyDown("Escape");
-		await Assert.That(open).IsEqualTo(false);
+		await Assert.That(open).IsFalse();
 	}
 }

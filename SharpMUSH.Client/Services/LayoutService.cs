@@ -196,6 +196,18 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			},
 			SidebarsOff),
 
+		// README §5.6 / §7.4: Here, then Exits.
+		LayoutScopes.Play => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("Here", 0, null),
+					new WidgetPlacement("Exits", 1, null)
+				]
+			},
+			SidebarsOff),
+
 		_ => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{

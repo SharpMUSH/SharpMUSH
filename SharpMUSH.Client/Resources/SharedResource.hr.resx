@@ -5012,4 +5012,181 @@
   <data name="PkgShowReadme" xml:space="preserve">
     <value>Prikaži README za {0}</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Povezan kao {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>U sceni</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Poruke</value>
+  </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# ovdje}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# izlaz} few {# izlaza} other {# izlaza}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Priča</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Prikaz</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scena · bilježi se u arhivu scena</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Potpuni ispis · s kanalima i porukama</value>
+  </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# tamo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zaključano</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zatvoreno</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Napušta scenu</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Idi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Pogledaj</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ostani</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pritisnite {0} za odlazak</value>
+  </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>U ovoj sceni</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Neaktivan {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Pojedinosti</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerija</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>List lika: {0}</value>
+  </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poza</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Govor</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Napišite svoju pozu…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Recite nešto…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Govorite izvan uloge…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Upišite naredbu…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Vrsta poruke</value>
+  </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scena</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Prostorija</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Dijelovi igre</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Ovdje nema nikoga drugog.</value>
+  </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Opseg rasporeda</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Opseg rasporeda (neobavezno)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Stranica kojoj widget pripada, npr. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB paket (neobavezno)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Podaci uživo koje šalje igra, npr. weather.now; zamjenjuje URL podataka</value>
+  </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Danas</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Jučer</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Novo</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Poruka za {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privatne poruke</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Ovdje još nema ničega.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Natrag na scenu</value>
+  </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Igra</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Desni stupac stranice igre: tko je ovdje, izlazi i ploče igre.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Ovdje</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Izlazi</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplikacije</value>
+  </data>
 </root>

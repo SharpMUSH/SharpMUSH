@@ -1,0 +1,273 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+@inject CharacterProfileService Profiles
+@inject GalleryService Gallery
+@inject SceneService Scenes
+@inject IJSRuntime JS
+
+@* D1 §5.7 the character sheet drawer (board 08): a modal from the right with the full-height portrait
+   and Full image (the portrait viewer, board 09), the name in its colour, the role line, pills (in
+   this scene, idle, dbref), Look · Page · Mail · Profile, the Details (the page supplies the profile
+   schema) and a gallery strip. Escape and Close close it and hand focus back. *@
+@if (Name is not null)
+{
+    <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Style="@ScrimStyle">
+        <aside class="sheet" role="dialog" aria-modal="true" aria-label="@Loc["NavPlaySheetLabel", Name]" tabindex="-1"
+               @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
+            <MudFocusTrap DefaultFocus="DefaultFocus.None">
+                <div class="sheet-hero">
+                    @if (ImageUrlPolicy.IsRenderable(Portrait))
+                    {
+                        <img class="sheet-portrait" src="@ApiUrl.Resolve(Portrait!)" alt="@Name" />
+                    }
+                    else
+                    {
+                        <span class="sheet-portrait sheet-portrait--initials" style="@FallbackStyle" aria-hidden="true">@Initials.From(Name)</span>
+                    }
+                    <div class="sheet-hero-scrim" aria-hidden="true"></div>
+                    <div class="sheet-hero-bar">
+                        @if (ImageUrlPolicy.IsRenderable(Portrait))
+                        {
+                            <CapsuleButton Class="sheet-full" Icon="@Icons.Material.Outlined.OpenInFull" OnClick="OpenPortrait">@Loc["NavPlayFullImage"]</CapsuleButton>
+                        }
+                        <span class="sheet-spacer"></span>
+                        <CapsuleButton @ref="_closeButton" Class="sheet-close" Icon="@Icons.Material.Outlined.Close" AriaLabel="@Loc["NavViewerClose"]" OnClick="CloseAsync" />
+                    </div>
+                    <div class="sheet-hero-text">
+                        <h2 class="sheet-name" style="@NameStyle">@Name</h2>
+                        @if (!string.IsNullOrWhiteSpace(_profile?.Role))
+                        {
+                            <div class="sheet-role">@_profile!.Role</div>
+                        }
+                    </div>
+                </div>
+                <div class="sheet-body">
+                    <div class="sheet-pills">
+                        @if (_inScene && Occupant is not null)
+                        {
+                            <Pill Dot="var(--accent)">@Loc["NavPlayInThisScene"]</Pill>
+                        }
+                        @if (Occupant?.Idle is >= 60 and var idle)
+                        {
+                            <Pill>@Loc["NavPlayIdle", IdleText(idle)]</Pill>
+                        }
+                        @if (Dbref is { } dbref)
+                        {
+                            <Pill>@dbref</Pill>
+                        }
+                    </div>
+                    <div class="sheet-actions">
+                        <button type="button" class="sheet-action sheet-action--primary" @onclick="LookAsync">@Loc["NavPlayLook"]</button>
+                        <button type="button" class="sheet-action" @onclick="() => OnPage.InvokeAsync(Name)">@Loc["NavCharPage"]</button>
+                        <a class="sheet-action" href="@($"/mail/compose?to={Uri.EscapeDataString(Name)}")">@Loc["NavCharMail"]</a>
+                        <a class="sheet-action" href="@ProfileHref">@Loc["NavPlayProfile"]</a>
+                    </div>
+                    @if (Details is not null)
+                    {
+                        <SectionLabel>@Loc["NavPlayDetails"]</SectionLabel>
+                        <div class="sheet-details">@Details(Name)</div>
+                    }
+                    @if (_gallery.Count > 0)
+                    {
+                        <div class="sheet-gallery-head">
+                            <SectionLabel>@($"{Loc["NavPlayGallery"]} · {_gallery.Count}")</SectionLabel>
+                            <a class="sheet-gallery-all" href="@ProfileHref">@Loc["NavPlayViewAll"]</a>
+                        </div>
+                        <div class="sheet-gallery">
+                            @for (var i = 0; i < Math.Min(3, _gallery.Count); i++)
+                            {
+                                var index = i;
+                                var entry = _gallery[i];
+                                <button type="button" class="sheet-gallery-item @(entry.IsIcon ? "sheet-gallery-item--icon" : null)"
+                                        aria-label="@(entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index + _portraitOffset)">
+                                    @if (ImageUrlPolicy.IsRenderable(entry.Url))
+                                    {
+                                        <img src="@ApiUrl.Resolve(entry.Url)" alt="" loading="lazy" />
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </MudFocusTrap>
+        </aside>
+    </MudOverlay>
+    <ImageViewer Items="_viewerItems" @bind-Open="_viewerOpen" @bind-Index="_viewerIndex" Label="@Name" />
+}
+
+@code {
+    /// <summary>Whose sheet is open; null closes it.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Their row in the room, when they are here: its picture, idle time and look command.</summary>
+    [Parameter] public RoomOccupant? Occupant { get; set; }
+
+    /// <summary>
+    /// The scene running in the room, if any. The In this scene pill is shown only when its member list
+    /// names this character: being in the room is not being in its scene.
+    /// </summary>
+    [Parameter] public string? SceneId { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>A command to send (Look).</summary>
+    [Parameter] public EventCallback<string> OnCommand { get; set; }
+
+    /// <summary>Page was chosen: Play starts a page to them in the composer.</summary>
+    [Parameter] public EventCallback<string> OnPage { get; set; }
+
+    /// <summary>The profile's Details (the page renders the profile schema for this name).</summary>
+    [Parameter] public RenderFragment<string>? Details { get; set; }
+
+    private CharacterProfileData? _profile;
+    private IReadOnlyList<GalleryEntry> _gallery = [];
+    private IReadOnlyList<ImageViewer.Item> _viewerItems = [];
+    private bool _viewerOpen;
+    private int _viewerIndex;
+    private string? _loadedFor;
+    private string? _loadedScene;
+    private bool _inScene;
+    private int _membershipGeneration;
+    private int _generation;
+    private bool _focusClose;
+    private CapsuleButton? _closeButton;
+
+    /// <summary>The scrim, and the overlay's flex root set to hold the sheet at the right edge at full height:
+    /// MudOverlay centres a zero-size content box, and scoped CSS cannot reach it.</summary>
+    private const string ScrimStyle = "background: rgba(8, 9, 10, 0.6); justify-content: flex-end; align-items: stretch;";
+
+    private string? Portrait => Occupant?.Image?.Url ?? _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
+
+    private string? Dbref => _profile?.Dbref ?? Occupant?.Dbref;
+
+    private string? NameStyle => NameColor.Safe(Occupant?.Color ?? _profile?.Color) is { } c ? $"color:{c};" : null;
+
+    private string FallbackStyle => $"background:hsl({NameHue.Of(Name)} 30% 24%);color:hsl({NameHue.Of(Name)} 45% 82%);";
+
+    private string ProfileHref => "/character/" + Uri.EscapeDataString(Name ?? string.Empty);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Name is null)
+        {
+            _loadedFor = null;
+            return;
+        }
+        var nameChanged = !string.Equals(Name, _loadedFor, StringComparison.Ordinal);
+        if (!nameChanged && string.Equals(SceneId, _loadedScene, StringComparison.Ordinal)) return;
+
+        _loadedScene = SceneId;
+        if (nameChanged)
+        {
+            await LoadCharacterAsync(Name);
+        }
+
+        await RefreshMembershipAsync();
+    }
+
+    private async Task LoadCharacterAsync(string name)
+    {
+        _loadedFor = name;
+        _inScene = false;
+        _profile = null;
+        _gallery = [];
+        _viewerOpen = false;
+        _focusClose = true;
+        var generation = ++_generation;
+        await RunFocusAsync("sharpmushLayout.rememberFocus");
+
+        // A second name chosen while the first is loading must not be overwritten by the first's answers.
+        // The two are independent, so both go out at once.
+        var profileTask = Profiles.GetAsync(name);
+        var galleryTask = Gallery.ListAsync(name);
+        var profile = await profileTask;
+        var gallery = await galleryTask;
+        if (generation != _generation) return;
+
+        _profile = profile is CharacterProfileData data ? data : null;
+        _gallery = gallery is List<GalleryEntry> entries ? entries.OrderByDescending(e => e.IsIcon).ThenBy(e => e.Order).ToList() : [];
+        BuildViewerItems();
+    }
+
+    /// <summary>
+    /// Whether the room's scene lists this character (by dbref) among its current members. Counted apart
+    /// from the character load, so a scene starting or ending re-asks only this; the last ask wins.
+    /// </summary>
+    private async Task RefreshMembershipAsync()
+    {
+        var generation = ++_membershipGeneration;
+        var inScene = SceneId is { } sceneId && Dbref is { } dbref
+            && await Scenes.GetMemberDbrefsAsync(sceneId) is IReadOnlyList<string> members
+            && members.Contains(dbref.Split(':')[0], StringComparer.Ordinal);
+        if (generation == _membershipGeneration)
+        {
+            _inScene = inScene;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusClose && Name is not null && _closeButton is not null)
+        {
+            _focusClose = false;
+            await _closeButton.FocusAsync();
+        }
+    }
+
+    private void OpenViewer(int index)
+    {
+        _viewerIndex = index;
+        _viewerOpen = true;
+    }
+
+    /// <summary>How far the gallery sits into the viewer's list: 1 when the portrait is not a gallery picture and leads it.</summary>
+    private int _portraitOffset;
+
+    /// <summary>One list for the viewer, built once per character: the portrait first when the gallery lacks it.</summary>
+    private void BuildViewerItems()
+    {
+        var gallery = _gallery.Select(g => new ImageViewer.Item(g.Url, g.Caption, g.Caption, g.AssetId)).ToList();
+        var portrait = Portrait;
+        var own = portrait is not null && !_gallery.Any(g => string.Equals(g.Url, portrait, StringComparison.Ordinal));
+        _portraitOffset = own ? 1 : 0;
+        _viewerItems = own ? [new ImageViewer.Item(portrait!, Name, null), .. gallery] : gallery;
+    }
+
+    /// <summary>The portrait in the viewer: its place in the gallery, or the lead item when it is not in it.</summary>
+    private void OpenPortrait()
+    {
+        var at = _portraitOffset == 1 ? 0 : _gallery.ToList().FindIndex(g => string.Equals(g.Url, Portrait, StringComparison.Ordinal));
+        OpenViewer(Math.Max(0, at));
+    }
+
+    private Task LookAsync() =>
+        OnCommand.InvokeAsync(Occupant?.Cmd is { Length: > 0 } cmd ? cmd : $"look {Dbref ?? Name}");
+
+    private static string IdleText(int seconds) => seconds switch
+    {
+        < 3600 => $"{seconds / 60}m",
+        < 86400 => $"{seconds / 3600}h",
+        _ => $"{seconds / 86400}d",
+    };
+
+    private async Task CloseAsync()
+    {
+        await OnClose.InvokeAsync();
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
+
+    // No preventDefault: it is decided when the dialog renders, so it would swallow the key after this one.
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && !_viewerOpen) await CloseAsync();
+    }
+
+    private async Task RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+}

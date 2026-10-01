@@ -18,7 +18,7 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// package drives it (or the side-effect <c>scene…</c> functions). Scene-scoped switches take a
 /// <c>&lt;sceneId&gt;</c>; pose-scoped switches take a <c>&lt;poseId&gt;</c>. Comma-separated arguments
 /// carry <c>content</c> last; object references are dbrefs (the service resolves the vertex, manages the
-/// edge, and snapshots the name). Pose mutations (addpose/editpose/delete/move) publish a realtime
+/// edge, and snapshots the name). Pose mutations (addpose/editpose/undo/redo/delete/move) publish a realtime
 /// <c>SceneEventMessage</c> on <c>game.scene.{id}</c> via <see cref="SceneBroadcast"/>.
 ///
 /// <para>As a plugin command this resolves <c>IMediator</c>/<c>INotifyService</c>/<c>ISceneService</c> from
