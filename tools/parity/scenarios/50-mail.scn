@@ -20,3 +20,12 @@ home
 @mail/fwd 1=*Bob
 ::as bob
 @unlock/mail me
+
+::case mail.functions-own-mailbox  mail()-family functions let a mortal read their own mailbox, not another's
+::as alice
+think mail(me)
+think mail(*Alice)
+think mailsubject(me,1)
+think mail(*Bob)
+think mail(*Bob,1)
+think mailsubject(*Bob,1)

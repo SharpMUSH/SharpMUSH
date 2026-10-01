@@ -215,6 +215,64 @@ public class MailFunctionUnitTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>fun_mail</c>, <c>fun_maillist</c> and <c>mailfun_fetch</c> (<c>src/extmail.c</c>) match the
+	/// player first and then require <c>controls(executor, player)</c>, so a mortal reads their own
+	/// mailbox under any name for themselves and is refused anyone else's (#1491). SharpMUSH used to
+	/// refuse every non-wizard before looking at who was named. A refused fetch answers as Penn's does:
+	/// "Permission denied" to the caller, and the function's usual not-found value.
+	/// </summary>
+	[Test]
+	[Arguments("mail(me)", "0 1 0")]
+	[Arguments("mail(%#)", "0 1 0")]
+	[Arguments("mail(me,1)", "MortalOwnMailBody")]
+	[Arguments("mailsubject(me,1)", "MortalOwnMailSubject")]
+	[Arguments("mailstatus(me,1)", "N----")]
+	[Arguments("mail(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mail(#1,1)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("mailsubject(#1,1)", "#-1")]
+	[Arguments("mailfrom(#1,1)", "#-1")]
+	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED")]
+	public async Task MailFunctions_MortalReadsOnlyTheirOwnMailbox(string code, string expected)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailOwnMortal");
+		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
+		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,MortalOwnMailSubject/MortalOwnMailBody)"));
+
+		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("mail(#1,1)")]
+	[Arguments("mailsubject(#1,1)")]
+	[Arguments("mailtime(#1,1)")]
+	public async Task MailFetch_RefusedMailbox_TellsTheCaller(string code)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailFetchRefused");
+		var before = WebAppFactoryArg.Notifications.CountFor(mortal);
+
+		await WebAppFactoryArg.FunctionParserFor(mortal).FunctionParse(MarkupText.Plain(code));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(mortal).Skip(before)).IsEquivalentTo(["Permission denied"]);
+	}
+
+	[Test]
+	public async Task MailFrom_MortalReadsTheirOwnMessage()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailFromMortal");
+		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
+		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,FromSubject/FromBody)"));
+
+		var result = (await asMortal.FunctionParse(MarkupText.Plain("mailfrom(me,1)")))!.Message!.ToPlainText();
+
+		await Assert.That(result).IsEqualTo(mortal.ToString());
+	}
+
 	[Test]
 	public async Task Mailstatus_ValidMessage_ReturnsStatusFormat()
 	{
