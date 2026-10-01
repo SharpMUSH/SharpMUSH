@@ -14,6 +14,8 @@
 @inject ILayoutService Layouts
 @inject ApplicationCatalog Catalog
 @inject IWidgetRegistry Widgets
+@inject IServiceProvider ServiceProvider
+@using SharpMUSH.Client.Widgets
 @using SharpMUSH.Client.Components.Layout
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
@@ -231,6 +233,11 @@ else
     /// <summary>The play layout's aside, then the scope panels it does not place, as the Room sheet's tabs.</summary>
     private IReadOnlyList<AsideEntry> _asideEntries = [];
 
+    /// <summary>The minimum-role gate for the aside and the Room sheet, the one every zone applies.</summary>
+    private ApplicationWidgetGate? _asideGate;
+
+    private ApplicationWidgetGate AsideGate => _asideGate ??= new ApplicationWidgetGate(Widgets, ServiceProvider);
+
     /// <summary>The Room sheet's current tab: Exits when there is one (board 11), else the first.</summary>
     private string? _sheetEntry;
 
@@ -404,8 +411,10 @@ else
     /// <summary>
     /// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
     /// layout does not place, that allow the right sidebar, and that the viewer's role allows. An application
-    /// the layout places keeps its minimum role too: placing it is not granting it. Re-read when an admin
-    /// changes the layout.
+    /// the layout places keeps its minimum role too: placing it is not granting it. The placed entries go
+    /// through the same <see cref="ApplicationWidgetGate"/> as every zone, so one the catalog has not delivered
+    /// yet joins only once its application is found and admits this viewer. Re-read when an admin changes the
+    /// layout.
     /// </summary>
     private async Task LoadAsideAsync()
     {
@@ -414,6 +423,17 @@ else
         var placements = (layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list : [])
             .OrderBy(p => p.Order)
             .ToList();
+
+        BuildAside(placements, role);
+        if (await AsideGate.ResolveAsync(placements.Select(p => p.WidgetName)))
+        {
+            BuildAside(placements, role);
+            StateHasChanged();
+        }
+    }
+
+    private void BuildAside(List<WidgetPlacement> placements, SharpMUSH.Library.Authorization.PortalRole role)
+    {
         var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _scopePanels = Catalog.ForScope(LayoutScopes.Play)
             .Where(a => role >= a.MinimumRoleEnum)
@@ -422,7 +442,7 @@ else
             .ToList();
 
         var entries = new List<AsideEntry>();
-        foreach (var placement in placements.Where(p => Catalog.Get(p.WidgetName) is not { } app || role >= app.MinimumRoleEnum))
+        foreach (var placement in placements.Where(p => AsideGate.Admits(p.WidgetName, role)))
         {
             if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config, Placed: true));
         }
@@ -454,13 +474,9 @@ else
         _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
     };
 
-    /// <summary>The parameters ZoneRenderer passes a widget; application widgets also get their slug.</summary>
-    private static Dictionary<string, object> EntryParameters(AsideEntry entry)
-    {
-        var parameters = new Dictionary<string, object> { ["Config"] = entry.Config!, ["Zone"] = nameof(WidgetZone.RightSidebar) };
-        if (entry.Widget.ComponentType == typeof(SchemaWidget)) parameters["WidgetName"] = entry.Name;
-        return parameters;
-    }
+    /// <summary>The parameters ZoneRenderer passes a widget, built by the same gate.</summary>
+    private Dictionary<string, object> EntryParameters(AsideEntry entry) =>
+        AsideGate.Parameters(entry.Name, entry.Widget, entry.Config, nameof(WidgetZone.RightSidebar));
 
     private async Task ResolveRosterAsync()
     {

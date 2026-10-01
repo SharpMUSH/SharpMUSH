@@ -1,5 +1,8 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
 @using SharpMUSH.Client.Components.Widgets
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Widgets
+@using SharpMUSH.Library.Authorization
 
 @if (_placements.Count > 0)
 {
@@ -53,38 +56,50 @@
 
     [Inject] private IWidgetRegistry? Registry { get; set; }
 
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     private IReadOnlyList<WidgetPlacement> _placements = [];
 
-    protected override void OnParametersSet()
+    /// <summary>The minimum-role gate, shared with the Play page's aside. Created on first use, since it needs the injected services.</summary>
+    private ApplicationWidgetGate? _gate;
+
+    private ApplicationWidgetGate Gate => _gate ??= new ApplicationWidgetGate(Registry, Services);
+
+    /// <summary>Bumped per parameter set, so a resolution that finishes after a newer one is dropped.</summary>
+    private int _generation;
+
+    protected override async Task OnParametersSetAsync()
     {
+        var generation = ++_generation;
         if (Layout is null)
         {
             _placements = [];
             return;
         }
 
-        _placements = Layout.Zones.TryGetValue(Zone, out var list)
-            ? list.OrderBy(p => p.Order).ToList().AsReadOnly()
-            : (IReadOnlyList<WidgetPlacement>)[];
+        var role = AuthState is null
+            ? PortalRole.Guest
+            : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var ordered = Layout.Zones.TryGetValue(Zone, out var list)
+            ? list.OrderBy(p => p.Order).ToList()
+            : [];
+
+        // An application the catalog has not delivered yet has no role to check. Everything else renders now;
+        // such a placement joins once its application is found and admits this viewer.
+        _placements = Visible(ordered, role);
+        if (await Gate.ResolveAsync(ordered.Select(p => p.WidgetName)) && generation == _generation)
+        {
+            _placements = Visible(ordered, role);
+        }
     }
+
+    private IReadOnlyList<WidgetPlacement> Visible(List<WidgetPlacement> ordered, PortalRole role) =>
+        ordered.Where(p => Gate.Admits(p.WidgetName, role)).ToList().AsReadOnly();
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
-    private Dictionary<string, object> BuildParams(WidgetPlacement placement, IPortalWidget descriptor)
-    {
-        var parameters = new Dictionary<string, object>
-        {
-            ["Config"] = placement.Config!,
-            ["Zone"] = Zone.ToString()
-        };
-
-        // SchemaWidget (and application-backed widgets, which render through it) resolves its routes
-        // from the placement's widget name (slug), so pass it through.
-        if (descriptor.ComponentType == typeof(SchemaWidget))
-        {
-            parameters["WidgetName"] = placement.WidgetName;
-        }
-
-        return parameters;
-    }
+    private Dictionary<string, object> BuildParams(WidgetPlacement placement, IPortalWidget descriptor) =>
+        Gate.Parameters(placement.WidgetName, descriptor, placement.Config, Zone.ToString());
 }
