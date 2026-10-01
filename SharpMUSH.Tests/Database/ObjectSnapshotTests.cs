@@ -38,7 +38,7 @@ public class ObjectSnapshotTests
 		return (actor!, target, player);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("DESC")]
 	[Arguments("desc")]
 	public async Task CapturePreviewRestorePreservesValuesAndClearsPendingMarker(string selectedName)
@@ -70,7 +70,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Any(s => s.Id == result.RecoverySnapshotId)).IsTrue();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task StalePreviewAndRecycledIdentityAreRejected()
 	{
 		var (actor, target, player) = await Setup();
@@ -83,7 +83,7 @@ public class ObjectSnapshotTests
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.ListAsync(actor, new DBRef(target.Number, target.CreationMilliseconds + 1)));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task CorruptDocumentIsRejectedAndRetentionPersists()
 	{
 		var (actor, target, _) = await Setup();
@@ -106,7 +106,7 @@ public class ObjectSnapshotTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task MidRestoreFailureRetainsDurableBeforeImage()
 	{
 		var (actor, target, player) = await Setup();
@@ -144,7 +144,7 @@ public class ObjectSnapshotTests
 		await Assert.That(await Get<IAttributeStore>().GetAttributeAsync(target, ["OTHER"]).AnyAsync()).IsFalse();
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("changed-desc");
 	}
-	[Test, NotInParallel]
+	[Test]
 	public async Task RevocationBetweenPreviewAndRestorePreventsWrites()
 	{
 		var (actor, target, _) = await Setup();
@@ -160,7 +160,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IObjectSnapshotService>().ListAsync(actor, target)).Snapshots.Length).IsEqualTo(1);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task LockAttributeValuesAreNotTreatedAsObjectReferences()
 	{
 		var (actor, target, _) = await Setup();
@@ -171,7 +171,7 @@ public class ObjectSnapshotTests
 		await Assert.That(preview.SnapshotId).IsEqualTo(saved.Id);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task MissingLockReferencesAreRejectedBeforeRestore()
 	{
 		var (actor, target, _) = await Setup();
@@ -183,7 +183,7 @@ public class ObjectSnapshotTests
 	}
 
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task RecoveryRemovesLockCreatedBeforeLaterFailure()
 	{
 		var (actor, target, player) = await Setup();
@@ -211,7 +211,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Node(target)).Object().Locks["Unrelated"].LockString).IsEqualTo("#FALSE");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task HistoricalAncestorRestrictionsSurviveCurrentFlagRemoval()
 	{
 		var (actor, target, player) = await Setup();
@@ -230,7 +230,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(0);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task RestoreOnlyDelegationCanListWithoutCapturing()
 	{
 		var (actor, target, _) = await Setup();
@@ -243,7 +243,7 @@ public class ObjectSnapshotTests
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.CaptureAsync(actor, target, "denied"));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("CAPTURE")]
 	[Arguments("LIST")]
 	[Arguments("PREVIEW")]
@@ -282,7 +282,7 @@ public class ObjectSnapshotTests
 		await Assert.That(tokens.All(token => token == budget.Token)).IsTrue();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task CancelledRestoreStopsMutationsAndRetainsUsableRecovery()
 	{
 		var (actor, target, player) = await Setup();
@@ -330,7 +330,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["OTHER"]).LastAsync()).Value.ToPlainText()).IsEqualTo("changed-other");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GameCommandCapturesAndResolvesThroughTheSharedService()
 	{
 		var (actor, target, _) = await Setup();
@@ -346,7 +346,7 @@ public class ObjectSnapshotTests
 		await Assert.That(resolved.LastResolution!.AccountId).IsEqualTo(actor.AccountId);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task RevocationAfterValueWriteStopsAttributeFlagMutation()
 	{
 		var (actor, target, player) = await Setup();
@@ -386,7 +386,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("unrelated later edit");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GodCanRestoreLockProtectedDuringRestore()
 	{
 		var (actor, target, player) = await Setup();
@@ -413,7 +413,7 @@ public class ObjectSnapshotTests
 		await Assert.That(current.Flags).IsEqualTo(Library.Services.LockService.LockFlags.Private);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task AuthorizedControllerCanResolveAnOrphanedRecoveryMarker()
 	{
 		var (originalActor, target, _) = await Setup();
@@ -441,7 +441,7 @@ public class ObjectSnapshotTests
 		await Assert.That(stored.LastResolution!.AccountId).IsEqualTo(actor.AccountId);
 		await Assert.That((await service.RestoreAsync(actor, target, own.Id, selection, preview.Token)).Completed).IsTrue();
 	}
-	[Test, NotInParallel]
+	[Test]
 	public async Task RecoveryMetadataCannotExceedTheFinalImageSizeLimit()
 	{
 		var (actor, target, player) = await Setup();
@@ -467,7 +467,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, [names[0]]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SelectiveRestoreIgnoresUnrelatedOversizedAttributes()
 	{
 		var (actor, target, player) = await Setup();
@@ -487,7 +487,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("original");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task NestedRecoveryPreservesInheritedAbsentLockMarkers()
 	{
 		var (actor, target, player) = await Setup();
@@ -523,7 +523,7 @@ public class ObjectSnapshotTests
 	/// object is keyed by: recorded as absent instead, recovery removes the lock rather than restoring
 	/// its value — and an absent lock reads as "no lock", which passes everybody.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task RecoveryKeepsALockAPreUpgradeSnapshotSpelledTheOldWay()
 	{
 		var (actor, target, player) = await Setup();
@@ -586,7 +586,7 @@ public class ObjectSnapshotTests
 			new SnapshotStorageRecord(stored.History with { Snapshots = rewritten }));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task NestedAttributeRecoveryRemovesOnlyPreviouslyAbsentParents()
 	{
 		var (actor, target, player) = await Setup();
@@ -612,7 +612,7 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["A"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task HistoryReusesCurrentAttributeReadsWithinOneRequest()
 	{
 		var (actor, target, player) = await Setup();

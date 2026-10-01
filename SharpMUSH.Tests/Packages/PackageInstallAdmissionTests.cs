@@ -133,7 +133,7 @@ public class PackageInstallAdmissionTests
 
 	// ── #1169: managed installs honour dependencies and conflicts ───────────
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Managed_MissingDependency_IsRejectedAndDepositsNothing()
 	{
 		using var scope = CreateManagedScope();
@@ -150,7 +150,7 @@ public class PackageInstallAdmissionTests
 		await AssertNothingRecordedAsync("adm-managed-missing");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Managed_IncompatibleDependency_IsRejected()
 	{
 		using var scope = CreateManagedScope();
@@ -175,7 +175,7 @@ public class PackageInstallAdmissionTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Managed_MatchingConflict_IsRejected()
 	{
 		using var scope = CreateManagedScope();
@@ -200,7 +200,9 @@ public class PackageInstallAdmissionTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
+	// Deploys CommandOnlyPlugin into the session's shared plugin manager, as other package tests do.
+	[NotInParallel]
 	public async Task Managed_SatisfiedDependency_DeploysAndRecordsDependencyRows()
 	{
 		using var scope = CreateManagedScope();
@@ -262,7 +264,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Applications.GetApplicationAsync(manifest.Application!.Slug)).Value).IsTypeOf<NotFound>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_InvalidConfiguredMinimumRole_PersistsNothing()
 	{
 		var manifest = ApplicationManifest("adm-app-role-answer");
@@ -270,7 +272,7 @@ public class PackageInstallAdmissionTests
 			manifest, new Dictionary<string, string> { ["access"] = "overlord" }, "overlord");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_InvalidLiteralMinimumRole_PersistsNothing()
 	{
 		// The manifest parser rejects a bad literal role, so the apply sees one only from a manifest
@@ -280,7 +282,7 @@ public class PackageInstallAdmissionTests
 		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string>(), "overlord");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("99")]
 	[Arguments("-1")]
 	public async Task Application_NumericMinimumRoleOutsideTheEnum_PersistsNothing(string role)
@@ -291,7 +293,7 @@ public class PackageInstallAdmissionTests
 
 	// ── #1171: an invalid zone is refused, not dropped ───────────────────────
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_InvalidConfiguredZone_PersistsNothing()
 	{
 		var manifest = ApplicationManifest("adm-app-zone-answer", zones: "[\"{{?zone}}\"]");
@@ -299,7 +301,7 @@ public class PackageInstallAdmissionTests
 			manifest, new Dictionary<string, string> { ["zone"] = "Basement" }, "Basement");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_InvalidLiteralZone_PersistsNothing()
 	{
 		var parsed = ApplicationManifest("adm-app-zone-literal");
@@ -307,14 +309,14 @@ public class PackageInstallAdmissionTests
 		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string>(), "Basement");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_NumericZoneOutsideTheEnum_PersistsNothing()
 	{
 		var manifest = ApplicationManifest("adm-app-zone-numeric", zones: "[\"{{?zone}}\"]");
 		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string> { ["zone"] = "42" }, "42");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_EmptyZoneList_IsValid()
 	{
 		var manifest = ApplicationManifest("adm-app-no-zones");
@@ -326,7 +328,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Installer.UninstallAsync("adm-app-no-zones")).Value).IsTypeOf<Success>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Application_ConfiguredZone_IsRegistered()
 	{
 		var manifest = ApplicationManifest("adm-app-zone-ok", zones: "[\"{{?zone}}\"]");
@@ -340,7 +342,9 @@ public class PackageInstallAdmissionTests
 
 	// ── #1172: rollback refuses what its snapshot cannot restore ────────────
 
-	[Test, NotInParallel]
+	[Test]
+	// Deploys CommandOnlyPlugin into the session's shared plugin manager, as other package tests do.
+	[NotInParallel]
 	public async Task Rollback_OfAManagedPackage_IsRefusedAndChangesNothing()
 	{
 		using var scope = CreateManagedScope();
@@ -362,7 +366,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await scope.Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_OfAnApplicationPackage_IsRefusedAndChangesNothing()
 	{
 		var id = "adm-app-rollback";
@@ -424,7 +428,7 @@ public class PackageInstallAdmissionTests
 		PackageManifest manifest, IReadOnlyDictionary<string, string>? answers = null, string commit = "commit-1") =>
 		(await Installer.ApplyAsync(manifest, Request(answers, commit: commit))).Expect<PackageApplyResult>().CreatedObjects;
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_ReleasesAnObjectAddedAfterTheTarget()
 	{
 		const string id = "adm-rb-added";
@@ -439,7 +443,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_ReRegistersAnObjectRemovedAfterTheTarget()
 	{
 		const string id = "adm-rb-removed";
@@ -454,7 +458,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_RefusesWhenAnObjectItOwnedWasDestroyed()
 	{
 		const string id = "adm-rb-destroyed";
@@ -472,7 +476,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_NeverRegistersAnAttachTarget()
 	{
 		const string id = "adm-rb-attach";
@@ -511,7 +515,7 @@ public class PackageInstallAdmissionTests
 			"1.0.0", "legacy", json, "{}", "[]", DateTimeOffset.UtcNow));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_ToALegacyRevision_RefusesAnEntryItCannotClassify()
 	{
 		const string id = "adm-rb-legacy-ambiguous";
@@ -528,7 +532,7 @@ public class PackageInstallAdmissionTests
 		await Assert.That(await IsGoingAsync(answers["host"])).IsFalse();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task Rollback_ToALegacyRevision_KeepsWhatTheRegistryProvesWasOwned()
 	{
 		const string id = "adm-rb-legacy-owned";

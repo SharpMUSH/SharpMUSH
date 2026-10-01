@@ -8,7 +8,6 @@ using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
-[NotInParallel]
 public class JetStreamReplayIntegrationTests
 {
 	// A non-reused broker for this class. The reused SharpMUSH-NATS dev container keeps the host ports it was

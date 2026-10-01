@@ -33,7 +33,6 @@ namespace SharpMUSH.Tests.Commands;
 /// command-level shape that protects that layer.
 /// </para>
 /// </remarks>
-[NotInParallel]
 public class MovementParityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -75,37 +74,35 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// Two rooms joined by an exit named <c>out</c>, and a mover standing in the first.
-	/// <c>@open</c> sources the exit from the executor's own location, so God is moved into the
-	/// origin room first — the same shape <c>ObjectDestructionTests.cs:153</c> uses — and its
-	/// CallState carries the new exit's dbref.
+	/// Two rooms joined by an exit named <c>out</c>, and a mover standing in the first. The exit is
+	/// opened with <c>@open</c>'s source-room argument, so God never leaves <c>#0</c>: the factory is
+	/// shared for the whole session and <c>DbrefFunctionUnitTests</c> asserts <c>loc(#1)</c> is <c>#0</c>.
 	/// </summary>
 	private async Task<(TestIsolationHelpers.TestPlayer Mover, string From, string To, string Exit)> Corridor(string prefix)
 	{
 		var from = await Dig($"{prefix}From");
 		var to = await Dig($"{prefix}To");
 
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent me={from}"));
+		var open = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open out={to},,{from}"));
+		var exit = open.Message!.ToPlainText().Trim();
 
-		try
-		{
-			var open = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open out={to}"));
-			var exit = open.Message!.ToPlainText().Trim();
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Mover");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={from}"));
 
-			var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-				WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Mover");
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={from}"));
+		return (mover, from, to, exit);
+	}
 
-			return (mover, from, to, exit);
-		}
-		finally
-		{
-			// God goes back where the rest of the session expects to find it: DbrefFunctionUnitTests
-			// asserts loc(#1) is #0, and this factory is shared for the whole test session. In a
-			// finally, because a throw between here and there would leave #1 displaced for every
-			// later test — [NotInParallel] only serialises against other [NotInParallel] tests.
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain("@teleport/silent me=#0"));
-		}
+	/// <summary>
+	/// A connected WIZARD to act where a test reads what the actor was told. God hears every test in
+	/// the session, so a message like <c>"Teleported."</c> in God's stream proves nothing either way.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> Wizard(string prefix)
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		return wizard;
 	}
 
 	/// <summary>
@@ -1077,7 +1074,7 @@ public class MovementParityTests
 	[Test]
 	public async ValueTask ARefusedTeleportAnnouncesNoDeparture()
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var teleporter = await Wizard("BadDestTeleporter");
 		var room = await Dig("BadDestRoom");
 		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "BadDestBox");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
@@ -1089,12 +1086,12 @@ public class MovementParityTests
 
 		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
 
-		var godSaw = await MessagesWhile(god, async () =>
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {box}={box}")));
+		var teleporterSaw = await MessagesWhile(teleporter.DbRef, async () =>
+			await As(teleporter.Handle, $"@teleport {box}={box}"));
 
 		var watcherSaw = WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore).ToList();
 
-		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.BadDestination)).IsTrue();
+		await Assert.That(teleporterSaw.Any(m => m == ErrorMessages.Notifications.BadDestination)).IsTrue();
 		await Assert.That(watcherSaw.Any(m => m.Contains("folds out of the world."))).IsFalse();
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room));
 	}
@@ -1106,16 +1103,15 @@ public class MovementParityTests
 	[Test]
 	public async ValueTask TeleportingSomeoneElseConfirmsToTheTeleporterAndNotToThemselves()
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var teleporter = await Wizard("ConfirmTeleporter");
 		var destination = await Dig("ConfirmDest");
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConfirmMover");
 
-		var godSaw = await MessagesWhile(god, async () =>
-			await GodParser.CommandParse(1, ConnectionService,
-				MarkupText.Plain($"@teleport {mover.DbRef}={destination}")));
+		var teleporterSaw = await MessagesWhile(teleporter.DbRef, async () =>
+			await As(teleporter.Handle, $"@teleport {mover.DbRef}={destination}"));
 
-		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.Teleported)).IsTrue();
+		await Assert.That(teleporterSaw.Any(m => m == ErrorMessages.Notifications.Teleported)).IsTrue();
 
 		// JUMP_OK because the mover is a mortal and does not own this room: tport_dest_ok
 		// (wiz.c:302) is what admits a stranger, and without the flag the move is refused before
@@ -2046,14 +2042,14 @@ public class MovementParityTests
 	[Arguments(Via.Function)]
 	public async ValueTask AnExitCanOnlyBeTeleportedToARoom(Via via)
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var teleporter = await Wizard("ExitToThingTeleporter");
 		var (_, from, _, exit) = await Corridor("ExitToThing");
 		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ExitToThingBox");
 
-		var godSaw = await MessagesWhile(god, async () =>
-			await Teleport(1, via, exit, $"#{box.Number}"));
+		var teleporterSaw = await MessagesWhile(teleporter.DbRef, async () =>
+			await Teleport(teleporter.Handle, via, exit, $"#{box.Number}"));
 
-		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.ExitsOnlyTeleportToRooms)).IsTrue();
+		await Assert.That(teleporterSaw.Any(m => m == ErrorMessages.Notifications.ExitsOnlyTeleportToRooms)).IsTrue();
 
 		var stillThere = (await Node(exit)).Expect<SharpExit>();
 		var source = await stillThere.Location.WithCancellation(CancellationToken.None);
@@ -2481,7 +2477,7 @@ public class MovementParityTests
 	[Arguments(Via.Function)]
 	public async ValueTask AnExitCannotBeTeleportedIntoACrumblingRoom(Via via)
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var teleporter = await Wizard("ExitCrumblingTeleporter");
 		var (_, _, _, exit) = await Corridor("ExitCrumbling");
 		var before = await ExitEnds(exit);
 		var destination = await Dig("ExitCrumblingDest");
@@ -2489,10 +2485,10 @@ public class MovementParityTests
 		// GOING is internal (flag_tab.h), so only @destroy can put a room in that state.
 		await God($"@destroy {destination}");
 
-		var godSaw = await MessagesWhile(god, async () =>
-			await Teleport(1, via, exit, destination));
+		var teleporterSaw = await MessagesWhile(teleporter.DbRef, async () =>
+			await Teleport(teleporter.Handle, via, exit, destination));
 
-		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.ExitDestinationCrumbling)).IsTrue();
+		await Assert.That(teleporterSaw.Any(m => m == ErrorMessages.Notifications.ExitDestinationCrumbling)).IsTrue();
 		await Assert.That(await ExitEnds(exit)).IsEqualTo(before)
 			.Because("a refused relocation moves neither end of the exit");
 	}
@@ -2656,15 +2652,15 @@ public class MovementParityTests
 	[Test]
 	public async ValueTask EnteringARoomIsPermissionDenied()
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var enterer = await Wizard("EnterRoomWizard");
 		var room = await Dig("EnterRoomTarget");
 
-		var godSaw = await MessagesWhile(god, async () =>
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"enter {room}")));
+		var entererSaw = await MessagesWhile(enterer.DbRef, async () =>
+			await As(enterer.Handle, $"enter {room}"));
 
-		await Assert.That(godSaw).Contains(ErrorMessages.Notifications.PermissionDenied);
-		await Assert.That(godSaw).DoesNotContain("You can't enter that.");
-		await Assert.That(await LocationOf("#1")).IsNotEqualTo(BareDbref(room));
+		await Assert.That(entererSaw).Contains(ErrorMessages.Notifications.PermissionDenied);
+		await Assert.That(entererSaw).DoesNotContain("You can't enter that.");
+		await Assert.That(await LocationOf(enterer.DbRef.ToString())).IsNotEqualTo(BareDbref(room));
 	}
 
 	/// <summary>
@@ -2675,7 +2671,7 @@ public class MovementParityTests
 	[Test]
 	public async ValueTask TeleportingAPlayerBesideAPlayerDoesNotConfirm()
 	{
-		var god = (await Node("#1")).Object().DBRef;
+		var teleporter = await Wizard("BesideTeleporter");
 		var room = await Dig("BesideRoom");
 		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "BesideHost");
@@ -2684,15 +2680,15 @@ public class MovementParityTests
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={room}"));
 
-		var beside = await MessagesWhile(god, async () =>
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {guest.DbRef}={host.DbRef}")));
+		var beside = await MessagesWhile(teleporter.DbRef, async () =>
+			await As(teleporter.Handle, $"@teleport {guest.DbRef}={host.DbRef}"));
 
 		await Assert.That(await LocationOf(guest.DbRef.ToString())).IsEqualTo(BareDbref(room))
 			.Because("the beside branch has to have run for its silence to mean anything");
 		await Assert.That(beside).DoesNotContain(ErrorMessages.Notifications.Teleported);
 
-		var inside = await MessagesWhile(god, async () =>
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/inside {guest.DbRef}={host.DbRef}")));
+		var inside = await MessagesWhile(teleporter.DbRef, async () =>
+			await As(teleporter.Handle, $"@teleport/inside {guest.DbRef}={host.DbRef}"));
 
 		await Assert.That(inside).Contains(ErrorMessages.Notifications.Teleported);
 	}

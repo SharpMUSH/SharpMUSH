@@ -1,5 +1,5 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -18,14 +18,12 @@ namespace SharpMUSH.Tests.Commands;
 /// and as a prefix in the callback attribute ("think {token} %0"), so every assertion
 /// can key on a string that is guaranteed to belong to that test's own response.
 /// </summary>
-[NotInParallel]
 [Category("External")]
 public class PostmanEchoHttpTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
@@ -76,12 +74,14 @@ public class PostmanEchoHttpTests
 	}
 
 	/// <summary>
-	/// Polls until a matching <see cref="INotifyService.Notify"/> call is observed, or the
-	/// <paramref name="timeout"/> elapses. This keeps individual test durations short on fast
-	/// networks while still allowing generous headroom for slow or busy environments.
+	/// Polls until <paramref name="recipient"/> has been told something matching
+	/// <paramref name="predicate"/>, or the <paramref name="timeout"/> elapses. This keeps individual
+	/// test durations short on fast networks while still allowing generous headroom for slow or busy
+	/// environments.
 	/// </summary>
 	private async Task WaitForNotify(
-		Func<SharpMessage, bool> predicate,
+		DBRef recipient,
+		Func<string, bool> predicate,
 		TimeSpan? timeout = null)
 	{
 		var timeoutSeconds = timeout?.TotalSeconds ?? MaxWaitSeconds;
@@ -90,16 +90,7 @@ public class PostmanEchoHttpTests
 
 		while (Stopwatch.GetTimestamp() < deadline)
 		{
-			var received = NotifyService.ReceivedCalls()
-				.Any(call =>
-				{
-					var args = call.GetArguments();
-					return args.Length >= 2
-						&& args[1] is SharpMessage msg
-						&& predicate(msg);
-				});
-
-			if (received)
+			if (WebAppFactoryArg.Notifications.For(recipient).Any(predicate))
 				return;
 
 			await Task.Delay(200);
@@ -108,6 +99,13 @@ public class PostmanEchoHttpTests
 		throw new TimeoutException(
 			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from postman-echo.");
 	}
+
+	/// <summary>How many announcements <paramref name="recipient"/> made to themselves that match <paramref name="predicate"/>.</summary>
+	private int Announced(DBRef recipient, Func<string, bool> predicate)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(recipient).Count(delivery =>
+			delivery.Sender == recipient
+			&& delivery.Type == INotifyService.NotificationType.Announce
+			&& predicate(delivery.Message));
 
 	[Test]
 	public async ValueTask HttpGet_ReturnsJsonWithEchoedUrl()
@@ -121,15 +119,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/get")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/get"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -144,15 +136,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http/post #1/{attrName}={PostmanEchoBase}/post,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/post")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/post"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -167,15 +153,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http/put #1/{attrName}={PostmanEchoBase}/put,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/put")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/put"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -190,15 +170,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http/delete #1/{attrName}={PostmanEchoBase}/delete?testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/delete")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/delete"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -213,15 +187,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/patch")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/patch"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -239,17 +207,11 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
 
-		await WaitForNotify(msg =>
-			TestHelpers.MessageContains(msg, token) &&
-			TestHelpers.MessageContains(msg, "gzipped"));
+		await WaitForNotify(executor, msg =>
+			msg.Contains(token) &&
+			msg.Contains("gzipped"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "gzipped")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("gzipped"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -267,17 +229,11 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
 
-		await WaitForNotify(msg =>
-			TestHelpers.MessageContains(msg, token) &&
-			TestHelpers.MessageContains(msg, "deflated"));
+		await WaitForNotify(executor, msg =>
+			msg.Contains(token) &&
+			msg.Contains("deflated"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "deflated")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("deflated"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -293,14 +249,9 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?{token}={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
+		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageContains(msg, token)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg.Contains(token))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -320,21 +271,17 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpCommand_GetWithBody_RejectsImmediately()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		// The refusal is not unique to this test, so it is read from a player of its own.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService, "HttpGetBody");
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGERR");
-		await SetCallbackAttribute(attrName, token);
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http/get #1/{attrName}={PostmanEchoBase}/get,{token}"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@http/get me/{attrName}={PostmanEchoBase}/get,{token}"));
 
 		// GET with a body is refused before the task is queued — error message is immediate.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, "GET requests cannot have a body.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(player.DbRef, msg => msg == "GET requests cannot have a body.")).IsEqualTo(1);
 	}
 
 	[Test]
@@ -351,16 +298,11 @@ public class PostmanEchoHttpTests
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
 
 		// The callback should emit "{token} 200" because postman-echo returns 200 OK.
-		await WaitForNotify(msg =>
-			TestHelpers.MessageContains(msg, token) &&
-			TestHelpers.MessageContains(msg, "200"));
+		await WaitForNotify(executor, msg =>
+			msg.Contains(token) &&
+			msg.Contains("200"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, $"{token} 200")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg == $"{token} 200")).IsEqualTo(1);
 	}
 
 	[Test]
@@ -378,16 +320,11 @@ public class PostmanEchoHttpTests
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/status/404"));
 
 		// The callback should emit "{token} 404".
-		await WaitForNotify(msg =>
-			TestHelpers.MessageContains(msg, token) &&
-			TestHelpers.MessageContains(msg, "404"));
+		await WaitForNotify(executor, msg =>
+			msg.Contains(token) &&
+			msg.Contains("404"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, $"{token} 404")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(Announced(executor, msg => msg == $"{token} 404")).IsEqualTo(1);
 	}
 }
 

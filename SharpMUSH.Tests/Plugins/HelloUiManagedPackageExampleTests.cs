@@ -24,7 +24,6 @@ namespace SharpMUSH.Tests.Plugins;
 ///   carrying the DLL with a SHA-256 per file.</item>
 /// </list>
 /// </summary>
-[NotInParallel]
 public class HelloUiManagedPackageExampleTests
 {
 	private static string HelloUiDllPath =>
