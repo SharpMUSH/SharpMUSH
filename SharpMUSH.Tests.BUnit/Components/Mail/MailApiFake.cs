@@ -30,8 +30,22 @@ public sealed class MailApiFake : HttpMessageHandler
 
 	private string[] _folders = ["INBOX", "SENT"];
 
+	/// <summary>The character the tab acts as first, whose mailbox the fields above are.</summary>
+	public static readonly AccountAuthService.CharacterSummary First = new(313, 1, "Ilsa Varn", "PLAYER", IsActing: true);
+
+	/// <summary>The character <see cref="SwitchCharacter"/> switches to.</summary>
+	public static readonly AccountAuthService.CharacterSummary Second = new(314, 1, "Wren Halloway", "PLAYER", IsActing: true);
+
 	/// <summary>The account session the Mail section reads its acting character from.</summary>
 	public IAccountAuthState Auth { get; } = Substitute.For<IAccountAuthState>();
+
+	/// <summary>
+	/// When set, a message read is answered — against the mailbox as it stood when the request arrived —
+	/// only once this completes: a read still in flight across a character switch.
+	/// </summary>
+	public TaskCompletionSource? HoldReads { get; set; }
+
+	public MailApiFake() => Auth.ActiveCharacter.Returns(First);
 
 	/// <summary>
 	/// The tab switches to another character. The server binds every later request to the new one, so
@@ -43,6 +57,7 @@ public sealed class MailApiFake : HttpMessageHandler
 		_folders = ["INBOX", "PLOTS"];
 		_inbox = [new(1, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX")];
 		_sent = [];
+		Auth.ActiveCharacter.Returns(Second);
 		Auth.ActiveCharacterChanged += Raise.Event<Action>();
 	}
 
@@ -51,14 +66,23 @@ public sealed class MailApiFake : HttpMessageHandler
 	/// <summary>Every list or folder request the fake has answered, to prove a change was applied without one.</summary>
 	public int ListRequests { get; private set; }
 
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		// Answered now, held after: a held read is the previous mailbox's, whatever happens meanwhile.
+		var (response, isRead) = Answer(request);
+		if (isRead && HoldReads is { } hold) await hold.Task;
+		return response;
+	}
+
+	/// <summary>The response, and whether the request was a message read.</summary>
+	private (HttpResponseMessage Response, bool IsRead) Answer(HttpRequestMessage request)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 		var query = request.RequestUri.Query;
 
 		if (request.Method == HttpMethod.Get && path is "api/mail/folders" or "api/mail") ListRequests++;
-		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return Task.FromResult(Json(_folders));
-		if (request.Method == HttpMethod.Get && path == "api/mail") return Task.FromResult(Json(query.Contains("folder=SENT") ? _sent : _inbox));
+		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return (Json(_folders), false);
+		if (request.Method == HttpMethod.Get && path == "api/mail") return (Json(query.Contains("folder=SENT") ? _sent : _inbox), false);
 
 		var parts = path.Split('/');
 		if (parts is ["api", "mail", var folderName, var numberText] && int.TryParse(numberText, out var number))
@@ -71,15 +95,15 @@ public sealed class MailApiFake : HttpMessageHandler
 				if (request.Method == HttpMethod.Delete)
 				{
 					folder.RemoveAt(index);
-					return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+					return (new HttpResponseMessage(HttpStatusCode.NoContent), false);
 				}
 
 				folder[index] = row with { Read = true };
-				return Task.FromResult(Json(new MailService.MailMessage(row.Number, row.From, row.Subject, Body, row.DateSent, row.Urgent, true, folderName)));
+				return (Json(new MailService.MailMessage(row.Number, row.From, row.Subject, Body, row.DateSent, row.Urgent, true, folderName)), true);
 			}
 		}
 
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+		return (new HttpResponseMessage(HttpStatusCode.NotFound), false);
 	}
 
 	private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
@@ -98,7 +122,7 @@ public sealed class MailApiFake : HttpMessageHandler
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
 			.AddSingleton(fake.Auth)
-			.AddSingleton(new MailService(factory))
+			.AddSingleton(new MailService(factory, fake.Auth))
 			.AddSingleton<SidebarCollapseService>()
 			.AddEchoLocalizer();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;

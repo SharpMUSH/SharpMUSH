@@ -50,7 +50,7 @@ public class MailServiceReadTests : IDisposable
 		_clients.Add(http);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
-		var mail = new MailService(factory);
+		var mail = new MailService(factory, Substitute.For<IAccountAuthState>());
 		var changes = new List<MailService.MailChange>();
 		mail.Changed += change => { lock (changes) changes.Add(change); };
 		return (mail, handler, changes);

@@ -11,7 +11,7 @@ namespace SharpMUSH.Client.Services;
 /// "No such character: Bob", "Subject may be at most N characters." — and a <see langword="bool"/>
 /// dropped that, leaving the page to guess at the recipient.
 /// </remarks>
-public class MailService(IHttpClientFactory httpClientFactory)
+public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState accountAuth)
 {
 	/// <summary>A mailbox row; mirrors <c>MailController.MailSummaryDto</c>.</summary>
 	public record MailSummary(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
@@ -40,8 +40,20 @@ public class MailService(IHttpClientFactory httpClientFactory)
 	/// a count can be adjusted where it stands; false when the folder's contents may have changed.</param>
 	public sealed record MailChange(string Folder, bool MarkedRead);
 
-	/// <summary>Raised after a read that changed something, a send or a delete lands.</summary>
+	/// <summary>
+	/// Raised after a read that changed something, a send or a delete lands — unless the tab switched
+	/// character while it was in flight. The change was to the previous character's mailbox, which
+	/// nothing shows any more, and applied to the new one's it would be wrong.
+	/// </summary>
 	public event Action<MailChange>? Changed;
+
+	/// <summary>The mailbox a request acts on: the server binds it to the tab's acting character.</summary>
+	private (int, long)? Mailbox => accountAuth.ActiveCharacter is { } acting ? (acting.DbrefNumber, acting.CreationTime) : null;
+
+	private void Report((int, long)? mailbox, MailChange change)
+	{
+		if (Mailbox == mailbox) Changed?.Invoke(change);
+	}
 
 	/// <summary>
 	/// Reads one message, which marks it read server-side. <paramref name="wasUnread"/> is what the
@@ -54,6 +66,7 @@ public class MailService(IHttpClientFactory httpClientFactory)
 		// One message changes state, so only the first read to succeed reports it; a read that fails
 		// leaves the report to the next one.
 		var key = (folder, number);
+		var mailbox = Mailbox;
 		if (wasUnread is true)
 		{
 			lock (_unreadInFlight) _unreadInFlight.Add(key);
@@ -66,10 +79,10 @@ public class MailService(IHttpClientFactory httpClientFactory)
 			switch (wasUnread)
 			{
 				case null:
-					Changed?.Invoke(new MailChange(folder, MarkedRead: false));
+					Report(mailbox, new MailChange(folder, MarkedRead: false));
 					break;
 				case true when Claim(key):
-					Changed?.Invoke(new MailChange(folder, MarkedRead: true));
+					Report(mailbox, new MailChange(folder, MarkedRead: true));
 					break;
 			}
 		}
@@ -108,15 +121,17 @@ public class MailService(IHttpClientFactory httpClientFactory)
 
 	public async Task<ApiResult<Success>> SendAsync(string to, string subject, string body, bool urgent)
 	{
+		var mailbox = Mailbox;
 		var result = await Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
-		if (result is Success) Changed?.Invoke(new MailChange("SENT", MarkedRead: false));
+		if (result is Success) Report(mailbox, new MailChange("SENT", MarkedRead: false));
 		return result;
 	}
 
 	public async Task<ApiResult<Success>> DeleteAsync(string folder, int number)
 	{
+		var mailbox = Mailbox;
 		var result = await Client.DeleteApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
-		if (result is Success) Changed?.Invoke(new MailChange(folder, MarkedRead: false));
+		if (result is Success) Report(mailbox, new MailChange(folder, MarkedRead: false));
 		return result;
 	}
 }

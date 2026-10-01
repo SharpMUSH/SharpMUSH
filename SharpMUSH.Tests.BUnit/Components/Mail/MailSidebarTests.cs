@@ -117,6 +117,28 @@ public class MailSidebarTests : TrackingBunitContext
 		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("1");
 	}
 
+	/// <summary>
+	/// A read the previous character started, answered after the switch, does not touch the new
+	/// character's count. It reported "one inbox message read" with nothing saying whose, and the sidebar
+	/// took one off the new mailbox's pill — after the refresh that had set it, so nothing put it back.
+	/// </summary>
+	[Test]
+	public async Task AReadFromThePreviousCharacter_LandingAfterTheSwitch_LeavesTheNewCountAlone()
+	{
+		var cut = RenderAt("/mail");
+		_fake.HoldReads = new TaskCompletionSource();
+		var read = Services.GetRequiredService<MailService>().ReadAsync("INBOX", 1, wasUnread: true);
+
+		_fake.SwitchCharacter();
+		cut.WaitForAssertion(() => cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=PLOTS']"), TimeSpan.FromSeconds(5));
+		_fake.HoldReads.SetResult();
+		await read;
+		await Task.Delay(100);
+
+		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("1")
+			.Because("the new character has one unread message; the read belonged to the previous one");
+	}
+
 	[Test]
 	public async Task WithoutACharacter_ListsNoMailbox()
 	{
