@@ -198,7 +198,13 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		_sceneStart = null;
 		_retry?.Cancel();
 		_retry = null;
-		if (_hub is null) return;
+		if (_hub is null)
+		{
+			// The game connection is down, but a scene connection that finished starting meanwhile is this
+			// session's and ends with it.
+			await DisposeHubAsync();
+			return;
+		}
 
 		try
 		{

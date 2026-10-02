@@ -302,9 +302,17 @@ public class ConnectionStateServiceTests
 		game.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
 		var waiting = StubHub(() => Task.CompletedTask);
 		var disposing = new TaskCompletionSource();
-		waiting.DisposeAsync().Returns(_ => new ValueTask(disposing.Task));
+		var disposeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		waiting.DisposeAsync().Returns(_ =>
+		{
+			disposeStarted.TrySetResult();
+			return new ValueTask(disposing.Task);
+		});
 		var fresh = StubHub(() => Task.CompletedTask);
 		fresh.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		Func<string?, Task>? reconnected = null;
+		game.When(hub => hub.Reconnected += Arg.Any<Func<string?, Task>>())
+			.Do(call => reconnected = call.Arg<Func<string?, Task>>());
 		var factory = Substitute.For<IGameHubConnectionFactory>();
 		factory.Create().Returns(game);
 		factory.CreateScene().Returns(waiting, fresh);
@@ -312,12 +320,69 @@ public class ConnectionStateServiceTests
 		await svc.ConnectAsync();
 
 		waiting.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting);
-		game.Reconnected += Raise.Event<Func<string?, Task>>("connection-id");
+		var revival = reconnected!("connection-id");
+		// The replacement is disposing the old scene connection when the sign-out comes.
+		await disposeStarted.Task;
 		await svc.DisconnectAsync();
 		disposing.SetResult();
-		await Task.Delay(50);
+		await revival;
 
 		await fresh.DidNotReceive().StartAsync(Arg.Any<CancellationToken>());
 		await Assert.That(svc.IsSceneLive).IsFalse();
+	}
+
+	/// <summary>
+	/// A scene connection that finishes starting while the game connection is down, between a failed restart and
+	/// the retry after it, belongs to the session as much as one that started with the game. A sign-out then ends
+	/// it; otherwise the next session would find it already there, joined to the scenes of the last one.
+	/// </summary>
+	[Test]
+	public async Task ASignOutWhileTheGameIsDown_LeavesNoSceneConnection()
+	{
+		var sceneStarting = new TaskCompletionSource();
+		var game = StubHub(() => Task.CompletedTask);
+		var restart = StubHub(() => Task.FromException(new HttpRequestException("connection refused")));
+		var scene = StubHub(() => sceneStarting.Task);
+		scene.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(game, restart);
+		factory.CreateScene().Returns(scene);
+		var waitingToRetry = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance)
+		{
+			RetryDelays = new SignallingDelays([TimeSpan.Zero, TimeSpan.FromHours(1)], waitingToRetry),
+		};
+
+		var connecting = svc.ConnectAsync();
+		game.Closed += Raise.Event<Func<Exception?, Task>>(new Exception("lost"));
+		// The restart was refused: there is no game connection, and the retry is waiting to try again.
+		await waitingToRetry.Task;
+		sceneStarting.SetResult();
+		await connecting;
+		await Assert.That(svc.IsSceneLive).IsTrue();
+
+		await svc.DisconnectAsync();
+
+		await Assert.That(svc.IsSceneLive).IsFalse();
+		await scene.Received().DisposeAsync();
+	}
+
+	/// <summary>Retry delays that say when the retry loop asks for its second wait.</summary>
+	private sealed class SignallingDelays(IReadOnlyList<TimeSpan> delays, TaskCompletionSource second) : IReadOnlyList<TimeSpan>
+	{
+		public TimeSpan this[int index]
+		{
+			get
+			{
+				if (index == 1) second.TrySetResult();
+				return delays[index];
+			}
+		}
+
+		public int Count => delays.Count;
+
+		public IEnumerator<TimeSpan> GetEnumerator() => delays.GetEnumerator();
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 	}
 }
