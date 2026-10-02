@@ -6,9 +6,19 @@ import vm from 'node:vm';
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
 function boot() {
     const listeners = new Map();
+    const classes = new Set();
+    const box = {
+        classList: {
+            add: (...names) => names.forEach(n => classes.add(n)),
+            remove: (...names) => names.forEach(n => classes.delete(n)),
+            toggle: (name, on) => on ? classes.add(name) : classes.delete(name),
+            contains: name => classes.has(name)
+        }
+    };
     const output = {
-        scrollTop: 0, scrollHeight: 500,
+        scrollTop: 0, scrollHeight: 500, clientHeight: 200,
         contains: a => a.command !== undefined,
+        closest: selector => selector === '.sharp-terminal-container' ? box : null,
         addEventListener: (name, handler) => listeners.set(name, handler),
         removeEventListener: name => listeners.delete(name)
     };
@@ -22,7 +32,7 @@ function boot() {
         const src = reference.replace('#[.{fingerprint}]', '');
         vm.runInContext(readFileSync(new URL(src, root), 'utf8'), context, { filename: src });
     }
-    return { terminal: context.window.SharpMUSH.Terminal, helpers: context.window.SharpMUSH, output, listeners };
+    return { terminal: context.window.SharpMUSH.Terminal, helpers: context.window.SharpMUSH, output, listeners, classes };
 }
 
 test('fresh Play page scrolls new output without loading an editor', () => {
@@ -33,6 +43,25 @@ test('fresh Play page scrolls new output without loading an editor', () => {
     output.scrollHeight = 900;
     terminal.scrollToBottom('output');
     assert.equal(output.scrollTop, 900);
+});
+
+test('scrolled up to reread, new output leaves the view in place and says so', () => {
+    const { terminal, output, listeners, classes } = boot();
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 500);
+    output.scrollTop = 100;
+    listeners.get('scroll')();
+    assert.ok(classes.has('sharp-terminal--reading'), 'scrolled up is reading');
+    output.scrollHeight = 900;
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 100, 'the reader is not dragged to the bottom');
+    assert.ok(classes.has('sharp-terminal--new'), 'new output is announced');
+    terminal.jumpToLatest('output');
+    assert.equal(output.scrollTop, 900);
+    assert.ok(!classes.has('sharp-terminal--reading') && !classes.has('sharp-terminal--new'));
+    output.scrollHeight = 1200;
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 1200, 'back at the bottom, it follows again');
 });
 
 test('fresh Play page command links support clicks, keyboard, and disposal', () => {
