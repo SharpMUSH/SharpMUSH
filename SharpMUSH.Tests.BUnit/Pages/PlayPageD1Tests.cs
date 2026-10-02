@@ -641,7 +641,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnACompactScreen_TheBannerFoldsIntoTheCardHeader_AndOpeningItIsNotRemembered()
+	public async Task OnACompactScreen_TheBannerFoldsIntoTheCardHeader_AndOpensAsASheetOverThePage()
 	{
 		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
@@ -652,15 +652,54 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find("button.scene-card-sub--action").GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner")
 			.Because("the room's name is the button that opens the banner");
 
-		cut.Find("button.scene-card-sub--action").Click();
-		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
-		await Assert.That(cut.FindAll("button.scene-card-sub--action").Count).IsEqualTo(0);
-		cut.Find("button.kit-banner-minimise").Click();
-		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising folds it back into the header");
+		cut.Find(".scene-card-title").Click();
+		var sheet = cut.Find(".play-sheet.play-sheet--details[role='dialog']");
+		await Assert.That(sheet.GetAttribute("aria-label")).IsEqualTo("Lower Docks");
+		await Assert.That(cut.FindAll(".play-sheet--details .kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
+		await Assert.That(cut.FindAll(".play-main .kit-banner").Count).IsEqualTo(0).Because("it drops over the page, not above the card: one bar");
+		await Assert.That(cut.FindAll(".play-sheet--details .play-banner-more .play-conn[aria-label='Disconnect']").Count).IsEqualTo(1);
+		cut.Find(".play-sheet--details button.kit-banner-minimise").Click();
+		await Assert.That(cut.FindAll(".play-sheet, .kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising closes it");
 
 		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
 		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner")).IsFalse()
 			.Because("a choice made on a sideways phone must not change the banner on a taller screen");
+	}
+
+	[Test]
+	public async Task TheBanner_CarriesThePhonesControlsRow_FocusSettingsAndDisconnect()
+	{
+		// Discord's channel details: on a phone, Play.razor.css hides the header's less frequent buttons
+		// (.play-head-more, the focus button) once a room has come, and shows this row in the banner the name opens.
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play.play--room"), TimeSpan.FromSeconds(5));
+		var more = cut.FindAll(".scene-card-head .play-head-more");
+		await Assert.That(more.Count).IsEqualTo(2);
+		await Assert.That(more[0].QuerySelector(".play-settings-btn")).IsNotNull();
+		await Assert.That(more[1].QuerySelector(".play-conn[aria-label='Disconnect']")).IsNotNull();
+
+		cut.Find(".scene-card-title").Click();
+		var row = cut.Find(".kit-banner .kit-banner-bottom-actions .play-banner-more");
+		await Assert.That(row.QuerySelector(".play-settings-btn")).IsNotNull();
+		row.QuerySelector("button.play-banner-focus")!.Click();
+		await Assert.That(cut.Find(".play").ClassList).Contains("play--focus");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("leaving focus brings the opened banner back");
+		cut.Find(".play-banner-more .play-conn[aria-label='Disconnect']").Click();
+		await _play.Received(1).DisconnectAsync();
+	}
+
+	[Test]
+	public async Task Disconnected_ConnectStaysInTheHeader()
+	{
+		_play.IsConnected.Returns(false);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head .play-conn--connect"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-head .play-conn--connect").Closest(".play-head-more")).IsNull()
+			.Because("the way in is never tucked away");
 	}
 
 	[Test]
@@ -686,7 +725,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
 
 		cut.Find("button.scene-card-sub--action").Click();
-		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the opened banner carries it again");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg").Because("the sheet drops over the header, which keeps it");
 	}
 
 	[Test]
@@ -699,8 +738,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find("button.scene-card-sub--action").Click();
 		var page = cut.FindComponent<PlayPage>();
 
+		await Assert.That(cut.FindAll(".play-sheet--details").Count).IsEqualTo(1);
 		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
-		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0).Because("a larger screen follows its own remembered choice (folded), not the phone's");
+		await Assert.That(cut.FindAll(".play-sheet--details, .kit-banner").Count).IsEqualTo(0).Because("a larger screen follows its own remembered choice (folded), not the phone's sheet");
 
 		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(true));
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn back to the compact screen folds it again");

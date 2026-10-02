@@ -71,12 +71,12 @@ else
        its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
-        <div class="play full-bleed full-height @(_focus ? "play--focus" : null)">
+        <div class="play full-bleed full-height @(_focus ? "play--focus" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
                 @if (BannerShown)
                 {
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" />
+                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls" />
                 }
                 @if (_commKey is { } commKey)
                 {
@@ -91,12 +91,22 @@ else
                                    SubtitleAction="@Loc["NavBannerRestore"]" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Lead>@ViewerAvatar</Lead>
                         <Controls>
-                            @if (View == PlayView.Terminal)
-                            {
-                                @TerminalSettings
-                            }
+                            @* On a phone these step back into the banner's controls row (Play.razor.css). *@
+                            <span class="play-head-more">
+                                @if (View == PlayView.Terminal)
+                                {
+                                    @TerminalSettings
+                                }
+                            </span>
                             @RoomControl
-                            @ConnectionControl
+                            @if (PlayTerminal.IsConnected)
+                            {
+                                <span class="play-head-more">@ConnectionControl</span>
+                            }
+                            else
+                            {
+                                @ConnectionControl
+                            }
                         </Controls>
                         <ChildContent>
                             <div class="play-views">
@@ -154,11 +164,18 @@ else
     @if (_mobileSheet is { } sheet)
     {
         <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet"
-                    Style="@($"background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: {(sheet == MobileSheet.Room ? "flex-end" : "flex-start")};")">
-            <div class="play-sheet @(sheet == MobileSheet.Room ? "play-sheet--room" : "play-sheet--side")" role="dialog" aria-modal="true"
+                    Style="@SheetOverlayStyle(sheet)">
+            <div class="play-sheet @SheetClass(sheet)" role="dialog" aria-modal="true"
                  aria-label="@SheetLabel(sheet)" tabindex="-1" @onclick:stopPropagation="true" @onkeydown="OnMobileSheetKey">
                 <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
-                    @if (sheet == MobileSheet.Room)
+                    @if (sheet == MobileSheet.Details)
+                    {
+                        @* The room's details, dropped over the page from the header the way a chat app opens a channel's:
+                           the banner, with the header's less frequent buttons on it. Its minimise closes it. *@
+                        <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
+                                    Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls" />
+                    }
+                    else if (sheet == MobileSheet.Room)
                     {
                         @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
                            scope panels, each rendered as the aside renders it but in sheet mode. *@
@@ -221,30 +238,22 @@ else
     /// <summary>The player opened the full banner on a larger screen; remembered (play.banner = open).</summary>
     private bool _bannerOpen;
 
-    /// <summary>The player opened the full banner on the compact screen; dropped when the screen changes tier.</summary>
-    private bool _compactScreenBannerOpen;
-
     /// <summary>
     /// The room banner is folded into the card header on every screen: one bar over the game. The header carries
-    /// the room's picture and name, and its sub-line opens the full banner, whose minimise folds it again. On a
-    /// larger screen that choice is remembered; on a phone it lasts until the screen changes tier, so it does not
-    /// change the banner on a larger screen.
+    /// the room's picture and name, and its name and sub-line open the full banner, whose minimise folds it again.
+    /// On a larger screen it opens above the card and the choice is remembered. On a phone it drops over the page
+    /// as a sheet (MobileSheet.Details) and is never pinned open, so the header stays the only bar.
     /// </summary>
-    private bool BannerOpen => _compactScreen ? _compactScreenBannerOpen : _bannerOpen;
+    private bool BannerOpen => !_compactScreen && _bannerOpen;
 
     private bool BannerFolded => !BannerOpen && !_focus;
 
     private bool BannerShown => BannerOpen && !_focus;
 
-    private Task OpenFoldedBanner() => SetBannerOpenAsync(true);
+    private Task OpenFoldedBanner() => _compactScreen ? OpenMobileSheetAsync(MobileSheet.Details) : SetBannerOpenAsync(true);
 
     private async Task SetBannerOpenAsync(bool open)
     {
-        if (_compactScreen)
-        {
-            _compactScreenBannerOpen = open;
-            return;
-        }
         _bannerOpen = open;
         await JS.SetItemAsync(BrowserStore.Local, BannerKey, open ? "open" : "folded");
     }
@@ -253,8 +262,22 @@ else
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
-    /// <summary>A phone's side panels: the Room panel from the right, Play's sidebar from the left.</summary>
-    private enum MobileSheet { Room, Side }
+    /// <summary>A phone's sheets: the Room panel from the right, Play's sidebar from the left, the room's details from the top.</summary>
+    private enum MobileSheet { Room, Side, Details }
+
+    private static string SheetOverlayStyle(MobileSheet sheet) => sheet switch
+    {
+        MobileSheet.Details => "background: rgba(8, 9, 10, 0.55); align-items: flex-start; justify-content: stretch;",
+        MobileSheet.Room => "background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: flex-end;",
+        _ => "background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: flex-start;",
+    };
+
+    private static string SheetClass(MobileSheet sheet) => sheet switch
+    {
+        MobileSheet.Details => "play-sheet--details",
+        MobileSheet.Room => "play-sheet--room",
+        _ => "play-sheet--side",
+    };
 
     private MobileSheet? _mobileSheet;
     /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
@@ -445,6 +468,29 @@ else
         }
     };
 
+    /// <summary>
+    /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
+    /// header keeps the buttons used all the time and the name opens the room's details, as a chat app's channel
+    /// name does. Focus mode, the terminal settings and Disconnect; Connect and Login stay in the header.
+    /// </summary>
+    private RenderFragment BannerControls => __builder =>
+    {
+        <div class="play-banner-more">
+            <button type="button" class="play-conn play-banner-focus" aria-label="@Loc["NavFocusMode"]" title="@Loc["NavFocusMode"]"
+                    @onclick="() => OnFocusChanged(true)">
+                <MudIcon Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" />
+            </button>
+            @if (View == PlayView.Terminal)
+            {
+                @TerminalSettings
+            }
+            @if (PlayTerminal.IsConnected)
+            {
+                @ConnectionControl
+            }
+        </div>
+    };
+
     private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;
 
     private Task DisconnectAsync() => _playTerm?.DisconnectAsync() ?? Task.CompletedTask;
@@ -461,7 +507,12 @@ else
     /// <summary>Unread messages in joined channels and in conversations: the menu button's dot.</summary>
     private int UnreadComms => Comms.Channels.Where(c => c.Joined).Sum(c => c.Unread) + Comms.Conversations.Sum(c => c.Unread);
 
-    private string SheetLabel(MobileSheet sheet) => sheet == MobileSheet.Room ? Loc["NavPlayTabRoom"] : Loc["NavPlayTabs"];
+    private string SheetLabel(MobileSheet sheet) => sheet switch
+    {
+        MobileSheet.Room => Loc["NavPlayTabRoom"],
+        MobileSheet.Details => Room.Info?.Name ?? Loc["NavPlayTabRoom"],
+        _ => Loc["NavPlayTabs"],
+    };
 
     private async Task OpenSiteMenu()
     {
@@ -549,7 +600,8 @@ else
     public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(async () =>
     {
         _compactScreen = compactScreen;
-        _compactScreenBannerOpen = false;
+        // The details sheet is a phone's banner; a larger screen has the banner above the card instead.
+        if (_mobileSheet == MobileSheet.Details) _mobileSheet = null;
         // A window that narrows to a phone's width changes chrome as well.
         _touchChrome = await IsTouchChromeAsync();
         StateHasChanged();

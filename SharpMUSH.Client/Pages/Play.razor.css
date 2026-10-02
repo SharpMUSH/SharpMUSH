@@ -271,6 +271,29 @@
     color: var(--text);
 }
 
+/* The header's less frequent buttons (terminal settings, Disconnect): in the header's flex row as they are, and
+   stepping back into the banner's controls row on a phone (below). */
+.play-head-more {
+    display: contents;
+}
+
+/* The banner's controls row: in the phone's details sheet (above), and in the banner on a narrow page (below). */
+.play-banner-more {
+    display: none;
+    gap: 8px;
+}
+
+/* On the room's picture: 44px glass buttons, a full touch target. */
+.play-banner-more .play-conn,
+.play-banner-more .play-settings-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(10, 11, 13, 0.55);
+    color: var(--text-on-image);
+    backdrop-filter: blur(6px);
+}
+
 /* A phone's side panels, as a chat app's: Play's sidebar from the left, the Room panel from the right, full
    height on MudOverlay's fixed layer (§4.12), clear of the notch and the home indicator. */
 .play-sheet {
@@ -296,6 +319,20 @@
     padding-right: max(16px, env(safe-area-inset-right));
     border-left: 1px solid var(--border);
     border-radius: 18px 0 0 18px;
+}
+
+/* The room's details, dropped from the top over the page (a chat app's channel details): the banner and its
+   controls row, as tall as they are. */
+.play-sheet--details {
+    box-sizing: border-box;
+    width: 100vw;
+    height: auto;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+    background: transparent;
+}
+
+.play-sheet--details .play-banner-more {
+    display: flex;
 }
 
 /* The site's own menu, at the top of Play's sidebar. */
@@ -444,6 +481,16 @@
     .play-conn.play-room-btn {
         display: grid;
     }
+    /* Discord's channel header: the buttons used all the time stay (menu, name, view, people); focus mode, the
+       terminal settings and Disconnect move into the banner the name opens. Only once a room has come (the banner
+       needs one), and not in focus mode, which has no banner and keeps its own exit. */
+    .play--room:not(.play--focus) .play-head-more,
+    .play--room:not(.play--focus) ::deep .scene-card-focus {
+        display: none;
+    }
+    .play-banner-more {
+        display: flex;
+    }
     /* A chat app's top bar keeps few buttons: with the terminal settings in the header, focus is in that
        menu (Play.razor), not a button of its own. */
     .play ::deep .scene-card-head:has(.play-settings-btn) .scene-card-focus {
@@ -464,12 +511,14 @@
     }
 }
 
-/* A 320–360px phone: the menu button, the avatar and four header buttons leave the name almost no width, so the
-   picture steps back (the power button still says whether the character is connected). This queries the header's
-   own container (PlaySceneCard.razor.css), whose content box is 344px on a 390px phone, not the page's: page tiers
-   are fixed at 48 / 64 / 90rem. */
+/* A 320–360px phone: with the header's four buttons (focus mode, or before a room has come and the banner can take
+   them), the menu button and the avatar leave the name almost no width, so the picture steps back (the power button
+   still says whether the character is connected). Otherwise two buttons remain and the avatar keeps its place. This
+   queries the header's own container (PlaySceneCard.razor.css), whose content box is 344px on a 390px phone, not
+   the page's: page tiers are fixed at 48 / 64 / 90rem. */
 @container (max-width: 20rem) {
-    .play-lead .play-me {
+    .play--focus .play-lead .play-me,
+    .play:not(.play--room) .play-lead .play-me {
         display: none;
     }
 }
