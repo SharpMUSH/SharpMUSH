@@ -36,6 +36,6 @@ think [comp(decompose(s(decompose(ansi(hr,Well met)\, all.%r[ansi(c,Sit)]%; plea
 think [comp(decompose(s(decompose(a%b%b[ansi(r,b c)]%b%bd))),decompose(a%b%b[ansi(r,b c)]%b%bd))]
 think [comp(decompose(s(decompose(lit(a,b;c%d[e]f{g}h^j$k(l)m)))),lit(a\,b\;c\%d\[e\]f\{g\}h\^j\$k\(l\)m))]
 
-::case dc.markup  markup decompose() does not write: an HTML tag
+::case dc.markup  an HTML tag: SharpMUSH writes tagwrap(), PennMUSH tag()/endtag() (compatibility output)
 think [decompose(tagwrap(b,bold))]|[decompose(tagwrap(b,ansi(r,x)))]
 ::logout wiz

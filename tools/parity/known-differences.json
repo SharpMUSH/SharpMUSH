@@ -150,6 +150,16 @@
       "tracking": "#1512",
       "profile": "`decompose()` writes colour inside colour nested",
       "command": "think [decompose(ansi(r,a[ansi(g,b)]c))]|[decompose(ansi(r,a[ansi(u,b)]))]"
+    },
+    {
+      "id": "KD-0015",
+      "scenario": "36-decompose",
+      "case": "dc.markup",
+      "step": 0,
+      "reason": "decompose() writes a tag as tagwrap(), the call that makes it here; PennMUSH writes tag()/endtag(), which SharpMUSH answers with 'use tagwrap'.",
+      "tracking": "#1512",
+      "profile": "`decompose()` writes tags and links as the calls that make them",
+      "command": "think [decompose(tagwrap(b,bold))]|[decompose(tagwrap(b,ansi(r,x)))]"
     }
   ]
 }

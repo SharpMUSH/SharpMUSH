@@ -432,11 +432,11 @@ public class SceneRoleplayIntegrationTests
 			.Because("+scene/rewrite replaces the whole text, commas included, and the composer's %r is a line break");
 		// The portal's Edit starts from decompose() of the pose. Sent back unchanged it is the same pose, colours
 		// and escaped specials included.
-		const string decomposed = @"[ansi(hr,Well met)]\, all.%r[ansi(c,Sit)]\; please.";
+		const string decomposed = @"[ansi(hr,Well met)]\,%b[tagwrap(b,all)].%r[ansi(c,Sit)]\; please.";
 		await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}={decomposed}");
 		var markup = await Eval($"scenepose({sceneId}, {bobPoseId}, markup)");
 		await Assert.That(SoftcodeDecomposer.Decompose(MarkupTextSerializer.Deserialize(markup))).IsEqualTo(decomposed)
-			.Because("an edit saved without changes must not lose the pose's colours");
+			.Because("an edit saved without changes must not lose the pose's colours or tags");
 
 		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each

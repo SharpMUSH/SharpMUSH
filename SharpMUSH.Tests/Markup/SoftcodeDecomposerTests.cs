@@ -74,4 +74,46 @@ public class SoftcodeDecomposerTests
 		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
 				AnsiMarkup.Create(foreground: new AnsiColor.Rgb(255, 0, 0), background: new AnsiColor.Rgb(0, 0, 255)), "x")))
 			.IsEqualTo("[ansi(#ff0000!#0000ff,x)]");
+
+	[Test]
+	public async Task ATagIsATagwrap()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(HtmlMarkup.Create("b", null), "bold")))
+			.IsEqualTo("[tagwrap(b,bold)]");
+
+	[Test]
+	public async Task ATagKeepsItsAttributes()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(HtmlMarkup.Create("a", "href=\"https://x.y/z?a=1,b\""), "go")))
+			.IsEqualTo(@"[tagwrap(a,href=""https://x.y/z?a=1\,b"",go)]");
+
+	[Test]
+	public async Task ACommandLinkIsACmdlink()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(linkUrl: "look", linkKind: LinkKind.Command, linkText: "look"), "here")))
+			.IsEqualTo("[cmdlink(here,look)]");
+
+	[Test]
+	public async Task ACommandLinkKeepsItsHint_AndItsCommandIsEscaped()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(linkUrl: "say hi, all", linkKind: LinkKind.Command, linkText: "Greet"), "wave")))
+			.IsEqualTo(@"[cmdlink(wave,say hi\, all,Greet)]");
+
+	[Test]
+	public async Task AColouredCommandLinkIsACmdlinkInsideAnsi()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(linkUrl: "help", linkKind: LinkKind.Command, linkText: "help", underlined: true), "help")))
+			.IsEqualTo("[ansi(u,[cmdlink(help,help)])]");
+
+	[Test]
+	public async Task AnAddressLinkIsAnAnchor()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(linkUrl: "https://x.y", linkKind: LinkKind.Url, linkText: "https://x.y"), "site")))
+			.IsEqualTo(@"[tagwrap(a,href=""https://x.y"",site)]");
+
+	[Test]
+	public async Task ATagInsideAColourNests()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Concat(
+				MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)),
+					MarkupText.Concat(MarkupText.Plain("a"), MarkupText.Wrap(HtmlMarkup.Create("b", null), "b"))),
+				MarkupText.Plain("c"))))
+			.IsEqualTo("[ansi(r,a[tagwrap(b,b)])]c");
 }

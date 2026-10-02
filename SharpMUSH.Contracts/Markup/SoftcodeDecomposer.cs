@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MarkupString;
 using MarkupString.Ansi;
+using MarkupString.Html;
 
 namespace SharpMUSH.Library.Markup;
 
@@ -28,20 +29,22 @@ public static partial class SoftcodeDecomposer
 	public static string Decompose(MarkupText text)
 	{
 		var builder = new StringBuilder(text.Length + 16);
-		// The ansi() calls open around the text written so far, outermost first.
-		var open = new List<AnsiMarkup>();
+		// The calls open around the text written so far, outermost first, with what closes each.
+		var open = new List<(IMarkup Markup, string Close)>();
 		var position = 0;
 
-		void Write(IReadOnlyList<AnsiMarkup> layers, string segment)
+		void Write(IReadOnlyList<IMarkup> markups, string segment)
 		{
+			// The first markup is the innermost.
+			var layers = markups.Reverse().Select(m => (Markup: m, Call: Call(m))).Where(l => l.Call is not null).ToList();
 			var kept = 0;
-			while (kept < open.Count && kept < layers.Count && open[kept].Equals(layers[kept])) kept++;
-			for (var i = open.Count; i > kept; i--) builder.Append(")]");
+			while (kept < open.Count && kept < layers.Count && open[kept].Markup.Equals(layers[kept].Markup)) kept++;
+			for (var i = open.Count - 1; i >= kept; i--) builder.Append(open[i].Close);
 			open.RemoveRange(kept, open.Count - kept);
-			foreach (var layer in layers.Skip(kept))
+			foreach (var (markup, call) in layers.Skip(kept))
 			{
-				builder.Append("[ansi(").Append(AnsiCodes(layer.Style)).Append(',');
-				open.Add(layer);
+				builder.Append(call!.Value.Open);
+				open.Add((markup, call.Value.Close));
 			}
 			builder.Append(Escape(segment));
 		}
@@ -49,14 +52,51 @@ public static partial class SoftcodeDecomposer
 		foreach (var run in text.Runs)
 		{
 			if (run.Start > position) Write([], text.Text[position..run.Start]);
-			// The first markup is the innermost; a layer that sets nothing writes no call.
-			Write(run.Markups.OfType<AnsiMarkup>().Where(a => AnsiCodes(a.Style).Length > 0).Reverse().ToList(),
-				text.Text.Substring(run.Start, run.Length));
+			Write(run.Markups, text.Text.Substring(run.Start, run.Length));
 			position = run.End;
 		}
 
 		Write([], position < text.Length ? text.Text[position..] : string.Empty);
 		return builder.ToString();
+	}
+
+	/// <summary>
+	/// The call that makes <paramref name="markup"/>, split around the text it covers; <c>null</c> for markup
+	/// no call writes.
+	/// </summary>
+	/// <remarks>
+	/// Colour is <c>ansi()</c>. A command link (it rides on the colour layer) is <c>cmdlink(text,command[,hint])</c>,
+	/// inside the <c>ansi()</c> when the layer has colour too. An address link is <c>tagwrap(a,href="…",text)</c>,
+	/// the one call that writes an address. A tag is <c>tagwrap(name[,attributes],text)</c>.
+	/// </remarks>
+	private static (string Open, string Close)? Call(IMarkup markup)
+	{
+		switch (markup)
+		{
+			case AnsiMarkup ansi:
+				{
+					var style = ansi.Style;
+					var codes = AnsiCodes(style);
+					var (open, close) = style.LinkUrl is { Length: > 0 } url
+						? style.LinkKind == LinkKind.Command
+							? ("[cmdlink(", "," + Escape(url)
+								+ (style.LinkText is { Length: > 0 } hint && hint != url ? "," + Escape(hint) : "") + ")]")
+							: ("[tagwrap(a," + Escape("href=\"" + url + "\"") + ",", ")]")
+						: ("", "");
+					if (codes.Length > 0)
+					{
+						open = $"[ansi({codes}," + open;
+						close += ")]";
+					}
+					return open.Length > 0 ? (open, close) : null;
+				}
+			case HtmlMarkup html:
+				return (html.Attributes is { Length: > 0 } attributes
+					? $"[tagwrap({html.TagName},{Escape(attributes)},"
+					: $"[tagwrap({html.TagName},", ")]");
+			default:
+				return null;
+		}
 	}
 
 	/// <summary>
