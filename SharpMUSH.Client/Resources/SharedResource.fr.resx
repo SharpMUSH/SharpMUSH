@@ -4388,6 +4388,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Tapez une commande…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Sauts de ligne en %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Les sauts de ligne partent en %r, dans un seul message. Cliquez pour envoyer chaque ligne séparément.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Chaque ligne part séparément. Cliquez pour envoyer les sauts de ligne en %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Agrandir la saisie</value>
   </data>

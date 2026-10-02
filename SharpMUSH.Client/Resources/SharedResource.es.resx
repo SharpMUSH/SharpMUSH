@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Escribe un comando…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Saltos de línea como %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Los saltos de línea se envían como %r en una sola publicación. Haz clic para enviar cada línea por separado.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Cada línea se envía por separado. Haz clic para enviar los saltos de línea como %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar el campo</value>
   </data>

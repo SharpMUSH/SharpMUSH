@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>输入命令…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>换行作为 %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>换行以 %r 发送，合为一条。点击改为每行单独发送。</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>每行单独发送。点击改为以 %r 发送换行。</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>展开输入框</value>
   </data>

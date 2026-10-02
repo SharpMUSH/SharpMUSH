@@ -11,20 +11,30 @@
    Up and Down walk the command history there as in the terminal. Enter sends and Shift+Enter is a new line,
    decided in layout.js per key; Ctrl/⌘+Enter also sends. The draft and the mode are kept per character
    (DraftKey), so neither switching to the terminal nor a reload loses a half-written post; the expand
-   button gives the field most of the screen for a long one. *@
+   button gives the field most of the screen for a long one. The %r toggle (on by default, kept per browser)
+   decides what a line break is: on, it travels as %r inside the one post or command; off, every line is sent
+   as a post or command of its own. *@
 <BottomBar Class="@($"composer {(_expanded ? "composer--expanded" : null)}")">
-    <div class="composer-head">
-        <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
-        <button type="button" class="composer-expand" aria-pressed="@(_expanded ? "true" : "false")"
-                aria-label="@ExpandLabel" title="@ExpandLabel" @onclick="ToggleExpanded">
-            <MudIcon Icon="@(_expanded ? Icons.Material.Outlined.CloseFullscreen : Icons.Material.Outlined.OpenInFull)" Size="Size.Small" />
-        </button>
-    </div>
-    <div class="composer-row">
-        <textarea class="composer-input @(_type == Command ? "composer-input--command" : null)" rows="1" @ref="_input"
-                  aria-label="@Loc["NavPlayMessageType"]: @Label(_type)" placeholder="@Placeholder"
-                  value="@_text" @oninput="OnInput" @onkeydown="OnKeyDownAsync"></textarea>
-        <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendAsync">@Loc["Send"]</button>
+    <div class="composer-scope">
+        <div class="composer-grid">
+            <div class="composer-chips">
+                <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
+            </div>
+            <div class="composer-tools">
+                <button type="button" class="composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
+                        aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
+                    <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" /><span class="composer-breaks-code">%r</span>
+                </button>
+                <button type="button" class="composer-expand" aria-pressed="@(_expanded ? "true" : "false")"
+                        aria-label="@ExpandLabel" title="@ExpandLabel" @onclick="ToggleExpanded">
+                    <MudIcon Icon="@(_expanded ? Icons.Material.Outlined.CloseFullscreen : Icons.Material.Outlined.OpenInFull)" Size="Size.Small" />
+                </button>
+            </div>
+            <textarea class="composer-input @(_type == Command ? "composer-input--command" : null)" rows="1" @ref="_input"
+                      aria-label="@Loc["NavPlayMessageType"]: @Label(_type)" placeholder="@Placeholder"
+                      value="@_text" @oninput="OnInput" @onkeydown="OnKeyDownAsync"></textarea>
+            <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendAsync">@Loc["Send"]</button>
+        </div>
     </div>
 </BottomBar>
 
@@ -54,6 +64,10 @@
     private bool _expanded;
     private string? _loadedKey;
     private readonly HistoryWalk _historyWalk = new();
+    private bool _breaksAsR = true;
+    private bool _breaksLoaded;
+
+    private const string BreaksKey = "play.composer.breaks";
 
     private bool CanSend => Connected && !string.IsNullOrWhiteSpace(_text);
 
@@ -90,6 +104,24 @@
         _text = e.Value?.ToString() ?? string.Empty;
         _historyWalk.Reset();
         return SaveDraftAsync();
+    }
+
+    private string BreaksHint => _breaksAsR ? Loc["NavPlayComposerBreaksOn"] : Loc["NavPlayComposerBreaksOff"];
+
+    private async Task ToggleBreaksAsync()
+    {
+        _breaksAsR = !_breaksAsR;
+        _focusInput = true;
+        await JS.SetItemAsync(BrowserStore.Local, BreaksKey, _breaksAsR ? "on" : "off");
+    }
+
+    private async Task LoadBreaksAsync()
+    {
+        if (_breaksLoaded) return;
+        _breaksLoaded = true;
+        if (await JS.GetItemAsync(BrowserStore.Local, BreaksKey) is not "off") return;
+        _breaksAsR = false;
+        StateHasChanged();
     }
 
     private void ToggleExpanded()
@@ -170,18 +202,37 @@
     private async Task SendAsync()
     {
         if (!CanSend) return;
-        var line = _type switch
+        var lines = Lines().ToList();
+        if (_type == Command)
         {
-            Say => $"say {MushComposeEncoder.Encode(_text)}",
-            Ooc => $"ooc {MushComposeEncoder.Encode(_text)}",
-            Emit => $"@emit {MushComposeEncoder.Encode(_text)}",
-            _ => _text.Trim(),
-        };
-        if (_type == Command) await History.AddAsync(line);
+            foreach (var line in lines) await History.AddAsync(line);
+        }
         _historyWalk.Reset();
         _text = string.Empty;
         await SaveDraftAsync();
-        await OnSend.InvokeAsync(line);
+        foreach (var line in lines) await OnSend.InvokeAsync(line);
+    }
+
+    /// <summary>
+    /// What Send puts on the wire: one line with the breaks as <c>%r</c>, or, with the toggle off, one per line
+    /// of the draft (blank lines skipped). Command text is otherwise sent as typed.
+    /// </summary>
+    private IEnumerable<string> Lines()
+    {
+        var text = _text.Replace("\r\n", "\n").Replace('\r', '\n');
+        IEnumerable<string> parts = _breaksAsR
+            ? [_type == Command ? text.Trim().Replace("\n", "%r") : text]
+            : text.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l));
+        foreach (var part in parts)
+        {
+            yield return _type switch
+            {
+                Say => $"say {MushComposeEncoder.Encode(part)}",
+                Ooc => $"ooc {MushComposeEncoder.Encode(part)}",
+                Emit => $"@emit {MushComposeEncoder.Encode(part)}",
+                _ => part.Trim(),
+            };
+        }
     }
 
     private DotNetObjectReference<PlayComposer>? _self;
@@ -197,6 +248,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await LoadDraftAsync();
+        await LoadBreaksAsync();
         if (firstRender)
         {
             _self = DotNetObjectReference.Create(this);

@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Въведете команда…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Нови редове като %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Новите редове се изпращат като %r в една публикация. Щракнете, за да изпращате всеки ред отделно.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Всеки ред се изпраща отделно. Щракнете, за да изпращате новите редове като %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Разгъни полето</value>
   </data>

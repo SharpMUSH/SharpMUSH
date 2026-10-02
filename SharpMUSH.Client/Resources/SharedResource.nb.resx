@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Skriv en kommando…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Linjeskift som %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Linjeskift sendes som %r i ett innlegg. Klikk for å sende hver linje for seg.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Hver linje sendes for seg. Klikk for å sende linjeskift som %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Utvid feltet</value>
   </data>

@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Введите команду…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Переносы строк как %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Переносы строк отправляются как %r в одном сообщении. Нажмите, чтобы отправлять каждую строку отдельно.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Каждая строка отправляется отдельно. Нажмите, чтобы отправлять переносы строк как %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Развернуть поле ввода</value>
   </data>

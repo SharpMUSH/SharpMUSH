@@ -92,6 +92,63 @@ public class PlayComposerTests : BunitContext
 		await Assert.That(cut.Find(".composer").ClassList).DoesNotContain("composer--expanded");
 	}
 
+	private const string Lorem =
+		"Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n\n"
+		+ "Sed do eiusmod tempor incididunt ut labore.\n\n"
+		+ "Ut enim ad minim veniam, quis nostrud exercitation.";
+
+	[Test]
+	public async Task LineBreaks_TravelAsR_ByDefault_SoParagraphsArriveWhole()
+	{
+		var cut = RenderComposer();
+		await Assert.That(cut.Find("button.composer-breaks").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.Find("button.composer-breaks").GetAttribute("aria-label")).IsEqualTo("Line breaks as %r");
+		Type(cut, Lorem);
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[]
+		{
+			"say Lorem ipsum dolor sit amet, consectetur adipiscing elit.%r%r"
+			+ "Sed do eiusmod tempor incididunt ut labore.%r%r"
+			+ "Ut enim ad minim veniam, quis nostrud exercitation."
+		});
+	}
+
+	[Test]
+	public async Task ACommand_KeepsItsLineBreaks_AsR()
+	{
+		var cut = RenderComposer();
+		cut.FindAll("[role=radio]")[3].Click();
+		Type(cut, "@desc me=First line.\r\nSecond line.");
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@desc me=First line.%rSecond line." });
+	}
+
+	[Test]
+	public async Task WithTheToggleOff_EachLine_IsSentOnItsOwn_AndTheChoiceIsKept()
+	{
+		var cut = RenderComposer();
+		cut.Find("button.composer-breaks").Click();
+		await Assert.That(cut.Find("button.composer-breaks").GetAttribute("aria-pressed")).IsEqualTo("false");
+		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem").Arguments;
+		await Assert.That((string?)kept[0]).IsEqualTo("play.composer.breaks");
+		await Assert.That((string?)kept[1]).IsEqualTo("off");
+		Type(cut, Lorem);
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[]
+		{
+			"say Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+			"say Sed do eiusmod tempor incididunt ut labore.",
+			"say Ut enim ad minim veniam, quis nostrud exercitation.",
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		JSInterop.Setup<string?>("localStorage.getItem", "play.composer.breaks").SetResult("off");
+		var again = RenderComposer();
+		again.WaitForAssertion(() =>
+		{
+			if (again.Find("button.composer-breaks").GetAttribute("aria-pressed") != "false") throw new InvalidOperationException("choice not read back yet");
+		}, TimeSpan.FromSeconds(5));
+	}
+
 	[Test]
 	public async Task InCommand_UpAndDown_WalkTheHistory()
 	{

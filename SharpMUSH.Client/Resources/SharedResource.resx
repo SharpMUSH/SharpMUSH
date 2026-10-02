@@ -4478,6 +4478,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Type a command…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Line breaks as %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Line breaks are sent as %r, in one post. Click to send each line on its own.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Each line is sent on its own. Click to send line breaks as %r.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Expand the input</value>
   </data>

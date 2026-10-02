@@ -5133,6 +5133,15 @@
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Gib einen Befehl ein…</value>
   </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Zeilenumbrüche als %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Zeilenumbrüche werden als %r in einem Beitrag gesendet. Klicken, um jede Zeile einzeln zu senden.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Jede Zeile wird einzeln gesendet. Klicken, um Zeilenumbrüche als %r zu senden.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Eingabefeld vergrößern</value>
   </data>

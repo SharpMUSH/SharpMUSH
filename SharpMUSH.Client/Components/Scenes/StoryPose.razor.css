@@ -13,8 +13,10 @@
 	text-decoration: line-through;
 }
 
+/* Beside the name, however long the pose runs. */
 .story-portrait-btn {
 	flex-shrink: 0;
+	align-self: flex-start;
 	padding: 0;
 	border: 0;
 	background: transparent;
