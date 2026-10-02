@@ -248,11 +248,16 @@ public class MailFunctionUnitTests
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "MailFetchRefused");
-		var before = WebAppFactoryArg.Notifications.CountFor(mortal);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(mortal);
 
 		await WebAppFactoryArg.FunctionParserFor(mortal).FunctionParse(MarkupText.Plain(code));
 
-		await Assert.That(WebAppFactoryArg.Notifications.For(mortal).Skip(before)).IsEquivalentTo(["Permission denied"]);
+		// Only what the mortal was told by its own call: a parallel test's player disconnecting in the shared
+		// default home is heard too, from that player.
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(mortal).Skip(before)
+				.Where(delivery => delivery.Sender is { } sender && sender.Number == mortal.Number)
+				.Select(delivery => delivery.Message))
+			.IsEquivalentTo(["Permission denied"]);
 	}
 
 	[Test]
