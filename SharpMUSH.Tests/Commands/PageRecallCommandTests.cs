@@ -754,6 +754,70 @@ public class PageRecallCommandTests
 		}
 	}
 
+	/// <summary>
+	/// A partner renamed between two conversations is found by each name a conversation gave them: the old
+	/// name still finds the older conversation after a newer one named them anew.
+	/// </summary>
+	[Test]
+	public async ValueTask APartnerRenamedBetweenConversations_IsFoundByEitherLoggedName()
+	{
+		var alice = await CreatePlayerAsync("PRTwoNamesA");
+		var bob = await CreatePlayerAsync("PRTwoNamesB");
+		var carol = await CreatePlayerAsync("PRTwoNamesC");
+		var renamed = TestIsolationHelpers.GenerateUniqueName("PRTwoNamesRenamed");
+		var older = TestIsolationHelpers.GenerateUniqueName("older");
+		var newer = TestIsolationHelpers.GenerateUniqueName("newer");
+		try
+		{
+			using (PageLog(on: true))
+			{
+				await CommandAsync(alice, $"page {bob.Name}={older}");
+				var bobObject = (await Mediator.Send(new GetObjectNodeQuery(bob.DbRef))).Expect<AnySharpObject>();
+				await Mediator.Send(new SetNameCommand(bobObject, MarkupText.Plain(renamed)));
+				await CommandAsync(alice, $"page {renamed} {carol.Name}={newer}");
+				await DestroyAsync(bob);
+
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({bob.Name})")).IsEqualTo(LiveLine(alice, older));
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({renamed} {carol.Name})")).IsEqualTo(LiveLine(alice, newer));
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, carol);
+		}
+	}
+
+	/// <summary>
+	/// A live player with no conversation with the caller, whose name the log gave two different partners,
+	/// is ambiguous: neither the unrelated live player nor either partner is picked.
+	/// </summary>
+	[Test]
+	public async ValueTask ALoggedNameSharedByTwoPartners_IsAmbiguous_EvenWithALivePlayerOfThatName()
+	{
+		var alice = await CreatePlayerAsync("PRSharedA");
+		var stranger = await CreatePlayerAsync("PRSharedStranger");
+		var first = new DBRef(stranger.DbRef.Number, stranger.DbRef.CreationMilliseconds - 86_400_000);
+		var second = new DBRef(stranger.DbRef.Number, stranger.DbRef.CreationMilliseconds - 172_800_000);
+		try
+		{
+			foreach (var (partner, id) in new[] { (first, 4L), (second, 5L) })
+			{
+				await Mediator.Send(new RecordPageCommand(new SharpPage(id, partner, stranger.Name, [alice.DbRef], [alice.Name],
+					"say", "hello", DateTimeOffset.UtcNow.AddDays(-1), SenderPlainName: stranger.Name), [alice.DbRef]));
+			}
+
+			using (PageLog(on: true))
+			{
+				await Assert.That(await FunctionAsync(alice, $"pagerecall({stranger.Name})"))
+					.IsEqualTo("#-2 I DON'T KNOW WHICH ONE YOU MEAN");
+			}
+		}
+		finally
+		{
+			await DisconnectAsync(alice, stranger);
+		}
+	}
+
 	/// <summary>Destroys <paramref name="player"/>, disconnected first.</summary>
 	private async Task DestroyAsync(PagePlayer player)
 	{
