@@ -17,7 +17,7 @@ public class RealityDebugOutputTests
 	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false, false, false)]
 	[Arguments(false, true, false)]
 	[Arguments(true, false, false)]
@@ -29,7 +29,7 @@ public class RealityDebugOutputTests
 		await CheckDebug(disabled, visible, forward, false);
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false, false)]
 	[Arguments(false, true)]
 	[Arguments(true, false)]
@@ -38,7 +38,7 @@ public class RealityDebugOutputTests
 		await CheckDebug(disabled, visible, false, true);
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async Task DebugForwardingUsesRecipientPerception(bool recipientCanReceive)

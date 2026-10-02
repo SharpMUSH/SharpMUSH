@@ -408,8 +408,9 @@ chan_title_len 80
 # copy, so the web portal can show a player their page history after a reload or
 # on another device. Each player can read only their own copy, through the
 # portal; wizards cannot read anyone else's. A player's copy is deleted when the
-# player is destroyed. Turning it off stops logging and hides what was kept.
-page_log no
+# player is destroyed. It is on by default; set it to no to keep no page log.
+# Turning it off stops logging and hides what was kept.
+page_log yes
 
 # How many days a logged page is kept before it is deleted. -1 never deletes.
 page_log_retention_days -1

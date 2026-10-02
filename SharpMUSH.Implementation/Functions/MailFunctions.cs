@@ -58,58 +58,58 @@ public partial class Functions
 			: null;
 
 	/// <summary>
-	/// Result of parsing player and message arguments
+	/// PennMUSH <c>mailfun_fetch</c> (<c>src/extmail.c:2154-2186</c>): the message
+	/// <c>[&lt;player&gt;, ][&lt;folder&gt;:]&lt;message&gt;</c> names, or null. With one argument it reads
+	/// the caller's own mailbox and says nothing when the message is not there. With two it matches the
+	/// player noisily, tells a caller who does not control them "Permission denied", and a malformed
+	/// message "Invalid message specification"; a well-formed number with no message behind it is
+	/// silent either way. Each function then returns its own failure value.
 	/// </summary>
-	private class PlayerMessageResult
-	{
-		public bool IsError { get; init; }
-		public string? Error { get; init; }
-		public AnySharpObject? Player { get; init; }
-		public string? MessageSpec { get; init; }
-
-		public static PlayerMessageResult Success(AnySharpObject player, string messageSpec)
-			=> new() { IsError = false, Player = player, MessageSpec = messageSpec };
-
-		public static PlayerMessageResult FromError(string error)
-			=> new() { IsError = true, Error = error };
-	}
-
-	/// <summary>
-	/// Helper to parse target player and message spec from function arguments.
-	/// Uses same methodology as commands - returns proper error types.
-	/// </summary>
-	private async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
-		IMUSHCodeParser parser,
-		AnySharpObject executor,
+	private async ValueTask<SharpMail?> FetchMailAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		Dictionary<string, CallState> args)
 	{
 		if (args.Count == 1)
 		{
-			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText());
+			var (ownFolder, ownIndex) = await ParseMessageSpec(parser, executor, args["0"].Message!.ToPlainText());
+			return ownIndex < 0 ? null : await GetMailMessage(executor, ownFolder, ownIndex);
 		}
 
-		if (!await executor.IsWizard())
+		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
+				args["0"].Message!.ToPlainText(), LocateFlags.PlayersPreference) is not AnySharpObject found)
 		{
-			return PlayerMessageResult.FromError(ErrorMessages.Returns.PermissionDenied);
+			return null;
 		}
 
-		var playerArg = args["0"].Message!.ToPlainText()!;
-		return await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference) switch
+		if (found is not SharpPlayer player)
 		{
-			AnySharpObject and SharpPlayer player => PlayerMessageResult.Success(player, args["1"].Message!.ToPlainText()),
-			AnySharpObject or None => PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer),
-			Error<string> error => PlayerMessageResult.FromError(error.Value)
-		};
+			// Penn matches TYPE_PLAYER, so anything else is no match at all, and said the same way.
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.CantSeeThat, executor);
+			return null;
+		}
+
+		if (!await CanReadMailOf(executor, player))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.MailFetchPermissionDenied, executor);
+			return null;
+		}
+
+		var (folder, index) = await ParseMessageSpec(parser, player, args["1"].Message!.ToPlainText());
+		if (index < 0)
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.MailInvalidMessageSpecification, executor);
+			return null;
+		}
+
+		return await GetMailMessage(player, folder, index);
 	}
 
 	/// <summary>
-	/// Helper to check if executor can view another player's mail (must be wizard)
+	/// Whether <paramref name="executor"/> may read <paramref name="target"/>'s mailbox. PennMUSH asks
+	/// <c>controls(executor, player)</c> once the player is matched (<c>src/extmail.c</c> fun_mail,
+	/// fun_maillist, mailfun_fetch), so a player may always read their own.
 	/// </summary>
-	private async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
-	{
-		return await executor.IsWizard();
-	}
+	private ValueTask<bool> CanReadMailOf(AnySharpObject executor, AnySharpObject target)
+		=> PermissionService.Controls(executor, target);
 
 	/// <summary>
 	/// The counts the mail statistics functions report, taken in one pass over a mailbox. As in PennMUSH's
@@ -136,84 +136,30 @@ public partial class Functions
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
 			// Only a player has a mailbox; anything else holds no mail.
-			var count = executor is SharpPlayer mailbox
-				? await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).CountAsync()
+			var count = executor is SharpPlayer own
+				? await Mediator.CreateStream(new GetAllMailListQuery(own)).CountAsync()
 				: 0;
 			return new CallState(count.ToString());
 		}
 
-		var arg0 = args["0"].Message!.ToPlainText();
-
-		var isMsgNumber = IsMessageNumber(arg0);
-
-		if (args.Count == 1 && !isMsgNumber)
+		// fun_mail (src/extmail.c:2121-2137) tries mail(<player>) first, matching quietly; anything that
+		// is not a player falls through to the message fetch.
+		if (args.Count == 1 && !IsMessageNumber(args["0"].Message!.ToPlainText())
+				&& await LocateService.Locate(parser, executor, executor, args["0"].Message!.ToPlainText(),
+					LocateFlags.PlayersPreference) is AnySharpObject and SharpPlayer mailbox)
 		{
-			if (!await CanViewOtherPlayerMail(executor))
+			if (!await CanReadMailOf(executor, mailbox))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
-				async target =>
-				{
-					if (target is not SharpPlayer mailbox)
-					{
-						return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-					}
-
-					var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
-					return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
-				});
+			var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
+			return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
 		}
 
-		if (args.Count == 1)
-		{
-			var (folder, messageIndex) = await ParseMessageSpec(parser, executor, arg0);
-			if (messageIndex < 0)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchMail);
-			}
-
-			var mail = await GetMailMessage(executor, folder, messageIndex);
-			if (mail == null)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchMail);
-			}
-
-			return new CallState(mail.Content);
-		}
-
-		var arg1 = args["1"].Message!.ToPlainText();
-
-		if (!await CanViewOtherPlayerMail(executor))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, arg0, LocateFlags.PlayersPreference,
-			async target =>
-			{
-				if (target is not SharpPlayer)
-				{
-					return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-				}
-
-				var (folder, messageIndex) = await ParseMessageSpec(parser, target, arg1);
-				if (messageIndex < 0)
-				{
-					return new CallState(ErrorMessages.Returns.NoSuchMail);
-				}
-
-				var mail = await GetMailMessage(target, folder, messageIndex);
-				if (mail == null)
-				{
-					return new CallState(ErrorMessages.Returns.NoSuchMail);
-				}
-
-				return new CallState(mail.Content);
-			});
+		return await FetchMailAsync(parser, executor, args) is { } mail
+			? new CallState(mail.Content)
+			: new CallState(ErrorMessages.Returns.InvalidMessageOrPlayer);
 	}
 
 	/// <summary>
@@ -250,18 +196,17 @@ public partial class Functions
 		}
 		else if (args.Count == 2)
 		{
-			if (!await CanViewOtherPlayerMail(executor))
+			// fun_maillist (src/extmail.c:817-821) matches quietly and answers anything but a player with #-1 NO MATCH.
+			var playerArg = args["0"].Message!.ToPlainText()!;
+			if (await LocateService.Locate(parser, executor, executor, playerArg, LocateFlags.PlayersPreference)
+				is not (AnySharpObject and SharpPlayer located))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return new CallState(ErrorMessages.Returns.NoMatch);
 			}
 
-			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-
-			if (locateResult is not (AnySharpObject and SharpPlayer located))
+			if (!await CanReadMailOf(executor, located))
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			targetPlayer = located;
@@ -312,26 +257,15 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (parseResult.IsError)
+		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
+		if (await FetchMailAsync(parser, executor, args) is not { } mail)
 		{
-			return new CallState(parseResult.Error!);
-		}
-
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
-		if (messageIndex < 0)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
-		}
-
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
-		if (mail == null)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		var from = await mail.From.WithCancellation(CancellationToken.None);
-		return new CallState(from.Object()?.DBRef.ToString() ?? ErrorMessages.Returns.Nothing);
+		// fun_mailfrom writes a bare dbref (src/extmail.c:2198), not an objid.
+		return new CallState(from.Object() is { } sender ? $"#{sender.DBRef.Number}" : ErrorMessages.Returns.Nothing);
 	}
 	/// <summary>
 	/// extmail.c:1466 — <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c>: the same send
@@ -417,22 +351,10 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (parseResult.IsError)
+		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
+		if (await FetchMailAsync(parser, executor, args) is not { } mail)
 		{
-			return new CallState(parseResult.Error!);
-		}
-
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
-		if (messageIndex < 0)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
-		}
-
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
-		if (mail == null)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		// Format status as per @mail/list format: [NCUF+]
@@ -450,22 +372,10 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (parseResult.IsError)
+		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
+		if (await FetchMailAsync(parser, executor, args) is not { } mail)
 		{
-			return new CallState(parseResult.Error!);
-		}
-
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
-		if (messageIndex < 0)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
-		}
-
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
-		if (mail == null)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		return new CallState(mail.Subject);
@@ -476,25 +386,14 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (parseResult.IsError)
+		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
+		if (await FetchMailAsync(parser, executor, args) is not { } mail)
 		{
-			return new CallState(parseResult.Error!);
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
-		if (messageIndex < 0)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
-		}
-
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
-		if (mail == null)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchMail);
-		}
-
-		return new CallState(mail.DateSent.ToUnixTimeSeconds().ToString());
+		// fun_mailtime: show_time(mp->time, 0) (src/extmail.c:2371), the same local time string as time().
+		return new CallState(mail.DateSent.ToLocalTime().ToString(PennTimeFormat, System.Globalization.CultureInfo.InvariantCulture));
 	}
 	/// <summary>fun_malias (<c>src/malias.c</c>): aliases, or one alias's members, with an optional delimiter.</summary>
 	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["alias", "delimiter"])]

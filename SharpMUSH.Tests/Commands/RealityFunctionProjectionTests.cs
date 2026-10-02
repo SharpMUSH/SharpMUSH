@@ -12,14 +12,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-// Each test rewrites the shared world's reality configuration, which every other test would see.
+// Each test rewrites the reality configuration of the factory's world.
 public class RealityFunctionProjectionTests
 {
 	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
 	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments("room", true)]
 	[Arguments("room", false)]
 	[Arguments("inventory", true)]
@@ -60,7 +60,7 @@ public class RealityFunctionProjectionTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false, true)]
 	[Arguments(false, false)]
 	[Arguments(true, true)]

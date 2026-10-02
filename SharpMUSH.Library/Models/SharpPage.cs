@@ -16,6 +16,9 @@ namespace SharpMUSH.Library.Models;
 /// <param name="Style"><c>say</c>, <c>pose</c> or <c>semipose</c>.</param>
 /// <param name="Message">The message, plain, without the pose token.</param>
 /// <param name="Timestamp">When it was sent.</param>
+/// <param name="SenderPlainName">The pager's own name when paged, without the page alias: what their own
+/// pose line (<c>Long distance to …</c>) named them. Null for a page logged before it was kept; the
+/// <paramref name="SenderName"/> stands in then.</param>
 public sealed record SharpPage(
 	long Id,
 	DBRef Sender,
@@ -24,7 +27,8 @@ public sealed record SharpPage(
 	IReadOnlyList<string> RecipientNames,
 	string Style,
 	string Message,
-	DateTimeOffset Timestamp)
+	DateTimeOffset Timestamp,
+	string? SenderPlainName = null)
 {
 	/// <summary>Everyone in the page, sender first, each once.</summary>
 	public IReadOnlyList<DBRef> Participants => Recipients.Prepend(Sender).Distinct().ToArray();
@@ -39,10 +43,13 @@ public sealed record SharpPage(
 		return others.Length > 0 ? PageConversation.Normalize(others) : [owner];
 	}
 
-	/// <summary>The name the page gave <paramref name="participant"/>: the sender's, or a recipient's.</summary>
+	/// <summary>
+	/// The name the page gave <paramref name="participant"/>: a recipient's, or the sender's own name (without
+	/// the page alias, so a conversation lists and is found by the name, not the name and alias).
+	/// </summary>
 	public string NameOf(DBRef participant)
 	{
-		if (participant == Sender) return SenderName;
+		if (participant == Sender) return SenderPlainName ?? SenderName;
 
 		for (var i = 0; i < Recipients.Count && i < RecipientNames.Count; i++)
 		{
@@ -59,11 +66,13 @@ public sealed record SharpPage(
 /// <param name="Names">Their names as the latest page named them, in the order of <paramref name="With"/>.</param>
 /// <param name="LastId">The latest page's id.</param>
 /// <param name="LastAt">When the latest page was sent.</param>
+/// <param name="Pages">How many of its pages the character's log holds.</param>
 public sealed record SharpPageConversation(
 	IReadOnlyList<DBRef> With,
 	IReadOnlyList<string> Names,
 	long LastId,
-	DateTimeOffset LastAt);
+	DateTimeOffset LastAt,
+	int Pages);
 
 /// <summary>How a page conversation is named: the same people in any order are one conversation.</summary>
 public static class PageConversation

@@ -28,8 +28,11 @@
     overflow: hidden;
 }
 
+/* Focus hides the shell's touch header too (shell.css), so on a touch device in any orientation the
+   card is what meets the notch and the home indicator: the safe-area insets, 8px at least. */
 .play--focus {
     grid-template-columns: minmax(0, 1fr);
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 }
 
 .play-main {
@@ -303,6 +306,7 @@
     }
     .play--focus {
         grid-template-columns: minmax(0, 1fr);
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     }
 }
 
@@ -324,6 +328,19 @@
         background: var(--surface);
     }
     .play--focus .play-tabs {
+        display: none;
+    }
+    /* Focus on a phone: the shell's header is gone too (shell.css), so the card meets the screen's
+       edges, clear of the notch and the home indicator (viewport-fit=cover). */
+    .play--focus {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        gap: 0;
+    }
+    .play--focus ::deep .scene-card {
+        border-width: 0;
+        border-radius: 0;
+    }
+    .play--focus ::deep .scene-card-sub {
         display: none;
     }
     .play-story-scroll {

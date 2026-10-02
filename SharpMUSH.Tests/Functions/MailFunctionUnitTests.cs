@@ -26,16 +26,12 @@ public class MailFunctionUnitTests
 
 	/// <summary>
 	/// Every test gets a fresh player who has mailed itself three messages. God's mailbox is the one
-	/// every other mail test writes to, so counting it was only ever exact when nothing else ran. The
-	/// player is a wizard, as God was: <c>mail(&lt;player&gt;)</c> is refused to a mortal here, even
-	/// for their own name.
+	/// every other mail test writes to, so counting it was only ever exact when nothing else ran.
 	/// </summary>
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
 	{
 		_player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "MailFunctions");
-		await WebAppFactoryArg.CommandParser.CommandParse(1, WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
-			MarkupText.Plain($"@set {_player}=WIZARD"));
 		var executor = (await Mediator.Send(new GetObjectNodeQuery(_player))).Expect<AnySharpObject>();
 		var testPlayer = executor.Expect<SharpPlayer>();
 
@@ -109,7 +105,7 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mail(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mail(999)", "#-1 INVALID MESSAGE OR PLAYER")]
 	public async Task Mail_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -139,13 +135,13 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mailfrom_ValidMessage_ReturnsSenderDbref()
 	{
+		// The fixture player sent every message to itself; fun_mailfrom writes a bare dbref.
 		var result = (await Parser.FunctionParse(MarkupText.Plain("mailfrom(1)")))?.Message!;
-		var dbref = result.ToPlainText();
-		await Assert.That(dbref).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#{_player.Number}");
 	}
 
 	[Test]
-	[Arguments("mailfrom(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailfrom(999)", "#-1")]
 	public async Task Mailfrom_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -214,6 +210,70 @@ public class MailFunctionUnitTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>fun_mail</c>, <c>fun_maillist</c> and <c>mailfun_fetch</c> (<c>src/extmail.c</c>) match the
+	/// player first and then require <c>controls(executor, player)</c>, so a mortal reads their own
+	/// mailbox under any name for themselves and is refused anyone else's (#1491). SharpMUSH used to
+	/// refuse every non-wizard before looking at who was named. A refused fetch answers as Penn's does:
+	/// "Permission denied" to the caller, and the function's usual not-found value.
+	/// </summary>
+	[Test]
+	[Arguments("mail(me)", "0 1 0")]
+	[Arguments("mail(%#)", "0 1 0")]
+	[Arguments("mail(me,1)", "MortalOwnMailBody")]
+	[Arguments("mailsubject(me,1)", "MortalOwnMailSubject")]
+	[Arguments("mailstatus(me,1)", "N----")]
+	[Arguments("mail(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mail(#1,1)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("mailsubject(#1,1)", "#-1")]
+	[Arguments("mailfrom(#1,1)", "#-1")]
+	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED")]
+	public async Task MailFunctions_MortalReadsOnlyTheirOwnMailbox(string code, string expected)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailOwnMortal");
+		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
+		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,MortalOwnMailSubject/MortalOwnMailBody)"));
+
+		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("mail(#1,1)")]
+	[Arguments("mailsubject(#1,1)")]
+	[Arguments("mailtime(#1,1)")]
+	public async Task MailFetch_RefusedMailbox_TellsTheCaller(string code)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailFetchRefused");
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(mortal);
+
+		await WebAppFactoryArg.FunctionParserFor(mortal).FunctionParse(MarkupText.Plain(code));
+
+		// Only what the mortal was told by its own call: a parallel test's player disconnecting in the shared
+		// default home is heard too, from that player.
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(mortal).Skip(before)
+				.Where(delivery => delivery.Sender is { } sender && sender.Number == mortal.Number)
+				.Select(delivery => delivery.Message))
+			.IsEquivalentTo(["Permission denied"]);
+	}
+
+	[Test]
+	public async Task MailFrom_MortalReadsTheirOwnMessage()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailFromMortal");
+		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
+		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,FromSubject/FromBody)"));
+
+		var result = (await asMortal.FunctionParse(MarkupText.Plain("mailfrom(me,1)")))!.Message!.ToPlainText();
+
+		// fun_mailfrom writes a bare dbref, not an objid.
+		await Assert.That(result).IsEqualTo($"#{mortal.Number}");
+	}
+
 	[Test]
 	public async Task Mailstatus_ValidMessage_ReturnsStatusFormat()
 	{
@@ -262,7 +322,7 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mailstatus(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailstatus(999)", "#-1")]
 	public async Task Mailstatus_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -278,26 +338,26 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mailsubject(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailsubject(999)", "#-1")]
 	public async Task Mailsubject_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary><c>fun_mailtime</c> writes <c>show_time(mp-&gt;time, 0)</c>: local time, as <c>time()</c> does.</summary>
 	[Test]
 	public async Task Mailtime_ValidMessage_ReturnsTimestamp()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("mailtime(1)")))?.Message!;
-		var timestamp = result.ToPlainText();
-		await Assert.That(long.TryParse(timestamp, out var ts)).IsTrue();
-		var date = DateTimeOffset.FromUnixTimeSeconds(ts);
-		await Assert.That(date).IsGreaterThan(DateTimeOffset.UtcNow.AddDays(-1));
-		await Assert.That(date).IsLessThan(DateTimeOffset.UtcNow.AddMinutes(1));
+		var parsed = DateTime.ParseExact(result.ToPlainText(), "ddd MMM dd HH:mm:ss yyyy",
+			System.Globalization.CultureInfo.InvariantCulture);
+		await Assert.That(parsed).IsGreaterThan(DateTime.Now.AddDays(-1));
+		await Assert.That(parsed).IsLessThan(DateTime.Now.AddMinutes(1));
 	}
 
 	[Test]
-	[Arguments("mailtime(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailtime(999)", "#-1")]
 	public async Task Mailtime_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -324,22 +384,23 @@ public class MailFunctionUnitTests
 	}
 
 	/// <summary>
-	/// Only a player has a mailbox. A located non-player answers as a missing player, and a non-player
-	/// executor holds no mail, rather than either one throwing out of the function. The mail*stats()
+	/// Only a player has a mailbox, and a non-player executor holds no mail, rather than either one
+	/// throwing out of the function. The fetch functions answer a non-player as they answer any message
+	/// they cannot fetch, and maillist() with #-1 NO MATCH, as live PennMUSH does. The mail*stats()
 	/// functions refuse a non-player executor outright, as <c>fun_mailstats</c> does: live PennMUSH
 	/// 80a1d5b gives <c>objeval(StatObj,mailstats())</c> nothing but "No such player.".
 	/// </summary>
 	[Test]
-	[Arguments("mail(here)", "#-1 NO SUCH PLAYER")]
-	[Arguments("mail(here,1)", "#-1 NO SUCH PLAYER")]
-	[Arguments("maillist(here,1)", "#-1 NO SUCH PLAYER")]
-	[Arguments("mailfrom(here,1)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mail(here)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("mail(here,1)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("maillist(here,1)", "#-1 NO MATCH")]
+	[Arguments("mailfrom(here,1)", "#-1")]
 	[Arguments("mailstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("maildstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("mailfstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("folderstats(here,INBOX)", "#-1 NO SUCH PLAYER")]
 	[Arguments("objeval(here,mail())", "0")]
-	[Arguments("objeval(here,mail(1))", "#-1 NO SUCH MAIL")]
+	[Arguments("objeval(here,mail(1))", "#-1 INVALID MESSAGE OR PLAYER")]
 	[Arguments("objeval(here,mailstats())", "#-1 NO SUCH PLAYER")]
 	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
 	{

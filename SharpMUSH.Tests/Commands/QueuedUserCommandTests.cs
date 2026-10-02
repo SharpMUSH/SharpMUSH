@@ -24,10 +24,11 @@ public class QueuedUserCommandTests : ServerTestBase
 	[Before(Test)]
 	public async Task CreateActor()
 	{
-		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "QueuedCmd");
+		// Created in its room, not teleported there: the look after a move is queued and could otherwise
+		// land among what a test counts.
 		_room = await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdRoom")}");
-		await Cmd($"@tel {_actor.DbRef}={_room}");
+		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "QueuedCmd", DBRef.Parse(_room.Trim()));
 		_commands = await CreateThing("QueuedCmdObj");
 		_token = TestIsolationHelpers.GenerateUniqueName("qc").ToLowerInvariant();
 	}
@@ -35,10 +36,18 @@ public class QueuedUserCommandTests : ServerTestBase
 	[After(Test)]
 	public async Task DisconnectActor()
 	{
-		// A loop that outlived a failed assertion must not keep running in the shared server.
-		await Cmd($"@set {_commands}=halt");
-		await Cmd($"@halt {_commands}");
-		await ConnectionService.Disconnect(_actor.Handle);
+		// A loop that outlived a failed assertion must not keep running in the shared server. Setup can
+		// also fail part-way, leaving _commands at #0 and _actor unset; halting #0 would reach the world.
+		if (_commands.Number > 0)
+		{
+			await Cmd($"@set {_commands}=halt");
+			await Cmd($"@halt {_commands}");
+		}
+
+		if (_actor is not null)
+		{
+			await ConnectionService.Disconnect(_actor.Handle);
+		}
 	}
 
 	private Task<string> Run(string command) => CmdAs(_actor.DbRef, _actor.Handle, command);

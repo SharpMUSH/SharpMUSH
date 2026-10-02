@@ -25,10 +25,12 @@ public class PrefixRedispatchTests
 	public async Task CreateActor()
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "PrefixActor");
-		_name = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).Expect<AnySharpObject>().Object().Name;
+		// Created in a room of its own rather than teleported there: the look after a move is queued, and
+		// could otherwise arrive inside the window a test counts.
 		var room = await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@dig {Guid.NewGuid():N}"));
-		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@tel {_actor.DbRef}={room.Message}"));
+		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "PrefixActor",
+			DBRef.Parse(room.Message!.ToPlainText().Trim()));
+		_name = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).Expect<AnySharpObject>().Object().Name;
 	}
 	[After(Test)]
 	public async Task DisconnectActor()

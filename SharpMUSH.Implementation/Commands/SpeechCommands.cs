@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Globalization;
+using SharpMUSH.Implementation.Commands.PageCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
 
@@ -74,7 +75,8 @@ public partial class Commands
 		return await CommunicationService.SpeechAsync(parser, message, ";");
 	}
 
-	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE"],
+	// RECALL, CONVERSATIONS and TIMESTAMPS read the page log, a SharpMUSH extension; see PageRecall.
+	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE", "RECALL", "CONVERSATIONS", "TIMESTAMPS"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
 	public async ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -83,6 +85,30 @@ public partial class Commands
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 		var isList = parser.CurrentState.Switches.Contains("LIST");
+
+		if (parser.CurrentState.Switches.Contains("CONVERSATIONS"))
+		{
+			return await ListPageConversations(executor);
+		}
+
+		if (parser.CurrentState.Switches.Contains("RECALL"))
+		{
+			return await RecallPages(executor,
+				isNoEval
+					? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+					: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty),
+				isNoEval
+					? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
+					: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty),
+				parser.CurrentState.Switches.Contains("TIMESTAMPS"));
+		}
+
+		if (parser.CurrentState.Switches.Contains("TIMESTAMPS"))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.PageTimestampsNeedsRecall, executor);
+			return CallState.Empty;
+		}
+
 		if (isList)
 		{
 			var lastPagedAttr = await AttributeService.GetAttributeAsync(
@@ -178,9 +204,9 @@ public partial class Commands
 		// wherever they stand — and never reaches anything that is not a player.
 		var unable = new List<string>();
 
-		foreach (var recipientName in NextInList(recipientsText))
+		foreach (var recipientName in PageRecipients.NextInList(recipientsText))
 		{
-			var resolved = await ResolvePageRecipient(recipientName);
+			var resolved = await PageRecipients.ResolveAsync(Mediator, ConnectionService, recipientName);
 			if (resolved is not AnySharpObject recipient)
 			{
 				// speech.c:911-921 — both misses name the string the pager typed, not an object, and both
@@ -268,17 +294,15 @@ public partial class Commands
 
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = MessageFormatting.FormatWithOxfordComma(
-				successfulRecipients.Select(r => r.Object().Name).ToArray());
+			var recipientNames = successfulRecipients.Select(r => r.Object().Name).ToArray();
 			var recipientRefs = string.Join(" ",
 				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
-			// speech.c:1040-1047: the short alias, unless it is only the name spelled differently.
-			var pageAlias = executor is SharpPlayer { Aliases: [var shortAlias, ..] } ? shortAlias : string.Empty;
-			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && pageAlias.Length > 0
-				&& !pageAlias.Equals(executor.Object().Name, StringComparison.OrdinalIgnoreCase)
-					? $"{executor.Object().Name} ({pageAlias})"
-					: executor.Object().Name;
-			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
+			var pageAlias = executor is SharpPlayer executorPlayer
+				? executorPlayer.Aliases?.FirstOrDefault() ?? string.Empty
+				: string.Empty;
+			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
+				? $"{executor.Object().Name} ({pageAlias})"
+				: executor.Object().Name;
 
 			// The page's id comes first, before anyone is told: taking one can write (the id source reserves
 			// a block), and a failure must not leave a page shown in a terminal that PAGE`MESSAGE never
@@ -294,39 +318,9 @@ public partial class Commands
 				},
 				message.ToPlainText());
 
-			var incomingDefault = pageType switch
-			{
-				PageMessageType.Speech => MarkupText.Concat([
-					MarkupText.Plain(successfulRecipients.Count > 1
-						? $"{senderName} pages {recipientList}: "
-						: $"{senderName} pages: "),
-					message
-				]),
-				PageMessageType.Pose => MarkupText.Concat([
-					MarkupText.Plain($"From afar{recipientSuffix}, {senderName} "),
-					message
-				]),
-				_ => MarkupText.Concat([
-					MarkupText.Plain($"From afar{recipientSuffix}, {senderName}"),
-					message
-				])
-			};
-			var outgoingDefault = pageType switch
-			{
-				PageMessageType.Speech => MarkupText.Concat([
-					MarkupText.Plain($"You paged {recipientList} with '"),
-					message,
-					MarkupText.Plain("'")
-				]),
-				PageMessageType.Pose => MarkupText.Concat([
-					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name} "),
-					message
-				]),
-				_ => MarkupText.Concat([
-					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name}"),
-					message
-				])
-			};
+			// The same lines page/recall shows a logged page as.
+			var incomingDefault = PageText.Incoming(senderName, recipientNames, delivered.Style, message);
+			var outgoingDefault = PageText.Outgoing(executor.Object().Name, recipientNames, delivered.Style, message);
 			var pageTypeToken = pageType switch
 			{
 				PageMessageType.Pose => ":",
@@ -397,103 +391,104 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// plyrlist.c <c>lookup_player</c> (:163) and then bsd.c <c>short_page</c> (:6376), which is how
-	/// <c>do_page</c> (speech.c:908-910) finds a recipient. Neither is a room-local match, so a page
-	/// reaches a player standing anywhere and never reaches anything that is not a player.
+	/// <c>page/recall [&lt;players&gt;][=&lt;lines&gt;]</c>: the executor's own logged pages with exactly
+	/// those players, or the latest across all their conversations, oldest first, as they read when
+	/// delivered. A SharpMUSH extension; see <see cref="PageRecall"/>.
 	/// </summary>
-	private async ValueTask<PageRecipient> ResolvePageRecipient(string name)
+	private async ValueTask<CallState> RecallPages(AnySharpObject executor, MString players, MString count,
+		bool timestamps)
 	{
-		if (await LookupPlayer(name) is AnySharpObject player)
+		if (!PageLog.Enabled)
 		{
-			return player;
+			return await Told(executor, ErrorMessages.Notifications.NoPageLog);
 		}
 
-		return await ShortPage(name);
-	}
-
-	/// <summary>
-	/// plyrlist.c <c>lookup_player</c>: a <c>#dbref</c> or objid that names a player, a leading
-	/// <c>*</c> (<c>LOOKUP_TOKEN</c>) stripped, and otherwise the whole name or alias — matched
-	/// case-insensitively and never partially.
-	/// </summary>
-	private async ValueTask<Found<AnySharpObject>> LookupPlayer(string name)
-	{
-		if (name.Length == 0)
+		// Counted before the players are matched, as @channel/recall counts before it finds the channel.
+		if (!PageRecall.TryParseLines(count.ToPlainText(), out var lines))
 		{
-			return new NotFound();
+			return await Told(executor, ErrorMessages.Notifications.ChatHowManyLinesToRecall);
 		}
 
-		if (name[0] == '#')
+		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, players.ToPlainText()) switch
 		{
-			return DBRef.TryParse(name, out var dbref)
-					&& await Mediator.Send(new GetObjectNodeQuery(dbref!.Value)) is AnySharpObject and SharpPlayer known
-				? new Found<AnySharpObject>(known)
-				: new NotFound();
-		}
-
-		var lookup = name[0] == '*' ? name[1..] : name;
-
-		return await Mediator.CreateStream(new GetPlayerQuery(lookup)).FirstOrDefaultAsync() is { } found
-			? new Found<AnySharpObject>(found)
-			: new NotFound();
-	}
-
-	/// <summary>
-	/// bsd.c <c>short_page</c> (:6376): the connected players whose name starts with
-	/// <paramref name="name"/>, case-insensitively. A whole-name match wins outright and ends the walk;
-	/// two of them are <see cref="AmbiguousName"/>.
-	/// </summary>
-	private async ValueTask<PageRecipient> ShortPage(string name)
-	{
-		if (name.Length == 0)
-		{
-			return new NotFound();
-		}
-
-		var count = 0;
-		var match = new PageRecipient(new NotFound());
-		DBRef? previous = null;
-
-		await foreach (var connection in ConnectionService.GetAll())
-		{
-			// short_page walks DESC_ITER_CONN, so a socket still at the connect screen is nobody.
-			if (connection.State is not IConnectionService.ConnectionState.LoggedIn || connection.Ref is null)
-			{
-				continue;
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(connection.Ref.Value)) is not AnySharpObject player)
-			{
-				continue;
-			}
-
-			var playerName = player.Object().Name;
-			if (!playerName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
-			{
-				continue;
-			}
-
-			if (playerName.Equals(name, StringComparison.OrdinalIgnoreCase))
-			{
-				return player;
-			}
-
-			// short_page compares against the *previous* match rather than a set, so one player holding
-			// two connections that are not adjacent in the list counts twice and reads as ambiguous.
-			if (previous is null || !connection.Ref.Value.Equals(previous.Value))
-			{
-				previous = connection.Ref.Value;
-				match = player;
-				count++;
-			}
-		}
-
-		return count switch
-		{
-			0 => new NotFound(),
-			1 => match,
-			_ => new AmbiguousName()
+			MatchedPartners matched => await ShowRecalledPages(executor, matched.Partners, lines, timestamps),
+			UnmatchedPartner { Ambiguous: true } unmatched => await Told(executor,
+				string.Format(ErrorMessages.Notifications.NotSureWhoYouPaged, unmatched.Name)),
+			UnmatchedPartner unmatched => await Told(executor,
+				string.Format(ErrorMessages.Notifications.CannotFindWhoYouPaged, unmatched.Name))
 		};
+	}
+
+	private async ValueTask<CallState> ShowRecalledPages(AnySharpObject executor, PagePartner[] partners, int lines,
+		bool timestamps)
+	{
+		var viewer = executor.Object().DBRef;
+		var pages = await PageRecall.ReadAsync(Mediator, viewer, partners, lines);
+
+		var others = partners.Where(partner => partner.Objid != viewer)
+			.Select(partner => partner.Name)
+			.ToArray();
+		var with = PageRecall.Describe(others, toSelf: others.Length == 0);
+
+		if (pages.Count == 0)
+		{
+			return await Told(executor, partners.Length == 0
+				? ErrorMessages.Notifications.NoLoggedPages
+				: string.Format(ErrorMessages.Notifications.NoLoggedPagesWith, with));
+		}
+
+		MString[] framed =
+		[
+			MarkupText.Plain(partners.Length == 0
+				? ErrorMessages.Notifications.PageRecallLatest
+				: string.Format(ErrorMessages.Notifications.PageRecallWith, with)),
+			.. pages.Select(page => timestamps ? PageRecall.Stamped(page, viewer) : PageRecall.Line(page, viewer)),
+			MarkupText.Plain(ErrorMessages.Notifications.PageRecallEnd)
+		];
+
+		var message = MarkupText.Join(MarkupText.NewLine, framed);
+		await NotifyService.Notify(executor, message, executor);
+		return new CallState(message);
+	}
+
+	/// <summary>
+	/// <c>page/conversations</c>: the executor's own logged page conversations, the latest first, each with
+	/// who it is with, how many pages it holds and when the last was sent. A SharpMUSH extension.
+	/// </summary>
+	private async ValueTask<CallState> ListPageConversations(AnySharpObject executor)
+	{
+		if (!PageLog.Enabled)
+		{
+			return await Told(executor, ErrorMessages.Notifications.NoPageLog);
+		}
+
+		var viewer = executor.Object().DBRef;
+		var conversations = await Mediator.Send(new GetPageConversationsQuery(viewer, PageRecall.MaxConversations));
+		if (conversations.Count == 0)
+		{
+			return await Told(executor, ErrorMessages.Notifications.NoLoggedPageConversations);
+		}
+
+		MString[] framed =
+		[
+			MarkupText.Plain(ErrorMessages.Notifications.PageConversationsHeader),
+			.. conversations.Select(conversation => MarkupText.Plain(
+				$"{PageRecall.Describe(conversation.Names, toSelf: conversation.With is [var only] && only == viewer)}: "
+				+ $"{conversation.Pages} page{(conversation.Pages == 1 ? string.Empty : "s")}, "
+				+ $"last {TimeFormatting.ShowTime(conversation.LastAt)}")),
+			MarkupText.Plain(ErrorMessages.Notifications.PageConversationsEnd)
+		];
+
+		var message = MarkupText.Join(MarkupText.NewLine, framed);
+		await NotifyService.Notify(executor, message, executor);
+		return new CallState(message);
+	}
+
+	/// <summary>Tells the executor <paramref name="message"/>, and answers with it.</summary>
+	private async ValueTask<CallState> Told(AnySharpObject executor, string message)
+	{
+		await NotifyService.Notify(executor, message, executor);
+		return new CallState(message);
 	}
 
 	/// <summary>
@@ -580,7 +575,7 @@ public partial class Commands
 		// nothing, or an object that cannot hear the whisperer, lands in one `Unable to whisper to:`
 		// line — the deaf one also gets its own `can't hear you` — and the hundredth good target ends
 		// the scan.
-		foreach (var targetName in NextInList(targetArg.ToPlainText()))
+		foreach (var targetName in PageRecipients.NextInList(targetArg.ToPlainText()))
 		{
 			var found = await LocateService.Locate(parser, executor, executor, targetName, WhisperTargetFlags);
 			if (found is not AnySharpObject target
@@ -696,38 +691,6 @@ public partial class Commands
 
 	/// <summary>speech.c: <c>dbref good[100]</c>.</summary>
 	private const int MaxWhisperTargets = 100;
-
-	private static readonly SearchValues<char> NextInListBreaks = SearchValues.Create(" \"");
-
-	/// <summary>
-	/// strutil.c <c>next_in_list</c>: spaces separate names, a leading <c>"</c> takes everything up to
-	/// the next <c>"</c> as one name, and an unquoted name also stops at a <c>"</c>. Nothing else splits
-	/// a name — <c>#12Lamp</c> is one token, which <c>parse_dbref</c> then refuses as a whole.
-	/// </summary>
-	private static IEnumerable<string> NextInList(string list)
-	{
-		var head = 0;
-		while (true)
-		{
-			while (head < list.Length && list[head] == ' ') head++;
-			if (head >= list.Length) yield break;
-
-			if (list[head] == '"')
-			{
-				var close = list.IndexOf('"', head + 1);
-				var end = close < 0 ? list.Length : close;
-				var quoted = list[(head + 1)..end];
-				head = close < 0 ? list.Length : close + 1;
-				if (quoted.Length > 0) yield return quoted;
-				continue;
-			}
-
-			var stop = list.AsSpan(head).IndexOfAny(NextInListBreaks);
-			var next = stop < 0 ? list.Length : head + stop;
-			yield return list[head..next];
-			head = next;
-		}
-	}
 
 	/// <summary>
 	/// PennMUSH's <c>Location()</c>, which reads the raw location field: a room's is its drop-to and an

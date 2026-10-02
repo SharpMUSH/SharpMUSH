@@ -104,12 +104,33 @@ public class PageLogServiceTests
 		logger.ReceivedWithAnyArgs(1).Log(Microsoft.Extensions.Logging.LogLevel.Error, default, default(object)!, default, default!);
 	}
 
+	/// <summary>
+	/// A new game keeps a page log, forever, unless it turns either off: the portal's page conversations
+	/// survive a reload out of the box. The shipped <c>mushcnf.dst</c> says the same
+	/// (<c>ConfigurationDefaultsTests</c> holds the two together).
+	/// </summary>
 	[Test]
-	public async Task TheShippedDefaults_AreOffAndKeepForever()
+	public async Task TheShippedDefaults_AreOnAndKeepForever()
 	{
 		var defaults = SharpMUSHOptions.Default().Chat;
 
-		await Assert.That(defaults.PageLog).IsFalse();
+		await Assert.That(defaults.PageLog).IsTrue();
 		await Assert.That(defaults.PageLogRetentionDays).IsEqualTo(PageLogService.KeepForever);
+	}
+
+	/// <summary>A <c>mush.cnf</c> that does not mention it gets the shipped default: on.</summary>
+	[Test]
+	public async Task AConfigurationFileThatDoesNotMentionIt_TurnsItOn()
+	{
+		var file = Path.Join(Path.GetTempPath(), $"pagelog-{Guid.NewGuid():N}.cnf");
+		await File.WriteAllTextAsync(file, "mud_name Test\n");
+		try
+		{
+			await Assert.That(SharpMUSH.Configuration.ReadPennMushConfig.Create(file).Chat.PageLog).IsTrue();
+		}
+		finally
+		{
+			File.Delete(file);
+		}
 	}
 }

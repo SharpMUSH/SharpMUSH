@@ -20,3 +20,36 @@ home
 @mail/fwd 1=*Bob
 ::as bob
 @unlock/mail me
+
+::case mail.functions-own-mailbox  mail()-family functions let a mortal read their own mailbox, not another's
+::as alice
+think mail(me)
+think mail(*Alice)
+think mailsubject(me,1)
+think mail(*Bob)
+think mail(*Bob,1)
+think mailsubject(*Bob,1)
+
+::case mail.fetch-failures  what the mail fetch functions return for a message or player they cannot find
+::as alice
+think mail(99)
+think mail(nosuchmailplayer)
+think mail(me,99)
+think mail(*nosuchmailplayer,1)
+think mail(me,abc)
+think mailsubject(99)
+think mailsubject(me,99)
+think mailsubject(*nosuchmailplayer,1)
+think mailsubject(me,abc)
+think mailfrom(99)
+think mailstatus(99)
+think mailtime(99)
+think mailsubject(1)
+think mailfrom(1)
+think mailstatus(1)
+think mailtime(1)
+think mail(here)
+think mail(here,1)
+think mailfrom(here,1)
+think maillist(here,1)
+think maillist(*nosuchmailplayer,1)

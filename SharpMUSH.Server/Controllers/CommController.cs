@@ -40,7 +40,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <c>text</c> goes through the game's installed <c>FN`COMM`TEXT</c> as the push's does
 /// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
 ///
-/// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, off by
+/// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, on by
 /// default): the character's own copies only. Each route reads the session's character's log and takes no
 /// one else's name, so nobody, staff included, can read another character's pages here. With the option
 /// off they answer with nothing and <c>logging: false</c>, so the portal can say why there is no
@@ -62,13 +62,13 @@ public class CommController(
 	public const int ConversationLimit = PageConversation.MaxOthers;
 
 	/// <summary>The most logged pages one conversation recall returns, and what it returns when not asked for fewer.</summary>
-	public const int PageRecallLimit = 500;
+	public const int PageRecallLimit = CommLimits.PageRecallMaxLines;
 
 	/// <summary>
 	/// The most conversations the listing returns, the latest: as many as the portal's feed keeps
 	/// (<c>OobCommFeed.ConversationLimit</c>), read without reading the rest.
 	/// </summary>
-	public const int PageConversationListLimit = 100;
+	public const int PageConversationListLimit = CommLimits.PageConversationListMax;
 
 	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
 

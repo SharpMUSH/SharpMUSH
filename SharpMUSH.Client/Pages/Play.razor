@@ -64,7 +64,8 @@ else
 {
     @* D1 §5 (boards 01–11): the Play sidebar in the shell's page-sidebar slot; main is the room banner
        and the scene card (Story | Terminal, focus mode, the composer); the aside is Here then Exits.
-       Focus mode steps the sidebar, the banner and the aside away. Below the narrow tier the aside
+       Focus mode steps the sidebar, the banner and the aside away, and the shell chrome with them
+       (shell.css: the rail, the touch header, the zones). Below the narrow tier the aside
        becomes the Room sheet and Play has its own tabs. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
