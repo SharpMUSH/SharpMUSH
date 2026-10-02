@@ -137,4 +137,42 @@ public class ServerInfoServiceTests
 		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
 			.Because("the package page removed the scene system, so the navigation stops offering it");
 	}
+
+	private static HttpResponseMessage Build(string id) =>
+		new(HttpStatusCode.OK)
+		{
+			Content = new StringContent($$"""{"guestsEnabled":true,"mudName":"Elsewhere","buildId":"{{id}}"}""",
+				Encoding.UTF8, "application/json")
+		};
+
+	/// <summary>
+	/// The build a tab runs is the one of its first answer. Refresh (the setup wizard, the package page) asks the
+	/// server again, possibly a newer one, and must not move it.
+	/// </summary>
+	[Test]
+	public async Task TheFirstBuildStaysAcrossARefresh()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([() => Build("build-1"), () => Build("build-2"), () => Build("build-2")]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+
+		await Assert.That(await service.BuildIdAsync()).IsEqualTo("build-1");
+		service.Refresh();
+		await service.GameNameAsync();
+
+		await Assert.That(await service.BuildIdAsync()).IsEqualTo("build-1");
+		await Assert.That(await service.CurrentBuildIdAsync()).IsEqualTo("build-2");
+	}
+
+	[Test]
+	public async Task WithoutAnAnswerTheFirstOneLaterIsTheBuild()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([Unavailable, () => Build("build-2"), () => Build("build-2")]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+
+		await Assert.That(await service.BuildIdAsync()).IsNull();
+		await Assert.That(await service.CurrentBuildIdAsync()).IsEqualTo("build-2");
+		await Assert.That(await service.BuildIdAsync()).IsEqualTo("build-2");
+	}
 }

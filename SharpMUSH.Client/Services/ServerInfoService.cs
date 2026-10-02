@@ -23,6 +23,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 	private Task<ServerInfoResponse?>? _info;
 
+	// The build of the first answer this tab had. Refresh() does not forget it: it names the bundle running here.
+	private string? _firstBuildId;
+
 	/// <summary>
 	/// Whether the server accepts guest logins (<c>Net.Guests</c>). On any fetch failure this degrades
 	/// to <c>true</c> — the config default — since the server refuses guest connects authoritatively
@@ -44,10 +47,14 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		=> (await FetchAsync()).Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) ?? false;
 
 	/// <summary>
-	/// The portal build the server serves, as of the remembered answer; <c>null</c> when the server did not
-	/// answer.
+	/// The portal build of the first answer this tab had, which is the build it is running; <c>null</c> until
+	/// the server has answered once.
 	/// </summary>
-	public virtual async Task<string?> BuildIdAsync() => (await FetchAsync()).BuildId;
+	public virtual async Task<string?> BuildIdAsync()
+	{
+		await FetchAsync();
+		return _firstBuildId;
+	}
 
 	/// <summary>
 	/// The portal build the server serves now, asked fresh and not remembered; <c>null</c> when the server did
@@ -82,8 +89,13 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		await httpClientFactory.CreateClient("api")
 				.GetApiAsync<ServerInfoResponse>("api/server-info", "The server returned no server info.") switch
 		{
-			ServerInfoResponse info =>
-				info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName },
+			ServerInfoResponse info => Answered(info),
 			ApiFailure => null
 		};
+
+	private ServerInfoResponse Answered(ServerInfoResponse info)
+	{
+		_firstBuildId ??= info.BuildId;
+		return info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName };
+	}
 }

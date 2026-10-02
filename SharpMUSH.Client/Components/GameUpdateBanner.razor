@@ -7,9 +7,12 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* Tells a tab left open across a deploy that it is running the previous portal. A deploy restarts the
-   server, so the game connection drops and comes back; that is when the server is asked which build it
-   serves now. The reader reloads when they are ready: reloading on its own would throw away an open wiki
-   edit. Drafts, command history and the terminal screen survive a reload. *@
+   server, so the game connection drops and comes back; each time it becomes connected (a reconnect, or the
+   first connect after logging in on a tab that sat on the login page) the server is asked which build it
+   serves now, and that is compared with the build of the first answer this tab had. Mounted above the
+   router, so the first answer is read at boot whatever the route. The reader reloads when they are ready:
+   reloading on its own would throw away an open wiki edit. Drafts, command history and the terminal screen
+   survive a reload. *@
 
 @if (_updated)
 {
@@ -23,43 +26,32 @@
 }
 
 @code {
-    private string? _known;
-    private bool _lost;
+    private HubConnectionState _state;
     private bool _updated;
 
     protected override async Task OnInitializedAsync()
     {
+        _state = Connection.ConnectionState;
         Connection.OnConnectionStateChanged += HandleConnectionStateChanged;
-        _known = await ServerInfo.BuildIdAsync();
+        // The build this tab is running: the server's first answer, asked for now.
+        await ServerInfo.BuildIdAsync();
     }
 
     private void HandleConnectionStateChanged()
     {
-        switch (Connection.ConnectionState)
-        {
-            case HubConnectionState.Reconnecting or HubConnectionState.Disconnected:
-                _lost = true;
-                break;
-            case HubConnectionState.Connected when _lost:
-                _lost = false;
-                // The event may arrive on a hub callback thread.
-                _ = InvokeAsync(CheckAsync);
-                break;
-        }
+        var previous = _state;
+        _state = Connection.ConnectionState;
+        // The event may arrive on a hub callback thread.
+        if (_state == HubConnectionState.Connected && previous != HubConnectionState.Connected) _ = InvokeAsync(CheckAsync);
     }
 
     private async Task CheckAsync()
     {
-        if (_updated || await ServerInfo.CurrentBuildIdAsync() is not { } current) return;
-
-        // The first read found no server; whatever answers now is the build this tab is measured against.
-        if (_known is null)
-        {
-            _known = current;
-            return;
-        }
-
-        if (current == _known) return;
+        if (_updated) return;
+        // The first answer is settled before the server is asked again, so a fresh answer is never the baseline
+        // while an earlier one exists.
+        var running = await ServerInfo.BuildIdAsync();
+        if (await ServerInfo.CurrentBuildIdAsync() is not { } current || running is null || current == running) return;
         _updated = true;
         StateHasChanged();
     }

@@ -22,9 +22,6 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-@* Offers a reload when the game was deployed under this tab (the build changed across a reconnect). *@
-<GameUpdateBanner />
-
 <div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
     @* Touch chrome only: tapping the dimmed backdrop closes the off-canvas drawer or section panel. *@

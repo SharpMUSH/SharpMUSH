@@ -52,7 +52,15 @@ public class GameUpdateBannerTests : BunitContext
 		public override Task<string?> CurrentBuildIdAsync() => Task.FromResult(Now);
 	}
 
+	/// <summary>Mounts the banner on a tab that is connected to the game, as most are when a deploy happens.</summary>
 	private (SteppedConnection Connection, BuildInfo Info, IRenderedComponent<GameUpdateBanner> Banner) Mount(string? first)
+	{
+		var (connection, info, banner) = MountDisconnected(first);
+		connection.Step(HubConnectionState.Connecting, HubConnectionState.Connected);
+		return (connection, info, banner);
+	}
+
+	private (SteppedConnection Connection, BuildInfo Info, IRenderedComponent<GameUpdateBanner> Banner) MountDisconnected(string? first)
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
@@ -60,7 +68,6 @@ public class GameUpdateBannerTests : BunitContext
 		var info = new BuildInfo(first);
 		Services.AddSingleton<IConnectionStateService>(connection);
 		Services.AddSingleton<ServerInfoService>(info);
-		connection.Step(HubConnectionState.Connecting, HubConnectionState.Connected);
 		return (connection, info, Render<GameUpdateBanner>());
 	}
 
@@ -127,20 +134,29 @@ public class GameUpdateBannerTests : BunitContext
 		await Assert.That(Navigation.History.Single().Options.ForceLoad).IsTrue();
 	}
 
+	/// <summary>
+	/// A tab that sat on the login page across a deploy has no game connection to lose. Its first connect, after
+	/// logging in, is to the new server.
+	/// </summary>
 	[TUnit.Core.Test]
-	public async Task WithoutAFirstAnswerTheNextOneIsTheBaseline()
+	public async Task ANewBuildAtTheFirstConnectOffersAReload()
+	{
+		var (connection, info, banner) = MountDisconnected("build-1");
+		info.Now = "build-2";
+
+		connection.Step(HubConnectionState.Connecting, HubConnectionState.Connected);
+
+		banner.WaitForElement(".game-update-banner");
+	}
+
+	[TUnit.Core.Test]
+	public async Task WithoutAFirstAnswerThereIsNothingToCompare()
 	{
 		var (connection, info, banner) = Mount(null);
 		info.Now = "build-2";
 
 		connection.Step(HubConnectionState.Reconnecting, HubConnectionState.Connected);
-		await Assert.That(banner.FindAll(".game-update-banner").Count).IsEqualTo(0);
 
-		connection.Step(HubConnectionState.Reconnecting, HubConnectionState.Connected);
 		await Assert.That(banner.FindAll(".game-update-banner").Count).IsEqualTo(0);
-
-		info.Now = "build-3";
-		connection.Step(HubConnectionState.Reconnecting, HubConnectionState.Connected);
-		banner.WaitForElement(".game-update-banner");
 	}
 }
