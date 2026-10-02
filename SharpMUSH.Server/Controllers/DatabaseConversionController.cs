@@ -56,6 +56,7 @@ public class DatabaseConversionController(
 		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 		string? mailTempPath = null;
 		string? chatTempPath = null;
+		Func<Task>? restore = null;
 		try
 		{
 
@@ -85,7 +86,6 @@ public class DatabaseConversionController(
 					chatFile.Length);
 			}
 
-			Func<Task>? restore = null;
 			if (configFile is not null)
 			{
 				string text;
@@ -108,8 +108,8 @@ public class DatabaseConversionController(
 				}
 
 				var previous = await mushCnf.SnapshotAsync(cancellationToken);
-				await mushCnf.ApplyAsync(import, cancellationToken);
 				restore = () => mushCnf.RestoreAsync(previous);
+				await mushCnf.ApplyAsync(import, cancellationToken);
 			}
 
 			var sessionId = Guid.NewGuid().ToString();
@@ -122,8 +122,27 @@ public class DatabaseConversionController(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error uploading PennMUSH database file");
+			// A failure after the mush.cnf went in (writing it, or starting the conversion) takes it back out.
+			if (restore is not null)
+			{
+				await RestoreAfterFailureAsync(restore);
+			}
+
 			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
 			return StatusCode(500, $"Error uploading file: {ex.Message}");
+		}
+	}
+
+	/// <summary>Puts the configuration back after a failed upload; a failure here is logged beside the first.</summary>
+	private async Task RestoreAfterFailureAsync(Func<Task> restore)
+	{
+		try
+		{
+			await restore();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Could not restore the configuration the uploaded mush.cnf replaced");
 		}
 	}
 
@@ -243,8 +262,9 @@ public static class DatabaseConversionSession
 				// Every way out — success, fault, cancellation — is done with the uploaded files.
 				DeleteTempFiles(sessionData.TempFilePaths, logger);
 
-				// A conversion that did not finish leaves the game on the configuration it had before the upload.
-				if (!task.IsCompletedSuccessfully && restoreConfiguration is not null)
+				// A conversion that did not finish leaves the game on the configuration it had before the upload. The
+				// converter answers a cancellation or a fatal error as an aborted result, not a faulted task.
+				if (restoreConfiguration is not null && (!task.IsCompletedSuccessfully || task.Result.Aborted))
 				{
 					try
 					{

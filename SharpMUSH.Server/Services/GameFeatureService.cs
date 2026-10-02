@@ -58,6 +58,8 @@ public class GameFeatureService(
 	PluginCatalog plugins,
 	ILogger<GameFeatureService> logger) : IGameFeatureReader
 {
+	private readonly SemaphoreSlim _declinedLock = new(1, 1);
+
 	/// <summary>The optional applications, in the order the wizard offers them.</summary>
 	public static readonly IReadOnlyList<OptionalApplication> All =
 	[
@@ -174,17 +176,27 @@ public class GameFeatureService(
 			return;
 		}
 
-		var record = await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>() ?? new DeclinedBundledPackages();
-		var present = record.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase);
-		if (present == declined)
+		// One record holds every choice: the package page and the wizard can both change it at once, and the
+		// second write of an unguarded read-change-write drops the first's change.
+		await _declinedLock.WaitAsync();
+		try
 		{
-			return;
-		}
+			var record = await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>() ?? new DeclinedBundledPackages();
+			var present = record.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase);
+			if (present == declined)
+			{
+				return;
+			}
 
-		record.PackageIds = declined
-			? [.. record.PackageIds, packageId]
-			: record.PackageIds.Where(id => !string.Equals(id, packageId, StringComparison.OrdinalIgnoreCase)).ToList();
-		await serverData.SetExpandedServerDataAsync(record);
+			record.PackageIds = declined
+				? [.. record.PackageIds, packageId]
+				: record.PackageIds.Where(id => !string.Equals(id, packageId, StringComparison.OrdinalIgnoreCase)).ToList();
+			await serverData.SetExpandedServerDataAsync(record);
+		}
+		finally
+		{
+			_declinedLock.Release();
+		}
 	}
 
 	/// <summary>The <see cref="HandlerKinds"/> value for a bundled package's handler, or null.</summary>

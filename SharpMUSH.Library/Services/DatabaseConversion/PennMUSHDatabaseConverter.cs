@@ -249,7 +249,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// The packages were uninstalled before the failure; don't leave the world without them.
 			await ReinstallPackagesAsync(context);
 			stopwatch.Stop();
-			result = result with { Errors = errors, Warnings = warnings, Duration = stopwatch.Elapsed };
+			result = result with { Errors = errors, Warnings = warnings, Duration = stopwatch.Elapsed, Aborted = true };
 		}
 
 		return result;

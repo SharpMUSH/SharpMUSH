@@ -371,6 +371,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(cancellation.IsCancellationRequested).IsTrue();
 		await Assert.That(result.Errors).Contains(e => e.StartsWith("Fatal error:"));
+		await Assert.That(result.Aborted).IsTrue();
 		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
 		var packageManager = (await NodeAsync(world, (int)stored.Database.PackageManager!.Value)).Expect<SharpPlayer>();
 		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(packageManager, "WIZARD")).IsTrue();

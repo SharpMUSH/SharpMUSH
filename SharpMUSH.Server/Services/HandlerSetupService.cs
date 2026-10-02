@@ -228,12 +228,19 @@ public class HandlerSetupService(
 	private async Task<Result<Success>> RepointAsync(string kind, uint? target, IReadOnlyList<string> attached,
 		CancellationToken cancellationToken)
 	{
+		var removed = new List<string>(attached.Count);
 		foreach (var id in attached.Reverse())
 		{
 			if (await installer.UninstallAsync(id, cancellationToken: cancellationToken) is Error<string> error)
 			{
-				return new Error<string>($"{id} could not be removed from the current handler: {error.Value}");
+				// The handler is unchanged, so what came off it goes back on rather than leaving the game without it.
+				var restored = removed.Count == 0 ? [] : await bundled.InstallBundledAsync(removed, cancellationToken);
+				var lost = removed.Except(restored).ToList();
+				return new Error<string>($"{id} could not be removed from the current handler: {error.Value}" +
+					(lost.Count == 0 ? string.Empty : $" {string.Join(", ", lost)} could not be put back; the server log says why."));
 			}
+
+			removed.Add(id);
 		}
 
 		var settings = options.CurrentValue;

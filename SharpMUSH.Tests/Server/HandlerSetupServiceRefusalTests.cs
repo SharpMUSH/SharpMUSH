@@ -42,4 +42,43 @@ public class HandlerSetupServiceRefusalTests
 		await Assert.That(mediator.ReceivedCalls()).IsEmpty()
 			.Because("nothing is looked up or created once the move is refused");
 	}
+
+	/// <summary>
+	/// A package that will not come off the current handler stops the move with the handler unchanged, so the
+	/// packages already taken off it go back on rather than leaving the game without them.
+	/// </summary>
+	[Test]
+	public async Task APackageThatWillNotComeOff_PutsBackTheOnesAlreadyRemoved()
+	{
+		var registry = Substitute.For<IPackageRegistryService>();
+		registry.GetInstalledPackageAsync(Arg.Any<string>()).Returns(new NotFound());
+		foreach (var id in new[] { "http-handler", "profile-handler" })
+		{
+			registry.GetInstalledPackageAsync(id).Returns(new InstalledPackageRecord(id, "1.0.0", "bundled", null,
+				"bundled", null, DateTimeOffset.UnixEpoch, 1));
+		}
+
+		registry.GetPackageDependentsAsync(Arg.Any<string>()).Returns([]);
+		var installer = Substitute.For<IPackageInstallService>();
+		installer.UninstallAsync("profile-handler", Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(new Success());
+		installer.UninstallAsync("http-handler", Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(new Error<string>("locked"));
+		var bundled = Substitute.For<IBundledPackageBootstrap>();
+		bundled.InstallBundledAsync(Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<CancellationToken>())
+			.Returns(call => (IReadOnlyList<string>)call.Arg<IReadOnlyCollection<string>>().ToList());
+		var options = TestSharpMushOptions.Create();
+		options = options with { Database = options.Database with { HttpHandler = 8 } };
+
+		var service = new HandlerSetupService(Substitute.For<IMediator>(), new TestSharpMushOptions.FixedWrapper(options),
+			registry, installer, bundled, Substitute.For<IPackageManifestService>(), new ConfigurationReloadService(),
+			NullLogger<HandlerSetupService>.Instance);
+
+		var result = await service.SetAsync(HandlerKinds.Http, new SetHandlerRequest(HandlerModes.None, null),
+			CancellationToken.None);
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("http-handler could not be removed");
+		await bundled.Received(1).InstallBundledAsync(
+			Arg.Is<IReadOnlyCollection<string>>(ids => ids.SequenceEqual(new[] { "profile-handler" })),
+			Arg.Any<CancellationToken>());
+	}
 }

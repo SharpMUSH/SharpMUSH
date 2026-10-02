@@ -90,6 +90,59 @@ public class DatabaseConversionSessionTests
 		await Assert.That(restored.Task.IsCompletedSuccessfully).IsTrue();
 	}
 
+	/// <summary>
+	/// The converter answers a cancellation or a fatal error with an aborted result rather than a faulted task;
+	/// that conversion did not finish either, so the configuration goes back.
+	/// </summary>
+	[Test]
+	public async Task An_aborted_conversion_puts_the_configuration_back()
+	{
+		var (database, mail, chat) = TempFiles();
+		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
+		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult(new ConversionResult { Errors = ["Fatal error: cancelled"], Aborted = true }));
+		var restored = new TaskCompletionSource();
+
+		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, database, mail, chat,
+			NullLogger.Instance, CancellationToken.None, () =>
+			{
+				restored.TrySetResult();
+				return Task.CompletedTask;
+			});
+
+		await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(restored.Task.IsCompletedSuccessfully).IsTrue();
+	}
+
+	/// <summary>A conversion that reached the end keeps the configuration, even with errors along the way.</summary>
+	[Test]
+	public async Task A_conversion_with_errors_that_finished_keeps_the_configuration()
+	{
+		var (database, mail, chat) = TempFiles();
+		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
+		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult(new ConversionResult { Errors = ["#12: number already taken"] }));
+		var restores = 0;
+
+		var sessionId = Guid.NewGuid().ToString();
+		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+			CancellationToken.None, () =>
+			{
+				Interlocked.Increment(ref restores);
+				return Task.CompletedTask;
+			});
+
+		ConversionResult? result = null;
+		for (var i = 0; i < 100 && result is null; i++)
+		{
+			await Task.Delay(50);
+			result = await DatabaseConversionSession.GetResult(sessionId);
+		}
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(restores).IsEqualTo(0);
+	}
+
 	/// <summary>A conversion that finished keeps the configuration that came with it.</summary>
 	[Test]
 	public async Task A_finished_conversion_keeps_the_configuration()

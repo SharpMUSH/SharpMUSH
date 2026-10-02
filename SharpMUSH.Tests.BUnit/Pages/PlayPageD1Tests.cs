@@ -136,6 +136,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("Salt Market at Dusk");
 		await Assert.That(cut.FindAll(".play-tab")[0].TextContent.Trim()).IsEqualTo("Terminal")
 			.Because("the main tab opens the terminal when there is no scene to show");
+
+		// The narrow tier's channels sheet draws the sidebar again, with the same room.
+		cut.FindAll(".play-tab").First(t => t.TextContent.Contains("Channels")).Click();
+		cut.WaitForAssertion(() => cut.Find(".play-sheet-body"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
 	}
 
 	[Test]

@@ -199,7 +199,7 @@ else
                     else
                     {
                         <div class="play-sheet-body">
-                            <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@Room.Info"
+                            <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
                                          Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
                         </div>
                     }
@@ -252,6 +252,9 @@ else
     /// </summary>
     private RoomScene? SceneHere => _scenesOn ? Room.Info?.Scene : null;
 
+    /// <summary>The room as every sidebar shows it: without its scene when the game has no scene system.</summary>
+    private RoomInfo? SidebarRoom => Room.Info is { } info ? info with { Scene = SceneHere } : null;
+
     private bool _scenesOn = true;
 
     private bool InScene => SceneHere is not null;
@@ -294,7 +297,7 @@ else
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@(Room.Info is { } info ? info with { Scene = SceneHere } : null)" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
+                      Room="@SidebarRoom" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">
