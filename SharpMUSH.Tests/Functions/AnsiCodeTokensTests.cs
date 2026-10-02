@@ -18,6 +18,7 @@ public class AnsiCodeTokensTests
 	[Arguments("h r <255 0 0>", new[] { "h", "r", "<255 0 0>" })]
 	[Arguments("/<0 0 255>", new[] { "/<0 0 255>" })]
 	[Arguments("200", new[] { "200" })]
+	[Arguments("+light_blue!+dark-red", new[] { "+light_blue", "/+dark-red" })]
 	public async Task SplitsAsPennReadsThem(string codes, string[] expected)
 		=> await Assert.That(Implementation.Functions.Functions.AnsiCodeTokens(codes).ToArray()).IsEquivalentTo(expected);
 }

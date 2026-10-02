@@ -290,4 +290,34 @@ public class ConnectionStateServiceTests
 		factory.Received(1).CreateScene();
 		await scene.DidNotReceive().DisposeAsync();
 	}
+
+	/// <summary>
+	/// A sign-out (or the first half of a character switch) while a reconnect is replacing the scene connection:
+	/// no scene connection outlives it.
+	/// </summary>
+	[Test]
+	public async Task ADisconnectDuringTheSceneReplacement_LeavesNoSceneConnection()
+	{
+		var game = StubHub(() => Task.CompletedTask);
+		game.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var waiting = StubHub(() => Task.CompletedTask);
+		var disposing = new TaskCompletionSource();
+		waiting.DisposeAsync().Returns(_ => new ValueTask(disposing.Task));
+		var fresh = StubHub(() => Task.CompletedTask);
+		fresh.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(game);
+		factory.CreateScene().Returns(waiting, fresh);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+		await svc.ConnectAsync();
+
+		waiting.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting);
+		game.Reconnected += Raise.Event<Func<string?, Task>>("connection-id");
+		await svc.DisconnectAsync();
+		disposing.SetResult();
+		await Task.Delay(50);
+
+		await fresh.DidNotReceive().StartAsync(Arg.Any<CancellationToken>());
+		await Assert.That(svc.IsSceneLive).IsFalse();
+	}
 }

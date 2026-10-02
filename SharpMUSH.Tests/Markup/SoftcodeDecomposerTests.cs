@@ -116,4 +116,10 @@ public class SoftcodeDecomposerTests
 					MarkupText.Concat(MarkupText.Plain("a"), MarkupText.Wrap(HtmlMarkup.Create("b", null), "b"))),
 				MarkupText.Plain("c"))))
 			.IsEqualTo("[ansi(r,a[tagwrap(b,b)])]c");
+
+	[Test]
+	public async Task AQuoteInAnAddressCannotEndTheAttribute()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(linkUrl: "https://x.y/a\"b", linkKind: LinkKind.Url, linkText: "x"), "site")))
+			.IsEqualTo(@"[tagwrap(a,href=""https://x.y/a\%22b"",site)]");
 }

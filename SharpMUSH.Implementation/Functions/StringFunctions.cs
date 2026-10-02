@@ -2301,7 +2301,9 @@ public partial class Functions
 					letters.Clear();
 					var end = i + 1;
 					if (c == '<') end = token.IndexOf('>', i) is var close and >= 0 ? close + 1 : token.Length;
-					else while (end < token.Length && char.IsAsciiLetterOrDigit(token[end])) end++;
+					// A colour name may carry _ or - (a game's own colors.json); hex digits never do.
+					else while (end < token.Length
+						&& (char.IsAsciiLetterOrDigit(token[end]) || (c == '+' && token[end] is '_' or '-'))) end++;
 					yield return (background ? "/" : "") + token[i..end];
 					background = false;
 					i = end;

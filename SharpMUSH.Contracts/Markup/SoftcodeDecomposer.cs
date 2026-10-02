@@ -81,7 +81,7 @@ public static partial class SoftcodeDecomposer
 						? style.LinkKind == LinkKind.Command
 							? ("[cmdlink(", "," + Escape(url)
 								+ (style.LinkText is { Length: > 0 } hint && hint != url ? "," + Escape(hint) : "") + ")]")
-							: ("[tagwrap(a," + Escape("href=\"" + url + "\"") + ",", ")]")
+							: ("[tagwrap(a," + Escape("href=\"" + url.Replace("\"", "%22") + "\"") + ",", ")]")
 						: ("", "");
 					if (codes.Length > 0)
 					{

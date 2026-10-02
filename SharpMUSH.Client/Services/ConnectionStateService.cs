@@ -27,6 +27,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private IGameHubConnection? _sceneHub;
 	// A scene connection being started: a second caller waits for it rather than open another.
 	private Task? _sceneStart;
+	// Counts DisconnectAsync calls. A scene connection that finished starting after one (a sign-out, or the
+	// first half of a character switch) belongs to the session that ended and is closed, not kept.
+	private int _session;
 	// The scene groups this client has joined, so a reconnect (which loses SignalR group membership) or a scene
 	// connection opened after the join can join them again.
 	private readonly HashSet<string> _joinedScenes = new(StringComparer.Ordinal);
@@ -190,6 +193,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public async Task DisconnectAsync()
 	{
 		_wanted = false;
+		_session++;
+		// A start still out is the ending session's; the next session starts its own.
+		_sceneStart = null;
 		_retry?.Cancel();
 		_retry = null;
 		if (_hub is null) return;
@@ -304,7 +310,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 
 	private async Task StartSceneHubAsync()
 	{
-		if (_sceneHub is not null) return;
+		if (_sceneHub is not null || !_wanted) return;
+		var session = _session;
 
 		var sceneHub = _factory.CreateScene();
 		if (sceneHub is null) return; // No scene hub configured — scene realtime simply stays inert.
@@ -334,6 +341,11 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		try
 		{
 			await sceneHub.StartAsync();
+			if (session != _session)
+			{
+				await sceneHub.DisposeAsync();
+				return;
+			}
 			_sceneHub = sceneHub;
 			await RejoinScenesAsync();
 		}
