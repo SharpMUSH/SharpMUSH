@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
 /// README §5.3 scene card header (boards 01, 04, 05): the title, the sub-line the page passes, the
-/// Story | Terminal radiogroup (only in a scene, each view's description its tooltip) and the focus button.
+/// Story | Terminal radiogroup (only in a scene, each radio an icon named by its aria-label) and the focus button.
 /// </summary>
 public class PlaySceneCardTests : BunitContext
 {
@@ -78,11 +78,15 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	[Test]
-	public async Task EachViewsDescription_IsItsRadiosTooltip()
+	public async Task EachRadio_IsAnIcon_NamedByItsLabel_AndDescribedByItsTooltip()
 	{
 		var radios = RenderCard().FindAll("[role='radio']");
-		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Scene · logged to the scene archive");
-		await Assert.That(radios[1].GetAttribute("title")).IsEqualTo("Full output · channels and pages included");
+		await Assert.That(radios[0].TextContent.Trim()).IsEmpty();
+		await Assert.That(radios[0].QuerySelector("svg")).IsNotNull();
+		await Assert.That(radios[0].GetAttribute("aria-label")).IsEqualTo("Story");
+		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Story: Scene · logged to the scene archive");
+		await Assert.That(radios[1].GetAttribute("aria-label")).IsEqualTo("Terminal");
+		await Assert.That(radios[1].GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
 	}
 
 	[Test]
@@ -93,13 +97,31 @@ public class PlaySceneCardTests : BunitContext
 		var group = cut.Find("[role='radiogroup']");
 		await Assert.That(group.GetAttribute("aria-label")).IsEqualTo("View");
 		var radios = cut.FindAll("[role='radio']");
-		await Assert.That(radios[0].TextContent).IsEqualTo("Story");
+		await Assert.That(radios[0].GetAttribute("aria-label")).IsEqualTo("Story");
 		await Assert.That(radios[0].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(radios[0].GetAttribute("tabindex")).IsEqualTo("0");
 		await Assert.That(radios[1].GetAttribute("aria-checked")).IsEqualTo("false");
 		await Assert.That(radios[1].GetAttribute("tabindex")).IsEqualTo("-1");
 		radios[1].Click();
 		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
+	}
+
+	[Test]
+	public async Task TheNarrowToggle_ShowsTheOtherView_AndSwitchesToIt()
+	{
+		PlayView? chosen = null;
+		var cut = RenderCard(onView: v => chosen = v);
+		var toggle = cut.Find(".scene-card-viewtoggle");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Terminal");
+		await Assert.That(toggle.GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
+		toggle.Click();
+		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
+
+		cut = RenderCard(view: PlayView.Terminal, onView: v => chosen = v);
+		toggle = cut.Find(".scene-card-viewtoggle");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Story");
+		toggle.Click();
+		await Assert.That(chosen).IsEqualTo(PlayView.Story);
 	}
 
 	[Test]
@@ -116,6 +138,7 @@ public class PlaySceneCardTests : BunitContext
 	{
 		var cut = RenderCard(inScene: false, view: PlayView.Terminal);
 		await Assert.That(cut.FindAll("[role='radiogroup']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".scene-card-viewtoggle").Count).IsEqualTo(0);
 	}
 
 	[Test]

@@ -3,7 +3,7 @@
 @* D1 §5.3 the scene card: a header with the lead (the viewer's avatar), the title and an optional
    sub-line, the Story | Terminal switch (a radiogroup, only while in a scene), any extra header controls
    (the terminal settings, Connect/Disconnect) and the focus-mode button; then the view, then the footer
-   (the composer). Each view's description is its radio's tooltip. With a HeaderImage the header carries the
+   (the composer). Each radio is an icon named by its aria-label; its tooltip names the view and describes it. With a HeaderImage the header carries the
    room's picture behind a scrim: Play passes it while no banner shows the room. *@
 <section class="scene-card" aria-labelledby="scene-card-title">
     <header class="scene-card-head @(HeaderImage is null ? null : "scene-card-head--image")">
@@ -34,9 +34,17 @@
         @if (InScene)
         {
             <div class="scene-card-switch" role="radiogroup" aria-label="@Loc["NavPlayView"]">
-                @Radio(PlayView.Story, Loc["NavPlayStory"], Loc["NavPlayStorySub"])
-                @Radio(PlayView.Terminal, Loc["Terminal"], Loc["NavPlayTerminalSub"])
+                @Radio(PlayView.Story, Icons.Material.Outlined.AutoStories, Loc["NavPlayStory"], Loc["NavPlayStorySub"])
+                @Radio(PlayView.Terminal, Icons.Material.Outlined.Terminal, Loc["Terminal"], Loc["NavPlayTerminalSub"])
             </div>
+            @* The narrow tier's stand-in for the pair: one button showing the other view, which it switches to. *@
+            var other = View == PlayView.Story ? PlayView.Terminal : PlayView.Story;
+            var otherLabel = other == PlayView.Story ? Loc["NavPlayStory"] : Loc["Terminal"];
+            var otherSub = other == PlayView.Story ? Loc["NavPlayStorySub"] : Loc["NavPlayTerminalSub"];
+            <button type="button" class="scene-card-viewtoggle" aria-label="@otherLabel" title="@($"{otherLabel}: {otherSub}")"
+                    @onclick="() => Choose(other)">
+                <MudIcon Icon="@(other == PlayView.Story ? Icons.Material.Outlined.AutoStories : Icons.Material.Outlined.Terminal)" Size="Size.Small" />
+            </button>
         }
         @Controls
         <button type="button" class="scene-card-focus @(Focus ? "scene-card-focus--on" : null)" aria-pressed="@(Focus ? "true" : "false")"
@@ -88,11 +96,14 @@
     /// <summary>The bottom bar: the composer.</summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
-    private RenderFragment Radio(PlayView value, string label, string description) => __builder =>
+    private RenderFragment Radio(PlayView value, string icon, string label, string description) => __builder =>
     {
         var on = View == value;
-        <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")" title="@description"
-                tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">@label</button>
+        <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")"
+                aria-label="@label" title="@($"{label}: {description}")"
+                tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+        </button>
     };
 
     private Task Choose(PlayView value) => value == View ? Task.CompletedTask : ViewChanged.InvokeAsync(value);
