@@ -402,7 +402,7 @@ public class StringFunctionUnitTests
 	// A 24-bit colour reconstructs as an ansi() hex code, '#' included: without it the code reads
 	// back as the letter sequence F, F, 0, 0, 0, 0 and the round trip loses the colour.
 	[Arguments("decompose(ansi(#ff0000,x))", "[ansi(#ff0000,x)]")]
-	[Arguments("decompose(ansi(/#ff0000,x))", "[ansi(/#ff0000,x)]")]
+	[Arguments("decompose(ansi(/#ff0000,x))", "[ansi(!#ff0000,x)]")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -436,7 +436,7 @@ public class StringFunctionUnitTests
 
 		var result = (await Parser.FunctionParse(source))?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(/+xterm200,x)]");
+		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(!+xterm200,x)]");
 	}
 
 	[Test]

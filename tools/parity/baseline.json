@@ -241,22 +241,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "35-function-families/ff.markup#0",
-   "command": "think [decompose(grab(ansi(r,alpha) beta,a*))]|[decompose(graball(ansi(r,alpha) [ansi(g,apex)] beta,a*))]"
-  },
-  {
-   "key": "35-function-families/ff.markup#2",
-   "command": "think [decompose(setunion(ansi(r,b) a,c))]|[decompose(setdiff(ansi(r,b) a,a))]"
-  },
-  {
-   "key": "35-function-families/ff.markup#3",
-   "command": "think [decompose(if(1,ansi(r,x)))]|[decompose(ifelse(0,a,ansi(g,y)))]"
-  },
-  {
-   "key": "35-function-families/ff.markup#4",
-   "command": "think [attrib_set(me/FFMARK,ansi(r,hi))][decompose(get(me/FFMARK))]|[decompose(xget(me,FFMARK))]"
-  },
-  {
    "key": "35-function-families/ff.numeric#6",
    "command": "think [median()] [mean()]"
   },

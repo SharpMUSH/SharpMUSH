@@ -140,6 +140,16 @@
       "command": "think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]|[attrib_set(*Alice/FFMISSING)]",
       "sharp": "#-1 NO PERMISSION TO SET ATTRIBUTE|#-1 PERMISSION DENIED|#-1 NO PERMISSION TO SET ATTRIBUTE",
       "penn": "The post office protects privacy!\n||"
+    },
+    {
+      "id": "KD-0014",
+      "scenario": "36-decompose",
+      "case": "dc.nesting",
+      "step": 0,
+      "reason": "decompose() writes colour inside colour as nested ansi() calls; PennMUSH writes flat calls with combined codes. Both evaluate to the same string.",
+      "tracking": "#1512",
+      "profile": "`decompose()` writes colour inside colour nested",
+      "command": "think [decompose(ansi(r,a[ansi(g,b)]c))]|[decompose(ansi(r,a[ansi(u,b)]))]"
     }
   ]
 }

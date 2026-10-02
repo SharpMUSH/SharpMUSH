@@ -2034,12 +2034,12 @@ public partial class Functions
 		// separator the code list is split on. Splitting naively tore it into "<255", "0", "0>" -
 		// the <...> branch below could never fire, and the stray "0" was then read as xterm 0, so
 		// ansi(<255 0 0>,test) silently produced some other colour entirely.
-		var ansiCodes = AnsiCodeTokenRegex().Matches(args["0"].Message!.ToPlainText());
+		var ansiCodes = AnsiCodeTokens(args["0"].Message!.ToPlainText());
 		var colorsConfig = ColorConfiguration?.CurrentValue;
 
-		foreach (Match token in ansiCodes)
+		foreach (var token in ansiCodes)
 		{
-			var code = token.ValueSpan;
+			var code = token.AsSpan();
 			var curHilight = false;
 			var isBackground = false;
 
@@ -2257,6 +2257,51 @@ public partial class Functions
 	/// </summary>
 	[GeneratedRegex(@"[^\s<]*<[^>]*>|\S+")]
 	private static partial Regex AnsiCodeTokenRegex();
+
+	/// <summary>
+	/// The <c>ansi()</c> code list as the tokens the parser below reads. PennMUSH's <c>define_ansi_data</c>
+	/// reads one string character by character, so a colour can follow letters with no space and <c>/</c> or
+	/// <c>!</c> turns the next colour into the background: <c>hBr</c>, <c>u#ff0000</c>,
+	/// <c>#ff0000!#0000ff</c>. decompose() writes that form, so a token is split where a <c>#</c>, <c>+</c> or
+	/// <c>&lt;</c> colour starts, and a background marker becomes the <c>/</c> prefix.
+	/// </summary>
+	internal static IEnumerable<string> AnsiCodeTokens(string codes)
+	{
+		foreach (Match match in AnsiCodeTokenRegex().Matches(codes))
+		{
+			var token = match.Value;
+			var letters = new StringBuilder();
+			var background = false;
+			var i = 0;
+			while (i < token.Length)
+			{
+				var c = token[i];
+				if (c is '/' or '!')
+				{
+					if (letters.Length > 0) yield return letters.ToString();
+					letters.Clear();
+					background = true;
+					i++;
+					continue;
+				}
+				if (c is '#' or '+' or '<')
+				{
+					if (letters.Length > 0) yield return letters.ToString();
+					letters.Clear();
+					var end = i + 1;
+					if (c == '<') end = token.IndexOf('>', i) is var close and >= 0 ? close + 1 : token.Length;
+					else while (end < token.Length && char.IsAsciiLetterOrDigit(token[end])) end++;
+					yield return (background ? "/" : "") + token[i..end];
+					background = false;
+					i = end;
+					continue;
+				}
+				letters.Append(c);
+				i++;
+			}
+			if (letters.Length > 0) yield return (background ? "/" : "") + letters;
+		}
+	}
 
 	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)

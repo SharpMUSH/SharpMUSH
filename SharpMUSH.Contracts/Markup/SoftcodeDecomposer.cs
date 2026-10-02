@@ -15,6 +15,12 @@ namespace SharpMUSH.Library.Markup;
 /// The text is escaped first and a coloured stretch is wrapped after: <c>[ansi(hr,red\, white)]</c>. The
 /// other order escaped the brackets and commas of the <c>ansi()</c> call itself, so it evaluated to the
 /// words "ansi(hr,red)" and the colour was gone.
+/// <para>
+/// Colour inside colour is written nested, as it was made: <c>[ansi(r,a[ansi(g,b)]c)]</c>. PennMUSH closes
+/// and reopens a flat call at each change (<c>[ansi(r,a)][ansi(g,b)][ansi(r,c)]</c>) because its markup has
+/// no tree to walk; this one does, and the nested form evaluates to the same text. The escapes, the space
+/// rule and the code letters are PennMUSH's.
+/// </para>
 /// </remarks>
 public static partial class SoftcodeDecomposer
 {
@@ -22,36 +28,34 @@ public static partial class SoftcodeDecomposer
 	public static string Decompose(MarkupText text)
 	{
 		var builder = new StringBuilder(text.Length + 16);
+		// The ansi() calls open around the text written so far, outermost first.
+		var open = new List<AnsiMarkup>();
 		var position = 0;
+
+		void Write(IReadOnlyList<AnsiMarkup> layers, string segment)
+		{
+			var kept = 0;
+			while (kept < open.Count && kept < layers.Count && open[kept].Equals(layers[kept])) kept++;
+			for (var i = open.Count; i > kept; i--) builder.Append(")]");
+			open.RemoveRange(kept, open.Count - kept);
+			foreach (var layer in layers.Skip(kept))
+			{
+				builder.Append("[ansi(").Append(AnsiCodes(layer.Style)).Append(',');
+				open.Add(layer);
+			}
+			builder.Append(Escape(segment));
+		}
 
 		foreach (var run in text.Runs)
 		{
-			if (run.Start > position)
-			{
-				builder.Append(Escape(text.Text[position..run.Start]));
-			}
-
-			var segment = text.Text.Substring(run.Start, run.Length);
-			var codes = run.Markups.OfType<AnsiMarkup>().Select(a => AnsiCodes(a.Style)).Where(c => c.Length > 0).ToList();
-			if (codes.Count == 0)
-			{
-				builder.Append(Escape(segment));
-			}
-			else
-			{
-				var inner = Escape(segment);
-				// The first markup is the innermost.
-				foreach (var code in codes) inner = $"[ansi({code},{inner})]";
-				builder.Append(inner);
-			}
+			if (run.Start > position) Write([], text.Text[position..run.Start]);
+			// The first markup is the innermost; a layer that sets nothing writes no call.
+			Write(run.Markups.OfType<AnsiMarkup>().Where(a => AnsiCodes(a.Style).Length > 0).Reverse().ToList(),
+				text.Text.Substring(run.Start, run.Length));
 			position = run.End;
 		}
 
-		if (position < text.Length)
-		{
-			builder.Append(Escape(text.Text[position..]));
-		}
-
+		Write([], position < text.Length ? text.Text[position..] : string.Empty);
 		return builder.ToString();
 	}
 
@@ -111,30 +115,28 @@ public static partial class SoftcodeDecomposer
 	}
 
 	/// <summary>
-	/// The <c>ansi()</c> codes that produce <paramref name="style"/>, comma-separated; empty when it sets
-	/// nothing. A single-letter foreground carries the attribute letters with it (<c>ub</c>, not <c>u,b</c>).
+	/// The <c>ansi()</c> codes that produce <paramref name="style"/>, written as PennMUSH's
+	/// <c>write_ansi_letters</c> writes them: the attribute letters <c>f h i u</c>, a palette background
+	/// letter, the foreground (a letter, <c>#rrggbb</c> or <c>+xtermN</c>), and a background that is not a
+	/// letter after <c>!</c>. <c>[ansi(hBr,x)]</c>, <c>[ansi(#ff0000!#0000ff,x)]</c>. Empty when it sets nothing.
 	/// </summary>
 	public static string AnsiCodes(AnsiStyle style)
 	{
-		var attributes = new List<string>();
-		var format = (style.Bold ? "h" : "") + (style.Underlined ? "u" : "") + (style.Blink ? "f" : "")
-			+ (style.Inverted ? "i" : "");
-
-		var foreground = ColorCode(style.Foreground);
-		if (foreground.Length == 1 && format.Length > 0)
-		{
-			attributes.Add(format + foreground);
-		}
-		else
-		{
-			if (format.Length > 0) attributes.Add(format);
-			if (foreground.Length > 0) attributes.Add(foreground);
-		}
+		var codes = new StringBuilder();
+		var bright = style.Foreground is AnsiColor.Standard { Bright: true };
+		if (style.Blink) codes.Append('f');
+		if (style.Bold || bright) codes.Append('h');
+		if (style.Inverted) codes.Append('i');
+		if (style.Underlined) codes.Append('u');
 
 		var background = ColorCode(style.Background, isBackground: true);
-		if (background.Length > 0) attributes.Add(background);
+		if (background.Length == 1) codes.Append(background);
+		codes.Append(ColorCode(style.Foreground));
+		if (background.Length > 1) codes.Append('!').Append(background);
 
-		return string.Join(",", attributes);
+		// n alone: a span that starts from a clean slate and sets nothing of its own.
+		if (codes.Length == 0 && style.Clear) codes.Append('n');
+		return codes.ToString();
 	}
 
 	/// <summary>The <c>ansi()</c> letter for each standard palette index, foreground and background.</summary>
@@ -142,22 +144,18 @@ public static partial class SoftcodeDecomposer
 	private const string BackgroundLetters = "XRGYBMCW";
 
 	/// <summary>
-	/// Converts an <see cref="AnsiColor"/> back to the PennMUSH <c>ansi()</c> code that produces it.
+	/// One colour as <c>write_ansi_letters</c> writes it: a palette letter (lower case for a foreground, upper
+	/// for a background, the terminal default <c>d</c>/<c>D</c>), <c>#rrggbb</c>, or <c>+xtermN</c>. A bright
+	/// palette colour is its letter; the brightness is the <c>h</c> <see cref="AnsiCodes"/> writes.
 	/// </summary>
 	public static string ColorCode(AnsiColor? color, bool isBackground = false) => color switch
 	{
 		null => string.Empty,
 		AnsiColor.Default => isBackground ? "D" : "d",
-		// The leading '#' is what makes this an ansi() hex code; without it the code came back as a
-		// letter sequence ("FF0000" reads as bright white, bright magenta, …), so decompose() did not
-		// round-trip through ansi(). Lower case to match the syntax help and ansi()'s own output.
-		AnsiColor.Rgb rgb => isBackground
-			? $"/#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
-			: $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
-		AnsiColor.Standard standard =>
-			(standard.Bright ? "h" : string.Empty)
-			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),
-		AnsiColor.Xterm xterm => isBackground ? $"/+xterm{xterm.Index}" : $"+xterm{xterm.Index}",
+		// Lower case to match the syntax help and ansi()'s own output.
+		AnsiColor.Rgb rgb => $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
+		AnsiColor.Standard standard => (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]).ToString(),
+		AnsiColor.Xterm xterm => $"+xterm{xterm.Index}",
 		// AnsiColor is a closed hierarchy (Default/Standard/Xterm/Rgb, private constructor); the
 		// compiler cannot see that, so this arm exists only to satisfy exhaustiveness.
 		_ => throw new UnreachableException($"Unhandled {nameof(AnsiColor)} subtype {color.GetType()}.")

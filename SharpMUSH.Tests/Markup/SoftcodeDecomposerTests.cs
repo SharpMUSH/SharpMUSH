@@ -4,7 +4,8 @@ namespace SharpMUSH.Tests.Markup;
 
 /// <summary>
 /// <see cref="SoftcodeDecomposer"/> is <c>decompose()</c> without a parser, which the portal's pose editor
-/// calls too. The expected values are PennMUSH's (the same as <c>FunctionFamilyConformanceTests</c> record).
+/// calls too. Escapes, spaces and code letters are PennMUSH's (<c>escape_marked_str</c>,
+/// <c>write_ansi_letters</c>); colour inside colour is written nested, where PennMUSH writes it flat.
 /// </summary>
 public class SoftcodeDecomposerTests
 {
@@ -46,4 +47,31 @@ public class SoftcodeDecomposerTests
 		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
 				AnsiMarkup.Create(foreground: new AnsiColor.Standard(4, false), underlined: true), "x")))
 			.IsEqualTo("[ansi(ub,x)]");
+
+	[Test]
+	public async Task ColourInsideColourIsNested()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)),
+				MarkupText.Concat(MarkupText.Plain("a"), MarkupText.Concat(Green("b"), MarkupText.Plain("c"))))))
+			.IsEqualTo("[ansi(r,a[ansi(g,b)]c)]");
+
+	[Test]
+	public async Task AdjacentColoursAreSideBySide()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Concat(Red("a"), Green("b"))))
+			.IsEqualTo("[ansi(r,a)][ansi(g,b)]");
+
+	[Test]
+	public async Task CodesAreWrittenInPennsOrder()
+	{
+		var style = AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, true), background: new AnsiColor.Standard(4, false),
+			underlined: true, blink: true);
+		await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(style, "x"))).IsEqualTo("[ansi(fhuBr,x)]")
+			.Because("write_ansi_letters: f h i u, the background letter, then the foreground");
+	}
+
+	[Test]
+	public async Task AHexBackgroundFollowsABang()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
+				AnsiMarkup.Create(foreground: new AnsiColor.Rgb(255, 0, 0), background: new AnsiColor.Rgb(0, 0, 255)), "x")))
+			.IsEqualTo("[ansi(#ff0000!#0000ff,x)]");
 }
