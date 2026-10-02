@@ -2267,10 +2267,10 @@ public partial class Functions
 	/// </summary>
 	internal static IEnumerable<string> AnsiCodeTokens(string codes)
 	{
-		foreach (Match match in AnsiCodeTokenRegex().Matches(codes))
+		var letters = new StringBuilder();
+		foreach (var token in AnsiCodeTokenRegex().Matches(codes).Select(match => match.Value))
 		{
-			var token = match.Value;
-			var letters = new StringBuilder();
+			letters.Clear();
 			var background = false;
 			var i = 0;
 			while (i < token.Length)
