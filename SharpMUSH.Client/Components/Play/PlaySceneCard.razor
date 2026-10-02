@@ -3,9 +3,15 @@
 @* D1 §5.3 the scene card: a header with the lead (the viewer's avatar), the title and an optional
    sub-line, the Story | Terminal switch (a radiogroup, only while in a scene), any extra header controls
    (the terminal settings, Connect/Disconnect) and the focus-mode button; then the view, then the footer
-   (the composer). Each view's description is its radio's tooltip. *@
+   (the composer). Each view's description is its radio's tooltip. With a HeaderImage the header carries the
+   room's picture behind a scrim: Play passes it while no banner shows the room. *@
 <section class="scene-card" aria-labelledby="scene-card-title">
-    <header class="scene-card-head">
+    <header class="scene-card-head @(HeaderImage is null ? null : "scene-card-head--image")">
+        @if (HeaderImage is not null)
+        {
+            <img class="scene-card-head-img" src="@ApiUrl.Resolve(HeaderImage)" alt="" />
+            <div class="scene-card-head-scrim" aria-hidden="true"></div>
+        }
         @if (Lead is not null)
         {
             <div class="scene-card-lead">@Lead</div>
@@ -43,6 +49,9 @@
 
     /// <summary>The line under the title; none when null or empty.</summary>
     [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>An image URL (site-relative or https) drawn behind the header, under a scrim; decorative.</summary>
+    [Parameter] public string? HeaderImage { get; set; }
 
     /// <summary>Whether the viewer is in a scene: only then is there a Story view to switch to.</summary>
     [Parameter] public bool InScene { get; set; }

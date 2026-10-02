@@ -509,6 +509,31 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheRoomsPicture_MovesIntoTheCardHeader_WhileNoBannerShowsIt()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the banner shows it");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
+	}
+
+	[Test]
+	public async Task OnAShortScreen_TheFoldedHeaderCarriesTheRoomsPicture()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
+
+		cut.Find("button.play-banner-show").Click();
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the opened banner carries it again");
+	}
+
+	[Test]
 	public async Task TurningTheScreen_PutsTheBannerBackToItsDefaultForThatScreen()
 	{
 		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);

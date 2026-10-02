@@ -18,6 +18,40 @@
 	flex-shrink: 0;
 }
 
+/* The room's picture behind the header while no banner shows it: the strip's look, at the header's height. */
+.scene-card-head--image {
+	position: relative;
+	border-bottom-color: transparent;
+}
+
+.scene-card-head-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.scene-card-head-scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to right, rgba(10, 11, 13, 0.8) 0%, rgba(10, 11, 13, 0.58) 45%, rgba(10, 11, 13, 0.42) 100%);
+	pointer-events: none;
+}
+
+/* Positioned after the image and scrim, so they paint above them. */
+.scene-card-head--image > :not(.scene-card-head-img):not(.scene-card-head-scrim) {
+	position: relative;
+}
+
+.scene-card-head--image .scene-card-titles {
+	text-shadow: var(--on-image-shadow);
+}
+
+.scene-card-head--image .scene-card-sub {
+	color: var(--text-on-image);
+}
+
 .scene-card-lead {
 	flex-shrink: 0;
 }

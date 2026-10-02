@@ -96,4 +96,18 @@ public class ShellFrameTests
 		foreach (var part in new[] { ".phosphor-rail", ".phosphor-topbar", ".phosphor-topzone", ".phosphor-footer", ".phosphor-widget-aside" })
 			await Assert.That(rule.Groups["parts"].Value).Contains(part);
 	}
+
+	[Test]
+	public async Task OnAShortLandscapeTouchScreen_TheHeaderIsARailDownTheLeft()
+	{
+		// A sideways phone has width to spare and no height: the touch header's buttons stack down the left
+		// edge and the content column steps over by the rail's width, so the page keeps the full height.
+		var shell = Shell();
+		var block = MediaBlock(shell, "(max-width: 760px) and (orientation: landscape) and (max-height: 32rem)");
+		await Assert.That(block).IsNotEmpty();
+		await Assert.That(Regex.IsMatch(block, @"\.phosphor-topbar\s*\{[^}]*position:\s*fixed[^}]*flex-direction:\s*column")).IsTrue();
+		await Assert.That(Regex.IsMatch(block, @"\.phosphor-content-col\s*\{[^}]*padding-left:\s*calc\(var\(--touch-rail-w\)")).IsTrue();
+		await Assert.That(shell).Contains("(max-width: 760px) and (orientation: landscape) and (max-height: 32rem),\n\t(pointer: coarse) and (orientation: landscape) and (max-height: 32rem) {")
+			.Because("the same condition as touch chrome, ANDed with the shape");
+	}
 }

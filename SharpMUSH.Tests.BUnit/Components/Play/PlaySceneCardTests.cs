@@ -44,6 +44,21 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	[Test]
+	public async Task AHeaderImage_SitsBehindTheHeader_UnderAScrim()
+	{
+		var cut = Render<PlaySceneCard>(p => p
+			.Add(x => x.Title, "Ilsa Varn")
+			.Add(x => x.HeaderImage, "https://localhost:8081/r/docks.jpg"));
+		await Assert.That(cut.Find(".scene-card-head").ClassList).Contains("scene-card-head--image");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("alt")).IsEqualTo("").Because("decorative: the sub-line names the room");
+		await Assert.That(cut.FindAll(".scene-card-head-scrim").Count).IsEqualTo(1);
+
+		var bare = RenderCard();
+		await Assert.That(bare.FindAll(".scene-card-head-img").Count).IsEqualTo(0);
+		await Assert.That(bare.Find(".scene-card-head").ClassList).DoesNotContain("scene-card-head--image");
+	}
+
+	[Test]
 	public async Task EachViewsDescription_IsItsRadiosTooltip()
 	{
 		var radios = RenderCard().FindAll("[role='radio']");

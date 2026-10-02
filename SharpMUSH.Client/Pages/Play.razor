@@ -84,7 +84,7 @@ else
                 }
                 @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
                 <div class="play-card" hidden="@(_commKey is not null)">
-                    <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                    <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" HeaderImage="@CardImage" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Lead>@ViewerAvatar</Lead>
                         <Controls>
                             @if (View == PlayView.Terminal)
@@ -331,6 +331,10 @@ else
         Room.Info?.Scene?.Title is { Length: > 0 } scene ? scene
         : BannerShown ? null
         : Room.Info?.Name;
+
+    /// <summary>The room's picture behind the card header, while no banner shows it.</summary>
+    private string? CardImage =>
+        !BannerShown && Room.Info?.Image?.Url is { } url && ImageUrlPolicy.IsRenderable(url) ? url : null;
 
     /// <summary>The viewer's own picture from the room's contents (the row marked as them).</summary>
     private ImageRef? ViewerImage => SelfRow?.Image;
