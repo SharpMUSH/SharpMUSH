@@ -13,6 +13,7 @@
    a line already held kept once. A game that keeps no page log (page_log off) is said so in a conversation. *@
 <section class="comm" aria-labelledby="comm-title">
     <header class="comm-head">
+        @Lead
         <div class="comm-titles">
             <h2 class="comm-title" id="comm-title">@Title</h2>
             <div class="comm-sub">@(IsConversation ? Loc["NavPlayPagesSub"] : Loc["NavPlayChannelSub"])</div>
@@ -83,6 +84,9 @@
 
     /// <summary>Back to the scene or the terminal.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Leads the header: Play's menu button on touch chrome, where this header is the only bar.</summary>
+    [Parameter] public RenderFragment? Lead { get; set; }
 
     /// <summary>A run of lines from one author within this long shares one header.</summary>
     private static readonly TimeSpan GroupGap = TimeSpan.FromMinutes(5);

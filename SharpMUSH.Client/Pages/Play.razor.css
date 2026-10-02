@@ -131,9 +131,6 @@
     background: transparent;
     color: var(--text-dim);
     cursor: pointer;
-}
-
-.play-menu-btn {
     position: relative;
 }
 

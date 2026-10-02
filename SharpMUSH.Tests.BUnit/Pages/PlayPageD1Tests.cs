@@ -523,6 +523,36 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OnTouchChrome_AnOpenChannel_LeadsItsHeaderWithTheMenuButton()
+	{
+		// The channel view hides the card, and with it the card's menu button; the shell's header stays
+		// merged away, so the channel header carries the menu button instead.
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsTrue();
+		var head = cut.Find(".comm-head");
+		await Assert.That(head.FirstElementChild!.ClassList).Contains("play-menu-btn");
+		head.QuerySelector("button.play-menu-btn")!.Click();
+		await Assert.That(cut.Find(".play-sheet[role='dialog']").ClassList).Contains("play-sheet--side");
+	}
+
+	[Test]
+	public async Task OnADesktop_TheChannelHeader_HasNoMenuButton()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-channels .kit-row"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+		await Assert.That(cut.FindAll(".comm-head .play-menu-btn").Count).IsEqualTo(0).Because("a desktop has the rail and the sidebar");
+	}
+
+	[Test]
 	public async Task AChannelRow_OpensTheChannelViewInMain_AndCloseReturnsToTheScene()
 	{
 		_comms.ChannelList = [new CommChannel("Public", 1)];

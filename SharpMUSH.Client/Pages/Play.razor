@@ -80,7 +80,7 @@ else
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
-                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" />
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" Lead="@(_touchChrome ? MenuButton : null)" />
                     </div>
                 }
                 @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
@@ -353,17 +353,8 @@ else
     {
         if (_touchChrome)
         {
-            var unread = UnreadComms;
             <span class="play-lead">
-                <button type="button" class="play-menu-btn" aria-label="@Loc["NavPlayTabs"]" title="@Loc["NavPlayTabs"]"
-                        aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Side)">
-                    <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
-                    @if (unread > 0)
-                    {
-                        <span class="play-menu-dot" aria-hidden="true"></span>
-                        <span class="play-me-status">@Loc.Plural("NavUnreadCount", "count", unread)</span>
-                    }
-                </button>
+                @MenuButton
                 @ViewerPicture
             </span>
         }
@@ -371,6 +362,22 @@ else
         {
             @ViewerPicture
         }
+    };
+
+    /// <summary>Touch chrome's menu button, leading the card header and, while a channel or conversation
+    /// hides the card, the channel view's header, so the one bar never loses its way to the sidebar.</summary>
+    private RenderFragment MenuButton => __builder =>
+    {
+        var unread = UnreadComms;
+        <button type="button" class="play-menu-btn" aria-label="@Loc["NavPlayTabs"]" title="@Loc["NavPlayTabs"]"
+                aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Side)">
+            <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
+            @if (unread > 0)
+            {
+                <span class="play-menu-dot" aria-hidden="true"></span>
+                <span class="play-me-status">@Loc.Plural("NavUnreadCount", "count", unread)</span>
+            }
+        </button>
     };
 
     private RenderFragment ViewerPicture => __builder =>
