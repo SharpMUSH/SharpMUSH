@@ -86,6 +86,9 @@ public class WebSocketClientService : IWebSocketClientService
 	/// terminal can skip the re-login it would otherwise run after a reconnect.
 	/// </summary>
 	public event EventHandler? Reattached;
+
+	/// <inheritdoc/>
+	public event EventHandler? ResumeRefused;
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	public bool IsConnected => _webSocket?.State == WebSocketState.Open;
@@ -388,6 +391,9 @@ public class WebSocketClientService : IWebSocketClientService
 		_resumeToken = null;
 		if (_slot is { } slot) await slot.ClearAsync();
 		verdict.TrySetResult(ResumeVerdict.Fresh);
+		// The stored point is gone, but the screen it kept is still in the slot: the same character in the same
+		// tab, so the reloaded page shows it above the fresh session rather than starting blank.
+		ResumeRefused?.Invoke(this, EventArgs.Empty);
 	}
 
 	/// <param name="verdict">This socket's pending resume answer, or null for a hello.</param>

@@ -71,6 +71,54 @@ public class StoryPoseTests : BunitContext
 	}
 
 	[Test]
+	public async Task YourOwnPose_HasEdit_WhichSavesTheWholeText()
+	{
+		(string PoseId, string Text)? saved = null;
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true)
+			.Add(x => x.OnEdit, e => saved = e));
+		var edit = cut.Find("button.story-edit-btn");
+		await Assert.That(edit.GetAttribute("aria-label")).IsEqualTo("Edit");
+		edit.Click();
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("leans on a stack of crates");
+		await Assert.That(cut.FindAll(".story-body").Count).IsEqualTo(0).Because("the text is being edited in its place");
+
+		cut.Find("textarea.story-editor-input").Input("leans on the crates, waiting.");
+		cut.Find("button.story-editor-save").Click();
+		await Assert.That(saved).IsEqualTo(("P1", "leans on the crates, waiting."));
+		await Assert.That(cut.FindAll(".story-editor").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Cancel_OrNoChange_SendsNothing()
+	{
+		var calls = 0;
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true).Add(x => x.OnEdit, _ => calls++));
+		cut.Find("button.story-edit-btn").Click();
+		cut.Find("textarea.story-editor-input").Input("something else");
+		cut.Find("button.story-editor-cancel").Click();
+		cut.Find("button.story-edit-btn").Click();
+		cut.Find("button.story-editor-save").Click();
+		await Assert.That(calls).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task SomeoneElsesPose_HasNoEdit()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()));
+		await Assert.That(cut.FindAll("button.story-edit-btn").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task APoseEditedOnScreen_IsMarked_ForAMoment()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()));
+		await Assert.That(cut.Find(".story-row").ClassList).DoesNotContain("story-row--just-edited");
+		cut.Render(p => p.Add(x => x.Pose, Pose(markup: "leans on the crates, waiting.", edits: 2)));
+		await Assert.That(cut.Find(".story-row").ClassList).Contains("story-row--just-edited");
+		await Assert.That(cut.Find(".story-edited").TextContent.Trim()).IsEqualTo("edited");
+	}
+
+	[Test]
 	public async Task WithAHandler_ThePortraitAndName_OpenTheCharacter()
 	{
 		string? opened = null;

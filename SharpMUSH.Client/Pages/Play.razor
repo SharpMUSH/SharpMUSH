@@ -125,7 +125,8 @@ else
                                         <div class="play-story-scroll">
                                             <SceneStory SceneId="@scene.Id" Occupants="@Room.Occupants" ViewerName="@PlayTerminal.ConnectedPlayerName"
                                                         OnCharacter="OpenSheetByName" LiveUnavailableChanged="unavailable => OnLiveUnavailable(scene.Id, unavailable)"
-                                                        LiveDownChanged="down => _storyLiveDown = down" />
+                                                        LiveDownChanged="down => _storyLiveDown = down"
+                                                        OnEditPose="EditPoseAsync" />
                                         </div>
                                     </div>
                                 }
@@ -326,6 +327,10 @@ else
 
     /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
     private string? _liveRefusedFor;
+
+    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit, encoded as the composer encodes.</summary>
+    private Task EditPoseAsync((string PoseId, string Text) edit) =>
+        SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
 
     /// <summary>The composer's draft, kept per character so an alt in another tab keeps its own.</summary>
     private string? DraftKey =>

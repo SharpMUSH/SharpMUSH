@@ -24,6 +24,13 @@ public interface IWebSocketClientService : IAsyncDisposable
 	event EventHandler? Reattached;
 
 	/// <summary>
+	/// Raised when the server refused a reload's resume and started a fresh session: the slot still holds
+	/// the screen the reloaded page left (<see cref="TerminalResumeSlot.TakeScrollback"/>), for the
+	/// terminal to show above the new session's first lines.
+	/// </summary>
+	event EventHandler? ResumeRefused;
+
+	/// <summary>
 	/// Gets whether the WebSocket is currently connected
 	/// </summary>
 	bool IsConnected { get; }

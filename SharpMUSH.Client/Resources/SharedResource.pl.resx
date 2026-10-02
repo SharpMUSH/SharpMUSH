@@ -3039,6 +3039,9 @@
     <value>Odmów</value>
     <comment>MT — permission tri-state (Allow / Deny / Inherit)</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Edytuj</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>edytowane</value>
     <comment>MT — neuter; refers to a pose/entry</comment>

@@ -3039,6 +3039,9 @@
     <value>Запретить</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>изменено</value>
     <comment>MT — lower-case badge as in the source.</comment>

@@ -3039,6 +3039,9 @@
     <value>Refuzat</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Editează</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>editat</value>
     <comment>MT</comment>

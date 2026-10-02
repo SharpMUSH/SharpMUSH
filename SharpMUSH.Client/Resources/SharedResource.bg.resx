@@ -3039,6 +3039,9 @@
     <value>Забрани</value>
     <comment>MT — permission tri-state value</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Редактирай</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>редактирано</value>
     <comment>MT — neuter, reads as a status badge</comment>

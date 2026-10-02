@@ -25,7 +25,8 @@
     @foreach (var pose in _poses)
     {
         var who = Identify(pose);
-        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter" />
+        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter"
+                   CanEdit="@(OnEditPose.HasDelegate && !pose.IsDeleted && IsViewer(pose.AuthorName))" OnEdit="OnEditPose" />
     }
 </div>
 
@@ -52,6 +53,9 @@
     /// still works and is recorded, and the story catches up when the connection is back.
     /// </summary>
     [Parameter] public EventCallback<bool> LiveDownChanged { get; set; }
+
+    /// <summary>Saves an edit to one of the viewer's own poses (its id and whole new text). Without it, no Edit.</summary>
+    [Parameter] public EventCallback<(string PoseId, string Text)> OnEditPose { get; set; }
 
     /// <summary>How many poses the backlog reads.</summary>
     [Parameter] public int Backlog { get; set; } = 100;

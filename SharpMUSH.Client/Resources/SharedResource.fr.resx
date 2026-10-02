@@ -2079,6 +2079,9 @@
   <data name="RolComposePlaceholder" xml:space="preserve">
     <value>Posez, parlez ou narrez…</value>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>modifié</value>
   </data>

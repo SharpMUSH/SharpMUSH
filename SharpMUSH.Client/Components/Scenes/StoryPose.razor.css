@@ -72,20 +72,130 @@
 	color: var(--text-dim);
 }
 
+/* An edited pose says so plainly: the accent, not a faint outline a reader skims past. */
 .story-edited {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
 	font-size: 10px;
+	font-weight: 700;
 	letter-spacing: 0.05em;
 	text-transform: uppercase;
-	color: var(--text-faint);
-	border: 1px solid var(--border);
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 14%, transparent);
 	border-radius: 4px;
-	padding: 0 5px;
+	padding: 1px 6px;
 }
 
+/* Edit, on the viewer's own poses: always there (touch has no hover), brighter on the row in hand. */
+.story-edit-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	padding: 2px 8px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.story-row:hover .story-edit-btn {
+	border-color: var(--text-faint);
+}
+
+.story-edit-btn:hover {
+	color: var(--text);
+	background: var(--surface-2);
+}
+
+.story-edit-btn:focus-visible,
+.story-editor-input:focus-visible,
+.story-editor-save:focus-visible,
+.story-editor-cancel:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.story-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.story-editor-input {
+	min-height: 96px;
+	max-height: 50vh;
+	field-sizing: content;
+	padding: 8px 10px;
+	border: 1px solid var(--accent);
+	border-radius: 10px;
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	font-size: 15px;
+	line-height: 1.6;
+	resize: vertical;
+}
+
+.story-editor-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.story-editor-cancel,
+.story-editor-save {
+	height: 32px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 16px;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.story-editor-cancel {
+	background: transparent;
+	color: var(--text-dim);
+}
+
+.story-editor-save {
+	background: var(--accent);
+	color: var(--accent-on);
+}
+
+.story-editor-save:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+/* A pose edited while on screen glows for a moment, so a reader who already read it notices. */
+.story-row--just-edited {
+	/* Ten slides long; zero under reduced motion, which zeroes the token (globals.css). */
+	animation: story-edited-flash calc(var(--motion-slide) * 10) ease-out;
+}
+
+@keyframes story-edited-flash {
+	0%, 30% {
+		background: color-mix(in srgb, var(--accent) 16%, transparent);
+	}
+	100% {
+		background: transparent;
+	}
+}
+
+/* A pose keeps its line breaks and spacing (%r, %b): a multi-line pose is written that way on purpose. */
 .story-body {
 	font-size: 15px;
 	line-height: 1.6;
 	color: var(--text);
+	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
 

@@ -3039,6 +3039,9 @@
     <value>Zabrani</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Uredi</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>uređeno</value>
     <comment>MT</comment>

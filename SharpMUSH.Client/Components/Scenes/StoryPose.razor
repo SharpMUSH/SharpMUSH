@@ -16,7 +16,7 @@
 }
 else
 {
-    <div class="story-row @(Pose.IsDeleted ? "story-row--deleted" : null)">
+    <div class="story-row @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
         @if (OnCharacter.HasDelegate)
         {
             <button type="button" class="story-portrait-btn" aria-label="@Pose.DisplayName" @onclick="Open">@Portrait</button>
@@ -38,10 +38,32 @@ else
                 <span class="story-time">@Time</span>
                 @if (Pose.WasEdited)
                 {
-                    <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">@Loc["RolEditedBadge"]</span>
+                    <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">
+                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:11px;" />@Loc["RolEditedBadge"]
+                    </span>
+                }
+                @if (CanEdit && !_editing)
+                {
+                    <button type="button" class="story-edit-btn" aria-label="@Loc["RolEditPose"]" title="@Loc["RolEditPose"]" @onclick="StartEdit">
+                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:14px;" /><span>@Loc["RolEditPose"]</span>
+                    </button>
                 }
             </div>
-            <div class="story-body">@Body</div>
+            @if (_editing)
+            {
+                <div class="story-editor">
+                    <textarea class="story-editor-input" aria-label="@Loc["RolEditPose"]" value="@_draft"
+                              @oninput="e => _draft = e.Value?.ToString() ?? string.Empty"></textarea>
+                    <div class="story-editor-actions">
+                        <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
+                        <button type="button" class="story-editor-save" disabled="@string.IsNullOrWhiteSpace(_draft)" @onclick="SaveEdit">@Loc["Save"]</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="story-body">@Body</div>
+            }
         </div>
     </div>
 }
@@ -60,6 +82,31 @@ else
 
     /// <summary>Opens a character by name (Play's sheet). Without it, names link to the profile page.</summary>
     [Parameter] public EventCallback<string> OnCharacter { get; set; }
+
+    /// <summary>The viewer wrote this pose, so it shows an Edit (the game still checks who may).</summary>
+    [Parameter] public bool CanEdit { get; set; }
+
+    /// <summary>Saves an edit: the pose's id and its whole new text.</summary>
+    [Parameter] public EventCallback<(string PoseId, string Text)> OnEdit { get; set; }
+
+    private bool _editing;
+    private string _draft = string.Empty;
+    private bool _flash;
+
+    private void StartEdit()
+    {
+        _draft = Pose.Content;
+        _editing = true;
+    }
+
+    private void CancelEdit() => _editing = false;
+
+    private async Task SaveEdit()
+    {
+        if (string.IsNullOrWhiteSpace(_draft)) return;
+        _editing = false;
+        if (_draft != Pose.Content) await OnEdit.InvokeAsync((Pose.Id, _draft));
+    }
 
     /// <summary>The tag the Scene plugin's <c>ooc</c> command puts on its poses (README §7.2).</summary>
     public const string OocTag = "ooc";
@@ -85,10 +132,21 @@ else
     protected override void OnParametersSet()
     {
         if (ReferenceEquals(_bodyMentions, Mentions) && string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) return;
+        // The text changed under a pose already on screen: an edit. Say so for a moment, so a reader who has
+        // already read it notices.
+        if (_bodyMarkup is not null && !string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) _ = FlashAsync();
         _bodyMarkup = Pose.Markup;
         _bodyMentions = Mentions;
         Body = (MarkupString)StoryMentions.Mark(SceneMarkupRenderer.ToHtml(Pose.Markup),
             Mentions.Where(m => !IsAuthor(m.Name)).ToList());
+    }
+
+    private async Task FlashAsync()
+    {
+        _flash = true;
+        await Task.Delay(2400);
+        _flash = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private bool IsAuthor(string name) =>

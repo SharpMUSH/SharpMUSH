@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.21.2
+version: 1.22.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -328,6 +328,12 @@ objects:
       CMD`EDIT: |-
         $+scene/edit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert setr(new,edit(scenepose(scenefocus(%#),%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
 
+      # The whole text at once: the portal's Edit on a pose sends this. %1 is set into a register in a command of
+      # its own (as CMD`EDIT does) and evaluated once there, so the composer's %r and %b encoding becomes the
+      # text; @scene/editpose then takes the register as it is, commas and all (it splits off one field).
+      CMD`REWRITE: |-
+        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert 1[setq(new,s(%1))]; @scene/editpose %q<pid>=%#,%q<new>
+
       CMD`UNDO: |-
         $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/undo %0
 
@@ -613,6 +619,7 @@ objects:
         - `+scene/emit <id>=<text>`
         - `+scene/as <name>` — pose under a different name from here on
         - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
+        - `+scene/rewrite <id>=<text>` — replace your own pose's whole text \(the portal's Edit\)
         - `+scene/undo <id>` · `+scene/redo <id>`
         - `+scene/recall <n>` — the last `<n>` poses of your focused scene; bare `+scene/recall`
           gives you two rounds of the room \(twice the size of the cast\). Each pose is introduced
