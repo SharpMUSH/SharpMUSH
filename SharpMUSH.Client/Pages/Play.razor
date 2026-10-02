@@ -345,17 +345,20 @@ else
 
     /// <summary>
     /// The card header is the only bar on Play: shell.css hides the shell's touch header while the card is
-    /// mounted, and the avatar opens the navigation drawer, whose tools row holds that header's other buttons.
-    /// A desktop has the rail, so there the avatar is only a picture.
+    /// mounted, and a menu button before the avatar opens the navigation drawer, whose tools row holds that
+    /// header's other buttons. A desktop has the rail, so there is no menu button.
     /// </summary>
     private RenderFragment ViewerAvatar => __builder =>
     {
         if (_touchChrome && Shell is { } shell)
         {
-            <button type="button" class="play-me-btn" aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]"
-                    aria-haspopup="true" @onclick="shell.Open">
+            <span class="play-lead">
+                <button type="button" class="play-menu-btn" aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]"
+                        aria-haspopup="true" @onclick="shell.Open">
+                    <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
+                </button>
                 @ViewerPicture
-            </button>
+            </span>
         }
         else
         {

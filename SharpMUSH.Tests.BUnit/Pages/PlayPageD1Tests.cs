@@ -216,26 +216,28 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnTouchChrome_TheAvatarOpensTheShellsDrawer()
+	public async Task OnTouchChrome_AMenuButtonBeforeTheAvatarOpensTheShellsDrawer()
 	{
-		// The shell's touch header is merged into the card header: the avatar is its menu button.
+		// The shell's touch header is merged into the card header, which leads with its menu button.
 		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
 		var opened = 0;
 		var cut = RenderPlay(new ShellNavigation(() => opened++));
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find("button.play-me-btn"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find("button.play-me-btn").GetAttribute("aria-label")).IsEqualTo("Toggle navigation");
-		cut.Find("button.play-me-btn").Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		var lead = cut.Find(".scene-card-lead .play-lead");
+		await Assert.That(lead.FirstElementChild!.ClassList).Contains("play-menu-btn").Because("the menu comes first, then the avatar");
+		await Assert.That(cut.Find("button.play-menu-btn").GetAttribute("aria-label")).IsEqualTo("Toggle navigation");
+		cut.Find("button.play-menu-btn").Click();
 		await Assert.That(opened).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task OnADesktop_TheAvatarIsOnlyAPicture()
+	public async Task OnADesktop_ThereIsNoMenuButton()
 	{
 		var cut = RenderPlay(new ShellNavigation(() => { }));
 		PushRoom(scene: false);
 		cut.WaitForAssertion(() => cut.Find(".play-me"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll("button.play-me-btn").Count).IsEqualTo(0).Because("a desktop has the rail");
+		await Assert.That(cut.FindAll("button.play-menu-btn").Count).IsEqualTo(0).Because("a desktop has the rail");
 	}
 
 	[Test]
