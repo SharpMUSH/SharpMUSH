@@ -79,6 +79,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
 	private sealed class Host : ComponentBase
 	{
+		/// <summary>MainLayout's drawer handle, cascaded to the page when set.</summary>
+		[Parameter] public ShellNavigation? Shell { get; set; }
+
 		protected override void BuildRenderTree(RenderTreeBuilder builder)
 		{
 			builder.OpenComponent<MudPopoverProvider>(0);
@@ -86,16 +89,29 @@ public class PlayPageD1Tests : TrackingBunitContext
 			builder.OpenComponent<PageSidebarHost>(1);
 			builder.AddAttribute(2, nameof(PageSidebarHost.ChildContent), (RenderFragment)(b =>
 			{
-				b.OpenComponent<PlayPage>(0);
+				if (Shell is null)
+				{
+					b.OpenComponent<PlayPage>(0);
+					b.CloseComponent();
+					return;
+				}
+				b.OpenComponent<CascadingValue<ShellNavigation>>(1);
+				b.AddAttribute(2, "Value", Shell);
+				b.AddAttribute(3, "IsFixed", true);
+				b.AddAttribute(4, "ChildContent", (RenderFragment)(c =>
+				{
+					c.OpenComponent<PlayPage>(0);
+					c.CloseComponent();
+				}));
 				b.CloseComponent();
 			}));
 			builder.CloseComponent();
 		}
 	}
 
-	private IRenderedComponent<Host> RenderPlay()
+	private IRenderedComponent<Host> RenderPlay(ShellNavigation? shell = null)
 	{
-		var cut = Render<Host>();
+		var cut = Render<Host>(p => p.Add(h => h.Shell, shell));
 		cut.WaitForAssertion(() => cut.Find(".play"), TimeSpan.FromSeconds(5));
 		return cut;
 	}
@@ -128,28 +144,31 @@ public class PlayPageD1Tests : TrackingBunitContext
 	public async Task WithoutTheSceneSystem_TheRoomsSceneIsNotOffered()
 	{
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, features: []));
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
 		await Assert.That(cut.Markup).DoesNotContain("Salt Market at Dusk");
-		await Assert.That(cut.FindAll(".play-tab")[0].TextContent.Trim()).IsEqualTo("Terminal")
-			.Because("the main tab opens the terminal when there is no scene to show");
+		await Assert.That(cut.FindAll("[role='radiogroup'], .scene-card-viewtoggle")).IsEmpty()
+			.Because("with no scene to show there is only the terminal");
 
-		// The narrow tier's channels sheet draws the sidebar again, with the same room.
-		cut.FindAll(".play-tab").First(t => t.TextContent.Contains("Channels")).Click();
+		// The menu button's panel draws the sidebar again, with the same room.
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-menu-btn").Click();
 		cut.WaitForAssertion(() => cut.Find(".play-sheet-body"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
 	}
 
 	[Test]
-	public async Task PushedRooms_DrawTheBanner_HereAndExits_AndAnExitGoes()
+	public async Task PushedRooms_DrawTheHeader_HereAndExits_AndAnExitGoes()
 	{
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".kit-banner-title").TextContent).IsEqualTo("Lower Docks");
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0).Because("the banner is folded into the card header on every screen");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
 		await Assert.That(cut.Find(".play-aside .here-card .kit-card-title").TextContent).IsEqualTo("Here · 1");
 		cut.Find(".play-aside .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
@@ -179,11 +198,140 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find(".kit-banner-title"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll("[role='radiogroup'][aria-label='View']").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".play-story").Count).IsEqualTo(0);
-		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheCardHeader_NamesTheCharacter_ThenTheRoom()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Lower Docks").Because("the folded banner's room is named in the header");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I").Because("she has no picture in the room's contents");
+		await Assert.That(cut.Find(".play-me").ClassList).Contains("play-me--on");
+		await Assert.That(cut.Find(".play-me-status").TextContent).IsEqualTo("Connected");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks").Because("with the banner gone, the card names the room");
+	}
+
+	[Test]
+	public async Task InAScene_TheSubLineIsTheScene()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Salt Market at Dusk");
+	}
+
+	[Test]
+	public async Task AGuest_IsNamedByTheirRowInTheRoomsContents()
+	{
+		// The server picks a guest's character, so the terminal never learns the name it connected as.
+		_play.ConnectedPlayerName.Returns((string?)null);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I");
+	}
+
+	[Test]
+	public async Task OnTouchChrome_TheMenuButtonOpensPlaysSidebarFromTheLeft_WithTheSiteMenuAtItsTop()
+	{
+		// A chat app's layout: the card header leads with a menu button; it opens the channel list (Play's
+		// sidebar), and the site's own menu is the first row there.
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var opened = 0;
+		var cut = RenderPlay(new ShellNavigation(() => opened++));
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		var lead = cut.Find(".scene-card-lead .play-lead");
+		await Assert.That(lead.FirstElementChild!.ClassList).Contains("play-menu-btn").Because("the menu comes first, then the avatar");
+		await Assert.That(cut.Find("button.play-menu-btn").GetAttribute("aria-label")).IsEqualTo("Play sections");
+
+		cut.Find("button.play-menu-btn").Click();
+		var sheet = cut.Find(".play-sheet[role='dialog']");
+		await Assert.That(sheet.ClassList).Contains("play-sheet--side");
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-start");
+		await Assert.That(cut.Find(".play-sheet .kit-side-sub").TextContent).Contains("Connected as Ilsa Varn").Because("Play's sidebar is the panel");
+
+		cut.Find("button.play-sheet-site").Click();
+		await Assert.That(opened).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0).Because("the site menu replaces the panel");
+	}
+
+	[Test]
+	public async Task UnreadChannelsOrPages_PutADotOnTheMenuButton()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		_comms.ChannelList = [new CommChannel("Public", 2), new CommChannel("Staff", 5, Joined: false)];
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn .play-menu-dot"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("button.play-menu-btn .play-me-status").TextContent).IsEqualTo("2 unread")
+			.Because("a channel the viewer has not joined does not count");
+	}
+
+	[Test]
+	public async Task TheTerminalSettingsMenu_CarriesFocusMode()
+	{
+		// A phone's header folds the focus button into this menu (Play.razor.css), so the menu must reach it.
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-settings-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-settings-btn").Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-cfg-focus"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-cfg-focus").Click();
+		await Assert.That(cut.FindAll(".play--focus").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task NothingUnread_NoDot()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-menu-dot").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task OnADesktop_ThereIsNoMenuButton()
+	{
+		var cut = RenderPlay(new ShellNavigation(() => { }));
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-me"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.play-menu-btn").Count).IsEqualTo(0).Because("a desktop has the rail");
+	}
+
+	[Test]
+	public async Task TheViewersPicture_IsTheirRowInTheRoomsContents()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		_store.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#313","objid":"#313:1","type":"player","name":"Ilsa Varn","cmd":"look #313","you":true,"image":{"url":"/c/ilsa.jpg"}}]}""");
+		cut.WaitForAssertion(() => cut.Find("img.play-me-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("img.play-me-img").GetAttribute("src")).EndsWith("/c/ilsa.jpg");
+	}
+
+	[Test]
+	public async Task TheConnectionControls_AreInTheHeader_AndTheTerminalHasNoConnectionRow()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-conn:not(.play-room-btn)"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play .sharp-terminal-connbar").Count).IsEqualTo(0);
+		await Assert.That(cut.Find("button.play-conn:not(.play-room-btn)").GetAttribute("aria-label")).IsEqualTo("Disconnect");
+
+		cut.Find("button.play-conn:not(.play-room-btn)").Click();
+		await _play.Received(1).DisconnectAsync();
 	}
 
 	[Test]
@@ -245,19 +393,18 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task TheRoomTab_OpensTheRoomSheet_WhoseExitsAreRowsThatGo()
+	public async Task ThePeopleButton_OpensTheRoomPanelFromTheRight_WhoseExitsAreRowsThatGo()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".play-tabs"), TimeSpan.FromSeconds(5));
-		var tabs = cut.FindAll(".play-tab");
-		await Assert.That(tabs.Select(t => t.TextContent.Trim()).ToList())
-			.IsEquivalentTo(new[] { "Scene", "Room", "#Channels", "Pages" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		tabs[1].Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-room-btn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-tabs, .play-tab").Count).IsEqualTo(0).Because("a chat app has no tab bar under its messages");
+		cut.Find("button.play-room-btn").Click();
 		var sheet = cut.Find(".play-sheet[role='dialog']");
 		await Assert.That(sheet.GetAttribute("aria-modal")).IsEqualTo("true");
-		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("align-items: flex-end")
-			.Because("MudOverlay centres a zero-size content box; the sheet sits on the bottom edge instead");
+		await Assert.That(sheet.ClassList).Contains("play-sheet--room");
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-end")
+			.Because("MudOverlay centres a zero-size content box; the Room panel sits on the right edge instead");
 		var sheetTabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList();
 		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("the Room sheet is the play layout, then the scope panels, as the desktop aside is");
@@ -311,7 +458,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.SchemaWidget>()
 				.Select(w => w.Instance.WidgetName).ToList())
 			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
-		cut.FindAll(".play-tab")[1].Click();
+		cut.Find("button.play-room-btn").Click();
 		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
 			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -344,7 +491,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindComponents<SharpMUSH.Client.Components.Layout.WidgetErrorBoundary>().Count >= 2, TimeSpan.FromSeconds(5));
 
 		await Assert.That(AsideApps(cut)).DoesNotContain("staffboard");
-		cut.FindAll(".play-tab")[1].Click();
+		cut.Find("button.play-room-btn").Click();
 		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
 			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -401,6 +548,36 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OnTouchChrome_AnOpenChannel_LeadsItsHeaderWithTheMenuButton()
+	{
+		// The channel view hides the card, and with it the card's menu button; the shell's header stays
+		// merged away, so the channel header carries the menu button instead.
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsTrue();
+		var head = cut.Find(".comm-head");
+		await Assert.That(head.FirstElementChild!.ClassList).Contains("play-menu-btn");
+		head.QuerySelector("button.play-menu-btn")!.Click();
+		await Assert.That(cut.Find(".play-sheet[role='dialog']").ClassList).Contains("play-sheet--side");
+	}
+
+	[Test]
+	public async Task OnADesktop_TheChannelHeader_HasNoMenuButton()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-channels .kit-row"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+		await Assert.That(cut.FindAll(".comm-head .play-menu-btn").Count).IsEqualTo(0).Because("a desktop has the rail and the sidebar");
+	}
+
+	[Test]
 	public async Task AChannelRow_OpensTheChannelViewInMain_AndCloseReturnsToTheScene()
 	{
 		_comms.ChannelList = [new CommChannel("Public", 1)];
@@ -439,15 +616,156 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task MinimisingTheBanner_IsRemembered()
+	public async Task OnALargerScreen_OpeningAndFoldingTheBanner_IsRemembered()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find("button.kit-banner-minimise"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1);
 		cut.Find("button.kit-banner-minimise").Click();
-		await Assert.That(cut.FindAll(".kit-banner-strip").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimise folds it back into the header, not to a strip");
+		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments)
+			.Where(a => (string?)a[0] == "play.banner").Select(a => (string?)a[1]).ToList();
+		await Assert.That(stored).IsEquivalentTo(new[] { "open", "folded" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task OnALargerScreen_ARememberedOpenBanner_StartsOpen()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.banner").SetResult("open");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the banner carries the picture");
+	}
+
+	[Test]
+	public async Task OnACompactScreen_TheBannerFoldsIntoTheCardHeader_AndOpensAsASheetOverThePage()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("one header row, not a strip over a header");
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Lower Docks").Because("the header names the room instead");
+		await Assert.That(cut.Find("button.scene-card-sub--action").GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner")
+			.Because("the room's name is the button that opens the banner");
+
+		cut.Find(".scene-card-title").Click();
+		var sheet = cut.Find(".play-sheet.play-sheet--details[role='dialog']");
+		await Assert.That(sheet.GetAttribute("aria-label")).IsEqualTo("Lower Docks");
+		await Assert.That(cut.FindAll(".play-sheet--details .kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
+		await Assert.That(cut.FindAll(".play-main .kit-banner").Count).IsEqualTo(0).Because("it drops over the page, not above the card: one bar");
+		await Assert.That(cut.FindAll(".play-sheet--details .play-banner-more .play-conn[aria-label='Disconnect']").Count).IsEqualTo(1);
+		cut.Find(".play-sheet--details button.kit-banner-minimise").Click();
+		await Assert.That(cut.FindAll(".play-sheet, .kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising closes it");
+
 		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
-		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner" && (string?)a[1] == "min")).IsTrue();
+		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner")).IsFalse()
+			.Because("a choice made on a sideways phone must not change the banner on a taller screen");
+	}
+
+	[Test]
+	public async Task TheBanner_CarriesThePhonesControlsRow_FocusSettingsAndDisconnect()
+	{
+		// Discord's channel details: on a phone, Play.razor.css hides the header's less frequent buttons
+		// (.play-head-more, the focus button) once a room has come, and the name opens them in the details sheet.
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play.play--room"), TimeSpan.FromSeconds(5));
+		var more = cut.FindAll(".scene-card-head .play-head-more");
+		await Assert.That(more.Count).IsEqualTo(2);
+		await Assert.That(more[0].QuerySelector(".play-settings-btn")).IsNotNull();
+		await Assert.That(more[1].QuerySelector(".play-conn[aria-label='Disconnect']")).IsNotNull();
+
+		cut.Find(".scene-card-title").Click();
+		var row = cut.Find(".play-sheet--details .play-banner-more");
+		await Assert.That(row.QuerySelector(".play-settings-btn")).IsNotNull();
+		await Assert.That(row.QuerySelector(".play-conn[aria-label='Disconnect']")).IsNotNull();
+		row.QuerySelector("button.play-banner-focus")!.Click();
+		await Assert.That(cut.Find(".play").ClassList).Contains("play--focus");
+		await Assert.That(cut.FindAll(".play-sheet--details").Count).IsEqualTo(0).Because("entering focus closes the sheet it was opened from");
+
+		cut.Find("button.scene-card-focus").Click();
+		cut.Find(".scene-card-title").Click();
+		cut.Find(".play-sheet--details .play-conn[aria-label='Disconnect']").Click();
+		await _play.Received(1).DisconnectAsync();
+	}
+
+	[Test]
+	public async Task TurningTheScreen_ClosesAnOpenPhoneSheet()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-room-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-room-btn").Click();
+		await Assert.That(cut.FindAll(".play-sheet--room").Count).IsEqualTo(1);
+
+		var page = cut.FindComponent<PlayPage>();
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
+		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0).Because("a larger screen has the aside beside the card");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.restoreFocus")).IsTrue()
+			.Because("closing hands focus back to what opened it");
+	}
+
+	[Test]
+	public async Task Disconnected_ConnectStaysInTheHeader()
+	{
+		_play.IsConnected.Returns(false);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head .play-conn--connect"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-head .play-conn--connect").Closest(".play-head-more")).IsNull()
+			.Because("the way in is never tucked away");
+	}
+
+	[Test]
+	public async Task TheRoomsPicture_IsInTheCardHeader_WhileNoBannerShowsIt()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head-img"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the opened banner shows it");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg").Because("focus hides the banner");
+	}
+
+	[Test]
+	public async Task OnACompactScreen_TheFoldedHeaderCarriesTheRoomsPicture()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
+
+		cut.Find("button.scene-card-sub--action").Click();
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg").Because("the sheet drops over the header, which keeps it");
+	}
+
+	[Test]
+	public async Task TurningTheScreen_PutsTheBannerBackToItsDefaultForThatScreen()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		var page = cut.FindComponent<PlayPage>();
+
+		await Assert.That(cut.FindAll(".play-sheet--details").Count).IsEqualTo(1);
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
+		await Assert.That(cut.FindAll(".play-sheet--details, .kit-banner").Count).IsEqualTo(0).Because("a larger screen follows its own remembered choice (folded), not the phone's sheet");
+
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(true));
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn back to the compact screen folds it again");
+		await Assert.That(cut.FindAll("button.scene-card-sub--action").Count).IsEqualTo(1);
 	}
 
 	private sealed class PlayApi : HttpMessageHandler

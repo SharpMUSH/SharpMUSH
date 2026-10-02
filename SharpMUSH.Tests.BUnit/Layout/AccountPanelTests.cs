@@ -184,7 +184,7 @@ public class AccountPanelTests : TrackingBunitContext
 	/// deleted; this is a pre-existing gap on the nav panel side, not one opened by that deletion — but
 	/// NavMenu's &lt;NotAuthorized&gt; branch (NavMenu.razor:158-175) is now the app's ONLY sign-in
 	/// affordance, so it needs a pin of its own.</summary>
-	private IRenderedComponent<MudHarness> RenderNavMenuAnonymous(bool isCollapsed)
+	private IRenderedComponent<MudHarness> RenderNavMenuAnonymous(bool isCollapsed, Action<ComponentParameterCollectionBuilder<NavMenu>>? extra = null)
 	{
 		Auth.SetNotAuthorized();
 
@@ -215,7 +215,35 @@ public class AccountPanelTests : TrackingBunitContext
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []));
 
-		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
+		return Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm =>
+		{
+			nm.Add(c => c.IsCollapsed, isCollapsed);
+			extra?.Invoke(nm);
+		}));
+	}
+
+	[Test]
+	public async Task TheDrawersToolsRow_CarriesTheTouchHeadersButtons()
+	{
+		// Play merges the touch header into its card header; the drawer then holds the header's other buttons.
+		var calls = new List<string>();
+		var cut = RenderNavMenuAnonymous(isCollapsed: false, nm => nm
+			.Add(c => c.ShowTools, true)
+			.Add(c => c.OnSectionMenu, () => calls.Add("section"))
+			.Add(c => c.OnSearch, () => calls.Add("search"))
+			.Add(c => c.OnToggleTerminal, () => calls.Add("terminal")));
+		cut.Find(".phosphor-drawer-tools button.phosphor-pagebar-btn").Click();
+		cut.Find(".phosphor-drawer-tools button[aria-haspopup='dialog']").Click();
+		cut.Find(".phosphor-drawer-tools button[aria-pressed]").Click();
+		await Assert.That(calls).IsEquivalentTo(new[] { "section", "search", "terminal" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindAll(".phosphor-drawer-tools .phosphor-lang").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TheDrawersToolsRow_IsNotRendered_OffPlay()
+	{
+		var cut = RenderNavMenuAnonymous(isCollapsed: false);
+		await Assert.That(cut.FindAll(".phosphor-drawer-tools").Count).IsEqualTo(0).Because("only Play merges the header away");
 	}
 
 	// ── Card wiring (real NavMenu) ──────────────────────────────────────────────────────────

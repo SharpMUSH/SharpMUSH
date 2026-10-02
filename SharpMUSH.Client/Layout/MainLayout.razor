@@ -29,7 +29,8 @@
 
     @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. *@
     <NavRail TerminalOpen="_terminalOpen" OnToggleTerminal="ToggleTerminal" OnSearch="OpenPalette" />
-    <NavMenu IsCollapsed="false" />
+    <NavMenu IsCollapsed="false" ShowTools="_isPlayRoute" TerminalOpen="_terminalOpen" OnSectionMenu="TogglePagebar" OnSearch="OpenPaletteFromDrawer"
+             OnToggleTerminal="ToggleTerminalFromDrawer" />
 
     @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
        while a sidebar is mounted (shell.css :has), 232px or the 62px strip; on touch chrome it is the
@@ -81,7 +82,9 @@
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
             <div class="phosphor-page">
-                @Body
+                <CascadingValue Value="_shellNavigation" IsFixed="true">
+                    @Body
+                </CascadingValue>
             </div>
         </main>
 
@@ -431,6 +434,29 @@
     private void OpenPalette() => _paletteOpen = true;
 
     private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
+
+    /// <summary>The drawer's own copies of the header's buttons (Play, whose header is merged away) close it first.</summary>
+    private void OpenPaletteFromDrawer()
+    {
+        _mobileNavOpen = false;
+        _paletteOpen = true;
+    }
+
+    private void ToggleTerminalFromDrawer()
+    {
+        _mobileNavOpen = false;
+        _terminalOpen = !_terminalOpen;
+    }
+
+    private ShellNavigation? _shellNavigationField;
+
+    /// <summary>Cascaded to pages: Play's card header opens the drawer through it.</summary>
+    private ShellNavigation _shellNavigation => _shellNavigationField ??= new ShellNavigation(() => _ = InvokeAsync(() =>
+    {
+        _mobileNavOpen = true;
+        _pagebarOpen = false;
+        StateHasChanged();
+    }));
 
     public async ValueTask DisposeAsync()
     {

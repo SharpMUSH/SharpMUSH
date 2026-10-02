@@ -10,12 +10,48 @@
 }
 
 .scene-card-head {
+	/* A container of its own, so what sits in it can answer to the header's width (Play's avatar). */
+	container-type: inline-size;
 	display: flex;
 	align-items: center;
 	gap: 12px;
 	padding: 10px 12px 10px 16px;
 	border-bottom: 1px solid var(--border);
 	flex-shrink: 0;
+}
+
+/* The room's picture behind the header while no banner shows it: the strip's look, at the header's height. */
+.scene-card-head--image {
+	position: relative;
+	border-bottom-color: transparent;
+}
+
+.scene-card-head-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.scene-card-head-scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to right, rgba(10, 11, 13, 0.8) 0%, rgba(10, 11, 13, 0.58) 45%, rgba(10, 11, 13, 0.42) 100%);
+	pointer-events: none;
+}
+
+/* Positioned after the image and scrim, so they paint above them. */
+.scene-card-head--image > :not(.scene-card-head-img):not(.scene-card-head-scrim) {
+	position: relative;
+}
+
+.scene-card-head--image .scene-card-titles {
+	text-shadow: var(--on-image-shadow);
+}
+
+.scene-card-head--image .scene-card-sub {
+	color: var(--text-on-image);
 }
 
 .scene-card-lead {
@@ -54,10 +90,11 @@
 }
 
 .scene-card-radio {
-	font: inherit;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 6px 14px;
+	width: 36px;
+	height: 30px;
+	display: grid;
+	place-items: center;
+	padding: 0;
 	border: 0;
 	border-radius: 17px;
 	background: transparent;
@@ -71,6 +108,7 @@
 }
 
 .scene-card-radio:focus-visible,
+.scene-card-viewtoggle:focus-visible,
 .scene-card-focus:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
@@ -89,6 +127,21 @@
 	flex-shrink: 0;
 }
 
+/* The single view toggle shows only in the narrow tier, in the pair's place. */
+.scene-card-viewtoggle {
+	display: none;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.scene-card-viewtoggle:hover,
 .scene-card-focus:hover {
 	background: var(--surface-2);
 	color: var(--text);
@@ -97,6 +150,43 @@
 .scene-card-focus--on {
 	background: color-mix(in srgb, var(--accent) 18%, transparent);
 	color: var(--accent);
+}
+
+/* The sub-line as a button (the folded banner): the same line, with a chevron and a hover. */
+.scene-card-sub--action {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	max-width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	font: inherit;
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+}
+
+/* The name opens the banner too (a bigger target than the sub-line on a phone); the sub-line stays the
+   keyboard's way in. */
+.scene-card-title--action {
+	cursor: pointer;
+}
+
+.scene-card-sub-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.scene-card-sub--action:hover {
+	color: var(--text);
+}
+
+.scene-card-sub--action:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 4px;
 }
 
 .scene-card-body {
@@ -109,4 +199,25 @@
 .scene-card-foot {
 	flex-shrink: 0;
 	padding: 0 12px 12px;
+}
+
+/* Narrow: the header wraps rather than squeeze the title to nothing on a 320–360px phone. The name stays
+   over the room (or scene), as on larger screens, so a long name does not push the room out. */
+@container page (max-width: 48rem) {
+	.scene-card-head {
+		flex-wrap: wrap;
+		gap: 8px;
+		row-gap: 8px;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+
+	/* The two-icon pair costs 80px of a row that the name and the room need; one toggle costs 36. */
+	.scene-card-switch {
+		display: none;
+	}
+
+	.scene-card-viewtoggle {
+		display: grid;
+	}
 }

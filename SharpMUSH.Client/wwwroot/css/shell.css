@@ -1214,6 +1214,25 @@
 	display: none;
 }
 
+/* Play merges the shell's touch header into its card header (Play.razor): while the card is mounted the
+   header (or its short-landscape rail) steps away, the avatar opens the drawer, and the drawer's tools row
+   carries the header's other buttons. The roster and no-character states have no card and keep the header.
+   The same child chain as focus mode, so game output cannot match it. */
+.phosphor-drawer-tools {
+	display: none;
+}
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-topbar {
+	display: none;
+}
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-drawer-tools {
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	flex-shrink: 0;
+	padding: 0.5rem 0.75rem;
+	border-top: 1px solid var(--border-soft);
+}
+
 /* ══ PHONE-WIDTH content: single-column helpers + a condensed topbar. Tablets and
    landscape phones are WIDER than this, so they keep the desktop multi-column content
    (the readability win) — only their chrome goes touch-friendly (next block). ══ */
@@ -1333,6 +1352,39 @@
 	.phosphor-shell--bottomnav .phosphor-main--terminal {
 		padding-bottom: 70vh;
 		padding-bottom: 70svh;
+	}
+}
+
+/* ══ SHORT LANDSCAPE: a phone held sideways is short of height, not width. The touch header turns into a
+   rail down the left edge — the same buttons, stacked — so the page keeps the full height. Touch chrome
+   only (the condition above, ANDed with the shape); a mouse desktop already has the rail. An upright phone
+   keeps the header on top: it is short of width, not height. The shape is the landscape half of
+   sharpmushLayout.compactScreenQuery in layout.js. ══ */
+@media (max-width: 760px) and (orientation: landscape) and (max-height: 32rem),
+	(pointer: coarse) and (orientation: landscape) and (max-height: 32rem) {
+	.phosphor-topbar {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: calc(var(--touch-rail-w) + env(safe-area-inset-left));
+		height: auto;
+		flex-direction: column;
+		gap: 4px;
+		padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
+		border-bottom: 0;
+		border-right: 1px solid var(--border-soft);
+	}
+	.phosphor-shell {
+		--touch-rail-w: 56px;
+	}
+	.phosphor-content-col {
+		box-sizing: border-box;
+		padding-left: calc(var(--touch-rail-w) + env(safe-area-inset-left));
+	}
+	/* Play merges the rail into its card header (above); the page gets its width back. */
+	.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-content-col {
+		padding-left: 0;
 	}
 }
 

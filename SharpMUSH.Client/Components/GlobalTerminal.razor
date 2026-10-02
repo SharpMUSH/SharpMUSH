@@ -29,37 +29,40 @@
         </div>
     </div>
 
-    <div class="sharp-terminal-connbar">
-        <MudChip T="string"
-                 Size="Size.Small"
-                 Color="@(_connected ? Color.Success : Color.Error)"
-                 Style="min-width:90px;justify-content:center;">
-            @(_connected ? Loc["Connected"] : Loc["Disconnected"])
-        </MudChip>
+    @if (ShowConnectionBar)
+    {
+        <div class="sharp-terminal-connbar">
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="@(_connected ? Color.Success : Color.Error)"
+                     Style="min-width:90px;justify-content:center;">
+                @(_connected ? Loc["Connected"] : Loc["Disconnected"])
+            </MudChip>
 
-        @if (!_connected)
-        {
-            <div style="flex:1"></div>
-            @if (AccountAuth.IsLoggedIn)
+            @if (!_connected)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           OnClick="ConnectAsync">@Loc["Connect"]</MudButton>
+                <div style="flex:1"></div>
+                @if (AccountAuth.IsLoggedIn)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               OnClick="ConnectAsync">@Loc["Connect"]</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick='() => Navigation.NavigateTo("/login")'>@Loc["Login"]</MudButton>
+                }
             }
             else
             {
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                           OnClick='() => Navigation.NavigateTo("/login")'>@Loc["Login"]</MudButton>
+                <MudText Typo="Typo.caption" Style="color:#888;flex:1;">
+                    @(_playerName ?? Loc["TermNotLoggedIn"].Value)
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                           OnClick="DisconnectAsync">@Loc["Disconnect"]</MudButton>
             }
-        }
-        else
-        {
-            <MudText Typo="Typo.caption" Style="color:#888;flex:1;">
-                @(_playerName ?? Loc["TermNotLoggedIn"].Value)
-            </MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
-                       OnClick="DisconnectAsync">@Loc["Disconnect"]</MudButton>
-        }
-    </div>
+        </div>
+    }
 
     @if (Interactive)
     {
@@ -118,6 +121,11 @@
     /// <summary>Whether the inline Clear button shows in the input row. The /play terminal sets
     /// this false because Clear lives in its settings menu instead.</summary>
     [Parameter] public bool ShowClearButton { get; set; } = true;
+
+    /// <summary>Whether the status, character and Connect/Disconnect row shows. The /play terminal sets
+    /// this false because its card header carries them, through <see cref="ConnectAsync"/> and
+    /// <see cref="DisconnectAsync"/>.</summary>
+    [Parameter] public bool ShowConnectionBar { get; set; } = true;
 
     /// <summary>
     /// Whether this terminal accepts typed commands. The /play terminal is interactive; the
@@ -364,7 +372,8 @@
         return true;
     }
 
-    private async Task ConnectAsync()
+    /// <summary>Connects as the active character, else the account's first; the connbar's Connect.</summary>
+    public async Task ConnectAsync()
     {
         var target = AccountAuth.ActiveCharacter ?? AccountAuth.Characters.FirstOrDefault();
         if (target is null) return;
@@ -376,7 +385,8 @@
         catch (Exception ex) { AddLocalLine(Loc["TermErrorLine", ex.Message], TerminalLineSource.System); }
     }
 
-    private async Task DisconnectAsync()
+    /// <summary>The connbar's Disconnect.</summary>
+    public async Task DisconnectAsync()
     {
         SetPlayerName(null);
         await Terminal.DisconnectAsync();

@@ -110,6 +110,35 @@ window.sharpmushLayout = {
 		this._exitKeys = null;
 	},
 
+	// Play's compact screen: a phone, either way up (sideways, or the phone width shell.css uses). The room
+	// banner folds into the card header there, so the terminal keeps the height. Returns whether it matches
+	// now and calls OnCompactScreenChanged on the page whenever that changes (a rotation, a resize).
+	compactScreenQuery: '(orientation: landscape) and (max-height: 32rem), (max-width: 760px)',
+
+	watchCompactScreen: function (dotnetRef) {
+		this.unwatchCompactScreen();
+		const query = window.matchMedia(this.compactScreenQuery);
+		const handler = event => {
+			const pending = dotnetRef.invokeMethodAsync('OnCompactScreenChanged', event.matches);
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		if (typeof query.addEventListener === 'function') {
+			query.addEventListener('change', handler);
+		}
+		this._compactScreen = { query, handler };
+		return query.matches;
+	},
+
+	unwatchCompactScreen: function () {
+		const watch = this._compactScreen;
+		this._compactScreen = null;
+		if (watch && typeof watch.query.removeEventListener === 'function') {
+			watch.query.removeEventListener('change', watch.handler);
+		}
+	},
+
 	// Play's composer: Enter sends and Shift+Enter is a new line. Decided here, per key, because Blazor
 	// decides preventDefault when it renders and would swallow the key after the one that sent. An Enter
 	// that ends an IME composition belongs to the composition; Safari sends that Enter after compositionend,

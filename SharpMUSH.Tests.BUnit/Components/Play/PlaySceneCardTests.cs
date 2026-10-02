@@ -7,8 +7,8 @@ using SharpMUSH.Client.Components.Play;
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
-/// README §5.3 scene card header (boards 01, 04, 05): the title, a sub-line per view, the Story |
-/// Terminal radiogroup (only in a scene) and the focus button.
+/// README §5.3 scene card header (boards 01, 04, 05): the title, the sub-line the page passes, the
+/// Story | Terminal radiogroup (only in a scene, each radio an icon named by its aria-label) and the focus button.
 /// </summary>
 public class PlaySceneCardTests : BunitContext
 {
@@ -20,9 +20,10 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	private IRenderedComponent<PlaySceneCard> RenderCard(bool inScene = true, PlayView view = PlayView.Story, bool focus = false,
-		Action<PlayView>? onView = null, Action<bool>? onFocus = null) =>
+		Action<PlayView>? onView = null, Action<bool>? onFocus = null, string? subtitle = null) =>
 		Render<PlaySceneCard>(p => p
 			.Add(x => x.Title, "Salt Market at Dusk")
+			.Add(x => x.Subtitle, subtitle)
 			.Add(x => x.InScene, inScene)
 			.Add(x => x.View, view)
 			.Add(x => x.ViewChanged, v => onView?.Invoke(v))
@@ -31,19 +32,64 @@ public class PlaySceneCardTests : BunitContext
 			.Add(x => x.ChildContent, (RenderFragment)(b => b.AddMarkupContent(0, "<p id=\"body\">body</p>"))));
 
 	[Test]
-	public async Task InStory_TheSubLineSaysItIsLogged()
+	public async Task TheSubLine_IsWhatThePagePasses_AndThereIsNoneWithout()
 	{
-		var cut = RenderCard();
+		var cut = RenderCard(subtitle: "Lower Docks");
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Salt Market at Dusk");
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Scene · logged to the scene archive");
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.Find("#body")).IsNotNull();
+
+		var bare = RenderCard();
+		await Assert.That(bare.FindAll(".scene-card-sub").Count).IsEqualTo(0).Because("no empty line takes the header's height");
 	}
 
 	[Test]
-	public async Task InTerminal_TheSubLineSaysItIsEverything()
+	public async Task AHeaderImage_SitsBehindTheHeader_UnderAScrim()
 	{
-		var cut = RenderCard(view: PlayView.Terminal);
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Full output · channels and pages included");
+		var cut = Render<PlaySceneCard>(p => p
+			.Add(x => x.Title, "Ilsa Varn")
+			.Add(x => x.HeaderImage, "https://localhost:8081/r/docks.jpg"));
+		await Assert.That(cut.Find(".scene-card-head").ClassList).Contains("scene-card-head--image");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("alt")).IsEqualTo("").Because("decorative: the sub-line names the room");
+		await Assert.That(cut.FindAll(".scene-card-head-scrim").Count).IsEqualTo(1);
+
+		var bare = RenderCard();
+		await Assert.That(bare.FindAll(".scene-card-head-img").Count).IsEqualTo(0);
+		await Assert.That(bare.Find(".scene-card-head").ClassList).DoesNotContain("scene-card-head--image");
+	}
+
+	[Test]
+	public async Task WithAnAction_TheSubLineIsAButton_AndTheNameOpensItToo()
+	{
+		var pressed = 0;
+		var cut = Render<PlaySceneCard>(p => p
+			.Add(x => x.Title, "Ilsa Varn")
+			.Add(x => x.Subtitle, "Lower Docks")
+			.Add(x => x.SubtitleAction, "Show banner")
+			.Add(x => x.OnSubtitle, () => pressed++));
+		var button = cut.Find("button.scene-card-sub");
+		await Assert.That(button.GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner");
+		await Assert.That(button.GetAttribute("title")).IsEqualTo("Show banner");
+		button.Click();
+		await Assert.That(pressed).IsEqualTo(1);
+		cut.Find(".scene-card-title").Click();
+		await Assert.That(pressed).IsEqualTo(2).Because("the name is the bigger target on a phone");
+
+		var plain = RenderCard(subtitle: "Lower Docks");
+		await Assert.That(plain.Find(".scene-card-sub").TagName).IsEqualTo("DIV").Because("no action, no button");
+		await Assert.That(plain.Find(".scene-card-title").ClassList).DoesNotContain("scene-card-title--action");
+	}
+
+	[Test]
+	public async Task EachRadio_IsAnIcon_NamedByItsLabel_AndDescribedByItsTooltip()
+	{
+		var radios = RenderCard().FindAll("[role='radio']");
+		await Assert.That(radios[0].TextContent.Trim()).IsEmpty();
+		await Assert.That(radios[0].QuerySelector("svg")).IsNotNull();
+		await Assert.That(radios[0].GetAttribute("aria-label")).IsEqualTo("Story");
+		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Story: Scene · logged to the scene archive");
+		await Assert.That(radios[1].GetAttribute("aria-label")).IsEqualTo("Terminal");
+		await Assert.That(radios[1].GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
 	}
 
 	[Test]
@@ -54,13 +100,31 @@ public class PlaySceneCardTests : BunitContext
 		var group = cut.Find("[role='radiogroup']");
 		await Assert.That(group.GetAttribute("aria-label")).IsEqualTo("View");
 		var radios = cut.FindAll("[role='radio']");
-		await Assert.That(radios[0].TextContent).IsEqualTo("Story");
+		await Assert.That(radios[0].GetAttribute("aria-label")).IsEqualTo("Story");
 		await Assert.That(radios[0].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(radios[0].GetAttribute("tabindex")).IsEqualTo("0");
 		await Assert.That(radios[1].GetAttribute("aria-checked")).IsEqualTo("false");
 		await Assert.That(radios[1].GetAttribute("tabindex")).IsEqualTo("-1");
 		radios[1].Click();
 		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
+	}
+
+	[Test]
+	public async Task TheNarrowToggle_ShowsTheOtherView_AndSwitchesToIt()
+	{
+		PlayView? chosen = null;
+		var cut = RenderCard(onView: v => chosen = v);
+		var toggle = cut.Find(".scene-card-viewtoggle");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Terminal");
+		await Assert.That(toggle.GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
+		toggle.Click();
+		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
+
+		cut = RenderCard(view: PlayView.Terminal, onView: v => chosen = v);
+		toggle = cut.Find(".scene-card-viewtoggle");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Story");
+		toggle.Click();
+		await Assert.That(chosen).IsEqualTo(PlayView.Story);
 	}
 
 	[Test]
@@ -77,6 +141,7 @@ public class PlaySceneCardTests : BunitContext
 	{
 		var cut = RenderCard(inScene: false, view: PlayView.Terminal);
 		await Assert.That(cut.FindAll("[role='radiogroup']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".scene-card-viewtoggle").Count).IsEqualTo(0);
 	}
 
 	[Test]

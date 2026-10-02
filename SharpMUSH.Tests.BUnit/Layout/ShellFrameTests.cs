@@ -96,4 +96,34 @@ public class ShellFrameTests
 		foreach (var part in new[] { ".phosphor-rail", ".phosphor-topbar", ".phosphor-topzone", ".phosphor-footer", ".phosphor-widget-aside" })
 			await Assert.That(rule.Groups["parts"].Value).Contains(part);
 	}
+
+	[Test]
+	public async Task OnAShortLandscapeTouchScreen_TheHeaderIsARailDownTheLeft()
+	{
+		// A sideways phone has width to spare and no height: the touch header's buttons stack down the left
+		// edge and the content column steps over by the rail's width, so the page keeps the full height.
+		var shell = Shell();
+		var block = MediaBlock(shell, "(max-width: 760px) and (orientation: landscape) and (max-height: 32rem)");
+		await Assert.That(block).IsNotEmpty();
+		await Assert.That(Regex.IsMatch(block, @"\.phosphor-topbar\s*\{[^}]*position:\s*fixed[^}]*flex-direction:\s*column")).IsTrue();
+		await Assert.That(Regex.IsMatch(block, @"\.phosphor-content-col\s*\{[^}]*padding-left:\s*calc\(var\(--touch-rail-w\)")).IsTrue();
+		await Assert.That(shell).Contains("(max-width: 760px) and (orientation: landscape) and (max-height: 32rem),\n\t(pointer: coarse) and (orientation: landscape) and (max-height: 32rem) {")
+			.Because("the same condition as touch chrome, ANDed with the shape");
+	}
+
+	[Test]
+	public async Task PlaysCard_MergesTheTouchHeaderAway_AndTheDrawerTakesItsButtons()
+	{
+		// One bar on Play: while the card is mounted the shell's touch header (and its landscape rail) is hidden;
+		// the drawer's tools row, hidden elsewhere, carries the header's other buttons. The roster and
+		// no-character states have no .play and keep the header.
+		const string play = ".phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play)";
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, Regex.Escape(play + " .phosphor-topbar") + @"\s*\{[^}]*display:\s*none")).IsTrue();
+		await Assert.That(Regex.IsMatch(shell, Regex.Escape(play + " .phosphor-drawer-tools") + @"\s*\{[^}]*display:\s*flex")).IsTrue();
+		await Assert.That(Regex.IsMatch(shell, @"(?m)^\.phosphor-drawer-tools\s*\{[^}]*display:\s*none")).IsTrue();
+		var rail = MediaBlock(shell, "(max-width: 760px) and (orientation: landscape) and (max-height: 32rem)");
+		await Assert.That(Regex.IsMatch(rail, Regex.Escape(play + " .phosphor-content-col") + @"\s*\{[^}]*padding-left:\s*0")).IsTrue();
+		await Assert.That(Layout()).Contains("<CascadingValue Value=\"_shellNavigation\" IsFixed=\"true\">");
+	}
 }

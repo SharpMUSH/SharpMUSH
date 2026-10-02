@@ -63,8 +63,9 @@ GLOBAL_INPUTS = {
 CLIENT_TEST_INPUTS = ("SharpMUSH.Client/wwwroot/", "tools/client-tests/")
 
 # Test projects that start Testcontainers. Without a Docker daemon they cannot pass, which says
-# nothing about the change, so they are left to CI.
-NEEDS_DOCKER = {"SharpMUSH.Tests.Integration"}
+# nothing about the change, so they are left to CI. SharpMUSH.Tests starts them through
+# Tests.Infrastructure (DockerNetwork, the server and connection-server factories).
+NEEDS_DOCKER = {"SharpMUSH.Tests", "SharpMUSH.Tests.Integration"}
 
 # Background commands that produce a verdict the agent must read. Servers and watchers are
 # deliberately not listed: an agent may leave those running on purpose. Anchored to the
@@ -250,14 +251,19 @@ def owning_project(path: str, by_dir: dict[str, str]) -> str | None:
         parent = parent.parent
 
 
-def is_test_project(proj: str) -> bool:
-    name = Path(proj).stem
-    return name.startswith("SharpMUSH.Tests") and name != "SharpMUSH.Tests.Infrastructure"
+def is_test_project(root: Path, proj: str) -> bool:
+    # The csproj says so, not the name: SharpMUSH.Tests.Infrastructure and SharpMUSH.Tests.Shared are
+    # helper libraries that `dotnet run` cannot start.
+    path = root / proj
+    if not Path(proj).stem.startswith("SharpMUSH.Tests") or not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return re.search(r"<IsTestProject>\s*true\s*</IsTestProject>", text, re.IGNORECASE) is not None
 
 
 def affected_test_projects(root: Path, files: list[str]) -> list[str]:
     by_dir, refs, linked = project_graph(root, files)
-    tests = [p for p in refs if is_test_project(p) and (root / p).is_file()]
+    tests = [p for p in refs if is_test_project(root, p)]
 
     if any(Path(f).name in GLOBAL_INPUTS for f in files if "/" not in f):
         return sorted(tests)

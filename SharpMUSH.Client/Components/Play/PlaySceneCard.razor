@@ -1,24 +1,57 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* D1 §5.3 the scene card: a header with the title (the scene's, else the room's) and a sub-line for
-   the view, the Story | Terminal switch (a radiogroup, only while in a scene), the focus-mode button and
-   any extra header controls (the terminal settings); then the view, then the footer (the composer). *@
+@* D1 §5.3 the scene card: a header with the lead (the viewer's avatar), the title and an optional
+   sub-line, the Story | Terminal switch (a radiogroup, only while in a scene), any extra header controls
+   (the terminal settings, Connect/Disconnect) and the focus-mode button; then the view, then the footer
+   (the composer). Each radio is an icon named by its aria-label; its tooltip names the view and describes it. With a HeaderImage the header carries the
+   room's picture behind a scrim: Play passes it while no banner shows the room. *@
 <section class="scene-card" aria-labelledby="scene-card-title">
-    <header class="scene-card-head">
+    <header class="scene-card-head @(HeaderImage is null ? null : "scene-card-head--image")">
+        @if (HeaderImage is not null)
+        {
+            <img class="scene-card-head-img" src="@ApiUrl.Resolve(HeaderImage)" alt="" />
+            <div class="scene-card-head-scrim" aria-hidden="true"></div>
+        }
         @if (Lead is not null)
         {
             <div class="scene-card-lead">@Lead</div>
         }
         <div class="scene-card-titles">
-            <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
-            <div class="scene-card-sub">@(View == PlayView.Story && InScene ? Loc["NavPlayStorySub"] : Loc["NavPlayTerminalSub"])</div>
+            @if (SubtitleIsAction)
+            {
+                <h2 class="scene-card-title scene-card-title--action" id="scene-card-title" @onclick="OnSubtitle">@Title</h2>
+            }
+            else
+            {
+                <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
+            }
+            @if (SubtitleIsAction)
+            {
+                <button type="button" class="scene-card-sub scene-card-sub--action" aria-expanded="false"
+                        aria-label="@($"{Subtitle}: {SubtitleAction}")" title="@SubtitleAction" @onclick="OnSubtitle">
+                    <span class="scene-card-sub-text">@Subtitle</span>
+                    <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
+                </button>
+            }
+            else if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <div class="scene-card-sub">@Subtitle</div>
+            }
         </div>
         @if (InScene)
         {
             <div class="scene-card-switch" role="radiogroup" aria-label="@Loc["NavPlayView"]">
-                @Radio(PlayView.Story, Loc["NavPlayStory"])
-                @Radio(PlayView.Terminal, Loc["Terminal"])
+                @Radio(PlayView.Story, Icons.Material.Outlined.AutoStories, Loc["NavPlayStory"], Loc["NavPlayStorySub"])
+                @Radio(PlayView.Terminal, Icons.Material.Outlined.Terminal, Loc["Terminal"], Loc["NavPlayTerminalSub"])
             </div>
+            @* The narrow tier's stand-in for the pair: one button showing the other view, which it switches to. *@
+            var other = View == PlayView.Story ? PlayView.Terminal : PlayView.Story;
+            var otherLabel = other == PlayView.Story ? Loc["NavPlayStory"] : Loc["Terminal"];
+            var otherSub = other == PlayView.Story ? Loc["NavPlayStorySub"] : Loc["NavPlayTerminalSub"];
+            <button type="button" class="scene-card-viewtoggle" aria-label="@otherLabel" title="@($"{otherLabel}: {otherSub}")"
+                    @onclick="() => Choose(other)">
+                <MudIcon Icon="@(other == PlayView.Story ? Icons.Material.Outlined.AutoStories : Icons.Material.Outlined.Terminal)" Size="Size.Small" />
+            </button>
         }
         @Controls
         <button type="button" class="scene-card-focus @(Focus ? "scene-card-focus--on" : null)" aria-pressed="@(Focus ? "true" : "false")"
@@ -37,6 +70,21 @@
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 
+    /// <summary>The line under the title; none when null or empty.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>When set, the sub-line is a button that does this (Play: open the folded banner).</summary>
+    [Parameter] public EventCallback OnSubtitle { get; set; }
+
+    /// <summary>What pressing the sub-line does, for its tooltip and accessible name ("Show banner").</summary>
+    [Parameter] public string? SubtitleAction { get; set; }
+
+    /// <summary>The sub-line opens something (the folded banner): the name opens it too.</summary>
+    private bool SubtitleIsAction => !string.IsNullOrEmpty(Subtitle) && OnSubtitle.HasDelegate;
+
+    /// <summary>An image URL (site-relative or https) drawn behind the header, under a scrim; decorative.</summary>
+    [Parameter] public string? HeaderImage { get; set; }
+
     /// <summary>Whether the viewer is in a scene: only then is there a Story view to switch to.</summary>
     [Parameter] public bool InScene { get; set; }
 
@@ -47,7 +95,7 @@
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
-    /// <summary>Before the titles: the room's thumbnail while the banner is minimised on a small screen.</summary>
+    /// <summary>Before the titles: Play puts the viewer's avatar here.</summary>
     [Parameter] public RenderFragment? Lead { get; set; }
 
     /// <summary>Extra header controls, before the focus button (the terminal settings).</summary>
@@ -58,11 +106,14 @@
     /// <summary>The bottom bar: the composer.</summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
-    private RenderFragment Radio(PlayView value, string label) => __builder =>
+    private RenderFragment Radio(PlayView value, string icon, string label, string description) => __builder =>
     {
         var on = View == value;
         <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")"
-                tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">@label</button>
+                aria-label="@label" title="@($"{label}: {description}")"
+                tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+        </button>
     };
 
     private Task Choose(PlayView value) => value == View ? Task.CompletedTask : ViewChanged.InvokeAsync(value);

@@ -8,7 +8,7 @@
 {
     <GlassBanner Title="@Info.Name" ImageUrl="@Info.Image?.Url" Alt="@Info.Image?.Alt" Focal="@Info.Image?.Focal"
                  Hue="@NameHue.Of(Info.Name)" Open="@_descOpen" Minimised="@Minimised" MinimisedChanged="MinimisedChanged"
-                 Fact="@StripFact" HeadingLevel="1">
+                 Fact="@StripFact" HeadingLevel="1" BottomActions="@BottomActions">
         <Secondary>@Facts</Secondary>
         <Actions>
             @if (HasDescription)
@@ -32,6 +32,9 @@
 
     /// <summary>How many exits <c>room.exits</c> lists.</summary>
     [Parameter] public int Exits { get; set; }
+
+    /// <summary>The page's own controls, at the banner's bottom right (Play's phone controls row).</summary>
+    [Parameter] public RenderFragment? BottomActions { get; set; }
 
     [Parameter] public bool Minimised { get; set; }
     [Parameter] public EventCallback<bool> MinimisedChanged { get; set; }
