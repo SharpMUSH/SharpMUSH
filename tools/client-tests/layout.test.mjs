@@ -263,3 +263,43 @@ test('a click outside a mention does nothing, and undelegating removes the liste
     assert.equal(element.listeners.has('click'), false);
     assert.deepEqual(calls, []);
 });
+
+test('the short-screen watch reports the screen now and on every turn, and stops when unwatched', () => {
+    const queries = [];
+    const context = vm.createContext({
+        window: {
+            matchMedia: media => {
+                const listeners = new Set();
+                const query = {
+                    media,
+                    matches: true,
+                    addEventListener: (name, handler) => { assert.equal(name, 'change'); listeners.add(handler); },
+                    removeEventListener: (name, handler) => listeners.delete(handler),
+                    fire: matches => listeners.forEach(handler => handler({ matches })),
+                    listeners
+                };
+                queries.push(query);
+                return query;
+            }
+        },
+        document: { addEventListener: () => { } },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    const layout = context.window.sharpmushLayout;
+    const calls = [];
+    const ref = { invokeMethodAsync: (name, value) => { calls.push([name, value]); return Promise.resolve(); } };
+
+    assert.equal(layout.watchShortScreen(ref), true);
+    assert.equal(queries[0].media, '(orientation: landscape) and (max-height: 32rem)');
+    queries[0].fire(false);
+    assert.deepEqual(calls, [['OnShortScreenChanged', false]]);
+
+    // Watching again replaces the first watch rather than adding a second listener.
+    layout.watchShortScreen(ref);
+    assert.equal(queries[0].listeners.size, 0);
+    layout.unwatchShortScreen();
+    assert.equal(queries[1].listeners.size, 0);
+    queries[1].fire(true);
+    assert.equal(calls.length, 1);
+});

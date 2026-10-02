@@ -427,6 +427,39 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner" && (string?)a[1] == "min")).IsTrue();
 	}
 
+	[Test]
+	public async Task OnAShortScreen_TheBannerStartsAsTheStrip_AndOpeningItIsNotRemembered()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-strip"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0);
+
+		cut.Find("button.kit-banner-restore").Click();
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
+		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
+		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner")).IsFalse()
+			.Because("a choice made on a sideways phone must not change the banner on a taller screen");
+	}
+
+	[Test]
+	public async Task TurningTheScreen_PutsTheBannerBackToItsDefaultForThatScreen()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-strip"), TimeSpan.FromSeconds(5));
+		cut.Find("button.kit-banner-restore").Click();
+		var page = cut.FindComponent<PlayPage>();
+
+		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(false));
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("upright, the stored choice (open) applies");
+
+		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(true));
+		await Assert.That(cut.FindAll(".kit-banner-strip").Count).IsEqualTo(1).Because("each turn to the short screen starts from the strip");
+	}
+
 	private sealed class PlayApi : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

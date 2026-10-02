@@ -20,7 +20,7 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
 
@@ -74,7 +74,7 @@ else
                 @if (!_focus)
                 {
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                Minimised="@_bannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
+                                Minimised="@BannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
                 }
                 @if (_commKey is { } commKey)
                 {
@@ -221,6 +221,21 @@ else
 
     private bool _focus;
     private bool _bannerMinimised;
+
+    /// <summary>A phone held sideways (layout.js shortScreenQuery): the banner starts as its strip.</summary>
+    private bool _shortScreen;
+
+    /// <summary>The player opened the full banner on the short screen; dropped on the next rotation.</summary>
+    private bool _shortScreenBannerOpen;
+
+    private DotNetObjectReference<Play>? _self;
+
+    /// <summary>
+    /// On a short screen the strip is the default, whatever the stored choice: the full banner would take
+    /// most of the height the terminal needs. Restoring it there lasts until the screen turns, and is not
+    /// remembered, so it does not change the banner on a taller screen.
+    /// </summary>
+    private bool BannerMinimised => _shortScreen ? !_shortScreenBannerOpen : _bannerMinimised;
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
@@ -359,8 +374,28 @@ else
             changed |= !_bannerMinimised;
             _bannerMinimised = true;
         }
+        _self = DotNetObjectReference.Create(this);
+        try
+        {
+            var shortScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchShortScreen", _self);
+            changed |= shortScreen != _shortScreen;
+            _shortScreen = shortScreen;
+        }
+        catch (JSException)
+        {
+            // No layout script (prerender, tests): the banner follows the stored choice.
+        }
         if (changed) StateHasChanged();
     }
+
+    /// <summary>The screen turned into or out of the short tier (layout.js watchShortScreen).</summary>
+    [JSInvokable]
+    public Task OnShortScreenChanged(bool shortScreen) => InvokeAsync(() =>
+    {
+        _shortScreen = shortScreen;
+        _shortScreenBannerOpen = false;
+        StateHasChanged();
+    });
 
     private async Task OnColsChanged(ChangeEventArgs e)
     {
@@ -372,6 +407,11 @@ else
 
     private async Task OnBannerMinimisedAsync(bool minimised)
     {
+        if (_shortScreen)
+        {
+            _shortScreenBannerOpen = !minimised;
+            return;
+        }
         _bannerMinimised = minimised;
         await JS.SetItemAsync(BrowserStore.Local, BannerKey, minimised ? "min" : "open");
     }
@@ -627,11 +667,21 @@ else
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         Layouts.OnLayoutChanged -= OnLayoutChanged;
         PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
         Comms.Changed -= OnCommsChanged;
+        if (_self is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException)
+        {
+            // The page is going away; so is the listener's reason to call it.
+        }
+        _self.Dispose();
     }
 }

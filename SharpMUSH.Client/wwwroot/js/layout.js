@@ -110,6 +110,35 @@ window.sharpmushLayout = {
 		this._exitKeys = null;
 	},
 
+	// Play's short screen: a phone held sideways. The room banner starts as its 48px strip there, because
+	// the full banner would take most of the height the terminal needs. Returns whether it matches now
+	// and calls OnShortScreenChanged on the page whenever that changes (a rotation).
+	shortScreenQuery: '(orientation: landscape) and (max-height: 32rem)',
+
+	watchShortScreen: function (dotnetRef) {
+		this.unwatchShortScreen();
+		const query = window.matchMedia(this.shortScreenQuery);
+		const handler = event => {
+			const pending = dotnetRef.invokeMethodAsync('OnShortScreenChanged', event.matches);
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		if (typeof query.addEventListener === 'function') {
+			query.addEventListener('change', handler);
+		}
+		this._shortScreen = { query, handler };
+		return query.matches;
+	},
+
+	unwatchShortScreen: function () {
+		const watch = this._shortScreen;
+		this._shortScreen = null;
+		if (watch && typeof watch.query.removeEventListener === 'function') {
+			watch.query.removeEventListener('change', watch.handler);
+		}
+	},
+
 	// Play's composer: Enter sends and Shift+Enter is a new line. Decided here, per key, because Blazor
 	// decides preventDefault when it renders and would swallow the key after the one that sent. An Enter
 	// that ends an IME composition belongs to the composition; Safari sends that Enter after compositionend,
