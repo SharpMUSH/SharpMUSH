@@ -188,6 +188,18 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AGuest_IsNamedByTheirRowInTheRoomsContents()
+	{
+		// The server picks a guest's character, so the terminal never learns the name it connected as.
+		_play.ConnectedPlayerName.Returns((string?)null);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I");
+	}
+
+	[Test]
 	public async Task TheViewersPicture_IsTheirRowInTheRoomsContents()
 	{
 		var cut = RenderPlay();
@@ -476,16 +488,21 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnAShortScreen_TheBannerStartsAsTheStrip_AndOpeningItIsNotRemembered()
+	public async Task OnAShortScreen_TheBannerFoldsIntoTheCardHeader_AndOpeningItIsNotRemembered()
 	{
 		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
-		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".kit-banner-strip"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0);
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-banner-show"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("one header row, not a strip over a header");
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks").Because("the header names the room instead");
 
-		cut.Find("button.kit-banner-restore").Click();
+		cut.Find("button.play-banner-show").Click();
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
+		await Assert.That(cut.FindAll("button.play-banner-show").Count).IsEqualTo(0);
+		cut.Find("button.kit-banner-minimise").Click();
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising folds it back into the header");
+
 		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
 		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner")).IsFalse()
 			.Because("a choice made on a sideways phone must not change the banner on a taller screen");
@@ -497,15 +514,16 @@ public class PlayPageD1Tests : TrackingBunitContext
 		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".kit-banner-strip"), TimeSpan.FromSeconds(5));
-		cut.Find("button.kit-banner-restore").Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-banner-show"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-banner-show").Click();
 		var page = cut.FindComponent<PlayPage>();
 
 		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(false));
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("upright, the stored choice (open) applies");
 
 		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(true));
-		await Assert.That(cut.FindAll(".kit-banner-strip").Count).IsEqualTo(1).Because("each turn to the short screen starts from the strip");
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn to the short screen folds it again");
+		await Assert.That(cut.FindAll("button.play-banner-show").Count).IsEqualTo(1);
 	}
 
 	private sealed class PlayApi : HttpMessageHandler

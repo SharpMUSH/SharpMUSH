@@ -110,3 +110,22 @@
 	flex-shrink: 0;
 	padding: 0 12px 12px;
 }
+
+/* Narrow: the avatar, the switch and three 36px buttons do not fit one row on a 320–360px phone, and
+   the title would collapse to nothing. The switch takes a row of its own under the titles, full width. */
+@container page (max-width: 48rem) {
+	.scene-card-head {
+		flex-wrap: wrap;
+		gap: 8px;
+		row-gap: 8px;
+	}
+
+	.scene-card-switch {
+		order: 1;
+		flex-basis: 100%;
+	}
+
+	.scene-card-radio {
+		flex: 1;
+	}
+}

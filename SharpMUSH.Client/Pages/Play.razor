@@ -71,7 +71,7 @@ else
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-bleed full-height @(_focus ? "play--focus" : null)">
             <div class="play-main">
-                @if (!_focus)
+                @if (BannerShown)
                 {
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
                                 Minimised="@BannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
@@ -90,6 +90,13 @@ else
                             @if (View == PlayView.Terminal)
                             {
                                 @TerminalSettings
+                            }
+                            @if (BannerFolded)
+                            {
+                                <button type="button" class="play-conn play-banner-show" aria-label="@Loc["NavBannerRestore"]" title="@Loc["NavBannerRestore"]"
+                                        @onclick="() => _shortScreenBannerOpen = true">
+                                    <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
+                                </button>
                             }
                             @ConnectionControl
                         </Controls>
@@ -230,14 +237,22 @@ else
     /// <summary>The player opened the full banner on the short screen; dropped on the next rotation.</summary>
     private bool _shortScreenBannerOpen;
 
+    /// <summary>
+    /// On a short screen the banner folds into the card header, which names the room and offers the full
+    /// banner: one header row instead of a strip over a header.
+    /// </summary>
+    private bool BannerFolded => _shortScreen && !_shortScreenBannerOpen && !_focus;
+
+    private bool BannerShown => !_focus && !BannerFolded;
+
     private DotNetObjectReference<Play>? _self;
 
     /// <summary>
-    /// On a short screen the strip is the default, whatever the stored choice: the full banner would take
-    /// most of the height the terminal needs. Restoring it there lasts until the screen turns, and is not
+    /// On a short screen the banner is folded into the card header unless the player opened it, and then it
+    /// is the full banner: its minimise folds it again. That choice lasts until the screen turns and is not
     /// remembered, so it does not change the banner on a taller screen.
     /// </summary>
-    private bool BannerMinimised => _shortScreen ? !_shortScreenBannerOpen : _bannerMinimised;
+    private bool BannerMinimised => !_shortScreen && _bannerMinimised;
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
@@ -301,18 +316,24 @@ else
     /// </summary>
     private string ViewerName =>
         PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
+        : SelfRow?.Name is { Length: > 0 } self ? self
         : AccountAuth.ActiveCharacter?.Name is { Length: > 0 } active ? active
         : Loc["TermNotLoggedIn"];
+
+    /// <summary>
+    /// The viewer's row in the room's contents while connected. It names a guest, whose character the
+    /// server chooses, so nothing on the client knows it otherwise.
+    /// </summary>
+    private RoomOccupant? SelfRow => PlayTerminal.IsConnected ? Room.Occupants.FirstOrDefault(o => o.You) : null;
 
     /// <summary>The scene's title in a scene; outside one, the room's name only while no banner shows it.</summary>
     private string? CardSubtitle =>
         Room.Info?.Scene?.Title is { Length: > 0 } scene ? scene
-        : _focus ? Room.Info?.Name
-        : null;
+        : BannerShown ? null
+        : Room.Info?.Name;
 
     /// <summary>The viewer's own picture from the room's contents (the row marked as them).</summary>
-    private ImageRef? ViewerImage =>
-        PlayTerminal.IsConnected ? Room.Occupants.FirstOrDefault(o => o.You)?.Image : null;
+    private ImageRef? ViewerImage => SelfRow?.Image;
 
     /// <summary>A small avatar with a connection dot: the picture, else the name's initial on its hue.</summary>
     private RenderFragment ViewerAvatar => __builder =>

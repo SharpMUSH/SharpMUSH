@@ -180,6 +180,10 @@
     color: var(--warn);
 }
 
+.play-banner-show:hover {
+    color: var(--text);
+}
+
 .play-conn--connect {
     padding: 0 14px;
     background: var(--accent);
