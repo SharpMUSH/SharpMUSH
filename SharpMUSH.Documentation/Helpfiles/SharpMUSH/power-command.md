@@ -43,7 +43,7 @@ God can add, delete, and otherwise manipulate power definitions. See help @power
 
 `@power/add <power>=<alias>`<br>
 `@power/delete <power>`<br>
-`@power/alias <power>=<alias>`<br>
+`@power/alias <power>=<alias list>`<br>
 `@power/letter <power>[=<letter>]`<br>
 `@power/restrict <power>=<permissions>`<br>
 `@power/type <power>=<type(s)>`<br>
@@ -54,7 +54,7 @@ God can add, delete, and otherwise manipulate power definitions. See help @power
 These commands manipulate power definitions. Only God may use them, with the exception of `/decompile`, which only reads.
 - /disable disables a power, making it invisible and unusable
 - /enable re-enables a disabled power
-- /alias replaces the alias of an existing power
+- /alias replaces the aliases of an existing power with the space- or comma-separated list given; an empty list clears them. Like PennMUSH, the standard powers answer to PennMUSH's aliases for them: `tel_anywhere` for Tport_Anywhere, `@wall` and `wall` for Announce
 - /letter changes or removes the single-letter abbreviation of an existing power (see below)
 - /restrict changes power permissions (see help @power registry behavior)
 - /type changes power type(s) (see help @power registry behavior)

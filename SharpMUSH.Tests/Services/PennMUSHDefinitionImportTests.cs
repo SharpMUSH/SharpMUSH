@@ -103,8 +103,8 @@ public class PennMUSHDefinitionImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.Warnings.Where(w => w.Contains("attribute alias"))).IsEmpty()
 			.Because("the source's table aliases only DESC, SUCC and the like, which SharpMUSH reads through");
-		await Assert.That(result.Warnings.Any(w => w.Contains("ON_VACATION") && w.Contains("VACATION"))).IsTrue()
-			.Because("SharpMUSH's ON_VACATION does not answer to the source's VACATION");
+		await Assert.That(result.Warnings.Where(w => w.Contains("does not answer to"))).IsEmpty()
+			.Because("SharpMUSH's flags and powers answer to every alias a stock PennMUSH table gives them (#1508)");
 		await Assert.That(result.Warnings.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
 	}
 
@@ -178,8 +178,8 @@ public class PennMUSHDefinitionImportTests
 	}
 
 	/// <summary>
-	/// A power arrives with one alias, which is all SharpMUSH gives it; the rest are reported. So is a
-	/// standard attribute's default value and a default flag SharpMUSH does not know.
+	/// A power arrives with every alias the source gives it, as a flag does. A standard attribute's default value
+	/// and a default flag SharpMUSH does not know have no place here, and are reported.
 	/// </summary>
 	[Test]
 	public async Task SemanticsSharpMUSHHasNoPlaceForAreReportedRatherThanGuessedAt()
@@ -188,8 +188,9 @@ public class PennMUSHDefinitionImportTests
 		var result = await ImportAsync(world, CustomFixture());
 
 		var power = await world.Mediator.Send(new GetPowerQuery("Oracle_Sight"));
-		await Assert.That(power!.Alias).IsEqualTo("osight");
-		await Assert.That(result.Warnings.Any(w => w.Contains("Oracle_Sight") && w.Contains("oracle_see"))).IsTrue();
+		await Assert.That(power!.Aliases).IsEquivalentTo(["osight", "oracle_see"]);
+		await Assert.That(result.Warnings.Any(w => w.Contains("Oracle_Sight"))).IsFalse()
+			.Because("nothing of the power is left behind");
 
 		var note = await AttributeEntryAsync(world, "ORACLE_NOTE");
 		await Assert.That(note).IsNotNull();

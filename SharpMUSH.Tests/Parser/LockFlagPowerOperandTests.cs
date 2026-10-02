@@ -61,7 +61,7 @@ public class LockFlagPowerOperandTests
 		new()
 		{
 			Name = name,
-			Alias = alias,
+			Aliases = alias.Length == 0 ? [] : [alias],
 			System = true,
 			SetPermissions = [],
 			UnsetPermissions = [],

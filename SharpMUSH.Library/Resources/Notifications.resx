@@ -1223,11 +1223,11 @@
   <data name="FailedToDeletePowerFormat" xml:space="preserve">
     <value>Failed to delete power '{0}'.</value>
   </data>
-  <data name="PowerAliasRequiresNameAndAlias" xml:space="preserve">
-    <value>@POWER/ALIAS requires power name and new alias.</value>
+  <data name="PowerAliasRequiresNameAndAliases" xml:space="preserve">
+    <value>@POWER/ALIAS requires power name and aliases.</value>
   </data>
-  <data name="PowerAliasChangedFormat" xml:space="preserve">
-    <value>Power '{0}' alias changed to '{1}'.</value>
+  <data name="PowerAliasesSetFormat" xml:space="preserve">
+    <value>Power '{0}' aliases set to: {1}.</value>
   </data>
   <data name="PowerAliasConflictFormat" xml:space="preserve">
     <value>That alias already matches the {0} power.</value>

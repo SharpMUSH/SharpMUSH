@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record CreatePowerCommand(
 	string Name,
-	string Alias,
+	string[] Aliases,
 	string Symbol,
 	bool System,
 	string[] SetPermissions,

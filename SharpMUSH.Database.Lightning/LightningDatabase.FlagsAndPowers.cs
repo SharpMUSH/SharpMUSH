@@ -163,14 +163,14 @@ public partial class LightningDatabase
 		}
 	}
 
-	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, string symbol, bool system,
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string[] aliases, string symbol, bool system,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 	{
 		var record = new PowerRecord
 		{
 			Name = name.ToUpperInvariant(),
-			Alias = alias,
+			Aliases = aliases,
 			Symbol = symbol,
 			SetPermissions = setPermissions,
 			UnsetPermissions = unsetPermissions,
@@ -230,7 +230,7 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
-	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol,
+	public async ValueTask<bool> UpdatePowerAsync(string name, string[] aliases, string symbol,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx =>
@@ -242,7 +242,8 @@ public partial class LightningDatabase
 
 			tx.Put(Tables.Power, key, Codec.Serialize(existing with
 			{
-				Alias = alias,
+				Alias = string.Empty,
+				Aliases = aliases,
 				Symbol = symbol,
 				SetPermissions = setPermissions,
 				UnsetPermissions = unsetPermissions,
@@ -338,7 +339,7 @@ public partial class LightningDatabase
 		Name = record.Name,
 		System = record.System,
 		Disabled = record.Disabled,
-		Alias = record.Alias,
+		Aliases = record.AllAliases,
 		Symbol = record.Symbol,
 		SetPermissions = record.SetPermissions,
 		UnsetPermissions = record.UnsetPermissions,

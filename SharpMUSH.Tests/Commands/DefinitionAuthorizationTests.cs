@@ -57,7 +57,7 @@ public class DefinitionAuthorizationTests
 	private async Task Create(string kind, string name)
 	{
 		if (kind == "flag") await Mediator.Send(new CreateObjectFlagCommand(name, [name + "_ORIGINAL"], DefinitionSymbol, false, ["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"]));
-		else await Mediator.Send(new CreatePowerCommand(name, name + "_ORIGINAL", DefinitionSymbol, false, ["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"]));
+		else await Mediator.Send(new CreatePowerCommand(name, [name + "_ORIGINAL"], DefinitionSymbol, false, ["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"]));
 	}
 	private async Task Delete(string kind, string name)
 	{
@@ -86,7 +86,7 @@ public class DefinitionAuthorizationTests
 			}
 			else
 			{
-				await Assert.That(await Mediator.Send(new CreatePowerCommand(name, "REPLACED", "X", true, [], [], []))).IsNull();
+				await Assert.That(await Mediator.Send(new CreatePowerCommand(name, ["REPLACED"], "X", true, [], [], []))).IsNull();
 				var listed = await Mediator.CreateStream(new GetPowersQuery()).Where(power => power.Name == name).ToArrayAsync();
 				await Assert.That(listed).HasSingleItem();
 				await Assert.That(JsonSerializer.Serialize(listed[0])).IsEqualTo(before);
@@ -127,7 +127,7 @@ public class DefinitionAuthorizationTests
 			else
 			{
 				var power = await Mediator.Send(new GetPowerQuery(name));
-				await Assert.That(power!.Alias).IsEqualTo(alias);
+				await Assert.That(power!.Aliases).IsEquivalentTo([alias]);
 				await Assert.That(power.Symbol).IsEqualTo(DefinitionSymbol);
 			}
 		}
@@ -264,10 +264,10 @@ public class DefinitionAuthorizationTests
 		var name = "AUTH" + Guid.NewGuid().ToString("N").ToUpperInvariant();
 		try
 		{
-			await Mediator.Send(new CreatePowerCommand(name, "ORIGINAL", DefinitionSymbol, false, ["FLAG^ROYALTY"], ["FLAG^WIZARD"], ["THING"]));
+			await Mediator.Send(new CreatePowerCommand(name, ["ORIGINAL"], DefinitionSymbol, false, ["FLAG^ROYALTY"], ["FLAG^WIZARD"], ["THING"]));
 			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@power/add {name}=REPLACEMENT"));
 			var stored = await Mediator.Send(new GetPowerQuery(name));
-			await Assert.That(stored!.Alias).IsEqualTo("ORIGINAL");
+			await Assert.That(stored!.Aliases).IsEquivalentTo(["ORIGINAL"]);
 			await Assert.That(stored.Symbol).IsEqualTo(DefinitionSymbol);
 			await Assert.That(stored.TypeRestrictions).IsEquivalentTo(["THING"]);
 			await Assert.That(Factory.Notifications.For(new DBRef(1)).Where(message => message.Contains(name)))
