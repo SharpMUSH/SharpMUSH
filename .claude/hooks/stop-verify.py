@@ -63,8 +63,9 @@ GLOBAL_INPUTS = {
 CLIENT_TEST_INPUTS = ("SharpMUSH.Client/wwwroot/", "tools/client-tests/")
 
 # Test projects that start Testcontainers. Without a Docker daemon they cannot pass, which says
-# nothing about the change, so they are left to CI.
-NEEDS_DOCKER = {"SharpMUSH.Tests.Integration"}
+# nothing about the change, so they are left to CI. SharpMUSH.Tests starts them through
+# Tests.Infrastructure (DockerNetwork, the server and connection-server factories).
+NEEDS_DOCKER = {"SharpMUSH.Tests", "SharpMUSH.Tests.Integration"}
 
 # Background commands that produce a verdict the agent must read. Servers and watchers are
 # deliberately not listed: an agent may leave those running on purpose. Anchored to the
