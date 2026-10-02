@@ -228,6 +228,7 @@ public class AccountPanelTests : TrackingBunitContext
 		// Play merges the touch header into its card header; the drawer then holds the header's other buttons.
 		var calls = new List<string>();
 		var cut = RenderNavMenuAnonymous(isCollapsed: false, nm => nm
+			.Add(c => c.ShowTools, true)
 			.Add(c => c.OnSectionMenu, () => calls.Add("section"))
 			.Add(c => c.OnSearch, () => calls.Add("search"))
 			.Add(c => c.OnToggleTerminal, () => calls.Add("terminal")));
@@ -236,6 +237,13 @@ public class AccountPanelTests : TrackingBunitContext
 		cut.Find(".phosphor-drawer-tools button[aria-pressed]").Click();
 		await Assert.That(calls).IsEquivalentTo(new[] { "section", "search", "terminal" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll(".phosphor-drawer-tools .phosphor-lang").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TheDrawersToolsRow_IsNotRendered_OffPlay()
+	{
+		var cut = RenderNavMenuAnonymous(isCollapsed: false);
+		await Assert.That(cut.FindAll(".phosphor-drawer-tools").Count).IsEqualTo(0).Because("only Play merges the header away");
 	}
 
 	// ── Card wiring (real NavMenu) ──────────────────────────────────────────────────────────
