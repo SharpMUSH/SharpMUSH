@@ -4068,6 +4068,9 @@
     <value>Все още няма редактирани страници.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Страницата не можа да се зареди. Играта може да се рестартира; ще бъде опитано отново автоматично.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Тази страница още не съществува. Можете да я създадете с бутона по-долу.</value>
     <comment>MT — polite Вие-form</comment>

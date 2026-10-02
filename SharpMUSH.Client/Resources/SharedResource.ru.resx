@@ -4068,6 +4068,9 @@
     <value>Пока ни одна страница не изменялась.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить страницу. Возможно, игра перезапускается; попытка повторится автоматически.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Этой страницы пока не существует. вы можете создать её, нажав кнопку ниже.</value>
     <comment>MT — formal вы, lower case per locale sheet.</comment>

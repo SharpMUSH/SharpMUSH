@@ -4068,6 +4068,9 @@
     <value>Es wurden noch keine Seiten bearbeitet.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Diese Seite konnte nicht geladen werden. Das Spiel startet vielleicht neu; es wird automatisch erneut versucht.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Diese Seite existiert noch nicht. Sie können sie über die Schaltfläche unten erstellen.</value>
     <comment>MT</comment>

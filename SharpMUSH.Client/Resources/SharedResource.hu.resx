@@ -4068,6 +4068,9 @@
     <value>Még egyetlen oldalt sem szerkesztettek.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Az oldalt nem sikerült betölteni. Lehet, hogy a játék újraindul; magától újra megpróbálja.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Ez az oldal még nem létezik. Az alábbi gombra kattintva létrehozhatja.</value>
     <comment>MT</comment>

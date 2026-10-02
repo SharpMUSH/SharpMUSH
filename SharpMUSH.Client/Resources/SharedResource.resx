@@ -198,6 +198,9 @@
   <!-- ======================== -->
   <!-- WikiDisplay.razor        -->
   <!-- ======================== -->
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>This page could not be loaded. The game may be restarting; it will try again on its own.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>This page does not exist yet. You can create it by clicking the button below.</value>
   </data>

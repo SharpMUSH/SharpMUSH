@@ -124,6 +124,21 @@ file sealed class ScenesFailHandler : HttpMessageHandler
 			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) });
 }
 
+/// <summary>Fails the roster until <see cref="Up"/> is set, as a game that is restarting does.</summary>
+file sealed class RosterRecoversHandler : HttpMessageHandler
+{
+	private record Row(string Name, string Objid, long Created, string Category);
+
+	public bool Up { get; set; }
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(request.RequestUri!.AbsolutePath == "/http/characters" && !Up
+			? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+			: request.RequestUri!.AbsolutePath == "/http/characters"
+				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { new Row("Ada", "#10:1000", 1000, "") }) }
+				: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) });
+}
+
 /// <summary>
 /// The "Players Online" tile must report who is connected — as people, one per character — rather
 /// than the size of the character roster or the number of open connections. And no tile may state
@@ -251,5 +266,26 @@ public class StatsWidgetTests : TrackingBunitContext
 
 		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("—");
 		await Assert.That(cut.Markup).Contains("WidUnavailable");
+	}
+
+	/// <summary>A count that failed is asked for again, so the tile fills in once the game is back.</summary>
+	[TUnit.Core.Test]
+	public async Task AFailedCount_IsAskedForAgain_AndFillsInOnceTheGameAnswers()
+	{
+		var handler = new RosterRecoversHandler();
+		Wire(this, handler);
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (TileValue(cut.Markup, "WidPlayersOnline") == "—") throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(TileValue(cut.Markup, "Characters")).IsEqualTo("—");
+
+		handler.Up = true;
+		cut.WaitForAssertion(() =>
+		{
+			if (TileValue(cut.Markup, "Characters") != "1") throw new InvalidOperationException("roster not read again yet");
+		}, TimeSpan.FromSeconds(10));
 	}
 }

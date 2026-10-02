@@ -4068,6 +4068,9 @@
     <value>Nijedna stranica još nije uređena.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Stranicu nije bilo moguće učitati. Igra se možda ponovno pokreće; pokušat će se ponovno samo od sebe.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Ova stranica još ne postoji. Možete je stvoriti klikom na gumb ispod.</value>
     <comment>MT</comment>

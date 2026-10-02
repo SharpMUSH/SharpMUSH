@@ -13,8 +13,8 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// Client-side SignalR connection manager.  Builds a connection to /hubs/game,
 /// manages auto-reconnect (exponential back-off is applied inside
-/// <see cref="IGameHubConnectionFactory"/>), and surfaces received messages
-/// as events.
+/// <see cref="IGameHubConnectionFactory"/>), starts a new connection when a start fails or a connection
+/// closes (a game restart can outlast both), and surfaces received messages as events.
 /// </summary>
 public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IAsyncDisposable
 {
@@ -30,6 +30,16 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private readonly HashSet<string> _joinedScenes = new(StringComparer.Ordinal);
 	private SignalRState _innerState = SignalRState.Disconnected;
 	private readonly List<IDisposable> _subscriptions = [];
+	// A connection was asked for and not given up on purpose (DisconnectAsync). While it holds, a start that
+	// fails or a connection that closes is tried again, so a game that restarts does not leave the portal
+	// without a hub until someone happens to ask for one.
+	private bool _wanted;
+	private CancellationTokenSource? _retry;
+
+	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
+	/// repeats. Settable for tests.</summary>
+	public IReadOnlyList<TimeSpan> RetryDelays { get; set; } =
+		[TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30)];
 
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
@@ -56,7 +66,13 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public LibraryState ConnectionState => MapState(_innerState);
 
 	/// <inheritdoc/>
-	public async Task ConnectAsync()
+	public Task ConnectAsync()
+	{
+		_wanted = true;
+		return StartHubAsync();
+	}
+
+	private async Task StartHubAsync()
 	{
 		if (_hub is not null)
 		{
@@ -91,6 +107,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			_logger.LogWarning(ex, "[ConnectionStateService] Hub closed");
 			SetState(SignalRState.Disconnected);
+			// Not a DisconnectAsync (that clears _wanted first): the connection gave up on its own. Start a new
+			// one, which the retry does after disposing this one outside its own callback.
+			RetryLater();
 			return Task.CompletedTask;
 		};
 
@@ -122,42 +141,51 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (hub state)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 		catch (HubException ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (hub error)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 		catch (HttpRequestException ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (network)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 		catch (TaskCanceledException ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (cancelled)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 		catch (OperationCanceledException ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (operation cancelled)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed with unexpected exception");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
+			RetryLater();
 		}
 	}
 
 	/// <inheritdoc/>
 	public async Task DisconnectAsync()
 	{
+		_wanted = false;
+		_retry?.Cancel();
+		_retry = null;
 		if (_hub is null) return;
 
 		try
@@ -193,6 +221,44 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 
 		await DisconnectAsync();
 		await ConnectAsync();
+	}
+
+	/// <summary>
+	/// Starts the retry loop, unless one is running or nobody wants a connection: wait, then start a new hub,
+	/// until one connects or <see cref="DisconnectAsync"/> says to stop.
+	/// </summary>
+	private void RetryLater()
+	{
+		if (!_wanted || _retry is not null) return;
+		_retry = new CancellationTokenSource();
+		_ = RetryAsync(_retry);
+	}
+
+	private async Task RetryAsync(CancellationTokenSource retry)
+	{
+		try
+		{
+			for (var attempt = 0; !retry.IsCancellationRequested; attempt++)
+			{
+				await Task.Delay(RetryDelays[Math.Min(attempt, RetryDelays.Count - 1)], retry.Token);
+				if (!_wanted || IsConnected) return;
+				// SignalR's own reconnect is still going: leave it be.
+				if (_hub?.State is SignalRState.Reconnecting or SignalRState.Connecting) continue;
+				// A hub that closed is spent; a new one replaces it.
+				if (_hub is not null) await DisposeHubAsync();
+				await StartHubAsync();
+				if (IsConnected) return;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// DisconnectAsync stopped it.
+		}
+		finally
+		{
+			if (ReferenceEquals(_retry, retry)) _retry = null;
+			retry.Dispose();
+		}
 	}
 
 	/// <inheritdoc/>
@@ -258,10 +324,16 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		if (IsSceneLive) return;
 		if (!IsConnected)
 		{
-			// The scene connection rides the game connection's lifecycle; this opens both.
-			await ReconnectAsync();
+			// A connection SignalR is still bringing back, or one the retry loop is about to replace, is left
+			// to them: stopping it here would end SignalR's reconnect for good.
+			if (_hub?.State is SignalRState.Reconnecting or SignalRState.Connecting || _retry is not null) return;
+			// Nothing is trying: open both connections (the scene one rides the game one's lifecycle).
+			if (_hub is not null) await DisposeHubAsync();
+			await ConnectAsync();
 			return;
 		}
+		// The scene connection is coming back on its own.
+		if (_sceneHub?.State is SignalRState.Reconnecting or SignalRState.Connecting) return;
 		// The game connection is up but the scene one is not (it failed to start, or gave up reconnecting).
 		if (_sceneHub is { } dead)
 		{

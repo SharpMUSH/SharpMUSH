@@ -4068,6 +4068,9 @@
     <value>Er zijn nog geen pagina's bewerkt.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Deze pagina kon niet worden geladen. Het spel start misschien opnieuw; er wordt vanzelf opnieuw geprobeerd.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Deze pagina bestaat nog niet. Je kunt hem aanmaken via de knop hieronder.</value>
     <comment>MT</comment>

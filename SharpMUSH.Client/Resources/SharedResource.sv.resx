@@ -4068,6 +4068,9 @@
     <value>Inga sidor har redigerats än.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Sidan kunde inte läsas in. Spelet startar kanske om; det försöks igen av sig självt.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Den här sidan finns inte än. Du kan skapa den genom att klicka på knappen nedan.</value>
     <comment>MT</comment>

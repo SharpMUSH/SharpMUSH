@@ -36,6 +36,7 @@
     private int? _activeScenes;
 
     /// <summary>Which counts failed to load, so their dash can be explained rather than left ambiguous.</summary>
+    private bool _recentFailed;
     private bool _charactersFailed;
     private bool _onlineFailed;
     private bool _activeScenesFailed;
@@ -47,7 +48,7 @@
     [
         ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed),
         .. (_scenesOn ? [("WidActiveScenes", _activeScenes?.ToString() ?? "—", _activeScenesFailed)] : Array.Empty<(string, string, bool)>()),
-        ("RecentChanges",    _recent?.ToString() ?? "—", false),
+        ("RecentChanges",    _recent?.ToString() ?? "—", _recentFailed),
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
 
@@ -61,31 +62,78 @@
     {
         _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadActiveScenesAsync(); StateHasChanged(); }), SceneService);
 
-        // AsTask() up front, once: these return ValueTask, which may be consumed only once, and
-        // both WhenAll and the reads below need to await them. Converting at the call site keeps
-        // each result awaitable twice regardless of how the services back their ValueTask.
-        var recentTask = WikiService.GetRecentChangesAsync(10).AsTask();
-        var charsTask = CharacterDirectory.ListAsync();
-        var onlineTask = CharacterDirectory.ListOnlineAsync();
-        var scenesTask = LoadActiveScenesAsync();
         var scenesOnTask = ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
-        await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask, scenesOnTask);
-
+        await Task.WhenAll(LoadRecentAsync(), LoadCharactersAsync(), LoadOnlineAsync(), LoadActiveScenesAsync(), scenesOnTask);
         _scenesOn = await scenesOnTask;
+        if (AnyFailed) StartRetrying();
+    }
 
-        _recent = (await recentTask).Count;
+    private bool AnyFailed => _recentFailed || _charactersFailed || _onlineFailed || (_scenesOn && _activeScenesFailed);
 
-        // A tile that could not be fetched keeps the loading placeholder instead of printing 0:
-        // "the game has no characters" and "the request never arrived" look identical as a count,
-        // and only one of them is something the portal actually knows.
-        _characters = await charsTask is IReadOnlyList<CharacterDirectoryService.CharacterSummary> characters
+    // A tile that could not be fetched keeps the loading placeholder instead of printing 0:
+    // "the game has no characters" and "the request never arrived" look identical as a count,
+    // and only one of them is something the portal actually knows.
+    private async Task LoadRecentAsync()
+    {
+        _recent = await WikiService.GetRecentChangesResultAsync(10) is IReadOnlyList<WikiPageSummary> recent ? recent.Count : null;
+        _recentFailed = _recent is null;
+    }
+
+    private async Task LoadCharactersAsync()
+    {
+        _characters = await CharacterDirectory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> characters
             ? characters.Count
             : null;
         _charactersFailed = _characters is null;
-        _online = await onlineTask is IReadOnlyList<CharacterDirectoryService.CharacterSummary> online
+    }
+
+    private async Task LoadOnlineAsync()
+    {
+        _online = await CharacterDirectory.ListOnlineAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> online
             ? online.Count
             : null;
         _onlineFailed = _online is null;
+    }
+
+    /// <summary>How long to wait before asking again for the counts that failed; the last delay repeats.</summary>
+    private static readonly TimeSpan[] RetryDelays =
+        [TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(30)];
+
+    private CancellationTokenSource? _retry;
+
+    /// <summary>
+    /// Asks again for the counts that failed (a game restarting answers nothing for a while), until all have
+    /// arrived, so the tiles do not keep their dashes after the game is back.
+    /// </summary>
+    private void StartRetrying()
+    {
+        if (_retry is not null) return;
+        _retry = new CancellationTokenSource();
+        _ = RetryAsync(_retry.Token);
+    }
+
+    private async Task RetryAsync(CancellationToken token)
+    {
+        for (var attempt = 0; AnyFailed; attempt++)
+        {
+            try
+            {
+                await Task.Delay(RetryDelays[Math.Min(attempt, RetryDelays.Length - 1)], token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            await InvokeAsync(async () =>
+            {
+                await Task.WhenAll(
+                    _recentFailed ? LoadRecentAsync() : Task.CompletedTask,
+                    _charactersFailed ? LoadCharactersAsync() : Task.CompletedTask,
+                    _onlineFailed ? LoadOnlineAsync() : Task.CompletedTask,
+                    _activeScenesFailed ? LoadActiveScenesAsync() : Task.CompletedTask);
+                StateHasChanged();
+            });
+        }
     }
 
     private Task LoadActiveScenesAsync() => _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
@@ -94,5 +142,10 @@
         _activeScenesFailed = _activeScenes is null;
     });
 
-    public void Dispose() => _reload.Dispose();
+    public void Dispose()
+    {
+        _retry?.Cancel();
+        _retry?.Dispose();
+        _reload.Dispose();
+    }
 }

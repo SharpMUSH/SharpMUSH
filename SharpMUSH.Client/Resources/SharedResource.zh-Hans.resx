@@ -4068,6 +4068,9 @@
     <value>还没有页面被编辑过。</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>无法加载此页面。游戏可能正在重启，稍后会自动重试。</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>此页面尚不存在。您可以点击下方按钮创建它。</value>
     <comment>MT</comment>

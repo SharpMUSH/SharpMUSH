@@ -16,7 +16,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>Concurrent reads of one recent-changes list (the stats tile and the activity widget) share a request.</summary>
 	private readonly SingleFlight<string, IReadOnlyList<WikiPageSummary>> _recentFlight = new();
 
-	public async ValueTask<Maybe<WikiArticle>> GetWikiArticle(
+	public async ValueTask<FoundResult<WikiArticle>> GetWikiArticle(
 		string slug, string? category = null, string? ns = null, string? lang = null)
 	{
 		try
@@ -24,16 +24,18 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			var http = httpClientFactory.CreateClient("api");
 			var url = $"api/wiki/ns/{Uri.EscapeDataString(ns ?? "main")}/{Uri.EscapeDataString(category ?? "general")}/{Uri.EscapeDataString(slug)}{LangQuery(lang, first: true)}";
 			var dto = await http.GetFromJsonAsync<WikiPageDto>(url);
-			return dto is null ? new None() : ToArticle(dto);
+			return dto is null ? new NotFound() : ToArticle(dto);
 		}
 		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
 		{
-			return new None();
+			return new NotFound();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetWikiArticle failed for slug={Slug} lang={Lang}", slug, lang);
-			return new None();
+			// Not "no such page": the server did not answer (a restart, a dropped connection) or answered
+			// wrongly. The page says so and offers to try again, rather than offering to create it.
+			logger.LogError(ex, "GetWikiArticle failed for slug={Slug} lang={Lang}", LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(lang ?? string.Empty));
+			return new Error<string>(ex.Message);
 		}
 	}
 

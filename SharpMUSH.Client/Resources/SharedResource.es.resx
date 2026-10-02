@@ -4068,6 +4068,9 @@
     <value>Todavía no se ha editado ninguna página.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>No se pudo cargar esta página. Puede que el juego se esté reiniciando; se volverá a intentar automáticamente.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Esta página aún no existe. Puede crearla con el botón de abajo.</value>
     <comment>MT</comment>

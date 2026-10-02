@@ -4068,6 +4068,9 @@
     <value>Żadna strona nie była jeszcze edytowana.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Nie udało się wczytać tej strony. Gra może się właśnie uruchamiać ponownie; nastąpi automatyczna ponowna próba.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Ta strona jeszcze nie istnieje. Możesz ją utworzyć, klikając przycisk poniżej.</value>
     <comment>MT</comment>

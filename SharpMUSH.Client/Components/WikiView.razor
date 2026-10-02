@@ -3,13 +3,24 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject WikiService Wiki
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 @if (_loading)
 {
     <WikiPageSkeleton />
+}
+else if (_loadFailed && Mode == WikiMode.View)
+{
+    @* The server did not answer (a restart, a dropped connection): not a missing page, so no offer to
+       create one. It tries again on its own and says so. *@
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2 wiki-load-failed">
+        <MudText>@Loc["WikiLoadFailed"]</MudText>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform:none;" OnClick="RetryNowAsync">@Loc["NavTryAgain"]</MudButton>
+    </MudAlert>
 }
 else if (Mode == WikiMode.View)
 {
@@ -228,11 +239,85 @@ else
         Mode = WikiMode.View;
     }
 
+    /// <summary>Set while the last read failed for want of an answer; cleared by one that succeeds.</summary>
+    private bool _loadFailed;
+    private CancellationTokenSource? _retry;
+
+    /// <summary>How long to wait between reads after one failed; the last delay repeats.</summary>
+    private static readonly TimeSpan[] RetryDelays =
+        [TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(30)];
+
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        _article = await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale) is WikiArticle article ? article : null;
+        if (!await LoadAsync()) StartRetrying();
+        _loading = false;
+        await base.OnInitializedAsync();
+    }
 
+    /// <summary>
+    /// Reads the page. False when the server did not answer: the view then says so and keeps asking, so a
+    /// game that restarts does not leave the page claiming it does not exist.
+    /// </summary>
+    private async Task<bool> LoadAsync()
+    {
+        switch (await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale))
+        {
+            case WikiArticle article:
+                _article = article;
+                break;
+            case NotFound:
+                _article = null;
+                break;
+            default:
+                _loadFailed = true;
+                return false;
+        }
+        _loadFailed = false;
+        await ShowLoadedAsync();
+        return true;
+    }
+
+    private void StartRetrying()
+    {
+        if (_retry is not null) return;
+        _retry = new CancellationTokenSource();
+        _ = RetryAsync(_retry.Token);
+    }
+
+    private async Task RetryAsync(CancellationToken token)
+    {
+        for (var attempt = 0; !token.IsCancellationRequested; attempt++)
+        {
+            try
+            {
+                await Task.Delay(RetryDelays[Math.Min(attempt, RetryDelays.Length - 1)], token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            if (!_loadFailed) return;
+            var loaded = false;
+            await InvokeAsync(async () =>
+            {
+                loaded = await LoadAsync();
+                if (loaded) StateHasChanged();
+            });
+            if (loaded) return;
+        }
+    }
+
+    private Task RetryNowAsync() => LoadAsync();
+
+    public void Dispose()
+    {
+        _retry?.Cancel();
+        _retry?.Dispose();
+    }
+
+    private async Task ShowLoadedAsync()
+    {
         if (_article is not null)
         {
             // The served locale is the source locale unless a translation won, in which case the source is
@@ -250,9 +335,7 @@ else
             _editDraft = BuildEditDraft();
         }
 
-        _loading = false;
         await OnLoaded.InvokeAsync(_article is not null);
         await OnArticle.InvokeAsync(_article);
-        await base.OnInitializedAsync();
     }
 }

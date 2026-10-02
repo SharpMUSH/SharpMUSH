@@ -4068,6 +4068,9 @@
     <value>Nicio pagină nu a fost editată încă.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Pagina nu a putut fi încărcată. Jocul poate reporni; se va încerca din nou automat.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Această pagină nu există încă. O puteți crea apăsând butonul de mai jos.</value>
     <comment>MT</comment>

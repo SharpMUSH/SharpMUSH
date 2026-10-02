@@ -4068,6 +4068,9 @@
     <value>Ingen sider er redigert ennå.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Siden kunne ikke lastes. Spillet starter kanskje på nytt; det prøves igjen av seg selv.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Denne siden finnes ikke ennå. Du kan opprette den ved å klikke på knappen nedenfor.</value>
     <comment>MT</comment>
