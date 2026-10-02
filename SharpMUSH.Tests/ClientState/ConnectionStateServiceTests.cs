@@ -243,4 +243,51 @@ public class ConnectionStateServiceTests
 		await hub.DidNotReceive().StopAsync(Arg.Any<CancellationToken>());
 		factory.Received(1).Create();
 	}
+
+	/// <summary>
+	/// The game connection came back, so the server is up: a scene connection still waiting out SignalR's
+	/// back-off is replaced at once, not left down until its next attempt up to 30 s later.
+	/// </summary>
+	[Test]
+	public async Task AReconnectedGameHub_BringsTheSceneFeedBackAtOnce()
+	{
+		var game = StubHub(() => Task.CompletedTask);
+		game.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var waiting = StubHub(() => Task.CompletedTask);
+		waiting.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var fresh = StubHub(() => Task.CompletedTask);
+		fresh.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(game);
+		factory.CreateScene().Returns(waiting, fresh);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+		await svc.ConnectAsync();
+		await Assert.That(svc.IsSceneLive).IsTrue();
+
+		waiting.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting);
+		game.Reconnected += Raise.Event<Func<string?, Task>>("connection-id");
+
+		await waiting.Received(1).DisposeAsync();
+		await fresh.Received(1).StartAsync(Arg.Any<CancellationToken>());
+		await Assert.That(svc.IsSceneLive).IsTrue();
+	}
+
+	/// <summary>A scene connection that came back first is left as it is.</summary>
+	[Test]
+	public async Task AReconnectedGameHub_LeavesALiveSceneFeedAlone()
+	{
+		var game = StubHub(() => Task.CompletedTask);
+		var scene = StubHub(() => Task.CompletedTask);
+		scene.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected);
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(game);
+		factory.CreateScene().Returns(scene);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+		await svc.ConnectAsync();
+
+		game.Reconnected += Raise.Event<Func<string?, Task>>("connection-id");
+
+		factory.Received(1).CreateScene();
+		await scene.DidNotReceive().DisposeAsync();
+	}
 }

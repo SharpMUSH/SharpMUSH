@@ -25,6 +25,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	// Phase 9: scene realtime now rides a SEPARATE connection to the plugin-owned hub at /hubs/scene
 	// (ReceiveSceneMessage + JoinScene/LeaveScene), not the GameHub connection.
 	private IGameHubConnection? _sceneHub;
+	// A scene connection being started: a second caller waits for it rather than open another.
+	private Task? _sceneStart;
 	// The scene groups this client has joined, so a reconnect (which loses SignalR group membership) or a scene
 	// connection opened after the join can join them again.
 	private readonly HashSet<string> _joinedScenes = new(StringComparer.Ordinal);
@@ -122,11 +124,13 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			return Task.CompletedTask;
 		};
 
-		_hub.Reconnected += _ =>
+		_hub.Reconnected += async _ =>
 		{
 			_logger.LogInformation("[ConnectionStateService] Hub reconnected");
 			SetState(SignalRState.Connected);
-			return Task.CompletedTask;
+			// The server is back. A scene connection still waiting out its own back-off would stay down until its
+			// next attempt, up to 30 s on, with the story saying live poses are not arriving.
+			await ReviveSceneHubAsync();
 		};
 
 		try
@@ -281,6 +285,25 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// </summary>
 	private async Task ConnectSceneHubAsync()
 	{
+		if (_sceneStart is { } pending)
+		{
+			await pending;
+			return;
+		}
+		var start = StartSceneHubAsync();
+		_sceneStart = start;
+		try
+		{
+			await start;
+		}
+		finally
+		{
+			if (ReferenceEquals(_sceneStart, start)) _sceneStart = null;
+		}
+	}
+
+	private async Task StartSceneHubAsync()
+	{
 		if (_sceneHub is not null) return;
 
 		var sceneHub = _factory.CreateScene();
@@ -339,6 +362,16 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		// The scene connection is coming back on its own.
 		if (_sceneHub?.State is SignalRState.Reconnecting or SignalRState.Connecting) return;
 		// The game connection is up but the scene one is not (it failed to start, or gave up reconnecting).
+		await ReviveSceneHubAsync();
+	}
+
+	/// <summary>
+	/// Replaces a scene connection that is not live with a new one, when the game connection says the server
+	/// answers. One still reconnecting is replaced too: its next attempt is on SignalR's back-off, not now.
+	/// </summary>
+	private async Task ReviveSceneHubAsync()
+	{
+		if (IsSceneLive) return;
 		if (_sceneHub is { } dead)
 		{
 			_sceneHub = null;
