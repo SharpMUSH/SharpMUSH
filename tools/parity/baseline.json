@@ -129,6 +129,14 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "15-player-aliases/alias.set#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "15-player-aliases/alias.set#1",
+   "command": "Bob bobpass"
+  },
+  {
    "key": "20-admin-commands/admin.lists#0",
    "command": "@list flags"
   },

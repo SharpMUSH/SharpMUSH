@@ -25,6 +25,8 @@ internal sealed class AttributeWriter(
 	IMediator mediator,
 	IPermissionService permissionService,
 	INotifyService notifyService,
+	IValidateService validateService,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
 	IServiceProvider serviceProvider)
 {
 	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
@@ -64,9 +66,59 @@ internal sealed class AttributeWriter(
 		SharpPlayer creator,
 		bool isAttributeCopy)
 	{
+		if (isAttributeCopy || !PlayerAliases.Applies(obj, attribute))
+		{
+			return await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: false);
+		}
+
+		var result = await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: true);
+		await ReportPlayerAliasAsync(executor, result, value.ToPlainText().Length > 0
+			? nameof(ErrorMessages.Notifications.PlayerAliasSet)
+			: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
+		return result;
+	}
+
+	/// <summary>
+	/// A write of a player's alias list is reported here, whatever became of it, because PennMUSH's ALIAS
+	/// branch of <c>do_set_atr</c> notifies the setter itself (<c>src/attrib.c:2268-2316, 2418-2423</c>):
+	/// <c>Alias set.</c> or <c>Alias removed.</c> where any other attribute gets the caller's
+	/// <c>Set.</c>/<c>Cleared.</c> line. Callers print nothing of their own for one
+	/// (<see cref="PlayerAliases.Applies"/>). The provider has already rebuilt the player's lookup names
+	/// from the new value, in the same write (<c>reset_player_list</c>).
+	/// </summary>
+	private async ValueTask ReportPlayerAliasAsync(AnySharpObject executor, Result<Success> result, string successKey)
+	{
+		switch (result)
+		{
+			case Success:
+				await notifyService.NotifyLocalized(executor, successKey, executor);
+				break;
+			case Error<string> error:
+				await notifyService.Notify(executor, error.Value, executor);
+				break;
+		}
+	}
+
+	private async ValueTask<Result<Success>> WriteAttributeAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		MString value,
+		SharpPlayer creator,
+		bool isAttributeCopy,
+		bool isPlayerAlias)
+	{
 		if (!await permissionService.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		// A player's alias list is validated right after controls(), where do_set_atr validates it
+		// (src/attrib.c:2268-2316).
+		if (isPlayerAlias
+				&& await PlayerAliasRestriction.CheckAsync(mediator, validateService,
+					configuration.CurrentValue.Limit.MaxAliases, executor, obj, value.ToPlainText()) is Error<string> refusedAlias)
+		{
+			return refusedAlias;
 		}
 
 		var attrPath = attribute.Split('`');
@@ -283,6 +335,23 @@ internal sealed class AttributeWriter(
 		string attributePattern,
 		IAttributeService.AttributePatternMode patternMode)
 	{
+		// do_set_atr(thing, "ALIAS", NULL, ...) reports a player's alias list itself. @wipe goes through
+		// wipe_atr instead, which says nothing of it; the provider still drops the lookup names.
+		if (patternMode == IAttributeService.AttributePatternMode.Wildcard || !PlayerAliases.Applies(obj, attributePattern))
+		{
+			return await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
+		}
+
+		var result = await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
+		await ReportPlayerAliasAsync(executor, result, nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
+		return result;
+	}
+
+	private async ValueTask<Result<Success>> ClearMatchingAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attributePattern,
+		IAttributeService.AttributePatternMode patternMode)
+	{
 		if (!await permissionService.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
@@ -321,7 +390,11 @@ internal sealed class AttributeWriter(
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributesWiped), executor, 0);
 			}
 
-			return new Success();
+			// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only where do_set_atr's own reporting is
+			// copied: a player's alias list.
+			return !isWipe && PlayerAliases.Applies(obj, attributePattern)
+				? new Error<string>(ErrorMessages.Notifications.NoSuchAttributeToReset)
+				: new Success();
 		}
 
 		var dbref = obj.Object().DBRef;

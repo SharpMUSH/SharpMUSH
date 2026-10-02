@@ -23,9 +23,5 @@ public record SetAttributesCommand(DBRef DBRef, IReadOnlyList<AttributeWrite> At
 			.Distinct(StringComparer.Ordinal)
 	];
 
-	public string[] CacheTags =>
-	[
-		Definitions.CacheKeys.AttributesTag(DBRef.Number),
-		Definitions.CacheTags.InheritedAttributes
-	];
+	public string[] CacheTags => Definitions.CacheKeys.AttributeWriteTags(DBRef, Attributes.Select(write => write.Path));
 }

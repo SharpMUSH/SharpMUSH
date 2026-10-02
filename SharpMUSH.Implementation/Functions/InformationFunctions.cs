@@ -16,6 +16,7 @@ using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.Markup;
@@ -214,36 +215,48 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "alias", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_alias</c> (<c>src/fundb.c:1760-1787</c>): the object's short alias - its alias list
+	/// up to the first <c>;</c> (<c>shortalias</c>) - or, with a second argument, sets the ALIAS attribute
+	/// as <c>@alias</c> does, clearing it when that argument is empty. Setting returns nothing; a player's
+	/// alias write reports itself.
+	/// </summary>
+	[SharpFunction(Name = "alias", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX,
+		SideEffectMinArgs = 2, ParameterNames = ["object", "new alias"])]
 	public async ValueTask<CallState> Alias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-		var args = parser.CurrentState.Arguments;
+		var newAlias = parser.CurrentState.Arguments.GetValueOrDefault("1");
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found =>
+			async found =>
 			{
-				var aliases = found.Aliases;
-
-				if (args.Count == 1)
+				if (newAlias is null)
 				{
-					return ValueTask.FromResult(new CallState(aliases.FirstOrDefault() ?? string.Empty));
+					return new CallState(PlayerAliases.Short(await FullAliasOf(found)));
 				}
 
-				var indexArg = args["1"].Message!.ToPlainText();
-				if (!int.TryParse(indexArg, out var index) || index < 1)
-				{
-					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidAliasIndex));
-				}
-
-				return ValueTask.FromResult(new CallState(
-					index <= aliases.Length
-						? aliases[index - 1]
-						: string.Empty));
+				var value = newAlias.Message ?? MarkupText.Empty;
+				_ = value.Length > 0
+					? await AttributeService.SetAttributeAsync(executor, found, PlayerAliases.AttributeName, value)
+					: await AttributeService.ClearAttributeAsync(executor, found, PlayerAliases.AttributeName,
+						IAttributeService.AttributePatternMode.Exact);
+				return CallState.Empty;
 			});
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>fullalias</c> (<c>src/utils.c:645</c>): an exit's aliases are the rest of its name, and
+	/// anything else's are its own ALIAS attribute, read without permission or inheritance as
+	/// <c>atr_get_noparent</c> reads it.
+	/// </summary>
+	private async ValueTask<string> FullAliasOf(AnySharpObject found)
+		=> found is SharpExit exit
+			? string.Join(PlayerAliases.Delimiter, exit.Aliases ?? [])
+			: (await Mediator.CreateStream(new GetAttributeQuery(found.Object().DBRef, [PlayerAliases.AttributeName]))
+				.LastOrDefaultAsync())?.Value.ToPlainText() ?? string.Empty;
 
 	/// <summary>
 	/// <c>fun_findable</c> (<c>fundb.c:1438-1452</c>): whether the first object could find the second.
@@ -305,10 +318,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found =>
-			{
-				return ValueTask.FromResult(new CallState(string.Join(" ", found.Aliases)));
-			});
+			async found => new CallState(await FullAliasOf(found)));
 	}
 
 	[SharpFunction(Name = "fullname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

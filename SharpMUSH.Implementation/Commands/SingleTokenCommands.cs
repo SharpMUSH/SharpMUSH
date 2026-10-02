@@ -3,6 +3,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -100,7 +101,12 @@ public partial class Commands
 							$"{realLocated.Object().Name}/{attrNameParsed}"),
 						Error<string> failure => (failure.Value, string.Empty)
 					};
-					await NotifyService.Notify(executor, clearMessage, executor);
+					// A player's alias list was reported by the write itself (PlayerAliases).
+					if (!PlayerAliases.Applies(realLocated, attrName))
+					{
+						await NotifyService.Notify(executor, clearMessage, executor);
+					}
+
 					return new CallState(cleared);
 				}
 
@@ -127,7 +133,10 @@ public partial class Commands
 						$"{realLocated.Object().Name}/{attrNameParsed}"),
 					Error<string> failure => (failure.Value, string.Empty)
 				};
-				await NotifyService.Notify(executor, setMessage, executor);
+				if (!PlayerAliases.Applies(realLocated, attrName))
+				{
+					await NotifyService.Notify(executor, setMessage, executor);
+				}
 
 				return new CallState(stored);
 			});

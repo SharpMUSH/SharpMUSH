@@ -610,7 +610,13 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			tx.Delete(Tables.ObjName, Keys.Lower(found.Record.Name), Keys.Dbref(dbref));
+			// A player renamed away from a name it also holds as an alias still answers to it: one index
+			// row serves both (reset_player_list re-adds the aliases after the name).
+			if (!found.Record.Aliases.Contains(found.Record.Name, StringComparer.OrdinalIgnoreCase))
+			{
+				tx.Delete(Tables.ObjName, Keys.Lower(found.Record.Name), Keys.Dbref(dbref));
+			}
+
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Name = plain }));
 			tx.Put(Tables.ObjName, Keys.Lower(plain), Keys.Dbref(dbref));
 		}, cancellationToken);

@@ -11,13 +11,15 @@ public partial class LightningDatabase
 	private const string AncestorFormatsMigrationId = "0002_ancestor_formats";
 	internal const string ExitSourceIndexMigrationId = "0003_exit_source_index";
 	internal const string MailFolderCountMigrationId = "0004_mail_folder_count";
+	internal const string PlayerAliasIndexMigrationId = "0005_player_alias_index";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions (always, cheap, and
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
-	/// 3. apply pending core repairs, including the atomic exit source-index and mail folder-count rebuilds;
+	/// 3. apply pending core repairs, including the atomic exit source-index, mail folder-count and
+	///    player-alias index rebuilds;
 	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 6. ensure the singleton server-state row exists.
@@ -47,6 +49,7 @@ public partial class LightningDatabase
 
 			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
+			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{

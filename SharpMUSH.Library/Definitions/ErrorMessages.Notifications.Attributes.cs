@@ -33,6 +33,20 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeFlagsSetFormat = "{0}/{1} - {2} set.";
 
+		// --- A player's ALIAS attribute: do_set_atr's ALIAS branch (PennMUSH src/attrib.c:2268-2316,
+		// 2418-2423) and do_name's player case (src/set.c:83-100) ---
+		public const string PlayerAliasSet = "Alias set.";
+		public const string PlayerAliasRemoved = "Alias removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PlayerAliasNotValidFormat = "'{0}' is not a valid alias.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PlayerAliasTooManyFormat = "'{0}' contains too many aliases.";
+		public const string PlayerAliasNull = "Null aliases are not valid.";
+		public const string PlayerNameOrAliasNotAllowed = "You can't give a player that name or alias.";
+		public const string PlayerNameTooManyAliases = "Too many aliases.";
+		/// <summary>PennMUSH's <c>AE_NOTFOUND</c> (<c>src/attrib.c:2411-2412</c>).</summary>
+		public const string NoSuchAttributeToReset = "No such attribute to reset.";
+
 		// --- Attribute set messages aligned with PennMUSH src/set.c ---
 		// PennMUSH format: "ObjectName/ATTRNAME - Set."
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
