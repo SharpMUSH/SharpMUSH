@@ -3876,6 +3876,14 @@
     <value>Dodatak je promijenjen — ponovno učitavanje…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Igra je ažurirana. Ponovno učitajte za novu verziju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Ponovno učitaj</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Započnite čitanjem wikija, pregledavanjem likova ili uključivanjem u scenu.</value>
     <comment>MT</comment>

@@ -3220,6 +3220,12 @@
   <data name="WidPluginChangedReloading" xml:space="preserve">
     <value>A plugin changed — reloading…</value>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>The game was updated. Reload to get the new version.</value>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
   <data name="WidWidgetRenderFailed" xml:space="preserve">
     <value>This widget failed to render.</value>
   </data>

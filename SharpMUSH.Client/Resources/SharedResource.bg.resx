@@ -3876,6 +3876,14 @@
     <value>Плъгин е променен — презареждане…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Играта беше обновена. Презаредете, за да получите новата версия.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Презареждане</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Започнете, като прочетете wiki, разгледате героите или се включите в сцена.</value>
     <comment>MT</comment>

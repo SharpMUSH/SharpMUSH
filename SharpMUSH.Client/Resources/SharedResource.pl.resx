@@ -3876,6 +3876,14 @@
     <value>Wtyczka uległa zmianie — ponowne wczytywanie…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Gra została zaktualizowana. Wczytaj ponownie, aby uzyskać nową wersję.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Wczytaj ponownie</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Na początek warto przeczytać wiki, przejrzeć postacie lub dołączyć do sceny.</value>
     <comment>MT</comment>

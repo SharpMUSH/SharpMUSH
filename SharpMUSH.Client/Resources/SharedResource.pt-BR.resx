@@ -3876,6 +3876,14 @@
     <value>Um plugin foi alterado — recarregando…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>O jogo foi atualizado. Recarregue para obter a nova versão.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Recarregar</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Comece lendo o wiki, vendo os personagens ou entrando em uma cena.</value>
     <comment>MT</comment>

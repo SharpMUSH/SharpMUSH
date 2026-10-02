@@ -1,0 +1,73 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services.Interfaces
+@implements IDisposable
+@inject IConnectionStateService Connection
+@inject ServerInfoService ServerInfo
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Tells a tab left open across a deploy that it is running the previous portal. A deploy restarts the
+   server, so the game connection drops and comes back; that is when the server is asked which build it
+   serves now. The reader reloads when they are ready: reloading on its own would throw away an open wiki
+   edit. Drafts, command history and the terminal screen survive a reload. *@
+
+@if (_updated)
+{
+    <div class="game-update-banner" role="status">
+        <MudAlert Severity="Severity.Info" Dense="true">
+            <span class="game-update-text">@Loc["WidGameUpdated"]</span>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="game-update-reload"
+                       OnClick="Reload">@Loc["WidGameUpdatedReload"]</MudButton>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    private string? _known;
+    private bool _lost;
+    private bool _updated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Connection.OnConnectionStateChanged += HandleConnectionStateChanged;
+        _known = await ServerInfo.BuildIdAsync();
+    }
+
+    private void HandleConnectionStateChanged()
+    {
+        switch (Connection.ConnectionState)
+        {
+            case HubConnectionState.Reconnecting or HubConnectionState.Disconnected:
+                _lost = true;
+                break;
+            case HubConnectionState.Connected when _lost:
+                _lost = false;
+                // The event may arrive on a hub callback thread.
+                _ = InvokeAsync(CheckAsync);
+                break;
+        }
+    }
+
+    private async Task CheckAsync()
+    {
+        if (_updated || await ServerInfo.CurrentBuildIdAsync() is not { } current) return;
+
+        // The first read found no server; whatever answers now is the build this tab is measured against.
+        if (_known is null)
+        {
+            _known = current;
+            return;
+        }
+
+        if (current == _known) return;
+        _updated = true;
+        StateHasChanged();
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+
+    public void Dispose()
+    {
+        Connection.OnConnectionStateChanged -= HandleConnectionStateChanged;
+    }
+}

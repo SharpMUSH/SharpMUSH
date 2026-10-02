@@ -14,7 +14,8 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
-	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null);
+	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
+		string? BuildId = null);
 
 	private const string DefaultMudName = "SharpMUSH";
 
@@ -41,6 +42,18 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// </summary>
 	public virtual async Task<bool> HasFeatureAsync(string feature)
 		=> (await FetchAsync()).Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) ?? false;
+
+	/// <summary>
+	/// The portal build the server serves, as of the remembered answer; <c>null</c> when the server did not
+	/// answer.
+	/// </summary>
+	public virtual async Task<string?> BuildIdAsync() => (await FetchAsync()).BuildId;
+
+	/// <summary>
+	/// The portal build the server serves now, asked fresh and not remembered; <c>null</c> when the server did
+	/// not answer. Differs from <see cref="BuildIdAsync"/> once the game was deployed under an open tab.
+	/// </summary>
+	public virtual async Task<string?> CurrentBuildIdAsync() => (await FetchCoreAsync())?.BuildId;
 
 	/// <summary>Raised after <see cref="Refresh"/>: what a reader asked before may have changed.</summary>
 	public event Action? Changed;

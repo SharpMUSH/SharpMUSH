@@ -3876,6 +3876,14 @@
     <value>En plugin ble endret — laster inn på nytt…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Spillet ble oppdatert. Last inn på nytt for å få den nye versjonen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Last inn på nytt</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Kom i gang ved å lese wikien, bla i karakterer eller hoppe inn i en scene.</value>
     <comment>MT</comment>

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models.Portal.Setup;
+using SharpMUSH.Server;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
 
@@ -33,7 +35,10 @@ public class ServerInfoControllerTests
 		var reader = Substitute.For<IGameFeatureReader>();
 		reader.EnabledAsync().Returns(features ?? []);
 
-		return new ServerInfoController(wrapper, reader);
+		var environment = Substitute.For<IHostEnvironment>();
+		environment.ContentRootPath.Returns(Path.GetTempPath());
+
+		return new ServerInfoController(wrapper, reader, PortalBuild.For(environment));
 	}
 
 	[Test]
@@ -70,5 +75,14 @@ public class ServerInfoControllerTests
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.Features).IsEquivalentTo([GameFeatures.WikiReader]);
+	}
+
+	[Test]
+	public async Task Get_ReportsTheBuildItServes()
+	{
+		var result = await MakeController(guestsEnabled: true).Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.BuildId).IsNotEmpty();
 	}
 }
