@@ -337,7 +337,33 @@ else
     private ImageRef? ViewerImage => SelfRow?.Image;
 
     /// <summary>A small avatar with a connection dot: the picture, else the name's initial on its hue.</summary>
+    /// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
+    [CascadingParameter] private ShellNavigation? Shell { get; set; }
+
+    /// <summary>The shell is in touch chrome (layout.js isTouchChrome): its header is merged into the card header.</summary>
+    private bool _touchChrome;
+
+    /// <summary>
+    /// The card header is the only bar on Play: shell.css hides the shell's touch header while the card is
+    /// mounted, and the avatar opens the navigation drawer, whose tools row holds that header's other buttons.
+    /// A desktop has the rail, so there the avatar is only a picture.
+    /// </summary>
     private RenderFragment ViewerAvatar => __builder =>
+    {
+        if (_touchChrome && Shell is { } shell)
+        {
+            <button type="button" class="play-me-btn" aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]"
+                    aria-haspopup="true" @onclick="shell.Open">
+                @ViewerPicture
+            </button>
+        }
+        else
+        {
+            @ViewerPicture
+        }
+    };
+
+    private RenderFragment ViewerPicture => __builder =>
     {
         var connected = PlayTerminal.IsConnected;
         var image = ViewerImage;
@@ -469,17 +495,34 @@ else
         {
             // No layout script (prerender, tests): the banner follows the stored choice.
         }
+        var touchChrome = await IsTouchChromeAsync();
+        changed |= touchChrome != _touchChrome;
+        _touchChrome = touchChrome;
         if (changed) StateHasChanged();
     }
 
     /// <summary>The screen turned into or out of the short tier (layout.js watchCompactScreen).</summary>
     [JSInvokable]
-    public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(() =>
+    public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(async () =>
     {
         _compactScreen = compactScreen;
         _compactScreenBannerOpen = false;
+        // A window that narrows to a phone's width changes chrome as well.
+        _touchChrome = await IsTouchChromeAsync();
         StateHasChanged();
     });
+
+    private async Task<bool> IsTouchChromeAsync()
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        }
+        catch (JSException)
+        {
+            return false;
+        }
+    }
 
     private async Task OnColsChanged(ChangeEventArgs e)
     {

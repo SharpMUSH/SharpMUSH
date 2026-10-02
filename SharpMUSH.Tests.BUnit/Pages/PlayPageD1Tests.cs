@@ -79,6 +79,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
 	private sealed class Host : ComponentBase
 	{
+		/// <summary>MainLayout's drawer handle, cascaded to the page when set.</summary>
+		[Parameter] public ShellNavigation? Shell { get; set; }
+
 		protected override void BuildRenderTree(RenderTreeBuilder builder)
 		{
 			builder.OpenComponent<MudPopoverProvider>(0);
@@ -86,16 +89,29 @@ public class PlayPageD1Tests : TrackingBunitContext
 			builder.OpenComponent<PageSidebarHost>(1);
 			builder.AddAttribute(2, nameof(PageSidebarHost.ChildContent), (RenderFragment)(b =>
 			{
-				b.OpenComponent<PlayPage>(0);
+				if (Shell is null)
+				{
+					b.OpenComponent<PlayPage>(0);
+					b.CloseComponent();
+					return;
+				}
+				b.OpenComponent<CascadingValue<ShellNavigation>>(1);
+				b.AddAttribute(2, "Value", Shell);
+				b.AddAttribute(3, "IsFixed", true);
+				b.AddAttribute(4, "ChildContent", (RenderFragment)(c =>
+				{
+					c.OpenComponent<PlayPage>(0);
+					c.CloseComponent();
+				}));
 				b.CloseComponent();
 			}));
 			builder.CloseComponent();
 		}
 	}
 
-	private IRenderedComponent<Host> RenderPlay()
+	private IRenderedComponent<Host> RenderPlay(ShellNavigation? shell = null)
 	{
-		var cut = Render<Host>();
+		var cut = Render<Host>(p => p.Add(h => h.Shell, shell));
 		cut.WaitForAssertion(() => cut.Find(".play"), TimeSpan.FromSeconds(5));
 		return cut;
 	}
@@ -197,6 +213,29 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
 		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I");
+	}
+
+	[Test]
+	public async Task OnTouchChrome_TheAvatarOpensTheShellsDrawer()
+	{
+		// The shell's touch header is merged into the card header: the avatar is its menu button.
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var opened = 0;
+		var cut = RenderPlay(new ShellNavigation(() => opened++));
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-me-btn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("button.play-me-btn").GetAttribute("aria-label")).IsEqualTo("Toggle navigation");
+		cut.Find("button.play-me-btn").Click();
+		await Assert.That(opened).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task OnADesktop_TheAvatarIsOnlyAPicture()
+	{
+		var cut = RenderPlay(new ShellNavigation(() => { }));
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-me"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.play-me-btn").Count).IsEqualTo(0).Because("a desktop has the rail");
 	}
 
 	[Test]
