@@ -2114,8 +2114,16 @@ public partial class Functions
 
 			// Reset isBackground for character-by-character processing
 			isBackground = false;
+			// Whether a palette letter has taken the highlight up; one that none has is bold.
+			var hilightUsed = false;
 			foreach (var chr in code)
 			{
+				if (curHilight && chr is 'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w'
+					or 'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W')
+				{
+					hilightUsed = true;
+				}
+
 				switch (chr)
 				{
 					case 'i':
@@ -2139,9 +2147,10 @@ public partial class Functions
 					case 'h':
 						// A per-token modifier that raises the FOLLOWING foreground letter to its bright
 						// variant (hr is AnsiColor.Standard(1, bright: true)); a background has no bright
-						// variant, so there it means bold instead. On its own it carries nothing, which
-						// matches AnsiCodeParser — the two must agree, or ansi() and the parsed form of
-						// the same code produce different markup.
+						// variant, so there it means bold instead, and so does an h no palette letter takes
+						// up (PennMUSH's hilite bit, SGR 1). AnsiCodeParser reads it the same way
+						// (MarkupString#28) — the two must agree, or ansi() and the parsed form of the same
+						// code produce different markup.
 						curHilight = true;
 						break;
 					case 'H':
@@ -2228,6 +2237,8 @@ public partial class Functions
 						break;
 				}
 			}
+
+			bold |= curHilight && !hilightUsed;
 		}
 
 		var details = new AnsiStyle

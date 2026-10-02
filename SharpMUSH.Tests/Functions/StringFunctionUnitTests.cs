@@ -393,6 +393,9 @@ public class StringFunctionUnitTests
 	// back to the same colours.
 	[Arguments("decompose(ansi(hr,red))", "[ansi(hr,red)]")]
 	[Arguments("decompose(ansi(ub,red))", "[ansi(ub,red)]")]
+	// PennMUSH's h with no palette letter to brighten is the hilite bit, bold (SGR 1).
+	[Arguments("decompose(ansi(h,x))", "[ansi(h,x)]")]
+	[Arguments("decompose(ansi(hu,x))", "[ansi(hu,x)]")]
 	[Arguments("decompose(ansi(r,a\\,b) c\\;d)", @"[ansi(r,a\,b)]%bc\;d")]
 	// Penn decompose.3: tab and newline characters → %t and %r
 	[Arguments("decompose(tab\treturn\n)", "tab%treturn%r")]

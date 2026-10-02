@@ -253,10 +253,6 @@
    "command": "Bob bobpass"
   },
   {
-   "key": "36-decompose/dc.colours#1",
-   "command": "think [decompose(ansi(h,x))]|[decompose(ansi(u,x))]|[decompose(ansi(f,x))]|[decompose(ansi(i,x))]|[decompose(ansi(ub,x))]|[decompose(ansi(hu,x))]"
-  },
-  {
    "key": "36-decompose/dc.colours#2",
    "command": "think [decompose(ansi(#ff0000,x))]|[decompose(ansi(/#00ff00,x))]|[decompose(ansi(#ff0000/#0000ff,x))]|[decompose(ansi(+red,x))]"
   },
