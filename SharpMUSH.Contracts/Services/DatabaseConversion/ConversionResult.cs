@@ -21,5 +21,11 @@ public record ConversionResult
 
 	public int TotalObjects => PlayersConverted + RoomsConverted + ThingsConverted + ExitsConverted;
 
+	/// <summary>
+	/// The conversion stopped part-way, cancelled or on a fatal error, rather than reaching the end with some
+	/// errors along the way: the world holds only part of the database.
+	/// </summary>
+	public bool Aborted { get; init; }
+
 	public bool IsSuccessful => Errors.Count == 0;
 }

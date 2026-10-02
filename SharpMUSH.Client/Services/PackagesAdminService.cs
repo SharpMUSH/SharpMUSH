@@ -13,9 +13,20 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="HttpRequestException"/> straight out into the render loop, so the package pages went
 /// blank where every other admin page shows the reason.
 /// </remarks>
-public class PackagesAdminService(IHttpClientFactory httpClientFactory)
+public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
+
+	/// <summary>
+	/// A call that may install or remove packages: whatever its answer, the portal asks the server again which
+	/// applications are on, so its navigation follows what actually changed.
+	/// </summary>
+	private async Task<T> Changing<T>(Task<T> call)
+	{
+		var result = await call;
+		serverInfo.Refresh();
+		return result;
+	}
 
 	public Task<ApiResult<IReadOnlyList<InstalledPackageDto>>> GetInstalledAsync() =>
 		Client.GetApiAsync<IReadOnlyList<InstalledPackageDto>>(
@@ -26,12 +37,12 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 			$"api/packages/{Uri.EscapeDataString(id)}/revisions", "The server returned no revisions.");
 
 	public Task<ApiResult<PackageRollbackResult>> RollbackAsync(string id, int revision) =>
-		Client.PostApiAsync<object?, PackageRollbackResult>(
+		Changing(Client.PostApiAsync<object?, PackageRollbackResult>(
 			$"api/packages/{Uri.EscapeDataString(id)}/rollback/{revision}", null,
-			"The rollback ran but the server described nothing.");
+			"The rollback ran but the server described nothing."));
 
 	public Task<ApiResult<Success>> UninstallAsync(string id, bool force) =>
-		Client.DeleteApiAsync($"api/packages/{Uri.EscapeDataString(id)}?force={force}");
+		Changing(Client.DeleteApiAsync($"api/packages/{Uri.EscapeDataString(id)}?force={force}"));
 
 	public Task<ApiResult<PackageUpdateInfo>> CheckForUpdateAsync(string id) =>
 		Client.GetApiAsync<PackageUpdateInfo>(
@@ -76,8 +87,8 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 			"api/packages/plan", request, "The server returned no plan.");
 
 	public Task<ApiResult<ApplyResponse>> ApplyAsync(ApplyRequest request) =>
-		Client.PostApiAsync<ApplyRequest, ApplyResponse>(
-			"api/packages/apply", request, "The apply ran but the server described nothing.");
+		Changing(Client.PostApiAsync<ApplyRequest, ApplyResponse>(
+			"api/packages/apply", request, "The apply ran but the server described nothing."));
 
 	public Task<ApiResult<PackageAuthoringScan>> AuthorScanAsync(IReadOnlyList<string> objids) =>
 		Client.PostApiAsync<IReadOnlyList<string>, PackageAuthoringScan>(

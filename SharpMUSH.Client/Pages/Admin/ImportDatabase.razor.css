@@ -55,6 +55,13 @@
 	color: var(--warn);
 }
 
+/* Said in place of the file row while no mush.cnf is chosen: what leaving it out means. */
+.dbimport-config-hint {
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-dim);
+}
+
 .dbimport-file-row {
 	display: flex;
 	align-items: center;

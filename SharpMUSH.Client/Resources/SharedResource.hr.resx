@@ -5199,4 +5199,7 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplikacije</value>
   </data>
+  <data name="RolScenesNotEnabled" xml:space="preserve">
+    <value>Sustav scena nije uključen u ovoj igri.</value>
+  </data>
 </root>

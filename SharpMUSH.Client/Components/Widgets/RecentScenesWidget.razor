@@ -10,6 +10,7 @@
 
 @* D1 §6.3 Recent scenes (board 25): the character's last three scenes the viewer may see, a live one
    marked "live now" and linking to the live view, the rest with when they last moved. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
 <div class="recent-scenes-widget">
     <KitCard Aside="true" Title="@Loc["NavRecentScenes"]">
         @if (_loading)
@@ -37,6 +38,7 @@
         }
     </KitCard>
 </div>
+</FeatureGate>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

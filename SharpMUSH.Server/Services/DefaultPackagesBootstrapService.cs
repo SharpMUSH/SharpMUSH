@@ -29,6 +29,7 @@ public class DefaultPackagesBootstrapService(
 	IPackageRegistryService registry,
 	IPackageInstallService installer,
 	IOptionsWrapper<SharpMUSHOptions> options,
+	IExpandedObjectDataService serverData,
 	ILogger<DefaultPackagesBootstrapService> logger) : IHostedService, IBundledPackageBootstrap
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -44,10 +45,22 @@ public class DefaultPackagesBootstrapService(
 			return;
 		}
 
+		var declined = (await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
+
 		foreach (var package in BundledPackages.All)
 		{
 			if (!HasHandler(package))
 			{
+				continue;
+			}
+
+			// A first-boot package the administrator removed stays removed: the setup wizard and the
+			// package manager record the choice, and installing it again on every restart would undo it.
+			if (declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase)
+					&& await registry.GetInstalledPackageAsync(package.PackageId) is NotFound)
+			{
+				logger.LogDebug("Bundled {PackageId} was turned off by the administrator; not installing it.",
+					package.PackageId);
 				continue;
 			}
 

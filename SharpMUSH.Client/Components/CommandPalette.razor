@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IAuthorizationService Authorization
 @inject IJSRuntime JS
+@inject ServerInfoService ServerInfo
 
 @* README §10 Q1: the rail's search opens a command palette (⌘K / Ctrl+K anywhere but a text field).
    Typing filters the destinations the viewer can use; the last two rows search the wiki and the
@@ -104,11 +105,12 @@
             _active = 0;
             var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
             var build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+            var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
             _destinations =
             [
                 new("/", Icons.Material.Outlined.Home, Loc["Home"]),
                 new("/play", Icons.Material.Outlined.Terminal, Loc["Play"]),
-                new("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"]),
+                .. (Item[])(scenes ? [new("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"])] : []),
                 new("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"]),
                 new("/characters", Icons.Material.Outlined.Groups, Loc["Characters"]),
                 new("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"]),

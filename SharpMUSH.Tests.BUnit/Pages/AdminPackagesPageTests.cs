@@ -67,7 +67,8 @@ file static class AdminPackagesTestServices
 		ctx.Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(sp => new PackagesAdminService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new PackagesAdminService(sp.GetRequiredService<IHttpClientFactory>(),
+				new StubServerInfoService(guestsEnabled: true)))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;

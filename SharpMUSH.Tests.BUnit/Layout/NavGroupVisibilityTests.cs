@@ -13,6 +13,7 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Resources;
 
@@ -94,6 +95,22 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 			.Single(g => g.QuerySelector(".nav-group-label")?.TextContent.Trim() == labelKey);
 
 	private static int LinkCount(IElement group) => group.QuerySelectorAll(".phosphor-nav-link").Length;
+
+	/// <summary>The scene archive is linked only while the game has the Scene System.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task The_scene_archive_is_linked_only_when_the_game_has_scenes(bool scenes)
+	{
+		Services.AddSingleton<ServerInfoService>(
+			new StubServerInfoService(guestsEnabled: true, features: scenes ? [GameFeatures.Scenes] : []));
+		Auth.SetNotAuthorized();
+
+		var cut = RenderNav();
+
+		cut.WaitForAssertion(() => Group(cut, "Play"));
+		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/scenes']").Count).IsEqualTo(scenes ? 1 : 0);
+	}
 
 	[Test]
 	public async Task Build_has_no_links_for_an_anonymous_visitor()

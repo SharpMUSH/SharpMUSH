@@ -3,6 +3,8 @@ using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -18,6 +20,7 @@ public class CommandPaletteTests : BunitContext
 	{
 		Services.AddLocalization();
 		Services.AddMudServices();
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		_auth = AddAuthorization();
 		_auth.SetAuthorized("player");
@@ -46,6 +49,17 @@ public class CommandPaletteTests : BunitContext
 		await Assert.That(labels).Contains("Wiki");
 		await Assert.That(labels).Contains("Roles");
 		await Assert.That(labels).DoesNotContain("Config").Because("config.admin was not granted");
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task TheSceneArchive_IsOffered_OnlyWhenTheGameHasTheSceneSystem(bool scenes)
+	{
+		Services.AddSingleton<ServerInfoService>(
+			new StubServerInfoService(guestsEnabled: true, features: scenes ? [GameFeatures.Scenes] : []));
+
+		await Assert.That(Labels(RenderOpen()).Contains("Scenes")).IsEqualTo(scenes);
 	}
 
 	[Test]

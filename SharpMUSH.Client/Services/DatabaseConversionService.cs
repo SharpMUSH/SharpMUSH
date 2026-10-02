@@ -22,10 +22,16 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 	/// (sent as <c>chatFile</c>). Answers the id of the conversion session it started.
 	/// </summary>
 	public async Task<ApiResult<string>> UploadDatabaseAsync(Stream fileStream, string fileName, Stream? mailStream = null,
-		string? mailFileName = null, Stream? chatStream = null, string? chatFileName = null)
+		string? mailFileName = null, Stream? chatStream = null, string? chatFileName = null, Stream? configStream = null,
+		string? configFileName = null)
 	{
 		using var content = new MultipartFormDataContent();
 		content.Add(new StreamContent(fileStream), "file", fileName);
+		if (configStream is not null)
+		{
+			content.Add(new StreamContent(configStream), "configFile", configFileName ?? "mush.cnf");
+		}
+
 		if (mailStream is not null)
 		{
 			content.Add(new StreamContent(mailStream), "mailFile", mailFileName ?? "maildb");
