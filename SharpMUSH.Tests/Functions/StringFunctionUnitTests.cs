@@ -393,7 +393,7 @@ public class StringFunctionUnitTests
 	// back to the same colours.
 	[Arguments("decompose(ansi(hr,red))", "[ansi(hr,red)]")]
 	[Arguments("decompose(ansi(ub,red))", "[ansi(ub,red)]")]
-	[Arguments("decompose(ansi(r,a\\,b) c\\;d)", @"[ansi(r,a\,b)] c\;d")]
+	[Arguments("decompose(ansi(r,a\\,b) c\\;d)", @"[ansi(r,a\,b)]%bc\;d")]
 	// Penn decompose.3: tab and newline characters → %t and %r
 	[Arguments("decompose(tab\treturn\n)", "tab%treturn%r")]
 	// AnsiColor.Default round-trips through its letter code rather than being dropped silently.

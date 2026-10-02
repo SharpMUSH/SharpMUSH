@@ -40,7 +40,7 @@ public static class SceneMarkupRenderer
 		{
 			text = string.IsNullOrEmpty(markup) ? MarkupText.Plain(content) : MarkupTextSerializer.Deserialize(markup);
 		}
-		catch (Exception)
+		catch (System.Text.Json.JsonException)
 		{
 			text = MarkupText.Plain(content);
 		}
