@@ -1205,6 +1205,15 @@
 	display: none;
 }
 
+/* Play's focus mode (.play--focus): the play area is the whole app. The shell's chrome steps away with
+   the page sidebar — the rail, the touch header, the TopBar zone, the footer and the widget asides —
+   and the scene card's focus button brings it back. The predicate is a child chain from the shell to
+   the page root because game output (tagwrap, wshtml) renders as HTML inside the terminal and can carry
+   any class name; a bare descendant match would let it switch the chrome off. */
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play--focus) :is(.phosphor-rail, .phosphor-topbar, .phosphor-topzone, .phosphor-footer, .phosphor-widget-aside) {
+	display: none;
+}
+
 /* ══ PHONE-WIDTH content: single-column helpers + a condensed topbar. Tablets and
    landscape phones are WIDER than this, so they keep the desktop multi-column content
    (the readability win) — only their chrome goes touch-friendly (next block). ══ */
