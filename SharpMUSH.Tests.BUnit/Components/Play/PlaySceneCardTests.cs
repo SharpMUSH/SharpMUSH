@@ -59,7 +59,7 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	[Test]
-	public async Task WithAnAction_TheSubLineIsAButton()
+	public async Task WithAnAction_TheSubLineIsAButton_AndTheNameOpensItToo()
 	{
 		var pressed = 0;
 		var cut = Render<PlaySceneCard>(p => p
@@ -72,9 +72,12 @@ public class PlaySceneCardTests : BunitContext
 		await Assert.That(button.GetAttribute("title")).IsEqualTo("Show banner");
 		button.Click();
 		await Assert.That(pressed).IsEqualTo(1);
+		cut.Find(".scene-card-title").Click();
+		await Assert.That(pressed).IsEqualTo(2).Because("the name is the bigger target on a phone");
 
 		var plain = RenderCard(subtitle: "Lower Docks");
 		await Assert.That(plain.Find(".scene-card-sub").TagName).IsEqualTo("DIV").Because("no action, no button");
+		await Assert.That(plain.Find(".scene-card-title").ClassList).DoesNotContain("scene-card-title--action");
 	}
 
 	[Test]

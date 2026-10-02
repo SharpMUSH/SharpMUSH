@@ -17,8 +17,15 @@
             <div class="scene-card-lead">@Lead</div>
         }
         <div class="scene-card-titles">
-            <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
-            @if (!string.IsNullOrEmpty(Subtitle) && OnSubtitle.HasDelegate)
+            @if (SubtitleIsAction)
+            {
+                <h2 class="scene-card-title scene-card-title--action" id="scene-card-title" @onclick="OnSubtitle">@Title</h2>
+            }
+            else
+            {
+                <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
+            }
+            @if (SubtitleIsAction)
             {
                 <button type="button" class="scene-card-sub scene-card-sub--action" aria-expanded="false"
                         aria-label="@($"{Subtitle}: {SubtitleAction}")" title="@SubtitleAction" @onclick="OnSubtitle">
@@ -71,6 +78,9 @@
 
     /// <summary>What pressing the sub-line does, for its tooltip and accessible name ("Show banner").</summary>
     [Parameter] public string? SubtitleAction { get; set; }
+
+    /// <summary>The sub-line opens something (the folded banner): the name opens it too.</summary>
+    private bool SubtitleIsAction => !string.IsNullOrEmpty(Subtitle) && OnSubtitle.HasDelegate;
 
     /// <summary>An image URL (site-relative or https) drawn behind the header, under a scrim; decorative.</summary>
     [Parameter] public string? HeaderImage { get; set; }

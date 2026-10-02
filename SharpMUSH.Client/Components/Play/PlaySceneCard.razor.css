@@ -167,6 +167,12 @@
 	cursor: pointer;
 }
 
+/* The name opens the banner too (a bigger target than the sub-line on a phone); the sub-line stays the
+   keyboard's way in. */
+.scene-card-title--action {
+	cursor: pointer;
+}
+
 .scene-card-sub-text {
 	min-width: 0;
 	overflow: hidden;
@@ -195,7 +201,8 @@
 	padding: 0 12px 12px;
 }
 
-/* Narrow: the header wraps rather than squeeze the title to nothing on a 320–360px phone. */
+/* Narrow: the header wraps rather than squeeze the title to nothing on a 320–360px phone. The name stays
+   over the room (or scene), as on larger screens, so a long name does not push the room out. */
 @container page (max-width: 48rem) {
 	.scene-card-head {
 		flex-wrap: wrap;
@@ -203,29 +210,6 @@
 		row-gap: 8px;
 		padding-top: 6px;
 		padding-bottom: 6px;
-	}
-
-	/* One line, as a chat app's top bar: the name, then the room (or scene) after a dot. */
-	.scene-card-titles {
-		display: flex;
-		align-items: baseline;
-		gap: 6px;
-	}
-
-	/* The name keeps its width; the room gives way first. */
-	.scene-card-title {
-		flex: 0 0 auto;
-		max-width: 100%;
-	}
-
-	.scene-card-sub {
-		flex: 0 1 auto;
-		min-width: 0;
-	}
-
-	.scene-card-sub::before {
-		content: "·";
-		margin-right: 6px;
 	}
 
 	/* The two-icon pair costs 80px of a row that the name and the room need; one toggle costs 36. */
