@@ -1,8 +1,9 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* D1 §5.3 the scene card: a header with the title (the scene's, else the room's) and a sub-line for
-   the view, the Story | Terminal switch (a radiogroup, only while in a scene), the focus-mode button and
-   any extra header controls (the terminal settings); then the view, then the footer (the composer). *@
+@* D1 §5.3 the scene card: a header with the lead (the viewer's avatar), the title and an optional
+   sub-line, the Story | Terminal switch (a radiogroup, only while in a scene), any extra header controls
+   (the terminal settings, Connect/Disconnect) and the focus-mode button; then the view, then the footer
+   (the composer). Each view's description is its radio's tooltip. *@
 <section class="scene-card" aria-labelledby="scene-card-title">
     <header class="scene-card-head">
         @if (Lead is not null)
@@ -11,13 +12,16 @@
         }
         <div class="scene-card-titles">
             <h2 class="scene-card-title" id="scene-card-title">@Title</h2>
-            <div class="scene-card-sub">@(View == PlayView.Story && InScene ? Loc["NavPlayStorySub"] : Loc["NavPlayTerminalSub"])</div>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <div class="scene-card-sub">@Subtitle</div>
+            }
         </div>
         @if (InScene)
         {
             <div class="scene-card-switch" role="radiogroup" aria-label="@Loc["NavPlayView"]">
-                @Radio(PlayView.Story, Loc["NavPlayStory"])
-                @Radio(PlayView.Terminal, Loc["Terminal"])
+                @Radio(PlayView.Story, Loc["NavPlayStory"], Loc["NavPlayStorySub"])
+                @Radio(PlayView.Terminal, Loc["Terminal"], Loc["NavPlayTerminalSub"])
             </div>
         }
         @Controls
@@ -37,6 +41,9 @@
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 
+    /// <summary>The line under the title; none when null or empty.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
     /// <summary>Whether the viewer is in a scene: only then is there a Story view to switch to.</summary>
     [Parameter] public bool InScene { get; set; }
 
@@ -47,7 +54,7 @@
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
-    /// <summary>Before the titles: the room's thumbnail while the banner is minimised on a small screen.</summary>
+    /// <summary>Before the titles: Play puts the viewer's avatar here.</summary>
     [Parameter] public RenderFragment? Lead { get; set; }
 
     /// <summary>Extra header controls, before the focus button (the terminal settings).</summary>
@@ -58,10 +65,10 @@
     /// <summary>The bottom bar: the composer.</summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
-    private RenderFragment Radio(PlayView value, string label) => __builder =>
+    private RenderFragment Radio(PlayView value, string label, string description) => __builder =>
     {
         var on = View == value;
-        <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")"
+        <button type="button" role="radio" class="scene-card-radio @(on ? "scene-card-radio--on" : null)" aria-checked="@(on ? "true" : "false")" title="@description"
                 tabindex="@(on ? 0 : -1)" @onclick="() => Choose(value)" @onkeydown="e => OnRadioKey(e, value)">@label</button>
     };
 

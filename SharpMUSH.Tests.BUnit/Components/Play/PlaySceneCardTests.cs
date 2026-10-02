@@ -7,8 +7,8 @@ using SharpMUSH.Client.Components.Play;
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
-/// README §5.3 scene card header (boards 01, 04, 05): the title, a sub-line per view, the Story |
-/// Terminal radiogroup (only in a scene) and the focus button.
+/// README §5.3 scene card header (boards 01, 04, 05): the title, the sub-line the page passes, the
+/// Story | Terminal radiogroup (only in a scene, each view's description its tooltip) and the focus button.
 /// </summary>
 public class PlaySceneCardTests : BunitContext
 {
@@ -20,9 +20,10 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	private IRenderedComponent<PlaySceneCard> RenderCard(bool inScene = true, PlayView view = PlayView.Story, bool focus = false,
-		Action<PlayView>? onView = null, Action<bool>? onFocus = null) =>
+		Action<PlayView>? onView = null, Action<bool>? onFocus = null, string? subtitle = null) =>
 		Render<PlaySceneCard>(p => p
 			.Add(x => x.Title, "Salt Market at Dusk")
+			.Add(x => x.Subtitle, subtitle)
 			.Add(x => x.InScene, inScene)
 			.Add(x => x.View, view)
 			.Add(x => x.ViewChanged, v => onView?.Invoke(v))
@@ -31,19 +32,23 @@ public class PlaySceneCardTests : BunitContext
 			.Add(x => x.ChildContent, (RenderFragment)(b => b.AddMarkupContent(0, "<p id=\"body\">body</p>"))));
 
 	[Test]
-	public async Task InStory_TheSubLineSaysItIsLogged()
+	public async Task TheSubLine_IsWhatThePagePasses_AndThereIsNoneWithout()
 	{
-		var cut = RenderCard();
+		var cut = RenderCard(subtitle: "Lower Docks");
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Salt Market at Dusk");
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Scene · logged to the scene archive");
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.Find("#body")).IsNotNull();
+
+		var bare = RenderCard();
+		await Assert.That(bare.FindAll(".scene-card-sub").Count).IsEqualTo(0).Because("no empty line takes the header's height");
 	}
 
 	[Test]
-	public async Task InTerminal_TheSubLineSaysItIsEverything()
+	public async Task EachViewsDescription_IsItsRadiosTooltip()
 	{
-		var cut = RenderCard(view: PlayView.Terminal);
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Full output · channels and pages included");
+		var radios = RenderCard().FindAll("[role='radio']");
+		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Scene · logged to the scene archive");
+		await Assert.That(radios[1].GetAttribute("title")).IsEqualTo("Full output · channels and pages included");
 	}
 
 	[Test]

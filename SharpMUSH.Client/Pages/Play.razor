@@ -84,12 +84,14 @@ else
                 }
                 @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
                 <div class="play-card" hidden="@(_commKey is not null)">
-                    <PlaySceneCard Title="@CardTitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                    <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                        <Lead>@ViewerAvatar</Lead>
                         <Controls>
                             @if (View == PlayView.Terminal)
                             {
                                 @TerminalSettings
                             }
+                            @ConnectionControl
                         </Controls>
                         <ChildContent>
                             <div class="play-views">
@@ -108,7 +110,7 @@ else
                                 }
                                 <div class="play-view play-terminal @(View == PlayView.Terminal ? null : "play-view--off")" inert="@(View != PlayView.Terminal)">
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" ShowClearButton="false" AllowGuest="true" />
+                                                    TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" />
                                 </div>
                             </div>
                         </ChildContent>
@@ -293,10 +295,70 @@ else
     /// <summary>The channel or conversation main is showing (board 06), or null for the scene card.</summary>
     private string? _commKey;
 
-    private string CardTitle =>
-        Room.Info?.Scene?.Title is { Length: > 0 } title ? title
-        : Room.Info?.Name is { Length: > 0 } room ? room
-        : Loc["NavPlayTerminal"];
+    /// <summary>
+    /// The card is headed by who the player is playing, the way the terminal's connection row named them:
+    /// the connected character, else the account's active one. The room's name is the banner's job.
+    /// </summary>
+    private string ViewerName =>
+        PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
+        : AccountAuth.ActiveCharacter?.Name is { Length: > 0 } active ? active
+        : Loc["TermNotLoggedIn"];
+
+    /// <summary>The scene's title in a scene; outside one, the room's name only while no banner shows it.</summary>
+    private string? CardSubtitle =>
+        Room.Info?.Scene?.Title is { Length: > 0 } scene ? scene
+        : _focus ? Room.Info?.Name
+        : null;
+
+    /// <summary>The viewer's own picture from the room's contents (the row marked as them).</summary>
+    private ImageRef? ViewerImage =>
+        PlayTerminal.IsConnected ? Room.Occupants.FirstOrDefault(o => o.You)?.Image : null;
+
+    /// <summary>A small avatar with a connection dot: the picture, else the name's initial on its hue.</summary>
+    private RenderFragment ViewerAvatar => __builder =>
+    {
+        var connected = PlayTerminal.IsConnected;
+        var image = ViewerImage;
+        var hue = NameHue.Of(ViewerName);
+        <span class="play-me @(connected ? "play-me--on" : null)">
+            @if (image is not null && ImageUrlPolicy.IsRenderable(image.Url))
+            {
+                <img class="play-me-img" src="@ApiUrl.Resolve(image.Url)" alt="" />
+            }
+            else
+            {
+                <span class="play-me-initial" aria-hidden="true" style="@($"background:hsl({hue} 30% 24%);color:hsl({hue} 45% 82%);")">@Initial(ViewerName)</span>
+            }
+            <span class="play-me-dot" title="@(connected ? Loc["Connected"] : Loc["Disconnected"])"></span>
+            <span class="play-me-status">@(connected ? Loc["Connected"] : Loc["Disconnected"])</span>
+        </span>
+    };
+
+    private static string Initial(string name) =>
+        name.FirstOrDefault(char.IsLetterOrDigit) is var c && c != default ? char.ToUpperInvariant(c).ToString() : "?";
+
+    /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>
+    private RenderFragment ConnectionControl => __builder =>
+    {
+        if (PlayTerminal.IsConnected)
+        {
+            <button type="button" class="play-conn" aria-label="@Loc["Disconnect"]" title="@Loc["Disconnect"]" @onclick="DisconnectAsync">
+                <MudIcon Icon="@Icons.Material.Filled.PowerSettingsNew" Size="Size.Small" />
+            </button>
+        }
+        else if (AccountAuth.IsLoggedIn)
+        {
+            <button type="button" class="play-conn play-conn--connect" @onclick="ConnectAsync">@Loc["Connect"]</button>
+        }
+        else
+        {
+            <a class="play-conn play-conn--connect" href="/login">@Loc["Login"]</a>
+        }
+    };
+
+    private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;
+
+    private Task DisconnectAsync() => _playTerm?.DisconnectAsync() ?? Task.CompletedTask;
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"

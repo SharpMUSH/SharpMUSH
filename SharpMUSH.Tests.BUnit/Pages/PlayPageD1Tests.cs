@@ -159,8 +159,56 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".kit-banner-title"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll("[role='radiogroup'][aria-label='View']").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".play-story").Count).IsEqualTo(0);
-		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheCardHeader_NamesTheCharacter_NotTheRoomTheBannerAlreadyNames()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
+		await Assert.That(cut.FindAll(".scene-card-sub").Count).IsEqualTo(0).Because("the banner names the room");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I").Because("she has no picture in the room's contents");
+		await Assert.That(cut.Find(".play-me").ClassList).Contains("play-me--on");
+		await Assert.That(cut.Find(".play-me-status").TextContent).IsEqualTo("Connected");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks").Because("with the banner gone, the card names the room");
+	}
+
+	[Test]
+	public async Task InAScene_TheSubLineIsTheScene()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Salt Market at Dusk");
+	}
+
+	[Test]
+	public async Task TheViewersPicture_IsTheirRowInTheRoomsContents()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		_store.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#313","objid":"#313:1","type":"player","name":"Ilsa Varn","cmd":"look #313","you":true,"image":{"url":"/c/ilsa.jpg"}}]}""");
+		cut.WaitForAssertion(() => cut.Find("img.play-me-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("img.play-me-img").GetAttribute("src")).EndsWith("/c/ilsa.jpg");
+	}
+
+	[Test]
+	public async Task TheConnectionControls_AreInTheHeader_AndTheTerminalHasNoConnectionRow()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-conn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play .sharp-terminal-connbar").Count).IsEqualTo(0);
+		await Assert.That(cut.Find("button.play-conn").GetAttribute("aria-label")).IsEqualTo("Disconnect");
+
+		cut.Find("button.play-conn").Click();
+		await _play.Received(1).DisconnectAsync();
 	}
 
 	[Test]
