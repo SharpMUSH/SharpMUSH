@@ -21,11 +21,11 @@
                 <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
             </div>
             <div class="composer-tools">
-                <button type="button" class="composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
+                <button type="button" class="composer-tool composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
                         aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
-                    <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" /><span class="composer-breaks-code">%r</span>
+                    <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" />
                 </button>
-                <button type="button" class="composer-expand" aria-pressed="@(_expanded ? "true" : "false")"
+                <button type="button" class="composer-tool composer-expand" aria-pressed="@(_expanded ? "true" : "false")"
                         aria-label="@ExpandLabel" title="@ExpandLabel" @onclick="ToggleExpanded">
                     <MudIcon Icon="@(_expanded ? Icons.Material.Outlined.CloseFullscreen : Icons.Material.Outlined.OpenInFull)" Size="Size.Small" />
                 </button>

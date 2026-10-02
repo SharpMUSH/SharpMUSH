@@ -20,11 +20,28 @@
 	min-width: 0;
 }
 
+/* Compact chips: the composer is always on screen, so its mode chips stay small. Each keeps a 44px tap area
+   (the shell's touch target) through an invisible ::after, which also covers the gap to its neighbour. */
+.composer-chips ::deep .kit-chip {
+	position: relative;
+	height: 26px;
+	min-height: 0;
+	padding: 0 10px;
+	border-radius: 13px;
+	font-size: 12px;
+}
+
+.composer-chips ::deep .kit-chip::after {
+	content: "";
+	position: absolute;
+	inset: -9px -3px;
+}
+
 .composer-tools {
 	grid-area: tools;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 4px;
 }
 
 @container (max-width: 28rem) {
@@ -36,10 +53,12 @@
 	}
 }
 
-/* Grows the field to most of the screen for a long post, and back. */
-.composer-expand {
-	width: 36px;
-	height: 36px;
+/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button and the
+   formatting buttons still to come read as one toolbar. */
+.composer-tool {
+	position: relative;
+	width: 32px;
+	height: 32px;
 	display: grid;
 	place-items: center;
 	flex-shrink: 0;
@@ -51,50 +70,20 @@
 	cursor: pointer;
 }
 
-.composer-expand:hover,
-.composer-expand[aria-pressed="true"] {
+/* A 44px tap area around the 32px button, as the chips have. */
+.composer-tool::after {
+	content: "";
+	position: absolute;
+	inset: -6px -2px;
+}
+
+.composer-tool:hover,
+.composer-tool[aria-pressed="true"] {
 	background: var(--surface-3);
 	color: var(--text);
 }
 
-.composer-expand:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
-}
-
-/* The %r toggle: the icon and the code it sends, so its state reads without a tooltip. Off is dim and struck. */
-.composer-breaks {
-	height: 36px;
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	flex-shrink: 0;
-	padding: 0 10px;
-	border: 1px solid var(--border);
-	border-radius: 10px;
-	background: transparent;
-	color: var(--text-dim);
-	font: inherit;
-	cursor: pointer;
-}
-
-.composer-breaks-code {
-	font-family: var(--font-mono);
-	font-size: 13px;
-	text-decoration: line-through;
-}
-
-.composer-breaks[aria-pressed="true"] {
-	border-color: transparent;
-	background: var(--surface-3);
-	color: var(--text);
-}
-
-.composer-breaks[aria-pressed="true"] .composer-breaks-code {
-	text-decoration: none;
-}
-
-.composer-breaks:focus-visible {
+.composer-tool:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
