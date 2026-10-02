@@ -3039,6 +3039,9 @@
     <value>Negar</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Editar</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>editado</value>
     <comment>MT — assumed the badge marks an edited pose</comment>
@@ -3555,6 +3558,12 @@
     <value>Expandir atributos</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Ir para o mais recente</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Novas linhas abaixo</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Expandir objetos</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Nenhuma página foi editada ainda.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Não foi possível carregar esta página. O jogo pode estar reiniciando; uma nova tentativa será feita automaticamente.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Esta página ainda não existe. Você pode criá-la clicando no botão abaixo.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Ficha de personagem: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Dizer</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Comando</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Escreva sua pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Descreva o que acontece…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Diga algo…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Digite um comando…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Quebras de linha como %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>As quebras de linha vão como %r, em uma só postagem ou comando. Clique para enviar cada linha não vazia separadamente.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Cada linha não vazia é enviada separadamente. Clique para enviar as quebras de linha como %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Ampliar o campo</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Reduzir o campo</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Tipo de mensagem</value>

@@ -163,4 +163,84 @@ public class ConnectionStateServiceTests
 		await svc.DisposeAsync();
 		await Assert.That(svc.IsConnected).IsFalse();
 	}
+
+	private static IGameHubConnection StubHub(Func<Task> start)
+	{
+		var hub = Substitute.For<IGameHubConnection>();
+		var disposable = Substitute.For<IDisposable>();
+		hub.On(Arg.Any<string>(), Arg.Any<Action<GameOutputMessage>>()).Returns(disposable);
+		hub.On(Arg.Any<string>(), Arg.Any<Action<RoomEventMessage>>()).Returns(disposable);
+		hub.On(Arg.Any<string>(), Arg.Any<Action<SceneEventMessage>>()).Returns(disposable);
+		hub.StartAsync(Arg.Any<CancellationToken>()).Returns(_ => start());
+		return hub;
+	}
+
+	/// <summary>
+	/// A game that is restarting refuses the first start. The service tries again on its own, so the portal
+	/// has its hub back once the game does, whichever page is open.
+	/// </summary>
+	[Test]
+	public async Task AStartThatFails_IsTriedAgain_UntilItConnects()
+	{
+		// The game stays down until the test says it is back, so no retry can connect early.
+		var gameUp = false;
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(_ => gameUp
+			? StubHub(() => Task.CompletedTask)
+			: StubHub(() => Task.FromException(new HttpRequestException("connection refused"))));
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance)
+		{
+			RetryDelays = [TimeSpan.FromMilliseconds(10)]
+		};
+
+		await svc.ConnectAsync();
+		await Task.Delay(50);
+		await Assert.That(svc.IsConnected).IsFalse();
+
+		gameUp = true;
+		for (var i = 0; i < 200 && !svc.IsConnected; i++) await Task.Delay(10);
+		await Assert.That(svc.IsConnected).IsTrue();
+	}
+
+	/// <summary>Disconnecting on purpose (sign-out, a character switch) ends the retrying.</summary>
+	[Test]
+	public async Task DisconnectAsync_StopsTheRetrying()
+	{
+		var down = StubHub(() => Task.FromException(new HttpRequestException("connection refused")));
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(down);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance)
+		{
+			RetryDelays = [TimeSpan.FromMilliseconds(20)]
+		};
+
+		await svc.ConnectAsync();
+		await svc.DisconnectAsync();
+		var created = factory.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IGameHubConnectionFactory.Create));
+		await Task.Delay(150);
+
+		await Assert.That(factory.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IGameHubConnectionFactory.Create)))
+			.IsEqualTo(created).Because("no hub is started after a disconnect");
+	}
+
+	/// <summary>
+	/// While SignalR is reconnecting on its own, asking for the scene feed must not stop that connection:
+	/// a stopped reconnect is over for good.
+	/// </summary>
+	[Test]
+	public async Task EnsureSceneLive_LeavesAReconnectingHubAlone()
+	{
+		var hub = StubHub(() => Task.CompletedTask);
+		var factory = Substitute.For<IGameHubConnectionFactory>();
+		factory.Create().Returns(hub);
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+		await svc.ConnectAsync();
+
+		hub.State.Returns(Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting);
+		hub.Reconnecting += Raise.Event<Func<Exception?, Task>>(new Exception("lost"));
+		await svc.EnsureSceneLiveAsync();
+
+		await hub.DidNotReceive().StopAsync(Arg.Any<CancellationToken>());
+		factory.Received(1).Create();
+	}
 }

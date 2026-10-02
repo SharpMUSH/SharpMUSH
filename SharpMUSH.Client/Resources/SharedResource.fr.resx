@@ -992,6 +992,12 @@
   <data name="TermCreateExit" xml:space="preserve">
     <value>Créer une sortie</value>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Aller au plus récent</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nouvelles lignes en bas</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Développer les objets</value>
   </data>
@@ -2072,6 +2078,9 @@
   </data>
   <data name="RolComposePlaceholder" xml:space="preserve">
     <value>Posez, parlez ou narrez…</value>
+  </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Modifier</value>
   </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>modifié</value>
@@ -3642,6 +3651,9 @@
     <value>Aucune page n'a encore été modifiée.</value>
     <comment>MT</comment>
   </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Cette page n’a pas pu être chargée. Le jeu redémarre peut-être ; une nouvelle tentative se fera d’elle-même.</value>
+  </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Cette page n'existe pas encore. Vous pouvez la créer en cliquant sur le bouton ci-dessous.</value>
     <comment>MT</comment>
@@ -4355,8 +4367,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Fiche de personnage : {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Dire</value>
@@ -4367,8 +4379,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Commande</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Écrivez votre pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Décrivez ce qui se passe…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Dites quelque chose…</value>
@@ -4378,6 +4390,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Tapez une commande…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Sauts de ligne en %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Les sauts de ligne partent en %r, dans un seul message ou une seule commande. Cliquez pour envoyer chaque ligne non vide séparément.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Chaque ligne non vide part séparément. Cliquez pour envoyer les sauts de ligne en %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Agrandir la saisie</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Réduire la saisie</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Type de message</value>

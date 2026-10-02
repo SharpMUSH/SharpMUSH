@@ -67,6 +67,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.MessageReceived += HandleMessage;
 		wsService.ConnectionStateChanged += HandleStateChange;
 		wsService.Reattached += HandleReattached;
+		wsService.ResumeRefused += HandleResumeRefused;
 
 		_logger.LogInformation("Connecting to {ServerUri}", LogSanitizer.Sanitize(serverUri));
 		await wsService.ConnectAsync(serverUri, identity);
@@ -78,6 +79,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.Reattached -= HandleReattached;
+		wsService.ResumeRefused -= HandleResumeRefused;
 	}
 
 	/// <inheritdoc/>
@@ -308,6 +310,22 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		}
 
 		AddSystemLine("Session resumed — reconnected without re-login.");
+	}
+
+	/// <summary>
+	/// The server started a fresh session instead of resuming the reloaded one (its grace ran out, it
+	/// restarted, or it would not let the old session go on). The screen the page left is the same
+	/// character's, so it comes back above a line saying the session started again, and is kept again for
+	/// the next reload.
+	/// </summary>
+	private void HandleResumeRefused(object? sender, EventArgs e)
+	{
+		if (wsService.ResumeSlot is not { } slot) return;
+		var earlier = slot.TakeScrollback();
+		if (earlier.Count == 0) return;
+		foreach (var line in earlier)
+			AddLine(line);
+		AddSystemLine("— Earlier lines, from before the reload. The session started again. —");
 	}
 
 	private void AddSystemLine(string text) => AddLine(text, TerminalLineSource.System);

@@ -3039,6 +3039,9 @@
     <value>Refuzat</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Editează</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>editat</value>
     <comment>MT</comment>
@@ -3555,6 +3558,12 @@
     <value>Extindere atribute</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Salt la cele mai noi</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Rânduri noi mai jos</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Extindere obiecte</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Nicio pagină nu a fost editată încă.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Pagina nu a putut fi încărcată. Jocul poate reporni; se va încerca din nou automat.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Această pagină nu există încă. O puteți crea apăsând butonul de mai jos.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Fișa personajului: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Poză</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Replică</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Comandă</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Scrie-ți poza…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Descrie ce se întâmplă…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Spune ceva…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Scrie o comandă…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Rânduri noi ca %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Rândurile noi se trimit ca %r, într-o singură postare sau comandă. Faceți clic pentru a trimite fiecare rând care nu e gol separat.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Fiecare rând care nu e gol se trimite separat. Faceți clic pentru a trimite rândurile noi ca %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Mărește câmpul</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Micșorează câmpul</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Tipul mesajului</value>

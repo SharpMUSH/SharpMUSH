@@ -243,6 +243,26 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 
 	public void RaiseScene(SceneEventMessage msg) => OnSceneEventReceived?.Invoke(msg);
 
+	/// <summary>Whether scene events can arrive. False reproduces a scene connection that failed or dropped.</summary>
+	public bool IsSceneLive { get; set; } = true;
+
+	public event Action? OnSceneLiveChanged;
+
+	public int EnsureSceneLiveCalls { get; private set; }
+
+	public Task EnsureSceneLiveAsync()
+	{
+		EnsureSceneLiveCalls++;
+		return Task.CompletedTask;
+	}
+
+	/// <summary>Sets <see cref="IsSceneLive"/> and says so, as the connection does on a drop or a reconnect.</summary>
+	public void SetSceneLive(bool live)
+	{
+		IsSceneLive = live;
+		OnSceneLiveChanged?.Invoke();
+	}
+
 	// Keep the compiler from flagging the otherwise-unused events.
 	public void Touch()
 	{

@@ -283,7 +283,7 @@ public static class SceneFunctions
 
 	/// <summary>
 	/// scenepose(&lt;scene&gt;, &lt;poseId&gt;[, &lt;field&gt;])
-	/// Returns a field of a pose. Fields: content (default), markup, id, scene,
+	/// Returns a field of a pose; an empty &lt;scene&gt; finds the pose by its id alone. Fields: content (default), markup, id, scene,
 	/// author, authorname, showas, origin, originname, source, tags, createdat,
 	/// deleted, editcount, lasteditedat, lasteditor, lasteditorname, or any meta key.
 	/// </summary>
@@ -300,6 +300,13 @@ public static class SceneFunctions
 			: "content";
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		// An empty scene looks the pose up by its id alone, in whatever scene it is. The scene is still checked
+		// for visibility before any field is read.
+		if (sceneId.Length == 0 && await service.GetPoseAsync(poseId) is ScenePose located)
+		{
+			sceneId = located.SceneId;
+		}
+
 		if (await service.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
@@ -354,6 +361,13 @@ public static class SceneFunctions
 		var poseId = args["1"].Message!.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		// An empty scene looks the pose up by its id alone, in whatever scene it is. The scene is still checked
+		// for visibility before any field is read.
+		if (sceneId.Length == 0 && await service.GetPoseAsync(poseId) is ScenePose located)
+		{
+			sceneId = located.SceneId;
+		}
+
 		if (await service.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);

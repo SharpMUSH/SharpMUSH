@@ -3039,6 +3039,9 @@
     <value>Забрани</value>
     <comment>MT — permission tri-state value</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Редактирай</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>редактирано</value>
     <comment>MT — neuter, reads as a status badge</comment>
@@ -3555,6 +3558,12 @@
     <value>Разгъни атрибутите</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Към най-новото</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Нови редове отдолу</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Разгъни обектите</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Все още няма редактирани страници.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Страницата не можа да се зареди. Играта може да се рестартира; ще бъде опитано отново автоматично.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Тази страница още не съществува. Можете да я създадете с бутона по-долу.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Лист на персонажа: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Поза</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Емит</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Реплика</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Команда</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Напишете позата си…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Опишете какво се случва…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Кажете нещо…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Въведете команда…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Нови редове като %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Новите редове се изпращат като %r в една публикация или команда. Щракнете, за да изпращате всеки непразен ред отделно.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Всеки непразен ред се изпраща отделно. Щракнете, за да изпращате новите редове като %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Разгъни полето</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Смали полето</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Вид съобщение</value>

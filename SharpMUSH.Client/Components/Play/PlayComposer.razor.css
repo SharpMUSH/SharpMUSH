@@ -1,12 +1,96 @@
-.composer-row {
+/* The chips and the tools share the top line, the field and Send the next. In a narrow composer (a phone) the four
+   chips take the top line to themselves, the field its full width, and the tools sit on Send's line below it, so
+   no chip wraps and the field is not squeezed beside two buttons. */
+.composer-scope {
+	container-type: inline-size;
+}
+
+.composer-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-areas:
+		"chips tools"
+		"input send";
+	align-items: center;
+	gap: 8px 10px;
+}
+
+.composer-chips {
+	grid-area: chips;
+	min-width: 0;
+}
+
+/* Compact chips: the composer is always on screen, so its mode chips stay small. Each keeps a 44px tap area
+   (the shell's touch target) through an invisible ::after, which also covers the gap to its neighbour. */
+.composer-chips ::deep .kit-chip {
+	position: relative;
+	height: 26px;
+	min-height: 0;
+	padding: 0 10px;
+	border-radius: 13px;
+	font-size: 12px;
+}
+
+.composer-chips ::deep .kit-chip::after {
+	content: "";
+	position: absolute;
+	inset: -9px -3px;
+}
+
+.composer-tools {
+	grid-area: tools;
 	display: flex;
-	align-items: flex-end;
-	gap: 10px;
-	margin-top: 8px;
+	align-items: center;
+	gap: 4px;
+}
+
+@container (max-width: 28rem) {
+	.composer-grid {
+		grid-template-areas:
+			"chips chips"
+			"input input"
+			"tools send";
+	}
+}
+
+/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button and the
+   formatting buttons still to come read as one toolbar. */
+.composer-tool {
+	position: relative;
+	width: 32px;
+	height: 32px;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+/* A 44px tap area around the 32px button, as the chips have. */
+.composer-tool::after {
+	content: "";
+	position: absolute;
+	inset: -6px -2px;
+}
+
+.composer-tool:hover,
+.composer-tool[aria-pressed="true"] {
+	background: var(--surface-3);
+	color: var(--text);
+}
+
+.composer-tool:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .composer-input {
-	flex: 1;
+	grid-area: input;
+	align-self: end;
 	min-width: 0;
 	min-height: 40px;
 	max-height: 160px;
@@ -22,6 +106,13 @@
 	outline: none;
 }
 
+/* Expanded: the field takes most of the screen, so a long post can be read whole while writing it. */
+.composer--expanded .composer-input {
+	min-height: 40vh;
+	max-height: 60vh;
+	field-sizing: fixed;
+}
+
 .composer-input::placeholder {
 	color: var(--text-faint);
 }
@@ -32,6 +123,9 @@
 }
 
 .composer-send {
+	grid-area: send;
+	align-self: end;
+	justify-self: end;
 	height: 40px;
 	padding: 0 20px;
 	border: 0;

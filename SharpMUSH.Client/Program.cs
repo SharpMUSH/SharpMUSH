@@ -117,12 +117,16 @@ builder.Services.AddSingleton<IWidgetRegistry>(registry);
 builder.Services.AddSingleton<ILayoutService, LayoutService>();
 builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
+// The hubs live on the API, like every other server call: against the page's own address they reach only
+// the standalone client dev host (or a separately hosted portal), which answers the negotiate with a 405.
 builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 	new GameHubConnectionFactory(
-		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game",
+		new Uri(apiBaseAddress, "hubs/game").ToString(),
 		sp.GetRequiredService<IAccountAuthState>(),
 		// Phase 9: scene realtime is a separate connection to the plugin-owned SceneHub at /hubs/scene.
-		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/scene"));
+		new Uri(apiBaseAddress, "hubs/scene").ToString()));
+// The commands this browser has sent, for Up and Down in the terminal and the composer.
+builder.Services.AddSingleton<CommandHistory>();
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).

@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ServerInfoService ServerInfo
 @inject IStringLocalizer<SharedResource> Loc
+@inject CommandHistory History
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -28,6 +29,13 @@
             <div id="@_bottomId"></div>
         </div>
     </div>
+    @* Shown by portal-interop.js while the player has scrolled up to reread (sharp-terminal--reading); it
+       says so when output has arrived meanwhile (sharp-terminal--new). *@
+    <button type="button" class="sharp-terminal-jump" @onclick="JumpToLatestAsync">
+        <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="font-size:1rem;" />
+        <span class="sharp-terminal-jump-latest">@Loc["TermJumpLatest"]</span>
+        <span class="sharp-terminal-jump-new">@Loc["TermNewLinesBelow"]</span>
+    </button>
 
     @if (ShowConnectionBar)
     {
@@ -70,7 +78,7 @@
             <span class="term-prompt">›</span>
             <input class="term-input" @ref="_inputRef"
                    value="@_input"
-                   @oninput="@(e => _input = e.Value?.ToString() ?? string.Empty)"
+                   @oninput="OnInput"
                    @onkeydown="OnInputKeyDown"
                    disabled="@(!_connected)"
                    placeholder="@Loc["TermInputPlaceholder"]" />
@@ -406,7 +414,19 @@
         }
 
         await Terminal.SendAsync(_input);
+        await History.AddAsync(_input);
+        // Sending is reading the latest again, as in a telnet client.
+        await JumpToLatestAsync();
+        _historyWalk.Reset();
         _input = string.Empty;
+    }
+
+    private readonly HistoryWalk _historyWalk = new();
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _input = e.Value?.ToString() ?? string.Empty;
+        _historyWalk.Reset();
     }
 
     /// <summary>Clears the terminal's display buffer. Public so a host page (e.g. /play, which
@@ -440,9 +460,22 @@
         return Task.CompletedTask;
     }
 
+    /// <summary>Enter sends; Up and Down walk the command history, as a telnet client's input line does.</summary>
     private async Task OnInputKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await SendAsync();
+        switch (e.Key)
+        {
+            case "Enter":
+                await SendAsync();
+                break;
+            case "ArrowUp":
+                await History.LoadAsync();
+                if (_historyWalk.Older(History.Entries, _input) is { } older) _input = older;
+                break;
+            case "ArrowDown":
+                if (_historyWalk.Newer(History.Entries) is { } newer) _input = newer;
+                break;
+        }
     }
 
     private void OnLineReceived(TerminalLine line)
@@ -472,6 +505,13 @@
     {
         _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
         StateHasChanged();
+    }
+
+    /// <summary>Back to the newest line, following new output again.</summary>
+    private async Task JumpToLatestAsync()
+    {
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.jumpToLatest", _outputId); }
+        catch (JSException) { /* ignore if JS not ready */ }
     }
 
     private async Task ScrollToBottomAsync()

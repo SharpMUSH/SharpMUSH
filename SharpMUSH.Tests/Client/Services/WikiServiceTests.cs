@@ -214,13 +214,26 @@ public class WikiServiceTests : TrackingTestContext
 	}
 
 	[Test]
-	public async Task GetWikiArticle_404_ReturnsNone()
+	public async Task GetWikiArticle_404_ReturnsNotFound()
 	{
 		var service = BuildService(HttpStatusCode.NotFound, "", out _);
 
 		var result = await service.GetWikiArticle("missing");
 
-		await Assert.That(result.Value).IsTypeOf<None>();
+		result.Expect<NotFound>();
+	}
+
+	/// <summary>A server that does not answer is not a page that does not exist: the view must not offer to create it.</summary>
+	[Test]
+	[Arguments(HttpStatusCode.ServiceUnavailable)]
+	[Arguments(HttpStatusCode.InternalServerError)]
+	public async Task GetWikiArticle_AServerFailure_IsAnError_NotNotFound(HttpStatusCode code)
+	{
+		var service = BuildService(code, "", out _);
+
+		var result = await service.GetWikiArticle("home");
+
+		await Assert.That(result.Expect<Error<string>>().Value).IsNotEmpty();
 	}
 
 	[Test]

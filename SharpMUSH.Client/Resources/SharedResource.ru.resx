@@ -3039,6 +3039,9 @@
     <value>Запретить</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>изменено</value>
     <comment>MT — lower-case badge as in the source.</comment>
@@ -3555,6 +3558,12 @@
     <value>Развернуть атрибуты</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>К последним</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Новые строки ниже</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Развернуть объекты</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Пока ни одна страница не изменялась.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить страницу. Возможно, игра перезапускается; попытка повторится автоматически.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Этой страницы пока не существует. вы можете создать её, нажав кнопку ниже.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Лист персонажа: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Поза</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Эмит</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Речь</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Команда</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Напишите позу…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Опишите, что происходит…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Скажите что-нибудь…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Введите команду…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Переносы строк как %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Переносы строк отправляются как %r в одном сообщении или команде. Нажмите, чтобы отправлять каждую непустую строку отдельно.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Каждая непустая строка отправляется отдельно. Нажмите, чтобы отправлять переносы строк как %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Развернуть поле ввода</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Свернуть поле ввода</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Тип сообщения</value>

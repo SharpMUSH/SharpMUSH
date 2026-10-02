@@ -3039,6 +3039,9 @@
     <value>Weigeren</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Bewerken</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>bewerkt</value>
     <comment>MT</comment>
@@ -3555,6 +3558,12 @@
     <value>Attributen uitklappen</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Naar het nieuwste</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nieuwe regels hieronder</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Objecten uitklappen</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Er zijn nog geen pagina's bewerkt.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Deze pagina kon niet worden geladen. Het spel start misschien opnieuw; er wordt vanzelf opnieuw geprobeerd.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Deze pagina bestaat nog niet. Je kunt hem aanmaken via de knop hieronder.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Personageblad: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Zeggen</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Commando</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Schrijf je pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Beschrijf wat er gebeurt…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Zeg iets…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Typ een commando…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Regeleinden als %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Regeleinden gaan als %r mee in één bericht of commando. Klik om elke niet-lege regel apart te sturen.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Elke niet-lege regel gaat apart. Klik om regeleinden als %r te sturen.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Invoerveld vergroten</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Invoerveld verkleinen</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Berichttype</value>

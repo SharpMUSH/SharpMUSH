@@ -25,7 +25,8 @@
     @foreach (var pose in _poses)
     {
         var who = Identify(pose);
-        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter" />
+        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter"
+                   CanEdit="@(OnEditPose.HasDelegate && !pose.IsDeleted && IsViewer(pose.AuthorName))" OnEdit="OnEditPose" />
     }
 </div>
 
@@ -47,6 +48,15 @@
     /// </summary>
     [Parameter] public EventCallback<bool> LiveUnavailableChanged { get; set; }
 
+    /// <summary>
+    /// Whether live poses have stopped arriving because the scene connection is down (not refused): posting
+    /// still works and is recorded, and the story catches up when the connection is back.
+    /// </summary>
+    [Parameter] public EventCallback<bool> LiveDownChanged { get; set; }
+
+    /// <summary>Saves an edit to one of the viewer's own poses (its id and whole new text). Without it, no Edit.</summary>
+    [Parameter] public EventCallback<(string PoseId, string Text)> OnEditPose { get; set; }
+
     /// <summary>How many poses the backlog reads.</summary>
     [Parameter] public int Backlog { get; set; } = 100;
 
@@ -65,10 +75,14 @@
     private string? _joinedSceneId;
     private string? _loadedSceneId;
     private int _generation;
+    private int _eventsSeen;
+    private bool? _live;
+    private CancellationTokenSource? _retry;
 
     protected override async Task OnInitializedAsync()
     {
         SceneHub.OnSceneEventReceived += HandleSceneEvent;
+        SceneHub.OnSceneLiveChanged += OnSceneLiveChanged;
         if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
         {
             _directory = rows;
@@ -118,6 +132,7 @@
             }
             _joinedSceneId = sceneId;
             await LiveUnavailableChanged.InvokeAsync(false);
+            await ReportLiveAsync();
         }
         catch (HubException) when (generation != _generation)
         {
@@ -155,6 +170,7 @@
     private void HandleSceneEvent(SceneEventMessage msg)
     {
         if (!string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
+        _eventsSeen++;
 
         switch (msg.EventType)
         {
@@ -302,9 +318,89 @@
 
     private bool IsViewer(string name) => ViewerName is not null && NameIs(name, ViewerName);
 
+    private void OnSceneLiveChanged() => _ = InvokeAsync(ReportLiveAsync);
+
+    /// <summary>
+    /// Says whether live poses are arriving, and acts on a change: down starts retrying the connection; back up
+    /// reads the backlog again, so poses posted while it was down appear (a reconnect does not replay them).
+    /// </summary>
+    private async Task ReportLiveAsync()
+    {
+        if (_joinedSceneId is not { } sceneId) return;
+        var generation = _generation;
+        var live = SceneHub.IsSceneLive;
+        if (live == _live) return;
+        var wasDown = _live == false;
+        _live = live;
+        await LiveDownChanged.InvokeAsync(!live);
+        if (!live)
+        {
+            StartRetrying();
+            return;
+        }
+        _retry?.Cancel();
+        if (wasDown) await RefillAsync(sceneId, generation);
+    }
+
+    private void StartRetrying()
+    {
+        if (_retry is { IsCancellationRequested: false }) return;
+        _retry = new CancellationTokenSource();
+        _ = RetryAsync(_retry.Token);
+    }
+
+    /// <summary>Retries the scene connection while it is down: 3 s, then doubling to 30 s.</summary>
+    private async Task RetryAsync(CancellationToken token)
+    {
+        var delay = TimeSpan.FromSeconds(3);
+        while (!token.IsCancellationRequested && !SceneHub.IsSceneLive)
+        {
+            try
+            {
+                await Task.Delay(delay, token);
+                await InvokeAsync(SceneHub.EnsureSceneLiveAsync);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception e) when (e is HubException or HttpRequestException or InvalidOperationException or JSException)
+            {
+                // This attempt failed; the next one is further off. The notice stays up meanwhile.
+            }
+            delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
+        }
+    }
+
+    /// <summary>
+    /// Reads the backlog again in place: the gap a dropped connection left. A failed read keeps the story on
+    /// screen and says so. A live event that lands while the read is out may be newer than what the read
+    /// returns, so the read is taken again (up to three times) rather than overwrite it.
+    /// </summary>
+    private async Task RefillAsync(string sceneId, int generation)
+    {
+        // The scene on screen may have changed while the live notice was reported; its backlog is not this one.
+        if (generation != _generation || !string.Equals(sceneId, SceneId, StringComparison.Ordinal)) return;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var events = _eventsSeen;
+            var backlog = await SceneService.GetPosesAsync(sceneId, count: Backlog);
+            if (generation != _generation) return;
+            if (backlog is IReadOnlyList<ScenePoseView> && _eventsSeen != events && attempt < 2) continue;
+            if (backlog is IReadOnlyList<ScenePoseView>) _objids.Clear();
+            ShowPoses(backlog);
+            RebuildMentions();
+            StateHasChanged();
+            return;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         SceneHub.OnSceneEventReceived -= HandleSceneEvent;
+        SceneHub.OnSceneLiveChanged -= OnSceneLiveChanged;
+        _retry?.Cancel();
+        _retry?.Dispose();
         await LeaveJoinedSceneAsync();
         if (_mentionsDelegated)
         {

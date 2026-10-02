@@ -414,6 +414,22 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(recap).DoesNotContain("eavesdropping")
 			.Because("Dave's uncaptured pose must never appear in the transcript");
 
+		// +scene/rewrite <poseId>=<text>: the portal's Edit, the whole text at once. Commas survive (the text is
+		// one field to @scene/editpose), the composer's %r becomes a line break, and only the author may.
+		await RunAndCollectAs(aliceHandle, $"+scene/rewrite {bobPoseId}=Not Bob's words.");
+		await RunAndCollectAs(aliceHandle, $"+scene/edit {bobPoseId}=friends^^^strangers");
+		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).Contains("Well met, friends!")
+			.Because("only the author may rewrite or edit a pose");
+		// The text is evaluated as its author, never as the WIZARD logger the command runs on.
+		await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}=[name(%!)] was here.");
+		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).IsEqualTo($"Bob_{Tag} was here.")
+			.Because("functions in a rewrite run as the player who sent it");
+		await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}=Well met, all, and welcome.%rSit, please.");
+		var rewritten = await Eval($"scenepose({sceneId}, {bobPoseId}, content)");
+		Log($"[REWRITE] {rewritten}");
+		await Assert.That(rewritten).IsEqualTo("Well met, all, and welcome.\nSit, please.")
+			.Because("+scene/rewrite replaces the whole text, commas included, and the composer's %r is a line break");
+
 		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each
 		// last posed. Both name their element with %iL rather than ##; an empty table body is what a

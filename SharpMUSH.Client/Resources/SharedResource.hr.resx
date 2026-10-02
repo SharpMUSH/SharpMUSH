@@ -3039,6 +3039,9 @@
     <value>Zabrani</value>
     <comment>MT</comment>
   </data>
+  <data name="RolEditPose" xml:space="preserve">
+    <value>Uredi</value>
+  </data>
   <data name="RolEditedBadge" xml:space="preserve">
     <value>uređeno</value>
     <comment>MT</comment>
@@ -3555,6 +3558,12 @@
     <value>Proširi atribute</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Na najnovije</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Novi retci ispod</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Proširi objekte</value>
     <comment>MT</comment>
@@ -4058,6 +4067,9 @@
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>Nijedna stranica još nije uređena.</value>
     <comment>MT</comment>
+  </data>
+  <data name="WikiLoadFailed" xml:space="preserve">
+    <value>Stranicu nije bilo moguće učitati. Igra se možda ponovno pokreće; pokušat će se ponovno samo od sebe.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Ova stranica još ne postoji. Možete je stvoriti klikom na gumb ispod.</value>
@@ -5100,8 +5112,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>List lika: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Poza</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Govor</value>
@@ -5112,8 +5124,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Naredba</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Napišite svoju pozu…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Opišite što se događa…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Recite nešto…</value>
@@ -5123,6 +5135,21 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Upišite naredbu…</value>
+  </data>
+  <data name="NavPlayComposerBreaks" xml:space="preserve">
+    <value>Prijelomi retka kao %r</value>
+  </data>
+  <data name="NavPlayComposerBreaksOn" xml:space="preserve">
+    <value>Prijelomi retka šalju se kao %r u jednoj objavi ili naredbi. Kliknite za slanje svakog nepraznog retka zasebno.</value>
+  </data>
+  <data name="NavPlayComposerBreaksOff" xml:space="preserve">
+    <value>Svaki neprazan redak šalje se zasebno. Kliknite za slanje prijeloma retka kao %r.</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Proširi polje</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Smanji polje</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Vrsta poruke</value>

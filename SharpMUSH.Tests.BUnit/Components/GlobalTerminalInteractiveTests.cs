@@ -24,6 +24,7 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	public GlobalTerminalInteractiveTests()
 	{
 		Services.AddMudServices();
+		Services.AddSingleton<CommandHistory>();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -58,6 +59,34 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		await Assert.That(cut.FindAll(".term-input")).IsEmpty();
 		await Assert.That(cut.FindAll(".term-send")).IsEmpty();
 		await Assert.That(cut.FindAll(".sharp-terminal-output")).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task Up_and_Down_walk_the_commands_sent()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		// The terminal reads the connection after its first await; under a loaded run the line can render first.
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not connected yet");
+		}, TimeSpan.FromSeconds(5));
+		var input = cut.Find(".term-input");
+		foreach (var command in new[] { "look", "say hi" })
+		{
+			input.Input(command);
+			input.KeyDown("Enter");
+		}
+		await terminal.Received(1).SendAsync("look");
+
+		input.KeyDown("ArrowUp");
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("say hi");
+		cut.Find(".term-input").KeyDown("ArrowUp");
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("look");
+		cut.Find(".term-input").KeyDown("ArrowDown");
+		cut.Find(".term-input").KeyDown("ArrowDown");
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("").Because("past the newest is the empty line");
 	}
 
 	[Test]

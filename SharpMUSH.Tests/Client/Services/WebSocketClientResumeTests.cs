@@ -225,11 +225,12 @@ public class WebSocketClientResumeTests
 	}
 
 	/// <summary>
-	/// A refused resume is a new session: the old screen belongs to one the server ended, so it is not
-	/// shown, and it is gone from storage before the new session's first line.
+	/// A refused resume is a new session, but the same character in the same tab: the screen the reloaded
+	/// page left comes back above a line saying the session started again, then the new session's lines, and
+	/// all of it is kept for the next reload.
 	/// </summary>
 	[Test]
-	public async Task A_refused_resume_does_not_restore_the_old_screen()
+	public async Task A_refused_resume_restores_the_old_screen_above_the_new_session()
 	{
 		var js = new FakeResumeJs();
 		js.Seed(AliceKey, Point("expired", 40));
@@ -240,8 +241,12 @@ public class WebSocketClientResumeTests
 		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
 
 		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("banner"))).IsTrue();
-		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["banner"]);
-		await Assert.That(await StoredTextsBecomeAsync(js, "banner")).IsTrue();
+		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "banner"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var lines = terminal.Lines.Select(l => l.Text).ToList();
+		var divider = lines.FindIndex(l => l.Contains("The session started again", StringComparison.Ordinal));
+		await Assert.That(divider).IsGreaterThan(lines.IndexOf("old one"));
+		await Assert.That(divider).IsLessThan(lines.IndexOf("banner"));
+		await Assert.That(await StoredTextsBecomeAsync(js, "old one", "banner")).IsTrue();
 
 		await terminal.DisposeAsync();
 	}

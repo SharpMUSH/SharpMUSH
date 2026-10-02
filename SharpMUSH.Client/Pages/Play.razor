@@ -117,9 +117,16 @@ else
                                         {
                                             <div class="play-story-unavailable" role="status">@Loc["RolSceneLiveUnavailable"]</div>
                                         }
+                                        else if (_storyLiveDown)
+                                        {
+                                            @* Posting still works (it goes over the terminal), so the composer stays on. *@
+                                            <div class="play-story-unavailable" role="status">@Loc["RolSceneLiveFeedDown"]</div>
+                                        }
                                         <div class="play-story-scroll">
                                             <SceneStory SceneId="@scene.Id" Occupants="@Room.Occupants" ViewerName="@PlayTerminal.ConnectedPlayerName"
-                                                        OnCharacter="OpenSheetByName" LiveUnavailableChanged="unavailable => OnLiveUnavailable(scene.Id, unavailable)" />
+                                                        OnCharacter="OpenSheetByName" LiveUnavailableChanged="unavailable => OnLiveUnavailable(scene.Id, unavailable)"
+                                                        LiveDownChanged="down => _storyLiveDown = down"
+                                                        OnEditPose="EditPoseAsync" />
                                         </div>
                                     </div>
                                 }
@@ -132,7 +139,8 @@ else
                         <Footer>
                             @if (View == PlayView.Story)
                             {
-                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync" />
+                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
+                                              DraftKey="@DraftKey" />
                             }
                         </Footer>
                     </PlaySceneCard>
@@ -319,6 +327,19 @@ else
 
     /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
     private string? _liveRefusedFor;
+
+    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit, encoded as the composer encodes.</summary>
+    private Task EditPoseAsync((string PoseId, string Text) edit) =>
+        SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
+
+    /// <summary>The composer's draft, kept per character so an alt in another tab keeps its own.</summary>
+    private string? DraftKey =>
+        (PlayTerminal.ConnectedPlayerName ?? SelfRow?.Name ?? AccountAuth.ActiveCharacter?.Name) is { Length: > 0 } name
+            ? $"play.draft.{name}"
+            : null;
+
+        /// <summary>Live poses are not arriving because the scene connection is down; the story retries and catches up.</summary>
+    private bool _storyLiveDown;
 
     /// <summary>
     /// This client cannot receive the room scene's poses (a guest, or a character that cannot see it):
