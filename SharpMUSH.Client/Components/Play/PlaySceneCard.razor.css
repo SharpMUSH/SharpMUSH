@@ -10,6 +10,8 @@
 }
 
 .scene-card-head {
+	/* A container of its own, so what sits in it can answer to the header's width (Play's avatar). */
+	container-type: inline-size;
 	display: flex;
 	align-items: center;
 	gap: 12px;
@@ -183,6 +185,31 @@
 		flex-wrap: wrap;
 		gap: 8px;
 		row-gap: 8px;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+
+	/* One line, as a chat app's top bar: the name, then the room (or scene) after a dot. */
+	.scene-card-titles {
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+	}
+
+	/* The name keeps its width; the room gives way first. */
+	.scene-card-title {
+		flex: 0 0 auto;
+		max-width: 100%;
+	}
+
+	.scene-card-sub {
+		flex: 0 1 auto;
+		min-width: 0;
+	}
+
+	.scene-card-sub::before {
+		content: "·";
+		margin-right: 6px;
 	}
 
 	.scene-card-switch {

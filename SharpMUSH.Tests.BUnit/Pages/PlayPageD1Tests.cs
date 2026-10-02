@@ -216,9 +216,10 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnTouchChrome_AMenuButtonBeforeTheAvatarOpensTheShellsDrawer()
+	public async Task OnTouchChrome_TheMenuButtonOpensPlaysSidebarFromTheLeft_WithTheSiteMenuAtItsTop()
 	{
-		// The shell's touch header is merged into the card header, which leads with its menu button.
+		// A chat app's layout: the card header leads with a menu button; it opens the channel list (Play's
+		// sidebar), and the site's own menu is the first row there.
 		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
 		var opened = 0;
 		var cut = RenderPlay(new ShellNavigation(() => opened++));
@@ -226,9 +227,52 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
 		var lead = cut.Find(".scene-card-lead .play-lead");
 		await Assert.That(lead.FirstElementChild!.ClassList).Contains("play-menu-btn").Because("the menu comes first, then the avatar");
-		await Assert.That(cut.Find("button.play-menu-btn").GetAttribute("aria-label")).IsEqualTo("Toggle navigation");
+		await Assert.That(cut.Find("button.play-menu-btn").GetAttribute("aria-label")).IsEqualTo("Play sections");
+
 		cut.Find("button.play-menu-btn").Click();
+		var sheet = cut.Find(".play-sheet[role='dialog']");
+		await Assert.That(sheet.ClassList).Contains("play-sheet--side");
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-start");
+		await Assert.That(cut.Find(".play-sheet .kit-side-sub").TextContent).Contains("Connected as Ilsa Varn").Because("Play's sidebar is the panel");
+
+		cut.Find("button.play-sheet-site").Click();
 		await Assert.That(opened).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0).Because("the site menu replaces the panel");
+	}
+
+	[Test]
+	public async Task UnreadChannelsOrPages_PutADotOnTheMenuButton()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		_comms.ChannelList = [new CommChannel("Public", 2), new CommChannel("Staff", 5, Joined: false)];
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn .play-menu-dot"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("button.play-menu-btn .play-me-status").TextContent).IsEqualTo("2 unread")
+			.Because("a channel the viewer has not joined does not count");
+	}
+
+	[Test]
+	public async Task TheTerminalSettingsMenu_CarriesFocusMode()
+	{
+		// A phone's header folds the focus button into this menu (Play.razor.css), so the menu must reach it.
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-settings-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-settings-btn").Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-cfg-focus"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-cfg-focus").Click();
+		await Assert.That(cut.FindAll(".play--focus").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task NothingUnread_NoDot()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-menu-dot").Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -256,11 +300,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find("button.play-conn"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.play-conn:not(.play-room-btn)"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play .sharp-terminal-connbar").Count).IsEqualTo(0);
-		await Assert.That(cut.Find("button.play-conn").GetAttribute("aria-label")).IsEqualTo("Disconnect");
+		await Assert.That(cut.Find("button.play-conn:not(.play-room-btn)").GetAttribute("aria-label")).IsEqualTo("Disconnect");
 
-		cut.Find("button.play-conn").Click();
+		cut.Find("button.play-conn:not(.play-room-btn)").Click();
 		await _play.Received(1).DisconnectAsync();
 	}
 
@@ -323,19 +367,18 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task TheRoomTab_OpensTheRoomSheet_WhoseExitsAreRowsThatGo()
+	public async Task ThePeopleButton_OpensTheRoomPanelFromTheRight_WhoseExitsAreRowsThatGo()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".play-tabs"), TimeSpan.FromSeconds(5));
-		var tabs = cut.FindAll(".play-tab");
-		await Assert.That(tabs.Select(t => t.TextContent.Trim()).ToList())
-			.IsEquivalentTo(new[] { "Scene", "Room", "#Channels", "Pages" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		tabs[1].Click();
+		cut.WaitForAssertion(() => cut.Find("button.play-room-btn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-tabs, .play-tab").Count).IsEqualTo(0).Because("a chat app has no tab bar under its messages");
+		cut.Find("button.play-room-btn").Click();
 		var sheet = cut.Find(".play-sheet[role='dialog']");
 		await Assert.That(sheet.GetAttribute("aria-modal")).IsEqualTo("true");
-		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("align-items: flex-end")
-			.Because("MudOverlay centres a zero-size content box; the sheet sits on the bottom edge instead");
+		await Assert.That(sheet.ClassList).Contains("play-sheet--room");
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-end")
+			.Because("MudOverlay centres a zero-size content box; the Room panel sits on the right edge instead");
 		var sheetTabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList();
 		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("the Room sheet is the play layout, then the scope panels, as the desktop aside is");
@@ -389,7 +432,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.SchemaWidget>()
 				.Select(w => w.Instance.WidgetName).ToList())
 			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
-		cut.FindAll(".play-tab")[1].Click();
+		cut.Find("button.play-room-btn").Click();
 		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
 			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -422,7 +465,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindComponents<SharpMUSH.Client.Components.Layout.WidgetErrorBoundary>().Count >= 2, TimeSpan.FromSeconds(5));
 
 		await Assert.That(AsideApps(cut)).DoesNotContain("staffboard");
-		cut.FindAll(".play-tab")[1].Click();
+		cut.Find("button.play-room-btn").Click();
 		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
 			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}

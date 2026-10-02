@@ -65,8 +65,9 @@ else
     @* D1 §5 (boards 01–11): the Play sidebar in the shell's page-sidebar slot; main is the room banner
        and the scene card (Story | Terminal, focus mode, the composer); the aside is Here then Exits.
        Focus mode steps the sidebar, the banner and the aside away, and the shell chrome with them
-       (shell.css: the rail, the touch header, the zones). Below the narrow tier the aside
-       becomes the Room sheet and Play has its own tabs. The terminal stays mounted in both views, so
+       (shell.css: the rail, the touch header, the zones). On a phone Play is laid out like a chat app: the
+       card header is the one bar, its menu button opens Play's sidebar from the left (with the site menu at
+       its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-bleed full-height @(_focus ? "play--focus" : null)">
@@ -93,6 +94,7 @@ else
                             {
                                 @TerminalSettings
                             }
+                            @RoomControl
                             @ConnectionControl
                         </Controls>
                         <ChildContent>
@@ -145,36 +147,16 @@ else
                     }
                 </CascadingValue>
             </aside>
-            <nav class="play-tabs" aria-label="@Loc["NavPlayTabs"]">
-                <button type="button" class="play-tab @(_mobileSheet is null ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet is null ? "true" : "false")"
-                        @onclick="() => _mobileSheet = null">
-                    <MudIcon Icon="@Icons.Material.Outlined.Theaters" Size="Size.Small" /><span>@Loc["NavPlayTabScene"]</span>
-                </button>
-                <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Room ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Room ? "true" : "false")"
-                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Room)">
-                    <MudIcon Icon="@Icons.Material.Outlined.MeetingRoom" Size="Size.Small" /><span>@Loc["NavPlayTabRoom"]</span>
-                </button>
-                <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Channels ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Channels ? "true" : "false")"
-                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Channels)">
-                    <span class="play-tab-hash" aria-hidden="true">#</span><span>@Loc["NavPlayChannels"]</span>
-                    @Badge(Comms.Channels.Where(c => c.Joined).Sum(c => c.Unread))
-                </button>
-                <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Pages ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Pages ? "true" : "false")"
-                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Pages)">
-                    <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Small" /><span>@Loc["NavPlayPages"]</span>
-                    @Badge(Comms.Conversations.Sum(c => c.Unread))
-                </button>
-            </nav>
         </div>
     </SectionShell>
 
     @if (_mobileSheet is { } sheet)
     {
-        <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet" Style="background: rgba(8, 9, 10, 0.55); align-items: flex-end;">
-            <div class="play-sheet" role="dialog" aria-modal="true" aria-label="@SheetLabel(sheet)" tabindex="-1"
-                 @onclick:stopPropagation="true" @onkeydown="OnMobileSheetKey">
+        <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet"
+                    Style="@($"background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: {(sheet == MobileSheet.Room ? "flex-end" : "flex-start")};")">
+            <div class="play-sheet @(sheet == MobileSheet.Room ? "play-sheet--room" : "play-sheet--side")" role="dialog" aria-modal="true"
+                 aria-label="@SheetLabel(sheet)" tabindex="-1" @onclick:stopPropagation="true" @onkeydown="OnMobileSheetKey">
                 <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
-                    <div class="play-sheet-grip" aria-hidden="true"></div>
                     @if (sheet == MobileSheet.Room)
                     {
                         @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
@@ -201,6 +183,13 @@ else
                     }
                     else
                     {
+                        @* Play's sidebar (the scene, channels, pages), with the site's own menu at its top. *@
+                        @if (Shell is not null)
+                        {
+                            <button type="button" class="play-sheet-site" @onclick="OpenSiteMenu">
+                                <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" /><span>@Loc["NavMenuLabel"]</span>
+                            </button>
+                        }
                         <div class="play-sheet-body">
                             <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@Room.Info"
                                          Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
@@ -253,7 +242,8 @@ else
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
-    private enum MobileSheet { Room, Channels, Pages }
+    /// <summary>A phone's side panels: the Room panel from the right, Play's sidebar from the left.</summary>
+    private enum MobileSheet { Room, Side }
 
     private MobileSheet? _mobileSheet;
     /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
@@ -345,17 +335,24 @@ else
 
     /// <summary>
     /// The card header is the only bar on Play: shell.css hides the shell's touch header while the card is
-    /// mounted, and a menu button before the avatar opens the navigation drawer, whose tools row holds that
-    /// header's other buttons. A desktop has the rail, so there is no menu button.
+    /// mounted. Like a chat app's, it leads with a menu button that opens Play's sidebar from the left (the site
+    /// menu sits at its top), carrying a dot while channels or pages are unread. A desktop has the rail and the
+    /// sidebar beside the card, so there is no menu button.
     /// </summary>
     private RenderFragment ViewerAvatar => __builder =>
     {
-        if (_touchChrome && Shell is { } shell)
+        if (_touchChrome)
         {
+            var unread = UnreadComms;
             <span class="play-lead">
-                <button type="button" class="play-menu-btn" aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]"
-                        aria-haspopup="true" @onclick="shell.Open">
+                <button type="button" class="play-menu-btn" aria-label="@Loc["NavPlayTabs"]" title="@Loc["NavPlayTabs"]"
+                        aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Side)">
                     <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
+                    @if (unread > 0)
+                    {
+                        <span class="play-menu-dot" aria-hidden="true"></span>
+                        <span class="play-me-status">@Loc.Plural("NavUnreadCount", "count", unread)</span>
+                    }
                 </button>
                 @ViewerPicture
             </span>
@@ -387,6 +384,18 @@ else
 
     private static string Initial(string name) =>
         name.FirstOrDefault(char.IsLetterOrDigit) is var c && c != default ? char.ToUpperInvariant(c).ToString() : "?";
+
+    /// <summary>
+    /// The Room panel (Here, Exits, the scope panels) from the right, like a chat app's member list. Play.razor.css
+    /// shows it only while the aside is not on screen: below the narrow tier, or in focus mode.
+    /// </summary>
+    private RenderFragment RoomControl => __builder =>
+    {
+        <button type="button" class="play-conn play-room-btn" aria-label="@Loc["NavPlayTabRoom"]" title="@Loc["NavPlayTabRoom"]"
+                aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Room)">
+            <MudIcon Icon="@Icons.Material.Outlined.Group" Size="Size.Small" />
+        </button>
+    };
 
     /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>
     private RenderFragment ConnectionControl => __builder =>
@@ -420,20 +429,16 @@ else
             <SchemaWidget WidgetName="character-header" />
         </CascadingValue>;
 
-    private RenderFragment Badge(int unread) => __builder =>
-    {
-        @if (unread > 0)
-        {
-            <span class="play-tab-badge" aria-label="@Loc.Plural("NavUnreadCount", "count", unread)">@unread</span>
-        }
-    };
+    /// <summary>Unread messages in joined channels and in conversations: the menu button's dot.</summary>
+    private int UnreadComms => Comms.Channels.Where(c => c.Joined).Sum(c => c.Unread) + Comms.Conversations.Sum(c => c.Unread);
 
-    private string SheetLabel(MobileSheet sheet) => sheet switch
+    private string SheetLabel(MobileSheet sheet) => sheet == MobileSheet.Room ? Loc["NavPlayTabRoom"] : Loc["NavPlayTabs"];
+
+    private async Task OpenSiteMenu()
     {
-        MobileSheet.Room => Loc["NavPlayTabRoom"],
-        MobileSheet.Channels => Loc["NavPlayChannels"],
-        _ => Loc["NavPlayPages"],
-    };
+        await CloseMobileSheet();
+        Shell?.Open();
+    }
 
     private RenderFragment TerminalSettings => __builder =>
     {
@@ -455,6 +460,11 @@ else
                     <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
                         <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
                         <span>@Loc["TermClearTerminal"]</span>
+                    </button>
+                    @* The header's focus button, for a phone where Play.razor.css folds it into this menu. *@
+                    <button type="button" class="play-cfg-item play-cfg-focus" @onclick="() => OnFocusChanged(!_focus)">
+                        <MudIcon Icon="@(_focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
+                        <span>@(_focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
                     </button>
                 </div>
             </ChildContent>

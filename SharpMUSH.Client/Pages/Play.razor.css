@@ -133,6 +133,32 @@
     cursor: pointer;
 }
 
+.play-menu-btn {
+    position: relative;
+}
+
+/* Unread channels or pages, on the menu button that opens them. */
+.play-menu-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* The Room panel's button, only while the aside is not on screen (below; and focus mode). Qualified by
+   .play-conn, whose display: grid comes later in this file. */
+.play-conn.play-room-btn {
+    display: none;
+}
+
+.play--focus .play-conn.play-room-btn {
+    display: grid;
+}
+
 .play-menu-btn:hover {
     background: var(--surface-2);
     color: var(--text);
@@ -248,75 +274,55 @@
     color: var(--text);
 }
 
-/* Play's own tabs (board 11): only below the narrow tier. */
-.play-tabs {
-    display: none;
-}
-
-.play-tab {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 4px;
-    border: 0;
-    background: transparent;
-    color: var(--text-dim);
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    min-height: 52px;
-}
-
-.play-tab--on {
-    color: var(--accent);
-}
-
-.play-tab-hash {
-    font-family: var(--font-mono);
-    font-size: 16px;
-    line-height: 20px;
-}
-
-.play-tab-badge {
-    position: absolute;
-    top: 4px;
-    left: calc(50% + 6px);
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    background: var(--accent);
-    color: var(--accent-on);
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 18px;
-}
-
-/* The mobile sheets sit at the bottom of MudOverlay's fixed layer (§4.12). */
+/* A phone's side panels, as a chat app's: Play's sidebar from the left, the Room panel from the right, full
+   height on MudOverlay's fixed layer (§4.12), clear of the notch and the home indicator. */
 .play-sheet {
     position: relative;
-    width: 100vw;
-    max-height: 72vh;
-    max-height: 72svh;
+    width: min(320px, 86vw);
+    height: 100vh;
+    height: 100svh;
     overflow-y: auto;
-    padding: 8px 16px 20px;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
     background: var(--surface);
-    border-top: 1px solid var(--border);
-    border-radius: 18px 18px 0 0;
     text-align: left;
     cursor: default;
     outline: none;
 }
 
-.play-sheet-grip {
-    width: 40px;
-    height: 4px;
-    margin: 0 auto 10px;
-    border-radius: 2px;
-    background: var(--border);
+.play-sheet--side {
+    padding-left: max(16px, env(safe-area-inset-left));
+    border-right: 1px solid var(--border);
+    border-radius: 0 18px 18px 0;
+}
+
+.play-sheet--room {
+    padding-right: max(16px, env(safe-area-inset-right));
+    border-left: 1px solid var(--border);
+    border-radius: 18px 0 0 18px;
+}
+
+/* The site's own menu, at the top of Play's sidebar. */
+.play-sheet-site {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 8px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--surface-3);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.play-sheet-site:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 .play-sheet-tabs {
@@ -346,7 +352,6 @@
     color: var(--text);
 }
 
-.play-tab:focus-visible,
 .play-sheet-tab:focus-visible,
 .play-settings-btn:focus-visible {
     outline: 2px solid var(--accent);
@@ -428,24 +433,23 @@
     }
 }
 
-/* Narrow (board 11): no aside — Here and Exits are the Room sheet — and Play's own tabs at the bottom. */
+/* Narrow (board 11): no aside. Here and Exits are the Room panel, from the header's people button. */
 @container page (max-width: 48rem) {
     .play {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) auto;
-        padding: 8px 8px 0;
+        grid-template-rows: minmax(0, 1fr);
+        padding: 8px;
         gap: 8px;
     }
     .play-aside {
         display: none;
     }
-    .play-tabs {
-        display: flex;
-        margin: 0 -8px;
-        border-top: 1px solid var(--border);
-        background: var(--surface);
+    .play-conn.play-room-btn {
+        display: grid;
     }
-    .play--focus .play-tabs {
+    /* A chat app's top bar keeps few buttons: with the terminal settings in the header, focus is in that
+       menu (Play.razor), not a button of its own. */
+    .play ::deep .scene-card-head:has(.play-settings-btn) .scene-card-focus {
         display: none;
     }
     /* Focus on a phone: the shell's header is gone too (shell.css), so the card meets the screen's
@@ -460,5 +464,15 @@
     }
     .play-story-scroll {
         padding: 6px 10px;
+    }
+}
+
+/* A 320–360px phone: the menu button, the avatar and four header buttons leave the name almost no width, so the
+   picture steps back (the power button still says whether the character is connected). This queries the header's
+   own container (PlaySceneCard.razor.css), whose content box is 344px on a 390px phone, not the page's: page tiers
+   are fixed at 48 / 64 / 90rem. */
+@container (max-width: 20rem) {
+    .play-lead .play-me {
+        display: none;
     }
 }
