@@ -738,20 +738,6 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>escaped_chars</c> table (src/tables.c): the characters the parser gives meaning
-	/// to, which escape() backslashes and secure() blanks.
-	/// </summary>
-	[GeneratedRegex(@"[$%(),;\[\\\]^{}]")]
-	private static partial Regex SoftcodeSpecial();
-
-	/// <summary>
-	/// <paramref name="text"/> with a backslash before every <see cref="SoftcodeSpecial"/> character;
-	/// the text comes back unchanged when it holds none of them. This is for decompose(), which has
-	/// flattened its markup into ansi() calls before it gets here; escape() edits the marked-up text.
-	/// </summary>
-	private static string EscapeSoftcode(string text) => SoftcodeSpecial().Replace(text, @"\$0");
-
-	/// <summary>
 	/// fun_escape (src/funstr.c): a leading backslash, then the text with every special escaped
 	/// except one standing first — the leading backslash already protects it.
 	/// </summary>
@@ -768,7 +754,7 @@ public partial class Functions
 		// Each backslash is an insertion into the argument, so the markup around every special stays.
 		var backslash = MarkupText.Plain("\\");
 		var edits = new List<MarkupString.Edit>();
-		foreach (var special in SoftcodeSpecial().EnumerateMatches(text, 1))
+		foreach (var special in SoftcodeDecomposer.SoftcodeSpecial().EnumerateMatches(text, 1))
 		{
 			edits.Add(new MarkupString.Edit(special.Index, 0, backslash));
 		}
@@ -910,133 +896,13 @@ public partial class Functions
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var input = parser.CurrentState.Arguments["0"].Message!;
-
-		// TODO: ANSI reconstruction needs to happen after text replacements to preserve
-		// proper nesting structure. Current implementation may produce incorrect output when ANSI codes
-		// interact with special character replacements.
-		var reconstructed = MarkupWalker.EvaluateWith((markupType, innerText) =>
-		{
-			return markupType switch
-			{
-				Ansi ansiMarkup
-					=> ReconstructAnsiCall(ansiMarkup.Style, innerText),
-				_ => innerText
-			};
-		}, input);
-
-		var result = EscapeSoftcode(reconstructed);
-
-		// PennMUSH decompose space algorithm (from escape_marked_str in markup.c):
-		// - 5+ consecutive spaces → [space(N)]
-		// - 1-4 spaces: alternating literal-space / %b pattern
-		//   - At start of string (dospace=1): first space → %b, then alternating space/%b
-		//   - After non-space (dospace=0): alternating space/%b pairs
-		//   - Trailing spaces: last space always becomes %b
-		bool dospaceGlobal = result.Length > 0 && result[0] == ' ';
-		result = SpacesRegex().Replace(result, m =>
-		{
-			int spaces = m.Length;
-			if (spaces >= 5)
-			{
-				return $"[space({spaces})]";
-			}
-
-			var sb = new System.Text.StringBuilder();
-			bool dospace = dospaceGlobal && m.Index == 0;
-
-			// Check if this is a trailing run (at end of string)
-			bool isTrailing = m.Index + m.Length == result.Length;
-
-			if (isTrailing)
-			{
-				spaces--; // reserve last for final %b
-				if (spaces > 0 && dospace) { spaces--; sb.Append("%b"); }
-				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
-				sb.Append("%b"); // final %b for trailing
-			}
-			else
-			{
-				if (dospace) { spaces--; sb.Append("%b"); }
-				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
-			}
-			return sb.ToString();
-		});
-
-		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
-
-		return ValueTask.FromResult(new CallState(result));
-	}
+		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!)));
 
 	/// <summary>
 	/// Reconstructs an ansi() function call from AnsiStyle and inner text
 	/// </summary>
 	internal static string ReconstructAnsiCall(AnsiStyle ansiDetails, string innerText)
-	{
-		var attributes = new List<string>();
-
-		// Build formatting prefix (h for bold, u for underline, f for blink, i for invert)
-		var formatPrefix = "";
-		if (ansiDetails.Bold) formatPrefix += "h";
-		if (ansiDetails.Underlined) formatPrefix += "u";
-		if (ansiDetails.Blink) formatPrefix += "f";
-		if (ansiDetails.Inverted) formatPrefix += "i";
-
-		// Add foreground color (with formatting prefix if any)
-		if (ansiDetails.Foreground is not null)
-		{
-			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
-			if (!string.IsNullOrEmpty(colorCode))
-			{
-				// If there's a formatting prefix and the color is a single character,
-				// combine them (e.g., "ub" instead of "u,b")
-				if (!string.IsNullOrEmpty(formatPrefix) && colorCode.Length == 1)
-				{
-					attributes.Add(formatPrefix + colorCode);
-					formatPrefix = ""; // Clear format prefix since it's been used
-				}
-				else
-				{
-					// Add formatting prefix as separate attribute if not combined
-					if (!string.IsNullOrEmpty(formatPrefix))
-					{
-						attributes.Add(formatPrefix);
-						formatPrefix = "";
-					}
-					attributes.Add(colorCode);
-				}
-			}
-			else if (!string.IsNullOrEmpty(formatPrefix))
-			{
-				// No valid color code, add format prefix anyway
-				attributes.Add(formatPrefix);
-				formatPrefix = "";
-			}
-		}
-		else if (!string.IsNullOrEmpty(formatPrefix))
-		{
-			// No foreground color, add format prefix as standalone attribute
-			attributes.Add(formatPrefix);
-			formatPrefix = "";
-		}
-
-		// Add background color
-		if (ansiDetails.Background is not null)
-		{
-			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
-			if (!string.IsNullOrEmpty(colorCode))
-				attributes.Add(colorCode);
-		}
-
-		if (attributes.Count > 0)
-		{
-			var attributeString = string.Join(",", attributes);
-			return $"ansi({attributeString},{innerText})";
-		}
-
-		return innerText;
-	}
+		=> SoftcodeDecomposer.AnsiCodes(ansiDetails) is { Length: > 0 } codes ? $"ansi({codes},{innerText})" : innerText;
 
 	/// <summary>
 	/// Encodes angle brackets for HTML/Web safety
@@ -1074,34 +940,6 @@ public partial class Functions
 				? "underline"
 				: "inherit")}\">{innerText}</span>";
 	}
-
-	/// <summary>The <c>ansi()</c> letter for each standard palette index, foreground and background.</summary>
-	private const string ForegroundLetters = "xrgybmcw";
-	private const string BackgroundLetters = "XRGYBMCW";
-
-	/// <summary>
-	/// Converts an <see cref="AnsiColor"/> back to the PennMUSH <c>ansi()</c> code that produces it.
-	/// The terminal default has no code — it is the absence of one — so it converts to nothing.
-	/// </summary>
-	internal static string ConvertAnsiColorToCode(AnsiColor? color, bool isBackground = false) => color switch
-	{
-		null => string.Empty,
-		AnsiColor.Default => isBackground ? "D" : "d",
-		// The leading '#' is what makes this an ansi() hex code; without it the code came back as a
-		// letter sequence ("FF0000" reads as bright white, bright magenta, …), so decompose() did not
-		// round-trip through ansi(). Lower case to match the syntax help and ansi()'s own output.
-		AnsiColor.Rgb rgb => isBackground
-			? $"/#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
-			: $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
-		AnsiColor.Standard standard =>
-			(standard.Bright ? "h" : string.Empty)
-			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),
-		AnsiColor.Xterm xterm => isBackground ? $"/+xterm{xterm.Index}" : $"+xterm{xterm.Index}",
-		// AnsiColor is a closed hierarchy (Default/Standard/Xterm/Rgb, private constructor); the
-		// compiler cannot see that, so this arm exists only to satisfy exhaustiveness. Reaching it
-		// means a fifth case was added to AnsiColor without updating this switch.
-		_ => throw new UnreachableException($"Unhandled {nameof(AnsiColor)} subtype {color.GetType()}.")
-	};
 
 	/// <summary>
 	/// Resolves an <see cref="AnsiColor"/> to 24-bit RGB for the web renderer.
@@ -1592,11 +1430,11 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MarkupText.Concat(shuffled));
 	}
 
-	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeSpecial"/> character becomes a space.</summary>
+	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeDecomposer.SoftcodeSpecial"/> character becomes a space.</summary>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!
-			.Apply(text => SoftcodeSpecial().Replace(text, " ")));
+			.Apply(text => SoftcodeDecomposer.SoftcodeSpecial().Replace(text, " ")));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -2117,9 +1955,6 @@ public partial class Functions
 		// Return error message per PennMUSH documentation
 		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
 	}
-
-	[GeneratedRegex(" +")]
-	private static partial Regex SpacesRegex();
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

@@ -1,4 +1,6 @@
 using Bunit;
+using MarkupString;
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Components.Scenes;
 using SharpMUSH.Client.Models;
@@ -96,7 +98,8 @@ public class StoryPoseTests : BunitContext
 			.Add(x => x.OnEdit, e => saved = e));
 		await Assert.That(cut.FindAll(".story-row--ooc").Count).IsEqualTo(1);
 		cut.Find("button.story-edit-btn").Click();
-		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("brb, making tea");
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo(@"brb\, making tea")
+			.Because("the box holds decompose() of the pose, which escapes the comma");
 		cut.Find("textarea.story-editor-input").Input("back, tea made");
 		cut.Find("button.story-editor-save").Click();
 		await Assert.That(saved).IsEqualTo(("P1", "back, tea made"));
@@ -166,5 +169,28 @@ public class StoryPoseTests : BunitContext
 		var mention = cut.Find(".story-body a.mention");
 		await Assert.That(mention.TextContent).IsEqualTo("Tomas");
 		await Assert.That(cut.FindAll(".story-body a.mention").Count).IsEqualTo(1).Because("the author is not a mention in their own pose");
+	}
+
+	/// <summary>
+	/// Edit starts from decompose() of the pose: its colours are ansi() calls in the box, so a save that changed
+	/// only the words keeps them.
+	/// </summary>
+	[Test]
+	public async Task Edit_StartsFromTheDecomposedPose_ColoursIncluded()
+	{
+		(string PoseId, string Text)? saved = null;
+		var styled = MarkupText.Concat(
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), "Tomas"),
+			MarkupText.Plain(" leans on a stack of crates"));
+		var pose = Pose() with { Content = styled.ToPlainText(), Markup = MarkupTextSerializer.Serialize(styled) };
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, pose).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
+
+		cut.Find("button.story-edit-btn").Click();
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value"))
+			.IsEqualTo("[ansi(r,Tomas)]%bleans on a stack of crates");
+
+		cut.Find("textarea.story-editor-input").Input("[ansi(r,Tomas)]%bleans on the crates.");
+		cut.Find("button.story-editor-save").Click();
+		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)]%bleans on the crates."));
 	}
 }

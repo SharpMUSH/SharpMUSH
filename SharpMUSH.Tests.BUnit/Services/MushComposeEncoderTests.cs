@@ -88,4 +88,15 @@ public class MushComposeEncoderTests
 	{
 		await Assert.That(MushComposeEncoder.Encode(string.Empty)).IsEqualTo(string.Empty);
 	}
+
+	/// <summary>
+	/// An escape travels with what it escapes. decompose() writes a semicolon as <c>\;</c>; turned into
+	/// <c>\%;</c> it read back as the two characters "%;".
+	/// </summary>
+	[Test]
+	[Arguments(@"a\;b", @"a\;b")]
+	[Arguments(@"a\\;b", @"a\\%;b")]
+	[Arguments(@"[ansi(r,a\,b)]\; c", @"[ansi(r,a\,b)]\; c")]
+	public async Task AnEscapedCharacterTravelsAsItIs(string text, string expected)
+		=> await Assert.That(MushComposeEncoder.Encode(text)).IsEqualTo(expected);
 }

@@ -328,7 +328,7 @@ else
     /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
     private string? _liveRefusedFor;
 
-    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit, encoded as the composer encodes.</summary>
+    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit. The text is softcode (decompose()'s, as the Edit box seeds it), which the package evaluates once.</summary>
     private Task EditPoseAsync((string PoseId, string Text) edit) =>
         SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
 
