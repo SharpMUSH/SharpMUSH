@@ -88,6 +88,20 @@ public class SetupController(
 		};
 
 	/// <summary>
+	/// What building the <c>http</c> or <c>event</c> handler's packages onto object <paramref name="dbref"/> would
+	/// leave not running: the attributes they write that the object already has from elsewhere, which the install
+	/// keeps. Read-only.
+	/// </summary>
+	[HttpGet("wizard/handlers/{kind}/clashes")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> HandlerClashes(string kind, [FromQuery] int dbref, CancellationToken cancellationToken)
+		=> await handlers.ClashesAsync(kind, dbref, cancellationToken) switch
+		{
+			IReadOnlyList<HandlerClash> clashes => Ok(clashes),
+			Error<string> error => NotFound(error.Value),
+		};
+
+	/// <summary>
 	/// Installs the listed bundled packages, with what they depend on, and removes the other bundled packages.
 	/// 409 with the reason when some could not be changed; the others still were.
 	/// </summary>

@@ -50,6 +50,12 @@ file sealed class SetupApiHandler(
 	private int? _httpHandler = 8;
 	private readonly HashSet<string> _installed = ["http-handler", "profile-handler", "common-functions", "plus-help", "scene"];
 
+	/// <summary>What api/setup/wizard/handlers/{kind}/clashes answers for the HTTP handler; none by default.</summary>
+	public List<object> HttpClashes { get; } = [];
+
+	/// <summary>Each clash check, as "kind dbref", in order.</summary>
+	public List<string> ClashChecks { get; } = [];
+
 	/// <summary>Each PUT to api/setup/wizard/handlers/{kind}, as "kind body", in order.</summary>
 	public List<string> HandlerChanges { get; } = [];
 
@@ -65,6 +71,13 @@ file sealed class SetupApiHandler(
 		if (path == "api/setup/wizard" && request.Method == HttpMethod.Get)
 		{
 			return _wizardPending is { } pending ? Json(Wizard(pending)) : new HttpResponseMessage(HttpStatusCode.Forbidden);
+		}
+
+		if (path.StartsWith("api/setup/wizard/handlers/", StringComparison.Ordinal) && path.EndsWith("/clashes", StringComparison.Ordinal))
+		{
+			var kind = path["api/setup/wizard/handlers/".Length..^"/clashes".Length];
+			ClashChecks.Add($"{kind} {request.RequestUri.Query.TrimStart('?')}");
+			return Json(kind == "http" ? HttpClashes : []);
 		}
 
 		if (path.StartsWith("api/setup/wizard/handlers/", StringComparison.Ordinal) && request.Method == HttpMethod.Put)
@@ -434,6 +447,44 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 			"http {\"mode\":\"use\",\"dbref\":46}",
 			"event {\"mode\":\"none\",\"dbref\":null}",
 		]);
+	}
+
+	/// <summary>
+	/// Building onto an object that already holds some of the packages' attributes keeps its values, so those
+	/// parts of the packages would not run as shipped. The wizard lists them and goes no further until the
+	/// administrator chooses to use the object anyway.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Handlers_AnObjectWithClashingAttributes_NeedsAnExplicitChoice()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.HttpClashes.Add(new { package = "http-handler", attribute = "GET" });
+		handler.HttpClashes.Add(new { package = "profile-handler", attribute = "GET`ONLINE" });
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=handlers");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-handler-http"));
+		cut.Find("#setup-handler-event input[value='none']").Change(true);
+
+		cut.Find("button.setup-save-handlers").Click();
+		cut.WaitForAssertion(() => cut.Find("#setup-handler-http .setup-handler-clashes"));
+
+		await Assert.That(handler.ClashChecks).IsEquivalentTo(["http dbref=8"])
+			.Because("only the kept HTTP handler is an existing object to build onto");
+		await Assert.That(cut.Find("#setup-handler-http .setup-handler-clashes").TextContent).Contains("GET`ONLINE");
+		await Assert.That(handler.HandlerChanges).IsEmpty().Because("nothing changes before the choice is made");
+		await Assert.That(cut.Markup).DoesNotContain("AdmSetupPackagesTitle");
+
+		cut.Find("#setup-handler-http-accept").Change(true);
+		cut.Find("button.setup-save-handlers").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupPackagesTitle"))
+				throw new InvalidOperationException("packages step not rendered yet");
+		});
+		await Assert.That(handler.ClashChecks).HasSingleItem().Because("the same object is not checked twice");
+		await Assert.That(handler.HandlerChanges).IsEquivalentTo(["event {\"mode\":\"none\",\"dbref\":null}"]);
 	}
 
 	/// <summary>

@@ -4605,7 +4605,7 @@
     <value>Choose your handlers</value>
   </data>
   <data name="AdmSetupHandlersLead" xml:space="preserve">
-    <value>The packages SharpMUSH ships build on two objects: the HTTP handler and the event handler. Use the ones your game already has, and the packages add their attributes to them without touching yours, or create new ones.</value>
+    <value>The packages SharpMUSH ships build on two objects: the HTTP handler and the event handler. You can build them onto the ones your game already has, or create new ones. Building onto an existing object adds the packages' attributes to it; where it already has one of the same name, your value is kept and that part of the package does not run as shipped. Before anything changes, the wizard lists every such attribute.</value>
   </data>
   <data name="AdmSetupHandlerHttpTitle" xml:space="preserve">
     <value>HTTP handler (http_handler)</value>
@@ -4720,5 +4720,14 @@
   </data>
   <data name="AdmImportConfigFailed" xml:space="preserve">
     <value>The configuration could not be applied, so nothing was imported: {0}</value>
+  </data>
+  <data name="AdmSetupHandlerClashes" xml:space="preserve">
+    <value>This object holds something other than what the packages ship in {0} attribute(s) they write. Your values would be kept, so these parts of the packages would run your code instead of theirs:</value>
+  </data>
+  <data name="AdmSetupHandlerClashesMore" xml:space="preserve">
+    <value>and {0} more</value>
+  </data>
+  <data name="AdmSetupHandlerClashAccept" xml:space="preserve">
+    <value>Use it anyway</value>
   </data>
 </root>

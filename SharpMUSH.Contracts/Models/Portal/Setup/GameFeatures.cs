@@ -41,6 +41,14 @@ public static class HandlerKinds
 /// <param name="Packages">The installed bundled packages that attach to this handler.</param>
 public record HandlerState(string Kind, int? Dbref, string? Name, bool IsWizard, IReadOnlyList<string> Packages);
 
+/// <summary>
+/// An attribute a bundled package writes to a handler that the object already has from somewhere else. The
+/// install keeps the object's own, so that part of the package runs the game's code instead of its own.
+/// </summary>
+/// <param name="Package">The bundled package that writes it.</param>
+/// <param name="Attribute">The attribute's name.</param>
+public record HandlerClash(string Package, string Attribute);
+
 /// <summary>How the wizard sets a handler.</summary>
 public static class HandlerModes
 {

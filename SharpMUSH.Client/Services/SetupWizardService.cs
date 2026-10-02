@@ -38,5 +38,13 @@ public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfo
 		return result;
 	}
 
+	/// <summary>
+	/// The attributes the <paramref name="kind"/> handler's packages would write to object <paramref name="dbref"/>
+	/// that it already has, which the install would keep in place of the packages' own.
+	/// </summary>
+	public virtual Task<ApiResult<List<HandlerClash>>> GetClashesAsync(string kind, int dbref)
+		=> Http.GetApiAsync<List<HandlerClash>>(
+			$"api/setup/wizard/handlers/{Uri.EscapeDataString(kind)}/clashes?dbref={dbref}", "The server returned no answer.");
+
 	public virtual Task<ApiResult<Success>> FinishAsync() => Http.PostApiAsync("api/setup/wizard/finish");
 }

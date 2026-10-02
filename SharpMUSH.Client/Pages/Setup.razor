@@ -140,6 +140,31 @@
                         {
                             <p class="setup-handler-warn" role="note">@Loc["AdmSetupHandlerNotWizard"]</p>
                         }
+
+                        @* Building onto an object that already has some of the packages' attributes keeps the
+                           object's own, so those parts of the packages run the game's code instead. Said before
+                           anything is changed, and only gone past with an explicit choice. *@
+                        @if (choice.Mode is Keep or HandlerModes.Use && choice.Clashes is { Count: > 0 } clashes)
+                        {
+                            <div class="setup-handler-clashes" role="alert">
+                                <p>@Loc["AdmSetupHandlerClashes", clashes.Count]</p>
+                                <ul>
+                                    @foreach (var clash in clashes.Take(ClashesShown))
+                                    {
+                                        <li><code>@clash.Attribute</code> — @PackageTitle(clash.Package)</li>
+                                    }
+                                    @if (clashes.Count > ClashesShown)
+                                    {
+                                        <li>@Loc["AdmSetupHandlerClashesMore", clashes.Count - ClashesShown]</li>
+                                    }
+                                </ul>
+                                <label class="setup-choice">
+                                    <input id="setup-handler-@kind-accept" type="checkbox" checked="@choice.Accepted"
+                                           disabled="@_busy" @onchange="e => Accept(kind, e.Value is true)" />
+                                    <span>@Loc["AdmSetupHandlerClashAccept"]</span>
+                                </label>
+                            </div>
+                        }
                     </section>
                 }
 
@@ -254,8 +279,17 @@
     /// <summary>The handler choice that changes nothing.</summary>
     private const string Keep = "keep";
 
-    /// <summary>A handler's choice on the handlers step: a <see cref="HandlerModes"/> value or <see cref="Keep"/>.</summary>
-    private sealed record HandlerChoice(string Mode, string? Dbref);
+    /// <summary>
+    /// A handler's choice on the handlers step: a <see cref="HandlerModes"/> value or <see cref="Keep"/>, the object
+    /// typed for <see cref="HandlerModes.Use"/>, and — once checked — the attributes building on that object would
+    /// keep in place of the packages' own (<paramref name="CheckedFor"/> is the object they were checked for), and
+    /// whether the administrator chose to go ahead regardless.
+    /// </summary>
+    private sealed record HandlerChoice(string Mode, string? Dbref, IReadOnlyList<HandlerClash>? Clashes = null,
+        int? CheckedFor = null, bool Accepted = false);
+
+    /// <summary>How many clashing attributes are listed before the rest are counted.</summary>
+    private const int ClashesShown = 8;
 
     private sealed record PackageGroup(string TitleKey, IReadOnlyList<BundledPackageState> Packages);
 
@@ -383,9 +417,22 @@
         _step = Step.Handlers;
     }
 
-    private void Choose(string kind, string mode) => _handlerChoices[kind] = _handlerChoices[kind] with { Mode = mode };
+    // A different choice is a different object, so whatever was checked and accepted no longer applies.
+    private void Choose(string kind, string mode)
+        => _handlerChoices[kind] = _handlerChoices[kind] with { Mode = mode, Clashes = null, CheckedFor = null, Accepted = false };
 
-    private void SetDbref(string kind, string? value) => _handlerChoices[kind] = _handlerChoices[kind] with { Dbref = value };
+    private void SetDbref(string kind, string? value)
+        => _handlerChoices[kind] = _handlerChoices[kind] with { Dbref = value, Clashes = null, CheckedFor = null, Accepted = false };
+
+    private void Accept(string kind, bool accepted) => _handlerChoices[kind] = _handlerChoices[kind] with { Accepted = accepted };
+
+    /// <summary>The existing object a choice builds the packages onto, or null for a new one or none.</summary>
+    private int? ExistingTarget(string kind, HandlerChoice choice) => choice.Mode switch
+    {
+        Keep => _handlers.FirstOrDefault(h => h.Kind == kind)?.Dbref,
+        HandlerModes.Use => ParseDbref(choice.Dbref),
+        _ => null
+    };
 
     /// <summary>Applies each handler choice that changes something, then moves on to the packages.</summary>
     private async Task SaveHandlersAsync()
@@ -410,7 +457,43 @@
             }
         }
 
+        // Building onto an existing object: say what it already has that the packages would write, and go no
+        // further until the administrator has seen it and chosen to go ahead or picked something else.
         _busy = true;
+        var unresolved = false;
+        foreach (var (kind, choice) in _handlerChoices.ToList())
+        {
+            if (ExistingTarget(kind, choice) is not { } target)
+            {
+                continue;
+            }
+
+            if (choice.CheckedFor != target)
+            {
+                switch (await Wizard.GetClashesAsync(kind, target))
+                {
+                    case List<HandlerClash> clashes:
+                        _handlerChoices[kind] = choice with { Clashes = clashes, CheckedFor = target, Accepted = false };
+                        break;
+                    case ApiFailure failure:
+                        _error = Loc["AdmSetupHandlerFailed", HandlerTitle(kind), failure.Message];
+                        _busy = false;
+                        return;
+                }
+            }
+
+            if (_handlerChoices[kind] is { Clashes.Count: > 0, Accepted: false })
+            {
+                unresolved = true;
+            }
+        }
+
+        if (unresolved)
+        {
+            _busy = false;
+            return;
+        }
+
         foreach (var (kind, request) in requests)
         {
             if (await Wizard.SetHandlerAsync(kind, request) is ApiFailure failure)
@@ -510,6 +593,10 @@
         HandlerKinds.Event => Loc["AdmSetupPkgNeedsEvent"],
         _ => Loc["AdmSetupAppUnavailable"],
     };
+
+    private string PackageTitle(string id) => _packages.FirstOrDefault(p => p.Id == id) is { } package
+        ? PackageTitle(package)
+        : id;
 
     private string PackageTitle(BundledPackageState package) => package.Id switch
     {

@@ -25,6 +25,7 @@ public class HandlerSetupService(
 	IPackageRegistryService registry,
 	IPackageInstallService installer,
 	IBundledPackageBootstrap bundled,
+	IPackageManifestService manifests,
 	ConfigurationReloadService reload,
 	ILogger<HandlerSetupService> logger)
 {
@@ -47,6 +48,65 @@ public class HandlerSetupService(
 		}
 
 		return states;
+	}
+
+	/// <summary>
+	/// The attributes the bundled packages that build on a <paramref name="kind"/> handler write to object
+	/// <paramref name="number"/> where it holds something other than what the package ships: its own attribute of
+	/// that name, or a value an earlier install kept in place of the package's. Installing keeps the object's value,
+	/// so those parts of the packages run the game's code instead of their own; the wizard shows them before the
+	/// object is made, or kept as, the handler.
+	/// </summary>
+	public async Task<Result<IReadOnlyList<HandlerClash>>> ClashesAsync(string kind, int number,
+		CancellationToken cancellationToken)
+	{
+		if (!Kinds.Contains(kind))
+		{
+			return new Error<string>($"Unknown handler: {kind}.");
+		}
+
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not AnySharpObject found)
+		{
+			return new Error<string>($"#{number} does not exist.");
+		}
+
+		var target = found.Object().DBRef;
+		var managed = await registry.GetManagedAttributesForObjectAsync(target.ToString());
+		var wellKnown = kind == HandlerKinds.Http ? WellKnownRefs.HttpHandler : WellKnownRefs.EventHandler;
+		var clashes = new List<HandlerClash>();
+		foreach (var package in BundledPackages.All.Where(p => GameFeatureService.HandlerKind(p.Requires) == kind))
+		{
+			if (manifests.ParseManifest(BundledPackages.ManifestYaml(package.PackageId)) is not ParsedPackageManifest parsed)
+			{
+				continue;
+			}
+
+			var written = parsed.Manifest.Objects
+				.Where(o => o.Target is { Kind: PackageRefKind.WellKnown } t && t.Name == wellKnown)
+				.SelectMany(o => o.Attributes.Keys);
+			foreach (var attribute in written)
+			{
+				// GetAttributeQuery yields the path's nodes, the leaf last, only when the leaf exists.
+				var live = await mediator.CreateStream(new GetAttributeQuery(target, attribute.Split('`')), cancellationToken)
+					.LastOrDefaultAsync(cancellationToken);
+				if (live is null)
+				{
+					continue;
+				}
+
+				// Installed already: the package recorded what it ships as the baseline, including where an install
+				// kept the object's own value instead, so a live value that differs is one the package is not running.
+				// Not installed: anything already there is the object's own.
+				var baseline = managed.FirstOrDefault(m => m.PackageId == package.PackageId
+					&& string.Equals(m.Attribute, attribute, StringComparison.OrdinalIgnoreCase));
+				if (baseline is null || baseline.BaselineValue != live.Value.ToPlainText())
+				{
+					clashes.Add(new HandlerClash(package.PackageId, attribute));
+				}
+			}
+		}
+
+		return clashes;
 	}
 
 	/// <summary>
