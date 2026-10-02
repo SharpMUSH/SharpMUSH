@@ -122,4 +122,20 @@ public class SoftcodeDecomposerTests
 		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(
 				AnsiMarkup.Create(linkUrl: "https://x.y/a\"b", linkKind: LinkKind.Url, linkText: "x"), "site")))
 			.IsEqualTo(@"[tagwrap(a,href=""https://x.y/a\%22b"",site)]");
+
+	[Test]
+	public async Task AnAttributeTurnedOffIsItsCapital()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(AnsiCodeParser.Parse("uU"), "x")))
+			.IsEqualTo("[ansi(U,x)]");
+
+	[Test]
+	public async Task AnOffCodeInsideItsAttributeNests()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(AnsiCodeParser.Parse("u"),
+				MarkupText.Concat(MarkupText.Plain("a"), MarkupText.Wrap(AnsiCodeParser.Parse("U"), "b")))))
+			.IsEqualTo("[ansi(u,a[ansi(U,b)])]");
+
+	[Test]
+	public async Task HiliteTurnedOffAfterAColourIsTheCapitalAndThePlainColour()
+		=> await Assert.That(SoftcodeDecomposer.Decompose(MarkupText.Wrap(AnsiCodeParser.Parse("hrH"), "x")))
+			.IsEqualTo("[ansi(Hr,x)]");
 }

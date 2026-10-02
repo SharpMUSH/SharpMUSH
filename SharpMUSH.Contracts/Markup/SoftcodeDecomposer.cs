@@ -156,7 +156,8 @@ public static partial class SoftcodeDecomposer
 
 	/// <summary>
 	/// The <c>ansi()</c> codes that produce <paramref name="style"/>, written as PennMUSH's
-	/// <c>write_ansi_letters</c> writes them: the attribute letters <c>f h i u</c>, a palette background
+	/// <c>write_ansi_letters</c> writes them: the attribute letters <c>f h i u</c>, the ones turning an
+	/// attribute off <c>F H I U</c>, a palette background
 	/// letter, the foreground (a letter, <c>#rrggbb</c> or <c>+xtermN</c>), and a background that is not a
 	/// letter after <c>!</c>. <c>[ansi(hBr,x)]</c>, <c>[ansi(#ff0000!#0000ff,x)]</c>. Empty when it sets nothing.
 	/// </summary>
@@ -168,6 +169,10 @@ public static partial class SoftcodeDecomposer
 		if (style.Bold || bright) codes.Append('h');
 		if (style.Inverted) codes.Append('i');
 		if (style.Underlined) codes.Append('u');
+		if (style.BlinkOff) codes.Append('F');
+		if (style.BoldOff) codes.Append('H');
+		if (style.InvertedOff) codes.Append('I');
+		if (style.UnderlinedOff) codes.Append('U');
 
 		var background = ColorCode(style.Background, isBackground: true);
 		if (background.Length == 1) codes.Append(background);

@@ -23,6 +23,10 @@ think [decompose(ansi(h,x))]|[decompose(ansi(u,x))]|[decompose(ansi(f,x))]|[deco
 think [decompose(ansi(#ff0000,x))]|[decompose(ansi(/#00ff00,x))]|[decompose(ansi(#ff0000/#0000ff,x))]|[decompose(ansi(+red,x))]
 think [decompose(ansi(d,x))]|[decompose(ansi(D,x))]|[decompose(ansi(n,x))]
 
+::case dc.offcodes  F, H, I and U, the codes that turn an attribute off, and xterm colours
+think [decompose(ansi(U,x))]|[decompose(ansi(uU,x))]|[decompose(ansi(Uu,x))]|[decompose(ansi(F,x))]|[decompose(ansi(I,x))]|[decompose(ansi(hrH,x))]
+think [decompose(ansi(+xterm200,x))]|[decompose(ansi(200,x))]|[decompose(ansi(u200,x))]
+
 ::case dc.nesting  colour inside colour: SharpMUSH nests the calls, PennMUSH writes them flat (compatibility output)
 think [decompose(ansi(r,a[ansi(g,b)]c))]|[decompose(ansi(r,a[ansi(u,b)]))]
 
