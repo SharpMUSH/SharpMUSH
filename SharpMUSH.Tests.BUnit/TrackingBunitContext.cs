@@ -30,10 +30,18 @@ public abstract class TrackingBunitContext : BunitContext
 	/// <see cref="AccountAuthService"/> gets that one, as the app would; a test that registers neither gets
 	/// a session nobody is signed in to; a test that registers its own <see cref="IAccountAuthState"/>
 	/// overrides this.
+	/// <para>
+	/// Anything that links to an optional application asks <see cref="ServerInfoService"/> whether the game
+	/// has it. Unless a test registers its own, the game is a new one: guests allowed, the default name, and
+	/// the applications a first boot installs.
+	/// </para>
 	/// </summary>
-	protected TrackingBunitContext() =>
+	protected TrackingBunitContext()
+	{
 		Services.TryAddSingleton<IAccountAuthState>(sp =>
 			sp.GetService<AccountAuthService>() ?? Substitute.For<IAccountAuthState>());
+		Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
+	}
 
 	/// <summary>
 	/// Takes ownership of <paramref name="disposable"/> and returns it unchanged. Public so a shared

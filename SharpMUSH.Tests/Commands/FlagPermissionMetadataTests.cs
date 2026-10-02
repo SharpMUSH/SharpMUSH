@@ -158,7 +158,7 @@ public class FlagPermissionMetadataTests
 		var principal = await Flag([], []);
 		var powerName = "METAPOWER" + Guid.NewGuid().ToString("N").ToUpperInvariant();
 		_powers.Add(powerName);
-		var powerDefinition = (await Mediator.Send(new CreatePowerCommand(powerName, "", "", false, [], [], ["PLAYER"])))!;
+		var powerDefinition = (await Mediator.Send(new CreatePowerCommand(powerName, [], "", false, [], [], ["PLAYER"])))!;
 		var permissions = new[] { "odark", principal.Name.ToLowerInvariant(), powerName.ToLowerInvariant(), "event" };
 		var flag = await Flag(permissions, permissions);
 		await Set(owner.Handle, owner.DbRef, flag.Name);

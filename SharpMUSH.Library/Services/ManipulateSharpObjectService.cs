@@ -19,7 +19,8 @@ public class ManipulateSharpObjectService(
 	IValidateService validateService,
 	INotifyService notifyService,
 	IAttributeService attributeService,
-	IPublisher publisher)
+	IPublisher publisher,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IManipulateSharpObjectService
 {
 	public async ValueTask<CallState> SetName(AnySharpObject executor, AnySharpObject obj, MString name, bool notify)
@@ -51,59 +52,7 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 
 			case { IsPlayer: true }:
-				var plainName = name.ToPlainText();
-				// Materialized: consulted again below for the alias collision check.
-				var tryFindPlayerByName = await mediator.CreateStream(new GetPlayerQuery(plainName)).ToArrayAsync();
-				if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase)))
-				{
-					if (notify)
-					{
-						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse), executor);
-					}
-
-					return "#-1 PLAYER NAME ALREADY IN USE.";
-				}
-
-				var playerSplit = name.Split(";");
-
-				// ok_object_name → ok_player_name(name, player, thing): the renamer decides the
-				// exemptions, and the player may keep a banned name it already has.
-				if (!await validateService.ValidPlayerName(playerSplit[0], executor, obj))
-				{
-					if (notify)
-					{
-						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameNotAllowed), executor);
-					}
-
-					return ErrorMessages.Returns.BadPlayerName;
-				}
-
-				await mediator.Send(new SetNameCommand(obj, playerSplit[0]));
-
-				if (playerSplit.Length <= 1)
-				{
-					return obj.Object().DBRef;
-				}
-
-				var aliases = Array.ConvertAll(playerSplit[1..], x => x.ToPlainText());
-
-				if (tryFindPlayerByName
-						.SelectMany(x => x.Aliases ?? [])
-						.Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
-						.Any())
-				{
-					if (notify)
-					{
-						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse), executor);
-					}
-
-					return "#-1 PLAYER ALIAS ALREADY IN USE.";
-				}
-
-				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-					MarkupText.Join(MarkupText.Plain(";"), aliases.Select(MarkupText.Plain)));
-
-				return obj.Object().DBRef;
+				return await SetPlayerName(executor, obj, name.ToPlainText(), notify);
 
 			default:
 				var split = name.Split(";");
@@ -117,6 +66,112 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 		}
 	}
+
+	/// <summary>
+	/// <c>do_name</c>'s player case (PennMUSH <c>src/set.c:83-100, 127-147</c>) with
+	/// <c>ok_object_name</c> (<c>src/predicat.c:766</c>): <c>Name</c>, <c>Name;alias;...</c>, or
+	/// <c>Name;</c> to clear the alias; a name in double quotes takes no aliases. The name and every alias
+	/// must be names the player could take (<c>ok_player_name</c>), and a setter who is not a wizard may
+	/// give no more than <c>max_aliases</c> names in all - counting the name itself, as Penn does. The
+	/// aliases are then written to ALIAS like any other ALIAS write, which reports them.
+	/// </summary>
+	private async ValueTask<CallState> SetPlayerName(AnySharpObject executor, AnySharpObject player, string requested,
+		bool notify)
+	{
+		if (await ParsePlayerName(executor, player, requested) is not { } parsed)
+		{
+			return await RefusePlayerName(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameOrAliasNotAllowed),
+				notify);
+		}
+
+		if (parsed.TooManyAliases)
+		{
+			return await RefusePlayerName(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameTooManyAliases),
+				notify);
+		}
+
+		await mediator.Send(new SetNameCommand(player, MarkupText.Plain(parsed.Name)));
+
+		if (parsed.AliasList is { Length: 0 })
+		{
+			await attributeService.ClearAttributeAsync(executor, player, PlayerAliases.AttributeName,
+				IAttributeService.AttributePatternMode.Exact);
+		}
+		else if (parsed.AliasList is { } list)
+		{
+			await attributeService.SetAttributeAsync(executor, player, PlayerAliases.AttributeName, MarkupText.Plain(list));
+		}
+
+		return player.Object().DBRef;
+	}
+
+	private async ValueTask<CallState> RefusePlayerName(AnySharpObject executor, string key, bool notify)
+	{
+		if (notify)
+		{
+			await notifyService.NotifyLocalized(executor, key, executor);
+		}
+
+		return ErrorMessages.Returns.BadPlayerName;
+	}
+
+	/// <summary>
+	/// The name, and the alias list to write: <see langword="null"/> to leave ALIAS alone, empty to clear
+	/// it. <see langword="null"/> when the name or an alias is one the player may not take, or an empty
+	/// alias is followed by another.
+	/// </summary>
+	private async ValueTask<ParsedPlayerName?> ParsePlayerName(AnySharpObject executor, AnySharpObject player,
+		string requested)
+	{
+		if (requested.StartsWith('"'))
+		{
+			var close = requested.IndexOf('"', 1);
+			var quoted = close < 0 ? requested[1..] : requested[1..close];
+			return await validateService.ValidPlayerName(MarkupText.Plain(quoted), executor, player)
+				? new ParsedPlayerName(quoted, null, false)
+				: null;
+		}
+
+		var parts = requested.Split(PlayerAliases.Delimiter);
+		if (!await validateService.ValidPlayerName(MarkupText.Plain(parts[0]), executor, player))
+		{
+			return null;
+		}
+
+		if (parts.Length == 1)
+		{
+			return new ParsedPlayerName(parts[0], null, false);
+		}
+
+		var names = new List<string>();
+		var empty = false;
+		foreach (var part in parts[1..])
+		{
+			if (empty)
+			{
+				return null;
+			}
+
+			var entry = part.TrimStart(' ');
+			if (entry.Length == 0)
+			{
+				empty = true;
+				continue;
+			}
+
+			if (!await validateService.ValidPlayerName(MarkupText.Plain(entry), executor, player))
+			{
+				return null;
+			}
+
+			names.Add(entry);
+		}
+
+		var tooMany = 1 + names.Count > configuration.CurrentValue.Limit.MaxAliases && !await executor.IsWizard();
+		return new ParsedPlayerName(parts[0], string.Join(PlayerAliases.Delimiter, names), tooMany);
+	}
+
+	private sealed record ParsedPlayerName(string Name, string? AliasList, bool TooManyAliases);
 
 	public async ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword,
 		bool notify)
@@ -279,15 +334,9 @@ public class ManipulateSharpObjectService(
 	/// <summary>
 	/// Resolves a power by name or alias.
 	/// </summary>
-	/// <remarks>
-	/// <see cref="SharpPower.Alias"/> is declared non-nullable but the seeded powers store null for "no alias", so the
-	/// null guard is load-bearing: without it the predicate throws on the first aliasless power the stream yields.
-	/// </remarks>
 	public ValueTask<SharpPower?> FindPower(string powerOrPowerAlias) =>
 		mediator.CreateStream(new GetPowersQuery())
-			.FirstOrDefaultAsync(x =>
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
+			.FirstOrDefaultAsync(x => x.AnswersTo(powerOrPowerAlias));
 
 	/// <summary>
 	/// PennMUSH src/wiz.c do_power: the shared body of <c>@power &lt;object&gt;=...</c> and the side-effect

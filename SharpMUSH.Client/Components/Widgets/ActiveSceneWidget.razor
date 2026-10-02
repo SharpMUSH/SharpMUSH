@@ -10,6 +10,7 @@
    view, with the room as the second line. Scenes carry no image yet, so the tile shows its icon
    fill until room images reach the scene summary. Placed in a page's main column (the home page)
    it takes the main card instead, its tiles across the width. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
 <div class="active-scene-widget">
     <KitCard Aside="@(!InMain)" Title="@Loc.Plural("NavLiveNow", "count", _activeScenes?.Count ?? 0)"
              Sub="@(InMain ? Loc["WidLiveNowSub"].Value : null)"
@@ -48,6 +49,7 @@
         </div>
     </KitCard>
 </div>
+</FeatureGate>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

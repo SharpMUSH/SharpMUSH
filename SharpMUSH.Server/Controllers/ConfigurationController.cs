@@ -11,6 +11,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -21,6 +22,7 @@ public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
+	MushCnfImportService mushCnf,
 	ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
@@ -231,30 +233,7 @@ public class ConfigurationController(
 	{
 		try
 		{
-			var tempFile = Path.GetTempFileName();
-			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
-
-			var import = ReadPennMushConfig.Import(tempFile, followIncludes: false);
-			var importedOptions = import.Options;
-
-			System.IO.File.Delete(tempFile);
-
-			// An uploaded mush.cnf arrives alone. Its include lines are not followed, since they would name
-			// files on this server, so the restrict.cnf and alias.cnf it includes are not read; each line
-			// that could not be carried over is named rather than lost silently.
-			foreach (var line in import.Skipped)
-			{
-				logger.LogWarning("Configuration import did not carry over: {Line}", line);
-			}
-
-			// Pass the object directly - the database will handle serialization
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
-
-			// This notifies IOptionsMonitor consumers via change tokens
-			configReloadService.SignalChange();
-
-			logger.LogInformation("Configuration imported and persisted successfully");
-
+			var importedOptions = await mushCnf.ApplyAsync(await mushCnf.ReadAsync(configContent));
 			return Ok(OptionHelper.OptionsToConfigurationResponse(importedOptions));
 		}
 		catch (Exception ex)

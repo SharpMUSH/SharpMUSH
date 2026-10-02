@@ -17,7 +17,16 @@ public class SharpPower
 	/// </summary>
 	public bool Disabled { get; set; } = false;
 
-	public required string Alias { get; set; }
+	/// <summary>
+	/// The other names the power answers to, as PennMUSH's power alias table gives them (<c>tel_anywhere</c>
+	/// for Tport_Anywhere, both <c>@wall</c> and <c>wall</c> for Announce). Empty for none.
+	/// </summary>
+	public string[] Aliases { get; set; } = [];
+
+	/// <summary>Whether <paramref name="name"/> is this power's name or one of its aliases, ignoring case.</summary>
+	public bool AnswersTo(string name)
+		=> Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+			|| Aliases.Any(alias => alias.Equals(name, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// The power's one-character abbreviation, or the empty string for none — PennMUSH's

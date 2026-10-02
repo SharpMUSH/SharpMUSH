@@ -85,3 +85,14 @@
 		height: 36px;
 	}
 }
+
+/* MudAlert renders its own root, so the scoped selector has to reach through. */
+.adm-dash ::deep .adm-dash-setup {
+	margin-bottom: 14px;
+}
+
+.adm-dash ::deep .adm-dash-setup-link {
+	margin-left: 0.5rem;
+	color: var(--accent);
+	font-weight: 600;
+}

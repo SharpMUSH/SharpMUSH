@@ -142,6 +142,10 @@ internal static class EngineRegistration
 		services.AddSingleton<IBanEnforcer>(sp => sp.GetRequiredService<BanEnforcementService>());
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<SetupService>();
+		services.AddSingleton<GameFeatureService>();
+		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
+		services.AddSingleton<HandlerSetupService>();
+		services.AddSingleton<MushCnfImportService>();
 		services.AddHostedService<RoleSeedService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();

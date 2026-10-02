@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.BUnit.Controllers;
 
@@ -23,7 +25,8 @@ public class ConfigurationControllerTests
 		var database = Substitute.For<ISharpDatabase>();
 		var reloadService = new ConfigurationReloadService();
 		var logger = Substitute.For<ILogger<ConfigurationController>>();
-		return new ConfigurationController(wrapper, database, reloadService, logger);
+		return new ConfigurationController(wrapper, database, reloadService,
+			new MushCnfImportService(wrapper, database, reloadService, NullLogger<MushCnfImportService>.Instance), logger);
 	}
 
 	[TUnit.Core.Test]
@@ -226,6 +229,8 @@ public class ConfigurationControllerTests
 		wrapper.CurrentValue.Returns(CreateDefaultOptions());
 		var controller = new ConfigurationController(
 			wrapper, database, new ConfigurationReloadService(),
+			new MushCnfImportService(wrapper, database, new ConfigurationReloadService(),
+				NullLogger<MushCnfImportService>.Instance),
 			Substitute.For<ILogger<ConfigurationController>>());
 
 		var updates = new Dictionary<string, JsonElement>

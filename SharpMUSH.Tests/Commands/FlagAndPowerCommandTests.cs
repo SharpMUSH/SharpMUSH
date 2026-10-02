@@ -155,7 +155,7 @@ public class FlagAndPowerCommandTests
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(createdPower).IsNotNull();
 		await Assert.That(createdPower!.Name).IsEqualTo(powerName);
-		await Assert.That(createdPower.Alias).IsEqualTo(alias);
+		await Assert.That(createdPower.Aliases).IsEquivalentTo([alias]);
 		await Assert.That(createdPower.System).IsFalse();
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, executor)).IsTrue();
@@ -188,7 +188,7 @@ public class FlagAndPowerCommandTests
 		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		var createdPower = await Mediator.Send(new CreatePowerCommand(
-			powerName, alias, string.Empty, false,
+			powerName, [alias], string.Empty, false,
 			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"]
 		));
 		await Assert.That(createdPower).IsNotNull();
@@ -565,7 +565,7 @@ public class FlagAndPowerCommandTests
 	{
 		var powerName = $"TEST_POWER_LTR_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var created = await Mediator.Send(new CreatePowerCommand(
-			powerName, string.Empty, string.Empty, false,
+			powerName, [], string.Empty, false,
 			["FLAG^WIZARD"], ["FLAG^WIZARD"], types ?? ["PLAYER"]));
 		await Assert.That(created).IsNotNull();
 		await Assert.That(created!.Symbol).IsEqualTo(string.Empty);
@@ -769,7 +769,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(before!.Symbol).IsEqualTo(string.Empty);
 
 		await Mediator.Send(new UpdatePowerCommand(
-			powerName, before.Alias, "9", before.SetPermissions, before.UnsetPermissions,
+			powerName, before.Aliases, "9", before.SetPermissions, before.UnsetPermissions,
 			before.TypeRestrictions));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol)
@@ -790,7 +790,7 @@ public class FlagAndPowerCommandTests
 
 		var definition = await Mediator.Send(new GetPowerQuery(powerName));
 		await Mediator.Send(new UpdatePowerCommand(
-			powerName, definition!.Alias, "8", definition.SetPermissions, definition.UnsetPermissions,
+			powerName, definition!.Aliases, "8", definition.SetPermissions, definition.UnsetPermissions,
 			definition.TypeRestrictions));
 
 		var after = await Mediator.CreateStream(new GetPowersQuery()).ToListAsync();
@@ -1081,9 +1081,30 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/alias {powerName}=builder"));
 
-		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Alias).IsEqualTo(alias);
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Aliases).IsEquivalentTo([alias]);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
 			nameof(ErrorMessages.Notifications.PowerAliasConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	/// <summary>
+	/// <c>@power/alias</c> takes a list, as <c>@flag/alias</c> does: PennMUSH gives Announce both <c>@wall</c> and
+	/// <c>wall</c>, so one alias per power was not enough (#1508).
+	/// </summary>
+	[Test]
+	public async ValueTask Power_Alias_SetsEveryAliasListed()
+	{
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var first = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var second = $"PB_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={first}"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/alias {powerName}={first} {second}"));
+
+		var power = (await Mediator.Send(new GetPowerQuery(powerName)))!;
+		await Assert.That(power.Aliases).IsEquivalentTo([first, second]);
+		await Assert.That((await Mediator.Send(new GetPowerQuery(second.ToLowerInvariant())))?.Name).IsEqualTo(powerName);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -1101,7 +1122,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@power/alias {claimant}={holderAlias.ToLowerInvariant()}"));
 
-		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Alias).IsEqualTo(claimantAlias);
+		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Aliases).IsEquivalentTo([claimantAlias]);
 
 		await Mediator.Send(new DeletePowerCommand(holder));
 		await Mediator.Send(new DeletePowerCommand(claimant));

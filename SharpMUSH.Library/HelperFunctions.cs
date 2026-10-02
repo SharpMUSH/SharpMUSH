@@ -249,9 +249,7 @@ public static partial class HelperFunctions
 		=> obj.HasPower(power, ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
-		=> await obj.Powers.Value
-			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
-									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false), cancellationToken);
+		=> await obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
 
 	/// <summary>
 	/// PennMUSH's <c>Hearer</c> (<c>src/game.c:1564</c>) walks <c>ATTR_FOR_EACH(thing, ptr)</c>,

@@ -1,4 +1,5 @@
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Tests.Shared;
 using System.Net;
 using System.Text;
@@ -71,5 +72,69 @@ public class ServerInfoServiceTests
 		var service = new ServerInfoService(new SingleClientFactory(handler));
 
 		await Assert.That(await service.GameNameAsync()).IsEqualTo("SharpMUSH");
+	}
+
+	private static HttpResponseMessage WithFeatures(params string[] features) =>
+		new(HttpStatusCode.OK)
+		{
+			Content = new StringContent(
+				$$"""{"guestsEnabled":true,"mudName":"Elsewhere","features":[{{string.Join(",", features.Select(f => $"\"{f}\""))}}]}""",
+				Encoding.UTF8, "application/json")
+		};
+
+	[Test]
+	public async Task TheApplicationsAreTheOnesTheServerReports()
+	{
+		using var handler = new CapturingHttpHandler(() => WithFeatures(GameFeatures.WikiReader));
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.WikiReader)).IsTrue();
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
+			.Because("a game that turned the Scene System off must not be linked to it");
+	}
+
+	[Test]
+	public async Task AFailedReadAssumesANewGamesApplications()
+	{
+		using var handler = new CapturingHttpHandler(Unavailable);
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.WikiReader)).IsFalse();
+	}
+
+	[Test]
+	public async Task Refresh_AsksAgain_AndTellsItsReaders()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([() => WithFeatures(GameFeatures.Scenes), () => WithFeatures()]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+		var told = 0;
+		service.Changed += () => told++;
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		service.Refresh();
+
+		await Assert.That(told).IsEqualTo(1);
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse();
+	}
+
+	[Test]
+	public async Task RemovingAPackageAsksForTheFeaturesAgain()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([
+			() => WithFeatures(GameFeatures.Scenes),
+			() => new HttpResponseMessage(HttpStatusCode.NoContent),
+			() => WithFeatures()]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var factory = new SingleClientFactory(handler);
+		var service = new ServerInfoService(factory);
+		var packages = new PackagesAdminService(factory, service);
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		await packages.UninstallAsync("scene", force: false);
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
+			.Because("the package page removed the scene system, so the navigation stops offering it");
 	}
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
@@ -17,6 +19,11 @@ namespace SharpMUSH.Server.Controllers;
 /// pre-generated admin account (renames it and sets its password). On success, the claimer
 /// is minted an account session exactly like <see cref="AuthController.AccountLogin"/> does,
 /// so they're auto-logged-in as the new administrator.
+///
+/// <para>The claim is the wizard's first step. The rest — importing a PennMUSH database and its
+/// <c>mush.cnf</c>, setting the HTTP and event handlers, choosing the bundled packages — is the
+/// administrator's (<c>api/setup/wizard</c>), and stays pending until they finish it, so closing the tab
+/// after the claim does not lose it.</para>
 /// </summary>
 [ApiController]
 [Route("api/setup")]
@@ -26,6 +33,8 @@ public class SetupController(
 	IAccountSessionStore accountSessionStore,
 	AccountClaimsService accountClaims,
 	SitelockGuard sitelockGuard,
+	GameFeatureService features,
+	HandlerSetupService handlers,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -56,6 +65,68 @@ public class SetupController(
 			Error<string> error => Conflict(error.Value),
 		};
 	}
+
+	/// <summary>Whether the wizard is unfinished, the game's handlers, and the packages it offers.</summary>
+	[HttpGet("wizard")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<ActionResult<SetupWizardResponse>> GetWizard(CancellationToken cancellationToken)
+		=> Ok(await WizardAsync(cancellationToken));
+
+	/// <summary>
+	/// Sets the <c>http</c> or <c>event</c> handler: an object the game has, a new one, or none. The bundled
+	/// packages built on the old handler move to the new one. Answers with the wizard's state afterwards; 409
+	/// with the reason when the change was refused or only partly made.
+	/// </summary>
+	[HttpPut("wizard/handlers/{kind}")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> SetHandler(string kind, [FromBody] SetHandlerRequest request,
+		CancellationToken cancellationToken)
+		=> await handlers.SetAsync(kind, request, cancellationToken) switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+
+	/// <summary>
+	/// What building the <c>http</c> or <c>event</c> handler's packages onto object <paramref name="dbref"/> would
+	/// leave not running: the attributes they write that the object already has from elsewhere, which the install
+	/// keeps. Read-only.
+	/// </summary>
+	[HttpGet("wizard/handlers/{kind}/clashes")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> HandlerClashes(string kind, [FromQuery] int dbref, CancellationToken cancellationToken)
+		=> await handlers.ClashesAsync(kind, dbref, cancellationToken) switch
+		{
+			IReadOnlyList<HandlerClash> clashes => Ok(clashes),
+			Error<string> error => NotFound(error.Value),
+		};
+
+	/// <summary>
+	/// Installs the listed bundled packages, with what they depend on, and removes the other bundled packages.
+	/// 409 with the reason when some could not be changed; the others still were.
+	/// </summary>
+	[HttpPut("wizard/packages")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> SetPackages([FromBody] SetupPackagesRequest request,
+		CancellationToken cancellationToken)
+		=> await features.ApplyPackagesAsync(request.Installed ?? [], cancellationToken) switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+
+	/// <summary>Closes the wizard. What it set up stays as it is.</summary>
+	[HttpPost("wizard/finish")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> FinishWizard()
+	{
+		await features.SetWizardPendingAsync(false);
+		return NoContent();
+	}
+
+	private async Task<SetupWizardResponse> WizardAsync(CancellationToken cancellationToken)
+		=> new(await features.WizardPendingAsync(), await handlers.HandlersAsync(cancellationToken),
+			await features.PackagesAsync());
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

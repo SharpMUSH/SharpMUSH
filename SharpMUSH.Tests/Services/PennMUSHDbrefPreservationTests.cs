@@ -211,6 +211,31 @@ public class PennMUSHDbrefPreservationTests
 	}
 
 	/// <summary>
+	/// The source game's own handler, named in the mush.cnf imported before the database, is the source's
+	/// object at that number once the import writes it there — not SharpMUSH's seed — so the option stays.
+	/// One only the default named is still unset.
+	/// </summary>
+	[Test]
+	public async Task AHandlerTheSourcesMushCnfNamed_IsKept()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var before = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))?.Database;
+		await Assert.That(before?.EventHandler ?? 9u).IsEqualTo(9u).Because("the seeded default this test relies on");
+		var named = new MushCnfObjectReferences();
+		named.Values["event_handler"] = 9;
+		await world.ExpandedData.SetExpandedServerData(nameof(MushCnfObjectReferences), named);
+
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
+
+		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
+		await Assert.That(stored.Database.EventHandler).IsEqualTo(9u);
+		await Assert.That(stored.Database.HttpHandler).IsNull();
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("Kept event_handler #9"))).IsTrue();
+		await Assert.That((await NodeAsync(world, 9)).Object().Name).IsEqualTo("Gadget")
+			.Because("#9 is the source game's object now");
+	}
+
+	/// <summary>
 	/// A fresh server's bundled packages create their objects owned by, inside and homed at the Package
 	/// Manager, among them the Scene Logger that SAY/POSE/@EMIT are hooked to. Removing the seeds must not
 	/// leave such an object ownerless: every command it runs would throw "No owner found" and the hooked
@@ -346,6 +371,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(cancellation.IsCancellationRequested).IsTrue();
 		await Assert.That(result.Errors).Contains(e => e.StartsWith("Fatal error:"));
+		await Assert.That(result.Aborted).IsTrue();
 		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
 		var packageManager = (await NodeAsync(world, (int)stored.Database.PackageManager!.Value)).Expect<SharpPlayer>();
 		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(packageManager, "WIZARD")).IsTrue();

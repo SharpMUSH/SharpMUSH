@@ -338,7 +338,9 @@ public static partial class ReadPennMushConfig
 			skipped.Add($"{line.Trim()}: SharpMUSH has no equivalent, so it was not carried over.");
 		}
 
-		return new PennMushConfigImport(work, skipped);
+		var named = configDictionary.Where(entry => entry.Value.Length > 0).Select(entry => entry.Key)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return new PennMushConfigImport(work, skipped, named);
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 	}

@@ -183,12 +183,6 @@
   </data>
 
   <!-- Name and alias notifications -->
-  <data name="PlayerNameInUse" xml:space="preserve">
-    <value>That player name is already in use.</value>
-  </data>
-  <data name="PlayerAliasInUse" xml:space="preserve">
-    <value>That player alias is already in use.</value>
-  </data>
 
   <!-- Function notifications -->
   <data name="RecursionLimit" xml:space="preserve">
@@ -1229,11 +1223,11 @@
   <data name="FailedToDeletePowerFormat" xml:space="preserve">
     <value>Failed to delete power '{0}'.</value>
   </data>
-  <data name="PowerAliasRequiresNameAndAlias" xml:space="preserve">
-    <value>@POWER/ALIAS requires power name and new alias.</value>
+  <data name="PowerAliasRequiresNameAndAliases" xml:space="preserve">
+    <value>@POWER/ALIAS requires power name and aliases.</value>
   </data>
-  <data name="PowerAliasChangedFormat" xml:space="preserve">
-    <value>Power '{0}' alias changed to '{1}'.</value>
+  <data name="PowerAliasesSetFormat" xml:space="preserve">
+    <value>Power '{0}' aliases set to: {1}.</value>
   </data>
   <data name="PowerAliasConflictFormat" xml:space="preserve">
     <value>That alias already matches the {0} power.</value>
@@ -2557,9 +2551,6 @@
   <data name="PlayerCreateInvalidName" xml:space="preserve">
     <value>That is not a valid player name.</value>
   </data>
-  <data name="PlayerNameNotAllowed" xml:space="preserve">
-    <value>You can't give a player that name.</value>
-  </data>
   <data name="PlayerNameAlreadyExists" xml:space="preserve">
     <value>That player name already exists.</value>
   </data>
@@ -2839,5 +2830,18 @@ PLAYERS:</value>
   </data>
   <data name="StatsWorldCountsFormat" xml:space="preserve">
     <value>{0} objects = {1} rooms, {2} exits, {3} things, {4} players, {5} garbage.</value>
+  </data>
+  <!-- A player's ALIAS attribute (PennMUSH do_set_atr / do_name) -->
+  <data name="PlayerAliasSet" xml:space="preserve">
+    <value>Alias set.</value>
+  </data>
+  <data name="PlayerAliasRemoved" xml:space="preserve">
+    <value>Alias removed.</value>
+  </data>
+  <data name="PlayerNameOrAliasNotAllowed" xml:space="preserve">
+    <value>You can't give a player that name or alias.</value>
+  </data>
+  <data name="PlayerNameTooManyAliases" xml:space="preserve">
+    <value>Too many aliases.</value>
   </data>
 </root>

@@ -10,6 +10,7 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.BUnit.Resources;
 
@@ -83,6 +84,21 @@ public class NavRailTests : TrackingBunitContext
 			await Assert.That(item.GetAttribute("aria-label")).IsNotNull().Because($"{href} is an icon-only link");
 		}
 		await Assert.That(cut.Find("nav.phosphor-rail").GetAttribute("aria-label")).IsNotNull();
+	}
+
+	/// <summary>The rail links the scene archive only while the game has the Scene System.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task TheSceneArchive_IsLinked_OnlyWhenTheGameHasScenes(bool scenes)
+	{
+		Services.AddSingleton<ServerInfoService>(
+			new StubServerInfoService(guestsEnabled: true, features: scenes ? [GameFeatures.Scenes] : []));
+
+		var cut = RenderAt("/");
+
+		await Assert.That(cut.FindAll("a.phosphor-rail-item[href='/scenes']").Count).IsEqualTo(scenes ? 1 : 0);
+		await Assert.That(cut.FindAll("a.phosphor-rail-item[href='/wiki']").Count).IsEqualTo(1);
 	}
 
 	[Test]

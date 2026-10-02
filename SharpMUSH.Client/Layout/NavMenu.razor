@@ -51,7 +51,7 @@
                     }
                 </NavLink>
             }
-            @NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])
+            <FeatureGate Feature="@GameFeatures.Scenes">@NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])</FeatureGate>
             @if (_characterActive)
             {
                 @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])

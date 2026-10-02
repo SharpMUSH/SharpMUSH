@@ -275,6 +275,11 @@ public partial class LightningDatabase
 			}
 
 			WriteAttributePath(tx, n, write);
+			if (TouchesAliases(write.Path))
+			{
+				SyncPlayerAliases(tx, n);
+			}
+
 			return true;
 		}, cancellationToken);
 	}
@@ -298,6 +303,12 @@ public partial class LightningDatabase
 			foreach (var write in writes)
 			{
 				WriteAttributePath(tx, n, write);
+			}
+
+			// The importer's path: an imported player's ALIAS is indexed as it lands.
+			if (writes.Any(write => TouchesAliases(write.Path)))
+			{
+				SyncPlayerAliases(tx, n);
 			}
 
 			return true;
@@ -458,12 +469,19 @@ public partial class LightningDatabase
 			if (HasChildren(tx, n, longName))
 			{
 				tx.Put(Tables.AttrVal, key, empty);
-				return true;
+			}
+			else
+			{
+				tx.Delete(Tables.AttrMeta, key);
+				tx.Delete(Tables.AttrVal, key);
+				DropParentBranchWhenChildless(tx, n, path);
 			}
 
-			tx.Delete(Tables.AttrMeta, key);
-			tx.Delete(Tables.AttrVal, key);
-			DropParentBranchWhenChildless(tx, n, path);
+			if (TouchesAliases(path))
+			{
+				SyncPlayerAliases(tx, n);
+			}
+
 			return true;
 		}, cancellationToken);
 	}
@@ -492,6 +510,11 @@ public partial class LightningDatabase
 			tx.DeletePrefix(Tables.AttrMeta, descendants);
 			tx.DeletePrefix(Tables.AttrVal, descendants);
 			DropParentBranchWhenChildless(tx, n, path);
+			if (TouchesAliases(path))
+			{
+				SyncPlayerAliases(tx, n);
+			}
+
 			return true;
 		}, cancellationToken);
 	}

@@ -4,21 +4,25 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// Unit tests for <see cref="ServerInfoController"/>: the anonymous server-info endpoint must
 /// surface <c>Net.Guests</c> so the portal can decide whether to offer a "play as guest" entry,
-/// and <c>Net.MudName</c> so the portal can brand the shell with the real game name.
+/// <c>Net.MudName</c> so the portal can brand the shell with the real game name, and the optional
+/// applications the game has on so the portal links only to those.
 /// </summary>
 public class ServerInfoControllerTests
 {
 	private static SharpMUSHOptions DefaultOptions()
 		=> new OptionsService(Substitute.For<ISharpDatabase>(), []).Create(string.Empty);
 
-	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH")
+	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH",
+		IReadOnlyList<string>? features = null)
 	{
 		var options = DefaultOptions();
 		options = options with { Net = options.Net with { Guests = guestsEnabled, MudName = mudName } };
@@ -26,13 +30,16 @@ public class ServerInfoControllerTests
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		wrapper.CurrentValue.Returns(options);
 
-		return new ServerInfoController(wrapper);
+		var reader = Substitute.For<IGameFeatureReader>();
+		reader.EnabledAsync().Returns(features ?? []);
+
+		return new ServerInfoController(wrapper, reader);
 	}
 
 	[Test]
 	public async Task Get_ReportsGuestsEnabled_WhenNetGuestsIsTrue()
 	{
-		var result = MakeController(guestsEnabled: true).Get();
+		var result = await MakeController(guestsEnabled: true).Get();
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.GuestsEnabled).IsTrue();
@@ -41,7 +48,7 @@ public class ServerInfoControllerTests
 	[Test]
 	public async Task Get_ReportsGuestsDisabled_WhenNetGuestsIsFalse()
 	{
-		var result = MakeController(guestsEnabled: false).Get();
+		var result = await MakeController(guestsEnabled: false).Get();
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.GuestsEnabled).IsFalse();
@@ -50,9 +57,18 @@ public class ServerInfoControllerTests
 	[Test]
 	public async Task Get_ReportsConfiguredMudName()
 	{
-		var result = MakeController(guestsEnabled: true, mudName: "My Grand Game").Get();
+		var result = await MakeController(guestsEnabled: true, mudName: "My Grand Game").Get();
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.MudName).IsEqualTo("My Grand Game");
+	}
+
+	[Test]
+	public async Task Get_ReportsTheApplicationsTheGameHasOn()
+	{
+		var result = await MakeController(guestsEnabled: true, features: [GameFeatures.WikiReader]).Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.Features).IsEquivalentTo([GameFeatures.WikiReader]);
 	}
 }

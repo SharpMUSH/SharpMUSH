@@ -5,6 +5,7 @@
 @inject WikiService WikiService
 @inject SceneService SceneService
 @inject IAccountAuthState AccountAuth
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -39,10 +40,13 @@
     private bool _onlineFailed;
     private bool _activeScenesFailed;
 
+    /// <summary>A game without the Scene System has no scenes to count, so it has no tile for them.</summary>
+    private bool _scenesOn = true;
+
     private (string LabelKey, string Value, bool Failed)[] Tiles =>
     [
         ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed),
-        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—", _activeScenesFailed),
+        .. (_scenesOn ? [("WidActiveScenes", _activeScenes?.ToString() ?? "—", _activeScenesFailed)] : Array.Empty<(string, string, bool)>()),
         ("RecentChanges",    _recent?.ToString() ?? "—", false),
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
@@ -64,7 +68,10 @@
         var charsTask = CharacterDirectory.ListAsync();
         var onlineTask = CharacterDirectory.ListOnlineAsync();
         var scenesTask = LoadActiveScenesAsync();
-        await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
+        var scenesOnTask = ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+        await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask, scenesOnTask);
+
+        _scenesOn = await scenesOnTask;
 
         _recent = (await recentTask).Count;
 

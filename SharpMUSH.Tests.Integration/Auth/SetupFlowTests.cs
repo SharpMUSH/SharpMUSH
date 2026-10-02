@@ -189,4 +189,49 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 			new MushTokenRequest(god.Name, claimPassword, null, null, null));
 		await Assert.That(right.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
+
+	private record HandlerState(string Kind, int? Dbref, string? Name, bool IsWizard, List<string> Packages);
+	private record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
+		List<string> DependsOn);
+	private record SetupWizardResponse(bool Pending, List<HandlerState> Handlers, List<BundledPackageState> Packages);
+	private record ServerInfoResponse(bool GuestsEnabled, string MudName, List<string>? Features);
+
+	/// <summary>
+	/// The claim leaves the rest of the wizard pending for the new administrator, who can read it and
+	/// close it. The portal is told which applications the game has.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 7)]
+	public async Task Claim_LeavesTheWizardPending_ForTheAdministratorToFinish()
+	{
+		var db = factory.Services.GetRequiredService<ISharpDatabase>();
+		await db.SetServerSetupCompletedAsync(false);
+
+		var http = CreateClient();
+		var claim = await http.PostAsJsonAsync("api/setup/complete",
+			new SetupCompleteRequest(UniqueName("wizard"), "wizard-password-7!"));
+		await Assert.That(claim.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var account = await claim.Content.ReadFromJsonAsync<AccountLoginResponse>();
+
+		var admin = CreateClient();
+		admin.DefaultRequestHeaders.Authorization =
+			new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", account!.AccountSessionToken);
+
+		var wizard = await admin.GetFromJsonAsync<SetupWizardResponse>("api/setup/wizard");
+		await Assert.That(wizard!.Pending).IsTrue();
+		await Assert.That(wizard.Handlers.Select(h => h.Kind)).IsEquivalentTo(["http", "event"]);
+		await Assert.That(wizard.Packages.Select(p => p.Id)).Contains("scene");
+		await Assert.That(wizard.Packages.Single(p => p.Id == "profile-handler").Requires).IsEqualTo("http");
+
+		// What the portal is told is on is exactly what the wizard reports as installed.
+		var info = await http.GetFromJsonAsync<ServerInfoResponse>("api/server-info");
+		await Assert.That(info!.Features).IsNotNull();
+		var installed = wizard.Packages.Where(p => p.Installed).Select(p => p.Id).ToHashSet();
+		await Assert.That(info.Features!.Contains("scenes")).IsEqualTo(installed.Contains("scene"));
+		await Assert.That(info.Features!.Contains("wiki-reader")).IsEqualTo(installed.Contains("wiki-reader"));
+
+		var finish = await admin.PostAsync("api/setup/wizard/finish", content: null);
+		await Assert.That(finish.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+		wizard = await admin.GetFromJsonAsync<SetupWizardResponse>("api/setup/wizard");
+		await Assert.That(wizard!.Pending).IsFalse();
+	}
 }

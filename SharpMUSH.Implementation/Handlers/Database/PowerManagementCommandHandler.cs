@@ -12,7 +12,7 @@ public class CreatePowerCommandHandler(IFlagAndPowerStore database)
 	{
 		return await database.CreatePowerAsync(
 			request.Name,
-			request.Alias,
+			request.Aliases,
 			request.Symbol,
 			request.System,
 			request.SetPermissions,

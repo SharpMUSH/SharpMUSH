@@ -2,129 +2,365 @@
 @layout OnboardingLayout
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject AccountAuthService AccountAuth
+@inject SetupWizardService Wizard
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
 
+@* The first-run wizard: claim the administrator account, then — as that administrator — bring in a
+   PennMUSH database with its mush.cnf or start fresh, set the HTTP and event handlers the bundled packages
+   build on, and choose the packages. Everything after the claim is pending on the server until the last
+   step, so an administrator who closes the tab comes back here to the step they left (the database import
+   page links back with ?step=handlers). *@
 <div class="setup-page">
     <div class="setup-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="setup-logo" />
         <h1 class="setup-brand-title">@Loc["AuthSetupWelcome", Loc["AppTitle"]]</h1>
     </div>
 
-    @if (!_statusResolved || _alreadyClaimed)
+    @switch (_step)
     {
-        @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
-           claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
-           an already-claimed game told every visitor it was unclaimed and invited them to become
-           its administrator (the POST was safely rejected with a 409, but the copy was a lie).
-           _alreadyClaimed is the same "don't render the form" case: the redirect below has
-           fired and this component is on its way out. *@
-        <div class="setup-card setup-card--resolving">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            <p class="setup-lead">@Loc["Loading"]</p>
-        </div>
-    }
-    else if (_success)
-    {
-        <div class="setup-card">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
-            @if (_autoLoggedIn)
-            {
-                <p class="setup-lead">
-                    @Loc["AuthSetupAdminLinked", _completedUsername]
-                    @Loc["AuthSetupSignedInAs", _completedUsername]
-                </p>
-                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
-            }
-            else
-            {
+        case Step.Resolving:
+            @* Nothing about the game's claim state is knowable until api/setup/status answers, so the
+               claim form is not rendered yet. On a cold load that check took ~12 seconds, during which
+               an already-claimed game told every visitor it was unclaimed and invited them to become
+               its administrator (the POST was safely rejected with a 409, but the copy was a lie).
+               It is also what shows while a claimed game's redirect is on its way out. *@
+            <div class="setup-card setup-card--resolving">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <p class="setup-lead">@Loc["Loading"]</p>
+            </div>
+            break;
+
+        case Step.SignIn:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
                 <!-- Claim succeeded but post-claim auto-login enrichment degraded server-side
                      (see SetupController.Complete's try/catch) — no session was minted, so send
-                     the claimer to a normal sign-in instead of pretending they're logged in. -->
+                     the claimer to a normal sign-in, which brings them back here to finish. -->
                 <p class="setup-lead">
                     @Loc["AuthSetupAdminLinked", _completedUsername]
                     @Loc["AuthSetupSignInToManage"]
                 </p>
-                <a class="setup-submit setup-signin" href="/login">@Loc["AuthSignIn"]</a>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="setup-card">
-            <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-            <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
-            <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
+                <a class="setup-submit setup-signin" href="/login?returnUrl=%2Fsetup">@Loc["AuthSignIn"]</a>
+            </div>
+            break;
 
-            @if (_error is not null)
-            {
-                <div class="setup-error" role="alert">@_error</div>
-            }
+        case Step.Import:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 4]</div>
+                @if (_completedUsername.Length > 0)
+                {
+                    <p class="setup-claimed" role="status">
+                        @Loc["AuthSetupAdminLinked", _completedUsername]
+                        @Loc["AuthSetupSignedInAs", _completedUsername]
+                    </p>
+                }
+                <h2 class="setup-title">@Loc["AdmSetupImportTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupImportLead"]</p>
 
-            @* Same field treatment as /login, which is one click away inside the same
-               OnboardingLayout: outlined + dense MudTextField, floating label, leading adornment
-               icon, real password inputs. These three were the portal's only hand-rolled <input>
-               elements, with uppercase micro-labels stacked above them — a visible inconsistency
-               rather than a deliberate variation. *@
-            <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                          Disabled="_busy" autocomplete="username" />
+                <a class="setup-submit setup-import" href="/admin/database/import?setup=1">@Loc["AdmSetupImportPenn"]</a>
+                <button class="setup-secondary setup-fresh" type="button" @onclick="StartFresh">@Loc["AdmSetupStartFresh"]</button>
+            </div>
+            break;
 
-            <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
-                          InputType="InputType.Password"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                          Disabled="_busy" autocomplete="new-password" />
+        case Step.Handlers:
+            <div class="setup-card setup-card--wide">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 4]</div>
+                <h2 class="setup-title">@Loc["AdmSetupHandlersTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupHandlersLead"]</p>
 
-            <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
-                          InputType="InputType.Password"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                          Disabled="_busy" autocomplete="new-password" />
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
 
-            <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
-                @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
-            </button>
-        </div>
+                @foreach (var handler in _handlers)
+                {
+                    var kind = handler.Kind;
+                    var choice = _handlerChoices[kind];
+                    <section class="setup-handler" id="setup-handler-@kind" @key="kind">
+                        <h3 class="setup-handler-title">@HandlerTitle(kind)</h3>
+                        <p class="setup-handler-desc">@HandlerDescription(kind)</p>
+                        <p class="setup-handler-now">
+                            @if (handler is { Dbref: { } number, Name: { } name })
+                            {
+                                @Loc["AdmSetupHandlerNow", $"#{number}", name]
+                                @if (handler.Packages.Count > 0)
+                                {
+                                    @* One text node: Blazor drops the whitespace-only one a leading space would be. *@
+                                    <span>@($" {Loc["AdmSetupHandlerCarries", string.Join(", ", handler.Packages)]}")</span>
+                                }
+                            }
+                            else if (handler.Dbref is { } missing)
+                            {
+                                @Loc["AdmSetupHandlerMissing", $"#{missing}"]
+                            }
+                            else
+                            {
+                                @Loc["AdmSetupHandlerUnset"]
+                            }
+                        </p>
+
+                        <div class="setup-handler-choices" role="radiogroup" aria-label="@HandlerTitle(kind)">
+                            @if (handler.Name is not null)
+                            {
+                                <label class="setup-choice">
+                                    <input type="radio" name="handler-@kind" value="keep" checked="@(choice.Mode == Keep)"
+                                           disabled="@_busy" @onchange="() => Choose(kind, Keep)" />
+                                    <span>@Loc["AdmSetupHandlerKeep"]</span>
+                                </label>
+                            }
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="use" checked="@(choice.Mode == HandlerModes.Use)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.Use)" />
+                                <span>@Loc["AdmSetupHandlerUse"]</span>
+                                <input class="setup-dbref" id="setup-handler-@kind-dbref" type="text" inputmode="numeric"
+                                       placeholder="#" value="@choice.Dbref" disabled="@(_busy || choice.Mode != HandlerModes.Use)"
+                                       aria-label="@Loc["AdmSetupHandlerUse"]"
+                                       @onchange="e => SetDbref(kind, e.Value as string)" />
+                            </label>
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="create" checked="@(choice.Mode == HandlerModes.Create)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.Create)" />
+                                <span>@Loc["AdmSetupHandlerCreate"]</span>
+                            </label>
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="none" checked="@(choice.Mode == HandlerModes.None)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.None)" />
+                                <span>@Loc["AdmSetupHandlerNone"]</span>
+                            </label>
+                        </div>
+
+                        @if (choice.Mode == Keep && !handler.IsWizard)
+                        {
+                            <p class="setup-handler-warn" role="note">@Loc["AdmSetupHandlerNotWizard"]</p>
+                        }
+
+                        @* Building onto an object that already has some of the packages' attributes keeps the
+                           object's own, so those parts of the packages run the game's code instead. Said before
+                           anything is changed, and only gone past with an explicit choice. *@
+                        @if (choice.Mode is Keep or HandlerModes.Use && choice.Clashes is { Count: > 0 } clashes)
+                        {
+                            <div class="setup-handler-clashes" role="alert">
+                                <p>@Loc["AdmSetupHandlerClashes", clashes.Count]</p>
+                                <ul>
+                                    @foreach (var clash in clashes.Take(ClashesShown))
+                                    {
+                                        <li><code>@clash.Attribute</code> — @PackageTitle(clash.Package)</li>
+                                    }
+                                    @if (clashes.Count > ClashesShown)
+                                    {
+                                        <li>@Loc["AdmSetupHandlerClashesMore", clashes.Count - ClashesShown]</li>
+                                    }
+                                </ul>
+                                <label class="setup-choice">
+                                    <input id="setup-handler-@kind-accept" type="checkbox" checked="@choice.Accepted"
+                                           disabled="@_busy" @onchange="e => Accept(kind, e.Value is true)" />
+                                    <span>@Loc["AdmSetupHandlerClashAccept"]</span>
+                                </label>
+                            </div>
+                        }
+                    </section>
+                }
+
+                <button class="setup-submit setup-save-handlers" type="button" disabled="@_busy" @onclick="SaveHandlersAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupContinueStep"])
+                </button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Import">@Loc["AdmSetupBack"]</button>
+            </div>
+            break;
+
+        case Step.Packages:
+            <div class="setup-card setup-card--wide">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 4]</div>
+                <h2 class="setup-title">@Loc["AdmSetupPackagesTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupPackagesLead"]</p>
+
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
+
+                @foreach (var group in PackageGroups)
+                {
+                    <h3 class="setup-group-title">@Loc[group.TitleKey]</h3>
+                    <ul class="setup-apps">
+                        @foreach (var package in group.Packages)
+                        {
+                            var id = package.Id;
+                            var needed = NeededBy(id);
+                            var on = Effective.Contains(id);
+                            <li class="setup-app @(package.Available ? null : "setup-app--unavailable")" @key="id">
+                                <label class="setup-app-label">
+                                    <input id="setup-pkg-@id" class="setup-app-check" type="checkbox"
+                                           checked="@on" disabled="@(_busy || needed is not null || (!package.Available && !on))"
+                                           @onchange="@(e => Choose(id, e.Value is true))" />
+                                    <span class="setup-app-text">
+                                        <span class="setup-app-title">@PackageTitle(package)</span>
+                                        <span class="setup-app-desc">@PackageDescription(package)</span>
+                                        @if (needed is not null)
+                                        {
+                                            <span class="setup-app-note">@Loc["AdmSetupPkgNeededBy", PackageTitle(needed)]</span>
+                                        }
+                                        else if (!package.Available)
+                                        {
+                                            <span class="setup-app-note">@Unavailable(package)</span>
+                                        }
+                                    </span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <button class="setup-submit setup-save" type="button" disabled="@_busy" @onclick="SavePackagesAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupSaveContinue"])
+                </button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Handlers">@Loc["AdmSetupBack"]</button>
+            </div>
+            break;
+
+        case Step.Done:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
+                <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupDoneLead"]</p>
+                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
+            </div>
+            break;
+
+        case Step.Claim:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 4]</div>
+                <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
+                <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
+
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
+
+                @* Same field treatment as /login, which is one click away inside the same
+                   OnboardingLayout: outlined + dense MudTextField, floating label, leading adornment
+                   icon, real password inputs. *@
+                <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                              Disabled="_busy" autocomplete="username" />
+
+                <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Disabled="_busy" autocomplete="new-password" />
+
+                <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Disabled="_busy" autocomplete="new-password" />
+
+                <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
+                    @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
+                </button>
+            </div>
+            break;
     }
 </div>
 
 @code {
+    private enum Step { Resolving, Claim, SignIn, Import, Handlers, Packages, Done }
+
+    /// <summary>The handler choice that changes nothing.</summary>
+    private const string Keep = "keep";
+
+    /// <summary>
+    /// A handler's choice on the handlers step: a <see cref="HandlerModes"/> value or <see cref="Keep"/>, the object
+    /// typed for <see cref="HandlerModes.Use"/>, and — once checked — the attributes building on that object would
+    /// keep in place of the packages' own (<paramref name="CheckedFor"/> is the object they were checked for), and
+    /// whether the administrator chose to go ahead regardless.
+    /// </summary>
+    private sealed record HandlerChoice(string Mode, string? Dbref, IReadOnlyList<HandlerClash>? Clashes = null,
+        int? CheckedFor = null, bool Accepted = false);
+
+    /// <summary>How many clashing attributes are listed before the rest are counted.</summary>
+    private const int ClashesShown = 8;
+
+    private sealed record PackageGroup(string TitleKey, IReadOnlyList<BundledPackageState> Packages);
+
+    /// <summary>
+    /// <c>?step=handlers</c> (or <c>packages</c>): where the database import sends the administrator back to.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "step")] public string? StepParameter { get; set; }
+
+    private Step _step = Step.Resolving;
+
     private string _username = string.Empty;
     private string _password = string.Empty;
     private string _confirm = string.Empty;
     private string? _error;
     private bool _busy;
-    private bool _success;
-    private bool _autoLoggedIn;
     private string _completedUsername = string.Empty;
 
-    // "Have we asked yet?" and "what did the server say?" are separate questions, and the markup
-    // above needs both. NeedsSetupAsync answers the second one three ways — needed / not needed /
-    // couldn't ask — so it cannot also carry "not asked yet"; conflating the two is what rendered
-    // the claim form during the wait.
-    private bool _statusResolved;
-    private bool _alreadyClaimed;
+    private IReadOnlyList<HandlerState> _handlers = [];
+    private readonly Dictionary<string, HandlerChoice> _handlerChoices = new(StringComparer.Ordinal);
+    private IReadOnlyList<BundledPackageState> _packages = [];
+
+    /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
+    private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
-        // Only a definitive "setup already done" navigates away. The failed arm means the status
-        // check couldn't reach or parse the server — stay on the page rather than bounce the user
-        // away from the only place they can complete first-run setup; the submit button's own error
-        // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
-        // form, but a check that came back and failed still shows it.
-        var status = await AccountAuth.NeedsSetupAsync();
-        _alreadyClaimed = status is bool needsSetup && !needsSetup;
-        _statusResolved = true;
+        // "Have we asked yet?" and "what did the server say?" are separate questions: NeedsSetupAsync
+        // answers the second three ways — needed / not needed / couldn't ask — and Resolving is the
+        // first. Only a definitive "already claimed" leaves the claim form; a check that came back and
+        // failed still shows it, since this is the only place first-run setup can be completed and the
+        // submit's own error handling surfaces a real server problem.
+        if (await AccountAuth.NeedsSetupAsync() is not bool needsSetup || needsSetup)
+        {
+            _step = Step.Claim;
+            return;
+        }
 
-        if (_alreadyClaimed)
+        // Claimed. Only the administrator with the wizard still pending has anything left to do here;
+        // for anyone else (signed out, not staff, or finished) the server refuses or says not pending.
+        if (await Wizard.GetAsync() is not SetupWizardResponse { Pending: true } wizard)
+        {
             Nav.NavigateTo("/", replace: true);
+            return;
+        }
+
+        Load(wizard);
+        _step = StepParameter?.ToLowerInvariant() switch
+        {
+            "handlers" => Step.Handlers,
+            "packages" => Step.Packages,
+            _ => Step.Import
+        };
+    }
+
+    /// <summary>Takes the server's view of the handlers and packages as the starting choices.</summary>
+    private void Load(SetupWizardResponse wizard)
+    {
+        _handlers = wizard.Handlers;
+        _handlerChoices.Clear();
+        foreach (var handler in wizard.Handlers)
+        {
+            _handlerChoices[handler.Kind] = new HandlerChoice(
+                handler.Name is not null ? Keep : HandlerModes.Create, null);
+        }
+
+        // What the game has, and what a new game would have that it is missing — after a PennMUSH import, the
+        // packages built on the handlers it removed — wherever that can go on now.
+        _packages = wizard.Packages;
+        _chosen.Clear();
+        _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
     }
 
     private async Task SubmitAsync()
@@ -138,10 +374,10 @@
         _busy = true;
 
         var (success, error, autoLoggedIn) = await AccountAuth.CompleteSetupAsync(_username, _password);
-        _busy = false;
 
         if (!success)
         {
+            _busy = false;
             _error = error switch
             {
                 not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
@@ -154,9 +390,250 @@
         }
 
         _completedUsername = _username;
-        _success = true;
-        _autoLoggedIn = autoLoggedIn;
+        if (!autoLoggedIn)
+        {
+            _busy = false;
+            _step = Step.SignIn;
+            return;
+        }
+
+        // Signed in as the new administrator: the rest of the wizard is theirs. If its state cannot be
+        // read, the claim still stands and the remaining steps are optional — finish rather than strand them.
+        var wizard = await Wizard.GetAsync();
+        _busy = false;
+        if (wizard is SetupWizardResponse state)
+        {
+            Load(state);
+            _step = Step.Import;
+        }
+        else
+        {
+            _step = Step.Done;
+        }
     }
+
+    private void StartFresh()
+    {
+        _error = null;
+        _step = Step.Handlers;
+    }
+
+    // A different choice is a different object, so whatever was checked and accepted no longer applies.
+    private void Choose(string kind, string mode)
+        => _handlerChoices[kind] = _handlerChoices[kind] with { Mode = mode, Clashes = null, CheckedFor = null, Accepted = false };
+
+    private void SetDbref(string kind, string? value)
+        => _handlerChoices[kind] = _handlerChoices[kind] with { Dbref = value, Clashes = null, CheckedFor = null, Accepted = false };
+
+    private void Accept(string kind, bool accepted) => _handlerChoices[kind] = _handlerChoices[kind] with { Accepted = accepted };
+
+    /// <summary>The existing object a choice builds the packages onto, or null for a new one or none.</summary>
+    private int? ExistingTarget(string kind, HandlerChoice choice) => choice.Mode switch
+    {
+        Keep => _handlers.FirstOrDefault(h => h.Kind == kind)?.Dbref,
+        HandlerModes.Use => ParseDbref(choice.Dbref),
+        _ => null
+    };
+
+    /// <summary>Applies each handler choice that changes something, then moves on to the packages.</summary>
+    private async Task SaveHandlersAsync()
+    {
+        _error = null;
+        var requests = new List<(string Kind, SetHandlerRequest Request)>();
+        foreach (var (kind, choice) in _handlerChoices)
+        {
+            switch (choice.Mode)
+            {
+                case Keep:
+                    continue;
+                case HandlerModes.Use when ParseDbref(choice.Dbref) is not { } number:
+                    _error = Loc["AdmSetupHandlerDbrefRequired", HandlerTitle(kind)];
+                    return;
+                case HandlerModes.Use:
+                    requests.Add((kind, new SetHandlerRequest(HandlerModes.Use, ParseDbref(choice.Dbref))));
+                    break;
+                default:
+                    requests.Add((kind, new SetHandlerRequest(choice.Mode)));
+                    break;
+            }
+        }
+
+        // Building onto an existing object: say what it already has that the packages would write, and go no
+        // further until the administrator has seen it and chosen to go ahead or picked something else.
+        _busy = true;
+        var unresolved = false;
+        foreach (var (kind, choice) in _handlerChoices.ToList())
+        {
+            if (ExistingTarget(kind, choice) is not { } target)
+            {
+                continue;
+            }
+
+            if (choice.CheckedFor != target)
+            {
+                switch (await Wizard.GetClashesAsync(kind, target))
+                {
+                    case List<HandlerClash> clashes:
+                        _handlerChoices[kind] = choice with { Clashes = clashes, CheckedFor = target, Accepted = false };
+                        break;
+                    case ApiFailure failure:
+                        _error = Loc["AdmSetupHandlerFailed", HandlerTitle(kind), failure.Message];
+                        _busy = false;
+                        return;
+                }
+            }
+
+            if (_handlerChoices[kind] is { Clashes.Count: > 0, Accepted: false })
+            {
+                unresolved = true;
+            }
+        }
+
+        if (unresolved)
+        {
+            _busy = false;
+            return;
+        }
+
+        foreach (var (kind, request) in requests)
+        {
+            if (await Wizard.SetHandlerAsync(kind, request) is ApiFailure failure)
+            {
+                _error = Loc["AdmSetupHandlerFailed", HandlerTitle(kind), failure.Message];
+                break;
+            }
+        }
+
+        // Some may have gone through before one failed: show what the game has now either way.
+        if (await Wizard.GetAsync() is SetupWizardResponse current)
+        {
+            Load(current);
+        }
+
+        _busy = false;
+        if (_error is null)
+        {
+            _step = Step.Packages;
+        }
+    }
+
+    private static int? ParseDbref(string? text)
+        => int.TryParse(text?.Trim().TrimStart('#'), out var number) && number >= 0 ? number : null;
+
+    private void Choose(string id, bool on)
+    {
+        if (on) _chosen.Add(id);
+        else _chosen.Remove(id);
+    }
+
+    /// <summary>What will be installed: the ticked packages and every bundled package they depend on.</summary>
+    private HashSet<string> Effective => Closure(_chosen);
+
+    private HashSet<string> Closure(IEnumerable<string> ids)
+    {
+        var closure = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new Stack<string>(ids);
+        while (pending.TryPop(out var id))
+        {
+            if (closure.Add(id) && _packages.FirstOrDefault(p => p.Id == id) is { } package)
+            {
+                foreach (var dependency in package.DependsOn) pending.Push(dependency);
+            }
+        }
+
+        return closure;
+    }
+
+    /// <summary>A ticked package that needs <paramref name="id"/>, which then cannot be unticked; null when none does.</summary>
+    private BundledPackageState? NeededBy(string id)
+        => _packages.FirstOrDefault(p => p.Id != id && _chosen.Contains(p.Id) && Closure([p.Id]).Contains(id));
+
+    private async Task SavePackagesAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        switch (await Wizard.SetPackagesAsync(Effective.ToList()))
+        {
+            case SetupWizardResponse:
+                // The applications are saved either way; a wizard the server still counts as unfinished comes
+                // back at the next sign-in, so say so here rather than show it as done.
+                switch (await Wizard.FinishAsync())
+                {
+                    case Success:
+                        _step = Step.Done;
+                        break;
+                    case ApiFailure failure:
+                        _error = Loc["AdmSetupFinishFailed", failure.Message];
+                        break;
+                }
+
+                break;
+            case ApiFailure failure:
+                // Some changes may have gone through; show what the game has now beside the reason.
+                if (await Wizard.GetAsync() is SetupWizardResponse current)
+                {
+                    Load(current);
+                }
+
+                _error = Loc["AdmSetupAppsFailed", failure.Message];
+                break;
+        }
+
+        _busy = false;
+    }
+
+    /// <summary>The handlers' packages first, then the game's own, each in the server's (dependency) order.</summary>
+    private IEnumerable<PackageGroup> PackageGroups =>
+    [
+        new("AdmSetupPkgGroupPortal", _packages.Where(p => p.Requires is not null).ToList()),
+        new("AdmSetupPkgGroupGame", _packages.Where(p => p.Requires is null).ToList()),
+    ];
+
+    private string HandlerTitle(string kind) => kind == HandlerKinds.Http
+        ? Loc["AdmSetupHandlerHttpTitle"]
+        : Loc["AdmSetupHandlerEventTitle"];
+
+    private string HandlerDescription(string kind) => kind == HandlerKinds.Http
+        ? Loc["AdmSetupHandlerHttpDesc"]
+        : Loc["AdmSetupHandlerEventDesc"];
+
+    private string Unavailable(BundledPackageState package) => package.Requires switch
+    {
+        HandlerKinds.Http => Loc["AdmSetupPkgNeedsHttp"],
+        HandlerKinds.Event => Loc["AdmSetupPkgNeedsEvent"],
+        _ => Loc["AdmSetupAppUnavailable"],
+    };
+
+    private string PackageTitle(string id) => _packages.FirstOrDefault(p => p.Id == id) is { } package
+        ? PackageTitle(package)
+        : id;
+
+    private string PackageTitle(BundledPackageState package) => package.Id switch
+    {
+        "http-handler" => Loc["AdmSetupPkgHttpHandlerTitle"],
+        "profile-handler" => Loc["AdmSetupPkgProfileHandlerTitle"],
+        "room-contents" => Loc["AdmSetupPkgRoomContentsTitle"],
+        "comm-feed" => Loc["AdmSetupPkgCommFeedTitle"],
+        "common-functions" => Loc["AdmSetupPkgCommonFunctionsTitle"],
+        "plus-help" => Loc["AdmSetupPkgPlusHelpTitle"],
+        "scene" => Loc["AdmSetupAppScenesTitle"],
+        "wiki-reader" => Loc["AdmSetupAppWikiReaderTitle"],
+        _ => package.Id,
+    };
+
+    private string PackageDescription(BundledPackageState package) => package.Id switch
+    {
+        "http-handler" => Loc["AdmSetupPkgHttpHandlerDesc"],
+        "profile-handler" => Loc["AdmSetupPkgProfileHandlerDesc"],
+        "room-contents" => Loc["AdmSetupPkgRoomContentsDesc"],
+        "comm-feed" => Loc["AdmSetupPkgCommFeedDesc"],
+        "common-functions" => Loc["AdmSetupPkgCommonFunctionsDesc"],
+        "plus-help" => Loc["AdmSetupPkgPlusHelpDesc"],
+        "scene" => Loc["AdmSetupAppScenesDesc"],
+        "wiki-reader" => Loc["AdmSetupAppWikiReaderDesc"],
+        _ => package.Description,
+    };
 
     private void EnterPortal() => Nav.NavigateTo("/");
 }

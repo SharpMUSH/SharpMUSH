@@ -59,13 +59,13 @@ internal static class DefinitionCreationContract
 		const string name = "DISPOSABLE_DEFINITION";
 		if (power)
 		{
-			var original = await db.CreatePowerAsync(name, "ORIGINAL", "Q", false, ["FLAG^ROYALTY"], ["FLAG^WIZARD"], ["THING"]);
+			var original = await db.CreatePowerAsync(name, ["ORIGINAL"], "Q", false, ["FLAG^ROYALTY"], ["FLAG^WIZARD"], ["THING"]);
 			await Assert.That(original).IsNotNull();
 			await db.SetObjectPowerAsync(god, original!);
 			await db.SetPowerDisabledAsync(name, true);
 			var before = JsonSerializer.Serialize(await db.GetPowerAsync(name));
 			foreach (var key in new[] { name, name.ToLowerInvariant() })
-				await Assert.That(await db.CreatePowerAsync(key, "REPLACED", "X", true, [], [], ["PLAYER"])).IsNull();
+				await Assert.That(await db.CreatePowerAsync(key, ["REPLACED"], "X", true, [], [], ["PLAYER"])).IsNull();
 			await Assert.That(JsonSerializer.Serialize(await db.GetPowerAsync(name))).IsEqualTo(before);
 			await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Name == name)).IsTrue();
 		}
@@ -94,7 +94,7 @@ internal static class DefinitionCreationContract
 			async Task<SharpPower?> Create(string key, string alias)
 			{
 				await gate.Task;
-				return await db.CreatePowerAsync(key, alias, "Q", false, [alias], [alias], [alias]);
+				return await db.CreatePowerAsync(key, [alias], "Q", false, [alias], [alias], [alias]);
 			}
 			var attempts = Enumerable.Range(0, 8)
 				.Select(index => Create(index % 2 == 0 ? name : name.ToLowerInvariant(), $"CANDIDATE{index}")).ToArray();
@@ -104,7 +104,7 @@ internal static class DefinitionCreationContract
 			await Assert.That(winners).HasSingleItem();
 			await Assert.That(winners[0].Name).IsEqualTo(name);
 			await Assert.That(JsonSerializer.Serialize(await db.GetPowerAsync(name))).IsEqualTo(JsonSerializer.Serialize(winners[0]));
-			var other = await db.CreatePowerAsync("other", "OTHER", "Q", false, [], [], []);
+			var other = await db.CreatePowerAsync("other", ["OTHER"], "Q", false, [], [], []);
 			await Assert.That(other!.Name).IsEqualTo("OTHER");
 			await Assert.That((await db.GetPowerAsync("other"))!.Name).IsEqualTo("OTHER");
 		}
@@ -137,7 +137,7 @@ internal static class DefinitionCreationContract
 		await Assert.That(original).IsNotNull();
 		var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		await db.SetObjectPowerAsync(god, original!);
-		await Assert.That(await db.CreatePowerAsync("CAN_SPOOF", "REPLACED", "Q", false, [], [], [])).IsNull();
+		await Assert.That(await db.CreatePowerAsync("CAN_SPOOF", ["REPLACED"], "Q", false, [], [], [])).IsNull();
 		await Assert.That(JsonSerializer.Serialize(await db.GetPowerAsync("can_spoof"))).IsEqualTo(JsonSerializer.Serialize(original));
 		await Assert.That((await db.GetPowerAsync("CAN_SPOOF"))!.Id).IsEqualTo(original!.Id);
 		await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();

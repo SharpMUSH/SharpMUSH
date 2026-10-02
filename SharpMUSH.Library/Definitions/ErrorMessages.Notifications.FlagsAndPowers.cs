@@ -88,9 +88,9 @@ public static partial class ErrorMessages
 		public const string PowerNotFoundFormat = "Power '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerDeletedFormat = "Power '{0}' deleted.";
-		public const string PowerAliasRequiresNameAndAlias = "@POWER/ALIAS requires power name and new alias.";
+		public const string PowerAliasRequiresNameAndAliases = "@POWER/ALIAS requires power name and aliases.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAliasChangedFormat = "Power '{0}' alias changed to '{1}'.";
+		public const string PowerAliasesSetFormat = "Power '{0}' aliases set to: {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerAliasConflictFormat = "That alias already matches the {0} power.";
 		public const string FlagDebugRequiresName = "@FLAG/DEBUG requires a flag name.";

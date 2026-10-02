@@ -12,7 +12,6 @@ public interface IValidateService
 		AttributeName,
 		AttributeValue,
 		PlayerName,
-		PlayerAlias,
 		Password,
 		CommandName,
 		FunctionName,

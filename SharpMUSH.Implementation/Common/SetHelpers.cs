@@ -5,6 +5,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Common;
@@ -102,6 +103,12 @@ public static class SetHelpers
 			var content = flagOrAttributeValue.Substring(colonIndex + 1, flagOrAttributeValue.Length - (colonIndex + 1));
 
 			var result = await attributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), content);
+
+			// A player's alias list was reported by the write itself, success or not (PlayerAliases).
+			if (PlayerAliases.Applies(found, attribute.ToPlainText()))
+			{
+				return new CallState(result is Error<string> refused ? refused.Value : string.Empty);
+			}
 
 			if (result is Error<string> error)
 			{

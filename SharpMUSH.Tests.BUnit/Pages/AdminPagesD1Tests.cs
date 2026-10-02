@@ -70,6 +70,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<BannedNamesService>()
 			.AddSingleton<RestrictionsService>()
 			.AddSingleton<AdminConfigService>()
+			.AddSingleton<SetupWizardService>()
 			.AddSingleton<ILayoutService, LayoutService>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []));
@@ -265,6 +266,44 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(Dashboard));
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/accounts']"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// An administrator who left the first-run wizard after the claim is pointed back to it; nobody else
+	/// is, and nobody is once it is finished.
+	/// </summary>
+	[Test]
+	[Arguments("server.admin", true, true)]
+	[Arguments("server.admin", false, false)]
+	[Arguments("players.view", true, false)]
+	public async Task Dashboard_PointsTheAdministratorBackToAnUnfinishedSetup(string policy, bool pending, bool shown)
+	{
+		Auth.SetPolicies("players.view", policy);
+		_api.Bodies["api/setup/wizard"] = $$"""{"pending":{{(pending ? "true" : "false")}},"handlers":[],"packages":[]}""";
+		var cut = RenderPage(typeof(Dashboard));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-setup-link[href='/setup']").Count).IsEqualTo(shown ? 1 : 0);
+	}
+
+	/// <summary>
+	/// The wizard opens the import page as <c>?setup=1</c>, and the page hands back to the wizard from its
+	/// header. A bool query parameter threw on that "1" and took the page down.
+	/// </summary>
+	[Test]
+	[Arguments("/admin/database/import?setup=1", true)]
+	[Arguments("/admin/database/import", false)]
+	public async Task ImportDatabase_FromTheWizard_OffersTheWayBack(string address, bool offered)
+	{
+		Auth.SetPolicies("server.admin");
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(address);
+		var cut = RenderPage(typeof(ImportDatabase));
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-page"), TimeSpan.FromSeconds(5));
+		var back = cut.FindAll("a.dbimport-continue-setup");
+		await Assert.That(back.Count).IsEqualTo(offered ? 1 : 0);
+		if (offered)
+			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=handlers");
 	}
 
 	[Test]

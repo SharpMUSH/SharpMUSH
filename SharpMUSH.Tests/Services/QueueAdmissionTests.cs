@@ -50,7 +50,7 @@ public class QueueAdmissionTests
 				Object = new SharpObject
 				{
 					Key = dbRef.Number, CreationTime = 1, Name = "Semaphore", Type = "PLAYER", Locks = null!, Owner = null!,
-					Powers = new(() => (queuePower ? new[] { new SharpPower { Name = "Queue", Alias = "", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Powers = new(() => (queuePower ? new[] { new SharpPower { Name = "Queue", Aliases = [], System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 					Flags = new(() => (wizard ? new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
 				},
 				Location = null!, Home = null!, PasswordHash = "", Quota = 0

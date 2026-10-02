@@ -19,12 +19,23 @@ using System.Text.Json;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>Answers each request from its method and the path it asked for.</summary>
-file sealed class RouteHandler(Func<HttpMethod, string, HttpResponseMessage> respond) : HttpMessageHandler
+/// <summary>
+/// Answers each request from its method and the path it asked for, keeping each body in <paramref name="bodies"/>
+/// when given one.
+/// </summary>
+file sealed class RouteHandler(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null)
+	: HttpMessageHandler
 {
-	protected override Task<HttpResponseMessage> SendAsync(
-		HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(respond(request.Method, request.RequestUri!.AbsolutePath.TrimStart('/')));
+	protected override async Task<HttpResponseMessage> SendAsync(
+		HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		if (bodies is not null && request.Content is not null)
+		{
+			bodies.Add(await request.Content.ReadAsStringAsync(cancellationToken));
+		}
+
+		return respond(request.Method, request.RequestUri!.AbsolutePath.TrimStart('/'));
+	}
 }
 
 /// <summary>
@@ -41,9 +52,9 @@ public class AdminImportRefusalTests : TrackingBunitContext
 {
 	private const string Reason = "The configuration store is offline.";
 
-	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond)
+	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null)
 	{
-		var client = Track(new HttpClient(new RouteHandler(respond))
+		var client = Track(new HttpClient(new RouteHandler(respond, bodies))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -93,6 +104,66 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+V-1\n~0\n***END OF DUMP***\n", "outdb"));
 		Click(cut, "StartConversion");
 		return cut;
+	}
+
+	/// <summary>Picks the database, then the source game's mush.cnf, and starts.</summary>
+	private IRenderedComponent<ImportDatabase> StartConversionWithConfig()
+	{
+		var cut = Render<ImportDatabase>();
+		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+V-1\n~0\n***END OF DUMP***\n", "outdb"));
+		// MudFileUpload keeps the input it used beside a fresh one, so the picker is found by what it accepts.
+		cut.FindComponents<InputFile>().Last(input => input.Find("input").GetAttribute("accept") == ".cnf,.conf,.txt")
+			.UploadFiles(InputFileContent.CreateFromText("mud_name Elsewhere\n", "mush.cnf"));
+		cut.WaitForAssertion(() => cut.Find(".dbimport-config-name"), TimeSpan.FromSeconds(5));
+		Click(cut, "StartConversion");
+		return cut;
+	}
+
+	/// <summary>
+	/// The source game's mush.cnf goes up with the database, in the one request, so the server applies it only
+	/// once the upload is in and can put the game's own configuration back if the conversion does not finish.
+	/// </summary>
+	[Test]
+	public async Task DatabaseImport_SendsTheMushCnfWithTheDatabase()
+	{
+		var asked = new List<string>();
+		var bodies = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path == "api/databaseconversion/upload" ? Started() : Halfway();
+		}, bodies);
+
+		var cut = StartConversionWithConfig();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!asked.Contains("POST api/databaseconversion/upload"))
+				throw new InvalidOperationException("not uploaded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(asked).DoesNotContain("POST api/configuration/import")
+			.Because("a configuration applied on its own would stay if the upload then failed");
+		await Assert.That(bodies.Single(b => b.Contains("name=file"))).Contains("name=configFile")
+			.And.Contains("mud_name Elsewhere");
+	}
+
+	/// <summary>
+	/// A refused upload, the configuration's fault or the database's, says why and does not claim the mush.cnf
+	/// was applied: the server changes nothing before the conversion starts.
+	/// </summary>
+	[Test]
+	public async Task DatabaseImport_ARefusedMushCnf_IsNotReportedAsApplied()
+	{
+		const string refused = "Error importing configuration: unreadable file";
+		AddServices((_, path) => path == "api/databaseconversion/upload"
+			? Refusal(HttpStatusCode.BadRequest, refused)
+			: Halfway());
+
+		var cut = StartConversionWithConfig();
+
+		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"DatabaseImportFailed({refused})");
+		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
 	[Test]

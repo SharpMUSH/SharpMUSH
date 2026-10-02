@@ -165,7 +165,6 @@ public static partial class ErrorMessages
 		public const string NoSuchFile = "#-1 NO SUCH FILE";
 		public const string ImaginaryNumber = "#-1 IMAGINARY NUMBER";
 		public const string InvalidAction = "#-1 INVALID ACTION";
-		public const string InvalidAliasIndex = "#-1 INVALID ALIAS INDEX";
 		public const string InvalidAlignString = "#-1 INVALID ALIGN STRING";
 		public const string InvalidArguments = "#-1 INVALID ARGUMENTS";
 		public const string InvalidBase64String = "#-1 INVALID BASE64 STRING";
@@ -496,9 +495,6 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontKnowThat = "I don't know that {0}.";
 		public const string DontKnowThatAttribute = "I don't know that attribute.";
-
-		public const string PlayerNameInUse = "That player name is already in use.";
-		public const string PlayerAliasInUse = "That player alias is already in use.";
 
 		public const string RecursionLimit = "That caused too much recursion.";
 
@@ -1372,7 +1368,6 @@ public static partial class ErrorMessages
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
-		public const string PlayerNameNotAllowed = "You can't give a player that name.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
 		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

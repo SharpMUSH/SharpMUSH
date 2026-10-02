@@ -10,6 +10,7 @@
 
 @* D1 §6.3 Often plays with (board 25): who shares the most scenes with this character, as portrait
    tiles two across, each linking to that profile. Counted on the server from scenes the viewer may see. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
 <div class="often-plays-widget">
     <KitCard Aside="true" Title="@Loc["NavOftenPlaysWith"]">
         @if (_loading)
@@ -36,6 +37,7 @@
         }
     </KitCard>
 </div>
+</FeatureGate>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

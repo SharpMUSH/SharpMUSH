@@ -136,6 +136,31 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".test-pagebar .kit-side-sub").TextContent).Contains("Connected as Ilsa Varn");
 	}
 
+	/// <summary>
+	/// A game with the Scene System off shows no In scene row and no story view, even if the room still
+	/// reports a scene from before it was turned off: there would be nothing behind either.
+	/// </summary>
+	[Test]
+	public async Task WithoutTheSceneSystem_TheRoomsSceneIsNotOffered()
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, features: []));
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
+		await Assert.That(cut.Markup).DoesNotContain("Salt Market at Dusk");
+		await Assert.That(cut.FindAll("[role='radiogroup'], .scene-card-viewtoggle")).IsEmpty()
+			.Because("with no scene to show there is only the terminal");
+
+		// The menu button's panel draws the sidebar again, with the same room.
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-menu-btn").Click();
+		cut.WaitForAssertion(() => cut.Find(".play-sheet-body"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
+	}
+
 	[Test]
 	public async Task PushedRooms_DrawTheHeader_HereAndExits_AndAnExitGoes()
 	{
