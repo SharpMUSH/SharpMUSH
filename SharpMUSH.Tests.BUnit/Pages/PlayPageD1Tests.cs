@@ -488,18 +488,20 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnAShortScreen_TheBannerFoldsIntoTheCardHeader_AndOpeningItIsNotRemembered()
+	public async Task OnACompactScreen_TheBannerFoldsIntoTheCardHeader_AndOpeningItIsNotRemembered()
 	{
-		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find("button.play-banner-show"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("one header row, not a strip over a header");
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Lower Docks").Because("the header names the room instead");
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Lower Docks").Because("the header names the room instead");
+		await Assert.That(cut.Find("button.scene-card-sub--action").GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner")
+			.Because("the room's name is the button that opens the banner");
 
-		cut.Find("button.play-banner-show").Click();
+		cut.Find("button.scene-card-sub--action").Click();
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("the full view is one press away");
-		await Assert.That(cut.FindAll("button.play-banner-show").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("button.scene-card-sub--action").Count).IsEqualTo(0);
 		cut.Find("button.kit-banner-minimise").Click();
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising folds it back into the header");
 
@@ -521,34 +523,34 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task OnAShortScreen_TheFoldedHeaderCarriesTheRoomsPicture()
+	public async Task OnACompactScreen_TheFoldedHeaderCarriesTheRoomsPicture()
 	{
-		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".scene-card-head-img"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
 
-		cut.Find("button.play-banner-show").Click();
+		cut.Find("button.scene-card-sub--action").Click();
 		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the opened banner carries it again");
 	}
 
 	[Test]
 	public async Task TurningTheScreen_PutsTheBannerBackToItsDefaultForThatScreen()
 	{
-		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find("button.play-banner-show"), TimeSpan.FromSeconds(5));
-		cut.Find("button.play-banner-show").Click();
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
 		var page = cut.FindComponent<PlayPage>();
 
-		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(false));
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("upright, the stored choice (open) applies");
 
-		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(true));
-		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn to the short screen folds it again");
-		await Assert.That(cut.FindAll("button.play-banner-show").Count).IsEqualTo(1);
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(true));
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn back to the compact screen folds it again");
+		await Assert.That(cut.FindAll("button.scene-card-sub--action").Count).IsEqualTo(1);
 	}
 
 	private sealed class PlayApi : HttpMessageHandler

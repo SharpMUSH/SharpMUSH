@@ -110,16 +110,16 @@ window.sharpmushLayout = {
 		this._exitKeys = null;
 	},
 
-	// Play's short screen: a phone held sideways. The room banner starts as its 48px strip there, because
-	// the full banner would take most of the height the terminal needs. Returns whether it matches now
-	// and calls OnShortScreenChanged on the page whenever that changes (a rotation).
-	shortScreenQuery: '(orientation: landscape) and (max-height: 32rem)',
+	// Play's compact screen: a phone, either way up (sideways, or the phone width shell.css uses). The room
+	// banner folds into the card header there, so the terminal keeps the height. Returns whether it matches
+	// now and calls OnCompactScreenChanged on the page whenever that changes (a rotation, a resize).
+	compactScreenQuery: '(orientation: landscape) and (max-height: 32rem), (max-width: 760px)',
 
-	watchShortScreen: function (dotnetRef) {
-		this.unwatchShortScreen();
-		const query = window.matchMedia(this.shortScreenQuery);
+	watchCompactScreen: function (dotnetRef) {
+		this.unwatchCompactScreen();
+		const query = window.matchMedia(this.compactScreenQuery);
 		const handler = event => {
-			const pending = dotnetRef.invokeMethodAsync('OnShortScreenChanged', event.matches);
+			const pending = dotnetRef.invokeMethodAsync('OnCompactScreenChanged', event.matches);
 			if (pending && typeof pending.catch === 'function') {
 				pending.catch(() => { });
 			}
@@ -127,13 +127,13 @@ window.sharpmushLayout = {
 		if (typeof query.addEventListener === 'function') {
 			query.addEventListener('change', handler);
 		}
-		this._shortScreen = { query, handler };
+		this._compactScreen = { query, handler };
 		return query.matches;
 	},
 
-	unwatchShortScreen: function () {
-		const watch = this._shortScreen;
-		this._shortScreen = null;
+	unwatchCompactScreen: function () {
+		const watch = this._compactScreen;
+		this._compactScreen = null;
 		if (watch && typeof watch.query.removeEventListener === 'function') {
 			watch.query.removeEventListener('change', watch.handler);
 		}

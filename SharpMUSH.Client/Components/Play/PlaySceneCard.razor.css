@@ -133,6 +133,37 @@
 	color: var(--accent);
 }
 
+/* The sub-line as a button (the folded banner): the same line, with a chevron and a hover. */
+.scene-card-sub--action {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	max-width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	font: inherit;
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.scene-card-sub-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.scene-card-sub--action:hover {
+	color: var(--text);
+}
+
+.scene-card-sub--action:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
 .scene-card-body {
 	flex: 1;
 	min-height: 0;

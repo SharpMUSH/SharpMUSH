@@ -264,7 +264,7 @@ test('a click outside a mention does nothing, and undelegating removes the liste
     assert.deepEqual(calls, []);
 });
 
-test('the short-screen watch reports the screen now and on every turn, and stops when unwatched', () => {
+test('the compact-screen watch reports the screen now and on every turn, and stops when unwatched', () => {
     const queries = [];
     const context = vm.createContext({
         window: {
@@ -290,15 +290,15 @@ test('the short-screen watch reports the screen now and on every turn, and stops
     const calls = [];
     const ref = { invokeMethodAsync: (name, value) => { calls.push([name, value]); return Promise.resolve(); } };
 
-    assert.equal(layout.watchShortScreen(ref), true);
-    assert.equal(queries[0].media, '(orientation: landscape) and (max-height: 32rem)');
+    assert.equal(layout.watchCompactScreen(ref), true);
+    assert.equal(queries[0].media, '(orientation: landscape) and (max-height: 32rem), (max-width: 760px)');
     queries[0].fire(false);
-    assert.deepEqual(calls, [['OnShortScreenChanged', false]]);
+    assert.deepEqual(calls, [['OnCompactScreenChanged', false]]);
 
     // Watching again replaces the first watch rather than adding a second listener.
-    layout.watchShortScreen(ref);
+    layout.watchCompactScreen(ref);
     assert.equal(queries[0].listeners.size, 0);
-    layout.unwatchShortScreen();
+    layout.unwatchCompactScreen();
     assert.equal(queries[1].listeners.size, 0);
     queries[1].fire(true);
     assert.equal(calls.length, 1);

@@ -1338,8 +1338,9 @@
 
 /* ══ SHORT LANDSCAPE: a phone held sideways is short of height, not width. The touch header turns into a
    rail down the left edge — the same buttons, stacked — so the page keeps the full height. Touch chrome
-   only (the condition above, ANDed with the shape); a mouse desktop already has the rail. Keep the shape
-   in sync with sharpmushLayout.shortScreenQuery in layout.js. ══ */
+   only (the condition above, ANDed with the shape); a mouse desktop already has the rail. An upright phone
+   keeps the header on top: it is short of width, not height. The shape is the landscape half of
+   sharpmushLayout.compactScreenQuery in layout.js. ══ */
 @media (max-width: 760px) and (orientation: landscape) and (max-height: 32rem),
 	(pointer: coarse) and (orientation: landscape) and (max-height: 32rem) {
 	.phosphor-topbar {

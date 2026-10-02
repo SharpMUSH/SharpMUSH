@@ -59,6 +59,25 @@ public class PlaySceneCardTests : BunitContext
 	}
 
 	[Test]
+	public async Task WithAnAction_TheSubLineIsAButton()
+	{
+		var pressed = 0;
+		var cut = Render<PlaySceneCard>(p => p
+			.Add(x => x.Title, "Ilsa Varn")
+			.Add(x => x.Subtitle, "Lower Docks")
+			.Add(x => x.SubtitleAction, "Show banner")
+			.Add(x => x.OnSubtitle, () => pressed++));
+		var button = cut.Find("button.scene-card-sub");
+		await Assert.That(button.GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner");
+		await Assert.That(button.GetAttribute("title")).IsEqualTo("Show banner");
+		button.Click();
+		await Assert.That(pressed).IsEqualTo(1);
+
+		var plain = RenderCard(subtitle: "Lower Docks");
+		await Assert.That(plain.Find(".scene-card-sub").TagName).IsEqualTo("DIV").Because("no action, no button");
+	}
+
+	[Test]
 	public async Task EachViewsDescription_IsItsRadiosTooltip()
 	{
 		var radios = RenderCard().FindAll("[role='radio']");

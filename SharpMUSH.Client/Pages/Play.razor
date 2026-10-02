@@ -84,19 +84,14 @@ else
                 }
                 @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
                 <div class="play-card" hidden="@(_commKey is not null)">
-                    <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" HeaderImage="@CardImage" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                    <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" HeaderImage="@CardImage"
+                                   OnSubtitle="@(BannerFolded ? EventCallback.Factory.Create(this, OpenFoldedBanner) : default)"
+                                   SubtitleAction="@Loc["NavBannerRestore"]" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Lead>@ViewerAvatar</Lead>
                         <Controls>
                             @if (View == PlayView.Terminal)
                             {
                                 @TerminalSettings
-                            }
-                            @if (BannerFolded)
-                            {
-                                <button type="button" class="play-conn play-banner-show" aria-label="@Loc["NavBannerRestore"]" title="@Loc["NavBannerRestore"]"
-                                        @onclick="() => _shortScreenBannerOpen = true">
-                                    <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
-                                </button>
                             }
                             @ConnectionControl
                         </Controls>
@@ -231,28 +226,30 @@ else
     private bool _focus;
     private bool _bannerMinimised;
 
-    /// <summary>A phone held sideways (layout.js shortScreenQuery): the banner starts as its strip.</summary>
-    private bool _shortScreen;
+    /// <summary>A phone, either way up (layout.js compactScreenQuery): the banner folds into the card header.</summary>
+    private bool _compactScreen;
 
-    /// <summary>The player opened the full banner on the short screen; dropped on the next rotation.</summary>
-    private bool _shortScreenBannerOpen;
+    /// <summary>The player opened the full banner on the compact screen; dropped when the screen changes tier.</summary>
+    private bool _compactScreenBannerOpen;
 
     /// <summary>
-    /// On a short screen the banner folds into the card header, which names the room and offers the full
-    /// banner: one header row instead of a strip over a header.
+    /// On a compact screen the banner folds into the card header, whose sub-line names the room and opens the
+    /// full banner: one header row instead of a banner over a header, the same either way up.
     /// </summary>
-    private bool BannerFolded => _shortScreen && !_shortScreenBannerOpen && !_focus;
+    private bool BannerFolded => _compactScreen && !_compactScreenBannerOpen && !_focus;
 
     private bool BannerShown => !_focus && !BannerFolded;
+
+    private void OpenFoldedBanner() => _compactScreenBannerOpen = true;
 
     private DotNetObjectReference<Play>? _self;
 
     /// <summary>
-    /// On a short screen the banner is folded into the card header unless the player opened it, and then it
-    /// is the full banner: its minimise folds it again. That choice lasts until the screen turns and is not
-    /// remembered, so it does not change the banner on a taller screen.
+    /// On a compact screen the banner is folded into the card header unless the player opened it, and then it
+    /// is the full banner: its minimise folds it again. That choice lasts until the screen changes tier and is
+    /// not remembered, so it does not change the banner on a larger screen.
     /// </summary>
-    private bool BannerMinimised => !_shortScreen && _bannerMinimised;
+    private bool BannerMinimised => !_compactScreen && _bannerMinimised;
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
@@ -464,9 +461,9 @@ else
         _self = DotNetObjectReference.Create(this);
         try
         {
-            var shortScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchShortScreen", _self);
-            changed |= shortScreen != _shortScreen;
-            _shortScreen = shortScreen;
+            var compactScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchCompactScreen", _self);
+            changed |= compactScreen != _compactScreen;
+            _compactScreen = compactScreen;
         }
         catch (JSException)
         {
@@ -475,12 +472,12 @@ else
         if (changed) StateHasChanged();
     }
 
-    /// <summary>The screen turned into or out of the short tier (layout.js watchShortScreen).</summary>
+    /// <summary>The screen turned into or out of the short tier (layout.js watchCompactScreen).</summary>
     [JSInvokable]
-    public Task OnShortScreenChanged(bool shortScreen) => InvokeAsync(() =>
+    public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(() =>
     {
-        _shortScreen = shortScreen;
-        _shortScreenBannerOpen = false;
+        _compactScreen = compactScreen;
+        _compactScreenBannerOpen = false;
         StateHasChanged();
     });
 
@@ -494,9 +491,9 @@ else
 
     private async Task OnBannerMinimisedAsync(bool minimised)
     {
-        if (_shortScreen)
+        if (_compactScreen)
         {
-            _shortScreenBannerOpen = !minimised;
+            _compactScreenBannerOpen = !minimised;
             return;
         }
         _bannerMinimised = minimised;
@@ -763,7 +760,7 @@ else
         if (_self is null) return;
         try
         {
-            await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
+            await JS.InvokeVoidAsync("sharpmushLayout.unwatchCompactScreen");
         }
         catch (Exception e) when (e is JSException or JSDisconnectedException)
         {
