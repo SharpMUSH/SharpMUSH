@@ -64,6 +64,9 @@ file sealed class SetupApiHandler(
 
 	public int FinishCalls { get; private set; }
 
+	/// <summary>Whether api/setup/wizard/finish refuses, leaving the wizard pending.</summary>
+	public bool FinishFails { get; set; }
+
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
@@ -110,6 +113,11 @@ file sealed class SetupApiHandler(
 		if (path == "api/setup/wizard/finish" && request.Method == HttpMethod.Post)
 		{
 			FinishCalls++;
+			if (FinishFails)
+			{
+				return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+			}
+
 			_wizardPending = false;
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
@@ -414,6 +422,27 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
 		enterPortalButton.Click();
 		await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
+	}
+
+	/// <summary>
+	/// A wizard the server could not mark finished comes back at the next sign-in, so the page says so and
+	/// stays on the applications rather than showing the setup as done.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_AFinishTheServerRefuses_IsNotShownAsDone()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.FinishFails = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".setup-error"));
+		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupFinishFailed");
+		await Assert.That(cut.Markup).DoesNotContain("AuthSetupComplete");
+		await Assert.That(handler.FinishCalls).IsEqualTo(1);
 	}
 
 	/// <summary>

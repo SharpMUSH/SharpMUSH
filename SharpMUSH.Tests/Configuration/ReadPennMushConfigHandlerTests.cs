@@ -12,7 +12,7 @@ public class ReadPennMushConfigHandlerTests
 {
 	private static PennMushConfigImport Import(params string[] lines)
 	{
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-cnf-{Guid.NewGuid():N}.cnf");
+		var path = Path.Join(Path.GetTempPath(), $"sharpmush-cnf-{Guid.NewGuid():N}.cnf");
 		File.WriteAllLines(path, lines);
 		try
 		{

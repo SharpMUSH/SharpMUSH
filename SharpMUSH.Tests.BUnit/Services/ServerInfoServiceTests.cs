@@ -118,4 +118,23 @@ public class ServerInfoServiceTests
 		await Assert.That(told).IsEqualTo(1);
 		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse();
 	}
+
+	[Test]
+	public async Task RemovingAPackageAsksForTheFeaturesAgain()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([
+			() => WithFeatures(GameFeatures.Scenes),
+			() => new HttpResponseMessage(HttpStatusCode.NoContent),
+			() => WithFeatures()]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var factory = new SingleClientFactory(handler);
+		var service = new ServerInfoService(factory);
+		var packages = new PackagesAdminService(factory, service);
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		await packages.UninstallAsync("scene", force: false);
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
+			.Because("the package page removed the scene system, so the navigation stops offering it");
+	}
 }

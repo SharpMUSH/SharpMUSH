@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Server.Services;
 using System.Collections.Concurrent;
 
 namespace SharpMUSH.Server.Controllers;
@@ -13,28 +15,42 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ServerAdmin)]
 public class DatabaseConversionController(
 	IPennMUSHDatabaseConverter converter,
+	MushCnfImportService mushCnf,
 	ILogger<DatabaseConversionController> logger)
 	: ControllerBase
 {
 	/// <summary>The most either file may be; the admin page allows the same.</summary>
 	private const long MaxUploadFileSize = 100 * 1024 * 1024;
 
+	/// <summary>The most the <c>mush.cnf</c> may be; the admin page allows the same.</summary>
+	private const long MaxConfigFileSize = 1024 * 1024;
+
 	/// <summary>Room for the multipart boundaries and headers around the files.</summary>
 	private const long MultipartOverhead = 1024 * 1024;
 
 	/// <summary>
-	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) and chatdb
-	/// (<c>chatFile</c>) optionally alongside
+	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>), chatdb (<c>chatFile</c>) and
+	/// <c>mush.cnf</c> (<c>configFile</c>) optionally alongside
 	/// </summary>
+	/// <remarks>
+	/// The <c>mush.cnf</c> is applied once every file is in and just before the conversion starts, so the conversion
+	/// reads the source game's master room, ancestors and handlers. A conversion that fails or is cancelled puts the
+	/// game's previous configuration back; an upload refused before it starts never changes it.
+	/// </remarks>
 	[HttpPost("upload")]
-	[RequestSizeLimit(3 * MaxUploadFileSize + MultipartOverhead)] // All three files at their limit, and the form around them
+	[RequestSizeLimit(3 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)] // Every file at its limit, and the form around them
 	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
-		[FromForm] IFormFile? chatFile, CancellationToken cancellationToken)
+		[FromForm] IFormFile? chatFile, [FromForm] IFormFile? configFile, CancellationToken cancellationToken)
 	{
 		if (file == null || file.Length == 0)
 		{
 			return BadRequest("No file uploaded");
+		}
+
+		if (configFile is { Length: > MaxConfigFileSize })
+		{
+			return BadRequest("The configuration file is larger than 1 MB.");
 		}
 
 		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
@@ -69,10 +85,37 @@ public class DatabaseConversionController(
 					chatFile.Length);
 			}
 
+			Func<Task>? restore = null;
+			if (configFile is not null)
+			{
+				string text;
+				using (var reader = new StreamReader(configFile.OpenReadStream()))
+				{
+					text = await reader.ReadToEndAsync(cancellationToken);
+				}
+
+				PennMushConfigImport import;
+				try
+				{
+					import = await mushCnf.ReadAsync(text, cancellationToken);
+				}
+				catch (Exception ex) when (ex is IOException or FormatException or InvalidOperationException
+					or ArgumentException)
+				{
+					logger.LogWarning(ex, "The configuration uploaded with a PennMUSH database could not be read");
+					DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
+					return BadRequest($"Error importing configuration: {ex.Message}");
+				}
+
+				var previous = await mushCnf.SnapshotAsync(cancellationToken);
+				await mushCnf.ApplyAsync(import, cancellationToken);
+				restore = () => mushCnf.RestoreAsync(previous);
+			}
+
 			var sessionId = Guid.NewGuid().ToString();
 
 			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, chatTempPath, logger,
-				cancellationToken);
+				cancellationToken, restore);
 
 			return Ok(new { sessionId, message = "Conversion started" });
 		}
@@ -173,7 +216,8 @@ public static class DatabaseConversionSession
 		string? mailTempFilePath,
 		string? chatTempFilePath,
 		ILogger logger,
-		CancellationToken cancellationToken)
+		CancellationToken cancellationToken,
+		Func<Task>? restoreConfiguration = null)
 	{
 		var sessionData = new SessionData
 		{
@@ -194,10 +238,23 @@ public static class DatabaseConversionSession
 
 		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, chatTempFilePath, progress,
 				linkedCts.Token)
-			.ContinueWith(task =>
+			.ContinueWith(async task =>
 			{
 				// Every way out — success, fault, cancellation — is done with the uploaded files.
 				DeleteTempFiles(sessionData.TempFilePaths, logger);
+
+				// A conversion that did not finish leaves the game on the configuration it had before the upload.
+				if (!task.IsCompletedSuccessfully && restoreConfiguration is not null)
+				{
+					try
+					{
+						await restoreConfiguration();
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, "Could not restore the configuration the conversion's mush.cnf replaced");
+					}
+				}
 				try
 				{
 					if (task.IsCompletedSuccessfully)
@@ -229,7 +286,7 @@ public static class DatabaseConversionSession
 					logger.LogError(ex, "Error processing conversion result");
 					throw;
 				}
-			}, TaskScheduler.Default);
+			}, TaskScheduler.Default).Unwrap();
 
 		_sessions[sessionId] = sessionData;
 

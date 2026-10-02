@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Setup;
@@ -150,6 +151,13 @@ public class HandlerSetupService(
 	/// </summary>
 	private async Task<Result<Success>> CreateAsync(string kind, CancellationToken cancellationToken)
 	{
+		// Refused before the object is made, so a package that blocks the move leaves no orphaned handler behind.
+		var attached = await AttachedAsync(kind);
+		if (await BlockingAsync(attached) is Error<string> blocked)
+		{
+			return blocked;
+		}
+
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), cancellationToken) is not (AnySharpObject and SharpPlayer owner))
 		{
 			return new Error<string>("God (#1) is not a player, so there is no one to own a new handler.");
@@ -172,8 +180,8 @@ public class HandlerSetupService(
 			await mediator.Send(new SetObjectFlagCommand(node, wizard), cancellationToken);
 		}
 
-		logger.LogInformation("Setup wizard created {Kind} handler #{Number}.", kind, created.Number);
-		return await MoveToAsync(kind, (uint)created.Number, cancellationToken);
+		logger.LogInformation("Setup wizard created {Kind} handler #{Number}.", LogSanitizer.Sanitize(kind), created.Number);
+		return await RepointAsync(kind, (uint)created.Number, attached, cancellationToken);
 	}
 
 	/// <summary>
@@ -189,6 +197,17 @@ public class HandlerSetupService(
 		}
 
 		var attached = await AttachedAsync(kind);
+		return await BlockingAsync(attached) is Error<string> blocked
+			? blocked
+			: await RepointAsync(kind, target, attached, cancellationToken);
+	}
+
+	/// <summary>
+	/// Refuses a move when a package that is not bundled depends on one of the <paramref name="attached"/> ones,
+	/// which would have to be removed from the current handler.
+	/// </summary>
+	private async Task<Result<Success>> BlockingAsync(IReadOnlyList<string> attached)
+	{
 		foreach (var id in attached)
 		{
 			var blocking = (await registry.GetPackageDependentsAsync(id))
@@ -202,6 +221,13 @@ public class HandlerSetupService(
 			}
 		}
 
+		return new Success();
+	}
+
+	/// <summary>Removes the <paramref name="attached"/> packages, sets the handler, and builds them onto the new one.</summary>
+	private async Task<Result<Success>> RepointAsync(string kind, uint? target, IReadOnlyList<string> attached,
+		CancellationToken cancellationToken)
+	{
 		foreach (var id in attached.Reverse())
 		{
 			if (await installer.UninstallAsync(id, cancellationToken: cancellationToken) is Error<string> error)
@@ -218,7 +244,7 @@ public class HandlerSetupService(
 				: settings.Database with { EventHandler = target }
 		}), cancellationToken);
 		reload.SignalChange();
-		logger.LogInformation("Setup wizard set the {Kind} handler to {Target}.", kind,
+		logger.LogInformation("Setup wizard set the {Kind} handler to {Target}.", LogSanitizer.Sanitize(kind),
 			target is { } t ? $"#{t}" : "none");
 
 		if (target is null || attached.Count == 0)
@@ -237,16 +263,12 @@ public class HandlerSetupService(
 	/// <summary>The installed bundled packages that attach to <paramref name="kind"/>, in install order.</summary>
 	private async Task<IReadOnlyList<string>> AttachedAsync(string kind)
 	{
-		var attached = new List<string>();
-		foreach (var package in BundledPackages.All.Where(p => GameFeatureService.HandlerKind(p.Requires) == kind))
-		{
-			if (await registry.GetInstalledPackageAsync(package.PackageId) is InstalledPackageRecord)
-			{
-				attached.Add(package.PackageId);
-			}
-		}
-
-		return attached;
+		return await BundledPackages.All
+			.Where(p => GameFeatureService.HandlerKind(p.Requires) == kind)
+			.ToAsyncEnumerable()
+			.Where(async (p, _) => await registry.GetInstalledPackageAsync(p.PackageId) is InstalledPackageRecord)
+			.Select(p => p.PackageId)
+			.ToListAsync();
 	}
 
 	private uint? Configured(string kind)

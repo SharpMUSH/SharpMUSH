@@ -4595,6 +4595,9 @@
   <data name="AdmSetupAppsFailed" xml:space="preserve">
     <value>Some applications could not be changed: {0}</value>
   </data>
+  <data name="AdmSetupFinishFailed" xml:space="preserve">
+    <value>The applications are saved, but the setup could not be marked finished: {0}</value>
+  </data>
   <data name="AdmSetupUnfinished" xml:space="preserve">
     <value>First-run setup is not finished.</value>
   </data>
@@ -4717,9 +4720,6 @@
   </data>
   <data name="AdmImportConfigApplied" xml:space="preserve">
     <value>The configuration from {0} was applied before the database.</value>
-  </data>
-  <data name="AdmImportConfigFailed" xml:space="preserve">
-    <value>The configuration could not be applied, so nothing was imported: {0}</value>
   </data>
   <data name="AdmSetupHandlerClashes" xml:space="preserve">
     <value>This object holds something other than what the packages ship in {0} attribute(s) they write. Your values would be kept, so these parts of the packages would run your code instead of theirs:</value>

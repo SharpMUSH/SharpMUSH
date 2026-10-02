@@ -2,6 +2,7 @@
 @layout OnboardingLayout
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject AccountAuthService AccountAuth
 @inject SetupWizardService Wizard
 @inject NavigationManager Nav
@@ -555,8 +556,18 @@
         switch (await Wizard.SetPackagesAsync(Effective.ToList()))
         {
             case SetupWizardResponse:
-                await Wizard.FinishAsync();
-                _step = Step.Done;
+                // The applications are saved either way; a wizard the server still counts as unfinished comes
+                // back at the next sign-in, so say so here rather than show it as done.
+                switch (await Wizard.FinishAsync())
+                {
+                    case Success:
+                        _step = Step.Done;
+                        break;
+                    case ApiFailure failure:
+                        _error = Loc["AdmSetupFinishFailed", failure.Message];
+                        break;
+                }
+
                 break;
             case ApiFailure failure:
                 // Some changes may have gone through; show what the game has now beside the reason.

@@ -5,7 +5,6 @@
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Services.DatabaseConversion
 @inject DatabaseConversionService ConversionService
-@inject AdminConfigService ConfigService
 @inject ILogger<ImportDatabase> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
@@ -341,35 +340,20 @@
 
         try
         {
-            // The configuration first, so the conversion reads the source game's master room, ancestors and
-            // handlers rather than SharpMUSH's defaults. A configuration that fails stops here: converting
-            // against the wrong settings is the outcome the file was given to prevent.
-            if (_selectedConfigFile is { } config)
-            {
-                string text;
-                using (var reader = new StreamReader(config.OpenReadStream(MaxConfigFileSize)))
-                {
-                    text = await reader.ReadToEndAsync();
-                }
-
-                if (await ConfigService.ImportFromConfigFileAsync(text) is ApiFailure configFailure)
-                {
-                    _error = Loc["AdmImportConfigFailed", configFailure.Message].Value;
-                    return;
-                }
-
-                _configImportedFrom = config.Name;
-            }
-
+            // The mush.cnf goes with the database: the server applies it once the upload is in and before the
+            // conversion starts, so the conversion reads the source game's master room, ancestors and handlers,
+            // and puts the game's own configuration back if the conversion fails or is cancelled.
             await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
             await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
+            await using var configStream = _selectedConfigFile?.OpenReadStream(MaxConfigFileSize);
             var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
-                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name);
+                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name, configStream, _selectedConfigFile?.Name);
 
             switch (upload)
             {
                 case string sessionId:
+                    _configImportedFrom = _selectedConfigFile?.Name;
                     _sessionId = sessionId;
                     _isConverting = true;
                     _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));

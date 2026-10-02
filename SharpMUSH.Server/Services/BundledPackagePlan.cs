@@ -21,12 +21,11 @@ public sealed record BundledPackagePlan(IReadOnlyList<string> Install, IReadOnly
 		var pending = new Stack<string>(asked);
 		while (pending.TryPop(out var id))
 		{
-			foreach (var dependency in dependencies.GetValueOrDefault(id) ?? [])
+			foreach (var dependency in (dependencies.GetValueOrDefault(id) ?? [])
+				.Where(d => order.Contains(d) && !needed.Contains(d)))
 			{
-				if (order.Contains(dependency) && needed.Add(dependency))
-				{
-					pending.Push(dependency);
-				}
+				needed.Add(dependency);
+				pending.Push(dependency);
 			}
 		}
 

@@ -68,17 +68,12 @@ public class GameFeatureService(
 	/// <inheritdoc />
 	public async Task<IReadOnlyList<string>> EnabledAsync()
 	{
-		var enabled = new List<string>(All.Count);
-		foreach (var app in All)
-		{
-			if (PluginLoaded(app.RequiredPlugin)
-					&& await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord)
-			{
-				enabled.Add(app.Id);
-			}
-		}
-
-		return enabled;
+		return await All
+			.Where(app => PluginLoaded(app.RequiredPlugin))
+			.ToAsyncEnumerable()
+			.Where(async (app, _) => await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord)
+			.Select(app => app.Id)
+			.ToListAsync();
 	}
 
 	/// <summary>Every package this server ships, whether the game has it, and whether it can.</summary>

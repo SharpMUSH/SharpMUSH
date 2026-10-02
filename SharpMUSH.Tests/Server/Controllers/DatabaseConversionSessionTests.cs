@@ -69,6 +69,56 @@ public class DatabaseConversionSessionTests
 		await Assert.That(File.Exists(chat)).IsFalse();
 	}
 
+	/// <summary>The mush.cnf that came with the upload is undone when the conversion it was applied for fails.</summary>
+	[Test]
+	public async Task A_failed_conversion_puts_the_configuration_back()
+	{
+		var (database, mail, chat) = TempFiles();
+		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
+		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+			.Returns(Task.FromException<ConversionResult>(new FormatException("bad maildb")));
+		var restored = new TaskCompletionSource();
+
+		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, database, mail, chat,
+			NullLogger.Instance, CancellationToken.None, () =>
+			{
+				restored.TrySetResult();
+				return Task.CompletedTask;
+			});
+
+		await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(restored.Task.IsCompletedSuccessfully).IsTrue();
+	}
+
+	/// <summary>A conversion that finished keeps the configuration that came with it.</summary>
+	[Test]
+	public async Task A_finished_conversion_keeps_the_configuration()
+	{
+		var (database, mail, chat) = TempFiles();
+		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
+		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+			.Returns(Task.FromResult(new ConversionResult()));
+		var restores = 0;
+
+		var sessionId = Guid.NewGuid().ToString();
+		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+			CancellationToken.None, () =>
+			{
+				Interlocked.Increment(ref restores);
+				return Task.CompletedTask;
+			});
+
+		ConversionResult? result = null;
+		for (var i = 0; i < 100 && result is null; i++)
+		{
+			await Task.Delay(50);
+			result = await DatabaseConversionSession.GetResult(sessionId);
+		}
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(restores).IsEqualTo(0);
+	}
+
 	/// <summary>
 	/// The converter reports nothing until it has parsed the dump. The import page reads a 404 from the
 	/// progress endpoint as "the session is gone", so a session in that gap must still answer.
