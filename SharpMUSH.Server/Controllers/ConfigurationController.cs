@@ -235,7 +235,7 @@ public class ConfigurationController(
 			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
 
 			var import = ReadPennMushConfig.Import(tempFile, followIncludes: false);
-			var importedOptions = import.Options;
+			var importedOptions = import.Over(options.CurrentValue);
 
 			System.IO.File.Delete(tempFile);
 
@@ -249,6 +249,10 @@ public class ConfigurationController(
 
 			// Pass the object directly - the database will handle serialization
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
+
+			// Which handlers and ancestors the file itself named, so a PennMUSH database imported after it keeps
+			// them as the source game's objects instead of unsetting them as SharpMUSH's seeded ones.
+			await database.SetExpandedServerData(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(import));
 
 			// This notifies IOptionsMonitor consumers via change tokens
 			configReloadService.SignalChange();

@@ -279,7 +279,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	public async Task Dashboard_PointsTheAdministratorBackToAnUnfinishedSetup(string policy, bool pending, bool shown)
 	{
 		Auth.SetPolicies("players.view", policy);
-		_api.Bodies["api/setup/wizard"] = $$"""{"pending":{{(pending ? "true" : "false")}},"applications":[]}""";
+		_api.Bodies["api/setup/wizard"] = $$"""{"pending":{{(pending ? "true" : "false")}},"handlers":[],"packages":[]}""";
 		var cut = RenderPage(typeof(Dashboard));
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
@@ -303,7 +303,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var back = cut.FindAll("a.dbimport-continue-setup");
 		await Assert.That(back.Count).IsEqualTo(offered ? 1 : 0);
 		if (offered)
-			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=applications");
+			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=handlers");
 	}
 
 	[Test]

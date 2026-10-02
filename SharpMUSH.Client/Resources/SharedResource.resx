@@ -4554,19 +4554,13 @@
     <value>Bring an existing game?</value>
   </data>
   <data name="AdmSetupImportLead" xml:space="preserve">
-    <value>Moving from PennMUSH? Import its database now, before anyone else connects. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
+    <value>Moving from PennMUSH? Import its database now, before anyone else connects, with its mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
   </data>
   <data name="AdmSetupImportPenn" xml:space="preserve">
     <value>Import a PennMUSH database</value>
   </data>
   <data name="AdmSetupStartFresh" xml:space="preserve">
     <value>Start a new game</value>
-  </data>
-  <data name="AdmSetupAppsTitle" xml:space="preserve">
-    <value>Choose your applications</value>
-  </data>
-  <data name="AdmSetupAppsLead" xml:space="preserve">
-    <value>These parts of the game are optional. What you turn off here is removed from the game and from the portal's menus; you can turn it back on later under Packages.</value>
   </data>
   <data name="AdmSetupAppScenesTitle" xml:space="preserve">
     <value>Scene System</value>
@@ -4590,7 +4584,7 @@
     <value>Saving…</value>
   </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
-    <value>Everything here can be changed later: applications under Packages, imports under Database.</value>
+    <value>Everything here can be changed later: handlers under Configuration, packages under Packages, imports under Database.</value>
   </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
@@ -4603,5 +4597,128 @@
   </data>
   <data name="AdmSetupUnfinished" xml:space="preserve">
     <value>First-run setup is not finished.</value>
+  </data>
+  <data name="AdmSetupContinueStep" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="AdmSetupHandlersTitle" xml:space="preserve">
+    <value>Choose your handlers</value>
+  </data>
+  <data name="AdmSetupHandlersLead" xml:space="preserve">
+    <value>The packages SharpMUSH ships build on two objects: the HTTP handler and the event handler. Use the ones your game already has, and the packages add their attributes to them without touching yours, or create new ones.</value>
+  </data>
+  <data name="AdmSetupHandlerHttpTitle" xml:space="preserve">
+    <value>HTTP handler (http_handler)</value>
+  </data>
+  <data name="AdmSetupHandlerHttpDesc" xml:space="preserve">
+    <value>Answers requests to /http/ on this server. The portal's character directory, online list and profiles are served through it.</value>
+  </data>
+  <data name="AdmSetupHandlerEventTitle" xml:space="preserve">
+    <value>Event handler (event_handler)</value>
+  </data>
+  <data name="AdmSetupHandlerEventDesc" xml:space="preserve">
+    <value>Is triggered on game events: connections, movement, channel lines and pages. The portal's Play page learns who and what is in a room, and the channels and pages a player receives, through it.</value>
+  </data>
+  <data name="AdmSetupHandlerNow" xml:space="preserve">
+    <value>Now: {0}, {1}.</value>
+  </data>
+  <data name="AdmSetupHandlerCarries" xml:space="preserve">
+    <value>Built on it: {0}.</value>
+  </data>
+  <data name="AdmSetupHandlerMissing" xml:space="preserve">
+    <value>Set to {0}, which does not exist.</value>
+  </data>
+  <data name="AdmSetupHandlerUnset" xml:space="preserve">
+    <value>Not set: nothing is built on it.</value>
+  </data>
+  <data name="AdmSetupHandlerKeep" xml:space="preserve">
+    <value>Keep it, and build on it</value>
+  </data>
+  <data name="AdmSetupHandlerUse" xml:space="preserve">
+    <value>Use another object in your game</value>
+  </data>
+  <data name="AdmSetupHandlerCreate" xml:space="preserve">
+    <value>Create a new one in the master room</value>
+  </data>
+  <data name="AdmSetupHandlerNone" xml:space="preserve">
+    <value>No handler</value>
+  </data>
+  <data name="AdmSetupHandlerNotWizard" xml:space="preserve">
+    <value>This object is not WIZARD. The packages built on it need it to be: set the flag in the game.</value>
+  </data>
+  <data name="AdmSetupHandlerDbrefRequired" xml:space="preserve">
+    <value>Name the object to use as the {0}, as #number.</value>
+  </data>
+  <data name="AdmSetupHandlerFailed" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="AdmSetupPackagesTitle" xml:space="preserve">
+    <value>Choose your packages</value>
+  </data>
+  <data name="AdmSetupPackagesLead" xml:space="preserve">
+    <value>Every package this server ships. Add or remove any of them; what a package needs comes with it. You can change them later under Packages.</value>
+  </data>
+  <data name="AdmSetupPkgGroupPortal" xml:space="preserve">
+    <value>Built on your handlers</value>
+  </data>
+  <data name="AdmSetupPkgGroupGame" xml:space="preserve">
+    <value>In the game</value>
+  </data>
+  <data name="AdmSetupPkgNeededBy" xml:space="preserve">
+    <value>Needed by {0}.</value>
+  </data>
+  <data name="AdmSetupPkgNeedsHttp" xml:space="preserve">
+    <value>Needs an HTTP handler: set one in the previous step.</value>
+  </data>
+  <data name="AdmSetupPkgNeedsEvent" xml:space="preserve">
+    <value>Needs an event handler: set one in the previous step.</value>
+  </data>
+  <data name="AdmSetupPkgHttpHandlerTitle" xml:space="preserve">
+    <value>HTTP routes</value>
+  </data>
+  <data name="AdmSetupPkgHttpHandlerDesc" xml:space="preserve">
+    <value>The GET, POST and other verb routers on the HTTP handler, which the packages below and your own softcode add /http/ routes to.</value>
+  </data>
+  <data name="AdmSetupPkgProfileHandlerTitle" xml:space="preserve">
+    <value>Character directory</value>
+  </data>
+  <data name="AdmSetupPkgProfileHandlerDesc" xml:space="preserve">
+    <value>The portal's character list, who is online, and character profiles.</value>
+  </data>
+  <data name="AdmSetupPkgRoomContentsTitle" xml:space="preserve">
+    <value>Room feed</value>
+  </data>
+  <data name="AdmSetupPkgRoomContentsDesc" xml:space="preserve">
+    <value>Tells the portal's Play page the room a player is in, who and what is there, and the exits.</value>
+  </data>
+  <data name="AdmSetupPkgCommFeedTitle" xml:space="preserve">
+    <value>Channel and page feed</value>
+  </data>
+  <data name="AdmSetupPkgCommFeedDesc" xml:space="preserve">
+    <value>Gives the Play page's sidebar a player's channels, and each channel line and page to exactly the players who received it.</value>
+  </data>
+  <data name="AdmSetupPkgCommonFunctionsTitle" xml:space="preserve">
+    <value>Common functions</value>
+  </data>
+  <data name="AdmSetupPkgCommonFunctionsDesc" xml:space="preserve">
+    <value>header(), footer() and line(): the rules and titles the other packages draw their output with.</value>
+  </data>
+  <data name="AdmSetupPkgPlusHelpTitle" xml:space="preserve">
+    <value>+help</value>
+  </data>
+  <data name="AdmSetupPkgPlusHelpDesc" xml:space="preserve">
+    <value>The game's own help, gathering the topics installed packages carry and keeping the ones you write.</value>
+  </data>
+  <data name="AdmImportConfigRecommended" xml:space="preserve">
+    <value>Configuration (mush.cnf, recommended)</value>
+  </data>
+  <data name="AdmImportConfigHint" xml:space="preserve">
+    <value>Give the source game's mush.cnf if you have it. It is applied first, so the master room, player start, ancestors and handlers are your game's; without it the game keeps SharpMUSH's defaults.</value>
+  </data>
+  <data name="AdmImportConfigApplied" xml:space="preserve">
+    <value>The configuration from {0} was applied before the database.</value>
+  </data>
+  <data name="AdmImportConfigFailed" xml:space="preserve">
+    <value>The configuration could not be applied, so nothing was imported: {0}</value>
   </data>
 </root>

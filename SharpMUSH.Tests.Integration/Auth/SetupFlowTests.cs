@@ -190,8 +190,10 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		await Assert.That(right.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
-	private record OptionalApplicationState(string Id, bool Enabled, bool Available);
-	private record SetupWizardResponse(bool Pending, List<OptionalApplicationState> Applications);
+	private record HandlerState(string Kind, int? Dbref, string? Name, bool IsWizard, List<string> Packages);
+	private record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
+		List<string> DependsOn);
+	private record SetupWizardResponse(bool Pending, List<HandlerState> Handlers, List<BundledPackageState> Packages);
 	private record ServerInfoResponse(bool GuestsEnabled, string MudName, List<string>? Features);
 
 	/// <summary>
@@ -216,12 +218,16 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 
 		var wizard = await admin.GetFromJsonAsync<SetupWizardResponse>("api/setup/wizard");
 		await Assert.That(wizard!.Pending).IsTrue();
-		await Assert.That(wizard.Applications.Select(a => a.Id)).IsEquivalentTo(["scenes", "wiki-reader"]);
+		await Assert.That(wizard.Handlers.Select(h => h.Kind)).IsEquivalentTo(["http", "event"]);
+		await Assert.That(wizard.Packages.Select(p => p.Id)).Contains("scene");
+		await Assert.That(wizard.Packages.Single(p => p.Id == "profile-handler").Requires).IsEqualTo("http");
 
-		// What the portal is told is on is exactly what the wizard reports as on.
+		// What the portal is told is on is exactly what the wizard reports as installed.
 		var info = await http.GetFromJsonAsync<ServerInfoResponse>("api/server-info");
 		await Assert.That(info!.Features).IsNotNull();
-		await Assert.That(info.Features!).IsEquivalentTo(wizard.Applications.Where(a => a.Enabled).Select(a => a.Id));
+		var installed = wizard.Packages.Where(p => p.Installed).Select(p => p.Id).ToHashSet();
+		await Assert.That(info.Features!.Contains("scenes")).IsEqualTo(installed.Contains("scene"));
+		await Assert.That(info.Features!.Contains("wiki-reader")).IsEqualTo(installed.Contains("wiki-reader"));
 
 		var finish = await admin.PostAsync("api/setup/wizard/finish", content: null);
 		await Assert.That(finish.StatusCode).IsEqualTo(HttpStatusCode.NoContent);

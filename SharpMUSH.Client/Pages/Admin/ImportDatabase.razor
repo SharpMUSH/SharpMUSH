@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Services.DatabaseConversion
 @inject DatabaseConversionService ConversionService
+@inject AdminConfigService ConfigService
 @inject ILogger<ImportDatabase> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
@@ -20,7 +21,7 @@
             @if (FromSetup && !_isConverting)
             {
                 <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Filled.ArrowForward"
-                               Href="/setup?step=applications">@Loc["AdmSetupContinue"]</CapsuleButton>
+                               Href="/setup?step=handlers">@Loc["AdmSetupContinue"]</CapsuleButton>
             }
         </Actions>
     </PlainPageHeader>
@@ -61,6 +62,27 @@
                         <span class="dbimport-file-name">@_selectedFile.Name</span>
                         <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                     </div>
+
+                    @* The source game's mush.cnf goes in first: it names the master room, the player start,
+                       the ancestors and the handlers the database's objects are, and those decide how the
+                       import places SharpMUSH's own objects. Without it the game keeps SharpMUSH's defaults. *@
+                    <SectionLabel Class="dbimport-label">@Loc["AdmImportConfigRecommended"]</SectionLabel>
+                    <MudFileUpload T="IBrowserFile"
+                                   Accept=".cnf,.conf,.txt"
+                                   FilesChanged="OnConfigFileSelected"
+                                   MaximumFileCount="1"
+                                   MaxFileSize="MaxConfigFileSize" />
+                    @if (_selectedConfigFile != null)
+                    {
+                        <div class="dbimport-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="dbimport-file-icon" />
+                            <span class="dbimport-file-name dbimport-config-name">@_selectedConfigFile.Name</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="dbimport-config-hint">@Loc["AdmImportConfigHint"]</div>
+                    }
 
                     <SectionLabel Class="dbimport-label">@Loc["MailDatabaseOptional"]</SectionLabel>
                     <MudFileUpload T="IBrowserFile"
@@ -189,6 +211,12 @@
                     <MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Dense="true">
                         @(_result.IsSuccessful ? Loc["ConversionSuccess"] : Loc["ConversionErrors"])
                     </MudAlert>
+                    @if (_configImportedFrom is not null)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="dbimport-config-applied">
+                            @Loc["AdmImportConfigApplied", _configImportedFrom]
+                        </MudAlert>
+                    }
 
                     <div class="dbimport-grid">
                         <div class="dbimport-tile">
@@ -278,7 +306,17 @@
     // Kept apart from _error so a poll that succeeds clears only what a poll said, not why a cancel was refused.
     private string? _pollError;
 
+    /// <summary>A mush.cnf is a few hundred lines; a megabyte leaves room for comments and still refuses a database.</summary>
+    private const long MaxConfigFileSize = 1024 * 1024;
+
+    private IBrowserFile? _selectedConfigFile;
+
+    /// <summary>The mush.cnf this import applied before the database, for the result to say so.</summary>
+    private string? _configImportedFrom;
+
     private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
+
+    private void OnConfigFileSelected(IBrowserFile? file) => _selectedConfigFile = file;
 
     private void OnMailFileSelected(IBrowserFile? file) => _selectedMailFile = file;
 
@@ -287,6 +325,7 @@
     private void ClearSelection()
     {
         _selectedFile = null;
+        _selectedConfigFile = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
     }
@@ -298,9 +337,30 @@
 
         _isUploading = true;
         _error = null;
+        _configImportedFrom = null;
 
         try
         {
+            // The configuration first, so the conversion reads the source game's master room, ancestors and
+            // handlers rather than SharpMUSH's defaults. A configuration that fails stops here: converting
+            // against the wrong settings is the outcome the file was given to prevent.
+            if (_selectedConfigFile is { } config)
+            {
+                string text;
+                using (var reader = new StreamReader(config.OpenReadStream(MaxConfigFileSize)))
+                {
+                    text = await reader.ReadToEndAsync();
+                }
+
+                if (await ConfigService.ImportFromConfigFileAsync(text) is ApiFailure configFailure)
+                {
+                    _error = Loc["AdmImportConfigFailed", configFailure.Message].Value;
+                    return;
+                }
+
+                _configImportedFrom = config.Name;
+            }
+
             await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
             await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
@@ -439,6 +499,8 @@
     private void Reset()
     {
         _selectedFile = null;
+        _selectedConfigFile = null;
+        _configImportedFrom = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
         _sessionId = null;

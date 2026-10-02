@@ -20,9 +20,10 @@ namespace SharpMUSH.Server.Controllers;
 /// is minted an account session exactly like <see cref="AuthController.AccountLogin"/> does,
 /// so they're auto-logged-in as the new administrator.
 ///
-/// <para>The claim is the wizard's first step. The rest — importing a PennMUSH database, choosing which
-/// optional applications the game runs — is the administrator's (<c>api/setup/wizard</c>), and stays
-/// pending until they finish it, so closing the tab after the claim does not lose it.</para>
+/// <para>The claim is the wizard's first step. The rest — importing a PennMUSH database and its
+/// <c>mush.cnf</c>, setting the HTTP and event handlers, choosing the bundled packages — is the
+/// administrator's (<c>api/setup/wizard</c>), and stays pending until they finish it, so closing the tab
+/// after the claim does not lose it.</para>
 /// </summary>
 [ApiController]
 [Route("api/setup")]
@@ -33,6 +34,7 @@ public class SetupController(
 	AccountClaimsService accountClaims,
 	SitelockGuard sitelockGuard,
 	GameFeatureService features,
+	HandlerSetupService handlers,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -64,23 +66,38 @@ public class SetupController(
 		};
 	}
 
-	/// <summary>Whether the wizard is unfinished, and the optional applications it offers.</summary>
+	/// <summary>Whether the wizard is unfinished, the game's handlers, and the packages it offers.</summary>
 	[HttpGet("wizard")]
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
-	public async Task<ActionResult<SetupWizardResponse>> GetWizard()
-		=> Ok(await WizardAsync());
+	public async Task<ActionResult<SetupWizardResponse>> GetWizard(CancellationToken cancellationToken)
+		=> Ok(await WizardAsync(cancellationToken));
 
 	/// <summary>
-	/// Turns on the listed optional applications and off the rest, then answers with what the game has
-	/// afterwards. 409 with the reason when some could not be switched; the others still were.
+	/// Sets the <c>http</c> or <c>event</c> handler: an object the game has, a new one, or none. The bundled
+	/// packages built on the old handler move to the new one. Answers with the wizard's state afterwards; 409
+	/// with the reason when the change was refused or only partly made.
 	/// </summary>
-	[HttpPut("wizard/applications")]
+	[HttpPut("wizard/handlers/{kind}")]
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
-	public async Task<IActionResult> SetApplications([FromBody] SetupApplicationsRequest request,
+	public async Task<IActionResult> SetHandler(string kind, [FromBody] SetHandlerRequest request,
 		CancellationToken cancellationToken)
-		=> await features.ApplyAsync(request.Enabled ?? [], cancellationToken) switch
+		=> await handlers.SetAsync(kind, request, cancellationToken) switch
 		{
-			Success => Ok(await WizardAsync()),
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+
+	/// <summary>
+	/// Installs the listed bundled packages, with what they depend on, and removes the other bundled packages.
+	/// 409 with the reason when some could not be changed; the others still were.
+	/// </summary>
+	[HttpPut("wizard/packages")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> SetPackages([FromBody] SetupPackagesRequest request,
+		CancellationToken cancellationToken)
+		=> await features.ApplyPackagesAsync(request.Installed ?? [], cancellationToken) switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
 			Error<string> error => Conflict(error.Value),
 		};
 
@@ -93,8 +110,9 @@ public class SetupController(
 		return NoContent();
 	}
 
-	private async Task<SetupWizardResponse> WizardAsync()
-		=> new(await features.WizardPendingAsync(), await features.ApplicationsAsync());
+	private async Task<SetupWizardResponse> WizardAsync(CancellationToken cancellationToken)
+		=> new(await features.WizardPendingAsync(), await handlers.HandlersAsync(cancellationToken),
+			await features.PackagesAsync());
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

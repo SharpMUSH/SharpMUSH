@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -346,21 +348,39 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (removed.Count == 0) return;
 
-		uint? Unset(uint? value) => value is { } v && removed.Contains(v) ? null : value;
 		try
 		{
 			var options = _options.CurrentValue;
 			var database = options.Database;
+
+			// An option the source game's mush.cnf named is the source's object at that number, which the import
+			// is about to write there; only one that names a seed because it is SharpMUSH's default is unset.
+			var named = await SourceConfigurationReferencesAsync(cancellationToken);
+			var kept = new List<string>();
+			uint? Unset(string property, uint? value)
+			{
+				if (value is not { } v || !removed.Contains(v)) return value;
+				if (!named.Named(property, value)) return null;
+				kept.Add($"{ConfigMetadata.PropertyToAttributeName[property]} #{v}");
+				return value;
+			}
+
 			var cleared = database with
 			{
-				AncestorRoom = Unset(database.AncestorRoom),
-				AncestorExit = Unset(database.AncestorExit),
-				AncestorThing = Unset(database.AncestorThing),
-				AncestorPlayer = Unset(database.AncestorPlayer),
-				PackageManager = Unset(database.PackageManager),
-				HttpHandler = Unset(database.HttpHandler),
-				EventHandler = Unset(database.EventHandler)
+				AncestorRoom = Unset(nameof(DatabaseOptions.AncestorRoom), database.AncestorRoom),
+				AncestorExit = Unset(nameof(DatabaseOptions.AncestorExit), database.AncestorExit),
+				AncestorThing = Unset(nameof(DatabaseOptions.AncestorThing), database.AncestorThing),
+				AncestorPlayer = Unset(nameof(DatabaseOptions.AncestorPlayer), database.AncestorPlayer),
+				PackageManager = Unset(nameof(DatabaseOptions.PackageManager), database.PackageManager),
+				HttpHandler = Unset(nameof(DatabaseOptions.HttpHandler), database.HttpHandler),
+				EventHandler = Unset(nameof(DatabaseOptions.EventHandler), database.EventHandler)
 			};
+			if (kept.Count > 0)
+			{
+				context.Warnings.Add($"Kept {string.Join(", ", kept)}: the imported mush.cnf names them, so they are " +
+					"the source game's objects at those numbers.");
+			}
+
 			if (cleared == database) return;
 
 			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
@@ -376,6 +396,19 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
 				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
 		}
+	}
+
+	/// <summary>
+	/// The object-reference options the source game's <c>mush.cnf</c> named, when one was imported before this
+	/// database; none otherwise.
+	/// </summary>
+	private async ValueTask<MushCnfObjectReferences> SourceConfigurationReferencesAsync(CancellationToken cancellationToken)
+	{
+		var stored = await _mediator.Send(new ExpandedServerDataQuery(nameof(MushCnfObjectReferences)), cancellationToken);
+		return stored is null
+			? new MushCnfObjectReferences()
+			: System.Text.Json.JsonSerializer.Deserialize<MushCnfObjectReferences>(
+				System.Text.Json.JsonSerializer.Serialize(stored)) ?? new MushCnfObjectReferences();
 	}
 
 	/// <summary>

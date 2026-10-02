@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
@@ -43,15 +44,17 @@ public interface IGameFeatureReader
 }
 
 /// <summary>
-/// Which optional applications this game has, and switching them on and off. The answer is what the
-/// game has installed, not a setting beside it: the portal hides an application's pages exactly when
-/// the package that serves them is gone.
+/// Which optional applications and bundled packages this game has, and switching them on and off. The
+/// answer is what the game has installed, not a setting beside it: the portal hides an application's pages
+/// exactly when the package that serves them is gone.
 /// </summary>
 public class GameFeatureService(
 	IPackageRegistryService registry,
 	IPackageInstallService installer,
+	IPackageManifestService manifests,
 	IBundledPackageBootstrap bundled,
 	IExpandedObjectDataService serverData,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	PluginCatalog plugins,
 	ILogger<GameFeatureService> logger) : IGameFeatureReader
 {
@@ -64,61 +67,93 @@ public class GameFeatureService(
 
 	/// <inheritdoc />
 	public async Task<IReadOnlyList<string>> EnabledAsync()
-		=> (await ApplicationsAsync()).Where(a => a.Enabled).Select(a => a.Id).ToList();
-
-	/// <summary>Every optional application, whether it is on, and whether it can be.</summary>
-	public async Task<IReadOnlyList<OptionalApplicationState>> ApplicationsAsync()
 	{
-		var states = new List<OptionalApplicationState>(All.Count);
+		var enabled = new List<string>(All.Count);
 		foreach (var app in All)
 		{
-			var available = IsAvailable(app);
-			var installed = await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord;
-			states.Add(new OptionalApplicationState(app.Id, available && installed, available));
+			if (PluginLoaded(app.RequiredPlugin)
+					&& await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord)
+			{
+				enabled.Add(app.Id);
+			}
+		}
+
+		return enabled;
+	}
+
+	/// <summary>Every package this server ships, whether the game has it, and whether it can.</summary>
+	public async Task<IReadOnlyList<BundledPackageState>> PackagesAsync()
+	{
+		var declined = (await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
+		var states = new List<BundledPackageState>(BundledPackages.All.Count);
+		foreach (var package in BundledPackages.All)
+		{
+			var (description, dependsOn) = Catalogue.GetValueOrDefault(package.PackageId);
+			states.Add(new BundledPackageState(
+				package.PackageId,
+				description ?? string.Empty,
+				await registry.GetInstalledPackageAsync(package.PackageId) is InstalledPackageRecord,
+				HandlerKind(package.Requires),
+				IsAvailable(package),
+				dependsOn ?? [],
+				package.InstallAtFirstBoot && !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase)));
 		}
 
 		return states;
 	}
 
 	/// <summary>
-	/// Turns on the applications in <paramref name="enabled"/> and off every other one. An unknown id is
-	/// refused before anything changes; one this server cannot run is left off.
+	/// Installs the bundled packages in <paramref name="wanted"/>, with the bundled packages they depend on, and
+	/// removes every other bundled package. An unknown id is refused before anything changes. A package that
+	/// cannot be installed now (its handler or plugin is missing) is reported, and the rest still apply.
 	/// </summary>
-	public async Task<Result<Success>> ApplyAsync(IReadOnlyCollection<string> enabled, CancellationToken cancellationToken)
+	public async Task<Result<Success>> ApplyPackagesAsync(IReadOnlyCollection<string> wanted, CancellationToken cancellationToken)
 	{
-		var unknown = enabled.Where(id => !All.Any(a => string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase))).ToList();
+		var order = BundledPackages.All.Select(p => p.PackageId).ToList();
+		var unknown = wanted.Where(id => !order.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList();
 		if (unknown.Count > 0)
 		{
-			return new Error<string>($"Unknown application: {string.Join(", ", unknown)}.");
+			return new Error<string>($"Unknown package: {string.Join(", ", unknown)}.");
 		}
 
-		var failures = new List<string>();
-		foreach (var app in All)
-		{
-			var wanted = enabled.Contains(app.Id, StringComparer.OrdinalIgnoreCase) && IsAvailable(app);
-			var installed = await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord;
+		var installed = (await PackagesAsync()).Where(p => p.Installed).Select(p => p.Id)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		var plan = BundledPackagePlan.For(
+			order.Where(id => wanted.Contains(id, StringComparer.OrdinalIgnoreCase)),
+			installed,
+			Catalogue.ToDictionary(entry => entry.Key, entry => entry.Value.DependsOn ?? []),
+			order);
 
-			if (wanted)
+		var failures = new List<string>();
+		foreach (var id in plan.Remove)
+		{
+			switch (await installer.UninstallAsync(id, cancellationToken: cancellationToken))
 			{
-				await SetDeclinedAsync(app.PackageId, declined: false);
-				if (!installed
-						&& !(await bundled.InstallBundledAsync([app.PackageId], cancellationToken)).Contains(app.PackageId))
-				{
-					failures.Add($"{app.Id} could not be installed; the server log says why.");
-				}
+				case Success:
+					await SetDeclinedAsync(id, declined: true);
+					logger.LogInformation("Bundled package {PackageId} removed by the setup wizard.", id);
+					break;
+				case Error<string> error:
+					failures.Add($"{id} could not be removed: {error.Value}");
+					break;
 			}
-			else if (installed)
+		}
+
+		foreach (var id in plan.Install)
+		{
+			await SetDeclinedAsync(id, declined: false);
+			var package = BundledPackages.All.First(p => p.PackageId == id);
+			if (!IsAvailable(package))
 			{
-				switch (await installer.UninstallAsync(app.PackageId, cancellationToken: cancellationToken))
-				{
-					case Success:
-						await SetDeclinedAsync(app.PackageId, declined: true);
-						logger.LogInformation("Optional application {Application} turned off.", app.Id);
-						break;
-					case Error<string> error:
-						failures.Add($"{app.Id} could not be removed: {error.Value}");
-						break;
-				}
+				failures.Add(package.Requires is BundledPackageHandler.None
+					? $"{id} needs a plugin this server has not loaded."
+					: $"{id} needs an {HandlerKind(package.Requires)} handler; set one first.");
+				continue;
+			}
+
+			if (!(await bundled.InstallBundledAsync([id], cancellationToken)).Contains(id))
+			{
+				failures.Add($"{id} could not be installed; the server log says why.");
 			}
 		}
 
@@ -157,7 +192,43 @@ public class GameFeatureService(
 		await serverData.SetExpandedServerDataAsync(record);
 	}
 
-	private bool IsAvailable(OptionalApplication app)
-		=> app.RequiredPlugin is null
-			|| plugins.Plugins.Any(p => string.Equals(p.Id, app.RequiredPlugin, StringComparison.OrdinalIgnoreCase));
+	/// <summary>The <see cref="HandlerKinds"/> value for a bundled package's handler, or null.</summary>
+	public static string? HandlerKind(BundledPackageHandler handler) => handler switch
+	{
+		BundledPackageHandler.Http => HandlerKinds.Http,
+		BundledPackageHandler.Event => HandlerKinds.Event,
+		_ => null
+	};
+
+	/// <summary>Whether <paramref name="package"/> can be installed now: its handler is set, its plugin loaded.</summary>
+	private bool IsAvailable(BundledPackages.Descriptor package)
+	{
+		var database = options.CurrentValue.Database;
+		var handlerSet = package.Requires switch
+		{
+			BundledPackageHandler.Http => database.HttpHandler is not (null or 0),
+			BundledPackageHandler.Event => database.EventHandler is not (null or 0),
+			_ => true
+		};
+
+		return handlerSet
+			&& PluginLoaded(All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin);
+	}
+
+	private bool PluginLoaded(string? plugin)
+		=> plugin is null || plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>Each bundled package's description and bundled dependencies, read from its embedded manifest once.</summary>
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn)> Catalogue
+		=> _catalogue ??= BundledPackages.All.ToDictionary(
+			p => p.PackageId,
+			p => manifests.ParseManifest(BundledPackages.ManifestYaml(p.PackageId)) switch
+			{
+				ParsedPackageManifest parsed => ((string?)parsed.Manifest.Description,
+					(IReadOnlyList<string>?)parsed.Manifest.Dependencies.Select(d => d.PackageId)
+						.Where(BundledPackages.Contains).ToList()),
+				_ => (null, null)
+			});
+
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn)>? _catalogue;
 }

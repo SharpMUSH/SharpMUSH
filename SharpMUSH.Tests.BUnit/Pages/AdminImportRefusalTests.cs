@@ -95,6 +95,69 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		return cut;
 	}
 
+	/// <summary>Picks the database, then the source game's mush.cnf, and starts.</summary>
+	private IRenderedComponent<ImportDatabase> StartConversionWithConfig()
+	{
+		var cut = Render<ImportDatabase>();
+		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+V-1\n~0\n***END OF DUMP***\n", "outdb"));
+		// MudFileUpload keeps the input it used beside a fresh one, so the picker is found by what it accepts.
+		cut.FindComponents<InputFile>().Last(input => input.Find("input").GetAttribute("accept") == ".cnf,.conf,.txt")
+			.UploadFiles(InputFileContent.CreateFromText("mud_name Elsewhere\n", "mush.cnf"));
+		cut.WaitForAssertion(() => cut.Find(".dbimport-config-name"), TimeSpan.FromSeconds(5));
+		Click(cut, "StartConversion");
+		return cut;
+	}
+
+	/// <summary>
+	/// The source game's mush.cnf is applied before the database is sent, so the conversion reads the game's
+	/// own master room, ancestors and handlers rather than SharpMUSH's defaults.
+	/// </summary>
+	[Test]
+	public async Task DatabaseImport_AppliesTheMushCnfFirst()
+	{
+		var asked = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path switch
+			{
+				"api/configuration/import" => Json(HttpStatusCode.OK, "{}"),
+				"api/databaseconversion/upload" => Started(),
+				_ => Halfway()
+			};
+		});
+
+		var cut = StartConversionWithConfig();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!asked.Contains("POST api/databaseconversion/upload"))
+				throw new InvalidOperationException("not uploaded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(asked.IndexOf("POST api/configuration/import")).IsGreaterThanOrEqualTo(0);
+		await Assert.That(asked.IndexOf("POST api/configuration/import"))
+			.IsLessThan(asked.IndexOf("POST api/databaseconversion/upload"));
+	}
+
+	/// <summary>A configuration the server refuses stops the import: converting against the wrong settings is what it was given to prevent.</summary>
+	[Test]
+	public async Task DatabaseImport_ARefusedMushCnf_ImportsNothing()
+	{
+		const string refused = "Error importing configuration: unreadable file";
+		var asked = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path == "api/configuration/import" ? Refusal(HttpStatusCode.BadRequest, refused) : Started();
+		});
+
+		var cut = StartConversionWithConfig();
+
+		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"AdmImportConfigFailed({refused})");
+		await Assert.That(asked).DoesNotContain("POST api/databaseconversion/upload");
+	}
+
 	[Test]
 	public async Task ConfigHome_SaysWhyItHasNoCounts()
 	{

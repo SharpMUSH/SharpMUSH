@@ -10,9 +10,10 @@
 <PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
 
 @* The first-run wizard: claim the administrator account, then — as that administrator — bring in a
-   PennMUSH database or start fresh, then choose the optional applications. Everything after the claim
-   is pending on the server until the last step, so an administrator who closes the tab comes back here
-   to the step they left (the database import page links back with ?step=applications). *@
+   PennMUSH database with its mush.cnf or start fresh, set the HTTP and event handlers the bundled packages
+   build on, and choose the packages. Everything after the claim is pending on the server until the last
+   step, so an administrator who closes the tab comes back here to the step they left (the database import
+   page links back with ?step=handlers). *@
 <div class="setup-page">
     <div class="setup-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="setup-logo" />
@@ -51,7 +52,7 @@
 
         case Step.Import:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 3]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 4]</div>
                 @if (_completedUsername.Length > 0)
                 {
                     <p class="setup-claimed" role="status">
@@ -67,43 +68,135 @@
             </div>
             break;
 
-        case Step.Applications:
+        case Step.Handlers:
             <div class="setup-card setup-card--wide">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 3]</div>
-                <h2 class="setup-title">@Loc["AdmSetupAppsTitle"]</h2>
-                <p class="setup-lead">@Loc["AdmSetupAppsLead"]</p>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 4]</div>
+                <h2 class="setup-title">@Loc["AdmSetupHandlersTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupHandlersLead"]</p>
 
                 @if (_error is not null)
                 {
                     <div class="setup-error" role="alert">@_error</div>
                 }
 
-                <ul class="setup-apps">
-                    @foreach (var app in _applications)
-                    {
-                        var id = app.Id;
-                        <li class="setup-app @(app.Available ? null : "setup-app--unavailable")" @key="id">
-                            <label class="setup-app-label">
-                                <input id="setup-app-@id" class="setup-app-check" type="checkbox"
-                                       checked="@_chosen.Contains(id)" disabled="@(_busy || !app.Available)"
-                                       @onchange="@(e => Choose(id, e.Value is true))" />
-                                <span class="setup-app-text">
-                                    <span class="setup-app-title">@Title(id)</span>
-                                    <span class="setup-app-desc">@Description(id)</span>
-                                    @if (!app.Available)
-                                    {
-                                        <span class="setup-app-note">@Loc["AdmSetupAppUnavailable"]</span>
-                                    }
-                                </span>
-                            </label>
-                        </li>
-                    }
-                </ul>
+                @foreach (var handler in _handlers)
+                {
+                    var kind = handler.Kind;
+                    var choice = _handlerChoices[kind];
+                    <section class="setup-handler" id="setup-handler-@kind" @key="kind">
+                        <h3 class="setup-handler-title">@HandlerTitle(kind)</h3>
+                        <p class="setup-handler-desc">@HandlerDescription(kind)</p>
+                        <p class="setup-handler-now">
+                            @if (handler is { Dbref: { } number, Name: { } name })
+                            {
+                                @Loc["AdmSetupHandlerNow", $"#{number}", name]
+                                @if (handler.Packages.Count > 0)
+                                {
+                                    @* One text node: Blazor drops the whitespace-only one a leading space would be. *@
+                                    <span>@($" {Loc["AdmSetupHandlerCarries", string.Join(", ", handler.Packages)]}")</span>
+                                }
+                            }
+                            else if (handler.Dbref is { } missing)
+                            {
+                                @Loc["AdmSetupHandlerMissing", $"#{missing}"]
+                            }
+                            else
+                            {
+                                @Loc["AdmSetupHandlerUnset"]
+                            }
+                        </p>
 
-                <button class="setup-submit setup-save" type="button" disabled="@_busy" @onclick="SaveApplicationsAsync">
-                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupSaveContinue"])
+                        <div class="setup-handler-choices" role="radiogroup" aria-label="@HandlerTitle(kind)">
+                            @if (handler.Name is not null)
+                            {
+                                <label class="setup-choice">
+                                    <input type="radio" name="handler-@kind" value="keep" checked="@(choice.Mode == Keep)"
+                                           disabled="@_busy" @onchange="() => Choose(kind, Keep)" />
+                                    <span>@Loc["AdmSetupHandlerKeep"]</span>
+                                </label>
+                            }
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="use" checked="@(choice.Mode == HandlerModes.Use)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.Use)" />
+                                <span>@Loc["AdmSetupHandlerUse"]</span>
+                                <input class="setup-dbref" id="setup-handler-@kind-dbref" type="text" inputmode="numeric"
+                                       placeholder="#" value="@choice.Dbref" disabled="@(_busy || choice.Mode != HandlerModes.Use)"
+                                       aria-label="@Loc["AdmSetupHandlerUse"]"
+                                       @onchange="e => SetDbref(kind, e.Value as string)" />
+                            </label>
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="create" checked="@(choice.Mode == HandlerModes.Create)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.Create)" />
+                                <span>@Loc["AdmSetupHandlerCreate"]</span>
+                            </label>
+                            <label class="setup-choice">
+                                <input type="radio" name="handler-@kind" value="none" checked="@(choice.Mode == HandlerModes.None)"
+                                       disabled="@_busy" @onchange="() => Choose(kind, HandlerModes.None)" />
+                                <span>@Loc["AdmSetupHandlerNone"]</span>
+                            </label>
+                        </div>
+
+                        @if (choice.Mode == Keep && !handler.IsWizard)
+                        {
+                            <p class="setup-handler-warn" role="note">@Loc["AdmSetupHandlerNotWizard"]</p>
+                        }
+                    </section>
+                }
+
+                <button class="setup-submit setup-save-handlers" type="button" disabled="@_busy" @onclick="SaveHandlersAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupContinueStep"])
                 </button>
                 <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Import">@Loc["AdmSetupBack"]</button>
+            </div>
+            break;
+
+        case Step.Packages:
+            <div class="setup-card setup-card--wide">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 4]</div>
+                <h2 class="setup-title">@Loc["AdmSetupPackagesTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupPackagesLead"]</p>
+
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
+
+                @foreach (var group in PackageGroups)
+                {
+                    <h3 class="setup-group-title">@Loc[group.TitleKey]</h3>
+                    <ul class="setup-apps">
+                        @foreach (var package in group.Packages)
+                        {
+                            var id = package.Id;
+                            var needed = NeededBy(id);
+                            var on = Effective.Contains(id);
+                            <li class="setup-app @(package.Available ? null : "setup-app--unavailable")" @key="id">
+                                <label class="setup-app-label">
+                                    <input id="setup-pkg-@id" class="setup-app-check" type="checkbox"
+                                           checked="@on" disabled="@(_busy || needed is not null || (!package.Available && !on))"
+                                           @onchange="@(e => Choose(id, e.Value is true))" />
+                                    <span class="setup-app-text">
+                                        <span class="setup-app-title">@PackageTitle(package)</span>
+                                        <span class="setup-app-desc">@PackageDescription(package)</span>
+                                        @if (needed is not null)
+                                        {
+                                            <span class="setup-app-note">@Loc["AdmSetupPkgNeededBy", PackageTitle(needed)]</span>
+                                        }
+                                        else if (!package.Available)
+                                        {
+                                            <span class="setup-app-note">@Unavailable(package)</span>
+                                        }
+                                    </span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <button class="setup-submit setup-save" type="button" disabled="@_busy" @onclick="SavePackagesAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupSaveContinue"])
+                </button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Handlers">@Loc["AdmSetupBack"]</button>
             </div>
             break;
 
@@ -118,7 +211,7 @@
 
         case Step.Claim:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 3]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 4]</div>
                 <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
                 <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
 
@@ -156,9 +249,19 @@
 </div>
 
 @code {
-    private enum Step { Resolving, Claim, SignIn, Import, Applications, Done }
+    private enum Step { Resolving, Claim, SignIn, Import, Handlers, Packages, Done }
 
-    /// <summary><c>?step=applications</c>: where the database import sends the administrator back to.</summary>
+    /// <summary>The handler choice that changes nothing.</summary>
+    private const string Keep = "keep";
+
+    /// <summary>A handler's choice on the handlers step: a <see cref="HandlerModes"/> value or <see cref="Keep"/>.</summary>
+    private sealed record HandlerChoice(string Mode, string? Dbref);
+
+    private sealed record PackageGroup(string TitleKey, IReadOnlyList<BundledPackageState> Packages);
+
+    /// <summary>
+    /// <c>?step=handlers</c> (or <c>packages</c>): where the database import sends the administrator back to.
+    /// </summary>
     [SupplyParameterFromQuery(Name = "step")] public string? StepParameter { get; set; }
 
     private Step _step = Step.Resolving;
@@ -170,7 +273,11 @@
     private bool _busy;
     private string _completedUsername = string.Empty;
 
-    private IReadOnlyList<OptionalApplicationState> _applications = [];
+    private IReadOnlyList<HandlerState> _handlers = [];
+    private readonly Dictionary<string, HandlerChoice> _handlerChoices = new(StringComparer.Ordinal);
+    private IReadOnlyList<BundledPackageState> _packages = [];
+
+    /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
     private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
@@ -194,17 +301,31 @@
             return;
         }
 
-        Resume(wizard);
+        Load(wizard);
+        _step = StepParameter?.ToLowerInvariant() switch
+        {
+            "handlers" => Step.Handlers,
+            "packages" => Step.Packages,
+            _ => Step.Import
+        };
     }
 
-    private void Resume(SetupWizardResponse wizard)
+    /// <summary>Takes the server's view of the handlers and packages as the starting choices.</summary>
+    private void Load(SetupWizardResponse wizard)
     {
-        _applications = wizard.Applications;
+        _handlers = wizard.Handlers;
+        _handlerChoices.Clear();
+        foreach (var handler in wizard.Handlers)
+        {
+            _handlerChoices[handler.Kind] = new HandlerChoice(
+                handler.Name is not null ? Keep : HandlerModes.Create, null);
+        }
+
+        // What the game has, and what a new game would have that it is missing — after a PennMUSH import, the
+        // packages built on the handlers it removed — wherever that can go on now.
+        _packages = wizard.Packages;
         _chosen.Clear();
-        _chosen.UnionWith(wizard.Applications.Where(a => a.Enabled).Select(a => a.Id));
-        _step = string.Equals(StepParameter, "applications", StringComparison.OrdinalIgnoreCase)
-            ? Step.Applications
-            : Step.Import;
+        _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
     }
 
     private async Task SubmitAsync()
@@ -247,7 +368,8 @@
         _busy = false;
         if (wizard is SetupWizardResponse state)
         {
-            Resume(state);
+            Load(state);
+            _step = Step.Import;
         }
         else
         {
@@ -258,8 +380,61 @@
     private void StartFresh()
     {
         _error = null;
-        _step = Step.Applications;
+        _step = Step.Handlers;
     }
+
+    private void Choose(string kind, string mode) => _handlerChoices[kind] = _handlerChoices[kind] with { Mode = mode };
+
+    private void SetDbref(string kind, string? value) => _handlerChoices[kind] = _handlerChoices[kind] with { Dbref = value };
+
+    /// <summary>Applies each handler choice that changes something, then moves on to the packages.</summary>
+    private async Task SaveHandlersAsync()
+    {
+        _error = null;
+        var requests = new List<(string Kind, SetHandlerRequest Request)>();
+        foreach (var (kind, choice) in _handlerChoices)
+        {
+            switch (choice.Mode)
+            {
+                case Keep:
+                    continue;
+                case HandlerModes.Use when ParseDbref(choice.Dbref) is not { } number:
+                    _error = Loc["AdmSetupHandlerDbrefRequired", HandlerTitle(kind)];
+                    return;
+                case HandlerModes.Use:
+                    requests.Add((kind, new SetHandlerRequest(HandlerModes.Use, ParseDbref(choice.Dbref))));
+                    break;
+                default:
+                    requests.Add((kind, new SetHandlerRequest(choice.Mode)));
+                    break;
+            }
+        }
+
+        _busy = true;
+        foreach (var (kind, request) in requests)
+        {
+            if (await Wizard.SetHandlerAsync(kind, request) is ApiFailure failure)
+            {
+                _error = Loc["AdmSetupHandlerFailed", HandlerTitle(kind), failure.Message];
+                break;
+            }
+        }
+
+        // Some may have gone through before one failed: show what the game has now either way.
+        if (await Wizard.GetAsync() is SetupWizardResponse current)
+        {
+            Load(current);
+        }
+
+        _busy = false;
+        if (_error is null)
+        {
+            _step = Step.Packages;
+        }
+    }
+
+    private static int? ParseDbref(string? text)
+        => int.TryParse(text?.Trim().TrimStart('#'), out var number) && number >= 0 ? number : null;
 
     private void Choose(string id, bool on)
     {
@@ -267,15 +442,36 @@
         else _chosen.Remove(id);
     }
 
-    private async Task SaveApplicationsAsync()
+    /// <summary>What will be installed: the ticked packages and every bundled package they depend on.</summary>
+    private HashSet<string> Effective => Closure(_chosen);
+
+    private HashSet<string> Closure(IEnumerable<string> ids)
+    {
+        var closure = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new Stack<string>(ids);
+        while (pending.TryPop(out var id))
+        {
+            if (closure.Add(id) && _packages.FirstOrDefault(p => p.Id == id) is { } package)
+            {
+                foreach (var dependency in package.DependsOn) pending.Push(dependency);
+            }
+        }
+
+        return closure;
+    }
+
+    /// <summary>A ticked package that needs <paramref name="id"/>, which then cannot be unticked; null when none does.</summary>
+    private BundledPackageState? NeededBy(string id)
+        => _packages.FirstOrDefault(p => p.Id != id && _chosen.Contains(p.Id) && Closure([p.Id]).Contains(id));
+
+    private async Task SavePackagesAsync()
     {
         _error = null;
         _busy = true;
 
-        switch (await Wizard.SetApplicationsAsync(_chosen.ToList()))
+        switch (await Wizard.SetPackagesAsync(Effective.ToList()))
         {
-            case SetupWizardResponse state:
-                _applications = state.Applications;
+            case SetupWizardResponse:
                 await Wizard.FinishAsync();
                 _step = Step.Done;
                 break;
@@ -283,9 +479,7 @@
                 // Some changes may have gone through; show what the game has now beside the reason.
                 if (await Wizard.GetAsync() is SetupWizardResponse current)
                 {
-                    _applications = current.Applications;
-                    _chosen.Clear();
-                    _chosen.UnionWith(current.Applications.Where(a => a.Enabled).Select(a => a.Id));
+                    Load(current);
                 }
 
                 _error = Loc["AdmSetupAppsFailed", failure.Message];
@@ -295,18 +489,52 @@
         _busy = false;
     }
 
-    private string Title(string id) => id switch
+    /// <summary>The handlers' packages first, then the game's own, each in the server's (dependency) order.</summary>
+    private IEnumerable<PackageGroup> PackageGroups =>
+    [
+        new("AdmSetupPkgGroupPortal", _packages.Where(p => p.Requires is not null).ToList()),
+        new("AdmSetupPkgGroupGame", _packages.Where(p => p.Requires is null).ToList()),
+    ];
+
+    private string HandlerTitle(string kind) => kind == HandlerKinds.Http
+        ? Loc["AdmSetupHandlerHttpTitle"]
+        : Loc["AdmSetupHandlerEventTitle"];
+
+    private string HandlerDescription(string kind) => kind == HandlerKinds.Http
+        ? Loc["AdmSetupHandlerHttpDesc"]
+        : Loc["AdmSetupHandlerEventDesc"];
+
+    private string Unavailable(BundledPackageState package) => package.Requires switch
     {
-        GameFeatures.Scenes => Loc["AdmSetupAppScenesTitle"],
-        GameFeatures.WikiReader => Loc["AdmSetupAppWikiReaderTitle"],
-        _ => id,
+        HandlerKinds.Http => Loc["AdmSetupPkgNeedsHttp"],
+        HandlerKinds.Event => Loc["AdmSetupPkgNeedsEvent"],
+        _ => Loc["AdmSetupAppUnavailable"],
     };
 
-    private string Description(string id) => id switch
+    private string PackageTitle(BundledPackageState package) => package.Id switch
     {
-        GameFeatures.Scenes => Loc["AdmSetupAppScenesDesc"],
-        GameFeatures.WikiReader => Loc["AdmSetupAppWikiReaderDesc"],
-        _ => string.Empty,
+        "http-handler" => Loc["AdmSetupPkgHttpHandlerTitle"],
+        "profile-handler" => Loc["AdmSetupPkgProfileHandlerTitle"],
+        "room-contents" => Loc["AdmSetupPkgRoomContentsTitle"],
+        "comm-feed" => Loc["AdmSetupPkgCommFeedTitle"],
+        "common-functions" => Loc["AdmSetupPkgCommonFunctionsTitle"],
+        "plus-help" => Loc["AdmSetupPkgPlusHelpTitle"],
+        "scene" => Loc["AdmSetupAppScenesTitle"],
+        "wiki-reader" => Loc["AdmSetupAppWikiReaderTitle"],
+        _ => package.Id,
+    };
+
+    private string PackageDescription(BundledPackageState package) => package.Id switch
+    {
+        "http-handler" => Loc["AdmSetupPkgHttpHandlerDesc"],
+        "profile-handler" => Loc["AdmSetupPkgProfileHandlerDesc"],
+        "room-contents" => Loc["AdmSetupPkgRoomContentsDesc"],
+        "comm-feed" => Loc["AdmSetupPkgCommFeedDesc"],
+        "common-functions" => Loc["AdmSetupPkgCommonFunctionsDesc"],
+        "plus-help" => Loc["AdmSetupPkgPlusHelpDesc"],
+        "scene" => Loc["AdmSetupAppScenesDesc"],
+        "wiki-reader" => Loc["AdmSetupAppWikiReaderDesc"],
+        _ => package.Description,
     };
 
     private void EnterPortal() => Nav.NavigateTo("/");

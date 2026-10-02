@@ -37,7 +37,8 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// </param>
 /// <param name="wizard">
 /// What api/setup/wizard answers once the game is claimed: null is a refusal (not the administrator),
-/// otherwise whether the wizard is pending, with the scenes application on and the wiki reader off.
+/// otherwise whether the wizard is pending. The game has an HTTP handler (#8, carrying http-handler and
+/// profile-handler), no event handler, and the Scene System.
 /// </param>
 file sealed class SetupApiHandler(
 		bool needsSetup, HttpStatusCode completeStatus, string? completeBody, string completeSessionToken = "test-session-token",
@@ -45,10 +46,15 @@ file sealed class SetupApiHandler(
 		: HttpMessageHandler
 {
 	private bool? _wizardPending = wizard;
-	private readonly HashSet<string> _enabled = ["scenes"];
+	private int? _eventHandler;
+	private int? _httpHandler = 8;
+	private readonly HashSet<string> _installed = ["http-handler", "profile-handler", "common-functions", "plus-help", "scene"];
 
-	/// <summary>The bodies PUT to api/setup/wizard/applications, in order.</summary>
-	public List<string> ApplicationChoices { get; } = [];
+	/// <summary>Each PUT to api/setup/wizard/handlers/{kind}, as "kind body", in order.</summary>
+	public List<string> HandlerChanges { get; } = [];
+
+	/// <summary>The bodies PUT to api/setup/wizard/packages, in order.</summary>
+	public List<string> PackageChoices { get; } = [];
 
 	public int FinishCalls { get; private set; }
 
@@ -61,13 +67,30 @@ file sealed class SetupApiHandler(
 			return _wizardPending is { } pending ? Json(Wizard(pending)) : new HttpResponseMessage(HttpStatusCode.Forbidden);
 		}
 
-		if (path == "api/setup/wizard/applications" && request.Method == HttpMethod.Put)
+		if (path.StartsWith("api/setup/wizard/handlers/", StringComparison.Ordinal) && request.Method == HttpMethod.Put)
+		{
+			var kind = path["api/setup/wizard/handlers/".Length..];
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+			HandlerChanges.Add($"{kind} {body}");
+			using var document = JsonDocument.Parse(body);
+			int? target = document.RootElement.GetProperty("mode").GetString() switch
+			{
+				"create" => 120,
+				"use" => document.RootElement.GetProperty("dbref").GetInt32(),
+				_ => null
+			};
+			if (kind == "http") _httpHandler = target;
+			else _eventHandler = target;
+			return Json(Wizard(_wizardPending ?? true));
+		}
+
+		if (path == "api/setup/wizard/packages" && request.Method == HttpMethod.Put)
 		{
 			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
-			ApplicationChoices.Add(body);
+			PackageChoices.Add(body);
 			using var document = JsonDocument.Parse(body);
-			_enabled.Clear();
-			_enabled.UnionWith(document.RootElement.GetProperty("enabled").EnumerateArray().Select(e => e.GetString()!));
+			_installed.Clear();
+			_installed.UnionWith(document.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!));
 			return Json(Wizard(_wizardPending ?? true));
 		}
 
@@ -127,11 +150,35 @@ file sealed class SetupApiHandler(
 	private object Wizard(bool pending) => new
 	{
 		pending,
-		applications = new[]
+		handlers = new object[]
 		{
-			new { id = "scenes", enabled = _enabled.Contains("scenes"), available = true },
-			new { id = "wiki-reader", enabled = _enabled.Contains("wiki-reader"), available = true },
+			Handler("http", _httpHandler, _httpHandler is null ? null : "HTTP Handler", ["http-handler", "profile-handler"]),
+			Handler("event", _eventHandler, _eventHandler is null ? null : "Event Handler", []),
 		},
+		packages = new[]
+		{
+			Package("http-handler", "http", []),
+			Package("profile-handler", "http", ["http-handler"]),
+			Package("room-contents", "event", [], recommended: true),
+			Package("common-functions", null, []),
+			Package("plus-help", null, []),
+			Package("scene", null, ["plus-help", "common-functions"]),
+			Package("wiki-reader", null, ["plus-help", "common-functions"]),
+		},
+	};
+
+	private object Handler(string kind, int? dbref, string? name, string[] packages) =>
+		new { kind, dbref, name, isWizard = true, packages = dbref is null ? [] : packages.Where(_installed.Contains).ToArray() };
+
+	private object Package(string id, string? requires, string[] dependsOn, bool recommended = false) => new
+	{
+		recommended,
+		id,
+		description = $"{id} manifest description",
+		installed = _installed.Contains(id),
+		requires,
+		available = requires switch { "http" => _httpHandler is not null, "event" => _eventHandler is not null, _ => true },
+		dependsOn,
 	};
 
 	private static HttpResponseMessage Json<T>(T value) =>
@@ -276,11 +323,12 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	/// <summary>
-	/// The claim hands straight over to the rest of the wizard as the new administrator: the database step
-	/// first, then the applications, whose choice is what gets sent, then the finished state.
+	/// The claim hands straight over to the rest of the wizard as the new administrator: the database step,
+	/// then the handlers — keeping the HTTP handler the game has and creating the event handler it lacks — then
+	/// the packages, sent with what they need, then the finished state.
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task Setup_Success_WalksTheAdministratorThroughImportAndApplications()
+	public async Task Setup_Success_WalksTheAdministratorThroughImportHandlersAndPackages()
 	{
 		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: true));
 
@@ -298,7 +346,6 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		// Auto-login after the claim: signed in already, and told so.
 		await Assert.That(cut.Markup).Contains("AuthSetupSignedInAs");
-		await Assert.That(cut.Markup).Contains("headwiz");
 		var accountAuth = Services.GetRequiredService<AccountAuthService>();
 		await Assert.That(accountAuth.IsLoggedIn).IsTrue();
 		await Assert.That(accountAuth.Username).IsEqualTo("headwiz");
@@ -307,12 +354,31 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		cut.Find("button.setup-fresh").Click();
 
-		// What the game has now is what is ticked: a new game installs the Scene System at first boot.
-		await Assert.That(cut.Find("#setup-app-scenes").HasAttribute("checked")).IsTrue();
-		await Assert.That(cut.Find("#setup-app-wiki-reader").HasAttribute("checked")).IsFalse();
+		// The handler the game has is kept by default; the one it lacks is created.
+		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
+		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("http-handler, profile-handler");
+		await Assert.That(cut.FindAll("#setup-handler-event input[value='keep']")).IsEmpty();
+		await Assert.That(cut.Find("#setup-handler-event input[value='create']").HasAttribute("checked")).IsTrue();
+		cut.Find("button.setup-save-handlers").Click();
 
-		cut.Find("#setup-app-scenes").Change(false);
-		cut.Find("#setup-app-wiki-reader").Change(true);
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupPackagesTitle"))
+				throw new InvalidOperationException("packages step not rendered yet");
+		});
+		await Assert.That(handler.HandlerChanges).IsEquivalentTo(["event {\"mode\":\"create\",\"dbref\":null}"])
+			.Because("keeping the HTTP handler changes nothing, so it is not sent");
+
+		// What a ticked package needs is ticked with it and cannot be unticked on its own.
+		await Assert.That(cut.Find("#setup-pkg-scene").HasAttribute("checked")).IsTrue();
+		await Assert.That(cut.Find("#setup-pkg-plus-help").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Find("#setup-pkg-room-contents").HasAttribute("disabled")).IsFalse()
+			.Because("the event handler it needs was just created");
+		await Assert.That(cut.Find("#setup-pkg-room-contents").HasAttribute("checked")).IsTrue()
+			.Because("a new game has it, and the handler it builds on is there now");
+
+		cut.Find("#setup-pkg-scene").Change(false);
+		cut.Find("#setup-pkg-wiki-reader").Change(true);
 		cut.Find("button.setup-save").Click();
 
 		cut.WaitForAssertion(() =>
@@ -321,11 +387,12 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("finished state not rendered yet");
 		});
 
-		await Assert.That(handler.ApplicationChoices).HasSingleItem();
-		using (var sent = JsonDocument.Parse(handler.ApplicationChoices[0]))
+		await Assert.That(handler.PackageChoices).HasSingleItem();
+		using (var sent = JsonDocument.Parse(handler.PackageChoices[0]))
 		{
-			var enabled = sent.RootElement.GetProperty("enabled").EnumerateArray().Select(e => e.GetString()!).ToList();
-			await Assert.That(enabled).IsEquivalentTo(["wiki-reader"]);
+			var installed = sent.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!).ToList();
+			await Assert.That(installed).IsEquivalentTo(
+				["http-handler", "profile-handler", "room-contents", "common-functions", "plus-help", "wiki-reader"]);
 		}
 		await Assert.That(handler.FinishCalls).IsEqualTo(1);
 
@@ -337,12 +404,46 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	/// <summary>
+	/// "Use another object" builds on an object the game already has — a PennMUSH game's own handler — and
+	/// asks for its number before sending anything.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Handlers_UseAnObjectTheGameHas()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=handlers");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-handler-http"));
+
+		cut.Find("#setup-handler-http input[value='use']").Change(true);
+		cut.Find("#setup-handler-event input[value='none']").Change(true);
+		cut.Find("button.setup-save-handlers").Click();
+		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupHandlerDbrefRequired");
+		await Assert.That(handler.HandlerChanges).IsEmpty();
+
+		cut.Find("#setup-handler-http-dbref").Change("#46");
+		cut.Find("button.setup-save-handlers").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupPackagesTitle"))
+				throw new InvalidOperationException("packages step not rendered yet");
+		});
+		await Assert.That(handler.HandlerChanges).IsEquivalentTo([
+			"http {\"mode\":\"use\",\"dbref\":46}",
+			"event {\"mode\":\"none\",\"dbref\":null}",
+		]);
+	}
+
+	/// <summary>
 	/// An administrator who closed the tab after the claim comes back to the wizard, not the home page —
-	/// and the database import page's way back lands them on the applications step.
+	/// and the database import page's way back lands them on the handlers step.
 	/// </summary>
 	[TUnit.Core.Test]
 	[TUnit.Core.Arguments("/setup", "AdmSetupImportTitle")]
-	[TUnit.Core.Arguments("/setup?step=applications", "AdmSetupAppsTitle")]
+	[TUnit.Core.Arguments("/setup?step=handlers", "AdmSetupHandlersTitle")]
+	[TUnit.Core.Arguments("/setup?step=packages", "AdmSetupPackagesTitle")]
 	public async Task Setup_ClaimedWithTheWizardPending_ResumesIt(string address, string heading)
 	{
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: false, wizard: true));

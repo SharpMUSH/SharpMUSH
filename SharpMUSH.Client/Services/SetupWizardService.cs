@@ -5,7 +5,7 @@ namespace SharpMUSH.Client.Services;
 
 /// <summary>
 /// The steps of the first-run wizard after the claim (<c>api/setup/wizard</c>): whether it is still
-/// unfinished, and switching the game's optional applications on and off.
+/// unfinished, the game's HTTP and event handlers, and its bundled packages.
 /// </summary>
 public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo)
 {
@@ -15,13 +15,25 @@ public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfo
 		=> Http.GetApiAsync<SetupWizardResponse>("api/setup/wizard", "The server returned no setup state.");
 
 	/// <summary>
-	/// Turns on <paramref name="enabled"/> and off every other optional application. Whatever the answer, the
+	/// Sets the <paramref name="kind"/> handler (<see cref="HandlerKinds"/>). The portal asks the server again what
+	/// the game has afterwards, since the packages built on the handler moved with it.
+	/// </summary>
+	public virtual async Task<ApiResult<SetupWizardResponse>> SetHandlerAsync(string kind, SetHandlerRequest request)
+	{
+		var result = await Http.PutApiAsync<SetHandlerRequest, SetupWizardResponse>(
+			$"api/setup/wizard/handlers/{Uri.EscapeDataString(kind)}", request, "The server returned no setup state.");
+		serverInfo.Refresh();
+		return result;
+	}
+
+	/// <summary>
+	/// Installs <paramref name="installed"/> and removes every other bundled package. Whatever the answer, the
 	/// portal asks the server again what the game has, so its navigation follows what actually changed.
 	/// </summary>
-	public virtual async Task<ApiResult<SetupWizardResponse>> SetApplicationsAsync(IReadOnlyList<string> enabled)
+	public virtual async Task<ApiResult<SetupWizardResponse>> SetPackagesAsync(IReadOnlyList<string> installed)
 	{
-		var result = await Http.PutApiAsync<SetupApplicationsRequest, SetupWizardResponse>(
-			"api/setup/wizard/applications", new SetupApplicationsRequest(enabled), "The server returned no setup state.");
+		var result = await Http.PutApiAsync<SetupPackagesRequest, SetupWizardResponse>(
+			"api/setup/wizard/packages", new SetupPackagesRequest(installed), "The server returned no setup state.");
 		serverInfo.Refresh();
 		return result;
 	}

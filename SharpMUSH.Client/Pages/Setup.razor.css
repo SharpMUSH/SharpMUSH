@@ -227,6 +227,84 @@
 	font-style: italic;
 }
 
+/* The handlers step: one section per handler, its state, then the four ways to set it. */
+.setup-handler {
+	margin: 0 0 1rem;
+	padding: 0.875rem;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	font-family: var(--font-ui);
+}
+
+.setup-handler-title,
+.setup-group-title {
+	margin: 0 0 0.375rem;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.setup-group-title {
+	margin-top: 0.5rem;
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.setup-handler-desc,
+.setup-handler-now {
+	margin: 0 0 0.5rem;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--text-dim);
+}
+
+.setup-handler-now {
+	color: var(--text);
+}
+
+.setup-handler-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.setup-choice {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	color: var(--text);
+	cursor: pointer;
+}
+
+.setup-choice input[type="radio"] {
+	accent-color: var(--accent);
+}
+
+.setup-dbref {
+	width: 6rem;
+	padding: 0.25rem 0.5rem;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+	color: var(--text);
+	font-family: var(--font-mono);
+	font-size: 0.8125rem;
+}
+
+.setup-dbref:disabled {
+	opacity: 0.5;
+}
+
+.setup-handler-warn {
+	margin: 0.5rem 0 0;
+	font-size: 0.8125rem;
+	color: var(--warn);
+}
+
 /* Unnamed: under OnboardingLayout there is no .phosphor-page, so this queries .onboarding-shell. */
 @container (max-width: 48rem) {
     .setup-page {
