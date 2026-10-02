@@ -4485,10 +4485,10 @@
     <value>Line breaks as %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Line breaks are sent as %r, in one post. Click to send each line on its own.</value>
+    <value>Line breaks are sent as %r, in one post or command. Click to send each non-blank line on its own.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Each line is sent on its own. Click to send line breaks as %r.</value>
+    <value>Each non-blank line is sent on its own. Click to send line breaks as %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Expand the input</value>

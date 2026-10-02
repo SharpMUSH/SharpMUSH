@@ -8,7 +8,7 @@
    Play (OnCharacter), the profile page elsewhere. *@
 @if (IsOoc)
 {
-    <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null)">
+    <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
         <OocBand Name="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
             @if (_editing)
             {
@@ -17,6 +17,7 @@
             else
             {
                 <span class="story-body">@Body</span>
+                @EditedBadge
                 @EditButton
             }
         </OocBand>
@@ -44,12 +45,7 @@ else
                     <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
                 }
                 <span class="story-time">@Time</span>
-                @if (Pose.WasEdited)
-                {
-                    <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">
-                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:11px;" />@Loc["RolEditedBadge"]
-                    </span>
-                }
+                @EditedBadge
                 @if (!_editing)
                 {
                     @EditButton
@@ -153,6 +149,16 @@ else
         || string.Equals(name, Pose.AuthorName, StringComparison.OrdinalIgnoreCase);
 
     private Task Open() => OnCharacter.InvokeAsync(Pose.DisplayName);
+
+    private RenderFragment EditedBadge => __builder =>
+    {
+        @if (Pose.WasEdited)
+        {
+            <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">
+                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:11px;" />@Loc["RolEditedBadge"]
+            </span>
+        }
+    };
 
     private RenderFragment EditButton => __builder =>
     {

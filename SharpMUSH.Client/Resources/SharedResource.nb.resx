@@ -5140,10 +5140,10 @@
     <value>Linjeskift som %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Linjeskift sendes som %r i ett innlegg. Klikk for å sende hver linje for seg.</value>
+    <value>Linjeskift sendes som %r i ett innlegg eller én kommando. Klikk for å sende hver ikke-tomme linje for seg.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Hver linje sendes for seg. Klikk for å sende linjeskift som %r.</value>
+    <value>Hver ikke-tomme linje sendes for seg. Klikk for å sende linjeskift som %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Utvid feltet</value>

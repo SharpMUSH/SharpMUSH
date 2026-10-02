@@ -5140,10 +5140,10 @@
     <value>Нови редове като %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Новите редове се изпращат като %r в една публикация. Щракнете, за да изпращате всеки ред отделно.</value>
+    <value>Новите редове се изпращат като %r в една публикация или команда. Щракнете, за да изпращате всеки непразен ред отделно.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Всеки ред се изпраща отделно. Щракнете, за да изпращате новите редове като %r.</value>
+    <value>Всеки непразен ред се изпраща отделно. Щракнете, за да изпращате новите редове като %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Разгъни полето</value>

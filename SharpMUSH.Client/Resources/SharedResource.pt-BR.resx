@@ -5140,10 +5140,10 @@
     <value>Quebras de linha como %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>As quebras de linha vão como %r, em uma só postagem. Clique para enviar cada linha separadamente.</value>
+    <value>As quebras de linha vão como %r, em uma só postagem ou comando. Clique para enviar cada linha não vazia separadamente.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Cada linha é enviada separadamente. Clique para enviar as quebras de linha como %r.</value>
+    <value>Cada linha não vazia é enviada separadamente. Clique para enviar as quebras de linha como %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar o campo</value>

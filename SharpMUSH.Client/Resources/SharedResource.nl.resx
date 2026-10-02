@@ -5140,10 +5140,10 @@
     <value>Regeleinden als %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Regeleinden gaan als %r mee in één bericht. Klik om elke regel apart te sturen.</value>
+    <value>Regeleinden gaan als %r mee in één bericht of commando. Klik om elke niet-lege regel apart te sturen.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Elke regel gaat apart. Klik om regeleinden als %r te sturen.</value>
+    <value>Elke niet-lege regel gaat apart. Klik om regeleinden als %r te sturen.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Invoerveld vergroten</value>

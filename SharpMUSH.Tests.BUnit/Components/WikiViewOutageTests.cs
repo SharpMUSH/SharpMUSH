@@ -74,4 +74,16 @@ public class WikiViewOutageTests : TrackingBunitContext
 		cut.WaitForState(() => cut.Markup.Contains("Welcome back", StringComparison.Ordinal), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".wiki-load-failed").Count).IsEqualTo(0);
 	}
+
+	/// <summary>Nobody clicks: the view asks again on its own and shows the page once the server answers.</summary>
+	[Test]
+	public async Task AnUnansweredRead_IsTriedAgain_WithoutAClick()
+	{
+		var cut = Render<WikiView>(p => p.Add(x => x.Slug, "home"));
+		cut.WaitForState(() => cut.FindAll(".wiki-load-failed").Count == 1, TimeSpan.FromSeconds(5));
+
+		_handler.Up = true;
+		cut.WaitForState(() => cut.Markup.Contains("Welcome back", StringComparison.Ordinal), TimeSpan.FromSeconds(10));
+		await Assert.That(cut.FindAll(".wiki-load-failed").Count).IsEqualTo(0);
+	}
 }

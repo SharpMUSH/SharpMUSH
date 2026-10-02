@@ -5140,10 +5140,10 @@
     <value>Prijelomi retka kao %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Prijelomi retka šalju se kao %r u jednoj objavi. Kliknite za slanje svakog retka zasebno.</value>
+    <value>Prijelomi retka šalju se kao %r u jednoj objavi ili naredbi. Kliknite za slanje svakog nepraznog retka zasebno.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Svaki se redak šalje zasebno. Kliknite za slanje prijeloma retka kao %r.</value>
+    <value>Svaki neprazan redak šalje se zasebno. Kliknite za slanje prijeloma retka kao %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Proširi polje</value>

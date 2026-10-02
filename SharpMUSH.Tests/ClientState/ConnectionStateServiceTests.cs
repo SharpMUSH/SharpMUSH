@@ -182,21 +182,24 @@ public class ConnectionStateServiceTests
 	[Test]
 	public async Task AStartThatFails_IsTriedAgain_UntilItConnects()
 	{
-		var down = StubHub(() => Task.FromException(new HttpRequestException("connection refused")));
-		var up = StubHub(() => Task.CompletedTask);
+		// The game stays down until the test says it is back, so no retry can connect early.
+		var gameUp = false;
 		var factory = Substitute.For<IGameHubConnectionFactory>();
-		factory.Create().Returns(down, down, up);
+		factory.Create().Returns(_ => gameUp
+			? StubHub(() => Task.CompletedTask)
+			: StubHub(() => Task.FromException(new HttpRequestException("connection refused"))));
 		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance)
 		{
 			RetryDelays = [TimeSpan.FromMilliseconds(10)]
 		};
 
 		await svc.ConnectAsync();
+		await Task.Delay(50);
 		await Assert.That(svc.IsConnected).IsFalse();
 
+		gameUp = true;
 		for (var i = 0; i < 200 && !svc.IsConnected; i++) await Task.Delay(10);
 		await Assert.That(svc.IsConnected).IsTrue();
-		factory.Received(3).Create();
 	}
 
 	/// <summary>Disconnecting on purpose (sign-out, a character switch) ends the retrying.</summary>
@@ -213,9 +216,11 @@ public class ConnectionStateServiceTests
 
 		await svc.ConnectAsync();
 		await svc.DisconnectAsync();
+		var created = factory.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IGameHubConnectionFactory.Create));
 		await Task.Delay(150);
 
-		factory.Received(1).Create();
+		await Assert.That(factory.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IGameHubConnectionFactory.Create)))
+			.IsEqualTo(created).Because("no hub is started after a disconnect");
 	}
 
 	/// <summary>

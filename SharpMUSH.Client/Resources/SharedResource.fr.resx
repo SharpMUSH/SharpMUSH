@@ -4395,10 +4395,10 @@
     <value>Sauts de ligne en %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Les sauts de ligne partent en %r, dans un seul message. Cliquez pour envoyer chaque ligne séparément.</value>
+    <value>Les sauts de ligne partent en %r, dans un seul message ou une seule commande. Cliquez pour envoyer chaque ligne non vide séparément.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Chaque ligne part séparément. Cliquez pour envoyer les sauts de ligne en %r.</value>
+    <value>Chaque ligne non vide part séparément. Cliquez pour envoyer les sauts de ligne en %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Agrandir la saisie</value>

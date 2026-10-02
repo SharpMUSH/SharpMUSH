@@ -13,10 +13,10 @@
 {
     <WikiPageSkeleton />
 }
-else if (_loadFailed && Mode == WikiMode.View)
+else if (_loadFailed)
 {
     @* The server did not answer (a restart, a dropped connection): not a missing page, so no offer to
-       create one. It tries again on its own and says so. *@
+       create one, and nothing to edit yet. It tries again on its own and says so. *@
     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2 wiki-load-failed">
         <MudText>@Loc["WikiLoadFailed"]</MudText>
         <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform:none;" OnClick="RetryNowAsync">@Loc["NavTryAgain"]</MudButton>
@@ -282,7 +282,20 @@ else
     {
         if (_retry is not null) return;
         _retry = new CancellationTokenSource();
-        _ = RetryAsync(_retry.Token);
+        _ = RetryAndReleaseAsync(_retry);
+    }
+
+    private async Task RetryAndReleaseAsync(CancellationTokenSource retry)
+    {
+        try
+        {
+            await RetryAsync(retry.Token);
+        }
+        finally
+        {
+            if (ReferenceEquals(_retry, retry)) _retry = null;
+            retry.Dispose();
+        }
     }
 
     private async Task RetryAsync(CancellationToken token)
@@ -310,11 +323,7 @@ else
 
     private Task RetryNowAsync() => LoadAsync();
 
-    public void Dispose()
-    {
-        _retry?.Cancel();
-        _retry?.Dispose();
-    }
+    public void Dispose() => _retry?.Cancel();
 
     private async Task ShowLoadedAsync()
     {

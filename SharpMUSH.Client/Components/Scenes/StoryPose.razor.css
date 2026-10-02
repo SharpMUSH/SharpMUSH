@@ -216,7 +216,8 @@
 	text-decoration-color: var(--name, var(--text-faint));
 }
 
-/* In an OOC band the Edit follows the text. */
+/* In an OOC band the edited mark and the Edit follow the text. */
+.story-row--ooc .story-edited,
 .story-row--ooc .story-edit-btn {
 	margin-left: 8px;
 	vertical-align: baseline;

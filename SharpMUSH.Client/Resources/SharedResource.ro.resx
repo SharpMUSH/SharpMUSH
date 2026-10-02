@@ -5140,10 +5140,10 @@
     <value>Rânduri noi ca %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Rândurile noi se trimit ca %r, într-o singură postare. Faceți clic pentru a trimite fiecare rând separat.</value>
+    <value>Rândurile noi se trimit ca %r, într-o singură postare sau comandă. Faceți clic pentru a trimite fiecare rând care nu e gol separat.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Fiecare rând se trimite separat. Faceți clic pentru a trimite rândurile noi ca %r.</value>
+    <value>Fiecare rând care nu e gol se trimite separat. Faceți clic pentru a trimite rândurile noi ca %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Mărește câmpul</value>

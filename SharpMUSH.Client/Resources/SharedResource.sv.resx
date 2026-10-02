@@ -5140,10 +5140,10 @@
     <value>Radbrytningar som %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Radbrytningar skickas som %r i ett inlägg. Klicka för att skicka varje rad för sig.</value>
+    <value>Radbrytningar skickas som %r i ett inlägg eller ett kommando. Klicka för att skicka varje icke-tom rad för sig.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Varje rad skickas för sig. Klicka för att skicka radbrytningar som %r.</value>
+    <value>Varje icke-tom rad skickas för sig. Klicka för att skicka radbrytningar som %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Förstora fältet</value>

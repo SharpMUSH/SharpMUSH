@@ -327,6 +327,7 @@
     private async Task ReportLiveAsync()
     {
         if (_joinedSceneId is not { } sceneId) return;
+        var generation = _generation;
         var live = SceneHub.IsSceneLive;
         if (live == _live) return;
         var wasDown = _live == false;
@@ -338,7 +339,7 @@
             return;
         }
         _retry?.Cancel();
-        if (wasDown) await RefillAsync(sceneId);
+        if (wasDown) await RefillAsync(sceneId, generation);
     }
 
     private void StartRetrying()
@@ -376,9 +377,10 @@
     /// screen and says so. A live event that lands while the read is out may be newer than what the read
     /// returns, so the read is taken again (up to three times) rather than overwrite it.
     /// </summary>
-    private async Task RefillAsync(string sceneId)
+    private async Task RefillAsync(string sceneId, int generation)
     {
-        var generation = _generation;
+        // The scene on screen may have changed while the live notice was reported; its backlog is not this one.
+        if (generation != _generation || !string.Equals(sceneId, SceneId, StringComparison.Ordinal)) return;
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var events = _eventsSeen;

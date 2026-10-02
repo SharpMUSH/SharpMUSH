@@ -4069,7 +4069,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiLoadFailed" xml:space="preserve">
-    <value>Az oldalt nem sikerült betölteni. Lehet, hogy a játék újraindul; magától újra megpróbálja.</value>
+    <value>Az oldalt nem sikerült betölteni. Lehet, hogy a játék újraindul; a rendszer automatikusan újra megpróbálja betölteni az oldalt.</value>
   </data>
   <data name="WikiPageNotExist" xml:space="preserve">
     <value>Ez az oldal még nem létezik. Az alábbi gombra kattintva létrehozhatja.</value>
@@ -5140,10 +5140,10 @@
     <value>Sortörés %r-ként</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>A sortörések %r-ként mennek, egy bejegyzésben. Kattintson, ha minden sort külön szeretne küldeni.</value>
+    <value>A sortörések %r-ként mennek, egy bejegyzésben vagy parancsban. Kattintson, ha minden nem üres sort külön szeretne küldeni.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Minden sor külön megy. Kattintson, ha a sortöréseket %r-ként szeretné küldeni.</value>
+    <value>Minden nem üres sor külön megy. Kattintson, ha a sortöréseket %r-ként szeretné küldeni.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Beviteli mező nagyítása</value>

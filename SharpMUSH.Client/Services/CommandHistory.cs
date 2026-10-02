@@ -44,9 +44,14 @@ public sealed class CommandHistory(IJSRuntime js)
 	/// <c>ch</c> forms, <c>login</c>, <c>create</c>, <c>register</c>) and changing one. Kept out of history, which
 	/// sits in plain <c>localStorage</c>. The verb ends at any whitespace, a tab as much as a space.
 	/// </summary>
-	public static bool CarriesSecret(string line)
+	public static bool CarriesSecret(string line) =>
+		// A multi-line command travels as one line with %r between its lines (the composer's line-break
+		// toggle), and any of those lines can be the login.
+		line.Split(["%r", "%R", "\r\n", "\n", "\r"], StringSplitOptions.None).Any(SegmentCarriesSecret);
+
+	private static bool SegmentCarriesSecret(string segment)
 	{
-		var verb = line.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+		var verb = segment.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
 		return verb.ToLowerInvariant() is "connect" or "co" or "cd" or "cv" or "ch" or "login" or "create" or "cr"
 			or "register" or "make" or "@password" or "@newpassword" or "@pcreate";
 	}

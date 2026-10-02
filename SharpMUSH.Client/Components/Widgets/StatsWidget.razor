@@ -60,7 +60,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadActiveScenesAsync(); StateHasChanged(); }), SceneService);
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () =>
+        {
+            await LoadActiveScenesAsync();
+            if (AnyFailed) StartRetrying();
+            StateHasChanged();
+        }), SceneService);
 
         var scenesOnTask = ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
         await Task.WhenAll(LoadRecentAsync(), LoadCharactersAsync(), LoadOnlineAsync(), LoadActiveScenesAsync(), scenesOnTask);
@@ -109,10 +114,24 @@
     {
         if (_retry is not null) return;
         _retry = new CancellationTokenSource();
-        _ = RetryAsync(_retry.Token);
+        _ = RetryAsync(_retry);
     }
 
-    private async Task RetryAsync(CancellationToken token)
+    private async Task RetryAsync(CancellationTokenSource retry)
+    {
+        try
+        {
+            await RetryUntilLoadedAsync(retry.Token);
+        }
+        finally
+        {
+            // Done (or disposed): a later failure, after a character switch say, starts a new loop.
+            if (ReferenceEquals(_retry, retry)) _retry = null;
+            retry.Dispose();
+        }
+    }
+
+    private async Task RetryUntilLoadedAsync(CancellationToken token)
     {
         for (var attempt = 0; AnyFailed; attempt++)
         {
@@ -145,7 +164,6 @@
     public void Dispose()
     {
         _retry?.Cancel();
-        _retry?.Dispose();
         _reload.Dispose();
     }
 }

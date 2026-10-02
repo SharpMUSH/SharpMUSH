@@ -103,6 +103,13 @@ public class StoryPoseTests : BunitContext
 	}
 
 	[Test]
+	public async Task AnEditedOocPose_IsMarked_LikeAnyOther()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(tags: ["ooc"], markup: "brb, making tea", edits: 2)));
+		await Assert.That(cut.FindAll(".story-row--ooc .story-edited").Count).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task Cancel_OrNoChange_SendsNothing()
 	{
 		var calls = 0;

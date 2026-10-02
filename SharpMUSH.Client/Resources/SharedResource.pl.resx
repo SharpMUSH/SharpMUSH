@@ -5140,10 +5140,10 @@
     <value>Podziały wierszy jako %r</value>
   </data>
   <data name="NavPlayComposerBreaksOn" xml:space="preserve">
-    <value>Podziały wierszy są wysyłane jako %r w jednym wpisie. Kliknij, aby wysyłać każdy wiersz osobno.</value>
+    <value>Podziały wierszy są wysyłane jako %r w jednym wpisie lub poleceniu. Kliknij, aby wysyłać każdy niepusty wiersz osobno.</value>
   </data>
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
-    <value>Każdy wiersz jest wysyłany osobno. Kliknij, aby wysyłać podziały wierszy jako %r.</value>
+    <value>Każdy niepusty wiersz jest wysyłany osobno. Kliknij, aby wysyłać podziały wierszy jako %r.</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Powiększ pole</value>

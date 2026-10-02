@@ -74,6 +74,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 
 	private async Task StartHubAsync()
 	{
+		// Nobody wants a connection any more (DisconnectAsync ran while a retry was on its way here).
+		if (!_wanted) return;
 		if (_hub is not null)
 		{
 			_logger.LogDebug("[ConnectionStateService] Already connected — ignoring ConnectAsync");
@@ -246,6 +248,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 				if (_hub?.State is SignalRState.Reconnecting or SignalRState.Connecting) continue;
 				// A hub that closed is spent; a new one replaces it.
 				if (_hub is not null) await DisposeHubAsync();
+				// DisconnectAsync may have run while the old hub was being disposed.
+				if (retry.IsCancellationRequested || !_wanted) return;
 				await StartHubAsync();
 				if (IsConnected) return;
 			}
