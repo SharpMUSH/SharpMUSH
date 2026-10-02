@@ -75,6 +75,7 @@
     private string? _joinedSceneId;
     private string? _loadedSceneId;
     private int _generation;
+    private int _eventsSeen;
     private bool? _live;
     private CancellationTokenSource? _retry;
 
@@ -169,6 +170,7 @@
     private void HandleSceneEvent(SceneEventMessage msg)
     {
         if (!string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
+        _eventsSeen++;
 
         switch (msg.EventType)
         {
@@ -361,21 +363,34 @@
             {
                 return;
             }
+            catch (Exception e) when (e is HubException or HttpRequestException or InvalidOperationException or JSException)
+            {
+                // This attempt failed; the next one is further off. The notice stays up meanwhile.
+            }
             delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
         }
     }
 
-    /// <summary>Reads the backlog again in place: the gap a dropped connection left.</summary>
+    /// <summary>
+    /// Reads the backlog again in place: the gap a dropped connection left. A failed read keeps the story on
+    /// screen and says so. A live event that lands while the read is out may be newer than what the read
+    /// returns, so the read is taken again (up to three times) rather than overwrite it.
+    /// </summary>
     private async Task RefillAsync(string sceneId)
     {
         var generation = _generation;
-        var backlog = await SceneService.GetPosesAsync(sceneId, count: Backlog);
-        if (generation != _generation) return;
-        _poses.Clear();
-        _objids.Clear();
-        ShowPoses(backlog);
-        RebuildMentions();
-        StateHasChanged();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var events = _eventsSeen;
+            var backlog = await SceneService.GetPosesAsync(sceneId, count: Backlog);
+            if (generation != _generation) return;
+            if (backlog is IReadOnlyList<ScenePoseView> && _eventsSeen != events && attempt < 2) continue;
+            if (backlog is IReadOnlyList<ScenePoseView>) _objids.Clear();
+            ShowPoses(backlog);
+            RebuildMentions();
+            StateHasChanged();
+            return;
+        }
     }
 
     public async ValueTask DisposeAsync()

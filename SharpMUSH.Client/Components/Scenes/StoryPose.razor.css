@@ -215,3 +215,9 @@
 .story-body ::deep a.mention:hover {
 	text-decoration-color: var(--name, var(--text-faint));
 }
+
+/* In an OOC band the Edit follows the text. */
+.story-row--ooc .story-edit-btn {
+	margin-left: 8px;
+	vertical-align: baseline;
+}

@@ -10,7 +10,15 @@
 {
     <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null)">
         <OocBand Name="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
-            <span class="story-body">@Body</span>
+            @if (_editing)
+            {
+                @Editor
+            }
+            else
+            {
+                <span class="story-body">@Body</span>
+                @EditButton
+            }
         </OocBand>
     </div>
 }
@@ -42,23 +50,14 @@ else
                         <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:11px;" />@Loc["RolEditedBadge"]
                     </span>
                 }
-                @if (CanEdit && !_editing)
+                @if (!_editing)
                 {
-                    <button type="button" class="story-edit-btn" aria-label="@Loc["RolEditPose"]" title="@Loc["RolEditPose"]" @onclick="StartEdit">
-                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:14px;" /><span>@Loc["RolEditPose"]</span>
-                    </button>
+                    @EditButton
                 }
             </div>
             @if (_editing)
             {
-                <div class="story-editor">
-                    <textarea class="story-editor-input" aria-label="@Loc["RolEditPose"]" value="@_draft"
-                              @oninput="e => _draft = e.Value?.ToString() ?? string.Empty"></textarea>
-                    <div class="story-editor-actions">
-                        <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
-                        <button type="button" class="story-editor-save" disabled="@string.IsNullOrWhiteSpace(_draft)" @onclick="SaveEdit">@Loc["Save"]</button>
-                    </div>
-                </div>
+                @Editor
             }
             else
             {
@@ -154,6 +153,28 @@ else
         || string.Equals(name, Pose.AuthorName, StringComparison.OrdinalIgnoreCase);
 
     private Task Open() => OnCharacter.InvokeAsync(Pose.DisplayName);
+
+    private RenderFragment EditButton => __builder =>
+    {
+        @if (CanEdit)
+        {
+            <button type="button" class="story-edit-btn" aria-label="@Loc["RolEditPose"]" title="@Loc["RolEditPose"]" @onclick="StartEdit">
+                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:14px;" /><span>@Loc["RolEditPose"]</span>
+            </button>
+        }
+    };
+
+    private RenderFragment Editor => __builder =>
+    {
+        <div class="story-editor">
+            <textarea class="story-editor-input" aria-label="@Loc["RolEditPose"]" value="@_draft"
+                      @oninput="e => _draft = e.Value?.ToString() ?? string.Empty"></textarea>
+            <div class="story-editor-actions">
+                <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
+                <button type="button" class="story-editor-save" disabled="@string.IsNullOrWhiteSpace(_draft)" @onclick="SaveEdit">@Loc["Save"]</button>
+            </div>
+        </div>
+    };
 
     private RenderFragment Portrait => __builder =>
     {

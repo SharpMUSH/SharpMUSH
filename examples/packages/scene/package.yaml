@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.22.0
+version: 1.22.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -114,6 +114,8 @@ objects:
         You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
       DATA`DENY_NOT_OWNER: |-
         That scene is not yours to change. Its owner or a wizard can do it.
+      DATA`DENY_NOT_AUTHOR: |-
+        That pose is not yours to edit. Only its author can.
 
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
@@ -322,17 +324,20 @@ objects:
         $+scene/as *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @scene/showas %q<SceneID>/%#=%0; @pemit %#=Future poses show as: %0
 
       # ---- edit your own poses --------------------------------------------------
-      # %1 is find^^^replace; author-only is enforced by @scene/editpose. Stash the poseId in %q<pid>
+      # %1 is find^^^replace. @scene/editpose is the wizard primitive and edits any pose for any editor, so the
+      # author check is here: scenepose() with an empty scene finds the pose wherever it is. Stash the poseId in %q<pid>
       # and compute the new content into %q<new> in a separate command first (a nested function
       # reference to the verb's %0/%1 inside an @scene arg does not resolve reliably), then edit off them.
       CMD`EDIT: |-
-        $+scene/edit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert setr(new,edit(scenepose(scenefocus(%#),%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
+        $+scene/edit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @assert setr(new,edit(scenepose(,%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
 
-      # The whole text at once: the portal's Edit on a pose sends this. %1 is set into a register in a command of
-      # its own (as CMD`EDIT does) and evaluated once there, so the composer's %r and %b encoding becomes the
-      # text; @scene/editpose then takes the register as it is, commas and all (it splits off one field).
+      # The whole text at once: the portal's Edit on a pose sends this. Author-only, checked as CMD`EDIT does. %1 is
+      # evaluated once, as the player (objeval), so the composer's %r and %b encoding becomes the text and any
+      # function in it runs with the player's own powers, as it would in their say or pose, never the logger's.
+      # It goes into a register in a command of its own, and @scene/editpose takes the register as it is,
+      # commas and all (it splits off one field).
       CMD`REWRITE: |-
-        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert 1[setq(new,s(%1))]; @scene/editpose %q<pid>=%#,%q<new>
+        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @assert 1[setq(new,objeval(%#,s(%1)))]; @scene/editpose %q<pid>=%#,%q<new>
 
       CMD`UNDO: |-
         $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/undo %0

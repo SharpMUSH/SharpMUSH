@@ -144,12 +144,27 @@
         await JS.SetItemAsync(BrowserStore.Local, key, JsonSerializer.Serialize(new Draft(_type, _text)));
     }
 
-    /// <summary>Reads the kept draft, once per character: a draft typed before it arrived is not overwritten.</summary>
+    /// <summary>
+    /// Reads the kept draft, once per character. When the character is first known, text typed before then
+    /// stays. A switch to another character swaps the field for that character's own draft (the last one's is
+    /// already kept under its key), so one character's words are never sent or saved as another's.
+    /// </summary>
     private async Task LoadDraftAsync()
     {
         if (DraftKey is not { } key || key == _loadedKey) return;
+        var switched = _loadedKey is not null;
         _loadedKey = key;
-        if (_text.Length > 0) return;
+        if (switched)
+        {
+            _type = Say;
+            _text = string.Empty;
+            _historyWalk.Reset();
+            StateHasChanged();
+        }
+        else if (_text.Length > 0)
+        {
+            return;
+        }
         if (await JS.GetItemAsync(BrowserStore.Local, key) is not { Length: > 0 } json) return;
         try
         {

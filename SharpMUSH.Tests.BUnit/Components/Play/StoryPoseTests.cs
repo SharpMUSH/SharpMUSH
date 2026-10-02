@@ -89,6 +89,20 @@ public class StoryPoseTests : BunitContext
 	}
 
 	[Test]
+	public async Task YourOwnOocPose_HasEditToo()
+	{
+		(string PoseId, string Text)? saved = null;
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(tags: ["ooc"], markup: "brb, making tea")).Add(x => x.CanEdit, true)
+			.Add(x => x.OnEdit, e => saved = e));
+		await Assert.That(cut.FindAll(".story-row--ooc").Count).IsEqualTo(1);
+		cut.Find("button.story-edit-btn").Click();
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("brb, making tea");
+		cut.Find("textarea.story-editor-input").Input("back, tea made");
+		cut.Find("button.story-editor-save").Click();
+		await Assert.That(saved).IsEqualTo(("P1", "back, tea made"));
+	}
+
+	[Test]
 	public async Task Cancel_OrNoChange_SendsNothing()
 	{
 		var calls = 0;

@@ -80,6 +80,29 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
+	public async Task SwitchingCharacter_SwapsInThatCharactersDraft()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Tomas").SetResult("""{"Type":"ooc","Text":"Tomas's note"}""");
+		var cut = RenderComposer(draftKey: "play.draft.Ilsa");
+		Type(cut, "Ilsa's half pose");
+		cut.Render(p => p.Add(x => x.DraftKey, "play.draft.Tomas"));
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("textarea").GetAttribute("value") != "Tomas's note") throw new InvalidOperationException("Tomas's draft not shown yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("[role=radio]")[1].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+				.Any(i => (string?)i.Arguments[0] == "play.draft.Tomas" && ((string?)i.Arguments[1] ?? "").Contains("Ilsa")))
+			.IsFalse().Because("Ilsa's words are never kept as Tomas's");
+
+		cut.Render(p => p.Add(x => x.DraftKey, "play.draft.Carol"));
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("textarea").GetAttribute("value") is { Length: > 0 }) throw new InvalidOperationException("field not cleared yet");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
 	public async Task TheExpandButton_GrowsTheField_AndBack()
 	{
 		var cut = RenderComposer();

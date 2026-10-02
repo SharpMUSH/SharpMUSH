@@ -26,6 +26,20 @@ public class CommandHistoryTests : BunitContext
 	}
 
 	[Test]
+	[Arguments("cd Bob hunter2")]
+	[Arguments("cv Bob hunter2")]
+	[Arguments("ch Bob hunter2")]
+	[Arguments("connect\tBob hunter2")]
+	[Arguments("CONNECT Bob hunter2")]
+	public async Task EveryConnectForm_IsKeptOut(string line)
+	{
+		await Assert.That(CommandHistory.CarriesSecret(line)).IsTrue();
+		var history = new CommandHistory(JSInterop.JSRuntime);
+		await history.AddAsync(line);
+		await Assert.That(history.Entries).IsEmpty();
+	}
+
+	[Test]
 	public async Task TheOldest_GoFirst_PastTheCapacity()
 	{
 		var history = new CommandHistory(JSInterop.JSRuntime);
