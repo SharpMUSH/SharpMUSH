@@ -137,12 +137,13 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task PushedRooms_DrawTheBanner_HereAndExits_AndAnExitGoes()
+	public async Task PushedRooms_DrawTheHeader_HereAndExits_AndAnExitGoes()
 	{
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".kit-banner-title").TextContent).IsEqualTo("Lower Docks");
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0).Because("the banner is folded into the card header on every screen");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
 		await Assert.That(cut.Find(".play-aside .here-card .kit-card-title").TextContent).IsEqualTo("Here · 1");
 		cut.Find(".play-aside .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
@@ -172,20 +173,20 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find(".kit-banner-title"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll("[role='radiogroup'][aria-label='View']").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".play-story").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
 	}
 
 	[Test]
-	public async Task TheCardHeader_NamesTheCharacter_NotTheRoomTheBannerAlreadyNames()
+	public async Task TheCardHeader_NamesTheCharacter_ThenTheRoom()
 	{
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find(".kit-banner-title"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
-		await Assert.That(cut.FindAll(".scene-card-sub").Count).IsEqualTo(0).Because("the banner names the room");
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Lower Docks").Because("the folded banner's room is named in the header");
 		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I").Because("she has no picture in the room's contents");
 		await Assert.That(cut.Find(".play-me").ClassList).Contains("play-me--on");
 		await Assert.That(cut.Find(".play-me-status").TextContent).IsEqualTo("Connected");
@@ -199,8 +200,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".scene-card-sub"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".scene-card-sub").TextContent).IsEqualTo("Salt Market at Dusk");
+		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Salt Market at Dusk");
 	}
 
 	[Test]
@@ -560,15 +561,28 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task MinimisingTheBanner_IsRemembered()
+	public async Task OnALargerScreen_OpeningAndFoldingTheBanner_IsRemembered()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find("button.kit-banner-minimise"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1);
 		cut.Find("button.kit-banner-minimise").Click();
-		await Assert.That(cut.FindAll(".kit-banner-strip").Count).IsEqualTo(1);
-		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
-		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner" && (string?)a[1] == "min")).IsTrue();
+		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimise folds it back into the header, not to a strip");
+		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments)
+			.Where(a => (string?)a[0] == "play.banner").Select(a => (string?)a[1]).ToList();
+		await Assert.That(stored).IsEquivalentTo(new[] { "open", "folded" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task OnALargerScreen_ARememberedOpenBanner_StartsOpen()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.banner").SetResult("open");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the banner carries the picture");
 	}
 
 	[Test]
@@ -595,15 +609,16 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task TheRoomsPicture_MovesIntoTheCardHeader_WhileNoBannerShowsIt()
+	public async Task TheRoomsPicture_IsInTheCardHeader_WhileNoBannerShowsIt()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the banner shows it");
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head-img"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the opened banner shows it");
 
 		cut.Find("button.scene-card-focus").Click();
-		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
+		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg").Because("focus hides the banner");
 	}
 
 	[Test]
@@ -630,7 +645,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var page = cut.FindComponent<PlayPage>();
 
 		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
-		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("upright, the stored choice (open) applies");
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0).Because("a larger screen follows its own remembered choice (folded), not the phone's");
 
 		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(true));
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("each turn back to the compact screen folds it again");

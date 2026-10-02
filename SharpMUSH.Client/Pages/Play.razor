@@ -75,7 +75,7 @@ else
                 @if (BannerShown)
                 {
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                Minimised="@BannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
+                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" />
                 }
                 @if (_commKey is { } commKey)
                 {
@@ -213,32 +213,42 @@ else
     private PlayView? _chosenView;
 
     private bool _focus;
-    private bool _bannerMinimised;
 
-    /// <summary>A phone, either way up (layout.js compactScreenQuery): the banner folds into the card header.</summary>
+    /// <summary>A phone, either way up (layout.js compactScreenQuery).</summary>
     private bool _compactScreen;
+
+    /// <summary>The player opened the full banner on a larger screen; remembered (play.banner = open).</summary>
+    private bool _bannerOpen;
 
     /// <summary>The player opened the full banner on the compact screen; dropped when the screen changes tier.</summary>
     private bool _compactScreenBannerOpen;
 
     /// <summary>
-    /// On a compact screen the banner folds into the card header, whose sub-line names the room and opens the
-    /// full banner: one header row instead of a banner over a header, the same either way up.
+    /// The room banner is folded into the card header on every screen: one bar over the game. The header carries
+    /// the room's picture and name, and its sub-line opens the full banner, whose minimise folds it again. On a
+    /// larger screen that choice is remembered; on a phone it lasts until the screen changes tier, so it does not
+    /// change the banner on a larger screen.
     /// </summary>
-    private bool BannerFolded => _compactScreen && !_compactScreenBannerOpen && !_focus;
+    private bool BannerOpen => _compactScreen ? _compactScreenBannerOpen : _bannerOpen;
 
-    private bool BannerShown => !_focus && !BannerFolded;
+    private bool BannerFolded => !BannerOpen && !_focus;
 
-    private void OpenFoldedBanner() => _compactScreenBannerOpen = true;
+    private bool BannerShown => BannerOpen && !_focus;
+
+    private Task OpenFoldedBanner() => SetBannerOpenAsync(true);
+
+    private async Task SetBannerOpenAsync(bool open)
+    {
+        if (_compactScreen)
+        {
+            _compactScreenBannerOpen = open;
+            return;
+        }
+        _bannerOpen = open;
+        await JS.SetItemAsync(BrowserStore.Local, BannerKey, open ? "open" : "folded");
+    }
 
     private DotNetObjectReference<Play>? _self;
-
-    /// <summary>
-    /// On a compact screen the banner is folded into the card header unless the player opened it, and then it
-    /// is the full banner: its minimise folds it again. That choice lasts until the screen changes tier and is
-    /// not remembered, so it does not change the banner on a larger screen.
-    /// </summary>
-    private bool BannerMinimised => !_compactScreen && _bannerMinimised;
     private string? _sheetName;
     private RoomOccupant? _sheetOccupant;
 
@@ -475,7 +485,7 @@ else
 
     // The player's preferred terminal width in columns (min 78). The terminal autoscales its
     // font to fill this many columns; the value is also what the client reports over NAWS.
-    // Persisted per-browser in localStorage, with the banner's minimised state.
+    // Persisted per-browser in localStorage, with whether the room banner is open (larger screens).
     private const int MinCols = 78;
     private const int MaxCols = 240;
     private const string BannerKey = "play.banner";
@@ -492,10 +502,11 @@ else
             changed |= clamped != _targetCols;
             _targetCols = clamped;
         }
-        if (await JS.GetItemAsync(BrowserStore.Local, BannerKey) == "min")
+        // Folded unless the player opened it; the old "min" (the strip) folds too.
+        if (await JS.GetItemAsync(BrowserStore.Local, BannerKey) == "open")
         {
-            changed |= !_bannerMinimised;
-            _bannerMinimised = true;
+            changed |= !_bannerOpen;
+            _bannerOpen = true;
         }
         _self = DotNetObjectReference.Create(this);
         try
@@ -545,16 +556,8 @@ else
         await JS.SetItemAsync(BrowserStore.Local, "play.cols", _targetCols.ToString(CultureInfo.InvariantCulture));
     }
 
-    private async Task OnBannerMinimisedAsync(bool minimised)
-    {
-        if (_compactScreen)
-        {
-            _compactScreenBannerOpen = !minimised;
-            return;
-        }
-        _bannerMinimised = minimised;
-        await JS.SetItemAsync(BrowserStore.Local, BannerKey, minimised ? "min" : "open");
-    }
+    /// <summary>The open banner's minimise folds it back into the card header.</summary>
+    private Task OnBannerMinimisedAsync(bool minimised) => SetBannerOpenAsync(!minimised);
 
     private void OnViewChanged(PlayView view) => _chosenView = view;
 
