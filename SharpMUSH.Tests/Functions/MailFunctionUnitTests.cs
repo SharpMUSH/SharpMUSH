@@ -105,7 +105,7 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mail(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mail(999)", "#-1 INVALID MESSAGE OR PLAYER")]
 	public async Task Mail_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -135,13 +135,13 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mailfrom_ValidMessage_ReturnsSenderDbref()
 	{
+		// The fixture player sent every message to itself; fun_mailfrom writes a bare dbref.
 		var result = (await Parser.FunctionParse(MarkupText.Plain("mailfrom(1)")))?.Message!;
-		var dbref = result.ToPlainText();
-		await Assert.That(dbref).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#{_player.Number}");
 	}
 
 	[Test]
-	[Arguments("mailfrom(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailfrom(999)", "#-1")]
 	public async Task Mailfrom_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -270,7 +270,8 @@ public class MailFunctionUnitTests
 
 		var result = (await asMortal.FunctionParse(MarkupText.Plain("mailfrom(me,1)")))!.Message!.ToPlainText();
 
-		await Assert.That(result).IsEqualTo(mortal.ToString());
+		// fun_mailfrom writes a bare dbref, not an objid.
+		await Assert.That(result).IsEqualTo($"#{mortal.Number}");
 	}
 
 	[Test]
@@ -321,7 +322,7 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mailstatus(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailstatus(999)", "#-1")]
 	public async Task Mailstatus_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -337,26 +338,26 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mailsubject(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailsubject(999)", "#-1")]
 	public async Task Mailsubject_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary><c>fun_mailtime</c> writes <c>show_time(mp-&gt;time, 0)</c>: local time, as <c>time()</c> does.</summary>
 	[Test]
 	public async Task Mailtime_ValidMessage_ReturnsTimestamp()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("mailtime(1)")))?.Message!;
-		var timestamp = result.ToPlainText();
-		await Assert.That(long.TryParse(timestamp, out var ts)).IsTrue();
-		var date = DateTimeOffset.FromUnixTimeSeconds(ts);
-		await Assert.That(date).IsGreaterThan(DateTimeOffset.UtcNow.AddDays(-1));
-		await Assert.That(date).IsLessThan(DateTimeOffset.UtcNow.AddMinutes(1));
+		var parsed = DateTime.ParseExact(result.ToPlainText(), "ddd MMM dd HH:mm:ss yyyy",
+			System.Globalization.CultureInfo.InvariantCulture);
+		await Assert.That(parsed).IsGreaterThan(DateTime.Now.AddDays(-1));
+		await Assert.That(parsed).IsLessThan(DateTime.Now.AddMinutes(1));
 	}
 
 	[Test]
-	[Arguments("mailtime(999)", "#-1 NO SUCH MAIL")]
+	[Arguments("mailtime(999)", "#-1")]
 	public async Task Mailtime_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -383,22 +384,23 @@ public class MailFunctionUnitTests
 	}
 
 	/// <summary>
-	/// Only a player has a mailbox. A located non-player answers as a missing player, and a non-player
-	/// executor holds no mail, rather than either one throwing out of the function. The mail*stats()
+	/// Only a player has a mailbox, and a non-player executor holds no mail, rather than either one
+	/// throwing out of the function. The fetch functions answer a non-player as they answer any message
+	/// they cannot fetch, and maillist() with #-1 NO MATCH, as live PennMUSH does. The mail*stats()
 	/// functions refuse a non-player executor outright, as <c>fun_mailstats</c> does: live PennMUSH
 	/// 80a1d5b gives <c>objeval(StatObj,mailstats())</c> nothing but "No such player.".
 	/// </summary>
 	[Test]
-	[Arguments("mail(here)", "#-1 NO SUCH PLAYER")]
-	[Arguments("mail(here,1)", "#-1 NO SUCH PLAYER")]
-	[Arguments("maillist(here,1)", "#-1 NO SUCH PLAYER")]
-	[Arguments("mailfrom(here,1)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mail(here)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("mail(here,1)", "#-1 INVALID MESSAGE OR PLAYER")]
+	[Arguments("maillist(here,1)", "#-1 NO MATCH")]
+	[Arguments("mailfrom(here,1)", "#-1")]
 	[Arguments("mailstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("maildstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("mailfstats(here)", "#-1 NO SUCH PLAYER")]
 	[Arguments("folderstats(here,INBOX)", "#-1 NO SUCH PLAYER")]
 	[Arguments("objeval(here,mail())", "0")]
-	[Arguments("objeval(here,mail(1))", "#-1 NO SUCH MAIL")]
+	[Arguments("objeval(here,mail(1))", "#-1 INVALID MESSAGE OR PLAYER")]
 	[Arguments("objeval(here,mailstats())", "#-1 NO SUCH PLAYER")]
 	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
 	{

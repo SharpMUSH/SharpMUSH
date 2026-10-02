@@ -31,15 +31,21 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
-	// Shared by every host variant; TUnit disposes storage after all consuming hosts.
+	// The session's world, opened by every host except one with UsesOwnWorld; TUnit disposes storage
+	// after all consuming hosts.
 	[ClassDataSource<TestDatabaseStorage>(Shared = SharedType.PerTestSession)]
 	public required TestDatabaseStorage DatabaseStorage { get; init; }
 
 	/// <summary>Integration fixtures can retain the production sender/perception pipeline.</summary>
 	protected virtual bool UseRealNotifications => false;
 
-	/// <summary>Secondary session hosts reuse the primary host's database and cache.</summary>
-	protected virtual IServiceProvider? SharedWorldServices => null;
+	/// <summary>
+	/// Whether this host runs on a world of its own instead of the session's. No two hosts ever open
+	/// the same database, so a variant that needs a different host configuration sets this.
+	/// </summary>
+	protected virtual bool UsesOwnWorld => false;
+
+	private string? _ownWorldPath;
 
 	public IServiceProvider Services => _server!.Services;
 
@@ -219,7 +225,9 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
 			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications),
-			_sqlPlatform, SharedWorldServices);
+			_sqlPlatform, _ownWorldPath = UsesOwnWorld
+				? Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{GetType().Name}-{Guid.NewGuid():N}")
+				: null);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
@@ -245,6 +253,11 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		// Its shared TestDatabaseStorage dependency outlives every host using that database.
 		if (Interlocked.Exchange(ref _server, null) is { } server)
 			await server.DisposeAsync();
+		if (Interlocked.Exchange(ref _ownWorldPath, null) is { } world)
+		{
+			foreach (var path in new[] { world, world + ".backups" }.Where(Directory.Exists))
+				Directory.Delete(path, recursive: true);
+		}
 		GC.SuppressFinalize(this);
 	}
 

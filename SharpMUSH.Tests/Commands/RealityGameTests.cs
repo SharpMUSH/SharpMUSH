@@ -12,24 +12,28 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+/// <summary>A host on the production notification pipeline, on a world of its own.</summary>
 public class RealityGameServerFactory : ServerWebAppFactory
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory Primary { get; init; }
+	/// <summary>
+	/// The tests on this host switch reality on, or rewrite its configuration, for the host's whole world.
+	/// They take turns with each other under this key; no other test sees that world.
+	/// </summary>
+	public const string WorldKey = nameof(RealityGameServerFactory);
 
 	protected override bool UseRealNotifications => true;
-	protected override IServiceProvider SharedWorldServices => Primary.Services;
+	protected override bool UsesOwnWorld => true;
 }
 
-// The tests switch reality on, or rewrite its configuration, for the whole shared world, which every
-// other test would see.
+// The tests switch reality on, or rewrite its configuration, for their host's whole world, so they
+// take turns under RealityGameServerFactory.WorldKey.
 public class RealityGameTests
 {
 	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
 	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false, false)]
 	[Arguments(true, false)]
 	[Arguments(true, true)]
@@ -64,7 +68,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task SpoofedRoomEmitUsesTheEffectiveSendersReality(bool sourceVisible)
@@ -91,7 +95,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task MovementAnnouncementsDoNotRevealAnUnperceivedMover(bool arriving)
@@ -121,7 +125,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task FollowingNotificationsDoNotRevealAnUnperceivedActor(bool dismiss)
@@ -149,7 +153,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task TelCannotMoveAnObjectIntoAnUnperceivedDestination()
 	{
 		var objects = Get<IObjectStore>();
@@ -178,7 +182,7 @@ public class RealityGameTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false, false)]
 	[Arguments(true, false)]
 	[Arguments(false, true)]
@@ -215,7 +219,7 @@ public class RealityGameTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task GiveLocatesRecipientsInTheGiversReceivingDirection(bool byName)
@@ -241,7 +245,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task HiddenCandidatesDoNotMatchOrMakeVisibleNamesAmbiguous()
 	{
 		var objects = Get<IObjectStore>();
@@ -283,7 +287,7 @@ public class RealityGameTests
 			await mediator.Send(new MoveObjectCommand(player, originalLocation, room.Object.DBRef));
 		}
 	}
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task GameAdministrationUsesLinkedPlayerCapability()
 	{
 		var policy = Get<RealityPolicy>();
@@ -303,7 +307,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task LayerDescriptionFallsBackUnlessItCanExecute(bool executable)
@@ -342,7 +346,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task LayerDescriptionUsesNormalAttributeReadAndEvaluation()
 	{
 		var policy = Get<RealityPolicy>();
@@ -372,7 +376,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async Task ExitAdmissionHonorsRealityAndBasicLocks(bool hiddenDestination)
@@ -404,7 +408,7 @@ public class RealityGameTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task EmptyDoesNotDiscoverOrMoveHiddenContents()
 	{
 		var objects = Get<IObjectStore>();
@@ -432,7 +436,7 @@ public class RealityGameTests
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task DropToDoesNotRevealDestinationOnlyTheObjectCanPerceive()
 	{
 		var objects = Get<IObjectStore>();
@@ -466,7 +470,7 @@ public class RealityGameTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task EmptyRejectsBothHopsBeforeRemovingAnItem()
 	{
 		var objects = Get<IObjectStore>();
@@ -495,10 +499,7 @@ public class RealityGameTests
 		}
 	}
 
-	// Serial though it touches only its own thing: whichever test first uses RealityGameServerFactory
-	// boots a second host over the shared world, and that boot runs every object's STARTUP. Keeping
-	// every user of the factory serial keeps the boot out of the parallel phase.
-	[Test, NotInParallel]
+	[Test]
 	public async Task CorruptProfileProducesAnAdministrativeError()
 	{
 		var objects = Get<IObjectStore>();
