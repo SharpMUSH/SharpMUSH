@@ -477,7 +477,7 @@ else
     {
         <div class="play-banner-more">
             <button type="button" class="play-conn play-banner-focus" aria-label="@Loc["NavFocusMode"]" title="@Loc["NavFocusMode"]"
-                    @onclick="() => OnFocusChanged(true)">
+                    @onclick="EnterFocusAsync">
                 <MudIcon Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" />
             </button>
             @if (View == PlayView.Terminal)
@@ -490,6 +490,13 @@ else
             }
         </div>
     };
+
+    /// <summary>Focus from the banner's row: the details sheet it sits in closes first, so focus mode is not under it.</summary>
+    private async Task EnterFocusAsync()
+    {
+        if (_mobileSheet == MobileSheet.Details) await CloseMobileSheet();
+        OnFocusChanged(true);
+    }
 
     private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;
 
@@ -600,8 +607,8 @@ else
     public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(async () =>
     {
         _compactScreen = compactScreen;
-        // The details sheet is a phone's banner; a larger screen has the banner above the card instead.
-        if (_mobileSheet == MobileSheet.Details) _mobileSheet = null;
+        // The sheets are a phone's: a larger screen has the banner above the card and the aside beside it.
+        if (_mobileSheet is not null) await CloseMobileSheet();
         // A window that narrows to a phone's width changes chrome as well.
         _touchChrome = await IsTouchChromeAsync();
         StateHasChanged();

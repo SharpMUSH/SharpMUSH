@@ -670,7 +670,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 	public async Task TheBanner_CarriesThePhonesControlsRow_FocusSettingsAndDisconnect()
 	{
 		// Discord's channel details: on a phone, Play.razor.css hides the header's less frequent buttons
-		// (.play-head-more, the focus button) once a room has come, and shows this row in the banner the name opens.
+		// (.play-head-more, the focus button) once a room has come, and the name opens them in the details sheet.
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
 		var cut = RenderPlay();
 		PushRoom(scene: false);
 		cut.WaitForAssertion(() => cut.Find(".play.play--room"), TimeSpan.FromSeconds(5));
@@ -680,15 +681,35 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(more[1].QuerySelector(".play-conn[aria-label='Disconnect']")).IsNotNull();
 
 		cut.Find(".scene-card-title").Click();
-		var row = cut.Find(".kit-banner .kit-banner-bottom-actions .play-banner-more");
+		var row = cut.Find(".play-sheet--details .play-banner-more");
 		await Assert.That(row.QuerySelector(".play-settings-btn")).IsNotNull();
+		await Assert.That(row.QuerySelector(".play-conn[aria-label='Disconnect']")).IsNotNull();
 		row.QuerySelector("button.play-banner-focus")!.Click();
 		await Assert.That(cut.Find(".play").ClassList).Contains("play--focus");
+		await Assert.That(cut.FindAll(".play-sheet--details").Count).IsEqualTo(0).Because("entering focus closes the sheet it was opened from");
 
 		cut.Find("button.scene-card-focus").Click();
-		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1).Because("leaving focus brings the opened banner back");
-		cut.Find(".play-banner-more .play-conn[aria-label='Disconnect']").Click();
+		cut.Find(".scene-card-title").Click();
+		cut.Find(".play-sheet--details .play-conn[aria-label='Disconnect']").Click();
 		await _play.Received(1).DisconnectAsync();
+	}
+
+	[Test]
+	public async Task TurningTheScreen_ClosesAnOpenPhoneSheet()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.watchCompactScreen", _ => true).SetResult(true);
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-room-btn"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-room-btn").Click();
+		await Assert.That(cut.FindAll(".play-sheet--room").Count).IsEqualTo(1);
+
+		var page = cut.FindComponent<PlayPage>();
+		await cut.InvokeAsync(() => page.Instance.OnCompactScreenChanged(false));
+		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0).Because("a larger screen has the aside beside the card");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.restoreFocus")).IsTrue()
+			.Because("closing hands focus back to what opened it");
 	}
 
 	[Test]
