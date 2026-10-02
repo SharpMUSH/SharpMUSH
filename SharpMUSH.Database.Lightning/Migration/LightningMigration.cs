@@ -176,7 +176,7 @@ public partial class LightningDatabase
 				Codec.Serialize(new AttributeFlagRecord { Name = name, Symbol = symbol, Inheritable = inheritable, System = true }));
 		}
 
-		foreach (var (name, alias, setPerms, unsetPerms) in PowerSeed.Powers)
+		foreach (var (name, aliases, setPerms, unsetPerms) in PowerSeed.Powers)
 		{
 			var key = Keys.Upper(name);
 			var currentPower = tx.TryGet(Tables.Power, key, out var existingPower)
@@ -193,7 +193,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.Power, key, Codec.Serialize(new PowerRecord
 			{
 				Name = name,
-				Alias = alias,
+				Aliases = aliases,
 				Symbol = "",
 				SetPermissions = setPerms,
 				UnsetPermissions = unsetPerms,

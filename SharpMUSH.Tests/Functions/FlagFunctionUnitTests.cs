@@ -277,6 +277,28 @@ public class FlagFunctionUnitTests
 		}
 	}
 
+	/// <summary>
+	/// A power answers to PennMUSH's aliases for it, so softcode written against a PennMUSH game
+	/// (<c>haspower(%#, tel_anywhere)</c>) reads the same power here (#1508).
+	/// </summary>
+	[Test]
+	[Arguments("tel_anywhere")]
+	[Arguments("Tport_Anywhere")]
+	[Arguments("TEL_ANYWHERE")]
+	public async Task HaspowerAnswersToPennMUSHsAlias(string asked)
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("HpAlias");
+		var home = new DBRef(0, null);
+		var subject = await Mediator.Send(new CreatePlayerCommand(name, "testpass", home, home, 1));
+		var player = await Mediator.CreateStream(new GetPlayerQuery(name)).FirstAsync();
+		var power = await Mediator.Send(new GetPowerQuery("tel_anywhere"));
+		await Assert.That(power?.Name).IsEqualTo("Tport_Anywhere").Because("the alias resolves to the power");
+		await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player), power!));
+
+		var held = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, {asked})")))?.Message!;
+		await Assert.That(held.ToPlainText()).IsEqualTo("1");
+	}
+
 	// Penn-oracle verified: an invalid object is an error (#-1 NO SUCH OBJECT VISIBLE).
 	[Test]
 	public async Task HaspowerInvalidObject()

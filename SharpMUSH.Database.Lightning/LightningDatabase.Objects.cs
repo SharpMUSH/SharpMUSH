@@ -569,9 +569,7 @@ public partial class LightningDatabase
 
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
-			var hasPower = ReadObjectPowers(tx, dbref).Any(power =>
-				string.Equals(power.Name, filter.HasPower, StringComparison.OrdinalIgnoreCase)
-				|| string.Equals(power.Alias, filter.HasPower, StringComparison.OrdinalIgnoreCase));
+			var hasPower = ReadObjectPowers(tx, dbref).Any(power => power.AnswersTo(filter.HasPower));
 			if (!hasPower)
 			{
 				return false;

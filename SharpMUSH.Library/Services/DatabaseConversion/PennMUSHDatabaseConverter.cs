@@ -643,9 +643,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// The source's powers, under the rules in <see cref="ImportDefinitionsAsync"/>. The one
-	/// difference from a flag is the alias: <see cref="SharpPower.Alias"/> holds one, and PennMUSH
-	/// writes a row per alias, so a power with two keeps the first and reports the rest.
+	/// The source's powers, under the rules in <see cref="ImportDefinitionsAsync"/>, every alias with them as
+	/// a flag's are.
 	/// </summary>
 	private async Task ImportPowerDefinitionsAsync(List<PennMUSHFlagDefinition> definitions,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
@@ -656,8 +655,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var known = new KnownDefinitions(await _mediator.CreateStream(new GetPowersQuery(), cancellationToken)
-			.Select(power => new KnownDefinition(power.Name, power.Symbol, power.TypeRestrictions,
-				string.IsNullOrEmpty(power.Alias) ? [] : [power.Alias]))
+			.Select(power => new KnownDefinition(power.Name, power.Symbol, power.TypeRestrictions, power.Aliases))
 			.ToArrayAsync(cancellationToken));
 
 		var kept = new List<string>();
@@ -683,16 +681,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var letter = UsableLetter("Power", definition, known, context);
 			var aliases = UsableAliases("Power", definition, known, context);
 
-			// SharpMUSH gives a power one alias; PennMUSH writes a row per alias, and Announce has two.
-			if (aliases.Length > 1)
-			{
-				context.Warnings.Add($"Power {definition.Name}: SharpMUSH gives a power one alias, so only " +
-					$"{aliases[0]} is imported ({string.Join(" ", aliases[1..])} dropped)");
-				aliases = [aliases[0]];
-			}
-
-			var power = await _mediator.Send(new CreatePowerCommand(definition.Name,
-				aliases.Length == 0 ? string.Empty : aliases[0], letter, false,
+			var power = await _mediator.Send(new CreatePowerCommand(definition.Name, aliases, letter, false,
 				[.. definition.SetPermissions], [.. definition.UnsetPermissions], [.. definition.Types]), cancellationToken);
 			if (power is null)
 			{

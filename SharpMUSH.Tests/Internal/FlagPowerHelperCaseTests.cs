@@ -47,7 +47,7 @@ public class FlagPowerHelperCaseTests
 		new()
 		{
 			Name = name,
-			Alias = alias,
+			Aliases = alias.Length == 0 ? [] : [alias],
 			System = true,
 			SetPermissions = [],
 			UnsetPermissions = [],

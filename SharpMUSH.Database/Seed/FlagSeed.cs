@@ -52,7 +52,7 @@ public static class FlagSeed
 		// (hdrs/flag_tab.h:51, src/flags.c:778). Symbols are not unique here — see ABODE/ANSI on 'A'.
 		("MYOPIC", "m", null, [], [], ["PLAYER"]),
 		("NO_COMMAND", "n", ["NOCOMMAND"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-		("ON_VACATION", "o", ["ONVACATION","ON-VACATION"], [], [], ["PLAYER"]),
+		("ON_VACATION", "o", ["ONVACATION","ON-VACATION","VACATION"], [], [], ["PLAYER"]),
 		("PUPPET", "p", null, [], [], ["ROOM","THING"]),
 		("ROYALTY", "r", null, ["trusted","royalty","log"], ["trusted","royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("SUSPECT", "s", null, ["wizard","mdark","log"], ["wizard","mdark"], ["ROOM","PLAYER","EXIT","THING"]),

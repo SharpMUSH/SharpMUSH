@@ -10,7 +10,7 @@ public class UpdatePowerCommandHandler(IFlagAndPowerStore database) : ICommandHa
 	{
 		return await database.UpdatePowerAsync(
 			command.Name,
-			command.Alias,
+			command.Aliases,
 			command.Symbol,
 			command.SetPermissions,
 			command.UnsetPermissions,

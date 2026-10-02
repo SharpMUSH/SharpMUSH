@@ -1820,7 +1820,7 @@ public partial class Commands : ICommandRestrictionApplier
 			var info = new System.Text.StringBuilder();
 			info.AppendLine($"{"Name",9}: {namedPower.Name}");
 			info.AppendLine($"{"Character",9}: {namedPower.Symbol}");
-			info.AppendLine($"{"Aliases",9}: {namedPower.Alias}");
+			info.AppendLine($"{"Aliases",9}: {string.Join(" ", namedPower.Aliases)}");
 			info.AppendLine($"{"Type(s)",9}: {string.Join(" ", namedPower.TypeRestrictions)}");
 			info.AppendLine($"{"Perms",9}: {string.Join(" ", namedPower.SetPermissions)}");
 			info.Append($"{"ResetPrms",9}: {string.Join(" ", namedPower.UnsetPermissions)}");
@@ -1864,7 +1864,7 @@ public partial class Commands : ICommandRestrictionApplier
 		Func<IMediator, RegistryEntry, ValueTask<bool>> Update,
 		Func<IMediator, string, ValueTask<bool>> Delete,
 		Func<IMediator, string, bool, ValueTask<bool>> SetDisabled,
-		bool SingleAlias,
+		bool AddTakesAlias,
 		string[] ListHeader,
 		Func<RegistryEntry, string> ListRow,
 		Func<RegistryEntry, string[]> Describe,
@@ -1892,7 +1892,7 @@ public partial class Commands : ICommandRestrictionApplier
 			flag.Name, flag.Aliases, flag.Symbol, flag.SetPermissions, flag.UnsetPermissions, flag.TypeRestrictions)),
 		Delete: async (mediator, name) => await mediator.Send(new DeleteObjectFlagCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetObjectFlagDisabledCommand(name, disabled)),
-		SingleAlias: false,
+		AddTakesAlias: false,
 		ListHeader:
 		[
 			"Object Flags:",
@@ -1951,28 +1951,28 @@ public partial class Commands : ICommandRestrictionApplier
 		Find: async (mediator, name) => await mediator.Send(new GetPowerQuery(name)) is { } power ? FromPower(power) : null,
 		All: mediator => mediator.CreateStream(new GetPowersQuery()).Select(FromPower),
 		Create: async (mediator, name, alias) => await mediator.Send(new CreatePowerCommand(
-			name, alias,
+			name, string.IsNullOrEmpty(alias) ? [] : [alias],
 			string.Empty, // PennMUSH @power/add defaults <letter> to none
 			false, // user-created powers are never system powers
 			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"])) is not null,
 		Update: async (mediator, power) => await mediator.Send(new UpdatePowerCommand(
-			power.Name, power.Aliases is [var alias, ..] ? alias : string.Empty, power.Symbol,
+			power.Name, power.Aliases ?? [], power.Symbol,
 			power.SetPermissions, power.UnsetPermissions, power.TypeRestrictions)),
 		Delete: async (mediator, name) => await mediator.Send(new DeletePowerCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetPowerDisabledCommand(name, disabled)),
-		SingleAlias: true,
+		AddTakesAlias: true,
 		ListHeader:
 		[
 			"Object Powers:",
-			"Name                 Symbol Alias              Type Restrictions",
+			"Name                 Symbol Aliases            Type Restrictions",
 			"-------------------- ------ ------------------ -------------------"
 		],
-		ListRow: power => $"{power.Name,-20} {power.Symbol,-6} {power.Aliases?.FirstOrDefault(),-18} {string.Join(",", power.TypeRestrictions)}",
+		ListRow: power => $"{power.Name,-20} {power.Symbol,-6} {string.Join(",", power.Aliases ?? []),-18} {string.Join(",", power.TypeRestrictions)}",
 		Describe: power =>
 		[
 			$"Power: {power.Name}",
 			$"Symbol: {power.Symbol}",
-			$"Alias: {power.Aliases?.FirstOrDefault()}",
+			$"Aliases: {(power.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none")}",
 			$"System: {(power.System ? "Yes" : "No")}",
 			$"Disabled: {(power.Disabled ? "Yes" : "No")}",
 			$"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}",
@@ -2001,8 +2001,8 @@ public partial class Commands : ICommandRestrictionApplier
 			TypeRequires: nameof(ErrorMessages.Notifications.PowerTypeRequiresNameAndTypes),
 			NameAndTypesEmpty: nameof(ErrorMessages.Notifications.PowerNameAndTypesCannotBeEmpty),
 			TypeUpdated: nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat),
-			AliasRequires: nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias),
-			AliasSet: nameof(ErrorMessages.Notifications.PowerAliasChangedFormat),
+			AliasRequires: nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAliases),
+			AliasSet: nameof(ErrorMessages.Notifications.PowerAliasesSetFormat),
 			AliasConflict: nameof(ErrorMessages.Notifications.PowerAliasConflictFormat),
 			RestrictRequires: nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions),
 			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty),
@@ -2020,7 +2020,7 @@ public partial class Commands : ICommandRestrictionApplier
 			flag.TypeRestrictions, flag.SetPermissions, flag.UnsetPermissions, flag.Id);
 
 	private static RegistryEntry FromPower(SharpPower power)
-		=> new(power.Name, string.IsNullOrEmpty(power.Alias) ? [] : [power.Alias], power.Symbol, power.System, power.Disabled,
+		=> new(power.Name, power.Aliases, power.Symbol, power.System, power.Disabled,
 			power.TypeRestrictions, power.SetPermissions, power.UnsetPermissions, power.Id);
 
 	/// <summary>
@@ -2075,7 +2075,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 			// A flag's second argument is its letter, kept as typed; a power's is its alias.
 			var (addConflict, created) = await CheckedCreateAsync(registry, name.ToUpperInvariant(),
-				registry.SingleAlias ? second.ToUpperInvariant() : second);
+				registry.AddTakesAlias ? second.ToUpperInvariant() : second);
 
 			if (addConflict is not null) return await Say(keys.AliasConflict, addConflict);
 			if (!created) return await Say(keys.FailedToCreate, name);
@@ -2109,7 +2109,6 @@ public partial class Commands : ICommandRestrictionApplier
 		{
 			DefinitionOperation.Type when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndTypesEmpty,
 			DefinitionOperation.Restrict when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndPermissionsEmpty,
-			DefinitionOperation.Alias when registry.SingleAlias && (string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value)) => keys.NameAndSecondEmpty,
 			DefinitionOperation.Decompile or DefinitionOperation.Debug => null,
 			_ when string.IsNullOrWhiteSpace(typed) => keys.NameEmpty,
 			_ => null
@@ -2193,7 +2192,6 @@ public partial class Commands : ICommandRestrictionApplier
 				string.Join(", ", words.Select(t => t.ToUpper()))),
 			DefinitionOperation.Restrict => (entry with { SetPermissions = words, UnsetPermissions = words }, keys.PermissionsUpdated,
 				string.Join(", ", words)),
-			_ when registry.SingleAlias => (entry with { Aliases = [value.ToUpper()] }, keys.AliasSet, value),
 			_ => (entry with { Aliases = words.Length > 0 ? [.. words.Select(a => a.ToUpper())] : null }, keys.AliasSet,
 				words.Length > 0 ? string.Join(", ", words.Select(a => a.ToUpper())) : "none")
 		};
@@ -2236,7 +2234,7 @@ public partial class Commands : ICommandRestrictionApplier
 		await DefinitionMutationGate.WaitAsync();
 		try
 		{
-			if (registry.SingleAlias && await FindAliasConflict(registry.All(Mediator), name, [second]) is { } conflict)
+			if (registry.AddTakesAlias && await FindAliasConflict(registry.All(Mediator), name, [second]) is { } conflict)
 			{
 				return (conflict, false);
 			}

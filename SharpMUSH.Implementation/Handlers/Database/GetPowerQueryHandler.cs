@@ -16,9 +16,6 @@ public class GetPowerQueryHandler(IFlagAndPowerStore database) : IQueryHandler<G
 		}
 
 		return await database.GetObjectPowersAsync(cancellationToken)
-			.FirstOrDefaultAsync(
-				p => p.Name.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)
-					|| (p.Alias != null && p.Alias.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)),
-				cancellationToken);
+			.FirstOrDefaultAsync(p => p.AnswersTo(query.PowerName), cancellationToken);
 	}
 }

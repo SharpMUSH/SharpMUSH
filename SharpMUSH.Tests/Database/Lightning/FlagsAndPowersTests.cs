@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -24,6 +25,38 @@ public class FlagsAndPowersTests
 		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		_db = Create(path);
 		await _db.Migrate();
+	}
+
+	/// <summary>
+	/// A power row written while a power had one alias keeps it: the single <c>Alias</c> field is read as the
+	/// alias list, so a world from before powers took several does not lose the one it had.
+	/// </summary>
+	[Test]
+	public async Task APowerRowWithTheOldSingleAlias_ReadsAsItsAliases()
+	{
+		var key = "LEGACY_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		await _db.Store.WriteAsync(tx => tx.Put(Tables.Power, Keys.Upper(key), Codec.Serialize(new PowerRecord
+		{
+			Name = key, Alias = "OLDNAME", TypeRestrictions = ["PLAYER"]
+		})));
+
+		var power = await _db.GetPowerAsync(key);
+
+		await Assert.That(power!.Aliases).IsEquivalentTo(["OLDNAME"]);
+		await Assert.That(power.AnswersTo("oldname")).IsTrue();
+	}
+
+	/// <summary>The seed gives a power every alias PennMUSH's table does, which reach an existing world on its next boot.</summary>
+	[Test]
+	public async Task TheSeededPowers_AnswerToPennMUSHsAliases()
+	{
+		var announce = await _db.GetPowerAsync("Announce");
+		var anywhere = await _db.GetPowerAsync("Tport_Anywhere");
+		var vacation = await _db.GetObjectFlagAsync("VACATION");
+
+		await Assert.That(announce!.Aliases).IsEquivalentTo(["@wall", "wall"]);
+		await Assert.That(anywhere!.AnswersTo("TEL_ANYWHERE")).IsTrue();
+		await Assert.That(vacation?.Name).IsEqualTo("ON_VACATION");
 	}
 
 	[Test]
@@ -162,7 +195,7 @@ public class FlagsAndPowersTests
 	public async Task SetAndUnsetObjectPower_WriteBothEdgeDirections()
 	{
 		const string name = "TEST_CUSTOM_POWER";
-		var power = await _db.CreatePowerAsync(name, "TCP", "", false, [], [], ["PLAYER"]);
+		var power = await _db.CreatePowerAsync(name, ["TCP"], "", false, [], [], ["PLAYER"]);
 		await Assert.That(power).IsNotNull();
 
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();

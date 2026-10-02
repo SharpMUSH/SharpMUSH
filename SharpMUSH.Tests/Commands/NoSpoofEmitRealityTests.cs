@@ -43,7 +43,7 @@ public class NoSpoofEmitRealityTests
 		recipient.Expect<SharpPlayer>().Id = "recipient";
 		executor.Object().Powers = new(() => new[] { new SharpPower
 		{
-			Name = "Can_Spoof", Alias = "", System = true,
+			Name = "Can_Spoof", Aliases = [], System = true,
 			SetPermissions = [], UnsetPermissions = [], TypeRestrictions = []
 		} }.ToAsyncEnumerable());
 		var reality = Substitute.For<IRealityPolicy>();

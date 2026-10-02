@@ -75,7 +75,7 @@ public interface IFlagAndPowerStore
 	/// Create a new Power without replacing an existing case-insensitive primary name.
 	/// </summary>
 	/// <param name="name">Power name</param>
-	/// <param name="alias">Power alias</param>
+	/// <param name="aliases">The other names the power answers to</param>
 	/// <param name="symbol">The power's one-character abbreviation, or the empty string for none</param>
 	/// <param name="system">Whether this is a system power</param>
 	/// <param name="setPermissions">Permissions required to set this power</param>
@@ -83,7 +83,7 @@ public interface IFlagAndPowerStore
 	/// <param name="typeRestrictions">Object types this power can be set on</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The created power, or null if creation failed</returns>
-	ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, string symbol, bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+	ValueTask<SharpPower?> CreatePowerAsync(string name, string[] aliases, string symbol, bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Delete a Power by name.
@@ -97,14 +97,14 @@ public interface IFlagAndPowerStore
 	/// Update an existing Power.
 	/// </summary>
 	/// <param name="name">Power name</param>
-	/// <param name="alias">Power alias</param>
+	/// <param name="aliases">The other names the power answers to</param>
 	/// <param name="symbol">The power's one-character abbreviation, or the empty string for none</param>
 	/// <param name="setPermissions">Permissions required to set this power</param>
 	/// <param name="unsetPermissions">Permissions required to unset this power</param>
 	/// <param name="typeRestrictions">Object types this power can be set on</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
-	ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+	ValueTask<bool> UpdatePowerAsync(string name, string[] aliases, string symbol, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Update an existing object flag.

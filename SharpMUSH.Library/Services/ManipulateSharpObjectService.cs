@@ -334,15 +334,9 @@ public class ManipulateSharpObjectService(
 	/// <summary>
 	/// Resolves a power by name or alias.
 	/// </summary>
-	/// <remarks>
-	/// <see cref="SharpPower.Alias"/> is declared non-nullable but the seeded powers store null for "no alias", so the
-	/// null guard is load-bearing: without it the predicate throws on the first aliasless power the stream yields.
-	/// </remarks>
 	public ValueTask<SharpPower?> FindPower(string powerOrPowerAlias) =>
 		mediator.CreateStream(new GetPowersQuery())
-			.FirstOrDefaultAsync(x =>
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
-				|| (x.Alias is not null && x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)));
+			.FirstOrDefaultAsync(x => x.AnswersTo(powerOrPowerAlias));
 
 	/// <summary>
 	/// PennMUSH src/wiz.c do_power: the shared body of <c>@power &lt;object&gt;=...</c> and the side-effect
