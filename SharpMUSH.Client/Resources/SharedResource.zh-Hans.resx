@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>角色卡：{0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>动作</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>描述</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>说</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>命令</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>写下你的动作…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>描述发生了什么…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>说点什么…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>输入命令…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>展开输入框</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>收起输入框</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>消息类型</value>

@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Rollformulär: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Säg</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Kommando</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Skriv din pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Beskriv vad som händer…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Säg något…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Skriv ett kommando…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Förstora fältet</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Förminska fältet</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Meddelandetyp</value>

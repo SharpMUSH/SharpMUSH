@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Karakterark: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Sig</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Kommando</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Skriv din pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Beskriv hvad der sker…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Sig noget…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Skriv en kommando…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Udvid feltet</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Formindsk feltet</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Beskedtype</value>

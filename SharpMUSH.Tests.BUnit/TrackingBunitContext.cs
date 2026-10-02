@@ -41,6 +41,7 @@ public abstract class TrackingBunitContext : BunitContext
 		Services.TryAddSingleton<IAccountAuthState>(sp =>
 			sp.GetService<AccountAuthService>() ?? Substitute.For<IAccountAuthState>());
 		Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
+		Services.TryAddSingleton<CommandHistory>();
 	}
 
 	/// <summary>

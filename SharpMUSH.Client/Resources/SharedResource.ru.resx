@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Лист персонажа: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Поза</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Эмит</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Речь</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Команда</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Напишите позу…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Опишите, что происходит…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Скажите что-нибудь…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Введите команду…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Развернуть поле ввода</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Свернуть поле ввода</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Тип сообщения</value>

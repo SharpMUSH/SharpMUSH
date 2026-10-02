@@ -1,15 +1,25 @@
+@using System.Text.Json
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject CommandHistory History
 @implements IAsyncDisposable
 
-@* D1 §5.8 / §4.11 the Play composer in the bottom bar: Pose · Say · OOC · Command, the field and Send.
-   Pose, Say and OOC send pose, say and the game's ooc command (the Scene plugin tags those poses
-   "ooc", §7.2) with the text encoded so the parser hands it back unchanged; Command sends the line as
-   typed. Enter sends and Shift+Enter is a new line, decided in layout.js per key; Ctrl/⌘+Enter also
-   sends. *@
-<BottomBar Class="composer">
-    <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
+@* D1 §5.8 / §4.11 the Play composer in the bottom bar: Say · OOC · Emit · Command, the field and Send.
+   Say, OOC and Emit send say, the game's ooc command (the Scene plugin tags those poses "ooc", §7.2) and
+   @emit, with the text encoded so the parser hands it back unchanged; Command sends the line as typed, and
+   Up and Down walk the command history there as in the terminal. Enter sends and Shift+Enter is a new line,
+   decided in layout.js per key; Ctrl/⌘+Enter also sends. The draft and the mode are kept per character
+   (DraftKey), so neither switching to the terminal nor a reload loses a half-written post; the expand
+   button gives the field most of the screen for a long one. *@
+<BottomBar Class="@($"composer {(_expanded ? "composer--expanded" : null)}")">
+    <div class="composer-head">
+        <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
+        <button type="button" class="composer-expand" aria-pressed="@(_expanded ? "true" : "false")"
+                aria-label="@ExpandLabel" title="@ExpandLabel" @onclick="ToggleExpanded">
+            <MudIcon Icon="@(_expanded ? Icons.Material.Outlined.CloseFullscreen : Icons.Material.Outlined.OpenInFull)" Size="Size.Small" />
+        </button>
+    </div>
     <div class="composer-row">
         <textarea class="composer-input @(_type == Command ? "composer-input--command" : null)" rows="1" @ref="_input"
                   aria-label="@Loc["NavPlayMessageType"]: @Label(_type)" placeholder="@Placeholder"
@@ -25,41 +35,102 @@
     /// <summary>The command line to send to the game.</summary>
     [Parameter] public EventCallback<string> OnSend { get; set; }
 
-    private const string Pose = "pose";
+    /// <summary>
+    /// Where the draft and the mode are kept (<c>localStorage</c>), per character; null keeps them only while
+    /// the composer is on screen.
+    /// </summary>
+    [Parameter] public string? DraftKey { get; set; }
+
     private const string Say = "say";
     private const string Ooc = "ooc";
+    private const string Emit = "emit";
     private const string Command = "command";
 
     private IReadOnlyList<(string Key, string Label)> _types = [];
-    private string _type = Pose;
+    private string _type = Say;
     private string _text = string.Empty;
     private ElementReference _input;
     private bool _focusInput;
+    private bool _expanded;
+    private string? _loadedKey;
+    private readonly HistoryWalk _historyWalk = new();
 
     private bool CanSend => Connected && !string.IsNullOrWhiteSpace(_text);
 
+    private string ExpandLabel => _expanded ? Loc["NavPlayComposerShrink"] : Loc["NavPlayComposerExpand"];
+
     protected override void OnInitialized() =>
-        _types = [(Pose, Label(Pose)), (Say, Label(Say)), (Ooc, Label(Ooc)), (Command, Label(Command))];
+        _types = [(Say, Label(Say)), (Ooc, Label(Ooc)), (Emit, Label(Emit)), (Command, Label(Command))];
 
     private string Label(string type) => type switch
     {
-        Pose => Loc["NavPlayTypePose"],
         Say => Loc["NavPlayTypeSay"],
         Ooc => Loc["NavPlayTypeOoc"],
+        Emit => Loc["NavPlayTypeEmit"],
         _ => Loc["NavPlayTypeCommand"],
     };
 
     private string Placeholder => _type switch
     {
-        Pose => Loc["NavPlayPlaceholderPose"],
         Say => Loc["NavPlayPlaceholderSay"],
         Ooc => Loc["NavPlayPlaceholderOoc"],
+        Emit => Loc["NavPlayPlaceholderEmit"],
         _ => Loc["NavPlayPlaceholderCommand"],
     };
 
-    private void OnTypeChanged(string type) => _type = type;
+    private Task OnTypeChanged(string type)
+    {
+        _type = type;
+        _historyWalk.Reset();
+        return SaveDraftAsync();
+    }
 
-    private void OnInput(ChangeEventArgs e) => _text = e.Value?.ToString() ?? string.Empty;
+    private Task OnInput(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? string.Empty;
+        _historyWalk.Reset();
+        return SaveDraftAsync();
+    }
+
+    private void ToggleExpanded()
+    {
+        _expanded = !_expanded;
+        _focusInput = true;
+    }
+
+    private sealed record Draft(string Type, string Text);
+
+    /// <summary>Keeps the draft and the mode for this character, so a reload or the terminal view loses neither.</summary>
+    private async Task SaveDraftAsync()
+    {
+        if (DraftKey is not { } key) return;
+        if (_text.Length == 0 && _type == Say)
+        {
+            await JS.RemoveItemAsync(BrowserStore.Local, key);
+            return;
+        }
+        await JS.SetItemAsync(BrowserStore.Local, key, JsonSerializer.Serialize(new Draft(_type, _text)));
+    }
+
+    /// <summary>Reads the kept draft, once per character: a draft typed before it arrived is not overwritten.</summary>
+    private async Task LoadDraftAsync()
+    {
+        if (DraftKey is not { } key || key == _loadedKey) return;
+        _loadedKey = key;
+        if (_text.Length > 0) return;
+        if (await JS.GetItemAsync(BrowserStore.Local, key) is not { Length: > 0 } json) return;
+        try
+        {
+            if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
+            _type = _types.Any(t => t.Key == draft.Type) ? draft.Type : Say;
+            _text = draft.Text ?? string.Empty;
+            StateHasChanged();
+        }
+        catch (JsonException)
+        {
+            // Not a draft this composer wrote: start empty.
+        }
+    }
 
     /// <summary>Starts a page to someone (the character sheet's Page): Command, with the page prefilled.</summary>
     /// <param name="command">The row's own Page action (<c>page #312=</c>, which survives a rename), when it has one.</param>
@@ -69,25 +140,47 @@
         _text = command ?? $"page {name}=";
         _focusInput = true;
         StateHasChanged();
-        return Task.CompletedTask;
+        return SaveDraftAsync();
     }
 
     // Ctrl/⌘+Enter inserts nothing in a textarea, so it needs no preventDefault. Plain Enter is handled in
     // layout.js (SendFromEnter), which prevents the newline only for the Enter that sends.
-    private Task OnKeyDownAsync(KeyboardEventArgs e) =>
-        e.Key == "Enter" && (e.CtrlKey || e.MetaKey) ? SendAsync() : Task.CompletedTask;
+    // In Command mode, Up and Down walk the command history while the line is one line, as the terminal's input
+    // does; in a multi-line draft they move the caret.
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
+        {
+            await SendAsync();
+            return;
+        }
+        if (_type != Command || _text.Contains('\n')) return;
+        switch (e.Key)
+        {
+            case "ArrowUp":
+                await History.LoadAsync();
+                if (_historyWalk.Older(History.Entries, _text) is { } older) _text = older;
+                break;
+            case "ArrowDown":
+                if (_historyWalk.Newer(History.Entries) is { } newer) _text = newer;
+                break;
+        }
+    }
 
     private async Task SendAsync()
     {
         if (!CanSend) return;
         var line = _type switch
         {
-            Pose => $"pose {MushComposeEncoder.Encode(_text)}",
             Say => $"say {MushComposeEncoder.Encode(_text)}",
             Ooc => $"ooc {MushComposeEncoder.Encode(_text)}",
+            Emit => $"@emit {MushComposeEncoder.Encode(_text)}",
             _ => _text.Trim(),
         };
+        if (_type == Command) await History.AddAsync(line);
+        _historyWalk.Reset();
         _text = string.Empty;
+        await SaveDraftAsync();
         await OnSend.InvokeAsync(line);
     }
 
@@ -103,6 +196,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await LoadDraftAsync();
         if (firstRender)
         {
             _self = DotNetObjectReference.Create(this);

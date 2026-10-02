@@ -4355,8 +4355,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Fiche de personnage : {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Dire</value>
@@ -4367,8 +4367,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Commande</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Écrivez votre pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Décrivez ce qui se passe…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Dites quelque chose…</value>
@@ -4378,6 +4378,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Tapez une commande…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Agrandir la saisie</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Réduire la saisie</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Type de message</value>

@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Ficha de personaje: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Decir</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Comando</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Escribe tu pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Describe lo que ocurre…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Di algo…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Escribe un comando…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Ampliar el campo</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Reducir el campo</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Tipo de mensaje</value>

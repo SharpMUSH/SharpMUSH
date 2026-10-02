@@ -138,7 +138,8 @@ else
                         <Footer>
                             @if (View == PlayView.Story)
                             {
-                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync" />
+                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
+                                              DraftKey="@DraftKey" />
                             }
                         </Footer>
                     </PlaySceneCard>
@@ -326,7 +327,13 @@ else
     /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
     private string? _liveRefusedFor;
 
-    /// <summary>Live poses are not arriving because the scene connection is down; the story retries and catches up.</summary>
+    /// <summary>The composer's draft, kept per character so an alt in another tab keeps its own.</summary>
+    private string? DraftKey =>
+        (PlayTerminal.ConnectedPlayerName ?? SelfRow?.Name ?? AccountAuth.ActiveCharacter?.Name) is { Length: > 0 } name
+            ? $"play.draft.{name}"
+            : null;
+
+        /// <summary>Live poses are not arriving because the scene connection is down; the story retries and catches up.</summary>
     private bool _storyLiveDown;
 
     /// <summary>

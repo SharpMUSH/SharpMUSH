@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Fișa personajului: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Poză</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Replică</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Comandă</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Scrie-ți poza…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Descrie ce se întâmplă…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Spune ceva…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Scrie o comandă…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Mărește câmpul</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Micșorează câmpul</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Tipul mesajului</value>

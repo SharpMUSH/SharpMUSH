@@ -5100,8 +5100,8 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Charakterbogen: {0}</value>
   </data>
-  <data name="NavPlayTypePose" xml:space="preserve">
-    <value>Pose</value>
+  <data name="NavPlayTypeEmit" xml:space="preserve">
+    <value>Emit</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
     <value>Sagen</value>
@@ -5112,8 +5112,8 @@
   <data name="NavPlayTypeCommand" xml:space="preserve">
     <value>Befehl</value>
   </data>
-  <data name="NavPlayPlaceholderPose" xml:space="preserve">
-    <value>Schreib deine Pose…</value>
+  <data name="NavPlayPlaceholderEmit" xml:space="preserve">
+    <value>Beschreib, was passiert…</value>
   </data>
   <data name="NavPlayPlaceholderSay" xml:space="preserve">
     <value>Sag etwas…</value>
@@ -5123,6 +5123,12 @@
   </data>
   <data name="NavPlayPlaceholderCommand" xml:space="preserve">
     <value>Gib einen Befehl ein…</value>
+  </data>
+  <data name="NavPlayComposerExpand" xml:space="preserve">
+    <value>Eingabefeld vergrößern</value>
+  </data>
+  <data name="NavPlayComposerShrink" xml:space="preserve">
+    <value>Eingabefeld verkleinern</value>
   </data>
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Nachrichtentyp</value>
