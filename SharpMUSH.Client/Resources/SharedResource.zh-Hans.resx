@@ -3555,6 +3555,12 @@
     <value>展开属性</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>跳到最新</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>下方有新内容</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>展开对象</value>
     <comment>MT</comment>

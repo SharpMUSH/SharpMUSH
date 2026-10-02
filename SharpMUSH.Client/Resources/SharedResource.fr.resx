@@ -992,6 +992,12 @@
   <data name="TermCreateExit" xml:space="preserve">
     <value>Créer une sortie</value>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Aller au plus récent</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nouvelles lignes en bas</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Développer les objets</value>
   </data>

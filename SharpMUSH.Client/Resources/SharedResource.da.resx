@@ -3555,6 +3555,12 @@
     <value>Vis attributter</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Gå til nyeste</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nye linjer nedenfor</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Vis objekter</value>
     <comment>MT</comment>

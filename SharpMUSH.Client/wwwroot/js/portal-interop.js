@@ -4,9 +4,37 @@
     window.SharpMUSH = window.SharpMUSH || {};
 
     window.SharpMUSH.Terminal = {
+        // Follows new output only while the reader is at the bottom, as a telnet client does: scrolled up to
+        // reread something, the view stays where it is, the container gets sharp-terminal--reading (which
+        // shows the jump button) and, once output arrives meanwhile, sharp-terminal--new.
         scrollToBottom: function (elementId) {
             var el = document.getElementById(elementId);
-            if (el) el.scrollTop = el.scrollHeight;
+            if (!el) return;
+            var box = el.closest('.sharp-terminal-container') || el;
+            if (!el._sharpmushFollow) {
+                el._sharpmushFollow = function () {
+                    var reading = el.scrollHeight - el.scrollTop - el.clientHeight > 48;
+                    el._sharpmushReading = reading;
+                    box.classList.toggle('sharp-terminal--reading', reading);
+                    if (!reading) box.classList.remove('sharp-terminal--new');
+                };
+                el.addEventListener('scroll', el._sharpmushFollow, { passive: true });
+            }
+            if (el._sharpmushReading) {
+                box.classList.add('sharp-terminal--new');
+                return;
+            }
+            el.scrollTop = el.scrollHeight;
+        },
+
+        // Back to the newest line, following again (the jump button, or the player sending a command).
+        jumpToLatest: function (elementId) {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            el._sharpmushReading = false;
+            el.scrollTop = el.scrollHeight;
+            var box = el.closest('.sharp-terminal-container') || el;
+            box.classList.remove('sharp-terminal--reading', 'sharp-terminal--new');
         },
 
         // Registers delegated handlers on the terminal output container. Clicking — or

@@ -3555,6 +3555,12 @@
     <value>Expandera attribut</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Gå till senaste</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nya rader nedanför</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Expandera objekt</value>
     <comment>MT</comment>

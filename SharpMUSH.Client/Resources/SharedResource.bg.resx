@@ -3555,6 +3555,12 @@
     <value>Разгъни атрибутите</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Към най-новото</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Нови редове отдолу</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Разгъни обектите</value>
     <comment>MT</comment>

@@ -3555,6 +3555,12 @@
     <value>Attributen uitklappen</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Naar het nieuwste</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nieuwe regels hieronder</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Objecten uitklappen</value>
     <comment>MT</comment>

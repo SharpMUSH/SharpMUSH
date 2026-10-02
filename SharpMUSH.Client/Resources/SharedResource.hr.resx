@@ -3555,6 +3555,12 @@
     <value>Proširi atribute</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Na najnovije</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Novi retci ispod</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Proširi objekte</value>
     <comment>MT</comment>

@@ -3555,6 +3555,12 @@
     <value>Attribute ausklappen</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Zum Neuesten</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Neue Zeilen unten</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Objekte ausklappen</value>
     <comment>MT</comment>

@@ -3555,6 +3555,12 @@
     <value>Expandir atributos</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Ir para o mais recente</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Novas linhas abaixo</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Expandir objetos</value>
     <comment>MT</comment>

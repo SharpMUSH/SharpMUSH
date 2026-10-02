@@ -3555,6 +3555,12 @@
     <value>Развернуть атрибуты</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>К последним</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Новые строки ниже</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Развернуть объекты</value>
     <comment>MT</comment>

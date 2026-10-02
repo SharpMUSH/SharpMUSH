@@ -3555,6 +3555,12 @@
     <value>Attribútumok kibontása</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Ugrás a legújabbra</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Új sorok lent</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Objektumok kibontása</value>
     <comment>MT</comment>

@@ -3555,6 +3555,12 @@
     <value>Rozwiń atrybuty</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Przejdź do najnowszych</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Nowe wiersze poniżej</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Rozwiń obiekty</value>
     <comment>MT</comment>

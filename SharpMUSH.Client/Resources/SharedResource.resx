@@ -1867,6 +1867,12 @@
   <data name="TermCreateExit" xml:space="preserve">
     <value>Create Exit</value>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Jump to latest</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>New lines below</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Expand objects</value>
   </data>

@@ -3555,6 +3555,12 @@
     <value>Extindere atribute</value>
     <comment>MT</comment>
   </data>
+  <data name="TermJumpLatest" xml:space="preserve">
+    <value>Salt la cele mai noi</value>
+  </data>
+  <data name="TermNewLinesBelow" xml:space="preserve">
+    <value>Rânduri noi mai jos</value>
+  </data>
   <data name="TermExpandObjects" xml:space="preserve">
     <value>Extindere obiecte</value>
     <comment>MT</comment>
