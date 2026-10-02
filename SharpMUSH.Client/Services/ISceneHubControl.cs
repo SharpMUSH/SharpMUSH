@@ -31,4 +31,19 @@ public interface ISceneHubControl
 	/// <exception cref="Microsoft.AspNetCore.SignalR.HubException">The hub refused the leave: this
 	/// connection acts as no character.</exception>
 	Task LeaveSceneAsync(string sceneId);
+
+	/// <summary>
+	/// Whether scene events can arrive: the scene connection is up. Joining while it is down records the
+	/// scene, so the join happens once it comes back, but nothing arrives in between.
+	/// </summary>
+	bool IsSceneLive { get; }
+
+	/// <summary>Raised when <see cref="IsSceneLive"/> may have changed, and after a reconnect rejoins the scenes.</summary>
+	event Action? OnSceneLiveChanged;
+
+	/// <summary>
+	/// Brings the scene connection up if it is down: the game connection first when that is down too, then a
+	/// fresh scene connection, rejoining every scene joined so far. A no-op while it is up.
+	/// </summary>
+	Task EnsureSceneLiveAsync();
 }

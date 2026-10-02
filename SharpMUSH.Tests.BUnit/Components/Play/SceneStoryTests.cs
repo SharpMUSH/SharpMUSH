@@ -72,6 +72,29 @@ public class SceneStoryTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ADownSceneConnection_IsReported_AndItsReturnReadsTheGapBack()
+	{
+		// The connection failed to start (or dropped): the join is recorded for later, nothing live arrives,
+		// and the page must say so rather than look live. Its return reads the backlog again, because a
+		// reconnect does not replay what was posted meanwhile.
+		_hub.IsSceneLive = false;
+		var down = new List<bool>();
+		var cut = Render<SceneStory>(p => p
+			.Add(x => x.SceneId, "42")
+			.Add(x => x.ViewerName, "Ilsa Varn")
+			.Add(x => x.LiveDownChanged, d => down.Add(d)));
+		WaitForRows(cut, 3);
+		cut.WaitForAssertion(() => { if (down.Count == 0) throw new InvalidOperationException("not reported yet"); }, TimeSpan.FromSeconds(5));
+		await Assert.That(down).IsEquivalentTo(new[] { true });
+		var reads = _api.PoseReads;
+
+		await cut.InvokeAsync(() => _hub.SetSceneLive(true));
+		cut.WaitForAssertion(() => { if (down.Count < 2) throw new InvalidOperationException("not reported yet"); }, TimeSpan.FromSeconds(5));
+		await Assert.That(down[^1]).IsFalse();
+		cut.WaitForAssertion(() => { if (_api.PoseReads <= reads) throw new InvalidOperationException("no catch-up read yet"); }, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
 	public async Task AnOccupantRow_GivesThePortraitAndColour_ByTheAuthorsDbref()
 	{
 		var cut = RenderStory([Tomas]);
@@ -230,8 +253,12 @@ public class SceneStoryTests : TrackingBunitContext
 		/// <summary>Paths whose answer waits for the task.</summary>
 		public Dictionary<string, Task> Hold { get; } = [];
 
+		/// <summary>How many times the backlog was read.</summary>
+		public int PoseReads { get; private set; }
+
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
+			if (request.RequestUri!.AbsolutePath.EndsWith("/poses", StringComparison.Ordinal)) PoseReads++;
 			if (Hold.TryGetValue(request.RequestUri!.AbsolutePath, out var hold)) await hold;
 			return Answer(request);
 		}

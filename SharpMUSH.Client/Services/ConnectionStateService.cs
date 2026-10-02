@@ -25,6 +25,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	// Phase 9: scene realtime now rides a SEPARATE connection to the plugin-owned hub at /hubs/scene
 	// (ReceiveSceneMessage + JoinScene/LeaveScene), not the GameHub connection.
 	private IGameHubConnection? _sceneHub;
+	// The scene groups this client has joined, so a reconnect (which loses SignalR group membership) or a scene
+	// connection opened after the join can join them again.
+	private readonly HashSet<string> _joinedScenes = new(StringComparer.Ordinal);
 	private SignalRState _innerState = SignalRState.Disconnected;
 	private readonly List<IDisposable> _subscriptions = [];
 
@@ -33,6 +36,10 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 	public event Action? OnPluginsChanged;
+	public event Action? OnSceneLiveChanged;
+
+	/// <inheritdoc/>
+	public bool IsSceneLive => _sceneHub?.State == SignalRState.Connected;
 
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
@@ -214,24 +221,89 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			_logger.LogDebug("[ConnectionStateService] ReceiveSceneMessage: {EventType}", msg.EventType);
 			OnSceneEventReceived?.Invoke(msg);
 		});
+		sceneHub.Reconnecting += _ =>
+		{
+			OnSceneLiveChanged?.Invoke();
+			return Task.CompletedTask;
+		};
+		// A reconnected connection has lost its groups: join them again before saying it is live.
+		sceneHub.Reconnected += async _ =>
+		{
+			await RejoinScenesAsync();
+			OnSceneLiveChanged?.Invoke();
+		};
+		sceneHub.Closed += _ =>
+		{
+			OnSceneLiveChanged?.Invoke();
+			return Task.CompletedTask;
+		};
 
 		try
 		{
 			await sceneHub.StartAsync();
 			_sceneHub = sceneHub;
+			await RejoinScenesAsync();
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[ConnectionStateService] Scene hub StartAsync failed; scene realtime disabled");
 			await sceneHub.DisposeAsync();
 		}
+		OnSceneLiveChanged?.Invoke();
 	}
 
 	/// <inheritdoc/>
-	public Task JoinSceneAsync(string sceneId) => InvokeSceneHubAsync("JoinScene", sceneId);
+	public async Task EnsureSceneLiveAsync()
+	{
+		if (IsSceneLive) return;
+		if (!IsConnected)
+		{
+			// The scene connection rides the game connection's lifecycle; this opens both.
+			await ReconnectAsync();
+			return;
+		}
+		// The game connection is up but the scene one is not (it failed to start, or gave up reconnecting).
+		if (_sceneHub is { } dead)
+		{
+			_sceneHub = null;
+			await dead.DisposeAsync();
+		}
+		await ConnectSceneHubAsync();
+	}
+
+	/// <summary>Joins every scene this client asked for again, on a connection that has lost them.</summary>
+	private async Task RejoinScenesAsync()
+	{
+		foreach (var sceneId in _joinedScenes.ToArray())
+		{
+			try
+			{
+				await InvokeSceneHubAsync("JoinScene", sceneId);
+			}
+			catch (HubException ex)
+			{
+				// The hub no longer lets this connection see the scene; the page that joined it says so on its
+				// next join. Drop it rather than retry a refusal on every reconnect.
+				_logger.LogDebug(ex, "[ConnectionStateService] Rejoining scene {SceneId} was refused", LogSanitizer.Sanitize(sceneId));
+				_joinedScenes.Remove(sceneId);
+			}
+		}
+	}
 
 	/// <inheritdoc/>
-	public Task LeaveSceneAsync(string sceneId) => InvokeSceneHubAsync("LeaveScene", sceneId);
+	public async Task JoinSceneAsync(string sceneId)
+	{
+		await InvokeSceneHubAsync("JoinScene", sceneId);
+		// Recorded after the call: a refusal throws, and a refused scene is not one to rejoin.
+		_joinedScenes.Add(sceneId);
+	}
+
+	/// <inheritdoc/>
+	public Task LeaveSceneAsync(string sceneId)
+	{
+		_joinedScenes.Remove(sceneId);
+		return InvokeSceneHubAsync("LeaveScene", sceneId);
+	}
 
 	/// <summary>
 	/// Invokes a scene-hub group method, treating an absent connection as the documented no-op.
