@@ -148,11 +148,20 @@ public partial class LightningDatabase
 	/// match that runs out its own timeout throws <see cref="RegexMatchTimeoutException"/>, which the
 	/// softcode callers report as <c>#-1 REGEXP TIMEOUT</c>.
 	/// </summary>
+	/// <remarks>
+	/// The filter's timeout was fixed when the scan began. Once less than that is left of the budget, the
+	/// row is matched with a filter bounded by what is left instead, since a synchronous match does not
+	/// observe the budget's token.
+	/// </remarks>
 	private static bool NameMatches(Regex filter, string longName, CancellationToken ct)
 	{
 		ct.ThrowIfCancellationRequested();
-		ExecutionBudget.Current?.ThrowIfExceeded();
-		return filter.IsMatch(longName);
+		var budget = ExecutionBudget.Current;
+		budget?.ThrowIfExceeded();
+		var bounded = budget is not null && budget.Remaining < filter.MatchTimeout
+			? SoftcodeRegex.Create(filter.ToString(), filter.Options)
+			: filter;
+		return bounded.IsMatch(longName);
 	}
 
 	public IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,

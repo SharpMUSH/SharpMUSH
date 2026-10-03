@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
@@ -406,6 +407,30 @@ public class AttributeReadCostTests
 		await Assert.That(await rows.MoveNextAsync()).IsTrue();
 		await Task.Delay(400);
 		await Assert.That(async () => await rows.MoveNextAsync()).Throws<OperationCanceledException>();
+		await rows.DisposeAsync();
+	}
+
+	/// <summary>
+	/// A row reached with less than <see cref="SoftcodeRegex.MatchTimeout"/> left of the budget is matched
+	/// within what is left, not within the timeout the filter was built with when the scan began.
+	/// </summary>
+	[Test]
+	public async Task ARowMatchedNearTheDeadlineIsBoundedByWhatIsLeft()
+	{
+		var target = await Thing("Tree");
+		await SetMany(target, [["W"], [new string('X', 40)]]);
+
+		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(400));
+		using var scope = budget.Enter();
+		var rows = _db.GetLazyAttributesByRegexAsync(target, "^(X|XX)+C$|^W$").GetAsyncEnumerator();
+		await Assert.That(await rows.MoveNextAsync()).IsTrue();
+		while (budget.Remaining >= TimeSpan.FromMilliseconds(90))
+		{
+			await Task.Delay(5);
+		}
+
+		var timedOut = await Assert.That(async () => await rows.MoveNextAsync()).Throws<RegexMatchTimeoutException>();
+		await Assert.That(timedOut!.MatchTimeout).IsLessThan(SoftcodeRegex.MatchTimeout);
 		await rows.DisposeAsync();
 	}
 
