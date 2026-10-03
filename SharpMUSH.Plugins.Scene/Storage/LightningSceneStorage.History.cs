@@ -72,15 +72,15 @@ public sealed partial class LightningSceneStorage
 				foreach (var group in batch.Candidates.GroupBy(c => Convert.ToHexString(StreamOf(c.Key).Span)))
 				{
 					var prefix = StreamOf(group.First().Key).ToArray();
+					var chosen = group.Select(c => Convert.ToHexString(c.Key)).ToHashSet(StringComparer.Ordinal);
 					var stillPurgeable = Purgeable(tx, tx.Range(scenes._log, prefix).ToList(), rule, now)
-						.Select(row => Convert.ToHexString(row.Key))
-						.ToHashSet(StringComparer.Ordinal);
-					foreach (var candidate in group.Where(c => stillPurgeable.Contains(Convert.ToHexString(c.Key))))
+						.Where(row => chosen.Contains(Convert.ToHexString(row.Key)))
+						.ToList();
+					foreach (var (key, value) in stillPurgeable)
 					{
-						if (!tx.TryGet(scenes._log, candidate.Key, out var current)) continue;
-						tx.Delete(scenes._log, candidate.Key);
+						tx.Delete(scenes._log, key);
 						deleted++;
-						freed += candidate.Key.Length + current.Length;
+						freed += key.Length + value.Length;
 					}
 				}
 
