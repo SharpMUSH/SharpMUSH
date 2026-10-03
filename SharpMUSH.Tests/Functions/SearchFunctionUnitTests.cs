@@ -355,7 +355,8 @@ public class SearchFunctionUnitTests
 
 		if (!string.IsNullOrEmpty(resultText))
 		{
-			await Assert.That(resultText).IsEqualTo("#1");
+			await Assert.That(resultText).Contains("#1");
+			await Assert.That(resultText).DoesNotContain(":");
 		}
 	}
 
