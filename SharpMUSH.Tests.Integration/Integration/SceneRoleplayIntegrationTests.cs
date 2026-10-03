@@ -431,8 +431,9 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(rewritten).IsEqualTo("Well met, all, and welcome.\nSit, please.")
 			.Because("+scene/rewrite replaces the whole text, commas included, and the composer's %r is a line break");
 		// The portal's Edit starts from decompose() of the pose. Sent back unchanged it is the same pose, colours
-		// and escaped specials included.
-		const string decomposed = @"[ansi(hr,Well met)]\,%b[tagwrap(b,all)].%r[ansi(c,Sit)]\; please.";
+		// and escaped specials included. The command line is the one evaluation: a second would run the [OOC]
+		// that the first left behind.
+		const string decomposed = @"[ansi(hr,Well met)]\,%b[tagwrap(b,all)].%r[ansi(c,Sit)]\; please \[OOC\].";
 		await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}={decomposed}");
 		var markup = await Eval($"scenepose({sceneId}, {bobPoseId}, markup)");
 		await Assert.That(SoftcodeDecomposer.Decompose(MarkupTextSerializer.Deserialize(markup))).IsEqualTo(decomposed)
