@@ -21,6 +21,12 @@ public interface IMUSHCodeParser
 	Func<ValueTask<CallState?>> CommandListParseVisitor(MString text);
 	ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text);
 	ValueTask<CallState> CommandParse(MString text);
+
+	/// <summary>
+	/// Runs a line <paramref name="player"/> typed in the web portal: as a line typed at a connection
+	/// (not split on semicolons, a matched <c>$</c>-command run in place), but with no connection handle.
+	/// </summary>
+	ValueTask<CallState> CommandParse(DBRef player, MString text);
 	ValueTask<CallState?> CommandSingleArgParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text, bool emitSubstDebug);

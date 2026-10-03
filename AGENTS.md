@@ -162,8 +162,13 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 **SignalR real-time flow:**
 - Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
-- Client calls `SendCommand` → NATS → engine → NATS → `ReceiveOutput` back to client
 - Room events broadcast to `room:{dbref}` group
+- The hub carries no commands. A command the portal issues itself goes through `POST api/commands`
+  (`GameCommandService` → `CommandsController` → `PortalCommandService`): one line run as the account
+  session's bound character — whatever the terminal is playing — on the engine's queue as typed input
+  (`$`-commands in place), answered with the output that character was told while it ran (copied by
+  `ICommandOutputCapture`; still delivered to its connections) and, when the request names one, a
+  `Result` expression evaluated right after in the same queue entry
 
 ### Widget System
 

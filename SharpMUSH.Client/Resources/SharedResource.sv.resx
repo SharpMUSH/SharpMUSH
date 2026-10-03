@@ -3182,6 +3182,14 @@
     <value>Scenen hittades inte.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Scenen startades inte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scenen startades, men den kunde inte göras privat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Sök efter ett konto för att hantera dess roller.</value>
     <comment>MT</comment>
@@ -3228,14 +3236,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Låt vem som helst titta</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Terminalen i den här fliken spelar {0}, inte {1}. Starta scenen från en flik som spelar {1}, eller byt tillbaka till {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Det gick inte att bekräfta vilken karaktär terminalen i den här fliken spelar. Försök igen om en stund.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

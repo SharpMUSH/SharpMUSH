@@ -25,7 +25,6 @@ file sealed class FakeConnectionStateService : IConnectionStateService
 	public Task ConnectAsync() => Task.CompletedTask;
 	public Task DisconnectAsync() => Task.CompletedTask;
 	public Task ReconnectAsync() => Task.CompletedTask;
-	public Task SendCommandAsync(string command) => Task.CompletedTask;
 
 	public void RaisePluginsChanged() => OnPluginsChanged?.Invoke();
 
