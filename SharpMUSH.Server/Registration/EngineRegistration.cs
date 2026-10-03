@@ -172,7 +172,11 @@ internal static class EngineRegistration
 		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
 			new FileSystemPluginUiAssemblyProvider(
 				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
+		// One process-wide lock every package operation holds from its registry read to its last write (#1484).
+		services.AddSingleton<IPackageOperationGate, PackageOperationGate>();
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
+		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
+		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
 			new Services.GitPackageSourceService(sp.GetRequiredService<IPackageManifestService>()));
