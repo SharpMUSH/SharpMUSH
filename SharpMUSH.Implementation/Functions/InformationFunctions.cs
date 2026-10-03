@@ -126,8 +126,14 @@ public partial class Functions
 		}
 
 		// Only a player has a mailbox; anything else holds no mail.
+		// A folder is named by its number, as count_mail takes it, or by one of the player's names for it.
 		var tally = targetPlayer is SharpPlayer mailbox
-			? await TallyMail(Mediator.CreateStream(new GetMailListQuery(mailbox, folderSpec ?? "INBOX")))
+			? await TallyMail(Mediator.CreateStream(new GetMailListQuery(mailbox,
+				Implementation.Commands.MailCommand.MailFolders.Resolve(
+					await Implementation.Commands.MailCommand.MailFolders.LoadAsync(ObjectDataService, mailbox),
+					folderSpec ?? "0") is Implementation.Commands.MailCommand.MailFolder folder
+					? folder.Name
+					: folderSpec ?? "INBOX")))
 			: new MailTally();
 
 		return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");

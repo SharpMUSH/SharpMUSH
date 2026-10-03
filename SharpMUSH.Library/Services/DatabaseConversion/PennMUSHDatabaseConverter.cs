@@ -1,3 +1,5 @@
+using System.Text.Json;
+using SharpMUSH.Library.ExpandedObjectData;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration;
@@ -1488,6 +1490,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var reusedSender = new SortedDictionary<int, int>();
 		var badTime = 0;
 		var folderNames = new Dictionary<int, Dictionary<int, string>>();
+		var mailboxes = new Dictionary<int, (SharpPlayer Recipient, SortedSet<int> Folders)>();
 		var pennObjects = new Dictionary<int, PennMUSHObject>();
 		foreach (var pennObject in pennDatabase.Objects)
 		{
@@ -1538,6 +1541,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
 			}
 
+			if (!mailboxes.TryGetValue(message.To, out var mailbox))
+			{
+				mailboxes[message.To] = mailbox = (recipient, []);
+			}
+
+			mailbox.Folders.Add(message.Folder);
+
 			// No limit: load_mail keeps every message whatever the recipient's mail_limit.
 			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
 			{
@@ -1554,6 +1564,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from.WithNoneOption()))
 			}), cancellationToken);
 			imported++;
+		}
+
+		foreach (var (pennRecipient, (recipient, folders)) in mailboxes)
+		{
+			await RecordMailFolderNumbersAsync(recipient, folders, folderNames[pennRecipient], cancellationToken);
 		}
 
 		if (noRecipient.Count > 0)
@@ -1591,6 +1606,34 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// A player's <c>MAILFOLDERS</c> attribute, <c>N:NAME:N</c> entries as <c>add_folder_name</c> writes
 	/// them, as folder number to name.
 	/// </summary>
+	/// <summary>
+	/// Keeps each imported folder's PennMUSH number (<see cref="ExpandedMailData.FolderNumbers"/>), so
+	/// <c>maillist()</c> and <c>&lt;folder&gt;:&lt;message&gt;</c> name the same folders they did in PennMUSH: every
+	/// folder that holds mail, and every folder <c>MAILFOLDERS</c> names.
+	/// </summary>
+	private async ValueTask RecordMailFolderNumbersAsync(SharpPlayer recipient, IEnumerable<int> folders,
+		Dictionary<int, string> names, CancellationToken cancellationToken)
+	{
+		// Messages are stored under their folder's name, so two folders PennMUSH gave one name share a folder here,
+		// under the lower number.
+		var numbers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		foreach (var number in folders.Concat(names.Keys).Where(number => number is > 0 and <= ExpandedMailData.MaxFolder)
+			.Distinct().Order())
+		{
+			numbers.TryAdd(names.GetValueOrDefault(number, $"{number}"), number);
+		}
+
+		if (numbers.Count == 0)
+		{
+			return;
+		}
+
+		await _mediator.Send(new SetExpandedDataCommand(recipient.Object, nameof(ExpandedMailData),
+			JsonSerializer.Serialize(new ExpandedMailData(Folders: [.. numbers.Keys],
+				FolderNumbers: new Dictionary<string, int>(numbers, StringComparer.Ordinal)))),
+			cancellationToken);
+	}
+
 	private static Dictionary<int, string> MailFolderNames(PennMUSHObject? player)
 	{
 		var names = new Dictionary<int, string>();
