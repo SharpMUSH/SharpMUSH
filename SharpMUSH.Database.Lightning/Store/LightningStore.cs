@@ -428,6 +428,55 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// How full the environment is, from LMDB's own statistics: the map ceiling, how many pages the file has
+	/// reached, and how many hold live data. Cheap — no data is read, only each table's B-tree header — and
+	/// a read-side operation like <see cref="CopyTo"/>, so writes continue.
+	/// </summary>
+	/// <remarks>
+	/// Pages on LMDB's own free list are not counted as used: they are exactly the space the file holds
+	/// for reuse. Neither is a table this process has not opened, which the provider never leaves behind.
+	/// </remarks>
+	public LightningEnvironmentUsage Usage()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			var info = _env.Info;
+			var main = _env.EnvironmentStats;
+			// The two meta pages, then the main database (which holds the named tables' catalogue).
+			var used = 2L + main.BranchPages + main.LeafPages + main.OverflowPages;
+			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+			used += _tables.Values.Select(tx.GetStats).Sum(stats => stats.BranchPages + stats.LeafPages + stats.OverflowPages);
+
+			return new LightningEnvironmentUsage(info.MapSize, main.PageSize, (long)info.LastPageNumber + 1, used);
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
+	/// <summary>
+	/// Every open table's entry count, plus the main database's (one entry per named table, plugins' too):
+	/// what a compacted copy has to match before it may replace this environment.
+	/// </summary>
+	internal IReadOnlyDictionary<string, long> EntryCounts()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+			var counts = _tables.ToDictionary(t => t.Key.Name, t => tx.GetEntriesCount(t.Value), StringComparer.Ordinal);
+			counts[string.Empty] = _env.EnvironmentStats.Entries;
+			return counts;
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
 	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
 	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()

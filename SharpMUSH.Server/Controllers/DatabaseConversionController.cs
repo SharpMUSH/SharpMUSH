@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 using System.Collections.Concurrent;
 
@@ -16,6 +17,7 @@ namespace SharpMUSH.Server.Controllers;
 public class DatabaseConversionController(
 	IPennMUSHDatabaseConverter converter,
 	MushCnfImportService mushCnf,
+	IStorageCapacityService capacity,
 	ILogger<DatabaseConversionController> logger)
 	: ControllerBase
 {
@@ -51,6 +53,15 @@ public class DatabaseConversionController(
 		if (configFile is { Length: > MaxConfigFileSize })
 		{
 			return BadRequest("The configuration file is larger than 1 MB.");
+		}
+
+		// Before anything is written: an import that fills the disk or the map part-way leaves a half-converted
+		// world, so one that clearly cannot fit is refused while the game is still untouched.
+		var sourceBytes = file.Length + (mailFile?.Length ?? 0) + (chatFile?.Length ?? 0);
+		if (capacity.Measure().ImportShortfall(sourceBytes) is { Length: > 0 } shortfall)
+		{
+			logger.LogWarning("PennMUSH import refused before it started: {Reason}", shortfall);
+			return StatusCode(StatusCodes.Status507InsufficientStorage, shortfall);
 		}
 
 		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");

@@ -100,20 +100,31 @@ internal static class DatabaseRegistration
 		var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
 		var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
 		services.AddSingleton(new LightningWorldPath(lightningPath));
+		var compactOnStart = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_COMPACT_ON_START"), "true",
+			StringComparison.OrdinalIgnoreCase);
 		services.AddSingleton<LightningDatabase>(x =>
 		{
 			var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
 			var password = x.GetRequiredService<IPasswordService>();
 			var relations = x.GetRequiredService<IObjectRelationLoader>();
-			var db = new LightningDatabase(dbLogger,
-				new LightningStoreOptions
-				{
-					Path = x.GetRequiredService<LightningWorldPath>().Value,
-					MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
-					Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
-					FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
-				},
-				password, relations, pluginMigrationSources, pluginFlags);
+			var storeOptions = new LightningStoreOptions
+			{
+				Path = x.GetRequiredService<LightningWorldPath>().Value,
+				MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
+				Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
+				FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
+			};
+
+			// Before anything opens the world: finish or undo an interrupted compaction, then compact if asked.
+			// A refused compaction is reported and the server starts on the world as it is.
+			LightningCompaction.Recover(storeOptions.Path, dbLogger);
+			if (compactOnStart && LightningCompaction.CompactInPlace(storeOptions, dbLogger) is Library.DiscriminatedUnions.Error<string> refused)
+			{
+				dbLogger.LogError("SHARPMUSH_LIGHTNING_COMPACT_ON_START is set, but the world was not compacted: {Reason}",
+					refused.Value);
+			}
+
+			var db = new LightningDatabase(dbLogger, storeOptions, password, relations, pluginMigrationSources, pluginFlags);
 			return db;
 		});
 		RegisterDatabaseProvider<LightningDatabase>(services);
@@ -124,14 +135,36 @@ internal static class DatabaseRegistration
 		// often one is taken; SHARPMUSH_BACKUP_PACKAGE_KEEP how many pre-package-operation copies stay;
 		// SHARPMUSH_LIGHTNING_BACKUP_COMPACT turns off omitting free pages.
 		var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
+		var compactBackups = !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase);
 		services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
 			sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
 			ResolveBackupOptions(sp.GetRequiredService<LightningWorldPath>().Value, sp.GetRequiredService<ILogger<LightningDatabase>>()),
-			compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
+			compact: compactBackups,
 			sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
+
+		// Capacity reporting (@storage, the sharpmush.storage.* gauges) and the provider's own history kind.
+		services.AddSingleton<IStorageCapacityService>(sp => new LightningStorageCapacityService(
+			sp.GetRequiredService<LightningDatabase>(), sp.GetRequiredService<IWorldBackupService>(), compactBackups));
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().WikiHistory);
+		AddHistoryRetention(services);
 
 		return services;
 	}
+
+	/// <summary>
+	/// History retention over every registered <see cref="IHistoryStore"/> — the provider's and any a
+	/// plugin adds. Its policy is read from <c>SHARPMUSH_HISTORY_*</c> once the stores are known, because
+	/// the kinds name the settings; every default keeps everything.
+	/// </summary>
+	private static void AddHistoryRetention(IServiceCollection services)
+		=> services.AddSingleton<IHistoryRetentionService>(sp =>
+		{
+			var stores = sp.GetServices<IHistoryStore>().ToArray();
+			var logger = sp.GetRequiredService<ILogger<HistoryRetentionService>>();
+			var options = HistoryRetentionOptions.Resolve(stores.Select(s => s.Kind), Environment.GetEnvironmentVariable,
+				logger);
+			return new HistoryRetentionService(stores, options, logger, TimeProvider.System);
+		});
 
 	private static void RegisterDatabaseProvider<TProvider>(IServiceCollection services)
 		where TProvider : class, ISharpDatabase, IWikiStore, IPackageRegistryService,

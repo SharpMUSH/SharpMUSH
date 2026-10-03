@@ -10,6 +10,14 @@
 # All game state lives in ONE named volume (app-data) so a single restic target covers everything.
 # Copy .env.example -> .env and fill it in before `docker compose -f deploy/docker-compose.prod.yml up -d`.
 
+# Container logs rotate instead of growing without bound. Docker's default json-file driver keeps
+# every line forever, on the same disk as the world and its backups: 3 files of 10 MB per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   nats:
     image: nats:2.10-alpine
@@ -30,6 +38,7 @@ services:
     mem_limit: 256m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
   connectionserver:
     build:
@@ -65,6 +74,7 @@ services:
     mem_limit: 512m
     cpus: 1.0
     restart: unless-stopped
+    logging: *default-logging
 
   # Rendering can restart independently; the stable connectionserver service owns client sockets.
   renderer:
@@ -81,6 +91,7 @@ services:
       - render-socket:/run/sharpmush
     network_mode: none
     restart: unless-stopped
+    logging: *default-logging
 
   sharpmush-server:
     build:
@@ -116,6 +127,13 @@ services:
       # Set rather than left to default (<world>.backups) so the copies sit at a path the
       # restic service names, well away from the live world it must not read.
       - SHARPMUSH_BACKUP_PATH=data/backup
+      # Version histories (wiki revisions, scene pose edits, deleted poses) are kept forever unless a
+      # policy is set; see "History retention" in deploy/README.md. @storage/history counts them.
+      # - SHARPMUSH_HISTORY_INTERVAL=1d
+      # - SHARPMUSH_HISTORY_WIKI_KEEP=50
+      # - SHARPMUSH_HISTORY_SCENE_EDITS_KEEP=10
+      # - SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE=90d
+      # - SHARPMUSH_HISTORY_ARCHIVE_PATH=data/history-archive
       # Wiki asset uploads (filesystem) land in the same persisted volume.
       - Wiki__AssetRoot=/app/data/wiki-assets
       # --- Messaging ---
@@ -151,6 +169,7 @@ services:
     mem_limit: 768m
     cpus: 1.5
     restart: unless-stopped
+    logging: *default-logging
 
   # --- Nightly encrypted backup of the single game-data volume to your bucket ---
   # OPT-IN — see the backup service in docker-compose.cloudflare.yml for why the profile exists and
@@ -187,6 +206,7 @@ services:
     mem_limit: 256m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
   # --- OPTIONAL: automatic HTTPS for the web portal. Delete this service if you ---
   # --- terminate TLS elsewhere (Cloudflare, a load balancer) or only use telnet. ---
@@ -217,6 +237,7 @@ services:
     mem_limit: 128m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   render-socket: # Private Unix socket shared only by socket owner and rendering worker

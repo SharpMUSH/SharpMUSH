@@ -83,4 +83,98 @@ public class WorldBackupWriterTests
 			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 		}
 	}
+
+	/// <summary>
+	/// A run checks the disk before it writes anything (#1465): the copies already kept are pruned only once
+	/// the new one is complete, so a new copy that cannot fit beside them must be refused up front — not
+	/// discovered half-way through a write that fills the disk.
+	/// </summary>
+	[Test]
+	public async Task ARunThatCannotFitIsRefusedBeforeAnythingIsWritten()
+	{
+		var root = TempPath();
+		var payloadRan = false;
+		var writer = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+			(dir, _) =>
+			{
+				payloadRan = true;
+				File.WriteAllText(Path.Join(dir, "world"), "x");
+				return ValueTask.CompletedTask;
+			},
+			NullLogger.Instance,
+			new FrozenClock(Instant))
+		{
+			EstimateCopyBytes = () => 100L << 20,
+			FreeBytes = _ => 50L << 20
+		};
+		try
+		{
+			var result = await writer.CreateAsync();
+
+			var error = result.Expect<Error<string>>();
+			await Assert.That(error.Value).Contains("not enough disk");
+			await Assert.That(payloadRan).IsFalse().Because("the copy must not start");
+			await Assert.That(Directory.EnumerateFileSystemEntries(root).Any()).IsFalse()
+				.Because("no staging directory and no latest pointer are left behind");
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+		}
+	}
+
+	/// <summary>The margin the check asks for on top of the copy: a tenth of it, never less than 16 MiB.</summary>
+	[Test]
+	[Arguments(0L, 16L << 20)]
+	[Arguments(100L << 20, (100L << 20) + (16L << 20))]
+	[Arguments(1L << 30, (1L << 30) + ((1L << 30) / 10))]
+	public async Task RequiredFreeSpaceIsTheCopyPlusAMargin(long copy, long required)
+		=> await Assert.That(WorldBackupWriter.RequiredFreeBytes(copy)).IsEqualTo(required);
+
+	/// <summary>
+	/// A run that does fit goes ahead, and a disk that fills part-way leaves the earlier copies exactly as
+	/// they were: the half-written copy goes, and the failure says the disk was the problem.
+	/// </summary>
+	[Test]
+	public async Task ADiskThatFillsMidCopyLeavesTheKeptCopiesAndSaysWhy()
+	{
+		var root = TempPath();
+		var fail = false;
+		var diskFull = false;
+		var writer = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+			(dir, _) =>
+			{
+				File.WriteAllText(Path.Join(dir, "world"), "x");
+				if (fail)
+				{
+					diskFull = true;
+					throw new IOException("No space left on device");
+				}
+
+				return ValueTask.CompletedTask;
+			},
+			NullLogger.Instance,
+			new FrozenClock(Instant))
+		{
+			EstimateCopyBytes = () => 1L << 20,
+			// Plenty at the check; the write itself is what fills the disk.
+			FreeBytes = _ => diskFull ? 1L << 20 : 1L << 40
+		};
+		try
+		{
+			var first = (await writer.CreateAsync()).Expect<WorldBackup>();
+			fail = true;
+
+			var error = (await writer.CreateAsync()).Expect<Error<string>>();
+
+			await Assert.That(error.Value).Contains("No space left on device");
+			await Assert.That(error.Value).Contains("not enough disk");
+			await Assert.That(writer.List().Select(b => b.Name)).IsEquivalentTo([first.Name]);
+			await Assert.That(Directory.EnumerateDirectories(root, WorldBackupWriter.IncomingPrefix + "*").Any()).IsFalse();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+		}
+	}
 }

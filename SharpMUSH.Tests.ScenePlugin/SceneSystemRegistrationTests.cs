@@ -32,6 +32,27 @@ public class SceneSystemRegistrationTests
 		await Assert.That(svc).IsTypeOf<LightningSceneStorage>();
 	}
 
+	/// <summary>
+	/// Both of the Scene System's histories reach the host's retention pass (#1464), and they are views of
+	/// the one storage instance the scene service uses — not a second set of table handles.
+	/// </summary>
+	[Test]
+	public async Task AddSceneSystem_RegistersItsHistoriesForRetention()
+	{
+		var services = new ServiceCollection();
+		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
+
+		services.AddSceneSystem();
+
+		await using var sp = services.BuildServiceProvider();
+		var kinds = sp.GetServices<IHistoryStore>().Select(store => store.Kind).ToList();
+		var storage = sp.GetRequiredService<LightningSceneStorage>();
+
+		await Assert.That(kinds).IsEquivalentTo(["scene.edits", "scene.deleted"]);
+		await Assert.That(sp.GetServices<IHistoryStore>().First()).IsSameReferenceAs(storage.EditHistory);
+		await Assert.That(sp.GetRequiredService<ISceneStorage>()).IsSameReferenceAs(storage);
+	}
+
 	[Test]
 	public async Task AddSceneSystem_AppliesBehaviorsInOrderAroundServiceCall()
 	{

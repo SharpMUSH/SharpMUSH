@@ -1,6 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
-
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
@@ -8,7 +5,7 @@ namespace SharpMUSH.Library.Models;
 /// this is provider-specific: it is a
 /// deployment concern — the size of the disk the copies land on — rather than game configuration.
 /// </summary>
-public sealed partial record WorldBackupOptions
+public sealed record WorldBackupOptions
 {
 	/// <summary>Directory the timestamped copies are written into. Created on first use.</summary>
 	public required string Root { get; init; }
@@ -70,50 +67,5 @@ public sealed partial record WorldBackupOptions
 	/// typo turns scheduling off loudly rather than picking a duration nobody asked for.
 	/// </summary>
 	public static bool TryParseInterval(string? setting, out TimeSpan interval)
-	{
-		interval = TimeSpan.Zero;
-		var text = setting?.Trim();
-		if (string.IsNullOrEmpty(text)) return true;
-
-		if (long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds))
-		{
-			if (seconds > MaxIntervalSeconds) return false;
-			interval = TimeSpan.FromSeconds(seconds);
-			return true;
-		}
-
-		if (!IntervalRegex().IsMatch(text)) return false;
-
-		var total = 0L;
-		foreach (Match part in IntervalPartRegex().Matches(text))
-		{
-			if (!long.TryParse(part.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value))
-			{
-				return false;
-			}
-
-			var unitSeconds = part.Groups[2].Value.ToLowerInvariant() switch
-			{
-				"d" => 86400L,
-				"h" => 3600L,
-				"m" => 60L,
-				_ => 1L
-			};
-
-			// Checked before multiplying, so an absurd count is rejected rather than wrapping.
-			if (value > MaxIntervalSeconds / unitSeconds) return false;
-			total += value * unitSeconds;
-			if (total > MaxIntervalSeconds) return false;
-		}
-
-		interval = TimeSpan.FromSeconds(total);
-		return true;
-	}
-
-	/// <summary>Anchored, so a setting with anything else in it is rejected rather than part-read.</summary>
-	[GeneratedRegex(@"^(\d+[dhms])+$", RegexOptions.IgnoreCase)]
-	private static partial Regex IntervalRegex();
-
-	[GeneratedRegex(@"(\d+)([dhms])", RegexOptions.IgnoreCase)]
-	private static partial Regex IntervalPartRegex();
+		=> DurationSetting.TryParse(setting, MaxIntervalSeconds, out interval);
 }

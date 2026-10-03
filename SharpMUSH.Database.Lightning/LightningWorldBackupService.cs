@@ -45,7 +45,13 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 		ILogger<LightningWorldBackupService> logger)
 	{
 		Func<string, CancellationToken, ValueTask> copy = (directory, ct) => accessor.CopyToAsync(directory, compact, ct);
-		_writer = new WorldBackupWriter(options, copy, logger);
+		// The copy's size is known before it is taken: LMDB writes the live pages for a compacting copy
+		// and the file up to its last page otherwise. An accessor that is not the provider itself (a test
+		// double) gives no estimate, and so no free-space check before the run.
+		Func<long>? estimate = accessor is LightningDatabase database
+			? () => database.Store.Usage().CopyBytes(compact)
+			: null;
+		_writer = new WorldBackupWriter(options, copy, logger) { EstimateCopyBytes = estimate };
 		_packageOperationWriter = options.PackageOperationKeep > 0
 			? new WorldBackupWriter(options with
 			{
@@ -53,6 +59,7 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 				Keep = options.PackageOperationKeep,
 				Interval = TimeSpan.Zero
 			}, copy, logger)
+			{ EstimateCopyBytes = estimate }
 			: null;
 	}
 
