@@ -115,11 +115,33 @@ window.sharpmushLayout = {
 	// now and calls OnCompactScreenChanged on the page whenever that changes (a rotation, a resize).
 	compactScreenQuery: '(orientation: landscape) and (max-height: 32rem), (max-width: 760px)',
 
+	// Play's short screen: the landscape half of compactScreenQuery, a phone held sideways. Wide enough for
+	// the tablet layout and short of height for it, so Play tightens it (play--short in Play.razor.css):
+	// the header on one line, the card edge to edge in focus mode. The same shape as shell.css's SHORT
+	// LANDSCAPE block. Calls OnShortScreenChanged on the page whenever it changes.
+	shortScreenQuery: '(orientation: landscape) and (max-height: 32rem)',
+
 	watchCompactScreen: function (dotnetRef) {
-		this.unwatchCompactScreen();
-		const query = window.matchMedia(this.compactScreenQuery);
+		return this._watchScreen('_compactScreen', this.compactScreenQuery, dotnetRef, 'OnCompactScreenChanged');
+	},
+
+	unwatchCompactScreen: function () {
+		this._unwatchScreen('_compactScreen');
+	},
+
+	watchShortScreen: function (dotnetRef) {
+		return this._watchScreen('_shortScreen', this.shortScreenQuery, dotnetRef, 'OnShortScreenChanged');
+	},
+
+	unwatchShortScreen: function () {
+		this._unwatchScreen('_shortScreen');
+	},
+
+	_watchScreen: function (slot, condition, dotnetRef, method) {
+		this._unwatchScreen(slot);
+		const query = window.matchMedia(condition);
 		const handler = event => {
-			const pending = dotnetRef.invokeMethodAsync('OnCompactScreenChanged', event.matches);
+			const pending = dotnetRef.invokeMethodAsync(method, event.matches);
 			if (pending && typeof pending.catch === 'function') {
 				pending.catch(() => { });
 			}
@@ -127,13 +149,13 @@ window.sharpmushLayout = {
 		if (typeof query.addEventListener === 'function') {
 			query.addEventListener('change', handler);
 		}
-		this._compactScreen = { query, handler };
+		this[slot] = { query, handler };
 		return query.matches;
 	},
 
-	unwatchCompactScreen: function () {
-		const watch = this._compactScreen;
-		this._compactScreen = null;
+	_unwatchScreen: function (slot) {
+		const watch = this[slot];
+		this[slot] = null;
 		if (watch && typeof watch.query.removeEventListener === 'function') {
 			watch.query.removeEventListener('change', watch.handler);
 		}
