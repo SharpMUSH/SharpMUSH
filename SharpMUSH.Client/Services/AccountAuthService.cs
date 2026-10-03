@@ -322,6 +322,17 @@ public class AccountAuthService(
 		}
 	}
 
+	/// <summary>
+	/// Re-reads the role and grants after the account's characters change (the server derives them from
+	/// the characters) and tells the portal, so gated controls follow at once.
+	/// </summary>
+	private async Task ReloadAuthorityAsync()
+	{
+		if (AccountSessionToken is not { } token) return;
+		if (await LoadSessionAuthorityAsync(token) is SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut)
+			RaiseAuthStateChanged();
+	}
+
 	/// <summary>Everything a tab holding no usable session must look like. Does not raise
 	/// <see cref="AuthStateChanged"/> — the caller decides when the notification is due.</summary>
 	private void ClearSessionState()
@@ -694,6 +705,9 @@ public class AccountAuthService(
 
 			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, "");
 			SetCharacters([.. Characters, character]);
+			// An account's role comes from its characters: a fresh account is a Guest until its first
+			// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.
+			await ReloadAuthorityAsync();
 			return (true, null, character);
 		}
 		catch (Exception ex)
@@ -729,6 +743,7 @@ public class AccountAuthService(
 				// Re-read the roster either way: the unlink itself succeeded, so the list must reflect
 				// it, and the server is the only thing that can say what the session is bound to now.
 				await GetCharactersAsync();
+				await ReloadAuthorityAsync();
 
 				if (!rebound)
 				{
@@ -743,6 +758,8 @@ public class AccountAuthService(
 			}
 
 			SetCharacters(remaining);
+			// The role the unlinked character gave the account goes with it.
+			await ReloadAuthorityAsync();
 			return (true, null);
 		}
 		catch (Exception ex)

@@ -7,6 +7,7 @@
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
+@inject IDialogService DialogService
 
 <PageTitle>@Loc["MyAccount"] — @Loc["AppTitle"]</PageTitle>
 
@@ -150,7 +151,7 @@
                                             <MudTd data-label="@Loc["AuthColumnActions"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
                                                                Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
-                                                               OnClick="() => UnlinkCharacterAsync(context.DbrefNumber)" />
+                                                               OnClick="() => UnlinkCharacterAsync(context.DbrefNumber, context.Name)" />
                                             </MudTd>
                                         </RowTemplate>
                                     </MudTable>
@@ -238,8 +239,16 @@
         else _profileError = error;
     }
 
-    private async Task UnlinkCharacterAsync(int dbrefNumber)
+    private async Task UnlinkCharacterAsync(int dbrefNumber, string name)
     {
+        // One click took the character off the account at once, and with it whatever role it carried:
+        // unlinking #1 left the administrator a Guest. Linking it back needs its in-game password.
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AuthUnlinkConfirmTitle", name],
+            Loc["AuthUnlinkConfirm", name],
+            yesText: Loc["AuthUnlinkCharacter"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
         _busy = true;
         var (success, error) = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);
         _busy = false;

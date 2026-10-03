@@ -619,6 +619,14 @@
     <value>Personage ontkoppelen</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>{0} ontkoppelen?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} is dan geen personage van dit account meer, en alles wat het het account gaf (een staffrol, bijvoorbeeld) gaat mee. Om het opnieuw te koppelen is het wachtwoord in het spel nodig.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Gebruikersnaam</value>
     <comment>MT</comment>

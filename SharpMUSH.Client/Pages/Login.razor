@@ -125,6 +125,17 @@
             _tabIndex = RegisterTabIndex;
     }
 
+    /// <summary>
+    /// Someone already signed in has nothing to do here: /login and /register (a bookmark, Back after
+    /// signing in) go on to where they would have landed after signing in.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountAuth.InitAsync();
+        if (AccountAuth.IsLoggedIn)
+            Nav.NavigateTo(SuccessUrl(), replace: true);
+    }
+
     private static string? GetQueryParam(string uri, string key)
     {
         var query = new Uri(uri).Query;

@@ -22,7 +22,7 @@ function boot() {
         addEventListener: (name, handler) => listeners.set(name, handler),
         removeEventListener: name => listeners.delete(name)
     };
-    const context = vm.createContext({ window: {}, document: {
+    const context = vm.createContext({ window: { addEventListener: () => {} }, document: {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
@@ -49,6 +49,7 @@ test('scrolled up to reread, new output leaves the view in place and says so', (
     const { terminal, output, listeners, classes } = boot();
     terminal.scrollToBottom('output');
     assert.equal(output.scrollTop, 500);
+    listeners.get('wheel')();
     output.scrollTop = 100;
     listeners.get('scroll')();
     assert.ok(classes.has('sharp-terminal--reading'), 'scrolled up is reading');
@@ -62,6 +63,21 @@ test('scrolled up to reread, new output leaves the view in place and says so', (
     output.scrollHeight = 1200;
     terminal.scrollToBottom('output');
     assert.equal(output.scrollTop, 1200, 'back at the bottom, it follows again');
+});
+
+test('a scroll the reader did not make does not stop the terminal following', () => {
+    const { terminal, output, listeners, classes } = boot();
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 500);
+    // Lines re-rendered under the view: the browser clamps it to the top, then the content grows back.
+    output.scrollTop = 0;
+    output.scrollHeight = 900;
+    listeners.get('scroll')();
+    assert.equal(output.scrollTop, 900, 'put back at the bottom');
+    assert.ok(!classes.has('sharp-terminal--reading'), 'not reading');
+    output.scrollHeight = 1200;
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 1200, 'still following');
 });
 
 test('fresh Play page command links support clicks, keyboard, and disposal', () => {
@@ -89,4 +105,28 @@ test('help and wiki helpers are available before an editor opens', () => {
     const { helpers } = boot();
     assert.equal(typeof helpers.Help?.registerLinkInterceptor, 'function');
     assert.equal(typeof helpers.Wiki?.wrap, 'function');
+});
+
+test('a terminal disposed before the fonts load is not measured for afterwards', async () => {
+    let fontsLoaded;
+    const output = { style: {}, clientWidth: 600, clientHeight: 400 };
+    const context = vm.createContext({
+        window: {},
+        document: {
+            getElementById: id => id === 'output' ? output : null,
+            fonts: { ready: new Promise(resolve => { fontsLoaded = resolve; }) }
+        },
+        ResizeObserver: class { observe() { } disconnect() { } },
+        setTimeout, clearTimeout
+    });
+    vm.runInContext(readFileSync(new URL('js/terminalMetrics.js', root), 'utf8'), context, { filename: 'terminalMetrics.js' });
+    const calls = [];
+    const handle = context.window.SharpMUSH.Metrics.observe('output', { invokeMethodAsync: (...args) => calls.push(args) }, 78);
+
+    // Mounted and gone at once (/register redirecting to /login): .NET has already let go of the reference.
+    handle.dispose();
+    fontsLoaded();
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(calls, [], 'no call through a released reference');
 });

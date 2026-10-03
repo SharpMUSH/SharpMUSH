@@ -313,6 +313,21 @@ public class AccountServiceTests
 	}
 
 	[Test]
+	public async ValueTask ChangeDisplayName_CaseOnlyChangeOfOwnName_UpdatesName()
+	{
+		var (svc, db, _, _) = Build();
+
+		// The lookup is case-insensitive, so "Admin" finds the account currently named "admin".
+		db.GetAccountByUsernameAsync("Admin", Arg.Any<CancellationToken>())
+			.Returns(MakeAccount(id: "accounts/1", username: "admin"));
+
+		var result = await svc.ChangeUsernameAsync("accounts/1", "Admin");
+
+		await Assert.That(result.Value).IsTypeOf<Success>();
+		await db.Received(1).UpdateAccountUsernameAsync("accounts/1", "Admin", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async ValueTask DisplayNameExists_WhenPresent_ReturnsTrue()
 	{
 		var (svc, db, _, _) = Build();

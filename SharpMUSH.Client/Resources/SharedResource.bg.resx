@@ -619,6 +619,14 @@
     <value>Отвържи героя</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Да се отвърже ли {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} вече няма да е герой на този акаунт и всичко, което той е давал на акаунта (например роля на персонала), се губи с него. За да го свържете отново, е нужна паролата му в играта.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Потребителско име</value>
     <comment>MT</comment>

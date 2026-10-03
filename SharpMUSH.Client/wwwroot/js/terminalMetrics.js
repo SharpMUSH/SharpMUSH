@@ -101,8 +101,12 @@ window.SharpMUSH.Metrics = {
 
         var last = { cols: 0, rows: 0 };
         var timer = null;
+        var disposed = false;
 
         function fire() {
+            // fonts.ready below cannot be cancelled: on a first load it can settle after a terminal that
+            // mounted and went at once (/register redirecting to /login) has let go of dotNetRef.
+            if (disposed) return;
             var g = self.measure(elementId);
             if (g.cols === last.cols && g.rows === last.rows) return;
             last = g;
@@ -125,6 +129,7 @@ window.SharpMUSH.Metrics = {
 
         return {
             dispose: function () {
+                disposed = true;
                 if (timer) clearTimeout(timer);
                 ro.disconnect();
                 delete self._targets[elementId];

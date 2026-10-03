@@ -619,6 +619,14 @@
     <value>解除角色关联</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>解除与 {0} 的关联？</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} 将不再是此账户的角色，它为账户带来的一切（例如工作人员身份）也会随之移除。重新关联需要该角色的游戏内密码。</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>用户名</value>
     <comment>MT</comment>

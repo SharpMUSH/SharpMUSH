@@ -90,6 +90,29 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 		return cut;
 	}
 
+	/// <summary>A visitor who is already signed in is sent on, not shown the sign-in form again.</summary>
+	[TUnit.Core.Test]
+	public async Task AlreadySignedIn_GoesStraightToTheReturnUrl()
+	{
+		SeedServices();
+		var auth = Services.GetRequiredService<AccountAuthService>();
+		// The portal starts restoring the tab's session at startup (Program.cs), before anyone signs in.
+		await auth.InitAsync();
+		await auth.LoginAsync("headwiz", "hunter2");
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/play")}");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		var expected = new Uri(new Uri(nav.BaseUri), "/play").ToString();
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.Uri != expected)
+				throw new InvalidOperationException("not redirected yet");
+		});
+
+		await Assert.That(nav.Uri).IsEqualTo(expected);
+	}
+
 	[TUnit.Core.Test]
 	public async Task ValidRelativeReturnUrl_NavigatesThereOnSuccess()
 	{

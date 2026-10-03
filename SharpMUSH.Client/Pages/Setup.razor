@@ -7,6 +7,7 @@
 @inject SetupWizardService Wizard
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 <PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
 
@@ -300,6 +301,7 @@
     [SupplyParameterFromQuery(Name = "step")] public string? StepParameter { get; set; }
 
     private Step _step = Step.Resolving;
+    private Step _shownStep = Step.Resolving;
 
     private string _username = string.Empty;
     private string _password = string.Empty;
@@ -314,6 +316,18 @@
 
     /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
     private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Each step starts at its top. The shell, not the window, scrolls, and it kept the offset of the step
+    /// before: a long step (handlers) left the next one opening below its heading.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_step == _shownStep) return;
+        _shownStep = _step;
+        try { await JS.InvokeVoidAsync("SharpMUSH.scrollToTop", ".onboarding-shell"); }
+        catch (JSException) { /* no portal-interop.js (tests): nothing scrolled */ }
+    }
 
     protected override async Task OnInitializedAsync()
     {

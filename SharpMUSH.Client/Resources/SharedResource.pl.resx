@@ -619,6 +619,14 @@
     <value>Odłącz postać</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Odłączyć {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} nie będzie już postacią tego konta, a wszystko, co dawała kontu (na przykład rolę w obsłudze), zniknie razem z nią. Aby ją ponownie podłączyć, potrzebne jest jej hasło w grze.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Nazwa użytkownika</value>
     <comment>MT</comment>

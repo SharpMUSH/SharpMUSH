@@ -67,6 +67,61 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		await Assert.That(service.Role).IsNull();
 		if (status == HttpStatusCode.Unauthorized) await Assert.That(service.IsLoggedIn).IsFalse();
 	}
+	/// <summary>A fresh account: a Guest with no grants until its first character exists.</summary>
+	private sealed class FirstCharacterHandler : HttpMessageHandler
+	{
+		private bool _hasCharacter;
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+			if (request.Method == HttpMethod.Post && path == "api/account/characters")
+			{
+				_hasCharacter = true;
+				return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Created)
+				{
+					Content = JsonContent.Create(new { dbrefNumber = 16, creationTime = 16L, name = "Ash" })
+				});
+			}
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new
+				{
+					username = "alice",
+					role = _hasCharacter ? "Player" : "Guest",
+					mustChangePassword = false,
+					permissions = _hasCharacter ? new[] { "wiki.create", "softcode.use" } : []
+				})
+			});
+		}
+	}
+
+	/// <summary>
+	/// The role comes from the account's characters. Creating the first one has to bring its grants into
+	/// this tab: the portal kept a new player a Guest (no build tools, no wiki editing, /softcode refused)
+	/// until they signed out and in again.
+	/// </summary>
+	[Test]
+	public async Task CreatingTheFirstCharacter_LoadsItsRoleAndGrants()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session");
+		var factory = Substitute.For<IHttpClientFactory>();
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
+		using var http = new HttpClient(new FirstCharacterHandler()) { BaseAddress = new Uri("https://localhost/") };
+		factory.CreateClient("api").Returns(http);
+		await service.InitAsync();
+		await Assert.That(service.Role).IsEqualTo("Guest");
+
+		var notified = 0;
+		service.AuthStateChanged += () => notified++;
+		var (success, _, _) = await service.CreateCharacterAsync("Ash", "pass");
+
+		await Assert.That(success).IsTrue();
+		await Assert.That(service.Role).IsEqualTo("Player");
+		await Assert.That(service.Permissions).Contains("softcode.use");
+		await Assert.That(notified).IsGreaterThanOrEqualTo(1).Because("gated controls re-check when the auth state changes");
+	}
+
 	private sealed class FailedTransportHandler(bool timeout) : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

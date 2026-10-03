@@ -619,6 +619,14 @@
     <value>Karakter leválasztása</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Leválasztod: {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} többé nem tartozik a fiók karakterei közé, és minden, amit a fióknak adott (például egy stábszerep), vele együtt megszűnik. Az újbóli összekapcsoláshoz a játékbeli jelszava kell.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Felhasználónév</value>
     <comment>MT</comment>

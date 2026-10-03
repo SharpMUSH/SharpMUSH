@@ -30,9 +30,9 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		new RoomScene("42", "Salt Market at Dusk", 5));
 
 	private IRenderedComponent<PlaySidebar> RenderSidebar(RoomInfo? room = null, bool connected = true, bool collapsed = false,
-		string? current = null, Action? onScene = null, Action<string>? onOpen = null) =>
+		string? current = null, Action? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn") =>
 		Render<PlaySidebar>(p => p
-			.Add(x => x.CharacterName, "Ilsa Varn")
+			.Add(x => x.CharacterName, characterName)
 			.Add(x => x.Connected, connected)
 			.Add(x => x.Room, room)
 			.Add(x => x.Collapsed, collapsed)
@@ -51,6 +51,19 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		var offline = RenderSidebar(connected: false);
 		await Assert.That(offline.Find(".kit-side-sub").TextContent).Contains("Disconnected");
 		await Assert.That(offline.FindAll(".kit-side-sub .kit-dot:not(.kit-dot--off)").Count).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// A visitor's socket is open before anyone is logged in on it (the guest login screen): the dot is
+	/// lit, so the line beside it must not say "Disconnected".
+	/// </summary>
+	[Test]
+	public async Task Head_ConnectedWithNoCharacter_SaysConnected()
+	{
+		var cut = RenderSidebar(characterName: null);
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("Connected");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).DoesNotContain("Disconnected");
+		await Assert.That(cut.FindAll(".kit-side-sub .kit-dot:not(.kit-dot--off)").Count).IsEqualTo(1);
 	}
 
 	[Test]

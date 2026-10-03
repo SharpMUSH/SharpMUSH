@@ -91,6 +91,17 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task Collapsed_NewPage_LinksToTheEditor()
+	{
+		_auth.SetPolicies("wiki.create");
+		_nav.NavigateTo("/wiki");
+		var cut = Render<WikiSidebar>(p => p.Add(x => x.Collapsed, true));
+		cut.WaitForAssertion(() => cut.Find("a.kit-row--collapsed[href='/wiki/main/general/new-page/edit']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.kit-row--collapsed").Count).IsEqualTo(0)
+			.Because("the strip has no room for the title form, so its New page is a link to the editor, not a toggle");
+	}
+
+	[Test]
 	public async Task Collapsed_KeepsCategoryCoversOnly()
 	{
 		_nav.NavigateTo("/wiki");

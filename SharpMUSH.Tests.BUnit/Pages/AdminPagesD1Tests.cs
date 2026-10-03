@@ -337,6 +337,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("SnapshotsCapture");
 	}
 
+	/// <summary>With no object identity, Load and Capture sent the request anyway and showed "the snapshot
+	/// request failed. Reload and try again"; they stay off until an identity is typed.</summary>
+	[Test]
+	public async Task Snapshots_LoadAndCapture_WaitForAnObjectIdentity()
+	{
+		Auth.SetPolicies("snapshots.capture");
+		var cut = RenderPage(typeof(AdminSnapshots));
+		cut.WaitForAssertion(() => cut.Find(".snapshots-lookup input"), TimeSpan.FromSeconds(5));
+
+		bool Disabled(string label) => cut.FindAll("button").Single(b => b.TextContent.Trim() == label).HasAttribute("disabled");
+		await Assert.That(Disabled("SnapshotsLoad")).IsTrue();
+		await Assert.That(Disabled("SnapshotsCapture")).IsTrue();
+
+		cut.Find(".snapshots-lookup input").Input("#12:1700000000000");
+		await Assert.That(Disabled("SnapshotsLoad")).IsFalse();
+		await Assert.That(Disabled("SnapshotsCapture")).IsFalse();
+	}
+
 	[Test]
 	public async Task Packages_CountsTheConfiguredRemotes()
 	{

@@ -1351,6 +1351,12 @@
   <data name="AuthUnlinkCharacter" xml:space="preserve">
     <value>Unlink character</value>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Unlink {0}?</value>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} will no longer be one of this account's characters, and anything it gave the account (a staff role, for one) goes with it. Linking it back needs its in-game password.</value>
+  </data>
   <data name="AuthCreateNewCharacter" xml:space="preserve">
     <value>+ Create new character</value>
   </data>

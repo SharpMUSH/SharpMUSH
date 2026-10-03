@@ -303,6 +303,13 @@
                     "SharpMUSH.Terminal.attachCommandLinks", _outputId, _selfRef);
             }
             catch (JSException) { /* ignore if JS not ready */ }
+            // Disposed while that call was out (a route that mounts the terminal and leaves at once):
+            // DisposeAsync found no handle to release, so this releases it.
+            if (_disposed)
+            {
+                await ReleaseAsync(_cmdLinkHandle);
+                return;
+            }
 
             _metricsRef = DotNetObjectReference.Create(this);
             try
@@ -312,6 +319,13 @@
                 _observedTarget = TargetColumns;
             }
             catch (JSException) { /* ignore if JS not ready */ }
+            // Likewise: left attached, the resize observer goes on calling OnTerminalResize through a
+            // reference DisposeAsync already let go of ("There is no tracked object with id ...").
+            if (_disposed)
+            {
+                await ReleaseAsync(_metricsHandle);
+                return;
+            }
         }
 
         if (_autoScroll)
@@ -527,28 +541,29 @@
         _ => "terminal-line"
     };
 
+    private bool _disposed;
+
+    /// <summary>Detaches a JS-side helper (its own <c>dispose</c>) and drops the handle to it.</summary>
+    private static async Task ReleaseAsync(IJSObjectReference? handle)
+    {
+        if (handle is null) return;
+        try { await handle.InvokeVoidAsync("dispose"); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException) { /* ignore during teardown */ }
+        try { await handle.DisposeAsync(); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException) { /* ignore during teardown */ }
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
 
-        if (_cmdLinkHandle is not null)
-        {
-            try { await _cmdLinkHandle.InvokeVoidAsync("dispose"); }
-            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
-            try { await _cmdLinkHandle.DisposeAsync(); }
-            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
-        }
+        await ReleaseAsync(_cmdLinkHandle);
         _selfRef?.Dispose();
 
-        if (_metricsHandle is not null)
-        {
-            try { await _metricsHandle.InvokeVoidAsync("dispose"); }
-            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
-            try { await _metricsHandle.DisposeAsync(); }
-            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
-        }
+        await ReleaseAsync(_metricsHandle);
         _metricsRef?.Dispose();
     }
 }

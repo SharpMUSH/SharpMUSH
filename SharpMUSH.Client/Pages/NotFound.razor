@@ -1,6 +1,18 @@
-﻿@page "/not-found"
+@page "/not-found"
 @layout MainLayout
 @inject IStringLocalizer<SharedResource> Loc
 
-<h3>@Loc["NotFound"]</h3>
-<p>@Loc["NotFoundDescription"]</p>
+@* The same centred panel as App.razor's Not Authorized: it had no page padding (flush to the screen edge
+   on a phone), no h1 for FocusOnNavigate, and no way back. *@
+<div class="not-authorized">
+    <div class="not-authorized-card">
+        <div class="not-authorized-icon">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size:1.875rem;" />
+        </div>
+        <h1>@Loc["NotFound"]</h1>
+        <p>@Loc["NotFoundDescription"]</p>
+        <a class="not-authorized-home" href="/">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.9375rem;" /> @Loc["NotAuthorizedBackHome"]
+        </a>
+    </div>
+</div>
