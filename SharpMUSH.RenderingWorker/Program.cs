@@ -37,10 +37,9 @@ public static class Program
 			options.ListenUnixSocket(socketPath, listen => listen.Protocols = HttpProtocols.Http2);
 		});
 		builder.Services.AddSingleton<MarkupOutputRenderer>();
-		builder.Services.AddSingleton<OutputTransformService>();
 		var app = builder.Build();
 		app.MapGet("/health", () => Results.Ok());
-		app.MapPost("/render", (RenderRequest request, MarkupOutputRenderer renderer, OutputTransformService transform) =>
+		app.MapPost("/render", (RenderRequest request, MarkupOutputRenderer renderer) =>
 		{
 			if (request.Context is null || request.Context.Capabilities is null ||
 				(request.Markup is null) == (request.Data is null))
@@ -49,7 +48,7 @@ public static class Program
 				? renderer.Render(request.Markup, request.Context, request.Prompt)
 				: new RenderedOutput(request.Data!, true);
 			var bytes = rendered.ApplyOutputTransform
-				? transform.Transform(rendered.Data, request.Context.Capabilities, request.Context.Preferences)
+				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities)
 				: rendered.Data;
 			return Results.Bytes(bytes, "application/octet-stream");
 		});

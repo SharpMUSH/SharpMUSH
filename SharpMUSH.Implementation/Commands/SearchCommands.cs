@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
@@ -779,13 +780,10 @@ public partial class Commands
 						continue;
 					}
 
-					var hasAnsi = ContainsAnsiMarkup(attr.Value);
-
-					if (hasAnsi)
+					if (attr.Value.Runs.Length > 0)
 					{
-						// Use @set format with decomposed value to ensure evaluation
-						var decomposedValue = DecomposeAttributeValue(attr.Value);
-						outputs.Add($"{prefix}@set {objectRef}={attr.Name}:{decomposedValue}");
+						// Markup only survives as the softcode that makes it, which @set evaluates.
+						outputs.Add($"{prefix}@set {objectRef}={attr.Name}:{SoftcodeDecomposer.Decompose(attr.Value)}");
 					}
 					else
 					{
@@ -813,60 +811,6 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
-	}
-
-	/// <summary>
-	/// Checks if an MString contains ANSI markup
-	/// </summary>
-	private bool ContainsAnsiMarkup(MString str)
-	{
-		var hasAnsi = false;
-		MarkupWalker.EvaluateWith((markupType, innerText) =>
-		{
-			if (markupType is Ansi)
-			{
-				hasAnsi = true;
-			}
-			return innerText;
-		}, str);
-		return hasAnsi;
-	}
-
-	/// <summary>
-	/// Decomposes an attribute value using the decompose() logic from StringFunctions
-	/// </summary>
-	private string DecomposeAttributeValue(MString input)
-	{
-		// Use same logic as decompose() function from StringFunctions
-		var reconstructed = MarkupWalker.EvaluateWith((markupType, innerText) =>
-		{
-			return markupType switch
-			{
-				Ansi ansiMarkup
-					=> Implementation.Functions.Functions.ReconstructAnsiCall(ansiMarkup.Style, innerText),
-				_ => innerText
-			};
-		}, input);
-
-		var result = reconstructed
-			.Replace("\\", @"\\")
-			.Replace("%", "\\%")
-			.Replace(";", "\\;")
-			.Replace("[", "\\[")
-			.Replace("]", "\\]")
-			.Replace("{", "\\{")
-			.Replace("}", "\\}")
-			.Replace("(", "\\(")
-			.Replace(")", "\\)")
-			.Replace(",", "\\,")
-			.Replace("^", "\\^")
-			.Replace("$", "\\$");
-
-		result = MultipleWhitespaceRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
-
-		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
-
-		return result;
 	}
 
 	/// <summary>
@@ -1419,7 +1363,4 @@ public partial class Commands
 						 && await ConnectionService.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 	}
-
-	[GeneratedRegex(@"\s{2,}")]
-	private static partial Regex MultipleWhitespaceRegex();
 }

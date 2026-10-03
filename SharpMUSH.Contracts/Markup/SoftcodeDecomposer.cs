@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using MarkupString;
@@ -19,8 +18,8 @@ namespace SharpMUSH.Library.Markup;
 /// <para>
 /// Colour inside colour is written nested, as it was made: <c>[ansi(r,a[ansi(g,b)]c)]</c>. PennMUSH closes
 /// and reopens a flat call at each change (<c>[ansi(r,a)][ansi(g,b)][ansi(r,c)]</c>) because its markup has
-/// no tree to walk; this one does, and the nested form evaluates to the same text. The escapes, the space
-/// rule and the code letters are PennMUSH's.
+/// no tree to walk; this one does, and the nested form evaluates to the same text. The escapes and the
+/// space rule are PennMUSH's; the code letters are MarkupString's <see cref="AnsiCodeWriter"/>.
 /// </para>
 /// </remarks>
 public static partial class SoftcodeDecomposer
@@ -76,7 +75,7 @@ public static partial class SoftcodeDecomposer
 			case AnsiMarkup ansi:
 				{
 					var style = ansi.Style;
-					var codes = AnsiCodes(style);
+					var codes = AnsiCodeWriter.Write(style);
 					var (open, close) = style.LinkUrl is { Length: > 0 } url
 						? style.LinkKind == LinkKind.Command
 							? ("[cmdlink(", "," + Escape(url)
@@ -153,56 +152,4 @@ public static partial class SoftcodeDecomposer
 
 		return result.Replace("\r\n", "%r").Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 	}
-
-	/// <summary>
-	/// The <c>ansi()</c> codes that produce <paramref name="style"/>, written as PennMUSH's
-	/// <c>write_ansi_letters</c> writes them: the attribute letters <c>f h i u</c>, the ones turning an
-	/// attribute off <c>F H I U</c>, a palette background
-	/// letter, the foreground (a letter, <c>#rrggbb</c> or <c>+xtermN</c>), and a background that is not a
-	/// letter after <c>!</c>. <c>[ansi(hBr,x)]</c>, <c>[ansi(#ff0000!#0000ff,x)]</c>. Empty when it sets nothing.
-	/// </summary>
-	public static string AnsiCodes(AnsiStyle style)
-	{
-		var codes = new StringBuilder();
-		var bright = style.Foreground is AnsiColor.Standard { Bright: true };
-		if (style.Blink) codes.Append('f');
-		if (style.Bold || bright) codes.Append('h');
-		if (style.Inverted) codes.Append('i');
-		if (style.Underlined) codes.Append('u');
-		if (style.BlinkOff) codes.Append('F');
-		if (style.BoldOff) codes.Append('H');
-		if (style.InvertedOff) codes.Append('I');
-		if (style.UnderlinedOff) codes.Append('U');
-
-		var background = ColorCode(style.Background, isBackground: true);
-		if (background.Length == 1) codes.Append(background);
-		codes.Append(ColorCode(style.Foreground));
-		if (background.Length > 1) codes.Append('!').Append(background);
-
-		// n alone: a span that starts from a clean slate and sets nothing of its own.
-		if (codes.Length == 0 && style.Clear) codes.Append('n');
-		return codes.ToString();
-	}
-
-	/// <summary>The <c>ansi()</c> letter for each standard palette index, foreground and background.</summary>
-	private const string ForegroundLetters = "xrgybmcw";
-	private const string BackgroundLetters = "XRGYBMCW";
-
-	/// <summary>
-	/// One colour as <c>write_ansi_letters</c> writes it: a palette letter (lower case for a foreground, upper
-	/// for a background, the terminal default <c>d</c>/<c>D</c>), <c>#rrggbb</c>, or <c>+xtermN</c>. A bright
-	/// palette colour is its letter; the brightness is the <c>h</c> <see cref="AnsiCodes"/> writes.
-	/// </summary>
-	public static string ColorCode(AnsiColor? color, bool isBackground = false) => color switch
-	{
-		null => string.Empty,
-		AnsiColor.Default => isBackground ? "D" : "d",
-		// Lower case to match the syntax help and ansi()'s own output.
-		AnsiColor.Rgb rgb => $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
-		AnsiColor.Standard standard => (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]).ToString(),
-		AnsiColor.Xterm xterm => $"+xterm{xterm.Index}",
-		// AnsiColor is a closed hierarchy (Default/Standard/Xterm/Rgb, private constructor); the
-		// compiler cannot see that, so this arm exists only to satisfy exhaustiveness.
-		_ => throw new UnreachableException($"Unhandled {nameof(AnsiColor)} subtype {color.GetType()}.")
-	};
 }

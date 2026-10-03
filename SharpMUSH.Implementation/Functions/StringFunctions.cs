@@ -899,12 +899,6 @@ public partial class Functions
 		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!)));
 
 	/// <summary>
-	/// Reconstructs an ansi() function call from AnsiStyle and inner text
-	/// </summary>
-	internal static string ReconstructAnsiCall(AnsiStyle ansiDetails, string innerText)
-		=> SoftcodeDecomposer.AnsiCodes(ansiDetails) is { Length: > 0 } codes ? $"ansi({codes},{innerText})" : innerText;
-
-	/// <summary>
 	/// Encodes angle brackets for HTML/Web safety
 	/// </summary>
 	private string WebEncodeAngleBrackets(string text)

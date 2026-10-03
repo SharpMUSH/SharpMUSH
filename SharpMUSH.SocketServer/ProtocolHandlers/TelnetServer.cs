@@ -197,9 +197,9 @@ public class TelnetServer : ConnectionHandler
 
 				// MTTS is the only thing that ever tells us a client can render more than 16 colours.
 				// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of
-				// false for every telnet connection, and OutputTransformService dutifully downgraded
-				// every xterm256 sequence the game produced — for clients that had said, in the one
-				// place there is to say it, that they could display them.
+				// false for every telnet connection, and every xterm256 colour the game produced was
+				// sent as one of the sixteen — to clients that had said, in the one place there is to
+				// say it, that they could display them.
 				await PublishAfterRegistrationAsync(async () =>
 				{
 					TryApplyTerminalCapabilities(nextPort, snapshot);
@@ -476,8 +476,8 @@ public class TelnetServer : ConnectionHandler
 	}
 
 	/// <summary>
-	/// Records what the client's terminal types say it can display, so <see cref="OutputTransformService"/>
-	/// stops downgrading what it can in fact render.
+	/// Records what the client's terminal types say it can display, so the renderer stops writing colour
+	/// below what it can in fact show.
 	/// <para>
 	/// Unlike the format updates, this does not wait for registration: TTYPE is answered in the
 	/// opening burst, usually before the main process has registered the connection, and the types

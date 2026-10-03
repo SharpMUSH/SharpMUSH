@@ -3,22 +3,20 @@ using SharpMUSH.SocketServer.Models;
 namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
-/// Service for transforming output based on client capabilities and player preferences
+/// Writes output in the character set a client asked for. Colour is already at the client's depth by then:
+/// the markup renderer wrote it that way.
 /// </summary>
 public interface IOutputTransformService
 {
 	/// <summary>
-	/// Transforms raw output bytes based on client capabilities and player preferences
+	/// <paramref name="rawOutput"/> in the client's character set.
 	/// </summary>
-	/// <param name="rawOutput">The raw UTF-8 output bytes from the server</param>
+	/// <param name="rawOutput">The UTF-8 output bytes</param>
 	/// <param name="capabilities">The client's protocol capabilities</param>
-	/// <param name="preferences">The player's output preferences (null if not logged in)</param>
-	/// <param name="ct">Cancels rendering, including waiting for a remote worker.</param>
-	/// <returns>Transformed output bytes suitable for the client</returns>
+	/// <param name="ct">Cancels the work, including waiting for a remote worker.</param>
 	ValueTask<byte[]> TransformAsync(
 		byte[] rawOutput,
 		ProtocolCapabilities capabilities,
-		PlayerOutputPreferences? preferences,
 		CancellationToken ct = default
 	);
 }

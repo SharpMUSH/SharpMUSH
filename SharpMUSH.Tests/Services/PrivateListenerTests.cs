@@ -159,7 +159,7 @@ public partial class PrivateListenerTests
 		connections.Get(prompt.Handle).Returns(client);
 		var transform = Substitute.For<SharpMUSH.SocketServer.Services.IOutputTransformService>();
 		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities>(),
-			Arg.Any<SharpMUSH.SocketServer.Models.PlayerOutputPreferences?>(), Arg.Any<CancellationToken>())
+			Arg.Any<CancellationToken>())
 			.Returns(call => ValueTask.FromResult(call.Arg<byte[]>()));
 		await new SharpMUSH.SocketServer.Consumers.MarkupPromptConsumer(connections,
 			new SharpMUSH.RenderingWorker.Services.MarkupOutputRenderer(), transform,
