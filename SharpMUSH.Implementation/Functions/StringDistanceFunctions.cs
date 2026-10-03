@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
@@ -207,7 +208,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var category = args["0"].Message!.ToPlainText();
 		var word = args["1"].Message!.ToPlainText();
-		var separator = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : " ";
+		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var limit = 20;
 
 		if (args.ContainsKey("3"))

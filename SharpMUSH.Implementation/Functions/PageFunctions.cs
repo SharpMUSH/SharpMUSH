@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Commands.PageCommand;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -30,13 +31,13 @@ public partial class Functions
 		}
 
 		var arguments = parser.CurrentState.Arguments;
-		var count = arguments.TryGetValue("1", out var lineArgument) ? lineArgument.Message!.ToPlainText() : string.Empty;
+		var count = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, string.Empty).ToPlainText();
 		if (!PageRecall.TryParseLines(count, out var lines))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var delimiter = arguments.TryGetValue("2", out var delimiterArgument) ? delimiterArgument.Message! : MarkupText.NewLine;
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.NewLine);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, arguments["0"].Message!.ToPlainText()) switch

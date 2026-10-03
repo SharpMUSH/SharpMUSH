@@ -269,9 +269,7 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var connectionId = args["0"].Message!.ToPlainText();
-		var osep = (args.TryGetValue("1", out var osepArg) && osepArg?.Message != null)
-			? osepArg.Message.ToPlainText()
-			: " ";
+		var osep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidConnectionId);

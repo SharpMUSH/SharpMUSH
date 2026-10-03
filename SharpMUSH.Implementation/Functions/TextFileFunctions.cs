@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -28,9 +29,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var fileReference = args["0"].Message!.ToPlainText();
 		var pattern = args["1"].Message!.ToPlainText();
-		var separator = args.TryGetValue("2", out var sep)
-			? sep.Message!.ToPlainText()
-			: " ";
+		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 
 		return await ReadableCorpusAsync(parser, fileReference) switch
 		{

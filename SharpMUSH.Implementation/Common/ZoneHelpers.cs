@@ -120,7 +120,7 @@ public static class ZoneHelpers
 		// method the one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 		if (!preserve && !target.IsPlayer)
 		{
-			await StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
+			await PrivilegeHelpers.StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
 		}
 		else if (noisy)
 		{
@@ -322,26 +322,6 @@ public static class ZoneHelpers
 					nameof(ErrorMessages.Notifications.CantMakeCircularZones)),
 			_ => new Success()
 		};
-
-	/// <summary>
-	/// <c>clear_flag_internal</c> on <c>WIZARD</c>, <c>ROYALTY</c> and <c>TRUST</c>, then the whole
-	/// power bitmask (<c>src/set.c:477-481</c>).
-	/// </summary>
-	private static async ValueTask StripPrivilegeAsync(IManipulateSharpObjectService manipulateSharpObjectService,
-		AnySharpObject executor, AnySharpObject target)
-	{
-		string[] privileged = ["WIZARD", "ROYALTY", "TRUST"];
-
-		foreach (var flag in privileged)
-		{
-			if (await target.HasFlag(flag))
-			{
-				await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, $"!{flag}", false);
-			}
-		}
-
-		await manipulateSharpObjectService.ClearAllPowers(executor, target, false);
-	}
 
 	/// <summary>
 	/// The outcome of the store write, which <see cref="IManipulateSharpObjectService"/> reports as

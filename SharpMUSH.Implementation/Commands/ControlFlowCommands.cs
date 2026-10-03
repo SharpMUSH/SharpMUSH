@@ -57,7 +57,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (args.Count == 0)
 		{
@@ -369,7 +369,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var strArg = args["0"];
 		var testString = strArg.Message?.ToPlainText() ?? string.Empty;
 		Option<MString> defaultArg = new None();
@@ -506,47 +506,18 @@ public partial class Commands
 			return false;
 		}
 
-		// Save before Clear: the new Dictionary<> is an independent copy, so clearing the original
-		// afterwards does not touch it. /clearregs without /localize deliberately does not restore --
-		// that is do_entry's bare QUEUE_CLEAR_QREG case, which calls clear_allq and keeps no snapshot.
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((localizeRegisters || clearRegisters) && parser.CurrentState.Registers.TryPeek(out var topRegisters))
-		{
-			if (localizeRegisters)
-			{
-				savedRegisters = new Dictionary<string, MString>(topRegisters);
-			}
+		using var registers = RegisterScope.Enter(parser.CurrentState.Registers, localizeRegisters, clearRegisters);
 
-			if (clearRegisters)
-			{
-				topRegisters.Clear();
-			}
-		}
+		var propagation = new BreakPropagation { PreserveNext = true };
+		var result = await parser.With(
+			state => state with { BreakPropagation = propagation },
+			p => p.CommandListParse(action));
 
-		try
+		if (propagation.Broke && !noBreak)
 		{
-			var propagation = new BreakPropagation { PreserveNext = true };
-			var result = await parser.With(
-				state => state with { BreakPropagation = propagation },
-				p => p.CommandListParse(action));
-
-			if (propagation.Broke && !noBreak)
-			{
-				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
-			}
-			return result?.HadErrors == true;
+			parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 		}
-		finally
-		{
-			if (savedRegisters is not null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
-		}
+		return result?.HadErrors == true;
 	}
 
 	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
@@ -578,7 +549,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		var testString = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(testString))
@@ -691,7 +662,7 @@ public partial class Commands
 	{
 		// Inline does nothing.
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var nargs = args.Count;
 
 		// Note: INLINE is default behavior (immediate execution)
@@ -744,7 +715,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var nargs = args.Count;
 
 		// Note: INLINE is default behavior (immediate execution)
@@ -893,7 +864,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
@@ -928,20 +899,8 @@ public partial class Commands
 
 		// /localize: save Q-registers so the included code cannot permanently change the caller's registers.
 		// /clearregs: start the included code with empty Q-registers. Both apply around the WHOLE chain;
-		// within a chain the targets still share registers. (Save must happen before Clear.)
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var includeTopRegs))
-		{
-			if (hasLocalize)
-			{
-				savedRegisters = new Dictionary<string, MString>(includeTopRegs);
-			}
-
-			if (hasClearRegs)
-			{
-				includeTopRegs.Clear();
-			}
-		}
+		// within a chain the targets still share registers.
+		using var registers = RegisterScope.Enter(parser.CurrentState.Registers, hasLocalize, hasClearRegs);
 
 		// Run the targets. Default: run a multi-target chain as ONE command list so an @break/@assert in a
 		// link short-circuits the remaining links (VisitCommandList contains the break at the list boundary,
@@ -1036,17 +995,6 @@ public partial class Commands
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeErrorExecutingFormat), executor, ex.Message);
 			return new CallState($"#-1 ERROR: {ex.Message}") { HadErrors = true };
-		}
-		finally
-		{
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
 		}
 
 		// Locate -> read -> strip $/^ prefix. Returns a (notified) error CallState on a hard failure;

@@ -23,7 +23,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Sql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var prepareSwitch = switches.Contains("PREPARE");
 
 		if (SqlService == null || !SqlService.IsAvailable)
@@ -108,7 +108,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var notifySwitch = switches.Contains("NOTIFY");
 		var colnamesSwitch = switches.Contains("COLNAMES");
 		var spoofSwitch = switches.Contains("SPOOF");

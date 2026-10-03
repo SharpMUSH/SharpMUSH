@@ -625,7 +625,7 @@ public partial class Functions
 		}
 
 		return AttributePatternAsync(parser, calledAs, checkParents, mode,
-			matched => string.Join(AttributeListSeparator(parser, "3"),
+			matched => string.Join(AttributeListSeparator(parser, 3),
 				matched.Skip(start - 1).Take(count)));
 	}
 
@@ -633,20 +633,18 @@ public partial class Functions
 	/// The optional output delimiter, a space when absent — PennMUSH's <c>delim_check</c> default
 	/// (<c>src/fundb.c:172,177</c>).
 	/// </summary>
-	private static string AttributeListSeparator(IMUSHCodeParser parser, string argument)
-		=> parser.CurrentState.Arguments.TryGetValue(argument, out var separator)
-			? separator.Message!.ToPlainText()
-			: " ";
+	private static string AttributeListSeparator(IMUSHCodeParser parser, int argument)
+		=> ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, argument, " ").ToPlainText();
 
 	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)

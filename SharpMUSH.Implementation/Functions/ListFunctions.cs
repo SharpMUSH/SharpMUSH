@@ -1457,6 +1457,14 @@ public partial class Functions
 		return errors.Complete(new CallState(count.ToString()));
 	}
 
+	/// <summary>PennMUSH's <c>insert()</c>, an alias of <c>linsert()</c>.</summary>
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
+		ParameterNames = ["list", "position", "new-item", "delim"])]
+	public ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		return ListInsert(parser, _2);
+	}
+
 	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
 	public async ValueTask<CallState> ListInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1576,7 +1584,7 @@ public partial class Functions
 
 		// With four arguments, a non-empty fourth is a sort type and an empty one is the
 		// output separator. With five, the fourth is the sort type and the fifth the separator.
-		var sortArg = args.TryGetValue("3", out var sortCall) ? sortCall.Message ?? MarkupText.Empty : MarkupText.Empty;
+		var sortArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Empty);
 		var sortType = sortArg.ToPlainText();
 		var outputSeparator = args.Count switch
 		{

@@ -606,7 +606,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -856,7 +856,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		AnySharpObject targetObject;
 
@@ -1223,7 +1223,7 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["flags"])]
 	public async ValueTask<Option<CallState>> Sweep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var connectFlag = switches.Contains("CONNECTED");
 		var hereFlag = switches.Contains("HERE");
 		var inventoryFlag = switches.Contains("INVENTORY");

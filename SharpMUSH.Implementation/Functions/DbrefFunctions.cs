@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Frozen;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -455,35 +456,8 @@ public partial class Functions
 		{
 			// ' ' is skipped rather than reported; every other unrecognised letter is fun_locate's
 			// "I don't understand switch '%c'.".
-			if (c != ' ' && !KnownLocateSwitches.Contains(c)) (unknown ??= []).Add(c);
-
-			flags |= c switch
-			{
-				'N' => LocateFlags.NoTypePreference,
-				'E' => LocateFlags.ExitsPreference,
-				'P' => LocateFlags.PlayersPreference,
-				'R' => LocateFlags.RoomsPreference,
-				'T' => LocateFlags.ThingsPreference,
-				'L' => LocateFlags.PreferLockPass,
-				'F' => LocateFlags.OnlyMatchTypePreference,
-				'X' => LocateFlags.UseLastIfAmbiguous,
-				'*' => LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName |
-							 LocateFlags.ExitsInsideOfLooker,
-				'a' => LocateFlags.AbsoluteMatch,
-				'c' => LocateFlags.ExitsInsideOfLooker,
-				'e' => LocateFlags.ExitsInTheRoomOfLooker,
-				'h' => LocateFlags.MatchHereForLookerLocation,
-				'i' => LocateFlags.MatchObjectsInLookerInventory,
-				'l' => LocateFlags.MatchAgainstLookerLocationName,
-				'm' => LocateFlags.MatchMeForLooker,
-				'n' => LocateFlags.MatchObjectsInLookerLocation,
-				'y' => LocateFlags.MatchOptionalWildCardForPlayerName,
-				'p' => LocateFlags.MatchWildCardForPlayerName,
-				'z' => LocateFlags.EnglishStyleMatching,
-				'x' => LocateFlags.NoPartialMatches,
-				's' => LocateFlags.OnlyMatchLookerControlledObjects,
-				_ => default
-			};
+			if (LocateSwitches.TryGetValue(c, out var flag)) flags |= flag;
+			else if (c != ' ') (unknown ??= []).Add(c);
 		}
 
 		// NOTYPE is the absence of a preference, not a flag anyone sets alongside one.
@@ -493,9 +467,32 @@ public partial class Functions
 		return (flags, (IReadOnlyList<char>?)unknown ?? []);
 	}
 
-	/// <summary>Every letter the switch above answers to, in fundb.c's order.</summary>
-	private static readonly System.Buffers.SearchValues<char> KnownLocateSwitches =
-		System.Buffers.SearchValues.Create("NEPRTLFX*acehilmnypzxs");
+	/// <summary><c>fun_locate</c>'s switch letters (src/fundb.c), in its order, to the match flags each adds.</summary>
+	private static readonly FrozenDictionary<char, LocateFlags> LocateSwitches = new Dictionary<char, LocateFlags>
+	{
+		['N'] = LocateFlags.NoTypePreference,
+		['E'] = LocateFlags.ExitsPreference,
+		['P'] = LocateFlags.PlayersPreference,
+		['R'] = LocateFlags.RoomsPreference,
+		['T'] = LocateFlags.ThingsPreference,
+		['L'] = LocateFlags.PreferLockPass,
+		['F'] = LocateFlags.OnlyMatchTypePreference,
+		['X'] = LocateFlags.UseLastIfAmbiguous,
+		['*'] = LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker,
+		['a'] = LocateFlags.AbsoluteMatch,
+		['c'] = LocateFlags.ExitsInsideOfLooker,
+		['e'] = LocateFlags.ExitsInTheRoomOfLooker,
+		['h'] = LocateFlags.MatchHereForLookerLocation,
+		['i'] = LocateFlags.MatchObjectsInLookerInventory,
+		['l'] = LocateFlags.MatchAgainstLookerLocationName,
+		['m'] = LocateFlags.MatchMeForLooker,
+		['n'] = LocateFlags.MatchObjectsInLookerLocation,
+		['y'] = LocateFlags.MatchOptionalWildCardForPlayerName,
+		['p'] = LocateFlags.MatchWildCardForPlayerName,
+		['z'] = LocateFlags.EnglishStyleMatching,
+		['x'] = LocateFlags.NoPartialMatches,
+		['s'] = LocateFlags.OnlyMatchLookerControlledObjects
+	}.ToFrozenDictionary();
 
 	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1028,21 +1025,10 @@ public partial class Functions
 						return ErrorMessages.Returns.ZoneLoop;
 					}
 
-					// Handle flag/power stripping (simplified - no /preserve in function)
+					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
 					if (!target.IsPlayer)
 					{
-						if (await target.HasFlag("WIZARD"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!WIZARD", false);
-						}
-						if (await target.HasFlag("ROYALTY"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!ROYALTY", false);
-						}
-						if (await target.HasFlag("TRUST"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!TRUST", false);
-						}
+						await PrivilegeHelpers.StripPrivilegeAsync(ManipulateSharpObjectService, executor, target);
 					}
 
 					await Mediator.Send(new SetObjectZoneCommand(target, zone));

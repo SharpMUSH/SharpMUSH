@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -493,40 +494,46 @@ public partial class Functions
 		}
 
 		var result = TimeFmtPattern().Replace(format, match =>
-		{
-			var code = match.Groups["code"].Value[0];
-			return code switch
-			{
-				'$' => "$",
-				'a' => dt.ToString("ddd"),
-				'A' => dt.ToString("dddd"),
-				'b' => dt.ToString("MMM"),
-				'B' => dt.ToString("MMMM"),
-				'c' => dt.ToString("f"),
-				'd' => dt.ToString("dd"),
-				'H' => dt.ToString("HH"),
-				'I' => dt.ToString("hh"),
-				'j' => dt.DayOfYear.ToString("D3"),
-				'm' => dt.ToString("MM"),
-				'M' => dt.ToString("mm"),
-				'p' or 'P' => dt.ToString("tt"),
-				'S' => dt.ToString("ss"),
-				'U' => CalculateWeekOfYearFromSunday(dt),
-				'w' => ((int)dt.DayOfWeek).ToString(),
-				'W' => CalculateWeekOfYearFromMonday(dt),
-				'x' => dt.ToString("d"),
-				'X' => dt.ToString("T"),
-				'y' => dt.ToString("yy"),
-				'Y' => dt.ToString("yyyy"),
-				'Z' => dt.ToString("zzz"),
-				_ => ErrorMessages.Returns.InvalidEscapeCode
-			};
-		});
+			TimeFmtCodes.TryGetValue(match.Groups["code"].Value[0], out var render)
+				? render(dt)
+				: ErrorMessages.Returns.InvalidEscapeCode);
 
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	private string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
+	/// <summary>
+	/// <c>timefmt()</c>'s <c>$</c>-escapes, each to what it writes. A code missing here is
+	/// <see cref="ErrorMessages.Returns.InvalidEscapeCode"/>.
+	/// </summary>
+	private static readonly FrozenDictionary<char, Func<DateTimeOffset, string>> TimeFmtCodes =
+		new Dictionary<char, Func<DateTimeOffset, string>>
+		{
+			['$'] = _ => "$",
+			['a'] = dt => dt.ToString("ddd"),
+			['A'] = dt => dt.ToString("dddd"),
+			['b'] = dt => dt.ToString("MMM"),
+			['B'] = dt => dt.ToString("MMMM"),
+			['c'] = dt => dt.ToString("f"),
+			['d'] = dt => dt.ToString("dd"),
+			['H'] = dt => dt.ToString("HH"),
+			['I'] = dt => dt.ToString("hh"),
+			['j'] = dt => dt.DayOfYear.ToString("D3"),
+			['m'] = dt => dt.ToString("MM"),
+			['M'] = dt => dt.ToString("mm"),
+			['p'] = dt => dt.ToString("tt"),
+			['P'] = dt => dt.ToString("tt"),
+			['S'] = dt => dt.ToString("ss"),
+			['U'] = CalculateWeekOfYearFromSunday,
+			['w'] = dt => ((int)dt.DayOfWeek).ToString(),
+			['W'] = CalculateWeekOfYearFromMonday,
+			['x'] = dt => dt.ToString("d"),
+			['X'] = dt => dt.ToString("T"),
+			['y'] = dt => dt.ToString("yy"),
+			['Y'] = dt => dt.ToString("yyyy"),
+			['Z'] = dt => dt.ToString("zzz")
+		}.ToFrozenDictionary();
+
+	private static string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;
@@ -535,7 +542,7 @@ public partial class Functions
 		return weekNumber.ToString("D2");
 	}
 
-	private string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
+	private static string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;

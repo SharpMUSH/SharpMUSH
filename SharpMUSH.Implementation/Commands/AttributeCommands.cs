@@ -18,16 +18,28 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> CopyAttributeAsync(parser, "@cpattr", move: false);
+
+	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
+	public ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> CopyAttributeAsync(parser, "@mvattr", move: true);
+
+	/// <summary>
+	/// The one body of <c>@cpattr</c> and <c>@mvattr</c>, as PennMUSH's <c>do_cpattr</c> (src/attrib.c) is
+	/// for both: copy the source attribute to every destination, then, for <c>@mvattr</c>, remove the
+	/// source once at least one copy landed.
+	/// </summary>
+	private async ValueTask<Option<CallState>> CopyAttributeAsync(IMUSHCodeParser parser, string commandName, bool move)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@cpattr");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, commandName);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -42,13 +54,13 @@ public partial class Commands
 		executor, executor, sourceDbref, LocateFlags.All) switch
 		{
 			AnySharpObject sourceObject => await CopyAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
-				sourceAttr),
+				sourceAttr, move),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
+		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr, bool move)
 	{
 		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
@@ -115,138 +127,31 @@ public partial class Commands
 			copiedCount++;
 		}
 
-		if (copiedCount > 0)
+		if (copiedCount == 0)
 		{
-			var destWord = copiedCount == 1 ? "destination" : "destinations";
+			await NotifyService.NotifyLocalized(executor, move
+				? nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny)
+				: nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
+			return new CallState(move ? ErrorMessages.Returns.MoveFailed : ErrorMessages.Returns.CopyFailed);
+		}
+
+		var destWord = copiedCount == 1 ? "destination" : "destinations";
+		if (!move)
+		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
-			return new CallState(ErrorMessages.Returns.CopyFailed);
+			return new CallState(string.Empty);
 		}
 
-		return new CallState(string.Empty);
-	}
-
-	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
-
-		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@mvattr");
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var sourceText = sourceArg.Message!.ToPlainText();
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(sourceText) is not { Object: var sourceDbref, Attribute: { } sourceAttr })
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState(ErrorMessages.Returns.InvalidSource);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, sourceDbref, LocateFlags.All) switch
-		{
-			AnySharpObject sourceObject => await MoveAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
-				sourceAttr),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> MoveAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
-	{
-		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
-				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-
-		var sourceLeaf = sourceAttribute.Last();
-		var attrValue = sourceLeaf.Value;
-		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
-
-		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
-		// starting at index 1. Collect all destination args in order.
-		var destinations = args
-			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
-			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => kvp.Value.Message!.ToPlainText().Trim())
-			.Where(d => !string.IsNullOrEmpty(d));
-
-		int copiedCount = 0;
-
-		foreach (var dest in destinations)
-		{
-			if (HelperFunctions.SplitDbRefAndOptionalAttr(dest) is not { Object: var destDbref, Attribute: var destAttr })
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
-				continue;
-			}
-
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
-
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
-				continue;
-			}
-
-			var canSet = await PermissionService.CanSet(executor, destObject);
-			if (!canSet)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
-				continue;
-			}
-
-			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
-
-			if (setResult is Error<string> error)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, error.Value);
-				continue;
-			}
-
-			if (copyFlags && attrFlagNames.Count > 0)
-			{
-				// One batch, not one call per flag: applying flags one at a time re-checks permission
-				// after each mutation, so a source attribute carrying both SAFE and (say) WIZARD would
-				// have WIZARD silently fail to copy once SAFE landed first - Penn's copy_attrib_flags
-				// checks once and applies the whole mask.
-				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
-			}
-
-			copiedCount++;
-		}
-
-		if (copiedCount > 0)
-		{
-			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+		var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact);
 
-			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			if (clearResult is Error<string> error)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, error.Value);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
-			}
+		if (clearResult is Error<string> clearError)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearError.Value);
 		}
 		else
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
-			return new CallState(ErrorMessages.Returns.MoveFailed);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
 		}
 
 		return new CallState(string.Empty);
@@ -478,14 +383,9 @@ public partial class Commands
 		{
 			SharpAttribute[] attributes => await EditMatchedAttributesAsync(parser, executor, targetObject, switches,
 				attributes.ToList(), search, replace),
-			Error<string> error => await NotifyAndReturnAsync(executor, error.Value)
+			Error<string> error => await NotifyService.NotifyAndReturn(executor.Object().DBRef, error.Value, error.Value,
+				shouldNotify: true)
 		};
-	}
-
-	private async ValueTask<Option<CallState>> NotifyAndReturnAsync(AnySharpObject executor, string message)
-	{
-		await NotifyService.Notify(executor, message, executor);
-		return new CallState(message);
 	}
 
 	/// <summary>Applies the edit to each attribute the pattern matched.</summary>
@@ -558,55 +458,6 @@ public partial class Commands
 		}
 
 		return new CallState(string.Empty) { HadErrors = hadErrors };
-	}
-
-	/// <summary>
-	/// Split search/replace text by comma, respecting curly brace escaping
-	/// </summary>
-	private string[] SplitSearchReplace(string text)
-	{
-		var parts = new List<string>();
-		var current = new StringBuilder();
-		int braceDepth = 0;
-
-		for (int i = 0; i < text.Length; i++)
-		{
-			char c = text[i];
-
-			if (c == '{')
-			{
-				braceDepth++;
-				current.Append(c);
-			}
-			else if (c == '}')
-			{
-				braceDepth--;
-				current.Append(c);
-			}
-			else if (c == ',' && braceDepth == 0)
-			{
-				parts.Add(current.ToString());
-				current.Clear();
-			}
-			else
-			{
-				current.Append(c);
-			}
-		}
-
-		parts.Add(current.ToString());
-
-		for (int i = 0; i < parts.Count; i++)
-		{
-			var part = parts[i].Trim();
-			if (part.StartsWith('{') && part.EndsWith('}'))
-			{
-				part = part[1..^1];
-			}
-			parts[i] = part;
-		}
-
-		return [.. parts];
 	}
 
 	/// <summary>
