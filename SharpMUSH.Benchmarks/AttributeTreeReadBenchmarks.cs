@@ -35,7 +35,7 @@ public class AttributeTreeReadBenchmarks
 	[GlobalSetup]
 	public async Task Setup()
 	{
-		_path = Path.Combine(Path.GetTempPath(), "sharpmush-bench-tree-" + Guid.NewGuid().ToString("N"));
+		_path = Path.Join(Path.GetTempPath(), "sharpmush-bench-tree-" + Guid.NewGuid().ToString("N"));
 		_database = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = _path, MapSize = 4L << 30 }, new UnusedPasswordService(), relations: null);
 		await _database.Migrate();

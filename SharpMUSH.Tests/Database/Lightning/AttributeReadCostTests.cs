@@ -30,7 +30,7 @@ public class AttributeReadCostTests
 	[Before(Test)]
 	public async Task Setup()
 	{
-		_path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		_db = Create(_path);
 		await _db.Migrate();
 	}
