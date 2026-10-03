@@ -3182,6 +3182,10 @@
     <value>Scène niet gevonden.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>De scène is niet gestart.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Zoek een account om de rollen ervan te beheren.</value>
     <comment>MT</comment>
@@ -3228,14 +3232,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Laat iedereen meekijken</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>De terminal in dit tabblad speelt {0}, niet {1}. Start de scène vanuit een tabblad dat {1} speelt, of schakel terug naar {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Kon niet bevestigen welk personage de terminal in dit tabblad speelt. Probeer het zo meteen opnieuw.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

@@ -3182,6 +3182,10 @@
     <value>No se encontró la escena.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>La escena no se inició.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Busque una cuenta para gestionar sus roles.</value>
     <comment>MT</comment>
@@ -3228,14 +3232,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Permitir que cualquiera lo vea</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>La terminal de esta pestaña juega como {0}, no como {1}. Inicia la escena desde una pestaña que juegue como {1} o vuelve a {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>No se pudo confirmar con qué personaje juega la terminal de esta pestaña. Inténtalo de nuevo en un momento.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

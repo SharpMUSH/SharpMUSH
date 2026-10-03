@@ -728,7 +728,30 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// else's command, which must not run with the player read above.
 		var current = connectionService.Get(handle);
 		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
-		var newParser = Push(new ParserState(
+		var newParser = Push(TypedLineState(player, handle, expectedSession, outputLimit));
+
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
+
+		return result ?? CallState.Empty;
+	}
+
+	/// <summary>
+	/// A line typed by <paramref name="player"/> in the web portal, which has no connection to type it at.
+	/// It runs as one typed at a connection does — <see cref="ParserStateFlags.DirectInput"/>, so it is
+	/// not split on semicolons and a <c>$</c>-command it matches runs in place — with no handle, so
+	/// nothing answers a descriptor that does not exist.
+	/// </summary>
+	public async ValueTask<CallState> CommandParse(DBRef player, MString text)
+	{
+		var outputLimit = await OutputLimitForAsync(player);
+		var newParser = Push(TypedLineState(player, handle: null, session: null, outputLimit));
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
+		return result ?? CallState.Empty;
+	}
+
+	/// <summary>The fresh state a typed line starts from: the player is executor, enactor and caller.</summary>
+	private static ParserState TypedLineState(DBRef? player, long? handle, string? session, int outputLimit)
+		=> new(
 			Registers: new([[]]),
 			IterationRegisters: [],
 			RegexRegisters: [],
@@ -753,17 +776,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag(),
 			Flags: ParserStateFlags.DirectInput,
-			ConnectionSessionId: expectedSession)
+			ConnectionSessionId: session)
 		{
 			MoveDepth = new InvocationCounter(),
 			CommandText = new CommandText(),
 			OutputLimit = outputLimit
-		});
-
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
-
-		return result ?? CallState.Empty;
-	}
+		};
 
 	/// <summary>
 	/// This is the main entry point for commands run by a player.

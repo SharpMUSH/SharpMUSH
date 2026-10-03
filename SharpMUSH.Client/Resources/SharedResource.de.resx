@@ -3182,6 +3182,10 @@
     <value>Szene nicht gefunden.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Die Szene wurde nicht gestartet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Suchen Sie nach einem Konto, um dessen Rollen zu verwalten.</value>
     <comment>MT</comment>
@@ -3228,14 +3232,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Alle zusehen lassen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Das Terminal in diesem Tab spielt {0}, nicht {1}. Starte die Szene in einem Tab, der {1} spielt, oder wechsle zurück zu {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Es ließ sich nicht bestätigen, welchen Charakter das Terminal in diesem Tab spielt. Versuche es gleich noch einmal.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

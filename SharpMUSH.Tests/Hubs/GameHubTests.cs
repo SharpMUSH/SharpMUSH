@@ -6,7 +6,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
@@ -33,11 +32,10 @@ public class GameHubTests
 
 	private static (GameHub hub, IGroupManager groups) BuildHub(string? characterDbref = "#42:1700000000")
 	{
-		var (hub, groups, _) = BuildHubWithBus(characterDbref);
-		return (hub, groups);
+		return BuildHubWith(characterDbref);
 	}
 
-	private static (GameHub hub, IGroupManager groups, IMessageBus bus) BuildHubWithBus(
+	private static (GameHub hub, IGroupManager groups) BuildHubWith(
 		string? characterDbref = "#42:1700000000", SitelockGuard? sitelockGuard = null, IVisibleWorldProjection? projection = null)
 	{
 		var groups = Substitute.For<IGroupManager>();
@@ -62,10 +60,6 @@ public class GameHubTests
 			context.User.Returns(new ClaimsPrincipal(new ClaimsIdentity()));
 		}
 
-		var bus = Substitute.For<IMessageBus>();
-		bus.Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>())
-			.Returns(Task.CompletedTask);
-
 		var registry = new HubConnectionRegistry();
 		registry.Add("conn-001", "account", "127.0.0.1", () => { });
 		var guard = sitelockGuard ?? BuildSitelockGuard(blocked: false);
@@ -84,31 +78,29 @@ public class GameHubTests
 			projection.CanSubscribeRoomAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		}
 
-		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry, guard, projection)
+		var hub = new GameHub(NullLogger<GameHub>.Instance, registry, guard, projection)
 		{
 			Groups = groups,
 			Clients = clients,
 			Context = context,
 		};
 
-		return (hub, groups, bus);
+		return (hub, groups);
 	}
 
 	[Test]
-	public async Task RevokedCharacterCannotJoinOutputGroupOrSendCommands()
+	public async Task RevokedCharacterCannotJoinOutputGroup()
 	{
 		var projection = Substitute.For<IVisibleWorldProjection>();
-		var (hub, groups, bus) = BuildHubWithBus(projection: projection);
+		var (hub, groups) = BuildHubWith(projection: projection);
 		await hub.OnConnectedAsync();
 		await groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-		await Assert.That(async () => await hub.SendCommand("look")).Throws<HubException>();
-		await bus.DidNotReceive().Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
 	public async Task CannotSubscribeWithoutCurrentPhysicalRoomAuthorization()
 	{
-		var (hub, groups, _) = BuildHubWithBus(projection: Substitute.For<IVisibleWorldProjection>());
+		var (hub, groups) = BuildHubWith(projection: Substitute.For<IVisibleWorldProjection>());
 		await Assert.That(async () => await hub.JoinRoom("#99:1")).Throws<HubException>();
 		await groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
@@ -142,7 +134,7 @@ public class GameHubTests
 	[Test]
 	public async Task OnConnectedAsync_WhenSitelockBlocked_AbortsAndNeverJoinsGroup()
 	{
-		var (hub, groups, _) = BuildHubWithBus("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: true));
+		var (hub, groups) = BuildHubWith("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: true));
 
 		await hub.OnConnectedAsync();
 
@@ -156,7 +148,7 @@ public class GameHubTests
 	[Test]
 	public async Task OnConnectedAsync_WhenSitelockNotBlocked_JoinsGroupNormally()
 	{
-		var (hub, groups, _) = BuildHubWithBus("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: false));
+		var (hub, groups) = BuildHubWith("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: false));
 
 		await hub.OnConnectedAsync();
 
@@ -171,30 +163,6 @@ public class GameHubTests
 
 		await hub.OnDisconnectedAsync(null);
 		await hub.OnDisconnectedAsync(new InvalidOperationException("test"));
-	}
-
-	[Test]
-	public async Task SendCommand_WithCommand_PublishesMessageForCorrectCharacter()
-	{
-		var (hub, _, bus) = BuildHubWithBus("#77:1700000000");
-
-		await hub.SendCommand("look");
-
-		await bus.Received(1).Publish(
-			Arg.Is<GameCommandMessage>(m => m.CharacterDbref == "#77:1700000000" && m.Command == "look"),
-			Arg.Any<CancellationToken>());
-	}
-
-	[Test]
-	public async Task SendCommand_WithEmptyCommand_StillPublishes()
-	{
-		var (hub, _, bus) = BuildHubWithBus("#1:1700000000");
-
-		await hub.SendCommand(string.Empty);
-
-		await bus.Received(1).Publish(
-			Arg.Is<GameCommandMessage>(m => m.CharacterDbref == "#1:1700000000" && m.Command == string.Empty),
-			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -263,17 +231,6 @@ public class GameHubTests
 			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
-	[Test]
-	public async Task SendCommand_WithBareDbrefClaim_Throws()
-	{
-		var (hub, _, bus) = BuildHubWithBus("#42");
-
-		await Assert.That(async () => await hub.SendCommand("look")).Throws<HubException>();
-
-		await bus.DidNotReceive().Publish(
-			Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
-	}
-
 	/// <summary>
 	/// A claim carrying a bare number rather than a dbref or objid does not resolve at all, so the
 	/// connection joins no character group. Every handler emits the objid form.
@@ -287,17 +244,6 @@ public class GameHubTests
 
 		await groups.DidNotReceive().AddToGroupAsync(
 			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-	}
-
-	[Test]
-	public async Task SendCommand_WithUnparseableCharacterClaim_Throws()
-	{
-		var (hub, _, bus) = BuildHubWithBus("42");
-
-		await Assert.That(async () => await hub.SendCommand("look")).Throws<HubException>();
-
-		await bus.DidNotReceive().Publish(
-			Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

@@ -3182,6 +3182,10 @@
     <value>Scena nu a fost găsită.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Scena nu a fost pornită.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Căutați un cont pentru a-i gestiona rolurile.</value>
     <comment>MT</comment>
@@ -3228,14 +3232,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Oricine poate urmări</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Terminalul din această filă joacă drept {0}, nu drept {1}. Pornește scena dintr-o filă care joacă drept {1} sau revino la {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Nu s-a putut confirma cu ce personaj joacă terminalul din această filă. Încearcă din nou peste câteva momente.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

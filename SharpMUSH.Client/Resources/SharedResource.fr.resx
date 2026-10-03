@@ -2009,6 +2009,10 @@
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scène introuvable.</value>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>La scène n'a pas été lancée.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
   </data>
@@ -2038,14 +2042,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Ouvert à tous les spectateurs</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Le terminal de cet onglet joue {0}, pas {1}. Lancez la scène depuis un onglet qui joue {1}, ou revenez à {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Impossible de confirmer quel personnage joue le terminal de cet onglet. Réessayez dans un instant.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
