@@ -131,23 +131,6 @@ public class ConnectionStateServiceTests
 	}
 
 	[Test]
-	public async Task SendCommandAsync_WhenNotConnected_ThrowsInvalidOperationException()
-	{
-		var (svc, _, _) = MakeService();
-		await Assert.ThrowsAsync<InvalidOperationException>(
-			async () => await svc.SendCommandAsync("look"));
-	}
-
-	[Test]
-	public async Task SendCommandAsync_WhenConnected_InvokesHubMethod()
-	{
-		var (svc, _, hub) = MakeService();
-		await svc.ConnectAsync();
-		await svc.SendCommandAsync("look");
-		await hub.Received(1).InvokeAsync("SendCommand", "look", Arg.Any<CancellationToken>());
-	}
-
-	[Test]
 	public async Task DisposeAsync_WhenConnected_DisposesHub()
 	{
 		var (svc, _, hub) = MakeService();

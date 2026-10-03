@@ -582,8 +582,8 @@ the room's active scene for capture to fire, so only real participants are logge
 submits poses; temp rooms keep the "always in a room" invariant.
 
 **Superseded — "two pose paths / web targets a scene_id":** there is **one**
-capture path. A web pose runs through the identical `GameHub.SendCommand →
-engine → room` path as a telnet pose, so the same `@hook/override` fires —
+capture path. A web pose runs through the identical play connection →
+engine → room path as a telnet pose, so the same `@hook/override` fires —
 no double-capture, no echo loop (room emit and the `game.scene.{id}` broadcast
 are two renderings of one stored pose). The editor submits a normal POSE/SAY/
 SEMIPOSE; `@EMIT` is not hooked.

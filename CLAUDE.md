@@ -167,6 +167,7 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 - `ApplicationCatalog` — the Dynamic Applications snapshot; loads alongside the first render, so a reader that needs the whole list awaits `Loaded`
 - `IThemeService` — built-in MudTheme accent presets, the choice persisted in localStorage (the CSS variables in `wwwroot/css/tokens.css` are static; see `docs/design/ui-patterns.md` §13)
 - `WikiService` / `SceneService` — HTTP clients for the server's wiki and scene APIs (scene writes go through game commands)
+- `GameCommandService` — runs a game command as the acting character (`POST api/commands`) and returns its output
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
 - `AccountAuthService` — account-session token stored in WASM memory; mints per-character OTTs for the terminal
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
@@ -178,8 +179,16 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 **SignalR real-time flow:**
 - Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
-- Client calls `SendCommand` → NATS → engine → NATS → `ReceiveOutput` back to client
 - Room events broadcast to `room:{dbref}` group
+- The hub carries no commands. A command the portal issues itself goes through `POST api/commands`
+  (`GameCommandService` → `CommandsController` → `PortalCommandService`): one line run as the account
+  session's bound character — whatever the terminal is playing — on the engine's queue as typed input
+  (`$`-commands in place), answered with the output that character was told while it ran (copied by
+  `ICommandOutputCapture`; still delivered to its connections) and, when the request names one, a
+  `Result` expression evaluated right after in the same queue entry, under the character's own output
+  limit. A request naming a `Character` (objid) is refused 409 unless the session is still bound to it;
+  an account may have `PortalCommands:MaxPendingPerAccount` (default 4) commands queued or running,
+  and is answered 429 past that
 
 ### Widget System
 

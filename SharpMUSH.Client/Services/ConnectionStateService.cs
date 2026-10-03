@@ -281,15 +281,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		}
 	}
 
-	/// <inheritdoc/>
-	public Task SendCommandAsync(string command)
-	{
-		if (_hub is null || !IsConnected)
-			throw new InvalidOperationException("Not connected to the game hub.");
-
-		return _hub.InvokeAsync("SendCommand", command);
-	}
-
 	/// <summary>
 	/// Opens the separate scene realtime connection and wires <c>ReceiveSceneMessage</c> to
 	/// <see cref="OnSceneEventReceived"/>. No-ops when the factory provides no scene hub URL (e.g. the

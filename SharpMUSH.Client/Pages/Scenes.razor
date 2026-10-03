@@ -3,7 +3,7 @@
 @using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
-@inject ITerminalService Terminal
+@inject GameCommandService Commands
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
 @implements IDisposable
@@ -16,10 +16,9 @@
 <div class="scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Heading" Description="@Description">
         <Actions>
-            @* Starting a scene goes down the terminal websocket, which is already open as this character —
-               the same channel the live compose box posts through. Shown only when that connection
-               exists, because without it there is nothing to send the verb down. *@
-            @if (Terminal.IsConnected && !_starting)
+            @* Starting a scene runs +scene/create as the character this tab acts as (POST api/commands),
+               so it is offered only while one is. No terminal is needed: the command answers the page. *@
+            @if (_acting is not null && !_starting)
             {
                 <div class="scene-start">
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="@(() => _starting = true)">@Loc["RolStartScene"]</CapsuleButton>
@@ -28,7 +27,7 @@
         </Actions>
     </PlainPageHeader>
 
-    @if (Terminal.IsConnected && _starting)
+    @if (_acting is not null && _starting)
     {
         <KitCard Class="scene-start" Title="@Loc["RolStartScene"]">
             <div class="scene-start-form">
@@ -122,11 +121,8 @@
         _ => Loc["ResScenesSubtitle"],
     };
 
-    // MainLayout opens the websocket, and a player can arrive before it finishes; reading
-    // IsConnected once without listening leaves the start button permanently absent for them.
     protected override async Task OnInitializedAsync()
     {
-        Terminal.ConnectionStateChanged += OnConnectionChanged;
         Nav.LocationChanged += OnLocationChanged;
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
         _filter = ScenesFilter.FromUri(Nav.Uri);
@@ -137,12 +133,9 @@
 
     public void Dispose()
     {
-        Terminal.ConnectionStateChanged -= OnConnectionChanged;
         Nav.LocationChanged -= OnLocationChanged;
         AccountAuth.ActiveCharacterChanged -= OnActingChanged;
     }
-
-    private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
     /// <summary>A sidebar link changes only the query, so the page stays mounted and reloads its list.</summary>
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -187,73 +180,33 @@
         _loading = false;
     }
 
+    /// <summary>What <c>scenefocus()</c> says before a scene was made and after: an id, or a <c>#-1</c> error.</summary>
+    private const string FocusedScene = "scenefocus(me)";
+
     private async Task StartSceneAsync()
     {
         var title = _newTitle.Trim();
-        if (title.Length == 0) return;
+        if (title.Length == 0 || _acting is not { } acting) return;
 
         _busy = true;
         _startError = null;
         try
         {
-            // +scene/create runs as whoever the terminal plays, and a switch of character rebinds the web
-            // session without reconnecting the terminal. Started from here after a switch, the scene would
-            // belong to the character the reader left — so the terminal is asked who it is, and a scene
-            // goes out only as the character the page acts as. Unknown when the query times out, which is
-            // refused too while a character is acting: it is the same question unanswered.
-            var self = await Terminal.SendCommandAsync("num(me)") is [var dbref, ..] && dbref.Trim().StartsWith('#')
-                ? dbref.Trim()
-                : null;
-            if (_acting is { } acting && self != $"#{acting.DbrefNumber}")
+            // Every command here runs as the character the account session is bound to, and answers this
+            // page alone — so the scene is that character's, and whether it was made is a question about
+            // that character, not about the roster. Each one names the character the form was started as:
+            // if the tab switches character part-way, the server refuses the rest rather than making the
+            // other character's scene private.
+            //
+            // +scene/create focuses the scene it makes, and focus moves only by that character's own
+            // commands. A focus that differs after the create from what it was just before is the new
+            // scene; an unchanged one means nothing was made, and the create's own output says why.
+            var character = $"#{acting.DbrefNumber}:{acting.CreationTime}";
+            _startError = await Commands.RunAsync("think", FocusedScene, character) switch
             {
-                _startError = self is null
-                    ? Loc["RolSceneTerminalUnconfirmed"]
-                    : Loc["RolSceneTerminalIsAnotherCharacter", Terminal.ConnectedPlayerName ?? self, acting.Name];
-                return;
-            }
-
-            // Ids, not a count: the list is capped, so on a game already at the cap a successful
-            // create would not change its length and the scene would look like it had never happened.
-            // Read now rather than trusted from when the page loaded: a scene somebody else started in
-            // between would otherwise be taken for this one. Unknown when the read fails, and then
-            // nothing is ever taken for new.
-            var before = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> running
-                ? running.Select(s => s.Id).ToHashSet()
-                : null;
-
-            // New is not enough: somebody else can start a scene between that read and the engine's
-            // answer to this one. The create makes the connection's character (self, above) the owner,
-            // so a new scene is this one only if that character owns it.
-            await Terminal.SendAsync($"+scene/create {title}");
-
-            // The verb travels to the engine and back over NATS, so the scene is not in the API the
-            // instant the send returns. Poll briefly for it rather than guessing at a sleep long
-            // enough to cover the round trip: whichever happens first, the page stops waiting.
-            var created = false;
-            for (var attempt = 0; attempt < 6 && !created && before is not null && self is not null; attempt++)
-            {
-                await Task.Delay(250);
-                created = await SceneService.GetActiveScenesAsync() is IReadOnlyList<SceneSummary> now
-                    && now.Any(s => !before.Contains(s.Id) && s.OwnerDbref == self);
-            }
-
-            // +scene/private acts on the focused scene, and creation is what focuses the new one, so
-            // sending this before knowing one exists would make the player's previous scene private.
-            if (created && !_newPublic)
-            {
-                await Terminal.SendAsync("+scene/private");
-            }
-
-            await LoadAsync();
-
-            if (created)
-            {
-                // The section sidebar read its counts when the layout mounted, and nothing here remounts it.
-                SceneService.ReportChanged();
-                _starting = false;
-                _newTitle = string.Empty;
-                _newPublic = true;
-            }
+                PortalCommandResponse asked => await CreateSceneAsync(title, asked.Result, character),
+                ApiFailure failure => failure.Message,
+            };
         }
         finally
         {
@@ -261,6 +214,53 @@
             _busy = false;
         }
     }
+
+    /// <summary>Runs the create, and answers why no scene came of it, or null when one did.</summary>
+    /// <param name="before">What the character was focused on just before.</param>
+    /// <param name="character">The objid of the character the form was started as.</param>
+    private async Task<string?> CreateSceneAsync(string title, string? before, string character) =>
+        await Commands.RunAsync($"+scene/create {title}", FocusedScene, character) switch
+        {
+            PortalCommandResponse { Result: { } focus } when IsScene(focus) && focus != before => await SceneCreatedAsync(character),
+            PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotStarted"]),
+            ApiFailure failure => failure.Message,
+        };
+
+    /// <summary>
+    /// The new scene is the one in focus, which is what +scene/private acts on — so it goes out only
+    /// once a scene is known to have been made, and never onto a scene the character had before.
+    /// </summary>
+    private async Task<string?> SceneCreatedAsync(string character)
+    {
+        var error = _newPublic ? null : await MakePrivateAsync(character);
+
+        await LoadAsync();
+
+        // The section sidebar read its counts when the layout mounted, and nothing here remounts it.
+        SceneService.ReportChanged();
+        _starting = error is not null;
+        _newTitle = string.Empty;
+        _newPublic = true;
+        return error;
+    }
+
+    /// <summary>
+    /// Runs +scene/private and asks the scene, in the same queue entry, whether it is now private: the
+    /// command can refuse in its output, and an answer that came back is not a scene that changed.
+    /// </summary>
+    private async Task<string?> MakePrivateAsync(string character) =>
+        await Commands.RunAsync("+scene/private", $"scene({FocusedScene},public)", character) switch
+        {
+            PortalCommandResponse { Result: "0" } => null,
+            PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotPrivate"]),
+            ApiFailure failure => failure.Message,
+        };
+
+    /// <summary>What a command that did not do its job said, or <paramref name="fallback"/> when it said nothing.</summary>
+    private static string Refusal(PortalCommandResponse refused, string fallback) =>
+        refused.Output.Count > 0 ? string.Join(" ", refused.Output) : fallback;
+
+    private static bool IsScene(string focus) => focus.Length > 0 && !focus.StartsWith("#-1", StringComparison.Ordinal);
 
     /// <summary>
     /// A list that could not be fetched keeps its reason: "no scenes" and "the archive did not answer"
