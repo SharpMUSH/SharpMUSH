@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using System.Collections.Concurrent;
 using System.Text.Json;
+using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -20,17 +22,21 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 	private readonly NatsOptions _options;
 	private readonly IServiceProvider _serviceProvider;
 	private readonly ILogger<NatsJetStreamConsumerService> _logger;
+	private readonly NatsMessagingMetrics? _metrics;
+	private readonly ConcurrentDictionary<string, HandledSequences> _handled = new();
 
 	public NatsJetStreamConsumerService(
 		NatsConsumerRegistry registry,
 		NatsOptions options,
 		IServiceProvider serviceProvider,
-		ILogger<NatsJetStreamConsumerService> logger)
+		ILogger<NatsJetStreamConsumerService> logger,
+		NatsMessagingMetrics? metrics = null)
 	{
 		_registry = registry;
 		_options = options;
 		_serviceProvider = serviceProvider;
 		_logger = logger;
+		_metrics = metrics;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -56,12 +62,9 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 
 				var js = new NatsJSContext(nats);
 
-				await js.CreateOrUpdateStreamAsync(
-					new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
-					{
-						MaxAge = _options.MaxAge,
-						MaxMsgSize = _options.MaxMsgSize,
-					},
+				// The publisher owns this stream's limits; creating it here only covers starting first.
+				await NatsStreamPolicy.EnsureExistsAsync(js,
+					NatsStreamPolicy.BusStream(_options.GetConsumeStreamName(), _options.GetConsumeSubjectPrefix(), _options),
 					stoppingToken);
 
 				_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
@@ -112,6 +115,9 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		_logger.LogInformation("[NATS-CONSUMER] Consumer starting — subject: {Subject}, durable: {Durable}",
 			reg.Subject, reg.DurableName);
 
+		// DeliverPolicy.New: a consumer identity created for the first time starts at the next message.
+		// It must not run a backlog of commands meant for a consumer that no longer exists; an existing
+		// durable consumer keeps its position, so a restart resumes where it stopped.
 		var consumer = await js.CreateOrUpdateConsumerAsync(
 			_options.GetConsumeStreamName(),
 			new ConsumerConfig(reg.DurableName)
@@ -119,6 +125,8 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 				FilterSubject = reg.Subject,
 				DeliverPolicy = ConsumerConfigDeliverPolicy.New,
 				AckPolicy = ConsumerConfigAckPolicy.Explicit,
+				AckWait = _options.AckWait,
+				MaxDeliver = _options.MaxDeliver,
 			},
 			ct);
 
@@ -128,28 +136,126 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 
 		await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
 		{
+			if (msg.Metadata is { NumDelivered: > 1 } redelivery)
+				_logger.LogInformation("[NATS-CONSUMER] Delivery {Count} of message {Sequence} on {Subject}",
+					redelivery.NumDelivered, redelivery.Sequence.Stream, reg.Subject);
+			var outcome = await HandleDeliveryAsync(reg, msg.Data, msg.Metadata?.Sequence.Stream,
+				progress => msg.AckProgressAsync(cancellationToken: progress), ct);
+			// Broker failures belong to the consumer-group recovery boundary, including ACKs. An ACK lost
+			// here leads to a redelivery, which HandleDeliveryAsync recognises as already handled.
+			if (outcome == DeliveryOutcome.Terminated)
+				await msg.AckTerminateAsync(cancellationToken: ct);
+			else
+				await msg.AckAsync(cancellationToken: ct);
+		}
+	}
+
+	internal enum DeliveryOutcome { Handled, Duplicate, Terminated }
+
+	/// <summary>
+	/// Runs one delivery through its handler under the bus's failure policy:
+	/// <list type="bullet">
+	///   <item>a payload that is empty or does not deserialize is terminal — no run could succeed;</item>
+	///   <item><see cref="RetryableMessageException"/> is retried in place with doubling backoff, up to
+	///   <see cref="NatsOptions.HandlerMaxAttempts"/> runs, keeping later messages behind it in order;</item>
+	///   <item>any other exception is terminal, because the handler may already have acted;</item>
+	///   <item>a redelivery of a stream sequence this process already finished (its ACK was lost) is
+	///   acknowledged without running the handler again.</item>
+	/// </list>
+	/// </summary>
+	internal async Task<DeliveryOutcome> HandleDeliveryAsync(NatsConsumerRegistration reg, JsonElement data,
+		ulong? streamSequence, Func<CancellationToken, ValueTask> progress, CancellationToken ct)
+	{
+		var handled = _handled.GetOrAdd(reg.DurableName, static _ => new HandledSequences());
+		if (streamSequence is { } seen && handled.Contains(seen))
+		{
+			_metrics?.RecordDuplicate(reg.DurableName);
+			_logger.LogInformation("[NATS-CONSUMER] Message {Sequence} on {Subject} was already handled; acknowledging the redelivery.",
+				seen, reg.Subject);
+			return DeliveryOutcome.Duplicate;
+		}
+
+		if (Deserialize(reg, data) is not { } message)
+		{
+			_metrics?.RecordTerminal(reg.DurableName, "unreadable");
+			_logger.LogWarning("[NATS-CONSUMER] Empty or unreadable payload on subject {Subject}; terminating it.", reg.Subject);
+			return Finish(handled, streamSequence, DeliveryOutcome.Terminated);
+		}
+
+		for (var attempt = 1; ; attempt++)
+		{
 			try
 			{
-				var message = msg.Data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null
-					? null : msg.Data.Deserialize(reg.MessageType);
-				if (message is null)
-				{
-					_logger.LogWarning("[NATS-CONSUMER] Null payload on subject {Subject}; acking and skipping.", reg.Subject);
-				}
-				else
-				{
-					_logger.LogDebug("[NATS-CONSUMER] Received message on subject {Subject} ({Type})", reg.Subject, reg.MessageType.Name);
-					using var scope = _serviceProvider.CreateScope();
-					await reg.Handler(scope.ServiceProvider, message, ct);
-				}
+				_logger.LogDebug("[NATS-CONSUMER] Received message on subject {Subject} ({Type})", reg.Subject, reg.MessageType.Name);
+				using var scope = _serviceProvider.CreateScope();
+				await reg.Handler(scope.ServiceProvider, message, ct);
+				return Finish(handled, streamSequence, DeliveryOutcome.Handled);
 			}
-			catch (Exception ex) when (ex is not OperationCanceledException)
+			catch (RetryableMessageException ex) when (attempt < _options.HandlerMaxAttempts)
+			{
+				_metrics?.RecordRetry(reg.DurableName);
+				var delay = _options.HandlerRetryDelay * Math.Pow(2, attempt - 1);
+				_logger.LogWarning(ex, "[NATS-CONSUMER] Retryable failure on subject {Subject}; attempt {Attempt} of {MaxAttempts}, next in {Delay}",
+					reg.Subject, attempt, _options.HandlerMaxAttempts, delay);
+				// Keep the broker from redelivering while this process is still working on the message.
+				await progress(ct);
+				await Task.Delay(delay, ct);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
 			{
 				// Preserve poison-message isolation across arbitrary application handlers.
-				_logger.LogError(ex, "[NATS-CONSUMER] Error handling message on subject {Subject}", reg.Subject);
+				var reason = ex is RetryableMessageException ? "retries-exhausted" : "handler-error";
+				_metrics?.RecordTerminal(reg.DurableName, reason);
+				_logger.LogError(ex, "[NATS-CONSUMER] Error handling message on subject {Subject} ({Reason}); terminating it.",
+					reg.Subject, reason);
+				return Finish(handled, streamSequence, DeliveryOutcome.Terminated);
 			}
-			// Broker failures belong to the consumer-group recovery boundary, including ACKs.
-			await msg.AckAsync(cancellationToken: ct);
+		}
+	}
+
+	private static DeliveryOutcome Finish(HandledSequences handled, ulong? streamSequence, DeliveryOutcome outcome)
+	{
+		if (streamSequence is { } seq) handled.Add(seq);
+		return outcome;
+	}
+
+	private object? Deserialize(NatsConsumerRegistration reg, JsonElement data)
+	{
+		if (data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null) return null;
+		try
+		{
+			return data.Deserialize(reg.MessageType);
+		}
+		catch (JsonException ex)
+		{
+			_logger.LogWarning(ex, "[NATS-CONSUMER] Payload on subject {Subject} is not a {Type}", reg.Subject, reg.MessageType.Name);
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// The stream sequences one consumer finished most recently, so a redelivery caused by a lost ACK is
+	/// recognised. Bounded, and process-local: it covers broker reconnects, not a restart of this process.
+	/// </summary>
+	internal sealed class HandledSequences
+	{
+		private const int Capacity = 4096;
+		private readonly HashSet<ulong> _set = [];
+		private readonly Queue<ulong> _order = new();
+
+		public bool Contains(ulong seq)
+		{
+			lock (_set) return _set.Contains(seq);
+		}
+
+		public void Add(ulong seq)
+		{
+			lock (_set)
+			{
+				if (!_set.Add(seq)) return;
+				_order.Enqueue(seq);
+				if (_order.Count > Capacity) _set.Remove(_order.Dequeue());
+			}
 		}
 	}
 }

@@ -86,6 +86,8 @@ Key environment variables:
 - `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)
 - `SHARPMUSH_LIGHTNING_SYNC` — how hard each LMDB commit pushes on the disk: `full` (default; every commit fsynced, nothing lost on power failure), `nometasync` (one fsync per commit instead of two; power failure can lose the last transaction), or `periodic` (no sync on commit; a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS`, default 1000, and power failure can lose at most that window). The file stays consistent in every mode.
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
+- `SHARPMUSH_NATS_MAX_BYTES` — byte budget of each bus stream (`SHARPMUSH-CS`, `SHARPMUSH-MS`); a full stream refuses new publications (default: 512 MiB)
+- `SHARPMUSH_NATS_MAX_AGE` — how long unconsumed bus messages wait for their consumer, e.g. `30m` (default: `1h`). Browser replay is configured apart: `Replay:RetentionHours`, `Replay:MaxBytes`, `Replay:MaxFrames` on the ConnectionServer. See `docs/design/messaging-retention.md`
 
 Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
 
@@ -312,6 +314,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - `url-strategy.md` — canonical route map (public, authenticated, admin, API)
 - `engine-data-trunk.md` — engine reads/writes through the Mediator, stores, cache coherence, single-process assumptions
 - `guided-input-ordering.md` — per-handle publication order; guided-input prompts and lifecycle notices display in commit order
+- `messaging-retention.md` — bus vs replay retention, stream byte budgets, handler retry/terminate semantics, bounded replay reads
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 
