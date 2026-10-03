@@ -76,8 +76,12 @@ public class ExamineHeaderParityTests
 		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>().Object();
 	}
 
+	/// <summary><c>object_header</c> as the test player sees it: CONNECTED shows on itself.</summary>
 	private async Task<string> Header(DBRef dbref) =>
-		await MessageFormatting.FormatObjectWithDbref((await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>().Object());
+		await MessageFormatting.FormatObjectWithDbref(
+			(await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>().Object(),
+			await FlagView.ForAsync((await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).Expect<AnySharpObject>(),
+				ConnectionService));
 
 	[Test]
 	public async Task Brief_NameAndOwnerLinesAreObjectHeaders()

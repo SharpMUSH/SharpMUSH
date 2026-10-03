@@ -208,6 +208,12 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(stored.Database.HttpHandler).IsNull();
 		await Assert.That(stored.Database.EventHandler).IsNull();
 		await Assert.That(stored.Compatibility.ParenGroups).IsTrue();
+		await Assert.That(result.Warnings).Contains("Unset ancestor_room, ancestor_exit, ancestor_thing, ancestor_player, " +
+			"package_manager, http_handler, event_handler: they named the removed objects.");
+
+		// A stock table overlaps SharpMUSH's by more than the ten names the line has room for (#1508).
+		await Assert.That(result.Warnings.Any(w => w.Contains("source flag definition(s) already exist here")
+			&& w.Contains("the server log lists all of them"))).IsTrue();
 	}
 
 	/// <summary>
@@ -231,6 +237,9 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(stored.Database.EventHandler).IsEqualTo(9u);
 		await Assert.That(stored.Database.HttpHandler).IsNull();
 		await Assert.That(result.Warnings.Any(w => w.StartsWith("Kept event_handler #9"))).IsTrue();
+		// The unset line names only what was unset, so it can't be read as unsetting the kept handler (#1508).
+		var unsetLine = result.Warnings.Single(w => w.StartsWith("Unset "));
+		await Assert.That(unsetLine).Contains("http_handler").And.DoesNotContain("event_handler");
 		await Assert.That((await NodeAsync(world, 9)).Object().Name).IsEqualTo("Gadget")
 			.Because("#9 is the source game's object now");
 	}
@@ -323,6 +332,25 @@ public class PennMUSHDbrefPreservationTests
 			var hook = (await hooks.GetHookAsync(command, "OVERRIDE")).Expect<CommandHook>();
 			await Assert.That($"#{hook.TargetObject.Number}").IsEqualTo(logger.Objid.Split(':')[0]);
 		}
+	}
+
+	/// <summary>
+	/// The HTTP handler package attaches to http_handler, which the import unsets with the seed it named, so
+	/// it is not installed again; the report says why and points at the wizard's handler step (#1508).
+	/// </summary>
+	[Test]
+	public async Task AnAttachModePackageLeftOutNamesTheHandlerItNeeds()
+	{
+		string[] bundled = ["http-handler"];
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
+		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
+
+		var line = result.Warnings.Single(w => w.Contains("were not installed again"));
+		await Assert.That(line).StartsWith("The package(s) http-handler were not installed again: http_handler is not set")
+			.And.Contains("setup wizard's handler step");
 	}
 
 	/// <summary>

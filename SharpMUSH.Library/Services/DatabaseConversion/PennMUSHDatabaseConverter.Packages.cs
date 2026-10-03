@@ -149,9 +149,29 @@ public partial class PennMUSHDatabaseConverter
 				context.Warnings.Add($"Installed the package(s) {string.Join(", ", reinstalled)} again.");
 			}
 
-			if (missing.Count > 0)
+			// An attach-mode package is skipped while its handler is unset, which the import does to an option
+			// that named a removed seed; say which, rather than send the administrator to the package manager
+			// first. Any other package left out (not bundled, or a failed install) gets the general advice.
+			var handlers = new Dictionary<string, uint?>(StringComparer.Ordinal)
 			{
-				context.Warnings.Add($"The package(s) {string.Join(", ", missing)} were not installed again: " +
+				["http_handler"] = database.HttpHandler,
+				["event_handler"] = database.EventHandler
+			};
+			var waitingOnHandler = missing
+				.Select(id => (id, handler: _bundledPackages?.RequiredHandlerOption(id) ?? string.Empty))
+				.Where(package => handlers.TryGetValue(package.handler, out var number) && number is null or 0)
+				.ToList();
+			foreach (var group in waitingOnHandler.GroupBy(package => package.handler, StringComparer.Ordinal))
+			{
+				context.Warnings.Add($"The package(s) {string.Join(", ", group.Select(package => package.id))} were not " +
+					$"installed again: {group.Key} is not set, and they attach to it. Choose the handler in the setup " +
+					"wizard's handler step, or set the option and install them from the package manager.");
+			}
+
+			var others = missing.Except(waitingOnHandler.Select(package => package.id), StringComparer.Ordinal).ToList();
+			if (others.Count > 0)
+			{
+				context.Warnings.Add($"The package(s) {string.Join(", ", others)} were not installed again: " +
 					"install them from the package manager.");
 			}
 		}

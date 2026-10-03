@@ -502,8 +502,8 @@ public class TelDiagnosticTests
 			.Because("@force @edit should have replaced #222 with actual dbref");
 
 		await WaitUntilAsync(async () =>
-			!(await Eval($"num({aName})")).StartsWith("#-") &&
-			!(await Eval($"num({bName})")).StartsWith("#-"),
+			!(await Eval($"num({aName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase) &&
+			!(await Eval($"num({bName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase),
 			"@tel source/destination objects never became locatable by name after @force @edit");
 
 		var errors = await ExecAndCollectErrors($"@tel {aName}={bName}");

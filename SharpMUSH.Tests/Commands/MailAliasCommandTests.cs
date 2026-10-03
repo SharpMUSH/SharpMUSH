@@ -76,23 +76,24 @@ public class MailAliasCommandTests
 	}
 
 	/// <summary>
-	/// lookup_player (<c>src/plyrlist.c</c>) tests <c>#</c> on the raw name and only then drops one
-	/// <c>*</c>: <c>*#N</c> looks for a player named "#N" and <c>**Name</c> for one named "*Name" (#1391).
+	/// <c>lookup_player</c> (<c>src/plyrlist.c:163-177</c>) tests <c>#</c> on the name as given and then
+	/// drops one <c>*</c>: <c>*#42</c> is a player named <c>#42</c> and <c>**Name</c> one named
+	/// <c>*Name</c>, so neither is anybody (#1391).
 	/// </summary>
 	[Test]
-	public async ValueTask AMemberNameDropsOneStarAndOnlyABareHashIsADbref()
+	public async ValueTask TheLookupTokenIsDroppedOnceAndOnlyAfterTheDbrefTest()
 	{
-		var owner = await PlayerAsync("MalStar");
-		var member = await PlayerAsync("MalStarMem");
-		var alias = UniqueAlias("S");
+		var owner = await PlayerAsync("MalTok");
+		var member = await PlayerAsync("MalTokMem");
+		var alias = UniqueAlias("T");
 
 		var output = await RunAsync(owner,
-			$"@malias {alias}=*{member.Name} *#{member.DbRef.Number} **{member.Name}");
+			$"@malias/create {alias}=*{member.Name} *#{member.DbRef.Number} **{member.Name}");
 
 		await Assert.That(output).Contains(m => m.StartsWith("MAIL: ") && m.EndsWith($" added to alias {alias}"));
 		await Assert.That(output).Contains($"MAIL: No such player '*#{member.DbRef.Number}'.");
 		await Assert.That(output).Contains($"MAIL: No such player '**{member.Name}'.");
-		await Assert.That(await EvaluateAsync(owner, $"malias({alias})")).IsEqualTo($"#{member.DbRef.Number}");
+		await Assert.That(output).Contains($"MAIL: Alias set '{alias}' defined.");
 	}
 
 	/// <summary>

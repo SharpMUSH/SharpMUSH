@@ -222,7 +222,6 @@ public static partial class ErrorMessages
 		public const string NotLinked = "#-1 NOT LINKED";
 		public const string VariableDestination = "#-2 VARIABLE DESTINATION";
 		public const string HomeDestination = "#-3 HOME";
-		public const string NeedAWord = "#-1 NEED A WORD";
 		public const string NoContents = "#-1 NO CONTENTS";
 		public const string NoExits = "#-1 NO EXITS";
 		public const string NoNextObject = "#-1 NO NEXT OBJECT";
@@ -234,6 +233,7 @@ public static partial class ErrorMessages
 		/// "not yours to see" have to read the same, or the answer says whether the descriptor exists.
 		/// </summary>
 		public const string NoSuchDescriptorOrPermissionDenied = "#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED";
+		public const string NeedAWord = "#-1 NEED A WORD";
 		public const string NonNegativeInteger = "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER";
 		public const string NotAMember = "#-1 NOT A MEMBER OF THAT CHANNEL";
 		public const string NotAnArray = "#-1 NOT AN ARRAY";

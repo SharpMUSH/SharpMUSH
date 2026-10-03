@@ -33,10 +33,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "05-import/import.players#2",
-   "command": "think [flags(*Wiz)] [flags(*Alice)]"
-  },
-  {
    "key": "05-import/import.rooms#1",
    "command": "look"
   },
@@ -57,10 +53,6 @@
    "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
   },
   {
-   "key": "10-player-commands/flags.set#1",
-   "command": "think [hasflag(me,HAVEN)] [flags(me)]"
-  },
-  {
    "key": "10-player-commands/flags.set#4",
    "command": "@set me=BOGUS"
   },
@@ -79,14 +71,6 @@
   {
    "key": "10-player-commands/obj.attrs#6",
    "command": "@set Widget/COLOR=!no_command"
-  },
-  {
-   "key": "10-player-commands/obj.create#2",
-   "command": "look Gizmo"
-  },
-  {
-   "key": "10-player-commands/obj.create#4",
-   "command": "look Gadget"
   },
   {
    "key": "10-player-commands/obj.create#6",
@@ -143,14 +127,6 @@
   {
    "key": "20-admin-commands/admin.restrict-command#0",
    "command": "One godpass"
-  },
-  {
-   "key": "20-admin-commands/admin.search#0",
-   "command": "@search name=Widget"
-  },
-  {
-   "key": "20-admin-commands/admin.search#1",
-   "command": "@find Widget"
   },
   {
    "key": "20-admin-commands/admin.search#2",

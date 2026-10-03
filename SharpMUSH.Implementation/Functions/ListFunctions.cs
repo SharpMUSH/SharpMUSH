@@ -1121,40 +1121,43 @@ public partial class Functions
 		return sortedIndexes.Select(i => list[i]);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>fun_splice</c> (<c>src/funlist.c:1973</c>): each word of the first list that equals
+	/// <c>word</c>, compared without markup and case-sensitively, is replaced by the word at the same
+	/// position in the second list.
+	/// </summary>
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
 	public ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var listArg = args["0"].Message;
-		var list2Arg = args["1"].Message;
+		var listArg = args["0"].Message ?? MarkupText.Empty;
+		var list2Arg = args["1"].Message ?? MarkupText.Empty;
+		var wordArg = args["2"].Message ?? MarkupText.Empty;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
-		// PennMUSH fun_splice: <word> is checked before the lists are split, then every word of
-		// <list1> equal to it (case-sensitive, markup ignored) is replaced by the word at the same
-		// position in <list2>.
-		var word = args["2"].Message?.ToPlainText() ?? string.Empty;
+		var word = wordArg.ToPlainText();
 		if (word.Length == 0)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NeedAWord));
 		}
 
-		if (MushText.SplitList(delimiter, MarkupText.Plain(word)).Length != 1)
+		if (MushList.Count(delimiter, MarkupText.Plain(word)) != 1)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.TooManyWords));
 		}
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var list2 = MushText.SplitList(delimiter, list2Arg ?? MarkupText.Empty);
+		var list = MushText.SplitList(delimiter, listArg);
+		var list2 = MushText.SplitList(delimiter, list2Arg);
 
 		if (list.Length != list2.Length)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
 		}
 
-		var spliced = list.Select((item, i) => item.ToPlainText() == word ? list2[i] : item);
-		var result = MarkupText.Join(delimiter, spliced);
+		var spliced = list.Select((item, index)
+			=> string.Equals(item.ToPlainText(), word, StringComparison.Ordinal) ? list2[index] : item);
 
-		return ValueTask.FromResult(new CallState(result));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, spliced)));
 	}
 
 	// (attribute, list, step, delimiter, outsep) — arg 0 is the attribute, arg 2 the group size,

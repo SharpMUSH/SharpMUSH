@@ -32,6 +32,10 @@ think [haspower(*Alice,GUEST)]
 @trigger *Alice/TRIG=1
 ::settle
 
+::case admin.force-noeval  /noeval leaves the right side for the forced player to evaluate (#1389)
+@force/noeval *Alice=think noeval me:%! en:%#
+@force *Alice=think eval me:%! en:%#
+
 ::case admin.denied  a plain player cannot use wizard commands
 ::as alice
 @pcreate Mallory=x

@@ -266,8 +266,8 @@ public class ScanCommandTests
 		var roomRef = DBRef.Parse(room);
 		var lines = await ScanOutputAsync(player, $"@scan {word} test");
 
-		var self = $"{await UnparseAsync(player.DbRef)}  [1: #{player.DbRef.Number}/CMD_ME]";
-		var here = $"{await UnparseAsync(roomRef)}  [1: #{roomRef.Number}/CMD_HERE]";
+		var self = $"{await UnparseAsync(player.DbRef, player.DbRef)}  [1: #{player.DbRef.Number}/CMD_ME]";
+		var here = $"{await UnparseAsync(roomRef, player.DbRef)}  [1: #{roomRef.Number}/CMD_HERE]";
 
 		await Assert.That(lines).IsEquivalentTo(
 		[
@@ -280,13 +280,17 @@ public class ScanCommandTests
 		], CollectionOrdering.Matching);
 	}
 
-	/// <summary>The <c>unparse_object</c> half of a match line: name, dbref and flag symbols.</summary>
-	private async Task<string> UnparseAsync(DBRef dbref)
+	/// <summary>
+	/// The <c>unparse_object</c> half of a match line: name, dbref and the flag symbols
+	/// <paramref name="viewer"/> sees, CONNECTED among them for a connected player.
+	/// </summary>
+	private async Task<string> UnparseAsync(DBRef dbref, DBRef viewer)
 	{
 		var obj = await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
 			? found.Object()
 			: throw new InvalidOperationException($"#{dbref.Number} vanished mid-test");
+		var looker = (await Mediator.Send(new GetObjectNodeQuery(viewer))).Expect<AnySharpObject>();
 
-		return await MessageFormatting.FormatObjectWithDbref(obj);
+		return await MessageFormatting.FormatObjectWithDbref(obj, await FlagView.ForAsync(looker, ConnectionService));
 	}
 }

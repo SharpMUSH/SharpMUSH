@@ -22,7 +22,8 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 /// </remarks>
 public static class MailAliases
 {
-	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions);
+	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions,
+		IConnectionService? Connections = null);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
 	public sealed record Recipients(SharpPlayer[] Members, bool Silent);
@@ -771,13 +772,18 @@ public static class MailAliases
 	}
 
 	/// <summary>
-	/// <c>lookup_player</c> (<c>src/plyrlist.c</c>): a <c>#</c> on the raw name is a dbref; otherwise one
-	/// leading <c>*</c> is dropped and the rest is an exact name or alias. So <c>*#42</c> looks for a
-	/// player named <c>#42</c>, and <c>**God</c> for one named <c>*God</c>.
+	/// <c>lookup_player</c> (<c>src/plyrlist.c:163</c>): a <c>#dbref</c> is tested on the name as given,
+	/// and only then is one leading <c>*</c> dropped before the exact name or alias lookup. So
+	/// <c>*#42</c> asks for a player named <c>#42</c>, and <c>**God</c> for one named <c>*God</c>.
 	/// </summary>
 	private static async ValueTask<SharpPlayer?> LookupPlayerAsync(Services services, string name)
 	{
-		if (name.StartsWith('#'))
+		if (name.Length == 0)
+		{
+			return null;
+		}
+
+		if (name[0] == '#')
 		{
 			return DBRef.TryParse(name, out var dbref) && dbref is { } reference
 					&& await services.Mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject and SharpPlayer byDbref
@@ -785,7 +791,8 @@ public static class MailAliases
 				: null;
 		}
 
-		var bare = name.StartsWith('*') ? name[1..] : name;
+		var bare = name[0] == '*' ? name[1..] : name;
+
 		return bare.Length == 0
 			? null
 			: await services.Mediator.CreateStream(new GetPlayerQuery(bare)).FirstOrDefaultAsync();
@@ -793,7 +800,7 @@ public static class MailAliases
 
 	/// <summary><c>unparse_object(player, target, AN_SYS)</c>: the name, with dbref and flags when the viewer may see them.</summary>
 	private static ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
-		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target));
+		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target), services.Connections);
 
 	/// <summary>get_shortprivs: the Use and See columns of the list, <c>E</c> for everyone.</summary>
 	private static string ShortPrivileges(SharpMailAlias alias)

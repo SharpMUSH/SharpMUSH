@@ -438,6 +438,12 @@ public class SceneRoleplayIntegrationTests
 		var markup = await Eval($"scenepose({sceneId}, {bobPoseId}, markup)");
 		await Assert.That(SoftcodeDecomposer.Decompose(MarkupTextSerializer.Deserialize(markup))).IsEqualTo(decomposed)
 			.Because("an edit saved without changes must not lose the pose's colours or tags");
+		// An empty rewrite would blank the pose (#1514): it is refused, and removing a pose stays +scene/delete.
+		var refusal = string.Join("\n", await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}="));
+		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, markup)")).IsEqualTo(markup)
+			.Because("+scene/rewrite with no text must leave the pose as it was");
+		await Assert.That(refusal).Contains("can't be rewritten to nothing")
+			.Because("the author is told why nothing changed");
 
 		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each

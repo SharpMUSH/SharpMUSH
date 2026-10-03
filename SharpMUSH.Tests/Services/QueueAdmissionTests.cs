@@ -2658,4 +2658,107 @@ public class QueueAdmissionTests
 		await Assert.That(queuedRan).IsFalse().Because("@halt <object> wipes what the object had queued");
 		await Assert.That(typedRan).IsTrue().Because("do_halt never reaches a line the player already typed");
 	}
+
+	private static async Task AssertTalliesMatchLedger(Scheduler queue, string because)
+	{
+		var (tallied, recounted) = queue.AdmissionTalliesAgainstLedger();
+		await Assert.That(tallied).IsEqualTo(recounted).Because(because);
+	}
+
+	/// <summary>
+	/// Admission reads the owner quota and the typed-line burst from tallies kept beside the ledger
+	/// rather than counting the ledger on every admission (#1336). The tallies must say what a count of
+	/// the ledger would at every step: after admission, after a halt by pid, an <c>@halt</c> of the
+	/// object, an abandoned reservation, and once everything has run.
+	/// </summary>
+	[Test]
+	public async Task AdmissionTalliesFollowAdmitHaltCancelAndCompletion()
+	{
+		await using var queue = Create(global: 20, owner: 10, burst: 5);
+		var target = new DBRef(10);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var charged = new List<long>();
+			for (var i = 0; i < 3; i++)
+			{
+				var admitted = await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), $"charged{i}", Scheduler.EnqueueGroup, target);
+				await Assert.That(admitted.Accepted).IsTrue();
+				charged.Add(admitted.Pid!.Value);
+			}
+			for (var i = 0; i < 2; i++)
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			using var reserved = await queue.ReserveCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(target));
+			await Assert.That(reserved.Admission.Accepted).IsTrue();
+
+			var (admittedTallies, _) = queue.AdmissionTalliesAgainstLedger();
+			await Assert.That(admittedTallies).Contains("=4").Because("three admitted and one reserved entry are charged to the owner");
+			await Assert.That(admittedTallies).Contains("#20/=2").Because("two lines typed on handle 20 are pending");
+			await AssertTalliesMatchLedger(queue, "after admission");
+
+			await queue.HaltByPid(charged[0]);
+			await AssertTalliesMatchLedger(queue, "after a halt by pid");
+
+			reserved.Dispose();
+			await AssertTalliesMatchLedger(queue, "after an abandoned reservation");
+
+			await queue.Halt(target);
+			await AssertTalliesMatchLedger(queue, "after @halt of the object");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+		var (tallied, recounted) = queue.AdmissionTalliesAgainstLedger();
+		await Assert.That(recounted).IsEqualTo("");
+		await Assert.That(tallied).IsEqualTo("").Because("every entry has completed, been halted or been cancelled");
+	}
+
+	/// <summary>
+	/// The limits read from those tallies still refuse at the configured count and admit again once
+	/// what was pending has run: the quota and the burst are given back, not leaked. The work here has
+	/// no executor, so it is charged to the system bucket and a refusal halts nothing.
+	/// </summary>
+	[Test]
+	public async Task OwnerQuotaAndBurstAreGivenBackWhenEntriesComplete()
+	{
+		await using var queue = Create(global: 20, owner: 3, burst: 2);
+		var ran = 0;
+		ValueTask<CallState?> Work()
+		{
+			Interlocked.Increment(ref ran);
+			return ValueTask.FromResult<CallState?>(null);
+		}
+
+		for (var round = 0; round < 2; round++)
+		{
+			var blocked = Signal(); var release = Signal();
+			// The blocker is the first of the system bucket's three.
+			await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+			await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			try
+			{
+				await Assert.That((await queue.AdmitWork(Work, "one", "test")).Accepted).IsTrue();
+				await Assert.That((await queue.AdmitWork(Work, "two", "test")).Accepted).IsTrue()
+					.Because($"round {round}: the quota is back to three");
+				await Assert.That((await queue.AdmitWork(Work, "three", "test")).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
+					.Because($"round {round}: the burst is back to two");
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+					.IsEqualTo(QueueRejectionReason.ConnectionLimit);
+				await AssertTalliesMatchLedger(queue, $"round {round}, loaded");
+			}
+			finally { release.TrySetResult(); }
+
+			await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+			await AssertTalliesMatchLedger(queue, $"round {round}, drained");
+			await Assert.That(queue.AdmissionTalliesAgainstLedger().Tallied).IsEqualTo("");
+		}
+
+		await Assert.That(ran).IsEqualTo(4).Because("the admitted work ran rather than being dropped");
+	}
 }

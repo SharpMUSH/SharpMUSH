@@ -404,7 +404,7 @@ public partial class Functions
 			.Select(arg => arg.Value.Message?.ToPlainText() ?? string.Empty)
 			.ToArray();
 
-		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService),
+		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService, ConnectionService),
 			executor, args));
 	}
 }

@@ -577,7 +577,7 @@ public partial class Functions
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, classObj?.Object().DBRef, pairs, useRegex);
 
-		// PennMUSH fun_lsearch writes each result with safe_dbref: a plain #N, not an objid.
+		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
 		var finalResults = search.Matches.Select(obj => $"#{obj.Key}");
 
 		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
@@ -772,14 +772,14 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		// fun_num is safe_dbref(match_thing(...)): the noisy match, then a bare dbref — #-1 for no match
-		// and #-2 (AMBIGUOUS) for an ambiguous one, with no error text after it.
-		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All) switch
-		{
-			AnySharpObject found => $"#{found.Object().DBRef.Number}",
-			Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch } => "#-2",
-			_ => ErrorMessages.Returns.Nothing
-		};
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser,
+			executor,
+			executor,
+			arg0,
+			LocateFlags.All,
+			found =>
+				ValueTask.FromResult<CallState>($"#{found.Object().DBRef.Number}"));
 	}
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]

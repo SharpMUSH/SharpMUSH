@@ -16,7 +16,7 @@ public class LocateService(
 	INotifyService notifyService,
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IConnectionService? connections = null) : ILocateService
+	IConnectionService? connectionService = null) : ILocateService
 {
 	/// <summary>
 	/// What PennMUSH's <c>match_result_internal</c> keeps in locals and its macros mutate in place.
@@ -216,7 +216,10 @@ public class LocateService(
 	{
 		var preferred = PreferredTypes(flags);
 		var noControl = false;
-		var ambiguousPlayer = false;
+
+		// match.c: match_player answering AMBIGUOUS leaves bestmatch AMBIGUOUS, which only an object
+		// matched by name afterwards replaces.
+		var playerAmbiguous = false;
 
 		// match.c: loc = where for a room, Source(where) for an exit — the room it sits in, not where it
 		// leads — and Location(where) otherwise. FriendlyWhereIs is all three.
@@ -266,22 +269,26 @@ public class LocateService(
 				 || (flags.HasFlag(LocateFlags.MatchWildCardForPlayerName) && name.StartsWith('*')))
 				&& TypeAllows(preferred, flags, SharpObjectTypes.Player))
 		{
-			// match.c match_player: one leading '*' is a player-name indicator, not a wildcard, so
-			// locate(%#, "*God", "p") finds the player named God. Then lookup_player, and on a miss a
-			// unique prefix of a connected player the executor can see (visible_short_page), unless
-			// MAT_EXACT forbids partial matches.
+			// match.c match_player: one leading '*' and any spaces after it are dropped, lookup_player
+			// takes the rest whole, and a miss falls back to the connected players the looker can see —
+			// unless the search is MAT_EXACT.
 			var playerName = (name.StartsWith('*') ? name[1..] : name).TrimStart();
-			PageRecipient player = await LookupPlayer(playerName) switch
+			var found = await LookupPlayer(playerName);
+
+			if (found is null && !flags.HasFlag(LocateFlags.NoPartialMatches))
 			{
-				AnySharpObject exact => exact,
-				_ when flags.HasFlag(LocateFlags.NoPartialMatches) || connections is null => new NotFound(),
-				_ => await ShortPage.VisibleMatchAsync(mediator, connections, executor, playerName)
-			};
+				switch (await VisibleShortPage(executor, playerName))
+				{
+					case AnySharpObject online:
+						found = online;
+						break;
+					case Error<string>:
+						playerAmbiguous = true;
+						break;
+				}
+			}
 
-			// short_page's AMBIGUOUS becomes match.c's bestmatch: the answer only if nothing else matches.
-			ambiguousPlayer = player is AmbiguousName;
-
-			if (player is AnySharpObject found)
+			if (found is not null)
 			{
 				if (await permissionService.CanInteract(executor, found, MatchInteraction(flags))
 						&& await InLookerContents(found)
@@ -337,9 +344,9 @@ public class LocateService(
 		// ambiguity is only ever considered for a non-ordinal search that matched more than once.
 		if (state.Best.IsNone)
 		{
-			return ambiguousPlayer
-				? (new Error<string>(ErrorMessages.Returns.AmbiguousMatch), state.NoControl)
-				: (new None(), state.NoControl);
+			if (playerAmbiguous) return (new Error<string>(ErrorMessages.Returns.AmbiguousMatch), state.NoControl);
+
+			return (new None(), state.NoControl);
 		}
 
 		if (state.Final == 0
@@ -351,6 +358,110 @@ public class LocateService(
 		}
 
 		return (state.Best, state.NoControl);
+	}
+
+	/// <summary>
+	/// plyrlist.c <c>lookup_player</c> (:163): a <c>#dbref</c> or objid that names a player, and
+	/// otherwise the exact name or alias with one leading <c>*</c> dropped.
+	/// </summary>
+	private async ValueTask<AnySharpObject?> LookupPlayer(string name)
+	{
+		if (name.Length == 0) return null;
+
+		if (name[0] == '#')
+		{
+			if (DBRef.TryParse(name, out var dbref) && dbref is { } reference
+					&& await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject known
+					&& known.IsPlayer)
+			{
+				return known;
+			}
+
+			return null;
+		}
+
+		var lookup = name[0] == '*' ? name[1..] : name;
+		if (lookup.Length == 0) return null;
+
+		var player = await mediator.CreateStream(new GetPlayerQuery(lookup)).FirstOrDefaultAsync();
+		if (player is null) return null;
+
+		return new AnySharpObject(player);
+	}
+
+	/// <summary>
+	/// bsd.c <c>visible_short_page</c> (:6416) over <c>short_page</c> (:6376): the one connected player
+	/// whose name starts with <paramref name="name"/>, case-insensitively. A whole-name match wins
+	/// outright; two different prefix matches are ambiguous. A looker without See_All does not find a
+	/// DARK player, nor one whose connections are all hidden unless they are nearby.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpObjectOrError> VisibleShortPage(AnySharpObject who, string name)
+	{
+		if (connectionService is null || name.Length == 0) return new None();
+
+		var count = 0;
+		AnySharpObject? match = null;
+		DBRef? previous = null;
+
+		await foreach (var connection in connectionService.GetAll())
+		{
+			// short_page walks connected descriptors only: a socket at the connect screen is nobody.
+			if (connection.State is not IConnectionService.ConnectionState.LoggedIn || connection.Ref is null)
+			{
+				continue;
+			}
+
+			if (await mediator.Send(new GetObjectNodeQuery(connection.Ref.Value)) is not AnySharpObject player)
+			{
+				continue;
+			}
+
+			var playerName = player.Object().Name;
+			if (!playerName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (playerName.Equals(name, StringComparison.OrdinalIgnoreCase))
+			{
+				match = player;
+				count = 1;
+				break;
+			}
+
+			// short_page compares against the previous match, not a set of them.
+			if (previous is null || !connection.Ref.Value.Equals(previous.Value))
+			{
+				previous = connection.Ref.Value;
+				match = player;
+				count++;
+			}
+		}
+
+		if (count > 1) return new Error<string>(ErrorMessages.Returns.AmbiguousMatch);
+		if (count == 0 || match is null) return new None();
+		if (await who.IsSee_All()) return match.WithNoneOption().WithErrorOption();
+
+		if (await match.IsDark()
+				|| (await Hidden(connectionService, match.Object().DBRef) && !await Nearby(who, match)))
+		{
+			return new None();
+		}
+
+		return match.WithNoneOption().WithErrorOption();
+	}
+
+	/// <summary>bsd.c <c>hidden</c>: connected, and every one of the player's connections is hidden.</summary>
+	private static async ValueTask<bool> Hidden(IConnectionService connections, DBRef player)
+	{
+		var any = false;
+		await foreach (var connection in connections.Get(player))
+		{
+			if (!connection.IsHidden) return false;
+			any = true;
+		}
+
+		return any;
 	}
 
 	/// <summary>
@@ -694,30 +805,6 @@ public class LocateService(
 		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
 
 		return loc2 == obj1.Object().DBRef || loc2 == loc1;
-	}
-
-	/// <summary>
-	/// plyrlist.c <c>lookup_player</c>, after match_player has dropped one <c>*</c>: a <c>#dbref</c> or
-	/// objid naming a player, or an exact name or alias.
-	/// </summary>
-	private async ValueTask<PageRecipient> LookupPlayer(string name)
-	{
-		if (name.Length == 0)
-		{
-			return new NotFound();
-		}
-
-		if (name[0] == '#')
-		{
-			return DBRef.TryParse(name, out var dbref) && dbref is { } reference
-					&& await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject and SharpPlayer known
-				? new AnySharpObject(known)
-				: new NotFound();
-		}
-
-		return await mediator.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync() is { } found
-			? new AnySharpObject(found)
-			: new NotFound();
 	}
 
 	/// <summary>PennMUSH's <c>type</c> mask — <c>SharpObjectTypes.None</c> is its <c>NOTYPE</c>.</summary>

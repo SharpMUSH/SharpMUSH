@@ -94,21 +94,6 @@ public partial class TaskScheduler(
 		public bool EscapeRequested { get; set; }
 	}
 
-	/// <summary>
-	/// Whether two typed lines belong to the same socket incarnation, for the per-connection burst.
-	/// </summary>
-	/// <remarks>
-	/// Not <c>ReferenceEquals</c> on the <see cref="IConnectionService.ConnectionData"/> itself:
-	/// <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace it with a <c>with</c> copy on the same
-	/// handle, and logging in mid-burst is not a new socket. A <c>with</c> copy carries the same
-	/// <c>Metadata</c> instance, and only <c>Register</c> (or startup reconciliation) builds a new one,
-	/// so that dictionary is the identity that survives a state change and is replaced by a new socket.
-	/// The transport session id separates two registrations that the state store can tell apart.
-	/// </remarks>
-	private static bool SameIncarnation(PendingInputCommand queued, PendingInputCommand typed)
-		=> ReferenceEquals(queued.Connection?.Metadata, typed.Connection?.Metadata)
-			&& (queued.Transport ?? "") == (typed.Transport ?? "");
-
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
 		string LongName, int? CommandListIndex, DBRef? Owner, string Flags);
 
@@ -155,8 +140,95 @@ public partial class TaskScheduler(
 		_running.Remove(pid);
 		if (!_pendingEntries.TryRemove(pid, out var entry)) return null;
 		_orderedPids.Remove(pid);
+		Uncount(entry);
 		return entry;
 	}
+
+	/// <summary>
+	/// The one write path into <see cref="_pendingEntries"/>, so the admission tallies below always
+	/// describe exactly what it holds. Caller holds <see cref="_admissionLock"/>.
+	/// </summary>
+	private void StoreEntry(QueueEntry entry)
+	{
+		if (_pendingEntries.TryGetValue(entry.Pid, out var previous)) Uncount(previous);
+		_pendingEntries[entry.Pid] = entry;
+		Count(entry);
+	}
+
+	/// <summary>
+	/// A typed line's socket incarnation, for the per-connection burst: the handle, the connection's
+	/// <c>Metadata</c> instance by reference, and the transport session.
+	/// </summary>
+	/// <remarks>
+	/// Not <c>ReferenceEquals</c> on the <see cref="IConnectionService.ConnectionData"/> itself:
+	/// <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace it with a <c>with</c> copy on the same
+	/// handle, and logging in mid-burst is not a new socket. A <c>with</c> copy carries the same
+	/// <c>Metadata</c> instance, and only <c>Register</c> (or startup reconciliation) builds a new one,
+	/// so that dictionary is the identity that survives a state change and is replaced by a new socket.
+	/// The transport session id separates two registrations that the state store can tell apart.
+	/// </remarks>
+	private readonly record struct IncarnationKey(long Handle, object? Metadata, string Transport)
+	{
+		public IncarnationKey(PendingInputCommand input)
+			: this(input.Handle, input.Connection?.Metadata, input.Transport ?? "") { }
+
+		public bool Equals(IncarnationKey other)
+			=> Handle == other.Handle && ReferenceEquals(Metadata, other.Metadata) && Transport == other.Transport;
+
+		public override int GetHashCode()
+			=> HashCode.Combine(Handle, RuntimeHelpers.GetHashCode(Metadata), Transport);
+	}
+
+	// Pending entries charged to each owner, and pending typed lines per connection incarnation.
+	// Kept with _pendingEntries under _admissionLock so admission never enumerates it (#1336).
+	private readonly Dictionary<string, int> _chargedPerOwner = new();
+	private readonly Dictionary<IncarnationKey, int> _typedPerIncarnation = new();
+
+	private void Count(QueueEntry entry)
+	{
+		if (entry.ChargesOwner) _chargedPerOwner[entry.Owner] = _chargedPerOwner.GetValueOrDefault(entry.Owner) + 1;
+		if (entry.PendingInput is { } input)
+		{
+			var key = new IncarnationKey(input);
+			_typedPerIncarnation[key] = _typedPerIncarnation.GetValueOrDefault(key) + 1;
+		}
+	}
+
+	private void Uncount(QueueEntry entry)
+	{
+		if (entry.ChargesOwner) Decrement(_chargedPerOwner, entry.Owner);
+		if (entry.PendingInput is { } input) Decrement(_typedPerIncarnation, new IncarnationKey(input));
+	}
+
+	private static void Decrement<TKey>(Dictionary<TKey, int> counts, TKey key) where TKey : notnull
+	{
+		var remaining = counts.GetValueOrDefault(key) - 1;
+		if (remaining > 0) counts[key] = remaining;
+		else counts.Remove(key);
+	}
+
+	/// <summary>
+	/// For tests: the admission tallies as kept, and the same tallies counted from the ledger the way
+	/// admission used to. Both are empty strings when nothing is pending.
+	/// </summary>
+	internal (string Tallied, string Recounted) AdmissionTalliesAgainstLedger()
+	{
+		lock (_admissionLock)
+		{
+			var owners = _pendingEntries.Values.Where(e => e.ChargesOwner)
+				.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count());
+			var typed = _pendingEntries.Values.Where(e => e.PendingInput is not null)
+				.GroupBy(e => new IncarnationKey(e.PendingInput!)).ToDictionary(g => g.Key, g => g.Count());
+			return (DescribeTallies(_chargedPerOwner, _typedPerIncarnation), DescribeTallies(owners, typed));
+		}
+	}
+
+	private static string DescribeTallies(IReadOnlyDictionary<string, int> owners, IReadOnlyDictionary<IncarnationKey, int> typed)
+		=> string.Join(';', owners.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={pair.Value}")
+			.Concat(typed.OrderBy(pair => pair.Key.Handle).ThenBy(pair => pair.Key.Transport, StringComparer.Ordinal)
+				.ThenBy(pair => pair.Value)
+				.Select(pair => $"#{pair.Key.Handle}/{pair.Key.Transport}={pair.Value}")));
+
 	private void Release(long pid, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
 		QueueEntry? entry;
@@ -237,14 +309,12 @@ public partial class TaskScheduler(
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
 			// Only charged entries are in the tally, so a typed line cannot make its owner a runaway.
-			else if (chargesOwner && _pendingEntries.Values.Count(e => e.ChargesOwner && e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (chargesOwner && _chargedPerOwner.GetValueOrDefault(owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
 			// Per connection incarnation, not per numeric handle: a replaced socket reuses the handle,
 			// and work the previous occupant left behind (which the entry's own session check will
 			// discard when it reaches the consumer) must not spend the new one's allowance.
 			else if (!chargesOwner && pendingInput is { } typed
-				&& _pendingEntries.Values.Count(e => e.PendingInput is { } queued
-					&& queued.Handle == typed.Handle
-					&& SameIncarnation(queued, typed))
+				&& _typedPerIncarnation.GetValueOrDefault(new IncarnationKey(typed))
 					>= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
 				result = Reject(QueueRejectionReason.ConnectionLimit);
 			else
@@ -257,7 +327,7 @@ public partial class TaskScheduler(
 					PendingInput = pendingInput,
 					ChargesOwner = chargesOwner
 				};
-				_pendingEntries[pid] = entry;
+				StoreEntry(entry);
 				_orderedPids.Add(pid);
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -516,7 +586,7 @@ public partial class TaskScheduler(
 					// cancelled entry now needs consumer disposal only, not another halt
 					// decrement or retained-notification cleanup attempt.
 					if (_pendingEntries.TryGetValue(entry.Pid, out var pending))
-						_pendingEntries[entry.Pid] = pending with { Deferred = null, HaltAccountingSettled = true };
+						StoreEntry(pending with { Deferred = null, HaltAccountingSettled = true });
 				}
 				await Activate(entry.Pid);
 			};
@@ -592,12 +662,12 @@ public partial class TaskScheduler(
 			if (entry.Deferred?.Paused == true)
 			{
 				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
-				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true } };
+				StoreEntry(entry with { Deferred = entry.Deferred with { ReleasePending = true } });
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}
 			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			entry = entry with { Group = EnqueueGroup };
-			_pendingEntries[pid] = entry;
+			StoreEntry(entry);
 			_immediateQueue.Writer.TryWrite(entry);
 		}
 		EnsureConsumerStarted();
@@ -950,8 +1020,8 @@ public partial class TaskScheduler(
 			}
 			timeout = Nonnegative(timeout);
 			var due = DateTimeOffset.UtcNow + timeout;
-			lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) };
+			lock (_admissionLock) StoreEntry(_pendingEntries[pid] with
+			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) });
 			scheduleWriteAttempted = true;
 			await Schedule(due, 0);
 			return admission;
@@ -1191,8 +1261,8 @@ public partial class TaskScheduler(
 			publication.Token.ThrowIfCancellationRequested();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
-		lock (_admissionLock) _pendingEntries[pid] = entry with
-		{ Deferred = new(due, Schedule, null, command, state) };
+		lock (_admissionLock) StoreEntry(entry with
+		{ Deferred = new(due, Schedule, null, command, state) });
 		try { await Schedule(due, 0); return admission; }
 		catch
 		{
@@ -1205,7 +1275,7 @@ public partial class TaskScheduler(
 				lock (_admissionLock)
 				{
 					_delayedRepairs.Add(pid);
-					_pendingEntries[pid] = _pendingEntries[pid] with { DeferredReleaseOutcome = QueueOutcome.ScheduleFailed };
+					StoreEntry(_pendingEntries[pid] with { DeferredReleaseOutcome = QueueOutcome.ScheduleFailed });
 				}
 				logger.LogError(cleanupFailure, "Delayed schedule cleanup failed for PID {Pid}; retry halt to release its reservation", pid);
 				throw;
@@ -1328,7 +1398,7 @@ public partial class TaskScheduler(
 			delay = Nonnegative(delay);
 			if (entry.Deferred.Paused)
 			{
-				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { Remaining = delay } };
+				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay } });
 				return;
 			}
 		}
@@ -1336,8 +1406,8 @@ public partial class TaskScheduler(
 		catch
 		{
 			lock (_admissionLock)
-				if (_pendingEntries.TryGetValue(pid, out entry!)) _pendingEntries[pid] = entry with
-				{ Deferred = entry.Deferred! with { Paused = true, Remaining = delay, Reason = "Schedule update failed" } };
+				if (_pendingEntries.TryGetValue(pid, out entry!)) StoreEntry(entry with
+				{ Deferred = entry.Deferred! with { Paused = true, Remaining = delay, Reason = "Schedule update failed" } });
 			throw;
 		}
 	}

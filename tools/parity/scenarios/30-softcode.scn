@@ -24,6 +24,13 @@ think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)
 think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]
 think [itemize(a b c)] [elements(a b c d,2 4)] [ldelete(a b c,2)] [insert(a b c,2,X)]
 
+::case sc.splice  splice() swaps in the second list's word wherever the first list's word is <word> (#1383)
+think [splice(foo bar baz,eek moof gleep,bar)] [splice(b a b,x y z,b)] [splice(a b c,x y z,B)] [splice(a|b|c,x|y|z,c,|)]
+think [splice(a b c,x y z,)] [splice(a|b|c,x|y|z,a|b,|)] [splice(a b c,x y,b)]
+
+::case sc.lsearch  lsearch() answers with dbrefs, not objids (#1409)
+think [lsearch(*Alice,type,player)] [strmatch(lsearch(*Alice,type,player),num(*Alice))] [nlsearch(*Alice,type,player)]
+
 ::case sc.control  switch, if, registers, evaluation order
 think [if(1,yes,no)] [if(0,yes,no)] [ifelse(,a,b)] [switch(2,1,one,2,two,other)] [case(3,1,x,3,y)]
 think [setq(0,hi)][r(0)] [setr(1,there)] [r(1)] [%q0 %q1]

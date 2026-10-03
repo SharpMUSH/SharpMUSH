@@ -73,3 +73,7 @@ think [name(me)] [strmatch(num(*Duchess),num(me))]
 @name me=Alice
 think [name(me)] [strmatch(num(*Duchess),num(me))] [fullalias(me)]
 @alias me
+
+::case alias.partial  *name falls back to a unique prefix of a connected player's name (#1502)
+::as bob
+think [strmatch(num(*Ali),num(*Alice))] [strmatch(num(*ali),num(*Alice))] [name(*Ali)]
