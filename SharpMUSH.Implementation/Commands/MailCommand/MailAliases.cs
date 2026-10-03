@@ -22,7 +22,8 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 /// </remarks>
 public static class MailAliases
 {
-	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions);
+	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions,
+		IConnectionService? Connections = null);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
 	public sealed record Recipients(SharpPlayer[] Members, bool Silent);
@@ -789,7 +790,7 @@ public static class MailAliases
 
 	/// <summary><c>unparse_object(player, target, AN_SYS)</c>: the name, with dbref and flags when the viewer may see them.</summary>
 	private static ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
-		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target));
+		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target), services.Connections);
 
 	/// <summary>get_shortprivs: the Use and See columns of the list, <c>E</c> for everyone.</summary>
 	private static string ShortPrivileges(SharpMailAlias alias)
