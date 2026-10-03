@@ -52,7 +52,7 @@ public class MailFolderSwitchTests
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef);
 
 		await Assert.That(told).DoesNotContain(m => m.Contains("INVALID SWITCH", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(told).Contains(m => m.Contains($"{moved} folder renamed to {renamed}", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains($"MAIL: Folder 1 now named '{renamed}'", StringComparison.Ordinal));
 	}
 
 	/// <summary>
@@ -74,7 +74,7 @@ public class MailFolderSwitchTests
 
 		await Assert.That(result.Message!.ToPlainText())
 			.DoesNotContain("INVALID SWITCH", StringComparison.OrdinalIgnoreCase);
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is INBOX.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 0 [INBOX].", StringComparison.Ordinal));
 	}
 
 	/// <summary>
@@ -103,8 +103,8 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is SAVED.", StringComparison.Ordinal));
-		await Assert.That(told).Contains(m => m.Contains("MAIL (folder SAVED)", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [SAVED].", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL (folder  1)", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Kept In Saved", StringComparison.Ordinal));
 		await Assert.That(told).DoesNotContain(m => m.Contains("Stays In Inbox", StringComparison.Ordinal));
 	}
@@ -139,10 +139,10 @@ public class MailFolderSwitchTests
 	}
 
 	/// <summary>
-	/// Renaming the folder you are reading moves your messages, so it has to move you with them. Penn
-	/// cannot have this: its active folder is a number and <c>@mail/folder N=name</c> only names it
-	/// (<c>extmail.c:340</c>). SharpMUSH folders are named, so the active name goes stale unless it is
-	/// retargeted — invisible until #1227 made the active folder readable at all.
+	/// Renaming the folder you are reading keeps you in it. Penn's active folder is a number and
+	/// <c>@mail/folder N=name</c> only names it (<c>extmail.c:340</c>); SharpMUSH stores messages under the
+	/// folder's name, so the rename moves them and the active folder has to follow — invisible until #1227
+	/// made the active folder readable at all.
 	/// </summary>
 	[Test]
 	public async Task RenamingTheActiveFolderFollowsIt()
@@ -163,16 +163,16 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is ARCHIVE.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [ARCHIVE].", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Renamed Subject", StringComparison.Ordinal));
 	}
 
 	/// <summary>
-	/// <c>@mail/unfolder</c> empties a folder back into INBOX, so reading it afterwards means reading
-	/// INBOX. The active folder followed the messages nowhere before.
+	/// <c>@mail/unfolder</c> takes a folder's name away and nothing else (<c>do_mail_unfolder</c>,
+	/// <c>extmail.c:358</c>): the folder keeps its number, its messages and its place as the current folder.
 	/// </summary>
 	[Test]
-	public async Task UnfolderingTheActiveFolderReturnsToInbox()
+	public async Task UnfolderingTheActiveFolderKeepsItsNumberAndMessages()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailUnfolderActive");
@@ -190,7 +190,8 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is INBOX.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: 1 messages in folder 1 [unnamed] (1 unread, 0 cleared).", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [unnamed].", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Returned Subject", StringComparison.Ordinal));
 	}
 }

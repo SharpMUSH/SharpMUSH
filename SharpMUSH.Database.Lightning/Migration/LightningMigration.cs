@@ -1,7 +1,9 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Seed;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using System.Text.Json;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -12,6 +14,7 @@ public partial class LightningDatabase
 	internal const string ExitSourceIndexMigrationId = "0003_exit_source_index";
 	internal const string MailFolderCountMigrationId = "0004_mail_folder_count";
 	internal const string PlayerAliasIndexMigrationId = "0005_player_alias_index";
+	internal const string MailFolderNumberMigrationId = "0010_mail_folder_numbers";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
@@ -19,7 +22,7 @@ public partial class LightningDatabase
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
 	/// 3. apply pending core repairs, including the atomic exit source-index, mail folder-count and
-	///    player-alias index rebuilds;
+	///    player-alias index rebuilds, and the numbering of mail folders that predate folder numbers;
 	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 6. ensure the singleton server-state row exists.
@@ -51,6 +54,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
 			await RebuildReadIndexesAsync(cancellationToken);
+			await Store.WriteAsync(tx => NumberMailFolders(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -150,6 +154,57 @@ public partial class LightningDatabase
 		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
 		{
 			Id = MailFolderCountMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
+	}
+
+	/// <summary>
+	/// Gives every mail folder a PennMUSH folder number, once, for worlds whose folders were kept by name alone:
+	/// each recipient's folders that hold mail, and those its <see cref="ExpandedMailData"/> lists, are numbered by
+	/// <see cref="ExpandedMailData.WithFolders"/> into its <see cref="ExpandedMailData.FolderNumbers"/>. Messages
+	/// stay under the names they are stored under, so no mail row changes.
+	/// </summary>
+	internal void NumberMailFolders(ITx tx, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var marker = Keys.Str("mig:" + MailFolderNumberMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+
+		var folders = new Dictionary<long, SortedSet<string>>();
+		foreach (var (key, _) in tx.Range(Tables.MailBox, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var recipient = Keys.ReadDbref(key.AsSpan(0, 8));
+			var mailId = Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
+			if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
+			var folder = Codec.Deserialize<MailRecord>(bytes).Folder;
+			if (!folders.TryGetValue(recipient, out var held))
+			{
+				folders[recipient] = held = new SortedSet<string>(StringComparer.Ordinal);
+			}
+
+			held.Add(folder);
+		}
+
+		foreach (var (recipient, held) in folders)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var key = Keys.Composite(recipient, nameof(ExpandedMailData));
+			var existing = tx.TryGet(Tables.ExpandedObj, key, out var stored) ? stored : null;
+			var data = existing is null
+				? new ExpandedMailData()
+				: JsonSerializer.Deserialize<ExpandedMailData>(existing, ExpandedDataJsonOptions) ?? new ExpandedMailData();
+			var numbered = data.WithFolders([.. held, .. data.Folders ?? [], .. data.ActiveFolder is { } active ? [active] : Array.Empty<string>()]);
+			if (numbered.FolderNumbers is null || numbered == data) continue;
+
+			var update = JsonSerializer.SerializeToUtf8Bytes(
+				new Dictionary<string, object> { [nameof(ExpandedMailData.FolderNumbers)] = numbered.FolderNumbers },
+				ExpandedDataJsonOptions);
+			tx.Put(Tables.ExpandedObj, key, existing is null ? update : MergeExpandedData(existing, update));
+		}
+
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = MailFolderNumberMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 		}));
 	}
 
