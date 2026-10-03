@@ -222,6 +222,7 @@ public static partial class ErrorMessages
 		public const string NotLinked = "#-1 NOT LINKED";
 		public const string VariableDestination = "#-2 VARIABLE DESTINATION";
 		public const string HomeDestination = "#-3 HOME";
+		public const string NeedAWord = "#-1 NEED A WORD";
 		public const string NoContents = "#-1 NO CONTENTS";
 		public const string NoExits = "#-1 NO EXITS";
 		public const string NoNextObject = "#-1 NO NEXT OBJECT";
@@ -250,6 +251,7 @@ public static partial class ErrorMessages
 		public const string StringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
+		public const string TooManyWords = "#-1 TOO MANY WORDS";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
 		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";

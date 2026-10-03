@@ -2738,7 +2738,10 @@ public class SharpMUSHParserVisitor(
 
 		var eqSplit = behavior.HasFlag(CommandBehavior.EqSplit);
 		var noParse = behavior.HasFlag(CommandBehavior.NoParse) || noEval;
-		var noRsParse = behavior.HasFlag(CommandBehavior.RSNoParse);
+		// command_parse's explicit-switch EQSPLIT branch: /noeval leaves the right side unevaluated
+		// (`@force/noeval obj=think %!` runs `think %!` as obj, #1389) while the left side is still
+		// evaluated when an = is present.
+		var noRsParse = behavior.HasFlag(CommandBehavior.RSNoParse) || (noEvalSwitch && eqSplit);
 		var nArgs = argCallState?.Arguments?.Length;
 
 		// TODO: Implement lsargs (list-style arguments) support.

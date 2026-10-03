@@ -770,18 +770,22 @@ public static class MailAliases
 		return await LookupPlayerAsync(services, entry);
 	}
 
-	/// <summary><c>lookup_player</c>: a player by exact name or alias, a leading <c>*</c> ignored.</summary>
+	/// <summary>
+	/// <c>lookup_player</c> (<c>src/plyrlist.c</c>): a <c>#</c> on the raw name is a dbref; otherwise one
+	/// leading <c>*</c> is dropped and the rest is an exact name or alias. So <c>*#42</c> looks for a
+	/// player named <c>#42</c>, and <c>**God</c> for one named <c>*God</c>.
+	/// </summary>
 	private static async ValueTask<SharpPlayer?> LookupPlayerAsync(Services services, string name)
 	{
-		var bare = name.TrimStart('*');
-		if (bare.StartsWith('#'))
+		if (name.StartsWith('#'))
 		{
-			return DBRef.TryParse(bare, out var dbref) && dbref is { } reference
+			return DBRef.TryParse(name, out var dbref) && dbref is { } reference
 					&& await services.Mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject and SharpPlayer byDbref
 				? byDbref
 				: null;
 		}
 
+		var bare = name.StartsWith('*') ? name[1..] : name;
 		return bare.Length == 0
 			? null
 			: await services.Mediator.CreateStream(new GetPlayerQuery(bare)).FirstOrDefaultAsync();

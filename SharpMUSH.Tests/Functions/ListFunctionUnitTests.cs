@@ -702,7 +702,13 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("splice(a b c,d e f, )", "a d  b e  c f")]
+	[Arguments("splice(a b c,x y z,b)", "a y c")]
+	[Arguments("splice(a b a,x y z,a)", "x b z")]
+	[Arguments("splice(a b c,x y z,B)", "a b c")]
+	[Arguments("splice(a|b|c,x|y|z,c,|)", "a|b|z")]
+	[Arguments("splice(a b c,x y z,)", "#-1 NEED A WORD")]
+	[Arguments("splice(a b c,x y z,b c)", "#-1 TOO MANY WORDS")]
+	[Arguments("splice(a b c,x y,b)", "#-1 NUMBER OF WORDS MUST BE EQUAL")]
 	public async Task Splice(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

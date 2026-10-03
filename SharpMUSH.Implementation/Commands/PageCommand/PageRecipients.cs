@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.PageCommand;
@@ -27,7 +28,7 @@ public static class PageRecipients
 			return player;
 		}
 
-		return await ShortPage(mediator, connections, name);
+		return await ShortPage.MatchAsync(mediator, connections, name);
 	}
 
 	/// <summary>
@@ -55,65 +56,6 @@ public static class PageRecipients
 		return await mediator.CreateStream(new GetPlayerQuery(lookup)).FirstOrDefaultAsync() is { } found
 			? new Found<AnySharpObject>(found)
 			: new NotFound();
-	}
-
-	/// <summary>
-	/// bsd.c <c>short_page</c> (:6376): the connected players whose name starts with
-	/// <paramref name="name"/>, case-insensitively. A whole-name match wins outright and ends the walk;
-	/// two of them are <see cref="AmbiguousName"/>.
-	/// </summary>
-	private static async ValueTask<PageRecipient> ShortPage(IMediator mediator, IConnectionService connections,
-		string name)
-	{
-		if (name.Length == 0)
-		{
-			return new NotFound();
-		}
-
-		var count = 0;
-		var match = new PageRecipient(new NotFound());
-		DBRef? previous = null;
-
-		await foreach (var connection in connections.GetAll())
-		{
-			// short_page walks DESC_ITER_CONN, so a socket still at the connect screen is nobody.
-			if (connection.State is not IConnectionService.ConnectionState.LoggedIn || connection.Ref is null)
-			{
-				continue;
-			}
-
-			if (await mediator.Send(new GetObjectNodeQuery(connection.Ref.Value)) is not AnySharpObject player)
-			{
-				continue;
-			}
-
-			var playerName = player.Object().Name;
-			if (!playerName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
-			{
-				continue;
-			}
-
-			if (playerName.Equals(name, StringComparison.OrdinalIgnoreCase))
-			{
-				return player;
-			}
-
-			// short_page compares against the *previous* match rather than a set, so one player holding
-			// two connections that are not adjacent in the list counts twice and reads as ambiguous.
-			if (previous is null || !connection.Ref.Value.Equals(previous.Value))
-			{
-				previous = connection.Ref.Value;
-				match = player;
-				count++;
-			}
-		}
-
-		return count switch
-		{
-			0 => new NotFound(),
-			1 => match,
-			_ => new AmbiguousName()
-		};
 	}
 
 	private static readonly SearchValues<char> NextInListBreaks = SearchValues.Create(" \"");

@@ -1129,6 +1129,20 @@ public partial class Functions
 		var list2Arg = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
+		// PennMUSH fun_splice: <word> is checked before the lists are split, then every word of
+		// <list1> equal to it (case-sensitive, markup ignored) is replaced by the word at the same
+		// position in <list2>.
+		var word = args["2"].Message?.ToPlainText() ?? string.Empty;
+		if (word.Length == 0)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NeedAWord));
+		}
+
+		if (MushText.SplitList(delimiter, MarkupText.Plain(word)).Length != 1)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.TooManyWords));
+		}
+
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var list2 = MushText.SplitList(delimiter, list2Arg ?? MarkupText.Empty);
 
@@ -1137,13 +1151,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
 		}
 
-		// Each pair uses delimiter as the within-pair separator.
-		// Pairs themselves are separated by delimiter + delimiter (double separator)
-		// to clearly distinguish pair boundaries in the output.
-		var pairs = list.Zip(list2)
-			.Select(pair => MarkupText.Concat(pair.First, MarkupText.Concat(delimiter, pair.Second)));
-		var betweenPairSep = MarkupText.Concat(delimiter, delimiter);
-		var result = MarkupText.Join(betweenPairSep, pairs);
+		var spliced = list.Select((item, i) => item.ToPlainText() == word ? list2[i] : item);
+		var result = MarkupText.Join(delimiter, spliced);
 
 		return ValueTask.FromResult(new CallState(result));
 	}

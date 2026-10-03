@@ -50,6 +50,23 @@ public class ForcePlayerParityTests
 		await Assert.That(Factory.Notifications.For(wizard.DbRef)).Contains($"{target.Name} says, \"{text}\"");
 	}
 
+	/// <summary>
+	/// <c>@force/noeval</c> leaves the command unevaluated (command_parse's EQSPLIT branch), so the forced
+	/// object evaluates it: <c>%!</c> is the forced object and <c>%#</c> the forcer
+	/// (<c>new_queue_actionlist(victim, player, ...)</c>, <c>src/wiz.c:665</c>) (#1389).
+	/// </summary>
+	[Test]
+	public async Task ForcedNoEvalCodeIsEvaluatedByTheForcedObject()
+	{
+		var (wizard, target) = await Setup("ForceEval");
+		var text = TestIsolationHelpers.GenerateUniqueName("forced");
+
+		await Run(wizard.Handle, $"@force/noeval *{target.Name}=think {text} me:%! en:%#");
+
+		await Assert.That(Factory.Notifications.For(target.DbRef))
+			.Contains($"{text} me:#{target.DbRef.Number} en:#{wizard.DbRef.Number}");
+	}
+
 	[Test]
 	public async Task TriggeredSayIsSpokenByTheTriggeredPlayer()
 	{
