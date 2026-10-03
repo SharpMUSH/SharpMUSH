@@ -3186,6 +3186,10 @@
     <value>La escena no se inició.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>La escena se inició, pero no se pudo hacer privada.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Busque una cuenta para gestionar sus roles.</value>
     <comment>MT</comment>

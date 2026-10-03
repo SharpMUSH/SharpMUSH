@@ -3186,6 +3186,10 @@
     <value>Die Szene wurde nicht gestartet.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Die Szene wurde gestartet, konnte aber nicht privat gemacht werden.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Suchen Sie nach einem Konto, um dessen Rollen zu verwalten.</value>
     <comment>MT</comment>

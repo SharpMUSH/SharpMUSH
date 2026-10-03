@@ -3186,6 +3186,10 @@
     <value>Сцената не беше започната.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Сцената започна, но не можа да бъде направена частна.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Потърсете акаунт, за да управлявате ролите му.</value>
     <comment>MT</comment>

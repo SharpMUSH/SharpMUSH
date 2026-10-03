@@ -3186,6 +3186,10 @@
     <value>Scena nu a fost pornită.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scena a fost pornită, dar nu a putut fi făcută privată.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Căutați un cont pentru a-i gestiona rolurile.</value>
     <comment>MT</comment>

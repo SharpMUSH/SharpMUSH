@@ -3186,6 +3186,10 @@
     <value>Scena nije pokrenuta.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scena je pokrenuta, ali nije se mogla učiniti privatnom.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Pretražite račun da biste upravljali njegovim ulogama.</value>
     <comment>MT</comment>

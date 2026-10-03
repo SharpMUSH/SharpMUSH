@@ -185,7 +185,10 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
   session's bound character — whatever the terminal is playing — on the engine's queue as typed input
   (`$`-commands in place), answered with the output that character was told while it ran (copied by
   `ICommandOutputCapture`; still delivered to its connections) and, when the request names one, a
-  `Result` expression evaluated right after in the same queue entry
+  `Result` expression evaluated right after in the same queue entry, under the character's own output
+  limit. A request naming a `Character` (objid) is refused 409 unless the session is still bound to it;
+  an account may have `PortalCommands:MaxPendingPerAccount` (default 4) commands queued or running,
+  and is answered 429 past that
 
 ### Widget System
 

@@ -186,22 +186,25 @@
     private async Task StartSceneAsync()
     {
         var title = _newTitle.Trim();
-        if (title.Length == 0) return;
+        if (title.Length == 0 || _acting is not { } acting) return;
 
         _busy = true;
         _startError = null;
         try
         {
-            // Every command here runs as the character this tab acts as, which is the one the account
-            // session is bound to, and answers this page alone — so the scene is the acting character's,
-            // and whether it was made is a question about that character, not about the roster.
+            // Every command here runs as the character the account session is bound to, and answers this
+            // page alone — so the scene is that character's, and whether it was made is a question about
+            // that character, not about the roster. Each one names the character the form was started as:
+            // if the tab switches character part-way, the server refuses the rest rather than making the
+            // other character's scene private.
             //
             // +scene/create focuses the scene it makes, and focus moves only by that character's own
             // commands. A focus that differs after the create from what it was just before is the new
             // scene; an unchanged one means nothing was made, and the create's own output says why.
-            _startError = await Commands.RunAsync("think", FocusedScene) switch
+            var character = $"#{acting.DbrefNumber}:{acting.CreationTime}";
+            _startError = await Commands.RunAsync("think", FocusedScene, character) switch
             {
-                PortalCommandResponse asked => await CreateSceneAsync(title, asked.Result),
+                PortalCommandResponse asked => await CreateSceneAsync(title, asked.Result, character),
                 ApiFailure failure => failure.Message,
             };
         }
@@ -214,11 +217,12 @@
 
     /// <summary>Runs the create, and answers why no scene came of it, or null when one did.</summary>
     /// <param name="before">What the character was focused on just before.</param>
-    private async Task<string?> CreateSceneAsync(string title, string? before) =>
-        await Commands.RunAsync($"+scene/create {title}", FocusedScene) switch
+    /// <param name="character">The objid of the character the form was started as.</param>
+    private async Task<string?> CreateSceneAsync(string title, string? before, string character) =>
+        await Commands.RunAsync($"+scene/create {title}", FocusedScene, character) switch
         {
-            PortalCommandResponse { Result: { } focus } when IsScene(focus) && focus != before => await SceneCreatedAsync(),
-            PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotStarted"],
+            PortalCommandResponse { Result: { } focus } when IsScene(focus) && focus != before => await SceneCreatedAsync(character),
+            PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotStarted"]),
             ApiFailure failure => failure.Message,
         };
 
@@ -226,9 +230,9 @@
     /// The new scene is the one in focus, which is what +scene/private acts on — so it goes out only
     /// once a scene is known to have been made, and never onto a scene the character had before.
     /// </summary>
-    private async Task<string?> SceneCreatedAsync()
+    private async Task<string?> SceneCreatedAsync(string character)
     {
-        var error = !_newPublic && await Commands.RunAsync("+scene/private") is ApiFailure failure ? failure.Message : null;
+        var error = _newPublic ? null : await MakePrivateAsync(character);
 
         await LoadAsync();
 
@@ -239,6 +243,22 @@
         _newPublic = true;
         return error;
     }
+
+    /// <summary>
+    /// Runs +scene/private and asks the scene, in the same queue entry, whether it is now private: the
+    /// command can refuse in its output, and an answer that came back is not a scene that changed.
+    /// </summary>
+    private async Task<string?> MakePrivateAsync(string character) =>
+        await Commands.RunAsync("+scene/private", $"scene({FocusedScene},public)", character) switch
+        {
+            PortalCommandResponse { Result: "0" } => null,
+            PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotPrivate"]),
+            ApiFailure failure => failure.Message,
+        };
+
+    /// <summary>What a command that did not do its job said, or <paramref name="fallback"/> when it said nothing.</summary>
+    private static string Refusal(PortalCommandResponse refused, string fallback) =>
+        refused.Output.Count > 0 ? string.Join(" ", refused.Output) : fallback;
 
     private static bool IsScene(string focus) => focus.Length > 0 && !focus.StartsWith("#-1", StringComparison.Ordinal);
 

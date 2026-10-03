@@ -3186,6 +3186,10 @@
     <value>A jelenet nem indult el.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>A jelenet elindult, de nem sikerült privátra állítani.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Keressen egy fiókot a szerepköreinek kezeléséhez.</value>
     <comment>MT</comment>

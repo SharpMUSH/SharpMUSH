@@ -3018,6 +3018,9 @@
   <data name="RolSceneNotStarted" xml:space="preserve">
     <value>The scene was not started.</value>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>The scene was started, but it could not be made private.</value>
+  </data>
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scene in {0}</value>
   </data>

@@ -3186,6 +3186,10 @@
     <value>De scène is niet gestart.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>De scène is gestart, maar kon niet privé worden gemaakt.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Zoek een account om de rollen ervan te beheren.</value>
     <comment>MT</comment>

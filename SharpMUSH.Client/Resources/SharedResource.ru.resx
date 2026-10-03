@@ -3186,6 +3186,10 @@
     <value>Сцена не была начата.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Сцена начата, но сделать её закрытой не удалось.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Найдите аккаунт, чтобы управлять его ролями.</value>
     <comment>MT</comment>

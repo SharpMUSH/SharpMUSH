@@ -3186,6 +3186,10 @@
     <value>A cena não foi iniciada.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>A cena foi iniciada, mas não pôde ser tornada privada.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Busque uma conta para gerenciar suas funções.</value>
     <comment>MT</comment>

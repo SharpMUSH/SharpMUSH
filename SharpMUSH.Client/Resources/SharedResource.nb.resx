@@ -3186,6 +3186,10 @@
     <value>Scenen ble ikke startet.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scenen ble startet, men den kunne ikke gjøres privat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Søk etter en konto for å administrere rollene dens.</value>
     <comment>MT</comment>

@@ -2013,6 +2013,10 @@
     <value>La scène n'a pas été lancée.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>La scène a été lancée, mais elle n’a pas pu être rendue privée.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
   </data>

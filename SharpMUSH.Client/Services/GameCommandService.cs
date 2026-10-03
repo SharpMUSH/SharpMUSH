@@ -19,8 +19,10 @@ public class GameCommandService(IHttpClientFactory httpClientFactory)
 	/// Runs <paramref name="command"/> as one typed line. <paramref name="result"/>, when given, is an
 	/// expression evaluated as the character straight after it, with nothing else in the game running in
 	/// between; its value comes back as <see cref="PortalCommandResponse.Result"/>.
+	/// <paramref name="character"/>, an objid, pins the command to that character: if the session has
+	/// moved on to another, the server refuses it rather than running it as the other one.
 	/// </summary>
-	public Task<ApiResult<PortalCommandResponse>> RunAsync(string command, string? result = null) =>
+	public Task<ApiResult<PortalCommandResponse>> RunAsync(string command, string? result = null, string? character = null) =>
 		Client.PostApiAsync<PortalCommandRequest, PortalCommandResponse>(
-			"api/commands", new PortalCommandRequest(command, result), "The server returned no command result.");
+			"api/commands", new PortalCommandRequest(command, result, character), "The server returned no command result.");
 }

@@ -12,7 +12,12 @@ namespace SharpMUSH.Library.Models.Portal;
 /// entry, so nothing else in the game runs between the two. Its value is the structured answer, for
 /// a caller that needs to learn what the command made — <c>scenefocus(me)</c> after <c>+scene/create</c>.
 /// </param>
-public record PortalCommandRequest(string Command, string? Result = null);
+/// <param name="Character">
+/// Optional. The objid (<c>#N:creation</c>) of the character the caller means to act as. The command
+/// runs only while the session is still bound to that character, and is refused with 409 otherwise,
+/// so a flow of several requests stays with the character it started as.
+/// </param>
+public record PortalCommandRequest(string Command, string? Result = null, string? Character = null);
 
 /// <summary>What a portal command answered.</summary>
 /// <param name="Output">

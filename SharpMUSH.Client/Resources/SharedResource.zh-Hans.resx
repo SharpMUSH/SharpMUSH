@@ -3186,6 +3186,10 @@
     <value>场景未能开始。</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>场景已开始，但无法设为私密。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>搜索账号以管理其权限组。</value>
     <comment>MT</comment>

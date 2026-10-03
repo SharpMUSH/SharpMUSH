@@ -5,9 +5,12 @@ using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Infrastructure;
@@ -126,6 +129,52 @@ public class PortalCommandApiTests(ServerWebAppFactory factory)
 		await Assert.That(created.Output).Contains(line => line.Contains($"Scene {created.Result} created", StringComparison.Ordinal));
 		var owner = (await RunAsync(CreateClient(), "think", $"scene({created.Result},owner)")).Result;
 		await Assert.That(owner?.Split(':')[0]).IsEqualTo($"#{character.Number}");
+	}
+
+	/// <summary>
+	/// A request that names the character it means to act as is refused, unrun, once the session acts as
+	/// someone else — so a flow of several commands cannot finish as the character the tab switched to.
+	/// </summary>
+	[Test]
+	public async Task ARequestPinnedToAnotherCharacter_IsRefused_AndNothingRuns()
+	{
+		var number = await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, "PortalPinned");
+		var character = (await Mediator.Send(new GetObjectNodeQuery(number))).Expect<SharpPlayer>().Object.DBRef;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>().Object.DBRef;
+		var controller = await CommandsControllerAs(character);
+		var marker = TestIsolationHelpers.GenerateUniqueName("PortalPin");
+
+		var refused = await controller.Run(new PortalCommandRequest($"&PINMARK me={marker}", Character: god.ToString()), CancellationToken.None);
+		var ran = await controller.Run(new PortalCommandRequest("think", $"get(me/PINMARK)", character.ToString()), CancellationToken.None);
+
+		await Assert.That((refused.Result as ObjectResult)?.StatusCode).IsEqualTo(StatusCodes.Status409Conflict);
+		await Assert.That(ran.Value!.Result).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
+	/// The result expression is the character's code as much as the command is, and runs under the same
+	/// output ceiling: a guest's is <c>guest_output_limit</c>, not the 5 MB everyone else gets.
+	/// </summary>
+	[Test]
+	public async Task AGuestsResultExpression_KeepsTheGuestOutputLimit()
+	{
+		var number = await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, "PortalGuest");
+		var character = (await Mediator.Send(new GetObjectNodeQuery(number))).Expect<SharpPlayer>().Object.DBRef;
+		var guestLimit = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Limit.GuestOutputLimit;
+		await RunAsync(CreateClient(), $"@power #{character.Number}=Guest");
+		try
+		{
+			var controller = await CommandsControllerAs(character);
+
+			var answer = (await controller.Run(new PortalCommandRequest("think", $"strlen(repeat(x,{guestLimit + 1}))"),
+				CancellationToken.None)).Value!;
+
+			await Assert.That(answer.Result).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+		}
+		finally
+		{
+			await RunAsync(CreateClient(), $"@power #{character.Number}=!Guest");
+		}
 	}
 
 	[Test]

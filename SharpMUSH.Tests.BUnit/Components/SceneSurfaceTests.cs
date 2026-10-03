@@ -88,6 +88,28 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// <summary>What the engine tells a character whose create it refused.</summary>
 	public const string Refusal = "You must be approved to do that.";
 
+	/// <summary>Whether the focused scene is watchable, as <c>scene(scenefocus(me),public)</c> answers.</summary>
+	public bool FocusIsPublic { get; set; } = true;
+
+	/// <summary>Whether <c>+scene/private</c> refuses, saying <see cref="PrivacyRefusal"/> and changing nothing.</summary>
+	public bool PrivacyRefused { get; set; }
+
+	public const string PrivacyRefusal = "Only the scene's owner may change who can watch it.";
+
+	/// <summary>
+	/// The objid the account session is bound to. A request that names a different character is refused
+	/// with 409 and not run, as <c>CommandsController</c> refuses it.
+	/// </summary>
+	public string BoundCharacter { get; set; } = "#1:1";
+
+	/// <summary>The character the session switches to straight after <c>+scene/create</c> runs, when set.</summary>
+	public string? SwitchAfterCreateTo { get; set; }
+
+	public const string Switched = "This session now acts as someone else; the command was not run.";
+
+	/// <summary>Every command request the page sent, in order, whether or not it ran.</summary>
+	private readonly List<PortalCommandRequest> _requests = [];
+
 	/// <summary>Every command the page ran through <c>POST api/commands</c>, in order.</summary>
 	private readonly List<string> _commands = [];
 
@@ -143,6 +165,15 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	private async Task<HttpResponseMessage> RunCommandAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>(ct))!;
+		lock (_commands) _requests.Add(command);
+		if (command.Character is { } pinned && pinned != BoundCharacter)
+		{
+			return new HttpResponseMessage(HttpStatusCode.Conflict)
+			{
+				Content = new StringContent($$"""{"status":409,"detail":"{{Switched}}"}""", Encoding.UTF8, "application/problem+json")
+			};
+		}
+
 		IReadOnlyList<string> output = [];
 		lock (_commands) _commands.Add(command.Command);
 		if (command.Command.StartsWith("+scene/create ", StringComparison.Ordinal))
@@ -150,16 +181,35 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			if (ASceneAppears)
 			{
 				Focus = "S2";
+				FocusIsPublic = true;
 				output = ["Scene S2 created and focused (status: active)."];
 			}
 			else
 			{
 				output = [Refusal];
 			}
+			if (SwitchAfterCreateTo is { } next) BoundCharacter = next;
+		}
+		else if (command.Command == "+scene/private")
+		{
+			if (PrivacyRefused) output = [PrivacyRefusal];
+			else FocusIsPublic = false;
 		}
 
-		var answer = new PortalCommandResponse(output, command.Result == "scenefocus(me)" ? Focus : null, Truncated: false);
+		var result = command.Result switch
+		{
+			"scenefocus(me)" => Focus,
+			"scene(scenefocus(me),public)" => FocusIsPublic ? "1" : "0",
+			_ => null,
+		};
+		var answer = new PortalCommandResponse(output, result, Truncated: false);
 		return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(answer) };
+	}
+
+	/// <summary>Every command request the page sent so far, in order, including any refused.</summary>
+	public List<PortalCommandRequest> RequestsSent()
+	{
+		lock (_commands) return [.. _requests];
 	}
 
 	/// <summary>The commands run so far, in order, as a snapshot a test can assert on.</summary>
@@ -586,9 +636,13 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>Signs the tab in with <paramref name="name"/> (#<paramref name="number"/>) as its acting character.</summary>
-	private async Task ActAsAsync(int number = 1, string name = "Wizard") =>
+	/// <remarks>The account session is bound to the same character, as signing in binds it.</remarks>
+	private async Task ActAsAsync(int number = 1, string name = "Wizard")
+	{
+		_api.BoundCharacter = $"#{number}:1";
 		Services.AddSingleton(await SharpMUSH.Tests.BUnit.Components.Characters.CharactersApiFake.SignedInAsync(this,
 			new AccountAuthService.CharacterSummary(number, 1, name, "PLAYER", IsActing: true)));
+	}
 
 	private void SubmitStartForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, bool watchable = true)
 	{
@@ -777,6 +831,84 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.CommandsRun()).Contains("+scene/create Never Created");
 		await Assert.That(_api.CommandsRun()).DoesNotContain("+scene/private");
+	}
+
+	/// <summary>
+	/// After +scene/private the page asks the scene whether it is private now, in the same request: a
+	/// verb that refused answers in its output, not with an error status, so a form that closed on any
+	/// answer would leave a scene the player asked to keep private watchable by anyone.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_APrivacyTheEngineRefused_KeepsTheFormOpen_AndSaysWhy()
+	{
+		_api.ASceneAppears = true;
+		_api.PrivacyRefused = true;
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		SubmitStartForm(cut, "Meant To Be Quiet", watchable: false);
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.PrivacyRefusal);
+		var asked = _api.RequestsSent().Single(request => request.Command == "+scene/private");
+		await Assert.That(asked.Result).IsEqualTo("scene(scenefocus(me),public)");
+	}
+
+	/// <summary>A private scene that really is private closes the form with nothing to report.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_APrivacyThatTookHold_ClosesTheForm()
+	{
+		_api.ASceneAppears = true;
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		SubmitStartForm(cut, "Truly Quiet", watchable: false);
+
+		WaitForCommand("+scene/private");
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-start-error")).IsEmpty();
+		await Assert.That(_api.FocusIsPublic).IsFalse();
+	}
+
+	/// <summary>
+	/// Every request of the start flow names the character the form was started as, so the server can
+	/// refuse one the session would now run as somebody else.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_EveryStartRequest_NamesTheCharacterItStartedAs()
+	{
+		_api.ASceneAppears = true;
+		await ActAsAsync(314, "Wren Halloway");
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		SubmitStartForm(cut, "Pinned", watchable: false);
+
+		WaitForCommand("+scene/private");
+		var sent = _api.RequestsSent();
+		await Assert.That(sent.Select(request => request.Command))
+			.IsEquivalentTo(["think", "+scene/create Pinned", "+scene/private"]);
+		await Assert.That(sent.All(request => request.Character == "#314:1")).IsTrue();
+	}
+
+	/// <summary>
+	/// A character switch between the create and +scene/private does not make the other character's
+	/// focused scene private: the private request still names the character the scene was made by, the
+	/// server refuses it, and the form says so instead of closing.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ASwitchMidStart_DoesNotRunPrivateAsTheOtherCharacter()
+	{
+		_api.ASceneAppears = true;
+		_api.SwitchAfterCreateTo = "#2:1";
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		SubmitStartForm(cut, "Switched Away", watchable: false);
+
+		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.Switched);
+		await Assert.That(_api.CommandsRun()).DoesNotContain("+scene/private");
+		await Assert.That(_api.RequestsSent().Single(request => request.Command == "+scene/private").Character).IsEqualTo("#1:1");
 	}
 
 	/// <summary>A route that fails says so, rather than leaving the form looking as if nothing happened.</summary>
