@@ -77,7 +77,7 @@ public static class SendMail
 
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var aliases = new MailAliases.Services(delivery.Mediator, delivery.Notify, delivery.Permissions);
+		var aliases = new MailAliases.Services(delivery.Mediator, delivery.Notify, delivery.Permissions, delivery.Connections);
 		var knownPlayerList = new List<(SharpPlayer Player, bool Silent)>();
 		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()))
 		{

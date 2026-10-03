@@ -121,10 +121,6 @@
    "command": "Bob bobpass"
   },
   {
-   "key": "20-admin-commands/admin.lists#0",
-   "command": "@list flags"
-  },
-  {
    "key": "20-admin-commands/admin.pcreate#2",
    "command": "Carol carolpw2"
   },

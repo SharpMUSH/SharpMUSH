@@ -47,7 +47,7 @@ public class MigrationTests
 			await db.Migrate();
 
 			await Assert.That(db.Store.Count(Tables.Obj)).IsEqualTo(10);
-			await Assert.That(db.Store.Count(Tables.Flag)).IsEqualTo(64);
+			await Assert.That(db.Store.Count(Tables.Flag)).IsEqualTo(65);
 			await Assert.That(db.Store.Count(Tables.AttrEntry)).IsEqualTo(220);
 
 			var next = db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : -1);
@@ -114,6 +114,101 @@ public class MigrationTests
 			var orphan = db.Store.Read(tx => tx.TryGet(Tables.Power, Keys.Upper("Pueblo_Send"), out _));
 			await Assert.That(orphan).IsFalse()
 				.Because("the superseded record is dropped, not left orphaned beside the new one");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
+	/// <summary>
+	/// The vacation flag was seeded as ON_VACATION; PennMUSH names it ON-VACATION (#1405). Holders are
+	/// edges keyed by the flag's name, so a world seeded under the old name has them moved and the old
+	/// record dropped, and a disabled flag stays disabled.
+	/// </summary>
+	[Test]
+	public async Task MigrateMovesLegacyOnVacationHoldersOntoOnHyphenVacation()
+	{
+		var path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+
+		try
+		{
+			await db.Migrate();
+
+			// A world seeded before the rename: the old record, disabled, and God holding it.
+			await db.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.Flag, Keys.Upper("ON_VACATION"), Codec.Serialize(new FlagRecord
+				{
+					Name = "ON_VACATION",
+					Symbol = "o",
+					Aliases = ["ONVACATION", "ON-VACATION", "VACATION"],
+					TypeRestrictions = ["PLAYER"],
+					System = true,
+					Disabled = true
+				}));
+				tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(1), Keys.Upper("ON_VACATION"));
+				tx.Put(Tables.ObjFlag.Reverse, Keys.Upper("ON_VACATION"), Keys.Dbref(1));
+				return true;
+			});
+
+			await db.Migrate();
+
+			var held = db.Store.Read(tx =>
+				tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(1)).Select(v => Keys.ReadStr(v)).ToArray());
+			await Assert.That(held).Contains("ON-VACATION");
+			await Assert.That(held).DoesNotContain("ON_VACATION");
+
+			var (orphan, renamed) = db.Store.Read(tx => (
+				tx.TryGet(Tables.Flag, Keys.Upper("ON_VACATION"), out _),
+				tx.TryGet(Tables.Flag, Keys.Upper("ON-VACATION"), out var value) ? Codec.Deserialize<FlagRecord>(value) : null));
+			await Assert.That(orphan).IsFalse();
+			await Assert.That(renamed!.Disabled).IsTrue();
+			await Assert.That(renamed.Aliases).Contains("ON_VACATION");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
+	/// <summary>
+	/// TERSE used to be an alias of CLOUDY, so a player set TERSE holds a CLOUDY edge. Once TERSE is its
+	/// own flag (#1404) that edge moves to TERSE; anything that is not a player or thing keeps CLOUDY.
+	/// </summary>
+	[Test]
+	public async Task MigrateMovesLegacyTerseHoldersOffCloudy()
+	{
+		var path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+
+		try
+		{
+			await db.Migrate();
+
+			// God (#1, a player) set TERSE before the split, and room #0 set CLOUDY.
+			await db.Store.WriteAsync(tx =>
+			{
+				foreach (var holder in new long[] { 0, 1 })
+				{
+					tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), Keys.Upper("CLOUDY"));
+					tx.Put(Tables.ObjFlag.Reverse, Keys.Upper("CLOUDY"), Keys.Dbref(holder));
+				}
+				return true;
+			});
+
+			await db.Migrate();
+
+			string[] Held(long dbref) => db.Store.Read(tx =>
+				tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref)).Select(v => Keys.ReadStr(v)).ToArray());
+			await Assert.That(Held(1)).Contains("TERSE").And.DoesNotContain("CLOUDY");
+			await Assert.That(Held(0)).Contains("CLOUDY").And.DoesNotContain("TERSE");
+			var cloudyHolders = db.Store.Read(tx =>
+				tx.Dups(Tables.ObjFlag.Reverse, Keys.Upper("CLOUDY")).Select(v => Keys.ReadDbref(v)).ToArray());
+			await Assert.That(cloudyHolders).IsEquivalentTo(new long[] { 0 });
 		}
 		finally
 		{

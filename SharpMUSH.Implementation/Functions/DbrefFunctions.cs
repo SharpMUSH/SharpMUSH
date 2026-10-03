@@ -1173,8 +1173,12 @@ public partial class Functions
 				continue;
 			}
 
-			// Look up flag by symbol (case-sensitive in PennMUSH)
-			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString());
+			// Look up flag by symbol (case-sensitive in PennMUSH). Letters are shared across types (A is
+			// ABODE on a room and ANSI on a player, x CLOUDY on an exit and TERSE on a thing), so Penn's
+			// letter_to_flagptr takes the flag whose type covers the object's.
+			var type = obj.Object().Type;
+			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString()
+				&& (f.TypeRestrictions.Length == 0 || f.TypeRestrictions.Contains(type, StringComparer.OrdinalIgnoreCase)));
 			if (flagDef == null)
 			{
 				// For AND: unknown required flag → false; negated unknown → true (not set)

@@ -30,7 +30,8 @@ public static partial class MailDelivery
 		IDidItService DidIt,
 		IAttributeService Attributes,
 		IExpandedObjectDataService ObjectData,
-		IOptionsWrapper<SharpMUSHOptions> Configuration);
+		IOptionsWrapper<SharpMUSHOptions> Configuration,
+		IConnectionService Connections);
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
 	/// <param name="Body">The text as the sender wrote it, which is what the <c>clear</c> check reads.</param>
