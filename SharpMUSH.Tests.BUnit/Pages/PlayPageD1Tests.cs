@@ -190,6 +190,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
 		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsFalse();
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0).Because("the terminal keeps its own input");
+		await Assert.That(cut.FindAll(".scene-card-foot").Count).IsEqualTo(0)
+			.Because("no empty footer either: it pads itself, and a sideways phone has no height to give it (#1506)");
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
 	}
 
@@ -747,6 +749,43 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		cut.Find("button.scene-card-sub--action").Click();
 		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg").Because("the sheet drops over the header, which keeps it");
+	}
+
+	[Test]
+	public async Task OnAShortScreen_ThePageIsMarkedShort_AndFollowsTheScreenAsItTurns()
+	{
+		// #1506: a phone held sideways is wider than the narrow tier and short of height for the tablet layout;
+		// Play.razor.css tightens that layout under play--short.
+		JSInterop.Setup<bool>("sharpmushLayout.watchShortScreen", _ => true).SetResult(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play.play--short"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-aside").Count).IsEqualTo(1).Because("it keeps the tablet layout, aside and all");
+
+		var page = cut.FindComponent<PlayPage>();
+		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(false));
+		await Assert.That(cut.Find(".play").ClassList).DoesNotContain("play--short").Because("turned upright");
+		await cut.InvokeAsync(() => page.Instance.OnShortScreenChanged(true));
+		await Assert.That(cut.Find(".play").ClassList).Contains("play--short");
+
+		cut.Find("button.scene-card-focus").Click();
+		await Assert.That(cut.Find(".play").ClassList).Contains("play--focus");
+		await Assert.That(cut.Find(".play").ClassList).Contains("play--short").Because("focus mode is tightened the same way");
+
+		await DisposeComponentsAsync();
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.unwatchShortScreen")).IsTrue()
+			.Because("a page that is gone must not be called when the screen turns");
+	}
+
+	[Test]
+	public async Task ATallerScreen_IsNotMarkedShort()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play.play--room"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play").ClassList).DoesNotContain("play--short");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.watchShortScreen")).IsTrue()
+			.Because("the page asks, and follows the answer as the screen turns");
 	}
 
 	[Test]
