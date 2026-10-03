@@ -56,6 +56,8 @@ public class NatsStreamBudgetTests
 			.Throws<FormatException>();
 		await Assert.That(() => new NatsOptions().ApplyEnvironment(name => name == "SHARPMUSH_NATS_MAX_AGE" ? "soon" : null))
 			.Throws<FormatException>();
+		await Assert.That(() => new NatsOptions().ApplyEnvironment(name => name == "SHARPMUSH_NATS_MAX_AGE" ? "99999999999999d" : null))
+			.Throws<FormatException>();
 	}
 
 	[Test]

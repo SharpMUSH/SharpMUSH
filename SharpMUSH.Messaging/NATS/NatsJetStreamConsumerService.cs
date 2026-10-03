@@ -130,6 +130,10 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			},
 			ct);
 
+		// A durable created anew (its stream was deleted and recreated) numbers from 1 again, so what this
+		// process finished under the old one says nothing about the sequences it will see now.
+		_handled.GetOrAdd(reg.DurableName, static _ => new HandledSequences()).BeginIncarnation(consumer.Info.Created);
+
 		_registry.MarkActive(reg.DurableName);
 		_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
 			reg.Subject, reg.DurableName);
@@ -242,6 +246,22 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		private const int Capacity = 4096;
 		private readonly HashSet<ulong> _set = [];
 		private readonly Queue<ulong> _order = new();
+		private DateTimeOffset? _incarnation;
+
+		/// <summary>
+		/// Forgets every sequence when <paramref name="created"/>, the consumer's creation time, differs from
+		/// the one these sequences were recorded under.
+		/// </summary>
+		public void BeginIncarnation(DateTimeOffset created)
+		{
+			lock (_set)
+			{
+				if (_incarnation == created) return;
+				_incarnation = created;
+				_set.Clear();
+				_order.Clear();
+			}
+		}
 
 		public bool Contains(ulong seq)
 		{

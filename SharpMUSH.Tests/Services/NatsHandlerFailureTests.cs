@@ -212,6 +212,22 @@ public class NatsHandlerFailureTests
 	}
 
 	[Test]
+	public async Task A_recreated_consumer_forgets_the_sequences_its_predecessor_handled()
+	{
+		var handled = new HandledSequences();
+		var first = DateTimeOffset.UtcNow;
+		handled.BeginIncarnation(first);
+		handled.Add(1);
+
+		handled.BeginIncarnation(first);
+		await Assert.That(handled.Contains(1)).IsTrue();
+
+		// A deleted and recreated durable numbers its deliveries afresh, so sequence 1 is new work.
+		handled.BeginIncarnation(first.AddSeconds(1));
+		await Assert.That(handled.Contains(1)).IsFalse();
+	}
+
+	[Test]
 	public async Task A_new_consumer_identity_starts_at_new_messages_instead_of_replaying_history()
 	{
 		var id = Guid.NewGuid().ToString("N")[..12];

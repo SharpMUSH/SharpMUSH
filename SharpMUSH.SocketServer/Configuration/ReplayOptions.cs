@@ -48,6 +48,7 @@ public sealed record ReplayOptions
 			Retention = TimeSpan.FromHours(configuration.GetValue("Replay:RetentionHours", defaults.Retention.TotalHours)),
 			MaxBytes = configuration.GetValue("Replay:MaxBytes", defaults.MaxBytes),
 			MaxFrames = configuration.GetValue("Replay:MaxFrames", defaults.MaxFrames),
+			PageSize = configuration.GetValue("Replay:PageSize", defaults.PageSize),
 		};
 		options.Validate();
 		return options;

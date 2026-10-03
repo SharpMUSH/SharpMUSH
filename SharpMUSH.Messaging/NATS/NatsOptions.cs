@@ -155,17 +155,18 @@ public class NatsOptions
 		var number = char.IsAsciiLetter(unit) ? trimmed[..^1] : trimmed;
 		if (!double.TryParse(number, System.Globalization.NumberStyles.AllowDecimalPoint,
 			System.Globalization.CultureInfo.InvariantCulture, out var count) || count <= 0) return false;
-		TimeSpan? parsed = unit switch
+		var seconds = unit switch
 		{
-			'd' => TimeSpan.FromDays(count),
-			'h' => TimeSpan.FromHours(count),
-			'm' => TimeSpan.FromMinutes(count),
-			's' => TimeSpan.FromSeconds(count),
-			_ when char.IsAsciiDigit(unit) => TimeSpan.FromSeconds(count),
-			_ => null
+			'd' => count * 86400,
+			'h' => count * 3600,
+			'm' => count * 60,
+			's' => count,
+			_ when char.IsAsciiDigit(unit) => count,
+			_ => double.NaN
 		};
-		if (parsed is not { } value) return false;
-		interval = value;
+		// Out of TimeSpan's range is as unusable as a malformed number.
+		if (double.IsNaN(seconds) || seconds >= TimeSpan.MaxValue.TotalSeconds) return false;
+		interval = TimeSpan.FromSeconds(seconds);
 		return true;
 	}
 
