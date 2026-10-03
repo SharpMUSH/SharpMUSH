@@ -3,13 +3,6 @@
 	height: 100%;
 }
 
-.recent-wiki-rows {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	margin: 0 -4px;
-}
-
 .recent-wiki-empty {
 	font-size: 13px;
 	color: var(--text-faint);

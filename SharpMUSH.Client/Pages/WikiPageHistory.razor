@@ -12,23 +12,19 @@
 <PageTitle>@Loc["WkHistoryPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikihist">
-    <a class="wikihist-back" href="@WithLang(WikiRoutes.PathFor(Ns, Category, Slug))">
-        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @_displayTitle
-    </a>
-    <div class="wikihist-head">
-        <div>
-            <div class="wikihist-kicker">@Loc["WkRevisionHistory"]</div>
-            <h1 class="wikihist-title">@_displayTitle</h1>
-        </div>
-        @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       Href="@DiffHref()"
-                       StartIcon="@Icons.Material.Filled.CompareArrows">
-                @Loc["WkCompareSelected"]
-            </MudButton>
-        }
-    </div>
+    <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Category, Slug))">@_displayTitle</BackLink>
+    <PlainPageHeader Kicker="@Loc["WkRevisionHistory"]" Title="@_displayTitle">
+        <Actions>
+            @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           Href="@DiffHref()"
+                           StartIcon="@Icons.Material.Filled.CompareArrows">
+                    @Loc["WkCompareSelected"]
+                </MudButton>
+            }
+        </Actions>
+    </PlainPageHeader>
     @if (_translations.Count > 0)
     {
         <div class="wiki-lang-chips">

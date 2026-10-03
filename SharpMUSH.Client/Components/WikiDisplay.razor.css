@@ -139,13 +139,6 @@
 	gap: 10px;
 }
 
-.wiki-more-rows {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	margin: 0 -4px;
-}
-
 .wiki-more-all {
 	display: inline-block;
 	font-size: 12px;

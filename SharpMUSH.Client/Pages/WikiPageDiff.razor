@@ -9,27 +9,23 @@
 <PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikidiff full-bleed">
-    <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">
-        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["WkRevisionHistory"]
-    </a>
-    <div class="wikidiff-head">
-        <div>
-            <div class="wikidiff-kicker">@Loc["WkComparingRevisions"]</div>
-            <h1 class="wikidiff-title">@_displayTitle</h1>
-        </div>
-        <div class="wikidiff-toggle">
-            <button type="button"
-                    class="@($"wikidiff-toggle-btn{(_mode == "unified" ? " active" : "")}")"
-                    @onclick="@(() => _mode = "unified")">
-                @Loc["WkDiffUnified"]
-            </button>
-            <button type="button"
-                    class="@($"wikidiff-toggle-btn{(_mode == "split" ? " active" : "")}")"
-                    @onclick="@(() => _mode = "split")">
-                @Loc["WkDiffSideBySide"]
-            </button>
-        </div>
-    </div>
+    <BackLink Href="@($"/wiki/{Ns}/{Category}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">@Loc["WkRevisionHistory"]</BackLink>
+    <PlainPageHeader Kicker="@Loc["WkComparingRevisions"]" Title="@_displayTitle">
+        <Actions>
+            <div class="wikidiff-toggle">
+                <button type="button"
+                        class="@($"wikidiff-toggle-btn{(_mode == "unified" ? " active" : "")}")"
+                        @onclick="@(() => _mode = "unified")">
+                    @Loc["WkDiffUnified"]
+                </button>
+                <button type="button"
+                        class="@($"wikidiff-toggle-btn{(_mode == "split" ? " active" : "")}")"
+                        @onclick="@(() => _mode = "split")">
+                    @Loc["WkDiffSideBySide"]
+                </button>
+            </div>
+        </Actions>
+    </PlainPageHeader>
 
     @if (_loading)
     {

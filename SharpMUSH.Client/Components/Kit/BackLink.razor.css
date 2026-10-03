@@ -1,0 +1,19 @@
+.kit-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	align-self: flex-start;
+	margin-bottom: 16px;
+	font-size: 13px;
+	color: var(--text-dim);
+	text-decoration: none;
+}
+
+.kit-back:hover,
+.kit-back:focus-visible {
+	color: var(--accent);
+}
+
+.kit-back ::deep .kit-back-icon {
+	font-size: 14px;
+}
