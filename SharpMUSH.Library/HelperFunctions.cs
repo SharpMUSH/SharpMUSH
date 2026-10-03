@@ -517,22 +517,14 @@ public static partial class HelperFunctions
 	/// <paramref name="newRelated"/> are the same object; <see cref="RelationshipSafety.Cycle"/> if
 	/// <paramref name="start"/> is otherwise reachable from <paramref name="newRelated"/>.
 	/// </returns>
+	/// <remarks>
+	/// The rule lives in <see cref="Services.RelationshipCycleChecker"/>; a service takes
+	/// <see cref="Services.Interfaces.IRelationshipCycleChecker"/> instead of a store. These statics stay
+	/// for the command and function helpers that already hold an <see cref="IObjectStore"/>, and for
+	/// plugins; <paramref name="mediator"/> is unused and kept only for the published signature.
+	/// </remarks>
 	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
-	{
-		var startDbRef = start.Object().DBRef;
-		var newRelatedDbRef = newRelated.Object().DBRef;
-
-		if (startDbRef.Number == newRelatedDbRef.Number)
-		{
-			return RelationshipSafety.SelfReference;
-		}
-
-		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
-		// would complete a cycle: start -> newRelated -> ... -> start
-		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
-
-		return isReachable ? RelationshipSafety.Cycle : RelationshipSafety.Safe;
-	}
+		=> await Services.RelationshipCycleChecker.SafeToAddAsync(database, start, newRelated, cancellationToken);
 
 	/// <summary>
 	/// Detects self-reference and cycles in the parent chain. Distinguishes the two

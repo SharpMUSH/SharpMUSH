@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelPrivs
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString privs)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString privs)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -30,7 +30,7 @@ public static class ChannelPrivs
 		};
 	}
 
-	private static async ValueTask<CallState> SetPrivilegesAsync(IPermissionService PermissionService,
+	private static async ValueTask<CallState> SetPrivilegesAsync(IChannelPermissionService PermissionService,
 		IMediator Mediator, INotifyService NotifyService, AnySharpObject executor, SharpChannel channel, MString privs)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
@@ -59,7 +59,7 @@ public static class ChannelPrivs
 		return new CallState(ErrorMessages.Returns.InvalidPrivileges);
 	}
 
-	private static async ValueTask<CallState> ApplyPrivilegesAsync(IPermissionService PermissionService,
+	private static async ValueTask<CallState> ApplyPrivilegesAsync(IChannelPermissionService PermissionService,
 		IMediator Mediator, INotifyService NotifyService, AnySharpObject executor, SharpChannel channel,
 		string[] privileges)
 	{

@@ -90,7 +90,7 @@ public partial class Functions
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
 			// extchat.c:2393 — Chan_Can_Modify, the same gate @channel/buffer and @channel/wipe answer to.
-			if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+			if (!await ChannelPermissions.ChannelCanModifyAsync(executor, channel))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -310,7 +310,7 @@ public partial class Functions
 
 			// extchat.c:3437 — reading a channel's lock needs Chan_Can_Decomp. This handed every channel's
 			// join/speak/see/hide/mod lock key to any mortal who asked for it.
-			if (!await PermissionService.ChannelCanDecomposeAsync(executor, channel))
+			if (!await ChannelPermissions.ChannelCanDecomposeAsync(executor, channel))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}

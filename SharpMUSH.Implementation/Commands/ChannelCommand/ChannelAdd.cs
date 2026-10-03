@@ -18,7 +18,7 @@ public static class ChannelAdd
 	public static async ValueTask<CallState> Handle(
 		IMUSHCodeParser parser,
 		ILocateService LocateService,
-		IPermissionService PermissionService,
+		IChannelPermissionService PermissionService,
 		IMediator Mediator,
 		INotifyService NotifyService,
 		IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString privileges)
@@ -84,7 +84,7 @@ public static class ChannelAdd
 		return new CallState(ErrorMessages.Returns.InvalidPrivileges);
 	}
 
-	private static async ValueTask<CallState> CreateAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> CreateAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, SharpPlayer executorOwner, MString channelName,
 		string[] parsedPrivileges)
 	{

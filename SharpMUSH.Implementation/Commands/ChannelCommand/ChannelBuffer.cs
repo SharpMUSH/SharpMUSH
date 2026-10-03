@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelBuffer
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString lines)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString lines)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -30,7 +30,7 @@ public static class ChannelBuffer
 	}
 
 	/// <summary>Sets how many lines the channel keeps for <c>@channel/recall</c>.</summary>
-	private static async ValueTask<CallState> ResizeAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> ResizeAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, SharpChannel channel, MString lines)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))

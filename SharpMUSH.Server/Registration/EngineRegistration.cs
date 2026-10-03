@@ -91,6 +91,7 @@ internal static class EngineRegistration
 		services.AddSingleton<SharpMUSH.Library.Reality.RealityAdministration>();
 		services.AddSingleton<SharpMUSH.Library.Reality.IRealityPolicy>(sp => sp.GetRequiredService<SharpMUSH.Library.Reality.RealityPolicy>());
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<IChannelPermissionService>(sp => sp.GetRequiredService<IPermissionService>());
 		services.AddSingleton<QueueDiagnosticsRecorder>();
 		services.AddSingleton<IQueueDiagnosticsRecorder>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
 		services.AddSingleton<ITelemetryInvocationObserver>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
@@ -114,6 +115,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
+		services.AddSingleton<IRelationshipCycleChecker, RelationshipCycleChecker>();
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IQueueControlService, QueueControlService>();

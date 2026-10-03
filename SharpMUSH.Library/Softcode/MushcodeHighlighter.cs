@@ -1,8 +1,9 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Services;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// MUSHcode rendering for the package review UI (Phase 8, decision 20.9):

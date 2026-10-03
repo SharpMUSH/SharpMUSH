@@ -1,7 +1,7 @@
 using System.Text;
 using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// Renders a token list plus a <see cref="SoftcodeLayout.Compute"/> break list back to plain text,
