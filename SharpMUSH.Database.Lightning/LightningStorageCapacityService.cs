@@ -55,7 +55,8 @@ public sealed class LightningStorageCapacityService(LightningDatabase database, 
 	/// <summary>
 	/// Everything beside the live world that a promotion, an import or an interrupted backup left: the
 	/// world a promotion replaced (<c>&lt;world&gt;.previous</c>, kept until an operator has verified the
-	/// new one and deletes it), staging worlds never promoted, and backup copies cut off mid-write.
+	/// new one and deletes it), the original a startup compaction replaced (<c>&lt;world&gt;.precompact</c>,
+	/// kept the same way), staging worlds never promoted, and backup copies cut off mid-write.
 	/// </summary>
 	private IReadOnlyList<LeftoverWorld> Leftovers(string worldPath)
 	{
@@ -63,6 +64,8 @@ public sealed class LightningStorageCapacityService(LightningDatabase database, 
 		var trimmed = worldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 		var previous = trimmed + ".previous";
 		if (Directory.Exists(previous)) found.Add(new LeftoverWorld(previous, "previous", DiskSpace.DirectoryBytes(previous)));
+		var precompact = trimmed + LightningCompaction.OriginalSuffix;
+		if (Directory.Exists(precompact)) found.Add(new LeftoverWorld(precompact, "precompact", DiskSpace.DirectoryBytes(precompact)));
 
 		var parent = Path.GetDirectoryName(Path.GetFullPath(trimmed));
 		var name = Path.GetFileName(trimmed);

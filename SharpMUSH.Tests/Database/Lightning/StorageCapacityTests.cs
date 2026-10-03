@@ -122,7 +122,8 @@ public class StorageCapacityTests
 	}
 
 	/// <summary>
-	/// The world a promotion replaced, a staging world never promoted, and a backup cut off mid-write are
+	/// The world a promotion replaced, the original a startup compaction kept, a staging world never
+	/// promoted, and a backup cut off mid-write are
 	/// all reported — none of them is ever deleted automatically, so the report is how an operator finds them.
 	/// </summary>
 	[Test]
@@ -132,6 +133,7 @@ public class StorageCapacityTests
 		var root = TempPath();
 		var db = Database(path);
 		var previous = path + ".previous";
+		var precompact = path + LightningCompaction.OriginalSuffix;
 		var staging = path + ".staging-abc12345";
 		var incoming = Path.Join(root, WorldBackupWriter.IncomingPrefix + "deadbeef");
 		try
@@ -139,6 +141,7 @@ public class StorageCapacityTests
 			await db.Migrate();
 			Directory.CreateDirectory(previous);
 			await File.WriteAllBytesAsync(Path.Join(previous, "data.mdb"), new byte[4096]);
+			Directory.CreateDirectory(precompact);
 			Directory.CreateDirectory(staging);
 			Directory.CreateDirectory(incoming);
 			var (_, capacity) = Services(db, root);
@@ -146,7 +149,7 @@ public class StorageCapacityTests
 			var leftovers = capacity.Measure().Leftovers;
 
 			await Assert.That(leftovers.Select(l => (l.Kind, l.Path))).IsEquivalentTo(
-				[("previous", previous), ("staging", staging), ("incoming", incoming)]);
+				[("previous", previous), ("precompact", precompact), ("staging", staging), ("incoming", incoming)]);
 			await Assert.That(leftovers.Single(l => l.Kind == "previous").Bytes).IsEqualTo(4096);
 		}
 		finally
@@ -155,6 +158,7 @@ public class StorageCapacityTests
 			Delete(path);
 			Delete(root);
 			Delete(previous);
+			Delete(precompact);
 			Delete(staging);
 		}
 	}

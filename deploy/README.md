@@ -424,7 +424,7 @@ Suggested alerts, on the server's `/metrics`:
 sharpmush_storage_backup_fits == 0                                     # next backup will refuse to start
 sharpmush_storage_bytes{kind="map_headroom"} < ignoring(kind) 2 * sharpmush_storage_bytes{kind="live"}   # raise MAPSIZE
 sharpmush_storage_bytes{kind="world_disk_free"} < ignoring(kind) sharpmush_storage_bytes{kind="backup_required_free"}
-sharpmush_storage_bytes{kind="leftover_worlds"} > 0                    # a .previous world to clean up
+sharpmush_storage_bytes{kind="leftover_worlds"} > 0                    # a .previous or .precompact world to clean up
 ```
 
 A PennMUSH import is checked the same way before it starts. It is refused with `507 Insufficient

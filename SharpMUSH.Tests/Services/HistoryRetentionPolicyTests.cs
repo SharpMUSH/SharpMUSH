@@ -1,5 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -97,5 +101,37 @@ public class HistoryRetentionPolicyTests
 		await Assert.That(DurationSetting.TryParse("1095d", 100L * 365 * 86400, out var age)).IsTrue();
 		await Assert.That(age).IsEqualTo(TimeSpan.FromDays(1095));
 		await Assert.That(WorldBackupOptions.TryParseInterval("1095d", out _)).IsFalse();
+	}
+	/// <summary>A provider's own failure type, as Lightning's commit failure is: it derives from nothing more
+	/// specific than <see cref="Exception"/>.</summary>
+	private sealed class ProviderFailure(string message) : Exception(message);
+
+	/// <summary>
+	/// Whatever a store throws, the kind reports a failed outcome and the next kind still runs; only
+	/// cancellation escapes the pass.
+	/// </summary>
+	[Test]
+	public async Task AnyStoreFailureIsReportedAndTheNextKindStillRuns()
+	{
+		var failing = Substitute.For<IHistoryStore>();
+		failing.Kind.Returns("first");
+		failing.FindPurgeableAsync(default!, default, default!, default, default)
+			.ReturnsForAnyArgs<ValueTask<HistoryPurgeBatch>>(_ => throw new ProviderFailure("commit failed"));
+		var healthy = Substitute.For<IHistoryStore>();
+		healthy.Kind.Returns("second");
+		healthy.FindPurgeableAsync(default!, default, default!, default, default)
+			.ReturnsForAnyArgs(ValueTask.FromResult(new HistoryPurgeBatch([], [])));
+		var keepOne = new HistoryRetentionRule { KeepNewest = 1 };
+		var retention = new HistoryRetentionService([failing, healthy],
+			new HistoryRetentionOptions
+			{
+				Rules = new Dictionary<string, HistoryRetentionRule> { ["first"] = keepOne, ["second"] = keepOne }
+			},
+			NullLogger<HistoryRetentionService>.Instance, TimeProvider.System);
+
+		var outcomes = await retention.PurgeAsync();
+
+		await Assert.That(outcomes[0].Expect<HistoryPurgeFailed>().Reason).IsEqualTo("commit failed");
+		await Assert.That(outcomes[1].Expect<HistoryPurged>().Records).IsEqualTo(0);
 	}
 }

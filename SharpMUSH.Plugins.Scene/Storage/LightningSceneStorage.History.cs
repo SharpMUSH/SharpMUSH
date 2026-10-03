@@ -168,10 +168,11 @@ public sealed partial class LightningSceneStorage
 				foreach (var candidate in batch.Candidates)
 				{
 					// Re-read: a move since the read renumbered the pose under another key, and this key may
-					// now hold a different pose entirely.
+					// now hold a different pose entirely. Only the pose that was archived, unchanged, goes.
 					if (!tx.TryGet(scenes._poses, candidate.Key, out var value)) continue;
 					var pose = Decode<ScenePoseRecord>(value);
-					if (!IsPurgeable(tx, pose, rule, now)) continue;
+					if (!IsPurgeable(tx, pose, rule, now)
+						|| !Candidate(tx, candidate.Key, value).Archive.AsSpan().SequenceEqual(candidate.Archive)) continue;
 
 					tx.Delete(scenes._poses, candidate.Key);
 					freed += candidate.Key.Length + value.Length;

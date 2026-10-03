@@ -100,10 +100,10 @@ public sealed class HistoryRetentionService(
 		{
 			throw;
 		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+		catch (Exception ex)
 		{
 			// An archive that cannot be written stops the kind before anything unarchived is deleted; a
-			// store failure stops it with everything before it already committed. Either way the pass
+			// store failure, whatever the provider throws, stops it with everything before it already committed. Either way the pass
 			// reports what it did and why it stopped, and the next kind still runs.
 			logger.LogError(ex, "History retention for {Kind} stopped after {Records} records", store.Kind, records);
 			return new HistoryPurgeFailed(store.Kind, records, bytes, ex.Message);

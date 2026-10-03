@@ -190,6 +190,33 @@ public class LightningSceneHistoryRetentionTests
 		await Assert.That(Expect<Scene>(await _scenes.GetSceneAsync(scene)).PoseCount).IsEqualTo(poseCount);
 	}
 
+	/// <summary>
+	/// A move between a pass's read and its write renumbers the scene's poses, so the key a candidate was
+	/// read under can hold another deleted pose. That pose is not the one archived, and it stays.
+	/// </summary>
+	[Test]
+	public async Task APoseMovedIntoAPurgedSlotIsNotPurgedInsteadOfIt()
+	{
+		var (scene, archived) = await PoseWithVersionsAsync(1);
+		var (_, other) = await PoseWithVersionsAsync(1, scene);
+		Expect<ScenePose>(await _scenes.DeletePoseAsync(archived));
+		Expect<ScenePose>(await _scenes.DeletePoseAsync(other));
+		var rule = new HistoryRetentionRule { MaxAge = TimeSpan.FromDays(1) };
+		var now = DateTimeOffset.UtcNow.AddDays(2);
+
+		var batch = await _scenes.DeletedPoseHistory.FindPurgeableAsync(rule, now, [], limit: 1);
+		await Assert.That(batch.Candidates.Count).IsEqualTo(1);
+		await Assert.That(System.Text.Encoding.UTF8.GetString(batch.Candidates[0].Archive)).Contains(archived);
+		Expect<ScenePose>(await _scenes.MovePoseAsync(other, ""));
+
+		var (records, _) = await _scenes.DeletedPoseHistory.PurgeAsync(batch, rule, now);
+
+		await Assert.That(records).IsEqualTo(0);
+		await Assert.That(RowsFor("scene.log", other)).IsEqualTo(1);
+		await Assert.That(_db.Read(tx => tx.TryGet(_db.OpenTable("scene.pose.idx", false), Keys.Str(other), out _)))
+			.IsTrue();
+	}
+
 	[Test]
 	public async Task UsageCountsEditsAndDeletedPoses()
 	{
