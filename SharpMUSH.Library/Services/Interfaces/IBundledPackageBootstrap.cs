@@ -13,4 +13,10 @@ public interface IBundledPackageBootstrap
 	/// <returns>The packages that are installed afterwards.</returns>
 	Task<IReadOnlyList<string>> InstallBundledAsync(IReadOnlyCollection<string> packageIds,
 		CancellationToken cancellationToken);
+
+	/// <summary>
+	/// The handler option (<c>http_handler</c> or <c>event_handler</c>) that <paramref name="packageId"/>
+	/// attaches to, or <see langword="null"/> when it is not bundled or creates its own objects.
+	/// </summary>
+	string? RequiredHandlerOption(string packageId);
 }
