@@ -644,7 +644,7 @@ public partial class Commands
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
-			LockService, AttributeService, ManipulateSharpObjectService, executor, exitName, destName,
+			LockService, AttributeService, ManipulateSharpObjectService, ConnectionService, executor, exitName, destName,
 			preserve) switch
 		{
 			Success => CallState.Empty,
@@ -722,7 +722,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.DigAsync(parser, Mediator, Database, Configuration, NotifyService, EventService,
-			PermissionService, LockService, executor, args["0"].Message!,
+			PermissionService, LockService, AttributeService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
 			BuildingHelpers.Argument(args, "5"),
@@ -736,9 +736,6 @@ public partial class Commands
 			=> await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
 				new TeleportOptions(List: false, Inside: false, Silent: false));
 	}
-
-	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
-		=> PermissionService.CanLinkToAsync(executor, destination);
 
 	/// <summary>
 	/// PennMUSH <c>do_open</c> (<c>src/create.c:205-237</c>), which reads a 1-based <c>links</c> array
@@ -767,10 +764,11 @@ public partial class Commands
 		var sourceRoom = await executor.Where();
 		if (BuildingHelpers.Argument(args, "3") is { } sourceRoomName)
 		{
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, sourceRoomName.ToPlainText(), LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
+			// create.c:211-216.
+			if (await BuildingHelpers.SourceRoomAsync(parser, LocateService, executor, sourceRoomName.ToPlainText())
+					is not AnySharpContainer namedRoom)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenFromWhere), executor);
 				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
 
@@ -829,8 +827,10 @@ public partial class Commands
 			return forward;
 		}
 
-		// Penn keeps an exit it could not link (create.c:167-171); LinkNewExitAsync has said why.
-		if (await LinkNewExitAsync(parser, executor, forward, destinationName.ToPlainText()) is not AnySharpContainer destination)
+		// Penn keeps an exit it could not link (create.c:167-171), and opens no return exit from a
+		// destination that is not an object (:230): LinkOpenedExitAsync has said why.
+		if (await BuildingHelpers.LinkOpenedExitAsync(Mediator, NotifyService, PermissionService, AttributeService,
+				executor, forward, destinationName.ToPlainText()) is not AnySharpContainer destination)
 		{
 			return forward;
 		}
@@ -842,46 +842,11 @@ public partial class Commands
 			opened.Add(back);
 
 			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid.
-			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
+			await BuildingHelpers.LinkOpenedExitAsync(Mediator, NotifyService, PermissionService, AttributeService,
+				executor, back, $"#{sourceRoom.Object().DBRef.Number}");
 		}
 
 		return forward;
-	}
-
-	/// <summary>
-	/// The link half of <c>do_real_open</c> (<c>create.c:160-176</c>): an exit may lead to any
-	/// container — room, player or thing (<c>can_link_to</c>) — and anywhere else, or anywhere the
-	/// executor may not link into, is reported and leaves the exit unlinked. Penn says
-	/// "Trying to link..." first and "Linked exit #N to #M" on success, dbrefs rather than names.
-	/// </summary>
-	private async ValueTask<AnyOptionalSharpContainer> LinkNewExitAsync(IMUSHCodeParser parser,
-		AnySharpObject executor, DBRef exit, string destinationName)
-	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TryingToLink), executor);
-
-		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, destinationName, LocateFlags.All) is not AnySharpObject destination)
-		{
-			// LocateAndNotifyIfInvalidWithCallState has already said why.
-			return new AnyOptionalSharpContainer(new None());
-		}
-
-		if (!destination.IsContainer || !await CanLinkTo(executor, destination))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
-			return new AnyOptionalSharpContainer(new None());
-		}
-
-		if (await Mediator.Send(new GetObjectNodeQuery(exit)) is not (AnySharpObject and SharpExit exitObj))
-		{
-			throw new InvalidOperationException("The exit just opened must exist.");
-		}
-
-		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor,
-			exit.Number, destination.Object().DBRef.Number);
-
-		return new AnyOptionalSharpContainer(destination.AsContainer);
 	}
 
 	/// <remarks>
@@ -1001,7 +966,7 @@ public partial class Commands
 		var targetName = args["0"].Message!.ToPlainText();
 
 		return await LinkHelpers.UnlinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
-			AttributeService, executor, targetName) switch
+			AttributeService, ConnectionService, executor, targetName) switch
 		{
 			Success => CallState.Empty,
 			Error<string> refused => new CallState(refused.Value)

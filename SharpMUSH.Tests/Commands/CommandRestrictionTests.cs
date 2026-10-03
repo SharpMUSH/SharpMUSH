@@ -94,8 +94,11 @@ public class CommandRestrictionTests
 	{
 		var player = await PlayerAsync("CmdLset", grant);
 
-		var said = (await Run(player, "think lset(me/Basic,no_inherit)")).Single(delivery => delivery.Sender == player.DbRef).Message;
+		// lset() is do_lset, which says why it changed nothing — here "No such lock." — so the function's
+		// own answer is one of the player's lines rather than the only one.
+		var said = (await Run(player, "think lset(me/Basic,no_inherit)"))
+			.Where(delivery => delivery.Sender == player.DbRef).Select(delivery => delivery.Message).ToList();
 
-		await Assert.That(said == ErrorMessages.Returns.PermissionDenied).IsEqualTo(denied);
+		await Assert.That(said.Contains(ErrorMessages.Returns.PermissionDenied)).IsEqualTo(denied);
 	}
 }

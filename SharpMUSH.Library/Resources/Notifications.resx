@@ -614,16 +614,46 @@
   <data name="LockFlagsUnset" xml:space="preserve">
     <value>{0}/{1} - lock flags unset.</value>
   </data>
+  <data name="CantLockThat" xml:space="preserve">
+    <value>You can't lock that!</value>
+  </data>
+  <data name="UnknownLockType" xml:space="preserve">
+    <value>Unknown lock type.</value>
+  </data>
+  <data name="InvalidLockName" xml:space="preserve">
+    <value>That is not a valid lock name.</value>
+  </data>
+  <data name="LockNameHasPipe" xml:space="preserve">
+    <value>The character '|' may not be used in lock names.</value>
+  </data>
+  <data name="UnrecognizedLockFlag" xml:space="preserve">
+    <value>Unrecognized lock flag.</value>
+  </data>
+  <data name="NoSuchLock" xml:space="preserve">
+    <value>No such lock.</value>
+  </data>
 
   <!-- Link/Unlink messages -->
   <data name="LinkedExitToRoom" xml:space="preserve">
     <value>Linked exit #{0} to #{1}</value>
   </data>
+  <data name="LinkedExitToObject" xml:space="preserve">
+    <value>Linked exit #{0} to {1}</value>
+  </data>
   <data name="UnlinkedExit" xml:space="preserve">
-    <value>Unlinked exit #{0}.</value>
+    <value>Unlinked exit #{0} (Used to lead to {1}).</value>
   </data>
   <data name="UnlinkWhat" xml:space="preserve">
     <value>Unlink what?</value>
+  </data>
+  <data name="OpenFromWhere" xml:space="preserve">
+    <value>Open from where?</value>
+  </data>
+  <data name="NotAValidObject" xml:space="preserve">
+    <value>That is not a valid object.</value>
+  </data>
+  <data name="RoomBeingDestroyed" xml:space="preserve">
+    <value>That room is being destroyed. Sorry.</value>
   </data>
   <data name="OpenedExit" xml:space="preserve">
     <value>Opened exit {0}</value>
@@ -795,12 +825,6 @@
   <data name="FloorDisappearsNothingness" xml:space="preserve">
     <value>The floor disappears under your feet, you fall through NOTHINGness and then:</value>
   </data>
-  <data name="LinkedToHome" xml:space="preserve">
-    <value>Linked to home.</value>
-  </data>
-  <data name="LinkedToVariable" xml:space="preserve">
-    <value>Linked to variable.</value>
-  </data>
   <data name="HomeSet" xml:space="preserve">
     <value>Home set.</value>
   </data>
@@ -815,9 +839,6 @@
   </data>
   <data name="SparedFromDestructionFormat" xml:space="preserve">
     <value>Spared from destruction: {0}</value>
-  </data>
-  <data name="SourceMustBeARoom" xml:space="preserve">
-    <value>Source must be a room.</value>
   </data>
   <data name="ExitsOnlyFromRooms" xml:space="preserve">
     <value>You can only make exits out of rooms.</value>

@@ -45,56 +45,36 @@ public partial class Commands
 	public ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
 		=> ChangeLockAsync(parser, "Use", true);
 
+	/// <summary>
+	/// The six lock commands: <c>@lock</c>/<c>@unlock</c> with the type as a switch, and the
+	/// <c>@elock</c>/<c>@ulock</c> pairs with it fixed. <c>&lt;object&gt;/&lt;attribute&gt;</c> is
+	/// <c>@atrlock</c>, as <c>do_lock</c> and <c>do_unlock</c> make it (<c>src/lock.c:668,710</c>);
+	/// anything else is <see cref="LockHelpers"/>, which <c>lock()</c> reaches too.
+	/// </summary>
 	private async ValueTask<Option<CallState>> ChangeLockAsync(IMUSHCodeParser parser, string? fixedType, bool unlock)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		if (!args.TryGetValue("0", out var targetArg)) return new CallState(ErrorMessages.Returns.InvalidArguments);
 		var targetText = targetArg.Message!.ToPlainText();
+		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault();
 		var slash = targetText.IndexOf('/');
-		var attributeName = slash < 0 ? null : targetText[(slash + 1)..];
-		if (slash >= 0) targetText = targetText[..slash];
-		var expression = args.TryGetValue("1", out var key) ? key.Message!.ToPlainText() : string.Empty;
-		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault() ?? "Basic";
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText, LocateFlags.All,
-			async target =>
-			{
-				if (attributeName is not null)
+		if (slash >= 0)
+		{
+			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText[..slash],
+				LocateFlags.All, async target =>
 				{
 					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
-					var result = await AttributeLockAsync(executor, target, attributeArgs, attributeName);
-					return result is CallState state ? state : CallState.Empty;
-				}
-				var removing = unlock || expression.Length == 0;
-				var nameResult = await LockService.ResolveWriteNameAsync(target, type, ExecutionBudget.CurrentToken);
-				if (nameResult is Error<string> nameError)
-				{
-					await NotifyService.Notify(executor, nameError.Value, executor);
-					return CallState.Empty;
-				}
-				var name = nameResult is string value ? value : type;
-				var existed = target.Object().Locks.ContainsKey(name);
-				var changed = removing
-					? await LockService.UnsetAsync(executor, target, type)
-					: await LockService.SetAsync(executor, target, type, expression);
-				if (changed is Error<string> error)
-				{
-					await NotifyService.Notify(executor, error.Value, executor);
-					return CallState.Empty;
-				}
-				if (!await target.Object().AreQuietAsync(executor))
-				{
-					if (removing && !existed)
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectAlreadyUnlocked), executor,
-							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
-					else
-						await NotifyService.NotifyLocalized(executor, removing
-							? nameof(ErrorMessages.Notifications.ObjectUnlocked)
-							: nameof(ErrorMessages.Notifications.ObjectLocked), executor,
-							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
-				}
-				return CallState.Empty;
-			});
+					return await AttributeLockAsync(executor, target, attributeArgs, targetText[(slash + 1)..]) is CallState state
+						? state
+						: CallState.Empty;
+				});
+		}
+
+		var key = !unlock && args.TryGetValue("1", out var keyArg) ? keyArg.Message!.ToPlainText() : string.Empty;
+		await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
+			targetText, key, type);
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
@@ -104,26 +84,9 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, attribute) is { } error) return error;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-		var slash = target.IndexOf('/');
-		if (slash < 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLockNameGiven), executor);
-			return CallState.Empty;
-		}
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target[..slash], LocateFlags.All,
-			async obj =>
-			{
-				var flags = args["1"].Message!.ToPlainText();
-				var result = await LockService.SetFlagsAsync(executor, obj, target[(slash + 1)..], flags);
-				if (result is Error<string> failure) await NotifyService.Notify(executor, failure.Value, executor);
-				else if (!await obj.Object().AreQuietAsync(executor))
-					await NotifyService.NotifyLocalized(executor, flags.StartsWith('!')
-						? nameof(ErrorMessages.Notifications.LockFlagsUnset)
-						: nameof(ErrorMessages.Notifications.LockFlagsSet), executor,
-						obj.Object().Name, LockNames.Display(target[(slash + 1)..]));
-				return CallState.Empty;
-			});
+		await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
+			args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText());
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]

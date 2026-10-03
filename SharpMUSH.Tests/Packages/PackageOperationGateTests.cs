@@ -38,7 +38,8 @@ public class PackageOperationGateTests
 			services.GetRequiredService<IPackageLifecycleRunner>(),
 			services.GetRequiredService<IManagedPackageInstaller>(),
 			services.GetRequiredService<IMediator>(),
-			gate);
+			gate,
+			services.GetRequiredService<ILockService>());
 	}
 
 	private static PackageManifest Manifest(string id, string version) =>

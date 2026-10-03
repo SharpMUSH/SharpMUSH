@@ -93,3 +93,38 @@ think [get(*Bob/PERMB)]|[u(*Bob/PERMB)]
 think [get(*Wiz/NOPE)]|[xget(*Wiz,NOPE)]|[u(*Wiz/NOPE)]
 think [get(*Wiz/SUCCESS)]|[get(me/NOPE)]|[get(me/SUCCESS)]
 think [get(*Wiz/FAILURE)]|[get(*Wiz/FAIL)]
+
+
+::case room.link  a new exit's destination is here, home, variable or a dbref; @link and @unlink name it
+::as alice
+@dig Linkroom
+@open Linkexit=Linkroom,,[lsearch(me,name,Linkroom)]
+@open Linkhome=home,,[lsearch(me,name,Linkroom)]
+@open Linkhere=here,,[lsearch(me,name,Linkroom)]
+@open Linkfar=here,,Linkroom
+@link [lsearch(me,name,Linkexit)]=[lsearch(me,name,Linkroom)]
+@unlink [lsearch(me,name,Linkexit)]
+@unlink [lsearch(me,name,Linkhome)]
+@link [lsearch(me,name,Linkhere)]=variable
+@unlink [lsearch(me,name,Linkhere)]
+@link [lsearch(me,name,Linkhere)]=home
+think [null(open(Linkfn,Linkroom,lsearch(me,name,Linkroom)))]
+
+::case lock.write  @lock, @unlock, @lset and their functions report as do_lock, do_unlock and do_lset
+@create Lockbox
+@lock Lockbox=me
+think [lock(Lockbox/Enter,me)]
+@lock Lockbox=(me
+@lock/NoSuchType Lockbox=me
+@lock/user:a|b Lockbox=me
+@lock NoSuchThing=me
+@lock *Bob=me
+@lset Lockbox/Basic=zzz
+@lset Lockbox/Use=visual
+@lset Lockbox/Basic=visual
+think [lset(Lockbox/Enter,visual)]
+@lset Lockbox=visual
+@unlock Lockbox
+@unlock Lockbox
+@unlock/Enter Lockbox
+@tel Lockbox=[lsearch(me,name,Linkroom)]
