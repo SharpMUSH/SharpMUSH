@@ -136,23 +136,13 @@ public record ExpandedMailData(
 	/// </summary>
 	public ExpandedMailData WithFolders(IEnumerable<string> folders)
 	{
-		var data = this;
-		var unnumbered = folders
+		// Each folder is numbered against the table the ones before it left, so this folds rather than filters.
+		return folders
 			.Where(folder => !folder.Equals(Inbox, StringComparison.OrdinalIgnoreCase) && !Listed(folder))
 			.Distinct(StringComparer.Ordinal)
 			.OrderBy(folder => UnnamedNumber(folder) is null)
 			.ThenBy(folder => folder, StringComparer.Ordinal)
-			.ToList();
-
-		foreach (var folder in unnumbered)
-		{
-			if (data.WithFolder(folder) is ExpandedMailData numbered)
-			{
-				data = numbered;
-			}
-		}
-
-		return data;
+			.Aggregate(this, (data, folder) => data.WithFolder(folder) is ExpandedMailData numbered ? numbered : data);
 	}
 
 	private bool Listed(string folder)

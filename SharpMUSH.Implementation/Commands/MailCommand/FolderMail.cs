@@ -35,27 +35,31 @@ public static class FolderMail
 
 		var folderInfo = await MailFolders.LoadAsync(objectDataService, executorPlayer);
 
+		// The folder the first argument names, read once: absent, a folder, or no folder at all.
+		var folderSpec = arg0?.ToPlainText().Trim() ?? string.Empty;
+		var newName = arg1?.ToPlainText() ?? string.Empty;
+		var named = folderInfo.Resolve(folderSpec);
+
 		switch (switches)
 		{
-			case ["FOLDERS"] or ["FOLDER"] when arg0 is null || arg0.ToPlainText().Trim().Length == 0:
+			case ["FOLDERS"] or ["FOLDER"] when folderSpec.Length == 0:
 				return await GetMailFolderInfo(mediator!, notifyService!, executor, executorPlayer, folderInfo);
 
-			case ["FOLDERS"] or ["FOLDER"] when folderInfo.Resolve(arg0.ToPlainText()) is not int:
+			case ["FOLDERS"] or ["FOLDER"] when named is not int:
 				return await WhatFolder(notifyService!, executor);
 
-			case ["FOLDERS"] or ["FOLDER"] when arg1 is null || arg1.ToPlainText().Length == 0:
-				return await SetCurrentMailFolder(objectDataService, notifyService!, executor, executorPlayer,
-					folderInfo.Resolve(arg0.ToPlainText()) is int current ? current : 0);
+			case ["FOLDERS"] or ["FOLDER"] when named is int current && newName.Length == 0:
+				return await SetCurrentMailFolder(objectDataService, notifyService!, executor, executorPlayer, current);
 
-			case ["FOLDERS"] or ["FOLDER"]:
+			case ["FOLDERS"] or ["FOLDER"] when named is int renamed:
 				return await RenameMailFolder(objectDataService, mediator!, notifyService!, executor, executorPlayer,
-					folderInfo, folderInfo.Resolve(arg0.ToPlainText()) is int renamed ? renamed : 0, arg1!.ToPlainText());
+					folderInfo, renamed, newName);
 
-			case ["UNFOLDER"] when arg0 is null || arg0.ToPlainText().Length == 0:
+			case ["UNFOLDER"] when folderSpec.Length == 0:
 				await notifyService!.Notify(executor, "MAIL: You must specify a folder name or number");
 				return MarkupText.Empty;
 
-			case ["UNFOLDER"] when folderInfo.Resolve(arg0.ToPlainText()) is int unnamed:
+			case ["UNFOLDER"] when named is int unnamed:
 				return await UnMailFolder(objectDataService, mediator!, notifyService!, executor, executorPlayer, unnamed);
 
 			case ["UNFOLDER"]:
