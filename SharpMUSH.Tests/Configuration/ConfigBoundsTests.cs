@@ -131,7 +131,7 @@ public class ConfigBoundsTests
 	[Test]
 	public async Task TheShippedMushCnfSitsInsideEveryRange()
 	{
-		var import = ReadPennMushConfig.Import(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
+		var import = ReadPennMushConfig.Import(Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 
 		await Assert.That(import.Skipped.Where(line => line.Contains("its minimum of") || line.Contains("its maximum of"))).IsEmpty();
 	}
