@@ -348,8 +348,9 @@ public class PennMUSHDbrefPreservationTests
 
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
-		var line = result.Warnings.Single(w => w.StartsWith("The package(s) http-handler were not installed again"));
-		await Assert.That(line).Contains("http_handler and event_handler are not set").And.Contains("setup wizard's handler step");
+		var line = result.Warnings.Single(w => w.Contains("were not installed again"));
+		await Assert.That(line).StartsWith("The package(s) http-handler were not installed again: http_handler is not set")
+			.And.Contains("setup wizard's handler step");
 	}
 
 	/// <summary>
