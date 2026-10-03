@@ -91,6 +91,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
+		services.AddHostedService<Services.ExpiredSessionSweepService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection

@@ -62,6 +62,53 @@ public class LookServiceTests
 	}
 
 	/// <summary>
+	/// TERSE is its own flag, not an alias of CLOUDY (#1404): PennMUSH has both on the letter <c>x</c>,
+	/// TERSE on players and things and CLOUDY on exits, and setting one does not set the other.
+	/// </summary>
+	[Test]
+	public async ValueTask TerseAndCloudyAreSeparateFlags()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TerseFlag");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=TERSE"));
+
+		var flags = (await GodParser.FunctionParse(MarkupText.Plain(
+			$"[hasflag({player.DbRef},TERSE)] [hasflag({player.DbRef},CLOUDY)]")))!.Message!.ToPlainText();
+		await Assert.That(flags).IsEqualTo("1 0");
+	}
+
+	/// <summary>
+	/// dbdefs.h <c>Terse(x)</c>: a TERSE thing is terse itself, as a thing whose owner is a TERSE player is.
+	/// </summary>
+	[Test]
+	public async ValueTask ATerseThingSkipsTheDescriptionOnAnAutomaticLook()
+	{
+		var dig = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("TerseThingRoom")}"));
+		var roomRef = dig.Message!.ToPlainText().Trim();
+		var create = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("TerseThing")}"));
+		var thingRef = DBRef.Parse(create.Message!.ToPlainText().Trim());
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thingRef}={roomRef}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@describe {roomRef}=A thing-terse description."));
+
+		var room = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(roomRef)));
+		var looker = (await Mediator.Send(new GetObjectNodeQuery(thingRef))).Expect<AnySharpObject>();
+
+		var full = await MessagesWhile(thingRef, async () =>
+			await LookService.LookRoom(GodParser, looker, room, LookKey.Auto));
+		await Assert.That(full.Any(m => m.Contains("A thing-terse description."))).IsTrue();
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingRef}=TERSE"));
+
+		var terse = await MessagesWhile(thingRef, async () =>
+			await LookService.LookRoom(GodParser, looker, room, LookKey.Auto));
+		await Assert.That(terse.Any(m => m.Contains("A thing-terse description."))).IsFalse();
+	}
+
+	/// <summary>
 	/// An exit in the room's exit list is a command link written in the client's own dialect. Pueblo's
 	/// command link is <c>&lt;A XCH_CMD&gt;</c> and MXP's is <c>&lt;SEND HREF&gt;</c>; each client prints the
 	/// other's as literal text, so one tag cannot serve both.

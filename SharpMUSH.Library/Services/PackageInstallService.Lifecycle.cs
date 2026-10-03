@@ -19,8 +19,13 @@ namespace SharpMUSH.Library.Services;
 /// <summary>Uninstall and rollback: removing a package and restoring what it displaced.</summary>
 public partial class PackageInstallService
 {
-	public async Task<Result<Success>> UninstallAsync(
+	public Task<Result<Success>> UninstallAsync(
 		string packageId, bool force = false, CancellationToken cancellationToken = default)
+		=> gate.RunAsync(() => UninstallExclusiveAsync(packageId, force, cancellationToken), cancellationToken);
+
+	/// <summary>Everything an uninstall reads and writes, run inside the package-operation gate.</summary>
+	private async Task<Result<Success>> UninstallExclusiveAsync(
+		string packageId, bool force, CancellationToken cancellationToken)
 	{
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
@@ -132,8 +137,13 @@ public partial class PackageInstallService
 
 	// ── Rollback ─────────────────────────────────────────────────────────────
 
-	public async Task<Result<PackageRollbackResult>> RollbackAsync(
+	public Task<Result<PackageRollbackResult>> RollbackAsync(
 		string packageId, int revision, CancellationToken cancellationToken = default)
+		=> gate.RunAsync(() => RollbackExclusiveAsync(packageId, revision, cancellationToken), cancellationToken);
+
+	/// <summary>Everything a rollback reads and writes, run inside the package-operation gate.</summary>
+	private async Task<Result<PackageRollbackResult>> RollbackExclusiveAsync(
+		string packageId, int revision, CancellationToken cancellationToken)
 	{
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{

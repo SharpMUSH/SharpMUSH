@@ -56,7 +56,7 @@ public class FlagsAndPowersTests
 
 		await Assert.That(announce!.Aliases).IsEquivalentTo(["@wall", "wall"]);
 		await Assert.That(anywhere!.AnswersTo("TEL_ANYWHERE")).IsTrue();
-		await Assert.That(vacation?.Name).IsEqualTo("ON_VACATION");
+		await Assert.That(vacation?.Name).IsEqualTo("ON-VACATION");
 	}
 
 	[Test]

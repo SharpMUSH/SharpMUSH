@@ -23,7 +23,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class MailAliases
 {
 	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions,
-		IConnectionService? Connections = null);
+		IConnectionService Connections);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
 	public sealed record Recipients(SharpPlayer[] Members, bool Silent);

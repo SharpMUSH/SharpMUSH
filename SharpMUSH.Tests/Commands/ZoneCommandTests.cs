@@ -449,7 +449,8 @@ public class ZoneCommandTests
 		// lock.c:968-971 reports the install, naming the zone through unparse_object.
 		var ownerNode = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 		var unparsed = await MessageFormatting.UnparseObjectAsync(
-			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(), ownerNode, zoneNode);
+			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(), ownerNode, zoneNode,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>());
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
 			nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat),
 			$"Unlocked zone {unparsed} - automatically zone-locking to itself", owner.DbRef)).IsTrue();

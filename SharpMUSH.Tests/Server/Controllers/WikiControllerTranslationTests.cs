@@ -336,6 +336,21 @@ public class WikiControllerTranslationTests
 			.Because("the source stream must never mix in translation revisions, which restart numbering at 1");
 	}
 
+	/// <summary>#1462: <c>before</c> pages by cursor — the revisions numbered below it, newest first — and
+	/// <c>skip</c> is not applied on top of it.</summary>
+	[Test]
+	public async Task GetRevisions_BeforePagesByCursor()
+	{
+		var (wiki, storage) = BuildAnonymous();
+		var page = (await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		for (var i = 2; i <= 6; i++) await storage.UpdateAsync(page.Id, $"v{i}", "#1");
+
+		var result = await wiki.Revisions.GetRevisions("dragons", skip: 3, take: 2, "main", "general", lang: null, before: 5);
+
+		var dtos = ((IEnumerable<WikiRevisionDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(dtos.Select(d => d.MarkdownSource)).IsEquivalentTo(new[] { "v4", "v3" });
+	}
+
 	[Test]
 	public async Task GetRevisions_NamingTheSourceLocaleReturnsTheSourceStream()
 	{

@@ -98,6 +98,17 @@ public class ConfigSetCommandTests
 			await Assert.That(AfterRestart().Net.MudUrl).IsEqualTo(url).Because("the stored document is what a restart reads");
 		});
 
+	/// <summary>A value outside the option's range is stored at the bound, and the command answers with what was stored.</summary>
+	[Test]
+	public async ValueTask Set_AnswersWithTheClampedValue()
+		=> await Restoring(async () =>
+		{
+			var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config/set player_queue_limit=0"));
+
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo("1");
+			await Assert.That(Configuration.CurrentValue.Limit.PlayerQueueLimit).IsEqualTo(1u);
+		});
+
 	/// <summary><c>cf_bool</c> takes yes/no, true/false and 1/0, caselessly.</summary>
 	[Test]
 	[Arguments("no", false)]

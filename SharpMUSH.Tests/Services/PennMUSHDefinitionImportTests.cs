@@ -75,8 +75,8 @@ public class PennMUSHDefinitionImportTests
 
 	/// <summary>
 	/// A source name this server already answers to is left alone, whether it matches a definition's
-	/// own name or one of its aliases: SharpMUSH reaches ON_VACATION and CLOUDY by the source's
-	/// ON-VACATION and TERSE, and neither is added a second time.
+	/// own name or one of its aliases: the source's ON-VACATION and TERSE are SharpMUSH's own flags, and
+	/// neither is added a second time.
 	/// </summary>
 	[Test]
 	public async Task ANameThisServerAlreadyAnswersToIsNotRedefined()
@@ -84,9 +84,11 @@ public class PennMUSHDefinitionImportTests
 		await using var world = await ImportFixtureAsync();
 
 		var flags = await world.Mediator.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
-		await Assert.That(flags.Where(f => f.Name is "ON-VACATION" or "TERSE")).IsEmpty();
-		await Assert.That(flags.Single(f => f.Name == "ON_VACATION").Aliases).Contains("ON-VACATION");
-		await Assert.That(flags.Single(f => f.Name == "CLOUDY").Aliases).Contains("TERSE");
+		await Assert.That(flags.Count(f => f.Name == "ON-VACATION")).IsEqualTo(1);
+		await Assert.That(flags.Count(f => f.Name == "TERSE")).IsEqualTo(1);
+		await Assert.That(flags.Where(f => f.Name == "ON_VACATION")).IsEmpty();
+		await Assert.That(flags.Single(f => f.Name == "ON-VACATION").Aliases).Contains("ON_VACATION");
+		await Assert.That(flags.Single(f => f.Name == "CLOUDY").Aliases ?? []).DoesNotContain("TERSE");
 	}
 
 	/// <summary>
@@ -158,7 +160,7 @@ public class PennMUSHDefinitionImportTests
 
 	/// <summary>
 	/// A name this server already spends elsewhere is dropped from the definition that wanted it, and
-	/// said so: an alias that would shadow DARK, and a letter ON_VACATION already carries on a player.
+	/// said so: an alias that would shadow DARK, and a letter ON-VACATION already carries on a player.
 	/// </summary>
 	[Test]
 	public async Task ANameOrLetterThisServerAlreadySpendsIsDroppedAndReported()
@@ -169,12 +171,12 @@ public class PennMUSHDefinitionImportTests
 		var shadow = await world.Mediator.Send(new GetObjectFlagQuery("ORACLE_SHADOW"));
 		await Assert.That(shadow).IsNotNull().Because("the definition arrives even when its alias cannot");
 		await Assert.That(shadow!.Aliases ?? []).IsEmpty();
-		await Assert.That(shadow.Symbol).IsEmpty().Because("ON_VACATION already uses 'o' on a player");
+		await Assert.That(shadow.Symbol).IsEmpty().Because("ON-VACATION already uses 'o' on a player");
 		await Assert.That(await world.Mediator.Send(new GetObjectFlagQuery("DARK")))
 			.IsNotNull().And.Satisfies(flag => flag!.Name, name => name.IsEqualTo("DARK"));
 
 		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("DARK"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("ON_VACATION"))).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("ON-VACATION"))).IsTrue();
 	}
 
 	/// <summary>
@@ -301,7 +303,7 @@ public class PennMUSHDefinitionImportTests
 	/// <summary>
 	/// A site's own definitions, and deliberate collisions with this server's protected built-ins: a
 	/// WIZARD that would be royalty-settable on a thing, a DESCRIBE that would be wizard-only, an
-	/// alias that would shadow DARK and a letter ON_VACATION already carries.
+	/// alias that would shadow DARK and a letter ON-VACATION already carries.
 	/// </summary>
 	private static PennMUSHDatabase CustomFixture() => new()
 	{
