@@ -6,7 +6,9 @@ using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -25,8 +27,8 @@ namespace SharpMUSH.Database.Lightning;
 /// <para>
 /// The inheritance members
 /// (<see cref="GetAttributeWithInheritanceAsync"/>, <see cref="GetLazyAttributeWithInheritanceAsync"/>)
-/// resolve their whole candidate set inside one snapshot — see
-/// <see cref="CollectInheritanceCandidates{T}"/>.
+/// resolve inside one snapshot, on metadata, stopping at the first decisive candidate — see
+/// <see cref="ResolveInheritance"/>.
 /// </para>
 /// </summary>
 public partial class LightningDatabase
@@ -97,6 +99,12 @@ public partial class LightningDatabase
 	/// key keeps that prefix, keep the rows whose long name matches. <paramref name="literalPrefix"/> is
 	/// only an index optimisation — <paramref name="filter"/> alone decides membership — so the regex
 	/// readers pass <c>""</c> and range the object's whole attribute space.
+	/// <para>
+	/// The filter is time-bounded per match (<see cref="SoftcodeRegex.MatchTimeout"/>), and the scan as a
+	/// whole answers to the ambient <see cref="ExecutionBudget"/>: every row checks what is left of it, so
+	/// a pattern that is slow on every name stops when the evaluation's time is up rather than after
+	/// a fresh timeout per row.
+	/// </para>
 	/// </summary>
 	private async IAsyncEnumerable<SharpAttribute> ScanAttributesCoreAsync(DBRef dbref, string literalPrefix, Regex filter,
 		[EnumeratorCancellation] CancellationToken ct)
@@ -104,8 +112,9 @@ public partial class LightningDatabase
 		var n = (long)dbref.Number;
 		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
+			ReadStats.MetaRowRead();
 			var longName = Keys.ParseAttr(key).LongName;
-			if (!filter.IsMatch(longName))
+			if (!NameMatches(filter, longName, ct))
 			{
 				continue;
 			}
@@ -122,8 +131,9 @@ public partial class LightningDatabase
 		var n = (long)dbref.Number;
 		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
+			ReadStats.MetaRowRead();
 			var longName = Keys.ParseAttr(key).LongName;
-			if (!filter.IsMatch(longName))
+			if (!NameMatches(filter, longName, ct))
 			{
 				continue;
 			}
@@ -131,6 +141,18 @@ public partial class LightningDatabase
 			var meta = Codec.Deserialize<AttrMetaRecord>(value);
 			yield return Store.Read(tx => HydrateLazyAttribute(tx, n, longName, meta));
 		}
+	}
+
+	/// <summary>
+	/// One row of a pattern scan: the scan's remaining budget first, then the time-bounded match. A
+	/// match that runs out its own timeout throws <see cref="RegexMatchTimeoutException"/>, which the
+	/// softcode callers report as <c>#-1 REGEXP TIMEOUT</c>.
+	/// </summary>
+	private static bool NameMatches(Regex filter, string longName, CancellationToken ct)
+	{
+		ct.ThrowIfCancellationRequested();
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		return filter.IsMatch(longName);
 	}
 
 	public IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
@@ -141,11 +163,12 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
 		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var candidates = Store.Read(tx => CollectInheritanceCandidates(tx, (long)dbref.Number, attribute, checkParent,
-			(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName))));
-
-		var resolved = ResolveInheritance(candidates, attribute.Length, static a => a.IsNoInherit(), static a => a.Flags,
-			static (attrs, source, kind, flags) => new AttributeWithInheritance(attrs, source, kind, flags));
+		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent) is { } hit
+			? BuildInheritanceHit(tx, hit,
+				(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName)),
+				static a => a.Flags,
+				static (attrs, source, kind, flags) => new AttributeWithInheritance(attrs, source, kind, flags))
+			: null);
 
 		if (resolved is not null)
 		{
@@ -163,10 +186,11 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
 		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var candidates = Store.Read(tx => CollectInheritanceCandidates(tx, (long)dbref.Number, attribute, checkParent, HydrateLazyAttribute));
-
-		var resolved = ResolveInheritance(candidates, attribute.Length, static a => a.IsNoInherit(), static a => a.Flags,
-			static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags));
+		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent) is { } hit
+			? BuildInheritanceHit(tx, hit, HydrateLazyAttribute,
+				static a => a.Flags,
+				static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags))
+			: null);
 
 		if (resolved is not null)
 		{
@@ -528,47 +552,122 @@ public partial class LightningDatabase
 	/// </summary>
 	private const int InheritanceHopLimit = 100;
 
-	/// <summary>One object the inheritance walk may resolve against, carrying whatever prefix of the
-	/// requested path actually exists on it — possibly shorter than the path, which is what makes the
-	/// no_inherit gate below able to fire on a branch that has no leaf.</summary>
-	private sealed record InheritanceCandidate<T>(DBRef Source, T[] Attributes);
-
-	private sealed record InheritanceCandidates<T>(
-		InheritanceCandidate<T>? Self,
-		List<InheritanceCandidate<T>> Parents,
-		List<InheritanceCandidate<T>> Zones);
+	/// <summary>The candidate the inheritance walk settled on: the object it resolved against, that
+	/// object's root..leaf path as metadata (values not yet read), and how it was reached.</summary>
+	private sealed record InheritanceHit(long Owner, IReadOnlyList<(string LongName, AttrMetaRecord Meta)> Path, AttributeSource Source);
 
 	/// <summary>
-	/// Everything the inheritance walk needs, read inside a single snapshot: the object itself, then its
+	/// The inheritance walk, inside a single snapshot and on metadata alone: the object itself, then its
 	/// parent chain, then the zone chain of every member of <c>[self, parent, grandparent, …]</c> in that
-	/// the object itself suppresses both inherited groups, and a candidate with no prefix at all is
-	/// dropped (their <c>FILTER LENGTH(...) &gt; 0</c>).
+	/// order (PennMUSH <c>atr_get_with_parent</c>). The object's own complete hit wins outright; otherwise
+	/// each candidate is tested in order, where <c>no_inherit</c> anywhere on the candidate's existing prefix
+	/// aborts the whole walk (<c>attrib.c:1232-1252</c> returns NULL rather than falling through to a more
+	/// distant ancestor) and only a prefix reaching the requested length is a match. A candidate with no
+	/// prefix at all is passed over.
+	/// <para>
+	/// The walk stops at the first decisive candidate, so a hit on the nearest parent reads nothing from
+	/// further parents or from any zone, and zone chains are not even followed until the parent chain is
+	/// exhausted. An object reached a second time (a zone shared by several members, a parent that is
+	/// also a zone) is not read again: its first visit was not decisive, and inside one snapshot it would
+	/// answer the same way, so skipping it keeps the precedence order and the outcome. The object itself
+	/// is not in that set — reached again as somebody's zone, it is an inherited candidate like any other.
+	/// No value is read here; <see cref="BuildInheritanceHit{T,TResult}"/> hydrates the winner alone.
+	/// </para>
 	/// </summary>
-	private InheritanceCandidates<T> CollectInheritanceCandidates<T>(ITx tx, long dbref, string[] path, bool checkParent,
-		Func<ITx, long, string, AttrMetaRecord, T> hydrate)
+	private InheritanceHit? ResolveInheritance(ITx tx, long dbref, string[] path, bool checkParent)
 	{
-		InheritanceCandidate<T> CandidateOf(long owner) => new(new DBRef((int)owner),
-			[.. ReadPathPrefixes(tx, owner, path).Select(entry => hydrate(tx, owner, entry.LongName, entry.Meta))]);
-
-		var self = CandidateOf(dbref);
-		if (self.Attributes.Length == path.Length)
+		var self = ReadPathPrefixes(tx, dbref, path);
+		if (self.Count == path.Length)
 		{
-			return new InheritanceCandidates<T>(self, [], []);
+			return new InheritanceHit(dbref, self, AttributeSource.Self);
 		}
 
 		if (!checkParent)
 		{
-			return new InheritanceCandidates<T>(null, [], []);
+			return null;
+		}
+
+		var decided = new HashSet<long>();
+		InheritanceHit? hit = null;
+
+		// True when the candidate settles the walk: a match (hit set) or a no_inherit barrier (hit null).
+		bool Decides(long owner, AttributeSource source)
+		{
+			if (!decided.Add(owner))
+			{
+				return false;
+			}
+
+			var prefixes = ReadPathPrefixes(tx, owner, path);
+			if (prefixes.Count == 0)
+			{
+				return false;
+			}
+
+			if (prefixes.Any(entry => IsNoInheritMeta(tx, entry.Meta)))
+			{
+				return true;
+			}
+
+			if (prefixes.Count != path.Length)
+			{
+				return false;
+			}
+
+			hit = new InheritanceHit(owner, prefixes, source);
+			return true;
 		}
 
 		var chain = EdgeChain(tx, Tables.Parent.Forward, dbref);
 
-		return new InheritanceCandidates<T>(
-			null,
-			[.. chain.Skip(1).Select(CandidateOf).Where(candidate => candidate.Attributes.Length > 0)],
-			[.. chain.SelectMany(member => EdgeChain(tx, Tables.Zone.Forward, member).Skip(1))
-				.Select(CandidateOf).Where(candidate => candidate.Attributes.Length > 0)]);
+		foreach (var parent in chain.Skip(1))
+		{
+			if (Decides(parent, AttributeSource.Parent))
+			{
+				return hit;
+			}
+		}
+
+		foreach (var member in chain)
+		{
+			foreach (var zone in EdgeChain(tx, Tables.Zone.Forward, member).Skip(1))
+			{
+				if (Decides(zone, AttributeSource.Zone))
+				{
+					return hit;
+				}
+			}
+		}
+
+		return null;
 	}
+
+	/// <summary>
+	/// Hydrates the winning candidate's path — the only values an inherited read reads — and builds the
+	/// result: a self hit keeps every flag of its leaf, an inherited one only the inheritable ones.
+	/// </summary>
+	private static TResult BuildInheritanceHit<T, TResult>(
+		ITx tx,
+		InheritanceHit hit,
+		Func<ITx, long, string, AttrMetaRecord, T> hydrate,
+		Func<T, IEnumerable<SharpAttributeFlag>> flagsOf,
+		Func<T[], DBRef, AttributeSource, IEnumerable<SharpAttributeFlag>, TResult> build)
+	{
+		T[] attributes = [.. hit.Path.Select(entry => hydrate(tx, hit.Owner, entry.LongName, entry.Meta))];
+		var flags = flagsOf(attributes[^1]);
+		return build(attributes, new DBRef((int)hit.Owner), hit.Source,
+			hit.Source == AttributeSource.Self ? flags : flags.Where(flag => flag.Inheritable));
+	}
+
+	/// <summary>
+	/// <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> on a metadata row, without
+	/// hydrating it: the same answer, because hydration resolves each stored flag name through
+	/// <see cref="Tables.AttrFlag"/> (dropping a name whose definition is gone) and the test then looks for
+	/// a resolved flag named <c>no_inherit</c>.
+	/// </summary>
+	private static bool IsNoInheritMeta(ITx tx, AttrMetaRecord meta)
+		=> meta.Flags.Any(name => tx.TryGet(Tables.AttrFlag, Keys.Upper(name), out var bytes)
+			&& Codec.Deserialize<AttributeFlagRecord>(bytes).Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
@@ -596,58 +695,20 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// <c>1104-1118</c>): the object's own complete hit wins outright and keeps every flag; otherwise each
-	/// parent then each zone is tested in order, where <c>no_inherit</c> anywhere on the candidate's
-	/// existing prefix aborts the whole walk (PennMUSH <c>atr_get_with_parent</c>, <c>attrib.c:1232-1252</c>,
-	/// returns NULL rather than falling through to a more distant ancestor) and only a prefix reaching the
-	/// requested length is a match, contributing just its inheritable flags.
-	/// </summary>
-	private static TResult? ResolveInheritance<T, TResult>(
-		InheritanceCandidates<T> candidates,
-		int expectedLength,
-		Func<T, bool> isNoInherit,
-		Func<T, IEnumerable<SharpAttributeFlag>> flagsOf,
-		Func<T[], DBRef, AttributeSource, IEnumerable<SharpAttributeFlag>, TResult> build)
-		where TResult : class
-	{
-		if (candidates.Self is { } self)
-		{
-			return build(self.Attributes, self.Source, AttributeSource.Self, flagsOf(self.Attributes[^1]));
-		}
-
-		var inherited = candidates.Parents.Select(candidate => (candidate, Kind: AttributeSource.Parent))
-			.Concat(candidates.Zones.Select(candidate => (candidate, Kind: AttributeSource.Zone)));
-
-		foreach (var (candidate, kind) in inherited)
-		{
-			if (candidate.Attributes.Any(isNoInherit))
-			{
-				return null;
-			}
-
-			if (candidate.Attributes.Length == expectedLength)
-			{
-				return build(candidate.Attributes, candidate.Source, kind,
-					flagsOf(candidate.Attributes[^1]).Where(flag => flag.Inheritable));
-			}
-		}
-
-		return null;
-	}
-
-	/// <summary>
 	/// Point-reads each prefix of <paramref name="path"/> in turn and stops at the first segment with no
 	/// row. A result shorter than <paramref name="path"/> means the walk stopped early — the caller decides
 	/// whether that is a miss (<see cref="GetAttributeAsync"/>) or a usable partial (the inheritance walk).
 	/// </summary>
 	internal IReadOnlyList<(string LongName, AttrMetaRecord Meta)> ReadPathPrefixes(ITx tx, long dbref, string[] path)
 	{
+		ReadStats.PathWalk();
 		var resolved = new List<(string, AttrMetaRecord)>(path.Length);
 		var longName = string.Empty;
 		for (var level = 0; level < path.Length; level++)
 		{
 			var segment = path[level].ToUpperInvariant();
 			longName = level == 0 ? segment : $"{longName}`{segment}";
+			ReadStats.MetaRowRead();
 			if (!tx.TryGet(Tables.AttrMeta, Keys.Attr(dbref, longName), out var bytes))
 			{
 				break;
@@ -696,11 +757,16 @@ public partial class LightningDatabase
 			new AsyncLazy<SharpPlayer?>(_ => Task.FromResult(LoadAttributeOwner(meta.Owner))),
 			new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult(LoadAttributeEntry(meta.Entry))),
 			// The whole point of the lazy shape: the attr.val row stays unread until someone asks.
+			// Resettable, so a content scan can drop a body once it has been tested
+			// (LazySharpAttributeExtensions.ReadValueOnceAsync) instead of keeping every one it read.
 			Value: new AsyncLazy<MString>(_ => Task.FromResult(
-				Store.Read(readTx => DeserializeValue(ReadAttributeValue(readTx, dbref, longName))))));
+				Store.Read(readTx => DeserializeValue(ReadAttributeValue(readTx, dbref, longName)))), resettable: true));
 
-	private static byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
-		=> tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+	private byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
+	{
+		ReadStats.ValueRead();
+		return tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+	}
 
 	private static MString DeserializeValue(byte[]? value)
 		=> value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value));
@@ -740,65 +806,104 @@ public partial class LightningDatabase
 	private static AttributeEntryRecord? ReadAttributeEntryRecord(ITx tx, string name)
 		=> tx.TryGet(Tables.AttrEntry, Keys.Upper(name), out var bytes) ? Codec.Deserialize<AttributeEntryRecord>(bytes) : null;
 
-	/// <summary>The direct children of <paramref name="longName"/>: the <c>LONGNAME`</c> range, minus the
-	/// grandchildren, which are exactly the keys carrying a further backtick.</summary>
-	private async IAsyncEnumerable<SharpAttribute> ChildAttributesCoreAsync(long dbref, string longName,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		var children = Store.Read(tx => ReadChildRows(tx, dbref, longName)
-			.Select(child => HydrateAttribute(tx, dbref, child.LongName, child.Meta, ReadAttributeValue(tx, dbref, child.LongName)))
-			.ToList());
-
-		foreach (var child in children)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return child;
-		}
-	}
+	/// <summary>The direct children of <paramref name="longName"/>, in key order; see <see cref="DirectChildrenAsync{T}"/>.</summary>
+	private IAsyncEnumerable<SharpAttribute> ChildAttributesCoreAsync(long dbref, string longName, CancellationToken ct)
+		=> DirectChildrenAsync(Keys.Attr(dbref, longName + "`"),
+			(tx, childName, meta) => HydrateAttribute(tx, dbref, childName, meta, ReadAttributeValue(tx, dbref, childName)), ct);
 
 	/// <inheritdoc cref="ChildAttributesCoreAsync"/>
-	private async IAsyncEnumerable<LazySharpAttribute> ChildLazyAttributesCoreAsync(long dbref, string longName,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		var children = Store.Read(tx => ReadChildRows(tx, dbref, longName)
-			.Select(child => HydrateLazyAttribute(tx, dbref, child.LongName, child.Meta))
-			.ToList());
+	private IAsyncEnumerable<LazySharpAttribute> ChildLazyAttributesCoreAsync(long dbref, string longName, CancellationToken ct)
+		=> DirectChildrenAsync(Keys.Attr(dbref, longName + "`"),
+			(tx, childName, meta) => HydrateLazyAttribute(tx, dbref, childName, meta), ct);
 
-		foreach (var child in children)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return child;
-		}
-	}
-
-	/// <summary>Top-level attributes of an object: the whole dbref range, minus everything with a backtick.</summary>
-	internal async IAsyncEnumerable<SharpAttribute> TopLevelAttributesCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), ct: ct))
-		{
-			var longName = Keys.ParseAttr(key).LongName;
-			if (longName.Contains('`'))
-			{
-				continue;
-			}
-
-			var meta = Codec.Deserialize<AttrMetaRecord>(value);
-			yield return Store.Read(tx => HydrateAttribute(tx, dbref, longName, meta, ReadAttributeValue(tx, dbref, longName)));
-		}
-	}
+	/// <summary>Top-level attributes of an object: the direct children of the object's attribute space.</summary>
+	internal IAsyncEnumerable<SharpAttribute> TopLevelAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> DirectChildrenAsync(Keys.AttrPrefix(dbref),
+			(tx, name, meta) => HydrateAttribute(tx, dbref, name, meta, ReadAttributeValue(tx, dbref, name)), ct);
 
 	/// <inheritdoc cref="TopLevelAttributesCoreAsync"/>
-	internal async IAsyncEnumerable<LazySharpAttribute> TopLevelLazyAttributesCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
+	internal IAsyncEnumerable<LazySharpAttribute> TopLevelLazyAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> DirectChildrenAsync(Keys.AttrPrefix(dbref),
+			(tx, name, meta) => HydrateLazyAttribute(tx, dbref, name, meta), ct);
+
+	/// <summary>How many direct children one read transaction collects before the stream yields them.</summary>
+	internal const int ChildPageSize = 256;
+
+	/// <summary>
+	/// The rows directly under <paramref name="parentPrefix"/> — <c>dbref·0x00</c> for the top level,
+	/// <c>dbref·0x00·LONGNAME`</c> for a branch — without reading their descendants. Key order is preorder,
+	/// so a child's subtree is the contiguous run of keys starting <c>CHILD`</c>; on meeting the first of
+	/// them the cursor seeks straight past the run (the same key with its backtick raised to the next byte)
+	/// instead of stepping through it. A sibling that shares the child's prefix but sorts before the
+	/// backtick (<c>FOO_X</c>, <c>FOO1</c> beside <c>FOO</c>) lies between the child and its subtree and is
+	/// read normally. Each page of <see cref="ChildPageSize"/> children is one read transaction, hydrated
+	/// inside it; the next page starts at the first child the previous one did not take, so a wide branch
+	/// is never held in one long snapshot.
+	/// </summary>
+	private async IAsyncEnumerable<T> DirectChildrenAsync<T>(byte[] parentPrefix, Func<ITx, string, AttrMetaRecord, T> hydrate,
+		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), ct: ct))
+		byte[]? start = parentPrefix;
+		while (start is not null)
 		{
-			var longName = Keys.ParseAttr(key).LongName;
-			if (longName.Contains('`'))
+			ct.ThrowIfCancellationRequested();
+			var from = start;
+			var (page, resume) = Store.Read(tx =>
 			{
-				continue;
+				var (rows, next) = ReadDirectChildPage(tx, parentPrefix, from, ChildPageSize);
+				return (rows.Select(row => hydrate(tx, row.LongName, row.Meta)).ToList(), next);
+			});
+
+			foreach (var item in page)
+			{
+				ct.ThrowIfCancellationRequested();
+				yield return item;
 			}
 
-			yield return Store.Read(tx => HydrateLazyAttribute(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(value)));
+			start = resume;
+		}
+	}
+
+	/// <summary>One page of <see cref="DirectChildrenAsync{T}"/>: up to <paramref name="pageSize"/> child rows
+	/// from <paramref name="start"/> on, and the key the next page starts at (null when there is none).</summary>
+	private (List<(string LongName, AttrMetaRecord Meta)> Rows, byte[]? Resume) ReadDirectChildPage(ITx tx, byte[] parentPrefix,
+		byte[] start, int pageSize)
+	{
+		var rows = new List<(string, AttrMetaRecord)>();
+		var seek = start;
+		while (true)
+		{
+			byte[]? skipTo = null;
+			foreach (var (key, value) in tx.RangeFromKey(Tables.AttrMeta, seek))
+			{
+				ReadStats.MetaRowRead();
+				if (!Keys.StartsWith(key, parentPrefix))
+				{
+					return (rows, null);
+				}
+
+				var tick = key.AsSpan(parentPrefix.Length).IndexOf((byte)'`');
+				if (tick >= 0)
+				{
+					skipTo = key[..(parentPrefix.Length + tick + 1)];
+					skipTo[^1]++;
+					break;
+				}
+
+				if (rows.Count == pageSize)
+				{
+					return (rows, key);
+				}
+
+				rows.Add((Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value)));
+			}
+
+			if (skipTo is null)
+			{
+				return (rows, null);
+			}
+
+			seek = skipTo;
 		}
 	}
 
@@ -822,12 +927,6 @@ public partial class LightningDatabase
 			yield return Store.Read(tx => HydrateLazyAttribute(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(value)));
 		}
 	}
-
-	private static List<(string LongName, AttrMetaRecord Meta)> ReadChildRows(ITx tx, long dbref, string longName)
-		=> [.. tx.Range(Tables.AttrMeta, Keys.Attr(dbref, longName + "`"))
-			.Select(entry => (LongName: Keys.ParseAttr(entry.Key).LongName, Value: entry.Value))
-			.Where(entry => !entry.LongName.AsSpan(longName.Length + 1).Contains('`'))
-			.Select(entry => (entry.LongName, Codec.Deserialize<AttrMetaRecord>(entry.Value)))];
 
 	private static bool HasChildren(ITx tx, long dbref, string longName)
 		=> tx.Range(Tables.AttrMeta, Keys.Attr(dbref, longName + "`")).Any();
@@ -994,12 +1093,20 @@ public partial class LightningDatabase
 			converted += "[^`]+";
 		}
 
-		return new Regex($"^{converted}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		return SoftcodeRegex.Create($"^{converted}$", NameRegexOptions);
 	}
 
 	/// <summary>The regex readers take their pattern raw — no wildcard conversion and no anchoring; a
-	/// caller wanting "everything" passes <c>.*</c>.</summary>
-	private static Regex RawRegex(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+	/// caller wanting "everything" passes <c>.*</c>. An invalid pattern throws
+	/// <see cref="RegexParseException"/>.</summary>
+	private static Regex RawRegex(string pattern) => SoftcodeRegex.Create(pattern, NameRegexOptions);
+
+	/// <summary>
+	/// Attribute names match case-insensitively and culture-invariantly. Built through
+	/// <see cref="SoftcodeRegex"/>, like every other pattern whose text came from softcode: each match is
+	/// time-bounded, and the same text is compiled once and shared across scans.
+	/// </summary>
+	private const RegexOptions NameRegexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/\\]")]
 	private static partial Regex WildcardToRegex();

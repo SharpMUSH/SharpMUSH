@@ -546,13 +546,21 @@ public partial class Functions
 	/// they had already drifted: five of the six regular-expression variants reported <c>GET</c> in
 	/// the error PennMUSH reports as <c>called_as</c> (<c>src/fundb.c:225</c>), and <c>lattr</c>
 	/// ignored the output delimiter it declares a second argument for.
+	/// <para>
+	/// Every variant needs names or a count, never a value, so the read is the lazy one: the same
+	/// permission walk over metadata, with no <c>attr.val</c> row read for a match or for any branch
+	/// node the walk checks. <paramref name="project"/> receives the permitted long names in the
+	/// order the eager read sorted them. A regular expression that does not compile, or a match that
+	/// runs out its time, answers <c>#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION</c> or
+	/// <c>#-1 REGEXP TIMEOUT</c>, as <c>regrep</c> does.
+	/// </para>
 	/// </summary>
 	private async ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
 		string calledAs,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
-		Func<SharpAttribute[], CallState> project)
+		Func<string[], CallState> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(
@@ -567,16 +575,33 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? (mode is IAttributeService.AttributePatternMode.Regex ? ".*" : "*"),
 					checkParents, mode);
 
 				return attributes switch
 				{
 					Error<string> error => error,
-					SharpAttribute[] matched => project(matched)
+					IAsyncEnumerable<LazySharpAttribute> matched => await ProjectNamesAsync(matched, project)
 				};
 			});
+	}
+
+	private static async ValueTask<CallState> ProjectNamesAsync(IAsyncEnumerable<LazySharpAttribute> matched,
+		Func<string[], CallState> project)
+	{
+		try
+		{
+			return project(await matched.Select(x => x.LongName).ToArrayAsync(ExecutionBudget.CurrentToken));
+		}
+		catch (System.Text.RegularExpressions.RegexParseException)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 	}
 
 	/// <summary>
@@ -600,7 +625,7 @@ public partial class Functions
 
 		return AttributePatternAsync(parser, calledAs, checkParents, mode,
 			matched => string.Join(AttributeListSeparator(parser, "3"),
-				matched.Skip(start - 1).Take(count).Select(x => x.LongName)));
+				matched.Skip(start - 1).Take(count)));
 	}
 
 	/// <summary>
@@ -615,12 +640,12 @@ public partial class Functions
 	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, "1"), matched));
 
 	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, "1"), matched));
 
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)

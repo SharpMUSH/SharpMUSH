@@ -573,9 +573,23 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, classObj?.Object().DBRef, pairs, useRegex);
+		SearchSpecEngine.SearchResult search;
+		try
+		{
+			search = await SearchSpecEngine.ExecuteResultAsync(
+				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+				executor, classObj?.Object().DBRef, pairs, useRegex);
+		}
+		catch (System.Text.RegularExpressions.RegexParseException) when (useRegex)
+		{
+			// lsearchr()'s name pattern is a regular expression the provider compiles; one that does not
+			// compile, or cannot finish a match in SoftcodeRegex.MatchTimeout, is an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException) when (useRegex)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 
 		var finalResults = search.Matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
 

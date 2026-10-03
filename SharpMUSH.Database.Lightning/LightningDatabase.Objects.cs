@@ -529,8 +529,23 @@ public partial class LightningDatabase
 		}
 
 		return filter.UseRegex
-			? Regex.IsMatch(record.Name, filter.NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+			? RegexNameMatches(record.Name, filter.NamePattern)
 			: record.Name.Contains(filter.NamePattern, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// A regex name search's predicate for one row. The pattern is softcode text, so it is built through
+	/// <see cref="SharpMUSH.Library.Utilities.SoftcodeRegex"/> — compiled once and shared by every row (and every later search with the
+	/// same text), each match bounded by <see cref="SharpMUSH.Library.Utilities.SoftcodeRegex.MatchTimeout"/> — and every row first
+	/// checks what is left of the ambient <see cref="SharpMUSH.Library.ParserInterfaces.ExecutionBudget"/>, so a pattern slow on every name
+	/// ends the scan when the evaluation's time is up rather than after a fresh timeout per row. An invalid
+	/// pattern throws <see cref="RegexParseException"/>, a match that times out
+	/// <see cref="RegexMatchTimeoutException"/>; <c>lsearchr()</c> and <c>@search</c> report both.
+	/// </summary>
+	private static bool RegexNameMatches(string name, string pattern)
+	{
+		SharpMUSH.Library.ParserInterfaces.ExecutionBudget.Current?.ThrowIfExceeded();
+		return SharpMUSH.Library.Utilities.SoftcodeRegex.Create(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).IsMatch(name);
 	}
 
 	private static bool NeedsEdgePredicates(ObjectSearchFilter filter)

@@ -1003,14 +1003,14 @@ public partial class Commands
 		// not a separate matching mode - it is the attribute-name wildcard that is allowed to
 		// cross "`" (wild.c:89-107, real_atr_wild). That distinction lives in the wildcard-to-regex
 		// translation in the database providers, so every pattern here is Wildcard.
-		return await AttributeService.GetAttributePatternAsync(
+		return await AttributeService.LazilyGetAttributePatternAsync(
 			executor,
 			targetObject,
 			attributePattern,
 			checkParents,
 			IAttributeService.AttributePatternMode.Wildcard) switch
 		{
-			SharpAttribute[] attributes => await GrepAttributesAsync(parser, executor, attributes, switches, pattern),
+			IAsyncEnumerable<LazySharpAttribute> attributes => await GrepAttributesAsync(parser, executor, attributes, switches, pattern),
 			Error<string> error => await GrepUnreadableAsync(executor, error.Value)
 		};
 	}
@@ -1021,20 +1021,28 @@ public partial class Commands
 		return new CallState($"#-1 {error}");
 	}
 
-	/// <summary>Reports the attributes whose value matches <paramref name="pattern"/>, the way the switches ask.</summary>
+	/// <summary>
+	/// Reports the attributes whose value matches <paramref name="pattern"/>, the way the switches ask.
+	/// The attributes arrive with their values unread, already past the read gate; each body is read for
+	/// its test and released unless it matched, so the scan holds only the matches it will report
+	/// (<see cref="LazySharpAttributeExtensions.ReadValueOnceAsync"/>).
+	/// </summary>
 	private async ValueTask<Option<CallState>> GrepAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		SharpAttribute[] attributes, IEnumerable<string> switches, string pattern)
+		IAsyncEnumerable<LazySharpAttribute> attributes, IEnumerable<string> switches, string pattern)
 	{
 		var isWild = switches.Contains("WILD");
 		var isRegexp = switches.Contains("REGEXP");
 		var isNoCase = switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT");
 		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
 
-		var matchingAttributes = new List<SharpAttribute>();
+		var matchingAttributes = new List<(LazySharpAttribute Attribute, MString Value)>();
+		var token = ExecutionBudget.CurrentToken;
 
-		foreach (var attr in attributes)
+		await foreach (var attr in attributes.WithCancellation(token))
 		{
-			var attrValue = attr.Value.ToPlainText();
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var value = await attr.ReadValueOnceAsync(token);
+			var attrValue = value.ToPlainText();
 			bool matches = false;
 
 			if (isRegexp)
@@ -1083,7 +1091,7 @@ public partial class Commands
 
 			if (matches)
 			{
-				matchingAttributes.Add(attr);
+				matchingAttributes.Add((attr, value));
 			}
 		}
 
@@ -1098,7 +1106,7 @@ public partial class Commands
 			// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
 			int? width = null;
 
-			foreach (var attr in matchingAttributes)
+			foreach (var (attr, value) in matchingAttributes)
 			{
 				var parseType = attr.SyntaxParseType();
 
@@ -1111,12 +1119,12 @@ public partial class Commands
 					// covering all existing traffic.
 					if (isRegexp || isWild)
 					{
-						displayValue = attr.Value;
+						displayValue = value;
 					}
 					else
 					{
 						// Highlight the matching parts using Span to avoid allocations
-						var plainValue = attr.Value.ToPlainText();
+						var plainValue = value.ToPlainText();
 						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 						var index = plainValue.IndexOf(pattern, comparison);
 
@@ -1131,7 +1139,7 @@ public partial class Commands
 						}
 						else
 						{
-							displayValue = attr.Value;
+							displayValue = value;
 						}
 					}
 				}
@@ -1147,16 +1155,16 @@ public partial class Commands
 					// summary the formatter appends beneath it.
 					int codeLength;
 
-					if (attr.Value.Length == 0)
+					if (value.Length == 0)
 					{
-						formatted = attr.Value;
+						formatted = value;
 						codeLength = 0;
 					}
 					else
 					{
 						width ??= await ExecutorFormatWidthAsync(executor);
 
-						var source = attr.Value;
+						var source = value;
 						var tokens = parser.Tokenize(source);
 						var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
 						var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
@@ -1203,7 +1211,7 @@ public partial class Commands
 		}
 		else
 		{
-			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Name));
+			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Attribute.Name));
 			await NotifyService.Notify(executor, attrNames, executor);
 		}
 
