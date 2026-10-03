@@ -48,6 +48,7 @@ public static class ZoneHelpers
 		IDidItService didItService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnyOptionalSharpObject zone,
@@ -96,8 +97,8 @@ public static class ZoneHelpers
 		}
 
 		// set.c:449-450.
-		await CheckZoneLockAsync(mediator, notifyService, permissionService, lockService, configuration, executor,
-			destination, noisy);
+		await CheckZoneLockAsync(mediator, notifyService, permissionService, lockService, configuration, connections,
+			executor, destination, noisy);
 
 		// set.c:452-456. Hasprivs(Owner(thing)), so a mortal's object owned by nobody privileged is quiet.
 		var owner = new AnySharpObject(await target.Object().Owner.WithCancellation(CancellationToken.None));
@@ -148,6 +149,7 @@ public static class ZoneHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
 		AnySharpObject executor,
 		AnySharpObject destination,
 		bool noisy)
@@ -162,7 +164,7 @@ public static class ZoneHelpers
 
 			if (noisy)
 			{
-				await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+				await NotifyAboutZoneAsync(notifyService, permissionService, connections, executor, destination,
 					nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat));
 			}
 
@@ -189,7 +191,7 @@ public static class ZoneHelpers
 		var trivial = playerStart is AnySharpObject start && await lockService.Evaluate(LockType.Zone, destination, start)
 			&& masterRoom is AnySharpObject master && await lockService.Evaluate(LockType.Zone, destination, master);
 
-		await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+		await NotifyAboutZoneAsync(notifyService, permissionService, connections, executor, destination,
 			trivial
 				? nameof(ErrorMessages.Notifications.ZoneShouldHaveMoreSecureLockFormat)
 				: nameof(ErrorMessages.Notifications.ZoneMayHaveLooseLockFormat));
@@ -197,9 +199,10 @@ public static class ZoneHelpers
 
 	/// <summary>One of <c>check_zone_lock</c>'s three notices, all of which name the zone by <c>unparse_object</c>.</summary>
 	private static async ValueTask NotifyAboutZoneAsync(INotifyService notifyService,
-		IPermissionService permissionService, AnySharpObject executor, AnySharpObject destination, string key)
+		IPermissionService permissionService, IConnectionService connections, AnySharpObject executor,
+		AnySharpObject destination, string key)
 		=> await notifyService.NotifyLocalized(executor, key, executor,
-			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination));
+			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination, connections));
 
 	/// <summary><c>PLAYER_START</c> and <c>MASTER_ROOM</c>, which a world need not actually hold.</summary>
 	private static async ValueTask<AnyOptionalSharpObject> RoomAsync(IMediator mediator, uint dbref)
