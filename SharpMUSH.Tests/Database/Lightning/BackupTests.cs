@@ -36,14 +36,14 @@ public class BackupTests
 
 	/// <summary>A migrated world plus a backup service writing into <paramref name="root"/>.</summary>
 	private static (LightningDatabase Db, LightningWorldBackupService Backups) Fixture(string path, string root,
-		int keep = 2, bool compact = true)
+		int keep = 2, bool compact = true, int packageKeep = 2)
 	{
 		// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 		var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(),
 			relations: null);
 		var backups = new LightningWorldBackupService(db,
-			new WorldBackupOptions { Root = root, Keep = keep }, compact,
+			new WorldBackupOptions { Root = root, Keep = keep, PackageOperationKeep = packageKeep }, compact,
 			NullLogger<LightningWorldBackupService>.Instance);
 		return (db, backups);
 	}
@@ -132,6 +132,74 @@ public class BackupTests
 			});
 			await Assert.That(copy.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("before"), out _))).IsTrue();
 			await Assert.That(copy.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("after"), out _))).IsFalse();
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	/// <summary>
+	/// The copies taken before package operations (#1333) have a directory and a count of their own:
+	/// however many package operations run, the scheduled and manual copies all stay, and those
+	/// copies' retention never deletes a pre-package one.
+	/// </summary>
+	[Test]
+	public async Task PackageOperationCopies_NeverEvictTheScheduledOnes()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root, keep: 2, packageKeep: 1);
+		try
+		{
+			await db.Migrate();
+			var scheduled = new[]
+			{
+				(await backups.CreateAsync()).Expect<WorldBackup>().Name,
+				(await backups.CreateAsync()).Expect<WorldBackup>().Name
+			};
+
+			var before = new List<WorldBackup>();
+			for (var i = 0; i < 3; i++)
+			{
+				before.Add((await backups.CreateBeforePackageOperationAsync()).Expect<WorldBackup>());
+			}
+
+			await Assert.That(backups.List().Select(b => b.Name).ToArray()).IsEquivalentTo(scheduled);
+			var kept = backups.ListPackageOperationBackups();
+			await Assert.That(kept.Count).IsEqualTo(1);
+			await Assert.That(kept[0].Name).IsEqualTo(before[^1].Name);
+			await Assert.That(Path.GetDirectoryName(kept[0].Path))
+				.IsEqualTo(Path.Combine(root, WorldBackupOptions.PackageOperationDirectory));
+
+			// And the other way round: a scheduled run's retention leaves the pre-package copy alone.
+			await backups.CreateAsync();
+			await Assert.That(backups.List().Count).IsEqualTo(2);
+			await Assert.That(backups.ListPackageOperationBackups().Single().Name).IsEqualTo(before[^1].Name);
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
+	public async Task PackageOperationCopies_AreOffWhenTheirCountIsZero()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root, packageKeep: 0);
+		try
+		{
+			await db.Migrate();
+
+			await Assert.That(backups.PackageOperationKeep).IsEqualTo(0);
+			await Assert.That((await backups.CreateBeforePackageOperationAsync()).Value).IsTypeOf<Error<string>>();
+			await Assert.That(Directory.Exists(Path.Combine(root, WorldBackupOptions.PackageOperationDirectory))).IsFalse();
 		}
 		finally
 		{

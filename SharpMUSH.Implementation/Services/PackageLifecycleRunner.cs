@@ -69,6 +69,12 @@ public class PackageLifecycleRunner(
 	/// <inheritdoc />
 	public async Task RunLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default)
 	{
+		// A portal operation running as a queue entry runs its hooks in entries of their own, after it.
+		if (PackageLifecycleDeferral.TryDefer(objId, attribute))
+		{
+			return;
+		}
+
 		try
 		{
 			if (HelperFunctions.ParseDbRef(objId) is not DBRef dbref)
