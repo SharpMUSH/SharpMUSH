@@ -137,10 +137,6 @@
    "command": "Bob bobpass"
   },
   {
-   "key": "20-admin-commands/admin.lists#0",
-   "command": "@list flags"
-  },
-  {
    "key": "20-admin-commands/admin.pcreate#2",
    "command": "Carol carolpw2"
   },
@@ -215,10 +211,6 @@
   {
    "key": "30-softcode/sc.identity#1",
    "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]"
-  },
-  {
-   "key": "30-softcode/sc.lists#2",
-   "command": "think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)] [splice(a b c,x y z,b)]"
   },
   {
    "key": "30-softcode/sc.lists#3",
