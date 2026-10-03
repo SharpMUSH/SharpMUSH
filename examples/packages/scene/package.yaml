@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.22.2
+version: 1.22.3
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -116,6 +116,9 @@ objects:
         That scene is not yours to change. Its owner or a wizard can do it.
       DATA`DENY_NOT_AUTHOR: |-
         That pose is not yours to edit. Only its author can.
+      # +scene/rewrite <id>= would otherwise blank the pose; deleting one is +scene/delete.
+      DATA`DENY_EMPTY: |-
+        A pose can't be rewritten to nothing. Use +scene/delete <id> to remove it.
 
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
@@ -338,7 +341,7 @@ objects:
       # decompose()d \[ that the first pass left as a [ would run as a function. @scene/editpose takes %1 as it
       # is, commas and all (it splits off one field); a substitution is not parsed again.
       CMD`REWRITE: |-
-        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @scene/editpose %q<pid>=%#,%1
+        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @assert strlen(%1)=@pemit %#=[get(%!/DATA`DENY_EMPTY)]; @scene/editpose %q<pid>=%#,%1
 
       CMD`UNDO: |-
         $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/undo %0
