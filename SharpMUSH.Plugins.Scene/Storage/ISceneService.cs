@@ -109,10 +109,16 @@ public interface ISceneService
 	/// </summary>
 	Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId);
 
-	/// <summary>Soft-deletes a pose (the slot remains in the chain). <c>NotFound</c> if missing.</summary>
+	/// <summary>
+	/// Soft-deletes a pose (the slot remains in the chain, its content and history stay stored). Only the
+	/// deleted-pose retention rule, when one is configured, removes it for good. <c>NotFound</c> if missing.
+	/// </summary>
 	Task<Found<ScenePose>> DeletePoseAsync(string poseId);
 
-	/// <summary>Returns a pose's content-version history (oldest first). <c>NotFound</c> if the pose is missing.</summary>
+	/// <summary>
+	/// Returns a pose's content-version history (oldest first): every version retention has kept, which by
+	/// default is all of them. <c>NotFound</c> if the pose is missing.
+	/// </summary>
 	Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId);
 
 	/// <summary>

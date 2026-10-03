@@ -37,7 +37,15 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 		bool compact,
 		ILogger<LightningWorldBackupService> logger)
 		=> _writer = new WorldBackupWriter(options,
-			(directory, ct) => accessor.CopyToAsync(directory, compact, ct), logger);
+			(directory, ct) => accessor.CopyToAsync(directory, compact, ct), logger)
+		{
+			// The copy's size is known before it is taken: LMDB writes the live pages for a compacting copy
+			// and the file up to its last page otherwise. An accessor that is not the provider itself (a test
+			// double) gives no estimate, and so no free-space check before the run.
+			EstimateCopyBytes = accessor is LightningDatabase database
+				? () => database.Store.Usage().CopyBytes(compact)
+				: null
+		};
 
 	public bool IsSupported => true;
 

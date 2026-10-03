@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Plugins.Storage;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Storage;
 
@@ -18,8 +19,13 @@ public static class SceneSystemServiceCollectionExtensions
 	{
 		// A factory lambda rather than an implementation type, so the host's ValidateOnBuild does not
 		// require the accessor before the provider has registered it.
-		services.AddSingleton<ISceneStorage>(sp =>
-			new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
+		services.AddSingleton(sp => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
+		services.AddSingleton<ISceneStorage>(sp => sp.GetRequiredService<LightningSceneStorage>());
+
+		// The two kinds of history the Scene System keeps, measured and bounded by the host's retention
+		// pass alongside the provider's own (see IHistoryRetentionService).
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningSceneStorage>().EditHistory);
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningSceneStorage>().DeletedPoseHistory);
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
