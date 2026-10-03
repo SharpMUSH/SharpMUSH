@@ -34,15 +34,16 @@ public class WikiRevisionsController(
 	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
-	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=
+	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=&amp;before=
 	/// Revision history, newest first. Omitting <c>lang</c> (or naming the page's source locale) returns
-	/// the source-locale stream.
+	/// the source-locale stream. <c>before</c>, the last revision number of the previous page, pages by
+	/// cursor instead of by <c>skip</c>, which it then ignores.
 	/// </summary>
 	[HttpGet("{slug}/revisions")]
 	public async Task<IActionResult> GetRevisions(
 		string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20,
 		[FromQuery] string? ns = null, [FromQuery] string? category = null,
-		[FromQuery] string? lang = null)
+		[FromQuery] string? lang = null, [FromQuery] int? before = null)
 	{
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
 		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
@@ -51,7 +52,9 @@ public class WikiRevisionsController(
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
 		var stream = await ResolveRevisionStreamAsync(page, lang);
 
-		var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
+		var revisions = before is { } cursor
+			? await Wiki.GetRevisionsBeforeForLocaleAsync(page.Id, stream, cursor, take)
+			: await Wiki.GetRevisionsForLocaleAsync(page.Id, stream, skip, take);
 		return Ok(await ToDtosAsync(revisions));
 	}
 

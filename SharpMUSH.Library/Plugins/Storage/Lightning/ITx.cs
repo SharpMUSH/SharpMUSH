@@ -25,6 +25,14 @@ public interface ITx
 	/// caller wanting the newest few of a time-ordered prefix reads only those.
 	/// </summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix);
+	/// <summary>
+	/// As <see cref="RangeReverse"/>, starting at the last entry whose key is strictly below
+	/// <paramref name="beforeKey"/>: a cursor page of a newest-first listing, read without stepping over
+	/// the entries already shown. <paramref name="beforeKey"/> starts with <paramref name="prefix"/>. The
+	/// default walks <see cref="RangeReverse"/>; the provider seeks.
+	/// </summary>
+	IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
+		=> RangeReverse(table, prefix).SkipWhile(entry => entry.Key.AsSpan().SequenceCompareTo(beforeKey) >= 0);
 	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
 	/// <summary>

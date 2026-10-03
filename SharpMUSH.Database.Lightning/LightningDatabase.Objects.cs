@@ -60,6 +60,7 @@ public partial class LightningDatabase
 				Locks = new Dictionary<string, LockRecord>()
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+			IndexObjectType(tx, DatabaseConstants.TypePlayer, dbref);
 
 			// A player owns itself, as in the migration seed.
 			SetSingleEdge(tx, Tables.Owner, dbref, dbref);
@@ -122,6 +123,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeRoom, dbref);
 
 		// Rooms carry no location/home edge of their own; LinkRoomAsync sets a drop-to later.
 		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
@@ -186,6 +188,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeThing, dbref);
 
 		SetSingleEdge(tx, Tables.Location, dbref, locKey);
 		SetSingleEdge(tx, Tables.Home, dbref, homeKey);
@@ -248,6 +251,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeExit, dbref);
 		foreach (var alias in aliases)
 		{
 			tx.Put(Tables.ObjName, Keys.Lower(alias), Keys.Dbref(dbref));
@@ -470,13 +474,76 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<SharpObject> GetFilteredObjectsCoreAsync(ObjectSearchFilter filter,
 		[EnumeratorCancellation] CancellationToken ct)
 	{
+		var skip = filter.Skip ?? 0;
+		var skipped = 0;
+		var yielded = 0;
+
+		await foreach (var (dbref, record) in FilteredCandidatesAsync(filter, ct).WithCancellation(ct))
+		{
+			if (skipped < skip)
+			{
+				skipped++;
+				continue;
+			}
+
+			if (filter.Limit.HasValue && yielded >= filter.Limit.Value)
+			{
+				yield break;
+			}
+
+			yielded++;
+			yield return MapToSharpObject(dbref, record);
+		}
+	}
+
+	/// <summary>
+	/// Every object <paramref name="filter"/> matches, in ascending dbref order, inside its dbref bounds.
+	/// When the filter names an owner, zone or parent, or exactly one type, the candidates come from the
+	/// matching reverse index (<see cref="Tables.Owner"/>, <see cref="Tables.Zone"/>,
+	/// <see cref="Tables.Parent"/> reversed, or <see cref="Tables.ObjType"/>) — the smallest of them — so the
+	/// work follows that relationship's size rather than the world's. The name pattern, flag and power
+	/// predicates have no index; they are tested on each candidate, and a filter with nothing else scans
+	/// <see cref="Tables.Obj"/> in its key range as before. Every candidate is tested against the whole
+	/// filter, the seeding predicate included, so the seed only narrows where to look.
+	/// </summary>
+	private IAsyncEnumerable<(long Dbref, ObjectRecord Record)> FilteredCandidatesAsync(ObjectSearchFilter filter,
+		CancellationToken ct)
+	{
+		var needsEdges = NeedsEdgePredicates(filter);
+		bool Matches(ITx tx, long dbref, ObjectRecord record)
+			=> MatchesRecord(record, filter) && (!needsEdges || MatchesEdges(tx, dbref, record, filter));
+
+		return Store.Read(tx => ChooseFilterSeed(tx, filter)) is { } seed
+			? IndexedObjectsAsync(seed.Table, seed.Key, filter.MinDbRef, filter.MaxDbRef, Matches, ct)
+			: ScannedObjectsAsync(filter, ct);
+	}
+
+	/// <summary>The reverse index with the fewest entries among those the filter's predicates can seed from;
+	/// null when none of them applies.</summary>
+	private static (TableDef Table, byte[] Key)? ChooseFilterSeed(ITx tx, ObjectSearchFilter filter)
+	{
+		var seeds = new List<(TableDef Table, byte[] Key)>();
+		if (filter.Owner is { } owner) seeds.Add((Tables.Owner.Reverse, Keys.Dbref(owner.Number)));
+		if (filter.Zone is { } zone) seeds.Add((Tables.Zone.Reverse, Keys.Dbref(zone.Number)));
+		if (filter.Parent is { } parent) seeds.Add((Tables.Parent.Reverse, Keys.Dbref(parent.Number)));
+		if (filter.Types is [var type]) seeds.Add((Tables.ObjType, ObjTypeKey(type)));
+		if (seeds.Count == 0) return null;
+
+		return seeds.MinBy(seed => tx.CountDups(seed.Table, seed.Key) switch
+		{
+			long count => count,
+			Error<string> => long.MaxValue
+		});
+	}
+
+	/// <summary>The unseeded path: <see cref="Tables.Obj"/> from <c>MinDbRef</c> to <c>MaxDbRef</c>.</summary>
+	private async IAsyncEnumerable<(long Dbref, ObjectRecord Record)> ScannedObjectsAsync(ObjectSearchFilter filter,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
 		var entries = filter.MinDbRef.HasValue
 			? Store.RangeFromKeyAsync(Tables.Obj, Keys.Dbref(filter.MinDbRef.Value), ct: ct)
 			: Store.RangeAsync(Tables.Obj, [], ct: ct);
 
-		var skip = filter.Skip ?? 0;
-		var skipped = 0;
-		var yielded = 0;
 		// The row itself answers the type and name predicates; only the edge and flag/power ones need a
 		// transaction, so a search on name alone opens none per row.
 		var needsEdges = NeedsEdgePredicates(filter);
@@ -495,19 +562,54 @@ public partial class LightningDatabase
 				continue;
 			}
 
-			if (skipped < skip)
-			{
-				skipped++;
-				continue;
-			}
+			yield return (dbref, record);
+		}
+	}
 
-			if (filter.Limit.HasValue && yielded >= filter.Limit.Value)
-			{
-				yield break;
-			}
+	/// <summary>
+	/// The objects a duplicate index lists under <paramref name="indexKey"/>, ascending, inside
+	/// [<paramref name="min"/>, <paramref name="max"/>], that <paramref name="matches"/> admits. Paged like
+	/// <see cref="LightningStore.RangeAsync"/>: each page of index entries is read, with the rows it names, in
+	/// one transaction, and the next page resumes after the last entry, so no transaction is held across the
+	/// consumer's awaits. An index entry whose object is gone is skipped.
+	/// </summary>
+	internal async IAsyncEnumerable<(long Dbref, ObjectRecord Record)> IndexedObjectsAsync(TableDef index, byte[] indexKey,
+		long? min, long? max, Func<ITx, long, ObjectRecord, bool> matches, [EnumeratorCancellation] CancellationToken ct)
+	{
+		const int pageSize = 256;
+		// A negative lower bound encodes above every dbref, which is where the table scan starts too.
+		if (min is < 0)
+		{
+			yield break;
+		}
 
-			yielded++;
-			yield return MapToSharpObject(dbref, record);
+		var after = min is > 0 ? Keys.Dbref(min.Value - 1) : null;
+		while (true)
+		{
+			ct.ThrowIfCancellationRequested();
+			var (page, last, read, pastMax) = Store.Read(tx =>
+			{
+				var found = new List<(long, ObjectRecord)>();
+				byte[]? lastValue = null;
+				var count = 0;
+				var entries = after is null ? tx.Range(index, indexKey) : tx.RangeFrom(index, indexKey, indexKey, after);
+				foreach (var (key, value) in entries.Take(pageSize))
+				{
+					// Range matches keys by prefix; only this exact key's duplicates are the seed.
+					if (!key.AsSpan().SequenceEqual(indexKey)) return (found, lastValue, count, true);
+					count++;
+					lastValue = value;
+					var dbref = Keys.ReadDbref(value);
+					if (max.HasValue && dbref > max.Value) return (found, lastValue, count, true);
+					if (ReadObject(tx, dbref) is { } row && matches(tx, dbref, row.Record)) found.Add((dbref, row.Record));
+				}
+
+				return (found, lastValue, count, false);
+			});
+
+			foreach (var entry in page) yield return entry;
+			if (pastMax || read < pageSize || last is null) yield break;
+			after = last;
 		}
 	}
 
@@ -584,18 +686,19 @@ public partial class LightningDatabase
 
 	private async IAsyncEnumerable<SharpPlayer> GetAllPlayersCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.Obj, [], ct: ct))
+		// The type index lists exactly the players; the row is still checked, so a stale entry yields nothing.
+		await foreach (var (dbref, record) in IndexedObjectsAsync(Tables.ObjType, ObjTypeKey(DatabaseConstants.TypePlayer),
+			null, null, (_, _, record) => record.Type == DatabaseConstants.TypePlayer, ct).WithCancellation(ct))
 		{
-			var record = Codec.Deserialize<ObjectRecord>(value);
-			if (record.Type != DatabaseConstants.TypePlayer)
-			{
-				continue;
-			}
-
-			var dbref = Keys.ReadDbref(key);
 			yield return HydratePlayer(dbref, record);
 		}
 	}
+
+	/// <summary>The <see cref="Tables.ObjType"/> key for one type: the type name and a separator, so no type's
+	/// key is a prefix of another's.</summary>
+	internal static byte[] ObjTypeKey(string type) => Keys.Concat(Keys.Str(type), Keys.Sep);
+
+	internal static void IndexObjectType(ITx tx, string type, long dbref) => tx.Put(Tables.ObjType, ObjTypeKey(type), Keys.Dbref(dbref));
 
 	#endregion
 
@@ -739,6 +842,7 @@ public partial class LightningDatabase
 				{
 					var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
 					tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
+					tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
 				}
 
 				tx.Delete(Tables.Mail, mailIdKey);
@@ -746,6 +850,8 @@ public partial class LightningDatabase
 			}
 
 			tx.DeletePrefix(Tables.MailSent, key);
+			tx.DeletePrefix(Tables.MailSentTo, key);
+			tx.DeletePrefix(Tables.MailFolder, key);
 			tx.DeletePrefix(Tables.MailCount, key);
 
 			// Channel membership.
@@ -776,6 +882,7 @@ public partial class LightningDatabase
 				tx.DeletePrefix(reverse, key);
 			}
 
+			tx.Delete(Tables.ObjType, ObjTypeKey(record.Type), key);
 			tx.Delete(Tables.Obj, key);
 
 			_logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", n, record.Name);

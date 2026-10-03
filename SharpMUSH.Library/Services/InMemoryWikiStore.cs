@@ -166,6 +166,13 @@ public sealed class InMemoryWikiStore : IWikiStore
 			.Take(take)
 			.ToList());
 
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeAsync(string pageId, string locale, int beforeRevisionNumber, int take)
+		=> Task.FromResult<IReadOnlyList<WikiRevision>>(RevisionSnapshot(pageId)
+			.Where(r => string.Equals(r.Locale, locale, StringComparison.OrdinalIgnoreCase) && r.RevisionNumber < beforeRevisionNumber)
+			.OrderByDescending(r => r.RevisionNumber)
+			.Take(take)
+			.ToList());
+
 	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, string locale, int revisionNumber)
 		=> Task.FromResult<Found<WikiRevision>>(RevisionSnapshot(pageId).FirstOrDefault(r =>
 			r.RevisionNumber == revisionNumber && string.Equals(r.Locale, locale, StringComparison.OrdinalIgnoreCase))

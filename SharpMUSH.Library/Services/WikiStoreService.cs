@@ -162,6 +162,10 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)
 		=> RevisionStream(locale) is { } stream ? await store.GetRevisionsAsync(pageId, stream, skip, take) : [];
 
+	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeForLocaleAsync(string pageId, string locale,
+		int beforeRevisionNumber, int take)
+		=> RevisionStream(locale) is { } stream ? await store.GetRevisionsBeforeAsync(pageId, stream, beforeRevisionNumber, take) : [];
+
 	public async Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
 		=> revisionNumber >= 0 && RevisionStream(locale) is { } stream
 			? await store.GetRevisionAsync(pageId, stream, revisionNumber)

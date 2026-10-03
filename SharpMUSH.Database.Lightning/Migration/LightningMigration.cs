@@ -50,6 +50,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
+			await RebuildReadIndexesAsync(cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -306,6 +307,7 @@ public partial class LightningDatabase
 				Locks = new Dictionary<string, LockRecord>()
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(seedObject.Name), Keys.Dbref(dbref));
+			IndexObjectType(tx, seedObject.Type, dbref);
 
 			SetSingleEdge(tx, Tables.Location, dbref, seedObject.Location);
 			SetSingleEdge(tx, Tables.Home, dbref, seedObject.Home);

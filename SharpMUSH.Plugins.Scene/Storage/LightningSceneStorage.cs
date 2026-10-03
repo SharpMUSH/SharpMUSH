@@ -441,21 +441,30 @@ public sealed class LightningSceneStorage : ISceneStorage
 				return new NotFound();
 			}
 
-			// Filtered on the projected, live-resolved author: a pose whose author has since been destroyed
-			// carries a null AuthorDbref and matches nobody.
+			// Filtered on the live-resolved author, as the projection reports it: a pose whose author has
+			// since been destroyed carries a null AuthorDbref and matches nobody. Tested before projecting, so
+			// a pose that does not match never has its current edit read.
 			var author = DbrefNumber(authorDbref) is { } number ? $"#{number}" : null;
-			var poses = ScenePoses(tx, id)
-				.Select(entry => ProjectPose(tx, entry.Pose))
-				.Where(p => author is null || p.AuthorDbref == author)
-				.ToList();
+			bool Matches(ScenePoseRecord pose) => author is null || LiveDbref(tx, pose.AuthorDbref) == author;
 
-			// The last `count` poses: drop the head in place rather than copying the tail out.
-			if (count is { } limit && limit >= 0 && poses.Count > limit)
+			if (count is { } limit && limit >= 0)
 			{
-				poses.RemoveRange(0, poses.Count - limit);
+				// The last `limit` matching poses: the key's sequence is the chain order, so the scene's range
+				// read backwards meets them newest first and the read stops at the last one needed.
+				var tail = tx.RangeReverse(_poses, ScenePosePrefix(id))
+					.Select(entry => Decode<ScenePoseRecord>(entry.Value))
+					.Where(Matches)
+					.Take(limit)
+					.Select(pose => ProjectPose(tx, pose))
+					.ToList();
+				tail.Reverse();
+				return tail;
 			}
 
-			return poses;
+			return ScenePoses(tx, id)
+				.Where(entry => Matches(entry.Pose))
+				.Select(entry => ProjectPose(tx, entry.Pose))
+				.ToList();
 		}));
 
 	public Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
@@ -1060,22 +1069,17 @@ public sealed class LightningSceneStorage : ISceneStorage
 			.ToList();
 
 	/// <summary>
-	/// The version a pose currently shows and how many it has, from one pass over its log — the sequence
-	/// sits in the key, so every version except the shown one is counted without being decoded.
+	/// The version a pose currently shows, read by its key, and how many versions it has, read off the last
+	/// key of its log. A log's sequences are always exactly 1..N — a pose starts with version 1, and an edit
+	/// first drops every version past the pointer and then writes pointer + 1 — so the highest sequence is
+	/// the count, and neither depends on how long the history is.
 	/// </summary>
 	private (int Count, ScenePoseEditRecord? Current) CurrentEdit(ITx tx, string poseId, uint currentSeq)
 	{
-		var count = 0;
-		ScenePoseEditRecord? current = null;
-		foreach (var (key, value) in tx.Range(_log, PoseLogPrefix(poseId)))
-		{
-			count++;
-			if (SeqOf(key) == currentSeq)
-			{
-				current = Decode<ScenePoseEditRecord>(value);
-			}
-		}
-
+		var current = tx.TryGet(_log, Keys.Composite(poseId, "", currentSeq), out var bytes)
+			? Decode<ScenePoseEditRecord>(bytes)
+			: null;
+		var count = tx.RangeReverse(_log, PoseLogPrefix(poseId)).Select(entry => (int)SeqOf(entry.Key)).FirstOrDefault();
 		return (count, current);
 	}
 
