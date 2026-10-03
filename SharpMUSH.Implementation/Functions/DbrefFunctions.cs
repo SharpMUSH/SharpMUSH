@@ -577,7 +577,8 @@ public partial class Functions
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, classObj?.Object().DBRef, pairs, useRegex);
 
-		var finalResults = search.Matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
+		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
+		var finalResults = search.Matches.Select(obj => $"#{obj.Key}");
 
 		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
 	}

@@ -233,6 +233,7 @@ public static partial class ErrorMessages
 		/// "not yours to see" have to read the same, or the answer says whether the descriptor exists.
 		/// </summary>
 		public const string NoSuchDescriptorOrPermissionDenied = "#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED";
+		public const string NeedAWord = "#-1 NEED A WORD";
 		public const string NonNegativeInteger = "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER";
 		public const string NotAMember = "#-1 NOT A MEMBER OF THAT CHANNEL";
 		public const string NotAnArray = "#-1 NOT AN ARRAY";
@@ -250,6 +251,7 @@ public static partial class ErrorMessages
 		public const string StringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
+		public const string TooManyWords = "#-1 TOO MANY WORDS";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
 		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";

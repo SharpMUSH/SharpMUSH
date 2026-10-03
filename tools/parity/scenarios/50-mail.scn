@@ -53,3 +53,7 @@ think mail(here,1)
 think mailfrom(here,1)
 think maillist(here,1)
 think maillist(*nosuchmailplayer,1)
+
+::case mail.malias-lookup  @malias members: lookup_player tests # before it drops one * (#1391)
+::as bob
+@malias +parity1391=*Alice *#1 **Alice

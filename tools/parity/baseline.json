@@ -217,10 +217,6 @@
    "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]"
   },
   {
-   "key": "30-softcode/sc.lists#2",
-   "command": "think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)] [splice(a b c,x y z,b)]"
-  },
-  {
    "key": "30-softcode/sc.lists#3",
    "command": "think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]"
   },

@@ -203,8 +203,8 @@ public class SearchFunctionUnitTests
 	/// The dbref numbers lsearch actually returned, parsed rather than substring-matched.
 	/// </summary>
 	/// <remarks>
-	/// lsearch emits objids — <c>#12:1787882979973</c> — so <c>Contains("#12")</c> also matches
-	/// <c>#120</c>. That cuts both ways: the presence assertion could pass on the wrong object, and
+	/// <c>Contains("#12")</c> also matches <c>#120</c>. That cuts both ways: the presence assertion
+	/// could pass on the wrong object, and
 	/// the absence assertion fails outright once the shared session database reaches a dbref that has
 	/// the control's number as a prefix. These tests exist to stop filters passing by accident; they
 	/// should not themselves pass, or fail, by accident.
@@ -215,6 +215,16 @@ public class SearchFunctionUnitTests
 			.Select(entry => DBRef.TryParse(entry, out var parsed) ? parsed!.Value.Number : (int?)null)
 			.Where(number => number.HasValue)
 			.Select(number => number!.Value)];
+
+	/// <summary>PennMUSH's <c>fun_lsearch</c> writes <c>safe_dbref</c>: <c>#N</c>, never an objid (#1409).</summary>
+	[Test]
+	public async Task Lsearch_ReturnsPlainDbrefsNotObjids()
+	{
+		var result = await SearchAsync("lsearch(all,mindb,0,maxdb,2)");
+
+		await Assert.That(result).StartsWith("#0 #1");
+		await Assert.That(result).DoesNotContain(":");
+	}
 
 	[Test]
 	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
@@ -340,13 +350,13 @@ public class SearchFunctionUnitTests
 		// 1. Once as an argument to lsearch()
 		// 2. Again for each object with ## replaced by the dbref
 		// Correct syntax uses commas, not equals: lsearch(all,eval,\[...\])
-		// Using strmatch to match dbref format with timestamp: #1:*
-		var result = (await Parser.FunctionParse(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,#1:*\)\])")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,*1\)\],maxdb,9)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		if (!string.IsNullOrEmpty(resultText))
 		{
-			await Assert.That(resultText).Contains("#1:");
+			await Assert.That(resultText).Contains("#1");
+			await Assert.That(resultText).DoesNotContain(":");
 		}
 	}
 

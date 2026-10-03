@@ -2599,10 +2599,13 @@ public class SharpMUSHParserVisitor(
 		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
 		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
 		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". The leading ] mode applies to
-		// both EQSPLIT sides. The explicit switch remains restricted to non-EQSPLIT commands here:
-		// Penn's explicit-switch EQSPLIT branch separately evaluates the LHS when '=' is present.
+		// both EQSPLIT sides. The explicit switch on an EQSPLIT command is the other branch
+		// (command.c:1436-1446): with an '=' the left side is evaluated after all and only the right
+		// side is left raw, so `@force/noeval *Alice=think %!` hands Alice `%!` to evaluate herself;
+		// without one the left side is the whole argument and stays raw.
 		var noEval = prs.CurrentState.ParseMode == ParseMode.NoEval
 			|| noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
+		var noEvalEqSplitSwitch = noEvalSwitch && behavior.HasFlag(CommandBehavior.EqSplit);
 
 		// Do not parse the argument splitting.
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
@@ -2616,7 +2619,8 @@ public class SharpMUSHParserVisitor(
 		//   preserve braces via the flag to match PennMUSH behavior.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
 												 || behavior.HasFlag(CommandBehavior.NoParse)
-												 || noEval;
+												 || noEval
+												 || noEvalEqSplitSwitch;
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
@@ -2787,13 +2791,13 @@ public class SharpMUSHParserVisitor(
 			// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
 			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
 			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MarkupText.Empty;
-			arguments.Add(noParse
+			arguments.Add(noParse || (noEvalEqSplitSwitch && nArgs < 2)
 				? DeferredArgument(noParseLhs)
 				: (await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false, splitHadErrors))!);
 
 			if (nArgs < 2) return argumentResults;
 
-			if (noRsParse || noParse)
+			if (noRsParse || noParse || noEvalEqSplitSwitch)
 			{
 				arguments.AddRange(argCallState.Arguments!
 					.Skip(1)

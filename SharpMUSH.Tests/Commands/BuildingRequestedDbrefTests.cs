@@ -48,7 +48,7 @@ public class BuildingRequestedDbrefTests
 	private async Task<string[]> Named(string name)
 		=> (await Run(1, $"think lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-	/// <summary>The dbref numbers of everything answering to <paramref name="name"/> — lsearch reports objids.</summary>
+	/// <summary>The dbref numbers of everything answering to <paramref name="name"/>.</summary>
 	private async Task<int[]> NumbersNamed(string name)
 		=> [.. (await Named(name)).Select(found => DBRef.Parse(found).Number)];
 
