@@ -653,7 +653,8 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<Result<SharpMUSHOptions>> StoreConfigValueAsync(IMUSHCodeParser parser, string property, object? value)
 	{
-		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value);
+		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value,
+			correction => Logger.LogWarning("Config option clamped to its declared range: {Correction}", correction.ToString()));
 
 		var failures = parser.ServiceProvider.GetServices<IValidateOptions<SharpMUSHOptions>>()
 			.Select(validator => validator.Validate(Options.DefaultName, updated))

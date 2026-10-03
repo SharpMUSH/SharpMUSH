@@ -100,6 +100,8 @@ public class QueueEnumerationOrderingTests
 			ledger = string.Join(',', queue.GetQueueEntries().Select(entry => entry.Pid));
 		}
 		await Assert.That(indexed).IsEqualTo(ledger);
+		var (tallied, recounted) = queue.AdmissionTalliesAgainstLedger();
+		await Assert.That(tallied).IsEqualTo(recounted).Because("the admission tallies describe the ledger (#1336)");
 	}
 
 	[Test]
