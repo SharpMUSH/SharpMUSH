@@ -171,7 +171,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		var sitelockRules = Configuration.CurrentValue.SitelockRules;
 		var bannedNames = Configuration.CurrentValue.BannedNames;

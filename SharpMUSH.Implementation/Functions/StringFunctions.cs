@@ -296,6 +296,43 @@ public partial class Functions
 		return new CallState(concat) { HadErrors = hadErrors };
 	}
 
+	/// <summary>
+	/// Deletes <c>&lt;len&gt;</c> characters from <c>&lt;string&gt;</c> starting at the zero-based
+	/// <c>&lt;first&gt;</c>. PennMUSH aliases <c>delete()</c> onto this (<c>src/function.c:335</c>);
+	/// the list-flavoured deletion is <c>ldelete()</c>.
+	/// </summary>
+	/// <remarks>
+	/// The range handling is <c>fun_delete</c>'s (<c>src/funstr.c:345</c>): a non-integer argument is
+	/// <c>#-1 ARGUMENTS MUST BE INTEGERS</c>, a negative position is <c>#-1 OUT OF RANGE</c>, and a
+	/// position past the end, a zero length or a negative length all answer the string untouched.
+	/// The negative length is PennMUSH's code rather than its help: <c>fun_delete</c> shifts the
+	/// position but leaves the count negative, and <c>ansi_string_delete</c> (<c>src/markup.c:2301</c>)
+	/// returns early on <c>count &lt; 1</c>. The 1.8.8 oracle answers the input unchanged, so that is
+	/// what this reproduces.
+	/// </remarks>
+	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "length"])]
+	public ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+
+		if (!int.TryParse(first, out var index)
+				|| !int.TryParse(len, out var length))
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
+		}
+
+		if (index < 0)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange);
+		}
+
+		return ValueTask.FromResult<CallState>(index >= str.Length || length < 1
+			? str
+			: str.Remove(index, Math.Min(length, str.Length - index)));
+	}
+
 	[SharpFunction(Name = "strinsert", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "insert"])]
 	public ValueTask<CallState> StrInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -693,6 +730,15 @@ public partial class Functions
 			: ErrorMessages.Returns.ArgRange;
 	}
 
+	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
+		ParameterNames = ["text"])]
+	public ValueTask<CallState> SHA0(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// SHA-0 is deprecated and not supported in modern .NET/OpenSSL
+		// Return error message per PennMUSH documentation
+		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
+	}
+
 	[SharpFunction(Name = "edit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string", "find", "replace"])]
 	public ValueTask<CallState> Edit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1067,6 +1113,14 @@ public partial class Functions
 	{
 		return new ValueTask<CallState>(
 			parser.CurrentState.Arguments["0"].Message!.Apply(transform: x => x.ToLowerInvariant()));
+	}
+
+	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["string"])]
+	public ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
 	}
 
 	[SharpFunction(Name = "left", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "length"])]
@@ -1746,6 +1800,14 @@ public partial class Functions
 		return new ValueTask<CallState>(result);
 	}
 
+	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["string"])]
+	public ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
+	}
+
 	[SharpFunction(Name = "urldecode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(new CallState(PercentDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
@@ -1830,75 +1892,6 @@ public partial class Functions
 		if (consumed < text.Length && text.Text[consumed] == ' ') consumed++;
 
 		return [head[0], .. text.Substring(consumed).WrapLines(width, WrapMode.Word)];
-	}
-
-	/// <summary>
-	/// Deletes <c>&lt;len&gt;</c> characters from <c>&lt;string&gt;</c> starting at the zero-based
-	/// <c>&lt;first&gt;</c>. PennMUSH aliases <c>delete()</c> onto this (<c>src/function.c:335</c>);
-	/// the list-flavoured deletion is <c>ldelete()</c>.
-	/// </summary>
-	/// <remarks>
-	/// The range handling is <c>fun_delete</c>'s (<c>src/funstr.c:345</c>): a non-integer argument is
-	/// <c>#-1 ARGUMENTS MUST BE INTEGERS</c>, a negative position is <c>#-1 OUT OF RANGE</c>, and a
-	/// position past the end, a zero length or a negative length all answer the string untouched.
-	/// The negative length is PennMUSH's code rather than its help: <c>fun_delete</c> shifts the
-	/// position but leaves the count negative, and <c>ansi_string_delete</c> (<c>src/markup.c:2301</c>)
-	/// returns early on <c>count &lt; 1</c>. The 1.8.8 oracle answers the input unchanged, so that is
-	/// what this reproduces.
-	/// </remarks>
-	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "length"])]
-	public ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-
-		if (!int.TryParse(first, out var index)
-				|| !int.TryParse(len, out var length))
-		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
-		}
-
-		if (index < 0)
-		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange);
-		}
-
-		return ValueTask.FromResult<CallState>(index >= str.Length || length < 1
-			? str
-			: str.Remove(index, Math.Min(length, str.Length - index)));
-	}
-
-	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
-		ParameterNames = ["list", "position", "new-item", "delim"])]
-	public ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ListInsert(parser, _2);
-	}
-
-	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["string"])]
-	public ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
-	}
-
-	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["string"])]
-	public ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
-	}
-
-	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
-		ParameterNames = ["text"])]
-	public ValueTask<CallState> SHA0(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// SHA-0 is deprecated and not supported in modern .NET/OpenSSL
-		// Return error message per PennMUSH documentation
-		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
 	}
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]

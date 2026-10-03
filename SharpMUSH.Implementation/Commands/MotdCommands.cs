@@ -48,21 +48,44 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		string motdType;
-		bool isConnect = !switches.Any() || switches.Contains("CONNECT");
-		bool isWizard = switches.Contains("WIZARD");
-		bool isDown = switches.Contains("DOWN");
-		bool isFull = switches.Contains("FULL");
+		var motdType = switches.Contains("WIZARD") ? "wizard"
+			: switches.Contains("DOWN") ? "down"
+			: switches.Contains("FULL") ? "full"
+			: "connect";
 
-		if (isWizard)
-			motdType = "wizard";
-		else if (isDown)
-			motdType = "down";
-		else if (isFull)
-			motdType = "full";
-		else
-			motdType = "connect";
+		return await SetMotdAsync(executor, motdType, switches.Contains("CLEAR"), argText,
+			nameof(ErrorMessages.Notifications.MotdUsage));
+	}
 
+	/// <summary>PennMUSH's <c>@wizmotd</c>: <c>cmd_motd</c> with the type fixed to the wizard MOTD.</summary>
+	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+		MinArgs = 0, ParameterNames = ["message"])]
+	public async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
+		SharpCommandAttribute _2)
+		=> await SetMotdAsync(await parser.CurrentState.KnownExecutorObject(Mediator), "wizard",
+			parser.CurrentState.Switches.Contains("CLEAR"), MotdArgument(parser),
+			nameof(ErrorMessages.Notifications.WizMotdUsage));
+
+	/// <summary>PennMUSH's <c>@rejectmotd</c>: <c>cmd_motd</c> with the type fixed to the full MOTD.</summary>
+	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+		MinArgs = 0, ParameterNames = ["message"])]
+	public async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
+		SharpCommandAttribute _2)
+		=> await SetMotdAsync(await parser.CurrentState.KnownExecutorObject(Mediator), "full",
+			parser.CurrentState.Switches.Contains("CLEAR"), MotdArgument(parser),
+			nameof(ErrorMessages.Notifications.RejectMotdUsage));
+
+	private static string MotdArgument(IMUSHCodeParser parser)
+		=> ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty).ToPlainText();
+
+	/// <summary>
+	/// PennMUSH's <c>do_motd</c> (src/bsd.c) once the type is known: the permission check for that type,
+	/// then set or clear it. <c>@motd</c>, <c>@wizmotd</c> and <c>@rejectmotd</c> all land here; each
+	/// keeps its own usage line.
+	/// </summary>
+	private async ValueTask<Option<CallState>> SetMotdAsync(AnySharpObject executor, string motdType, bool clear,
+		string argText, string usageKey)
+	{
 		if (motdType == "connect")
 		{
 			if (!await executor.IsWizard() && !await executor.HasPower("ANNOUNCE"))
@@ -71,112 +94,32 @@ public partial class Commands
 				return CallState.Empty;
 			}
 		}
-		else
+		else if (!await executor.IsWizard())
 		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return CallState.Empty;
-			}
-		}
-
-		if (switches.Contains("CLEAR"))
-		{
-			var newMotdData = motdType switch
-			{
-				"wizard" => motdData with { WizardMotd = null },
-				"down" => motdData with { DownMotd = null },
-				"full" => motdData with { FullMotd = null },
-				_ => motdData with { ConnectMotd = null }
-			};
-
-			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdClearedFormat), executor, motdType.Humanize(LetterCasing.Title));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		if (string.IsNullOrEmpty(argText))
+		if (!clear && string.IsNullOrEmpty(argText))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdUsage), executor);
+			await NotifyService.NotifyLocalized(executor, usageKey, executor);
 			return CallState.Empty;
 		}
 
-		var newMotdDataSet = motdType switch
+		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		var message = clear ? null : argText;
+		var newMotdData = motdType switch
 		{
-			"wizard" => motdData with { WizardMotd = argText },
-			"down" => motdData with { DownMotd = argText },
-			"full" => motdData with { FullMotd = argText },
-			_ => motdData with { ConnectMotd = argText }
+			"wizard" => motdData with { WizardMotd = message },
+			"down" => motdData with { DownMotd = message },
+			"full" => motdData with { FullMotd = message },
+			_ => motdData with { ConnectMotd = message }
 		};
 
-		await ObjectDataService.SetExpandedServerDataAsync(newMotdDataSet, ignoreNull: true);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdSetFormat), executor, motdType.Humanize(LetterCasing.Title));
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 0, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
-		SharpCommandAttribute _2)
-	{
-		// Alias for @motd/wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
-
-		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
-
-		if (switches.Contains("CLEAR"))
-		{
-			var newMotdData = motdData with { WizardMotd = null };
-			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdCleared), executor);
-		}
-		else if (string.IsNullOrEmpty(argText))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdUsage), executor);
-		}
-		else
-		{
-			var newMotdData = motdData with { WizardMotd = argText };
-			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdSet), executor);
-		}
-
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 0, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
-		SharpCommandAttribute _2)
-	{
-		// Alias for @motd/full
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
-
-		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
-
-		if (switches.Contains("CLEAR"))
-		{
-			var newMotdData = motdData with { FullMotd = null };
-			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdCleared), executor);
-		}
-		else if (string.IsNullOrEmpty(argText))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RejectMotdUsage), executor);
-		}
-		else
-		{
-			var newMotdData = motdData with { FullMotd = argText };
-			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdSet), executor);
-		}
-
+		await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+		await NotifyService.NotifyLocalized(executor,
+			clear ? nameof(ErrorMessages.Notifications.MotdClearedFormat) : nameof(ErrorMessages.Notifications.MotdSetFormat),
+			executor, motdType.Humanize(LetterCasing.Title));
 		return CallState.Empty;
 	}
 

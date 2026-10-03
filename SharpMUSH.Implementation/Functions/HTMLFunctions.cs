@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -83,7 +84,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = args["0"].Message!;
 		var command = args["1"].Message!.ToPlainText();
-		var hint = args.TryGetValue("2", out var hintArg) ? hintArg.Message!.ToPlainText() : string.Empty;
+		var hint = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, string.Empty).ToPlainText();
 
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{

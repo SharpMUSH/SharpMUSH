@@ -2358,66 +2358,33 @@ public class SharpMUSHParserVisitor(
 
 		var executorObj = executor is AnySharpObject knownExecutor ? knownExecutor : targetObj;
 
-		// Save q-registers if /localize is set
-		Dictionary<string, MString>? savedRegisters = null;
-		if (hook is { Inline: true, Localize: true })
+		// /localize and /clearregs only apply to an inline hook.
+		using var registers = RegisterScope.Enter(localParser.CurrentState.Registers,
+			hook is { Inline: true, Localize: true }, hook is { Inline: true, ClearRegs: true });
+
+		// For OVERRIDE and EXTEND hooks, perform $-command matching
+		if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput is MString input)
 		{
-			if (localParser.CurrentState.Registers.TryPeek(out var currentRegs))
+			var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
+				localParser,
+				new[] { targetObj }.ToAsyncEnumerable(),
+				input);
+
+			if (!matchResult.TryGetValue(out var matches))
 			{
-				savedRegisters = new Dictionary<string, MString>(currentRegs);
-			}
-		}
-
-		// Clear q-registers if /clearregs is set
-		if (hook is { Inline: true, ClearRegs: true })
-		{
-			if (localParser.CurrentState.Registers.TryPeek(out var currentRegs))
-			{
-				currentRegs.Clear();
-			}
-		}
-
-		try
-		{
-			// For OVERRIDE and EXTEND hooks, perform $-command matching
-			if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput is MString input)
-			{
-				var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
-					localParser,
-					new[] { targetObj }.ToAsyncEnumerable(),
-					input);
-
-				if (!matchResult.TryGetValue(out var matches))
-				{
-					return new None();
-				}
-
-				// run_cmd_hook (command.c:2454) hands hook->inplace to atr_comm_match as the queue type, so
-				// the matched body runs in place only for an /inline hook. Otherwise parse_que_attr queues
-				// it as its own entry, after the current action list, with fresh q-registers.
-				return await HandleUserDefinedCommand(localParser, matches, inPlace: hook.Inline);
+				return new None();
 			}
 
-			// run_hook (command.c:2406-2433) reads the hook attribute with a bare atr_get: the wizard who set
-			// the @hook chose the code, so the player whose command triggered it needs no right to read it.
-			return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
-				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true);
+			// run_cmd_hook (command.c:2454) hands hook->inplace to atr_comm_match as the queue type, so
+			// the matched body runs in place only for an /inline hook. Otherwise parse_que_attr queues
+			// it as its own entry, after the current action list, with fresh q-registers.
+			return await HandleUserDefinedCommand(localParser, matches, inPlace: hook.Inline);
 		}
-		finally
-		{
-			// Restore q-registers if /localize was set
-			if (hook is { Inline: true, Localize: true } && savedRegisters != null)
-			{
-				if (localParser.CurrentState.Registers.TryPeek(out var currentRegs))
-				{
-					currentRegs.Clear();
-					foreach (var (key, value) in savedRegisters)
-					{
-						currentRegs[key] = value;
-					}
-				}
-			}
-		}
+
+		// run_hook (command.c:2406-2433) reads the hook attribute with a bare atr_get: the wizard who set
+		// the @hook chose the code, so the player whose command triggered it needs no right to read it.
+		return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
+			hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true);
 	}
 
 	private async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,

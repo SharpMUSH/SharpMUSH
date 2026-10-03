@@ -275,7 +275,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 		var silent = switches.Contains("SILENT");
 
@@ -770,7 +770,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 
 		if (switches.Contains("ALL"))
@@ -1061,7 +1061,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var useLowercase = switches.Contains("LOWERCASE");
 
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();

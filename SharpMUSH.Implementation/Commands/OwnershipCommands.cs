@@ -53,17 +53,11 @@ public partial class Commands
 
 						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
 
-						if (!preserve)
+						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
+						// @chown leaves the object as it was.
+						if (!preserve && result.Message?.ToPlainText() != ErrorMessages.Returns.PermissionDenied)
 						{
-							if (await obj.HasFlag("WIZARD"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-							}
-							if (await obj.HasFlag("ROYALTY"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-							}
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
+							await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
 						}
 
 						return result;
@@ -202,21 +196,7 @@ public partial class Commands
 
 			if (!preserve && !obj.IsPlayer)
 			{
-				if (await obj.HasFlag("WIZARD"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-				}
-				if (await obj.HasFlag("ROYALTY"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-				}
-				if (await obj.HasFlag("TRUST"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
-				}
-				await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
-
-				await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
+				await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
 			}
 		}
 

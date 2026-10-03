@@ -37,7 +37,7 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> QueueControlCore(IMUSHCodeParser parser, AnySharpObject executor)
 	{
-		var switches = parser.CurrentState.Switches.ToHashSet(StringComparer.Ordinal);
+		var switches = parser.CurrentState.Switches;
 		var pause = switches.Contains("PAUSE");
 		var resume = switches.Contains("RESUME");
 		var owner = switches.Contains("OWNER");
@@ -233,7 +233,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 
 		if (switches.Contains("ALL"))
@@ -941,51 +941,23 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var hasLocalize = switches.Contains("LOCALIZE");
 		var hasClearRegs = switches.Contains("CLEARREGS");
 
-		// Implement /LOCALIZE: save Q-registers so forced code cannot permanently change
-		// the caller's Q-registers. /CLEARREGS: start with empty Q-registers.
-		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var forceTopRegs))
-		{
-			if (hasLocalize)
-			{
-				savedRegisters = new Dictionary<string, MString>(forceTopRegs);
-			}
+		// /LOCALIZE: forced code cannot permanently change the caller's Q-registers.
+		// /CLEARREGS: it starts with empty Q-registers.
+		using var registers = RegisterScope.Enter(parser.CurrentState.Registers, hasLocalize, hasClearRegs);
 
-			if (hasClearRegs)
+		// Note: Queue infrastructure available via AdmitCommandListRequest if needed
+		// Currently executes inline for immediate response (default PennMUSH behavior)
+		var nestedResult = await parser.With(
+			state => state with
 			{
-				forceTopRegs.Clear();
-			}
-		}
-
-		CallState? nestedResult = null;
-		try
-		{
-			// Note: Queue infrastructure available via AdmitCommandListRequest if needed
-			// Currently executes inline for immediate response (default PennMUSH behavior)
-			nestedResult = await parser.With(
-				state => state with
-				{
-					Executor = found.Object().DBRef,
-					Caller = state.Executor
-				},
-				async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
-		}
-		finally
-		{
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
-		}
+				Executor = found.Object().DBRef,
+				Caller = state.Executor
+			},
+			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
@@ -1010,7 +982,7 @@ public partial class Commands
 		if (parser.CurrentState.Switches.Contains("HISTORY")) return await QueueHistory(parser);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 
 		if (switches.Contains("DEBUG"))

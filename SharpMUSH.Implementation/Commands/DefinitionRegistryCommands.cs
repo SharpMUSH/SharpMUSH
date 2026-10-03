@@ -1434,7 +1434,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("DECOMPILE"))
 		{
@@ -2313,7 +2313,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (!await executor.IsWizard())
 		{
