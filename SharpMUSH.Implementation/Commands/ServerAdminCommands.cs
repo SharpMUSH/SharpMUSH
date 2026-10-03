@@ -578,7 +578,8 @@ public partial class Commands
 
 		return await StoreConfigValueAsync(parser, property, parsed) switch
 		{
-			SharpMUSHOptions => await ConfigSetAsync(executor, name, value, save),
+			SharpMUSHOptions updated => await ConfigSetAsync(executor, name, AppliedText(updated, property, parsed, value),
+				save),
 			Error<string> error => await ConfigRefusedAsync(executor, name, value, error.Value)
 		};
 	}
@@ -647,14 +648,23 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// The option's value as stored: <paramref name="given"/> as typed, unless the declared range moved it.
+	/// </summary>
+	private static string AppliedText(SharpMUSHOptions updated, string property, object? parsed, string given)
+		=> ConfigGenerated.ConfigAccessor.GetValue(updated, property) is var applied && Equals(applied, parsed)
+			? given
+			: Convert.ToString(applied, System.Globalization.CultureInfo.InvariantCulture) ?? given;
+
+	/// <summary>
 	/// Writes one option into the stored configuration — the document every service reads its options
 	/// from, and the one the portal's configuration page edits — after the registered validators accept
 	/// the whole result, then signals the reload that makes it live.
 	/// </summary>
 	private async ValueTask<Result<SharpMUSHOptions>> StoreConfigValueAsync(IMUSHCodeParser parser, string property, object? value)
 	{
+		var corrections = new List<ConfigBoundCorrection>();
 		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value,
-			correction => Logger.LogWarning("Config option clamped to its declared range: {Correction}", correction.ToString()));
+			corrections.Add);
 
 		var failures = parser.ServiceProvider.GetServices<IValidateOptions<SharpMUSHOptions>>()
 			.Select(validator => validator.Validate(Options.DefaultName, updated))
@@ -668,6 +678,12 @@ public partial class Commands
 
 		await ObjectDataService.SetExpandedServerDataAsync(updated);
 		ConfigReloadService.SignalChange();
+		// Logged once stored: a correction the validators refused never took effect.
+		foreach (var correction in corrections)
+		{
+			Logger.LogWarning("Config option clamped to its declared range: {Correction}", correction.ToString());
+		}
+
 		return updated;
 	}
 
