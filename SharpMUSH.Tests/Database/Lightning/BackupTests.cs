@@ -172,7 +172,7 @@ public class BackupTests
 			await Assert.That(kept.Count).IsEqualTo(1);
 			await Assert.That(kept[0].Name).IsEqualTo(before[^1].Name);
 			await Assert.That(Path.GetDirectoryName(kept[0].Path))
-				.IsEqualTo(Path.Combine(root, WorldBackupOptions.PackageOperationDirectory));
+				.IsEqualTo(Path.Join(root, WorldBackupOptions.PackageOperationDirectory));
 
 			// And the other way round: a scheduled run's retention leaves the pre-package copy alone.
 			await backups.CreateAsync();
@@ -199,7 +199,7 @@ public class BackupTests
 
 			await Assert.That(backups.PackageOperationKeep).IsEqualTo(0);
 			await Assert.That((await backups.CreateBeforePackageOperationAsync()).Value).IsTypeOf<Error<string>>();
-			await Assert.That(Directory.Exists(Path.Combine(root, WorldBackupOptions.PackageOperationDirectory))).IsFalse();
+			await Assert.That(Directory.Exists(Path.Join(root, WorldBackupOptions.PackageOperationDirectory))).IsFalse();
 		}
 		finally
 		{

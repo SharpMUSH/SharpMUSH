@@ -40,7 +40,7 @@ public sealed partial record WorldBackupOptions
 	/// <see cref="Root"/>. Its name is not a timestamp, so the retention of <see cref="Root"/> never
 	/// counts or deletes it.
 	/// </summary>
-	public string PackageOperationRoot => Path.Combine(Root, PackageOperationDirectory);
+	public string PackageOperationRoot => Path.Join(Root, PackageOperationDirectory);
 
 	/// <summary>The name of <see cref="PackageOperationRoot"/> inside <see cref="Root"/>.</summary>
 	public const string PackageOperationDirectory = "pre-package";
