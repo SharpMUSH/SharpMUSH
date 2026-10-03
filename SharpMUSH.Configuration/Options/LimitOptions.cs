@@ -203,7 +203,7 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "mail_limit",
 		Category = "Limit",
-		Description = "Maximum number of mail messages per player",
+		Description = "Maximum number of mail messages the folder new mail arrives in may hold (per folder, not a ceiling on all of a player's mail)",
 		ValidationPattern = @"^\d+$",
 		Group = "Players",
 		Order = 4,

@@ -140,6 +140,11 @@ graph LR
   + `next_edit` chain the history. **Undo/redo move the `current_edit` pointer**;
   a fresh edit after an undo truncates the forward versions and appends.
 - **Soft-delete** sets `Pose.IsDeleted`; the slot stays in the `pose_next` chain.
+  Its content and edit history stay stored until a retention policy says otherwise
+  (`SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` hard-purges a pose that long after its
+  deletion; `SHARPMUSH_HISTORY_SCENE_EDITS_*` bounds every pose's versions, never
+  touching the current one or anything redo can reach). The default keeps
+  everything; see "History retention" in `deploy/README.md`.
 - **Meta** is generic key/value. Known scene keys (`status`, `public`,
   `scheduledfor`, `istemp`, `room`, `owner`, `plot`, `title`, `summary`,
   `icdate`, `location`, `type`, `warning`) route to the first-class field/edge;

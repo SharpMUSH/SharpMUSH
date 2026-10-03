@@ -23,6 +23,14 @@
 #   3. Add a DNS-only A/AAAA record for telnet -> this host's IP.
 #   4. docker compose -f deploy/docker-compose.cloudflare.yml up -d --build
 
+# Container logs rotate instead of growing without bound. Docker's default json-file driver keeps
+# every line forever, on the same disk as the world and its backups: 3 files of 10 MB per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   nats:
     image: nats:2.10-alpine
@@ -42,6 +50,7 @@ services:
     mem_limit: 256m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
   connectionserver:
     # CI-published image (docker-dev.yml pushes :dev on every main merge, gated on the full test
@@ -76,6 +85,7 @@ services:
     mem_limit: 512m
     cpus: 1.0
     restart: unless-stopped
+    logging: *default-logging
 
   # Rendering can restart independently; the stable connectionserver service owns client sockets.
   renderer:
@@ -89,6 +99,7 @@ services:
       - render-socket:/run/sharpmush
     network_mode: none
     restart: unless-stopped
+    logging: *default-logging
 
   sharpmush-server:
     # CI-published image; includes the Blazor WASM client (baked into /app/wwwroot at build time).
@@ -120,6 +131,13 @@ services:
       # Set rather than left to default (<world>.backups) so the copies sit at a path the
       # restic service names, well away from the live world it must not read.
       - SHARPMUSH_BACKUP_PATH=data/backup
+      # Version histories (wiki revisions, scene pose edits, deleted poses) are kept forever unless a
+      # policy is set; see "History retention" in deploy/README.md. @storage/history counts them.
+      # - SHARPMUSH_HISTORY_INTERVAL=1d
+      # - SHARPMUSH_HISTORY_WIKI_KEEP=50
+      # - SHARPMUSH_HISTORY_SCENE_EDITS_KEEP=10
+      # - SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE=90d
+      # - SHARPMUSH_HISTORY_ARCHIVE_PATH=data/history-archive
       - Wiki__AssetRoot=/app/data/wiki-assets
       - NATS_URL=nats://nats:4222
       # HTTP only — Cloudflare terminates TLS at the edge and the tunnel reaches this over the private network.
@@ -152,6 +170,7 @@ services:
     mem_limit: 768m
     cpus: 1.5
     restart: unless-stopped
+    logging: *default-logging
 
   # Cloudflare Tunnel: dials out to Cloudflare, routes the public hostname(s) you
   # configured in the Zero Trust dashboard to the services on this network.
@@ -173,6 +192,7 @@ services:
     mem_limit: 128m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
   # Auto-deploy: polls Docker Hub and recreates the engine and renderer when their :dev tag moves
   # (pushed by docker-dev.yml after the full test suite passes on main). Both of those updates
@@ -197,6 +217,7 @@ services:
     mem_limit: 128m
     cpus: 0.25
     restart: unless-stopped
+    logging: *default-logging
 
   # Nightly encrypted backup of the game-data volume — identical to the prod stack.
   #
@@ -239,6 +260,7 @@ services:
     mem_limit: 256m
     cpus: 0.5
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   render-socket: # Private Unix socket shared only by socket owner and rendering worker

@@ -69,7 +69,7 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// C# after the index range is read. Visibility filtering: the viewer
 /// scopes <c>mine</c> and nothing else; who may SEE a scene is decided above this layer.</para>
 /// </remarks>
-public sealed class LightningSceneStorage : ISceneStorage
+public sealed partial class LightningSceneStorage : ISceneStorage
 {
 	/// <summary>
 	/// Reflection-based and PascalCase. The plugin runs in its own <c>AssemblyLoadContext</c> and cannot
@@ -155,6 +155,10 @@ public sealed class LightningSceneStorage : ISceneStorage
 		public Dictionary<string, string> Meta { get; init; } = [];
 		public long CreatedAt { get; init; }
 		public bool IsDeleted { get; set; }
+
+		/// <summary>When the pose was soft-deleted (UTC millis); null on a live pose, and on one deleted
+		/// before this was recorded. The deleted-pose retention rule ages a pose from here.</summary>
+		public long? DeletedAt { get; set; }
 
 		/// <summary>The <c>current_edit</c> pointer: which <c>scene.log</c> version this pose shows.</summary>
 		public uint CurrentEditSeq { get; set; }
@@ -619,8 +623,10 @@ public sealed class LightningSceneStorage : ISceneStorage
 			}
 
 			var pose = found.Pose;
-			// Soft delete: the slot stays in the chain so the poses around it keep their order.
+			// Soft delete: the slot stays in the chain so the poses around it keep their order. Its content
+			// and edit history stay too, until the deleted-pose retention rule (if one is set) purges them.
 			pose.IsDeleted = true;
+			pose.DeletedAt ??= UtcMillis();
 			tx.Put(_poses, found.Key, Encode(pose));
 
 			if (ReadScene(tx, pose.SceneId) is { } scene)
@@ -1159,8 +1165,9 @@ public sealed class LightningSceneStorage : ISceneStorage
 	private ScenePose ProjectPose(ITx tx, ScenePoseRecord rec)
 	{
 		var (versions, current) = CurrentEdit(tx, rec.Id, rec.CurrentEditSeq);
-		// "Edited" iff more than one version exists — an unedited pose reports no editor at all.
-		var edited = versions > 1 && current is not null;
+		// "Edited" iff more than one version exists — an unedited pose reports no editor at all. A pose
+		// showing a version past the first was edited even when retention has purged every older one.
+		var edited = current is not null && (versions > 1 || rec.CurrentEditSeq > 1);
 
 		return new ScenePose(
 			Id: rec.Id,

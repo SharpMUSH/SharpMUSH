@@ -28,7 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
-    <!-- LightningScenePoseReadTests run the plugin's storage against a real LMDB world. -->
+    <!-- The pose read and history retention tests run the plugin's storage against a real LMDB world. -->
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
   </ItemGroup>
 

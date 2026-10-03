@@ -50,7 +50,7 @@ Limits and constants, continued.
 - `starting_money=<number>`: How many pennies new players get.
 - `paycheck=<number>`: How many pennies players get each day they log on.
 - `max_pennies=<number>`: The maximum pennies an object can have.
-- `mail_limit=<number>`: How many @mail messages someone can have.
+- `mail_limit=<number>`: How many @mail messages the folder new mail arrives in may hold. New mail is refused when that folder is full. Messages filed into other folders do not count, so this is not a limit on all the mail a player keeps. Mail stays until it is deleted and purged.
 - `max_depth=<number>`: How deep indirect @lock chains can go.
 - `player_queue_limit=<number>`: The number of commands a player can have queued at once.
 - `queue_loss=<number>`: One in <number> times, queuing a command will cost an extra penny that doesn't get refunded.
