@@ -14,10 +14,9 @@ public class ReplayStoreContractTests
 	{
 		var store = new TerminalReplayStore();
 		for (var i = 0; i < 201; i++) await store.AppendAsync("session", "frame"u8.ToArray());
-		var missing = await store.ReadAsync("session", 0);
-		await Assert.That(missing.Complete).IsFalse();
-		await Assert.That(missing.Frames.Count).IsEqualTo(200);
-		await Assert.That((await store.ReadAsync("session", 1)).Complete).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 0) is IncompleteReplay { Reason: ReplayGap.Expired }).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 1) is ReplayFrames).IsTrue();
+		await Assert.That((await store.AfterAsync("session", 1)).Count).IsEqualTo(200);
 	}
 
 	[Test]
@@ -27,11 +26,11 @@ public class ReplayStoreContractTests
 		var store = new TerminalReplayStore(() => now);
 		await store.AppendAsync("session", "old"u8.ToArray());
 		now = now.AddSeconds(31);
-		await Assert.That((await store.ReadAsync("session", 0)).Complete).IsFalse();
-		await Assert.That((await store.ReadAsync("session", 1)).Complete).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 0) is IncompleteReplay).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 1) is ReplayFrames).IsTrue();
 		await store.AppendAsync("session", "fresh"u8.ToArray());
-		await Assert.That((await store.ReadAsync("session", 0)).Complete).IsFalse();
-		await Assert.That((await store.ReadAsync("session", 1)).Complete).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 0) is IncompleteReplay).IsTrue();
+		await Assert.That(await store.OpenAsync("session", 1) is ReplayFrames).IsTrue();
 	}
 
 	[Test]
@@ -64,7 +63,7 @@ public class ReplayStoreContractTests
 		await using var store = new JetStreamTerminalReplayStore(nats, js,
 			NullLogger<JetStreamTerminalReplayStore>.Instance);
 		await Assert.That(async () => await store.AppendAsync(session, [])).Throws<ArgumentException>();
-		await Assert.That(async () => await store.AfterAsync(session, 0)).Throws<ArgumentException>();
+		await Assert.That(async () => await store.OpenAsync(session, 0)).Throws<ArgumentException>();
 		await Assert.That(async () => await store.DropAsync(session)).Throws<ArgumentException>();
 		await Assert.That(js.ReceivedCalls().Count()).IsEqualTo(0);
 	}

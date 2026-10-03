@@ -26,18 +26,15 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 		return ValueTask.FromResult(buffer.Append(rawUtf8, _now(), MaxFramesPerSession));
 	}
 
-	public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
-		=> ValueTask.FromResult(_buffers.TryGetValue(session, out var buffer)
-			? buffer.Read(lastSeq, _now(), MaxAge).Frames
-			: []);
-
-	public ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default)
+	public ValueTask<ReplayOpening> OpenAsync(string session, long lastSeq, CancellationToken ct = default)
 	{
 		ArgumentOutOfRangeException.ThrowIfNegative(lastSeq);
 		ct.ThrowIfCancellationRequested();
-		return ValueTask.FromResult(_buffers.TryGetValue(session, out var buffer)
-			? buffer.Read(lastSeq, _now(), MaxAge)
-			: new ReplayReadResult(lastSeq == 0, []));
+		if (!_buffers.TryGetValue(session, out var buffer))
+			return ValueTask.FromResult<ReplayOpening>(lastSeq == 0
+				? new SnapshotFrames([])
+				: new IncompleteReplay(ReplayGap.Expired));
+		return ValueTask.FromResult(buffer.Read(lastSeq, _now(), MaxAge));
 	}
 
 	public ValueTask DropAsync(string session, CancellationToken ct = default)
@@ -65,7 +62,7 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 			}
 		}
 
-		public ReplayReadResult Read(long lastSeq, DateTimeOffset now, TimeSpan maxAge)
+		public ReplayOpening Read(long lastSeq, DateTimeOffset now, TimeSpan maxAge)
 		{
 			lock (_gate)
 			{
@@ -74,7 +71,9 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 					_entries.RemoveFirst();
 				var earliest = _entries.First?.Value.Seq;
 				var complete = earliest is { } seq ? lastSeq >= seq - 1 : lastSeq >= _seq;
-				return new ReplayReadResult(complete, _entries
+				if (!complete) return new IncompleteReplay(ReplayGap.Expired);
+				// At most MaxFramesPerSession frames, so a copy is already a bounded read.
+				return new SnapshotFrames(_entries
 					.Where(entry => entry.Seq > lastSeq)
 					.Select(entry => entry.Payload)
 					.ToList());
@@ -82,5 +81,10 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 		}
 
 		private sealed record Entry(long Seq, byte[] Payload, DateTimeOffset At);
+	}
+
+	private sealed class SnapshotFrames(IReadOnlyList<byte[]> frames) : ReplayFrames
+	{
+		public override IAsyncEnumerable<byte[]> ReadAsync(CancellationToken ct = default) => frames.ToAsyncEnumerable();
 	}
 }

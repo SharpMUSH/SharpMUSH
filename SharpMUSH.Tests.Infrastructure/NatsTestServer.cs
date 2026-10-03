@@ -13,7 +13,11 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 	private const string NatsImage = "nats:2.14-alpine";
 	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
-	private static readonly string NatsConfigContent = $"max_payload: {MaxPayloadBytes}\njetstream: true\n";
+	// JetStream reserves each stream's MaxBytes against max_file_store when the stream is created, and
+	// left unset that limit is 75% of the disk that happens to be free. Short-lived streams with budgets
+	// (docs/design/messaging-retention.md) would then fail with "insufficient storage resources" on a
+	// nearly full disk; the explicit ceiling makes creation independent of it. Little is actually written.
+	private static readonly string NatsConfigContent = $"max_payload: {MaxPayloadBytes}\njetstream {{ max_file_store: 256GB }}\n";
 
 	// Write config to a temp file for bind-mount (Podman rootless can't PUT /archive on stopped containers)
 	private readonly string _configTempFile = CreateTempConfigFile();

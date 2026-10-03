@@ -21,44 +21,46 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	private readonly TimeSpan _publishTimeout;
 	private readonly ILogger<NatsJetStreamMessageBus> _logger;
 	private readonly string _subjectPrefix;
+	private readonly string _streamName;
+	private readonly NatsMessagingMetrics? _metrics;
 	private readonly ConcurrentDictionary<Type, string> _subjects = new();
 
 	internal NatsJetStreamMessageBus(
 		NatsConnection nats,
 		INatsJSContext js,
 		NatsOptions options,
-		ILogger<NatsJetStreamMessageBus> logger)
+		ILogger<NatsJetStreamMessageBus> logger,
+		NatsMessagingMetrics? metrics = null)
 	{
 		_nats = nats;
 		_js = js;
 		_subjectPrefix = options.SubjectPrefix;
+		_streamName = options.StreamName;
+		_metrics = metrics;
 		_publishTimeout = options.PublishTimeout;
 		_logger = logger;
 	}
 
 	/// <summary>
-	/// Creates and initialises a <see cref="NatsJetStreamMessageBus"/>.
-	/// Creates the JetStream stream if it does not already exist.
+	/// Creates and initialises a <see cref="NatsJetStreamMessageBus"/>. This process owns the stream it
+	/// publishes to, so it creates it or brings it to the configured limits
+	/// (<see cref="NatsStreamPolicy"/>).
 	/// </summary>
 	public static async Task<NatsJetStreamMessageBus> CreateAsync(
 		NatsOptions options,
 		ILogger<NatsJetStreamMessageBus> logger,
-		CancellationToken ct = default)
+		CancellationToken ct = default,
+		NatsMessagingMetrics? metrics = null)
 	{
 		if (options.PublishTimeout <= TimeSpan.Zero || options.PublishTimeout.TotalMilliseconds > uint.MaxValue - 1)
 			throw new ArgumentOutOfRangeException(nameof(options.PublishTimeout));
+		var config = NatsStreamPolicy.BusStream(options.StreamName, options.SubjectPrefix, options);
 		var nats = await NatsStartupConnection.ConnectAsync(options.Url, options.ConnectTimeout, ct);
 		try
 		{
 			var js = new NatsJSContext(nats);
-			await js.CreateOrUpdateStreamAsync(
-				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
-				{
-					MaxAge = options.MaxAge,
-					MaxMsgSize = options.MaxMsgSize,
-				},
-				ct);
-			return new NatsJetStreamMessageBus(nats, js, options, logger);
+			await NatsStreamPolicy.ApplyAsync(js, config, ct);
+			return new NatsJetStreamMessageBus(nats, js, options, logger, metrics);
 		}
 		catch
 		{
@@ -104,14 +106,35 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 		deadline.CancelAfter(_publishTimeout);
 		try
 		{
-			await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default,
+			var acknowledgement = await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default,
 				headers: headers, cancellationToken: deadline.Token);
+			// A full discard-new stream answers with an error rather than an exception; without this
+			// check the refused message would look published.
+			acknowledgement.EnsureSuccess();
 		}
 		catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && deadline.IsCancellationRequested)
 		{
+			_metrics?.RecordRejected(_streamName, "timeout");
 			throw new TimeoutException($"Publishing to {subject} exceeded {_publishTimeout}.", ex);
 		}
+		catch (NatsJSApiException ex)
+		{
+			_metrics?.RecordRejected(_streamName, RejectionReason(ex.Error));
+			_logger.LogWarning("[NATS-SEND] Stream {Stream} refused a message on {Subject}: {Error}",
+				_streamName, subject, ex.Error.Description);
+			throw;
+		}
 	}
+
+	/// <summary>JetStream's code for a stream that is at its byte or message budget.</summary>
+	private const int StreamStoreFailed = 10077;
+
+	internal static string RejectionReason(ApiError error) => error.ErrCode switch
+	{
+		StreamStoreFailed when error.Description?.Contains("maximum", StringComparison.OrdinalIgnoreCase) == true => "full",
+		StreamStoreFailed => "store-failed",
+		_ => $"error-{error.ErrCode}"
+	};
 
 	private string GetSubjectForMessageType<T>() =>
 		_subjects.GetOrAdd(typeof(T), static (type, prefix) => NatsSubjects.For(type, prefix), _subjectPrefix);

@@ -86,8 +86,8 @@ public class ConnectionPumpTests
 			return ValueTask.FromResult((seq, wrapped));
 		}
 
-		public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
-			=> ValueTask.FromResult<IReadOnlyList<byte[]>>([]);
+		public ValueTask<ReplayOpening> OpenAsync(string session, long lastSeq, CancellationToken ct = default)
+			=> new TerminalReplayStore().OpenAsync(session, 0, ct);
 
 		public ValueTask DropAsync(string session, CancellationToken ct = default) => ValueTask.CompletedTask;
 	}
@@ -104,8 +104,8 @@ public class ConnectionPumpTests
 			return ValueTask.FromResult((seq, SeqEnvelope.Wrap(seq, rawUtf8)));
 		}
 
-		public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
-			=> ValueTask.FromResult<IReadOnlyList<byte[]>>([]);
+		public ValueTask<ReplayOpening> OpenAsync(string session, long lastSeq, CancellationToken ct = default)
+			=> new TerminalReplayStore().OpenAsync(session, 0, ct);
 
 		public ValueTask DropAsync(string session, CancellationToken ct = default)
 		{
