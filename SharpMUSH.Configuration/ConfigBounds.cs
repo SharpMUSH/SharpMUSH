@@ -28,6 +28,8 @@ public readonly record struct ConfigBoundCorrection(string Property, string Opti
 /// <remarks>
 /// Applied on both write paths: <see cref="ReadPennMushConfig"/> for a <c>mush.cnf</c>, and
 /// <see cref="ConfigAccessor.WithValue"/> for <c>@config/set</c> and the portal's configuration page.
+/// The engine's options factory also applies it to the stored document on load, for a document written
+/// before the ranges were enforced.
 /// Records built directly (tests forcing a limit to 0) are not touched.
 /// </remarks>
 public static class ConfigBounds
