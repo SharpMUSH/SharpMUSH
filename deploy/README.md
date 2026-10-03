@@ -303,11 +303,17 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 |---|---|---|
 | `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
 | `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
+| `SHARPMUSH_BACKUP_PACKAGE_KEEP` | `2` | How many of the copies taken automatically before a portal package apply, rollback or uninstall stay on disk. They go in `pre-package/` under the backup path, counted separately, so they never push out the copies above. `0` turns them off. |
 | `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
 `@backup/list`.
+
+The portal takes one into `pre-package/<timestamp>` before every package apply, rollback or
+uninstall, and refuses the operation if that copy fails. It is the restore point for a crash part
+way through the operation (`docs/design/world-transactions.md` §0). It copies the world only:
+a managed package's `plugins/<id>/` directory is not in it.
 
 Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
 construction.

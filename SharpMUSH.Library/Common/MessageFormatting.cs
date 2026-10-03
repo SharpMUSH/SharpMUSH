@@ -19,7 +19,7 @@ public static class MessageFormatting
 	/// (<c>src/unparse.c:118-119</c>): examine, link-to, or any of JUMP_OK / CHOWN_OK / DESTROY_OK.
 	/// </remarks>
 	public static async ValueTask<string> UnparseObjectAsync(IPermissionService permissions,
-		AnySharpObject viewer, AnySharpObject target, IConnectionService? connections = null)
+		AnySharpObject viewer, AnySharpObject target, IConnectionService connections)
 		=> await ShowsReferenceAsync(permissions, viewer, target)
 			? await FormatObjectWithDbref(target.Object(), await FlagView.ForAsync(viewer, connections))
 			: target.Object().Name;
@@ -27,7 +27,7 @@ public static class MessageFormatting
 	/// <inheritdoc cref="UnparseObjectAsync"/>
 	/// <remarks>The name portion is hilighted, as <see cref="FormatObjectWithDbrefMString"/> does.</remarks>
 	public static async ValueTask<MString> UnparseObjectMStringAsync(IPermissionService permissions,
-		AnySharpObject viewer, AnySharpObject target, IConnectionService? connections = null)
+		AnySharpObject viewer, AnySharpObject target, IConnectionService connections)
 		=> await ShowsReferenceAsync(permissions, viewer, target)
 			? await FormatObjectWithDbrefMString(target.Object(), await FlagView.ForAsync(viewer, connections))
 			: target.Object().Name.Hilight();

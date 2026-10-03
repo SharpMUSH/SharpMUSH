@@ -95,7 +95,8 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				services.GetRequiredService<IPackageLifecycleRunner>(),
 				managedInstaller,
-				services.GetRequiredService<IMediator>())
+				services.GetRequiredService<IMediator>(),
+				services.GetRequiredService<IPackageOperationGate>())
 		};
 	}
 

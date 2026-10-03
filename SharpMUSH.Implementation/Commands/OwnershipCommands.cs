@@ -109,7 +109,8 @@ public partial class Commands
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
-			DidItService, ManipulateSharpObjectService, Configuration, executor, target, zone, preserve, noisy);
+			DidItService, ManipulateSharpObjectService, Configuration, ConnectionService, executor, target, zone, preserve,
+			noisy);
 
 	/// <summary>
 	/// <c>do_chzone</c> reports its own refusals and returns 0; the command turns that into the error

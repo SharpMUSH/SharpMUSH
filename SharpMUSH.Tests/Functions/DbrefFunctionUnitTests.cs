@@ -273,6 +273,21 @@ public class DbrefFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// x is CLOUDY on an exit and TERSE on a player or thing; letter_to_flagptr takes the one whose type
+	/// covers the object's, so a TERSE thing answers x.
+	/// </summary>
+	[Test]
+	public async Task AndflagsReadsASharedLetterByTheObjectsType()
+	{
+		var thing = (await Parser.FunctionParse(MarkupText.Plain(
+			$"create({TestIsolationHelpers.GenerateUniqueName("TerseLetter")})")))!.Message!.ToPlainText();
+		await Parser.FunctionParse(MarkupText.Plain($"set({thing},TERSE)"));
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"andflags({thing},Tx)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
 	[Test]
 	[Arguments("orflags(%#,PLAYER)", "1")]
 	[Arguments("orflags(%#,WIZARD PLAYER)", "1")]

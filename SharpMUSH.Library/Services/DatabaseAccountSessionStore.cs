@@ -95,4 +95,16 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 
 	public Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default)
 		=> database.GetSessionOriginIpsAsync(ct).AsTask();
+
+	/// <summary>
+	/// Uses the same boundary as <see cref="ValidateAsync"/>: a session expires at <c>ExpiryUnixMs</c>,
+	/// so one whose expiry is at or before now is deleted.
+	/// </summary>
+	public async Task<IAccountSessionStore.SessionSweep> SweepExpiredAsync(int maxCount, CancellationToken ct = default)
+	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var deleted = await database.DeleteExpiredSessionsAsync(now, maxCount, ct);
+		var remaining = await database.CountExpiredSessionsAsync(now, ct);
+		return new IAccountSessionStore.SessionSweep(deleted, remaining);
+	}
 }

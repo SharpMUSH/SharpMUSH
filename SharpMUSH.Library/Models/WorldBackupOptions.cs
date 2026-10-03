@@ -25,6 +25,24 @@ public sealed record WorldBackupOptions
 	public TimeSpan Interval { get; init; } = TimeSpan.Zero;
 
 	/// <summary>
+	/// How many of the copies taken automatically before a portal package operation survive. They
+	/// live in <see cref="PackageOperationRoot"/>, with their own count, so however many package
+	/// operations run they never push a scheduled or manual copy out of <see cref="Root"/>. Zero turns
+	/// the automatic copy off.
+	/// </summary>
+	public int PackageOperationKeep { get; init; } = 2;
+
+	/// <summary>
+	/// Where the pre-package-operation copies go: a <c>pre-package</c> directory inside
+	/// <see cref="Root"/>. Its name is not a timestamp, so the retention of <see cref="Root"/> never
+	/// counts or deletes it.
+	/// </summary>
+	public string PackageOperationRoot => Path.Join(Root, PackageOperationDirectory);
+
+	/// <summary>The name of <see cref="PackageOperationRoot"/> inside <see cref="Root"/>.</summary>
+	public const string PackageOperationDirectory = "pre-package";
+
+	/// <summary>
 	/// The backup root for a world at <paramref name="worldPath"/>: <c>&lt;worldPath&gt;.backups</c>,
 	/// following the same convention as a Lightning staging promotion's <c>.previous</c>. Beside the
 	/// world, so a deployment mounting one volume for its data gets both under that mount without

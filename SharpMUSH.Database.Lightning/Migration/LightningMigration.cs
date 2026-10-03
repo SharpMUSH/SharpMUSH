@@ -50,6 +50,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
+			await RebuildReadIndexesAsync(cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -165,6 +166,9 @@ public partial class LightningDatabase
 			UpsertFlag(tx, name, symbol, aliases ?? [], setPerms, unsetPerms, typeRestrictions, system: true);
 		}
 
+		MergeRenamedFlag(tx, "ON_VACATION", "ON-VACATION");
+		MoveHoldersByType(tx, "CLOUDY", "TERSE", ["PLAYER", "THING"]);
+
 		foreach (var flag in _pluginFlags)
 		{
 			UpsertFlag(tx, flag.Name, flag.Symbol, flag.Aliases, flag.SetPermissions, flag.UnsetPermissions, flag.TypeRestrictions, flag.System);
@@ -251,6 +255,77 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
+	/// TERSE used to be an alias of CLOUDY, so setting it stored a CLOUDY edge. Now that TERSE is its own
+	/// flag and CLOUDY is an exit flag (#1404), a player or thing holding CLOUDY set TERSE: its edge
+	/// moves to TERSE, and an exit keeps CLOUDY.
+	/// </summary>
+	private static void MoveHoldersByType(ITx tx, string fromName, string toName, string[] types)
+	{
+		var fromKey = Keys.Upper(fromName);
+		var toKey = Keys.Upper(toName);
+		if (!tx.TryGet(Tables.Flag, toKey, out _))
+		{
+			return;
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, fromKey)
+			.Select(value => Keys.ReadDbref(value))
+			.Where(holder => tx.TryGet(Tables.Obj, Keys.Dbref(holder), out var bytes)
+				&& types.Contains(Codec.Deserialize<ObjectRecord>(bytes).Type, StringComparer.OrdinalIgnoreCase))
+			.ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), toKey);
+			tx.Put(Tables.ObjFlag.Reverse, toKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), fromKey);
+			tx.Delete(Tables.ObjFlag.Reverse, fromKey, Keys.Dbref(holder));
+		}
+	}
+
+	/// <summary>
+	/// <see cref="MergeRenamedPower"/> for a flag: a seeded flag whose canonical name changed (ON_VACATION
+	/// to PennMUSH's ON-VACATION, #1405). Holders are edges keyed by the flag's name, so they move onto the
+	/// new key, the new record keeps the old one's <c>Disabled</c> state, and the old record is dropped.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private static void MergeRenamedFlag(ITx tx, string oldName, string newName)
+	{
+		var oldKey = Keys.Upper(oldName);
+		if (!tx.TryGet(Tables.Flag, oldKey, out var oldRecord))
+		{
+			return;
+		}
+
+		// A flag an administrator created under the old name is not the seed's to move.
+		var old = Codec.Deserialize<FlagRecord>(oldRecord);
+		if (!old.System)
+		{
+			return;
+		}
+
+		var newKey = Keys.Upper(newName);
+		if (old.Disabled && tx.TryGet(Tables.Flag, newKey, out var newRecord))
+		{
+			tx.Put(Tables.Flag, newKey, Codec.Serialize(Codec.Deserialize<FlagRecord>(newRecord) with { Disabled = true }));
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, oldKey).Select(value => Keys.ReadDbref(value)).ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), newKey);
+			tx.Put(Tables.ObjFlag.Reverse, newKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), oldKey);
+			tx.Delete(Tables.ObjFlag.Reverse, oldKey, Keys.Dbref(holder));
+		}
+
+		tx.Delete(Tables.Flag, oldKey);
+	}
+
+	/// <summary>
 	/// Writes one flag definition, keeping the row's <c>Disabled</c> state. A definition the seed owns
 	/// (<paramref name="system"/>) never overwrites a row an administrator created with
 	/// <c>@flag/add</c>, which is always <c>System = false</c>: PennMUSH's own built-in add path stops
@@ -306,6 +381,7 @@ public partial class LightningDatabase
 				Locks = new Dictionary<string, LockRecord>()
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(seedObject.Name), Keys.Dbref(dbref));
+			IndexObjectType(tx, seedObject.Type, dbref);
 
 			SetSingleEdge(tx, Tables.Location, dbref, seedObject.Location);
 			SetSingleEdge(tx, Tables.Home, dbref, seedObject.Home);

@@ -624,6 +624,23 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.Previous().resultCode == MDBResultCode.Success);
 		}
 
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			// The first key at or past beforeKey, then one step back; with nothing at or past it, the last key.
+			var positioned = cursor.SetRange(beforeKey) == MDBResultCode.Success
+				? cursor.Previous().resultCode
+				: cursor.Last().resultCode;
+			if (positioned != MDBResultCode.Success) yield break;
+			do
+			{
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
+			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+		}
+
 		/// <summary>The smallest key greater than every key starting with <paramref name="prefix"/>; null when there is none.</summary>
 		private static byte[]? PrefixSuccessor(byte[] prefix)
 		{

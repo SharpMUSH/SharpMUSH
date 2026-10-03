@@ -573,9 +573,23 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, classObj?.Object().DBRef, pairs, useRegex);
+		SearchSpecEngine.SearchResult search;
+		try
+		{
+			search = await SearchSpecEngine.ExecuteResultAsync(
+				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+				executor, classObj?.Object().DBRef, pairs, useRegex);
+		}
+		catch (System.Text.RegularExpressions.RegexParseException) when (useRegex)
+		{
+			// lsearchr()'s name pattern is a regular expression the provider compiles; one that does not
+			// compile, or cannot finish a match in SoftcodeRegex.MatchTimeout, is an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException) when (useRegex)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 
 		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
 		var finalResults = search.Matches.Select(obj => $"#{obj.Key}");
@@ -1173,8 +1187,12 @@ public partial class Functions
 				continue;
 			}
 
-			// Look up flag by symbol (case-sensitive in PennMUSH)
-			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString());
+			// Look up flag by symbol (case-sensitive in PennMUSH). Letters are shared across types (A is
+			// ABODE on a room and ANSI on a player, x CLOUDY on an exit and TERSE on a thing), so Penn's
+			// letter_to_flagptr takes the flag whose type covers the object's.
+			var type = obj.Object().Type;
+			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString()
+				&& (f.TypeRestrictions.Length == 0 || f.TypeRestrictions.Contains(type, StringComparer.OrdinalIgnoreCase)));
 			if (flagDef == null)
 			{
 				// For AND: unknown required flag → false; negated unknown → true (not set)

@@ -52,7 +52,9 @@ public static class FlagSeed
 		// (hdrs/flag_tab.h:51, src/flags.c:778). Symbols are not unique here — see ABODE/ANSI on 'A'.
 		("MYOPIC", "m", null, [], [], ["PLAYER"]),
 		("NO_COMMAND", "n", ["NOCOMMAND"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-		("ON_VACATION", "o", ["ONVACATION","ON-VACATION","VACATION"], [], [], ["PLAYER"]),
+		// PennMUSH's name is ON-VACATION (hdrs/flag_tab.h:57). Worlds seeded as ON_VACATION are moved
+		// onto it by the seed migration's MergeRenamedFlag.
+		("ON-VACATION", "o", ["ON_VACATION","ONVACATION","VACATION"], [], [], ["PLAYER"]),
 		("PUPPET", "p", null, [], [], ["ROOM","THING"]),
 		("ROYALTY", "r", null, ["trusted","royalty","log"], ["trusted","royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("SUSPECT", "s", null, ["wizard","mdark","log"], ["wizard","mdark"], ["ROOM","PLAYER","EXIT","THING"]),
@@ -63,7 +65,12 @@ public static class FlagSeed
 		("UNINSPECTED", "u", null, ["royalty"], ["royalty"], ["ROOM"]),
 		("VERBOSE", "v", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("NO_WARN", "w", ["NOWARN"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-		("CLOUDY", "x", ["TERSE"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
+		// CLOUDY and TERSE share the letter x and are told apart by type, as in PennMUSH: CLOUDY is an
+		// exit flag (hdrs/flag_tab.h:69), TERSE a player and thing flag (flag_tab.h:52, widened to things
+		// at src/flags.c:790). TERSE was once an alias of CLOUDY; the holders of that are not moved,
+		// since a live world cannot tell which of them meant which.
+		("CLOUDY", "x", null, [], [], ["EXIT"]),
+		("TERSE", "x", null, [], [], ["PLAYER","THING"]),
 		("CHAN_USEFIRSTMATCH", "", ["CHAN_FIRSTMATCH","CHAN_MATCHFIRST"], ["trusted"], ["trusted"], ["ROOM","PLAYER","EXIT","THING"]),
 		("HEAR_CONNECT", "", null, ["royalty"], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("HEAVY", "", null, ["royalty"], [], ["ROOM","PLAYER","EXIT","THING"]),

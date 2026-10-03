@@ -46,8 +46,14 @@ apply or rollback, the removal of the package's rows for an uninstall. Then:
   result, the error names every write that could not be reverted. For an exception, a write that
   could not be reverted is dropped without a report, so that the original exception is what
   surfaces (`PackageWriteTransaction.DisposeAsync`).
-- **Other code is not isolated from the operation.** A queue entry, portal request or HTTP handler
-  that runs while the operation does can see, and write over, its intermediate state.
+- **Package operations are serialized with each other.** Apply, uninstall, rollback and the
+  profile-handler reset hold one process-wide gate (`IPackageOperationGate`, #1484) from their
+  first registry read to their last write.
+- **Softcode is isolated from a portal operation, other code is not.** A portal apply, rollback
+  or uninstall runs as a queue entry (`IPackageOperationRunner`, #1332), so no queue entry or HTTP
+  handler command runs beside it. A portal request that writes the world directly, and an
+  operation run at startup or by a PennMUSH import, still can see and write over its
+  intermediate state.
 - **A crash part way through keeps every write made so far, and replays nothing.** Every write is
   durable on its own (P4, §1), and the inverses were in memory only.
 
@@ -62,12 +68,16 @@ The writes happen in a fixed order, so the residue depends on how far the operat
 | **Uninstall** | clear this package's attributes on other packages' objects → mark its own objects `GOING` → remove its applications → remove its rows | The package is still listed as installed, with some of its objects `GOING` (and purged by the usual `@destroy` cycle) and some applications gone. |
 
 An apply's lifecycle hooks (`AINSTALL`, `AUPDATE`) run only after its commit, so a crash never
-runs them for a half-applied one.
+runs them for a half-applied one. From the portal each runs as a queue entry of its own after the
+operation's entry, never inside it.
 
 ### How an operator recovers
 
-1. **Before a package operation on a live game, take `@backup`.** It is a point-in-time copy that
-   does not stop the game, and it is the only restore point that is exact.
+1. **Before a package operation on a live game, have a backup.** The portal takes one into
+   `<backup path>/pre-package/` before each apply, rollback and uninstall (#1333), with its own
+   retention (`SHARPMUSH_BACKUP_PACKAGE_KEEP`, default 2), so it never evicts the scheduled
+   copies; it refuses the operation if the copy fails. It is a point-in-time copy that does not
+   stop the game, and it is the only restore point that is exact. Elsewhere, take `@backup`.
 2. **After a crash during a package operation, restore that backup.** Stop the server and put the
    backup directory back as the Lightning data directory (`SHARPMUSH_LIGHTNING_PATH`); the
    deployment steps are in `deploy/README.md`, *To restore for real*. Everything written after the
@@ -95,16 +105,15 @@ plugin loader reads `plugins/<id>/` on the next boot. `@backup` copies the world
 deploy replaces the whole directory and removal checks it exists. To recover, re-run the install
 of the version you want, or re-run the uninstall, before relying on the plugin again.
 
-### Follow-ups this decision leaves
+### Follow-ups this decision left
 
-These are separate issues, not part of this decision:
+Both are done:
 
-- **Run portal package operations as queue entries**, as #1184 did for HTTP handler commands.
-  That gives package operations P1 exclusion from softcode without a provider transaction. It
-  needs care with the lifecycle hooks, which queue work of their own.
-- **Offer an automatic `@backup` before a portal package operation**, so step 1 above is not left
-  to memory. It needs a retention decision, so that pre-operation copies do not evict the
-  scheduled ones.
+- **Portal package operations run as queue entries** (#1332), as #1184 did for HTTP handler
+  commands. The lifecycle hooks are held back while the operation's entry runs and then each runs
+  as an entry of its own; nothing in the operation's entry waits on the queue.
+- **An automatic backup precedes a portal package operation** (#1333), into its own directory
+  with its own retention, so it never evicts the scheduled copies.
 
 ---
 
@@ -131,8 +140,8 @@ PennMUSH has no transactions. What it guarantees comes from being single-threade
 Where SharpMUSH stands:
 
 - **P1** holds for the command queue, which has a single consumer (`TaskScheduler.ProcessQueueAsync`).
-  HTTP handler commands are queue entries too since #1184. Portal writes and package operations
-  don't hold it: both can interleave with a running queue entry.
+  HTTP handler commands are queue entries too since #1184, and portal package operations since
+  #1332. Other portal writes don't hold it: they can interleave with a running queue entry.
 - **P2** and **P3** hold.
 - **P4** differs in both directions. Every write is durable on its own, which is stronger than
   Penn's hourly dump. But a crash part way through an entry persists half of it, which Penn never

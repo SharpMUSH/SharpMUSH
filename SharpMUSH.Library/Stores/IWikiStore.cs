@@ -72,6 +72,13 @@ public interface IWikiStore
 	/// <summary>One locale's revisions, by revision number descending.</summary>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take);
 
+	/// <summary>
+	/// One locale's revisions numbered below <paramref name="beforeRevisionNumber"/>, by revision number
+	/// descending, at most <paramref name="take"/>: the cursor form of <see cref="GetRevisionsAsync"/>, whose
+	/// cost does not grow with how far into the history the page is.
+	/// </summary>
+	Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeAsync(string pageId, string locale, int beforeRevisionNumber, int take);
+
 	Task<Found<WikiRevision>> GetRevisionAsync(string pageId, string locale, int revisionNumber);
 
 	/// <summary>Every translation of one page as a bodyless summary, ordered by locale.</summary>

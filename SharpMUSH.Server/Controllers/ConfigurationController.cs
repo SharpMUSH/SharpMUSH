@@ -71,7 +71,8 @@ public class ConfigurationController(
 			}
 
 			var current = options.CurrentValue;
-			var updated = ApplyUpdates(current, updates, out var errors);
+			var corrections = new List<ConfigBoundCorrection>();
+			var updated = ApplyUpdates(current, updates, corrections, out var errors);
 
 			if (errors.Count > 0)
 			{
@@ -87,6 +88,11 @@ public class ConfigurationController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updated);
 			configReloadService.SignalChange();
+			// Logged once stored: a correction in a refused update never took effect.
+			foreach (var correction in corrections)
+			{
+				logger.LogWarning("Configuration value clamped to its declared range: {Correction}", correction.ToString());
+			}
 
 			logger.LogInformation("Configuration updated: {Properties}", string.Join(", ", updates.Keys));
 
@@ -107,11 +113,12 @@ public class ConfigurationController(
 	/// <summary>
 	/// Applies partial updates to the immutable record hierarchy. Updates are keyed by property path,
 	/// e.g. "Net.Port" or "Limit.MaxLogins"; both halves match case-insensitively. A number outside the
-	/// option's declared range is clamped to the bound and logged (#1335).
+	/// option's declared range is clamped to the bound and added to <paramref name="corrections"/>, for the caller to log once stored (#1335).
 	/// </summary>
 	private SharpMUSHOptions ApplyUpdates(
 		SharpMUSHOptions current,
 		Dictionary<string, JsonElement> updates,
+		List<ConfigBoundCorrection> corrections,
 		out Dictionary<string, string> errors)
 	{
 		errors = new Dictionary<string, string>();
@@ -146,8 +153,7 @@ public class ConfigurationController(
 			try
 			{
 				var converted = ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!);
-				result = ConfigAccessor.WithValue(result, property, converted, correction =>
-					logger.LogWarning("Configuration value clamped to its declared range: {Correction}", correction.ToString()));
+				result = ConfigAccessor.WithValue(result, property, converted, corrections.Add);
 			}
 			// Only what converting a JsonElement and assigning it can raise. Anything else — a null
 			// dereference, a missing switch arm in the generated setter — is a defect in this code, and

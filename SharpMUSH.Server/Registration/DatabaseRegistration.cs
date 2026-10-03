@@ -132,7 +132,8 @@ internal static class DatabaseRegistration
 			sp.GetRequiredService<LightningDatabase>());
 
 		// World backup. SHARPMUSH_BACKUP_{PATH,KEEP,INTERVAL} say where copies go, how many stay and how
-		// often one is taken; SHARPMUSH_LIGHTNING_BACKUP_COMPACT turns off omitting free pages.
+		// often one is taken; SHARPMUSH_BACKUP_PACKAGE_KEEP how many pre-package-operation copies stay;
+		// SHARPMUSH_LIGHTNING_BACKUP_COMPACT turns off omitting free pages.
 		var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
 		var compactBackups = !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase);
 		services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
@@ -273,6 +274,24 @@ internal static class DatabaseRegistration
 			}
 		}
 
+		// Zero is a setting here, not a typo: it turns off the copy taken before a portal package operation.
+		var packageKeepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_PACKAGE_KEEP");
+		const int defaultPackageKeep = 2;
+		var packageKeep = defaultPackageKeep;
+		if (!string.IsNullOrWhiteSpace(packageKeepSetting))
+		{
+			if (int.TryParse(packageKeepSetting, out var parsed) && parsed >= 0)
+			{
+				packageKeep = parsed;
+			}
+			else
+			{
+				logger.LogWarning(
+					"SHARPMUSH_BACKUP_PACKAGE_KEEP is set to '{Setting}', which is not a count; keeping {DefaultKeep}",
+					packageKeepSetting, defaultPackageKeep);
+			}
+		}
+
 		// Unset means no scheduled backup, so an unreadable setting leaves scheduling off — and says so,
 		// because the operator who set it is relying on it.
 		if (!WorldBackupOptions.TryParseInterval(intervalSetting, out var interval))
@@ -289,7 +308,8 @@ internal static class DatabaseRegistration
 				? WorldBackupOptions.DefaultRootFor(worldPath)
 				: configuredRoot,
 			Keep = keep,
-			Interval = interval
+			Interval = interval,
+			PackageOperationKeep = packageKeep
 		};
 	}
 }

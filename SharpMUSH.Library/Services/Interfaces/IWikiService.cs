@@ -233,6 +233,13 @@ public interface IWikiService
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take);
 
 	/// <summary>
+	/// The cursor form of <see cref="GetRevisionsForLocaleAsync"/>: the revisions of one stream numbered
+	/// below <paramref name="beforeRevisionNumber"/>, newest first, at most <paramref name="take"/>. Pass the
+	/// last number of the previous page to get the next one.
+	/// </summary>
+	Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeForLocaleAsync(string pageId, string locale, int beforeRevisionNumber, int take);
+
+	/// <summary>
 	/// Returns one revision snapshot from a single <c>(pageId, locale)</c> stream.
 	/// Pass <see cref="string.Empty"/> for the source-locale stream, which is what
 	/// <see cref="GetRevisionAsync"/> returns.
