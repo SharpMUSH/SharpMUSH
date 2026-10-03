@@ -166,6 +166,7 @@ public partial class LightningDatabase
 		}
 
 		MergeRenamedFlag(tx, "ON_VACATION", "ON-VACATION");
+		MoveHoldersByType(tx, "CLOUDY", "TERSE", ["PLAYER", "THING"]);
 
 		foreach (var flag in _pluginFlags)
 		{
@@ -250,6 +251,36 @@ public partial class LightningDatabase
 		}
 
 		tx.Delete(Tables.Power, oldKey);
+	}
+
+	/// <summary>
+	/// TERSE used to be an alias of CLOUDY, so setting it stored a CLOUDY edge. Now that TERSE is its own
+	/// flag and CLOUDY is an exit flag (#1404), a player or thing holding CLOUDY set TERSE: its edge
+	/// moves to TERSE, and an exit keeps CLOUDY.
+	/// </summary>
+	private static void MoveHoldersByType(ITx tx, string fromName, string toName, string[] types)
+	{
+		var fromKey = Keys.Upper(fromName);
+		var toKey = Keys.Upper(toName);
+		if (!tx.TryGet(Tables.Flag, toKey, out _))
+		{
+			return;
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, fromKey)
+			.Select(value => Keys.ReadDbref(value))
+			.Where(holder => tx.TryGet(Tables.Obj, Keys.Dbref(holder), out var bytes)
+				&& types.Contains(Codec.Deserialize<ObjectRecord>(bytes).Type, StringComparer.OrdinalIgnoreCase))
+			.ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), toKey);
+			tx.Put(Tables.ObjFlag.Reverse, toKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), fromKey);
+			tx.Delete(Tables.ObjFlag.Reverse, fromKey, Keys.Dbref(holder));
+		}
 	}
 
 	/// <summary>

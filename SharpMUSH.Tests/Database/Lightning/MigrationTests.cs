@@ -130,7 +130,7 @@ public class MigrationTests
 	[Test]
 	public async Task MigrateMovesLegacyOnVacationHoldersOntoOnHyphenVacation()
 	{
-		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		var path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		var db = Create(path);
 
 		try
@@ -167,6 +167,48 @@ public class MigrationTests
 			await Assert.That(orphan).IsFalse();
 			await Assert.That(renamed!.Disabled).IsTrue();
 			await Assert.That(renamed.Aliases).Contains("ON_VACATION");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
+	/// <summary>
+	/// TERSE used to be an alias of CLOUDY, so a player set TERSE holds a CLOUDY edge. Once TERSE is its
+	/// own flag (#1404) that edge moves to TERSE; anything that is not a player or thing keeps CLOUDY.
+	/// </summary>
+	[Test]
+	public async Task MigrateMovesLegacyTerseHoldersOffCloudy()
+	{
+		var path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+
+		try
+		{
+			await db.Migrate();
+
+			// God (#1, a player) set TERSE before the split, and room #0 set CLOUDY.
+			await db.Store.WriteAsync(tx =>
+			{
+				foreach (var holder in new long[] { 0, 1 })
+				{
+					tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), Keys.Upper("CLOUDY"));
+					tx.Put(Tables.ObjFlag.Reverse, Keys.Upper("CLOUDY"), Keys.Dbref(holder));
+				}
+				return true;
+			});
+
+			await db.Migrate();
+
+			string[] Held(long dbref) => db.Store.Read(tx =>
+				tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref)).Select(v => Keys.ReadStr(v)).ToArray());
+			await Assert.That(Held(1)).Contains("TERSE").And.DoesNotContain("CLOUDY");
+			await Assert.That(Held(0)).Contains("CLOUDY").And.DoesNotContain("TERSE");
+			var cloudyHolders = db.Store.Read(tx =>
+				tx.Dups(Tables.ObjFlag.Reverse, Keys.Upper("CLOUDY")).Select(v => Keys.ReadDbref(v)).ToArray());
+			await Assert.That(cloudyHolders).IsEquivalentTo(new long[] { 0 });
 		}
 		finally
 		{
