@@ -232,7 +232,11 @@ public static class SearchSpecEngine
 		// permissions must be judged against the canonical cached object, and the full objid check drops
 		// a row recycled since the scan. A row destroyed or recycled in between no longer resolves and is
 		// skipped, as @find skips it.
-		var finalResults = new List<SharpObject>();
+		//
+		// Every candidate is still evaluated, whatever START/COUNT ask for: an EVAL restriction is
+		// softcode, and its side effects and its HadErrors belong to the whole search, not to the page.
+		// What the page does bound is what is kept — only the requested window of matches is stored.
+		var window = new ResultWindow(start, count);
 		await foreach (var obj in filteredObjects)
 		{
 			if (await mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject typedObj)
@@ -285,9 +289,13 @@ public static class SearchSpecEngine
 				}
 			}
 
+			// LISTEN and COMMAND both test the object's visible attributes; read them at most once, and
+			// only when an earlier restriction has not already ruled the object out.
+			SharpAttributesOrError? visibleAttributes = null;
+
 			if (matches && hasListenCriteria)
 			{
-				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingListen = attributes.Any(attr =>
@@ -308,7 +316,7 @@ public static class SearchSpecEngine
 
 			if (matches && hasCommandCriteria)
 			{
-				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingCommand = attributes.Any(attr =>
@@ -327,19 +335,35 @@ public static class SearchSpecEngine
 
 			if (matches)
 			{
-				finalResults.Add(typedObj.Object());
+				window.Offer(typedObj.Object());
 			}
 		}
 
-		// This ensures pagination happens AFTER all runtime filters are applied
-		if (start.HasValue || count.HasValue)
-		{
-			var skipCount = start ?? 0;
-			var takeCount = count ?? int.MaxValue;
-			finalResults = [.. finalResults.Skip(skipCount).Take(takeCount)];
-		}
+		return new SearchResult(window.Results, hadErrors);
+	}
 
-		return new SearchResult(finalResults, hadErrors);
+	/// <summary>
+	/// START/COUNT applied to the matches as they arrive, after every runtime restriction: the first
+	/// <c>start</c> matches are counted and dropped, the next <c>count</c> kept, the rest counted and
+	/// dropped — the same page <c>Skip(start).Take(count)</c> over the full list gave, without the full
+	/// list. A START below one skips nothing and a COUNT below one keeps nothing, as Skip and Take do.
+	/// </summary>
+	private sealed class ResultWindow(int? start, int? count)
+	{
+		private readonly int _skip = Math.Max(0, start ?? 0);
+		private readonly int _take = Math.Max(0, count ?? int.MaxValue);
+		private int _seen;
+
+		public List<SharpObject> Results { get; } = [];
+
+		public void Offer(SharpObject match)
+		{
+			var position = _seen++;
+			if (position >= _skip && Results.Count < _take)
+			{
+				Results.Add(match);
+			}
+		}
 	}
 
 	/// <summary>
