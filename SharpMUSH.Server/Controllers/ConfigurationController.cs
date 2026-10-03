@@ -106,9 +106,10 @@ public class ConfigurationController(
 
 	/// <summary>
 	/// Applies partial updates to the immutable record hierarchy. Updates are keyed by property path,
-	/// e.g. "Net.Port" or "Limit.MaxLogins"; both halves match case-insensitively.
+	/// e.g. "Net.Port" or "Limit.MaxLogins"; both halves match case-insensitively. A number outside the
+	/// option's declared range is clamped to the bound and logged (#1335).
 	/// </summary>
-	private static SharpMUSHOptions ApplyUpdates(
+	private SharpMUSHOptions ApplyUpdates(
 		SharpMUSHOptions current,
 		Dictionary<string, JsonElement> updates,
 		out Dictionary<string, string> errors)
@@ -145,7 +146,8 @@ public class ConfigurationController(
 			try
 			{
 				var converted = ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!);
-				result = ConfigAccessor.WithValue(result, property, converted);
+				result = ConfigAccessor.WithValue(result, property, converted, correction =>
+					logger.LogWarning("Configuration value clamped to its declared range: {Correction}", correction.ToString()));
 			}
 			// Only what converting a JsonElement and assigning it can raise. Anything else — a null
 			// dereference, a missing switch arm in the generated setter — is a defect in this code, and
