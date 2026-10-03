@@ -96,6 +96,61 @@ public class PackageOperationRunnerTests
 		(await Installer.UninstallAsync(id)).Expect<Success>();
 	}
 
+	/// <summary>
+	/// A second operation that arrives while the first waits its turn is not admitted until the first's
+	/// hooks are, so it cannot run between the first operation and the AINSTALL it scheduled.
+	/// </summary>
+	[Test]
+	public async Task ALaterOperation_RunsAfterTheEarlierOnesHooks()
+	{
+		var id = $"runner-order-{Guid.NewGuid():N}";
+		var manifest = new PackageManifestService().ParseManifest($"""
+			package: {id}
+			version: "1.0"
+			objects:
+			  - ref: marker
+			    type: thing
+			    name: Runner Order Marker
+			    attributes:
+			      AINSTALL: |-
+			        &INSTALL_MARKER me=installed
+			""") switch
+		{
+			ParsedPackageManifest parsed => parsed.Manifest,
+			PackageManifestFailure failure => throw new InvalidOperationException(string.Join("; ", failure.Issues))
+		};
+		var request = new PackageApplyRequest(
+			new PackageApplySource("https://github.com/SharpMUSH/SharpMUSH-Packages", $"{id}/", "commit-1", "main"),
+			new Dictionary<string, string>(), []);
+
+		// Hold the queue so both operations arrive while nothing can run.
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var held = await Scheduler.AdmitSocketWork(async () =>
+		{
+			await release.Task.WaitAsync(TimeSpan.FromSeconds(30));
+			return null;
+		}, "test-hold-queue", "test");
+		await Assert.That(held.Accepted).IsTrue();
+
+		var runner = Runner();
+		string? objid = null;
+		var first = runner.RunAsync("apply", async token =>
+		{
+			var applied = (await Installer.ApplyAsync(manifest, request, token)).Expect<PackageApplyResult>();
+			objid = applied.CreatedObjects["marker"];
+			return applied;
+		});
+		var second = runner.RunAsync("apply", async _ => await MarkerAsync(Volatile.Read(ref objid)!));
+		release.TrySetResult();
+
+		await first.WaitAsync(TimeSpan.FromSeconds(60));
+		var seen = (await second.WaitAsync(TimeSpan.FromSeconds(60))).Expect<PackageOperationRan<string>>().Result;
+
+		await Assert.That(seen).IsEqualTo("installed")
+			.Because("the first operation's AINSTALL runs before the second operation does");
+		(await Installer.UninstallAsync(id)).Expect<Success>();
+	}
+
 	[Test]
 	public async Task TheOperationRunsWithoutTheQueueEntrysTimeLimit()
 	{

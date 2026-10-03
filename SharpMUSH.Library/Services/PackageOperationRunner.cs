@@ -17,6 +17,13 @@ public sealed class PackageOperationRunner(
 	/// <summary>The queue group package operations and their lifecycle hooks are admitted under.</summary>
 	public const string QueueGroup = "package";
 
+	/// <summary>
+	/// One portal operation at a time, from its admission until its lifecycle hooks are queued. A hook
+	/// reads its attribute when it runs, so an operation admitted ahead of it would run first and could
+	/// change or remove what the hook was scheduled to run.
+	/// </summary>
+	private readonly SemaphoreSlim _sequence = new(1, 1);
+
 	/// <summary>What the operation's entry hands back: its outcome, and the hooks it held back.</summary>
 	private sealed record Finished<T>(PackageOperationOutcome<T> Outcome, IReadOnlyList<PackageLifecycleHook> Hooks);
 
@@ -26,7 +33,22 @@ public sealed class PackageOperationRunner(
 		Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken = default)
 	{
-		cancellationToken.ThrowIfCancellationRequested();
+		await _sequence.WaitAsync(cancellationToken);
+		try
+		{
+			return await RunInSequenceAsync(operation, body, cancellationToken);
+		}
+		finally
+		{
+			_sequence.Release();
+		}
+	}
+
+	private async Task<PackageOperationOutcome<T>> RunInSequenceAsync<T>(
+		string operation,
+		Func<CancellationToken, Task<T>> body,
+		CancellationToken cancellationToken)
+	{
 		var completion = new TaskCompletionSource<Finished<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var abandoned = false;
 
