@@ -90,10 +90,10 @@ public partial class Commands
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,
 					switches),
-			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
-															int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, Math.Max(0, number - 1),
-					switches),
+			[.., "READ"] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
+				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0, switches),
+			[] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && ReadsMessages(arg0)
+				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0!, switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0, arg1, switches),
 			_ => await NotifyAndReturnBadMailArguments(executor)
@@ -101,6 +101,13 @@ public partial class Commands
 
 		return new CallState(response);
 	}
+
+	/// <summary>
+	/// <c>do_mail</c> (<c>extmail.c:2028</c>): a bare <c>@mail &lt;list&gt;</c> reads when the list starts with a digit
+	/// and names no range, so <c>@mail 3</c> and <c>@mail 1:3</c> read while <c>@mail 1:</c> and <c>@mail 1-3</c> list.
+	/// </summary>
+	private static bool ReadsMessages(MString? arg0)
+		=> arg0?.ToPlainText() is [>= '0' and <= '9', ..] list && !list.Contains('-') && !list.EndsWith(':');
 
 	private MailDelivery.Services MailDeliveryServices
 		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,

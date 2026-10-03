@@ -7,6 +7,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -17,20 +18,26 @@ public static class ListMail
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var line = MarkupText.Plain("-").Repeat(78);
 
+		var folders = executor is SharpPlayer player
+			? await MailFolders.LoadAsync(objectDataService, player)
+			: new ExpandedMailData();
+
 		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor) switch
 		{
-			IAsyncEnumerable<SharpMail> list => await ListAsync(notifyService!, executor, line, list),
+			IAsyncEnumerable<SharpMail> list => await ListAsync(notifyService!, executor, line, folders, list),
 			Error<string> error => await MessageListHelper.RefuseAsync(notifyService!, executor, error.Value)
 		};
 	}
 
 	private static async ValueTask<MString> ListAsync(INotifyService notifyService, AnySharpObject executor,
-		MString line, IAsyncEnumerable<SharpMail> list)
+		MString line, ExpandedMailData folders, IAsyncEnumerable<SharpMail> list)
 	{
 		var foundAny = false;
 		await foreach (var folder in list.GroupBy(x => x.Folder))
 		{
-			var center = MarkupText.Plain($"  MAIL (folder {folder.Key})  ").Pad(MarkupText.Plain("-"), 78, PadType.Center, TruncationType.Truncate);
+			// do_mail_list (extmail.c:762) heads the list with the folder's number.
+			var number = folders.NumberOf(folder.Key) is int n ? $"{n,2}" : folder.Key;
+			var center = MarkupText.Plain($"  MAIL (folder {number})  ").Pad(MarkupText.Plain("-"), 78, PadType.Center, TruncationType.Truncate);
 
 			var folderTasks = await folder.ToAsyncEnumerable().Select((x, y, _) => DisplayMailLine(x, y)).ToArrayAsync();
 

@@ -523,7 +523,8 @@ public class MailDeliveryTests
 	/// <summary>
 	/// <c>filter_mail</c> (<c>extmail.c:3289</c>): a non-empty MAILFILTER result files the new message into
 	/// that folder. Captured: <c>MAIL: You have a new message (3) from LS309.</c> then
-	/// <c>MAIL: Msg 0:3 filed in folder 1 [STUFF]</c>. SharpMUSH folders are named, not numbered.
+	/// <c>MAIL: Msg 0:3 filed in folder 1 [STUFF]</c>. A name the player has not used yet becomes their lowest free
+	/// folder number.
 	/// </summary>
 	[Test]
 	public async ValueTask AMailFilterFilesTheMessageIntoTheFolderItNames()
@@ -539,7 +540,7 @@ public class MailDeliveryTests
 		});
 
 		await Assert.That(heard).Contains($"MAIL: You have a new message (1) from {sender.Name}.");
-		await Assert.That(heard).Contains("MAIL: Msg 1 filed in folder Urgent.");
+		await Assert.That(heard).Contains("MAIL: Msg 0:1 filed in folder 1 [URGENT]");
 		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["Plain"]);
 		await Assert.That((await Mailbox(target, "Urgent")).Select(m => m.Subject.ToPlainText()))
 			.IsEquivalentTo(["Not urgent at all"]);
@@ -899,8 +900,11 @@ public class MailDeliveryTests
 			(await Mediator.Send(new GetObjectNodeQuery(target.DbRef))).Expect<SharpPlayer>().Object,
 			nameof(ExpandedMailData)));
 
-		var folders = JsonSerializer.Deserialize<ExpandedMailData>(JsonSerializer.Serialize(stored))!.Folders!;
+		var data = JsonSerializer.Deserialize<ExpandedMailData>(JsonSerializer.Serialize(stored))!;
+		var folders = data.Folders!;
 
 		await Assert.That(folders).IsEquivalentTo(Enumerable.Range(0, 6).Select(i => $"Folder{i}"));
+		// Each new folder took a number of its own.
+		await Assert.That(data.FolderNumbers!.Values).IsEquivalentTo(Enumerable.Range(1, 6));
 	}
 }

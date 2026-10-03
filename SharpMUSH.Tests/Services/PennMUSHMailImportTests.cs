@@ -1,6 +1,8 @@
 ﻿using System.Text;
+using System.Text.Json;
 using DotNext.Threading;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -194,7 +196,10 @@ public class PennMUSHMailImportTests
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
-	/// <summary>A folder the recipient named in MAILFOLDERS keeps that name; a message cut off is reported, the rest kept.</summary>
+	/// <summary>
+	/// A folder the recipient named in MAILFOLDERS keeps that name and its number, so <c>maillist()</c> writes
+	/// <c>2:1</c> for it as PennMUSH did (#1494); a message cut off is reported, the rest kept.
+	/// </summary>
 	[Test]
 	public async Task NamedFoldersAndATruncatedMaildb()
 	{
@@ -213,6 +218,11 @@ public class PennMUSHMailImportTests
 		await Assert.That(result.Warnings).Contains(w => w.StartsWith("The maildb holds 2 mail message(s) but only 1 could be read"));
 		await Assert.That(await MailboxAsync(world, 4)).IsEquivalentTo(new[] { "#3|Keep|Filed|SAVED|read" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		var bob = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 4)).Expect<SharpPlayer>();
+		var stored = await world.Mediator.Send(new ExpandedDataQuery(bob.Object, nameof(ExpandedMailData)));
+		await Assert.That(JsonSerializer.Deserialize<ExpandedMailData>(JsonSerializer.Serialize(stored))!.FolderNumbers)
+			.IsEquivalentTo(new Dictionary<string, int> { ["SAVED"] = 2 });
 	}
 
 	private static async Task<string[]> MailboxAsync(IsolatedImportWorld world, int dbref)
