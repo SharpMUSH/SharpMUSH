@@ -96,14 +96,6 @@
 	min-width: 0;
 }
 
-.mail-row-dot {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--accent);
-	flex-shrink: 0;
-}
-
 .mail-row-from {
 	flex: 1 1 auto;
 	min-width: 0;

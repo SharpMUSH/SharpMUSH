@@ -1,0 +1,11 @@
+.kit-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+	flex-shrink: 0;
+}
+
+.kit-dot--off {
+	background: var(--text-faint);
+}

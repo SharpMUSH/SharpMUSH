@@ -9,14 +9,14 @@
    over every list /api/scenes serves (All, Live now, Your scenes for a viewer acting as a character,
    Scheduled, Finished), and up to five running scenes as image rows into their live view. Collapsed
    keeps the browse icons and the scene leads. *@
-<div class="scenes-side @(Collapsed ? "scenes-side--collapsed" : null)">
+<SidebarPanel Class="scenes-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["SceneArchive"]">
             <Sub>
                 @if (_live is not null)
                 {
-                    <span class="scenes-side-dot" aria-hidden="true"></span>
+                    <StatusDot Class="scenes-side-dot" />
                     <span>@Loc.Plural("NavScenesLiveCount", "count", _live.Count)</span>
                 }
                 @if (_recent is not null)
@@ -28,7 +28,7 @@
         </SidebarHead>
         <SectionLabel>@Loc["NavScenesBrowse"]</SectionLabel>
     }
-    <nav class="scenes-side-browse" aria-label="@Loc["NavScenesBrowse"]">
+    <SidebarGroup Class="scenes-side-browse" Label="@Loc["NavScenesBrowse"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["NavScenesAll"]"
                     Href="/scenes" IsCurrent="@(_path == "/scenes" && _filter == ScenesFilter.All)" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Sensors" Label="@Loc["NavScenesLive"]" Count="@_live?.Count"
@@ -42,15 +42,15 @@
                     Href="@ScenesFilter.Href(ScenesFilter.Scheduled)" IsCurrent="@IsFilter(ScenesFilter.Scheduled)" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Inventory2" Label="@Loc["NavScenesFinished"]"
                     Href="@ScenesFilter.Href(ScenesFilter.Finished)" IsCurrent="@IsFilter(ScenesFilter.Finished)" Collapsed="@Collapsed" />
-    </nav>
+    </SidebarGroup>
     @if (!Collapsed)
     {
         <SectionLabel>@Loc["NavScenesLive"]</SectionLabel>
     }
-    <nav class="scenes-side-live" aria-label="@Loc["NavScenesLive"]">
+    <SidebarGroup Class="scenes-side-live" Label="@Loc["NavScenesLive"]">
         @if (_live is { Count: 0 } && !Collapsed)
         {
-            <div class="scenes-side-empty">@Loc["WidNoActiveScenes"]</div>
+            <SidebarNote>@Loc["WidNoActiveScenes"]</SidebarNote>
         }
         @foreach (var scene in (_live ?? []).Take(LiveShown))
         {
@@ -59,8 +59,8 @@
                         Name="@title" Label="@title" Sub="@scene.RoomName" Href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}/live")"
                         IsCurrent="@IsScene(scene)" Collapsed="@Collapsed" />
         }
-    </nav>
-</div>
+    </SidebarGroup>
+</SidebarPanel>
 
 @code {
     /// <summary>Only the leads, for the collapsed strip.</summary>

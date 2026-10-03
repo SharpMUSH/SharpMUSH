@@ -36,7 +36,7 @@ else if (Article is null)
         @* Embedded on another page, there is no wiki the reader came from, so no way "back" to it. *@
         @if (!Embedded)
         {
-            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
+            <BackLink Class="wiki-back" Href="/wiki">@Loc["Wiki"]</BackLink>
         }
         <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
             <AuthorizeView Policy="wiki.create">
@@ -174,14 +174,14 @@ else
                             <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
                         </Controls>
                         <ChildContent>
-                        <div class="wiki-more-rows">
+                        <CardRows>
                             @foreach (var sibling in _more)
                             {
                                 var page2 = sibling;
                                 <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
                                             Href="@WikiRoutes.PathFor(page2.Namespace, page2.Category, page2.Slug)" />
                             }
-                        </div>
+                        </CardRows>
                         </ChildContent>
                     </KitCard>
                 }

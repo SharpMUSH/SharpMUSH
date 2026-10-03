@@ -13,7 +13,7 @@
 
     @* The kit's chips switch the two lists, as on the media library. Only the chosen list is rendered,
        and each branch is its own component, so switching loads that list afresh. *@
-    <div class="restr-body">
+    <div class="page-stack restr-body">
         <TypeChips Items="@Tables" Selected="@_table" SelectedChanged="@(t => _table = t)" AriaLabel="@Loc["Restrictions"]" />
 
         @if (_table == FunctionsTable)

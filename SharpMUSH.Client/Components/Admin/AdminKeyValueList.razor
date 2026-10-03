@@ -13,7 +13,7 @@
 @* D1 frame: the add form is a kit card of MudBlazor fields with the one primary capsule, the list a
    kit card of rows. The fields used to be raw inputs whose styling lived in each page's scoped CSS,
    which never reaches into this component, so they rendered as bare white boxes. *@
-<div class="kvl">
+<div class="page-stack kvl">
     @if (_loading)
     {
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />

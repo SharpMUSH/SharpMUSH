@@ -12,7 +12,7 @@
 
 <PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="layedit full-bleed">
+<div class="page-stack page-stack--padded layedit full-bleed">
     <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="layedit-back-icon" /> @Loc["LayAllLayouts"]</a>
     <PlainPageHeader Kicker="@Loc["LayLayoutsKicker"]" Title="@ScopeLabel"
                      Description="@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)">

@@ -7,7 +7,7 @@
 
 @* D1 §6.5 Settings page sidebar: "Settings" and who is signed in, the overview, Account (the
    account page and its characters) and Preferences (theme). Collapsed keeps each row's icon. *@
-<div class="settings-side @(Collapsed ? "settings-side--collapsed" : null)">
+<SidebarPanel Class="settings-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Settings"]">
@@ -19,30 +19,30 @@
             </Sub>
         </SidebarHead>
     }
-    <nav class="settings-side-group" aria-label="@Loc["Settings"]">
+    <SidebarGroup Label="@Loc["Settings"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Tune" Label="@Loc["NavSettingsOverview"]"
                     Href="/settings" IsCurrent="@(_path == "/settings")" Collapsed="@Collapsed" />
-    </nav>
+    </SidebarGroup>
     @if (!Collapsed)
     {
         <SectionLabel>@Loc["NavSettingsGroupAccount"]</SectionLabel>
     }
-    <nav class="settings-side-group" aria-label="@Loc["NavSettingsGroupAccount"]">
+    <SidebarGroup Label="@Loc["NavSettingsGroupAccount"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.ManageAccounts" Label="@Loc["AuthAccount"]"
                     Href="/account" IsCurrent="@(_path == "/account")" Collapsed="@Collapsed" />
         @* The characters linked to the account are managed on the account page, in their own card. *@
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.People" Label="@Loc["Characters"]"
                     Href="/account#characters" Collapsed="@Collapsed" />
-    </nav>
+    </SidebarGroup>
     @if (!Collapsed)
     {
         <SectionLabel>@Loc["NavSettingsGroupPreferences"]</SectionLabel>
     }
-    <nav class="settings-side-group" aria-label="@Loc["NavSettingsGroupPreferences"]">
+    <SidebarGroup Label="@Loc["NavSettingsGroupPreferences"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Palette" Label="@Loc["NavTheme"]"
                     Href="/settings/theme" IsCurrent="@(_path == "/settings/theme")" Collapsed="@Collapsed" />
-    </nav>
-</div>
+    </SidebarGroup>
+</SidebarPanel>
 
 @code {
     /// <summary>Only the icons, for the collapsed strip.</summary>

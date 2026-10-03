@@ -9,14 +9,14 @@
    getting-started entries the corpus has), a slice of the topic list — the matches while searching,
    otherwise the neighbours of the topic being read, never all ~1500 — and Admin help for Wizard and
    God, who alone are asked the admin index. Collapsed keeps the browse icons. *@
-<div class="help-side @(Collapsed ? "help-side--collapsed" : null)">
+<SidebarPanel Class="help-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Help"]" Sub="@HeadSub" />
         <SidebarSearch Placeholder="@Loc["NavHelpSearch"]" OnSearch="Search" />
         <SectionLabel>@Loc["NavHelpBrowse"]</SectionLabel>
     }
-    <nav class="help-side-browse" aria-label="@Loc["NavHelpBrowse"]">
+    <SidebarGroup Class="help-side-browse" Label="@Loc["NavHelpBrowse"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavHelpIndex"]"
                     Href="/help" IsCurrent="@(_path == "/help")" Collapsed="@Collapsed" />
         @foreach (var (topic, label, icon) in Starters())
@@ -24,19 +24,19 @@
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@icon" Label="@label"
                         Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" Collapsed="@Collapsed" />
         }
-    </nav>
+    </SidebarGroup>
     @* A game with no help files has no topics to list, so no heading over nothing. *@
     @if (!Collapsed && _index is { Topics.Count: > 0 })
     {
         var (label, topics) = TopicSlice();
         <SectionLabel Class="help-side-topics-label">@label</SectionLabel>
-        <nav class="help-side-topics" aria-label="@Loc["NavHelpTopics"]">
+        <SidebarGroup Class="help-side-topics" Label="@Loc["NavHelpTopics"]">
             @foreach (var topic in topics)
             {
-                <SidebarRow Class="help-side-topic" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
+                <SidebarRow Class="help-side-topic" Mono="true" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
                             Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" />
             }
-        </nav>
+        </SidebarGroup>
     }
     <AuthorizeView Roles="Wizard,God">
         <Authorized>
@@ -44,21 +44,21 @@
             {
                 <SectionLabel>@Loc["NavHelpAdmin"]</SectionLabel>
             }
-            <nav class="help-side-admin" aria-label="@Loc["NavHelpAdmin"]">
+            <SidebarGroup Class="help-side-admin" Label="@Loc["NavHelpAdmin"]">
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.AdminPanelSettings" Label="@Loc["NavHelpAdminIndex"]"
                             Href="@AdminHref(AdminIndexTopic)" IsCurrent="@IsAdminTopic(AdminIndexTopic)" Collapsed="@Collapsed" />
                 @if (!Collapsed && _adminIndex is not null)
                 {
                     @foreach (var topic in Slice(_adminIndex.Topics, _adminTopic, AdminIndexTopic))
                     {
-                        <SidebarRow Class="help-side-topic" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
+                        <SidebarRow Class="help-side-topic" Mono="true" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
                                     Href="@AdminHref(topic)" IsCurrent="@IsAdminTopic(topic)" />
                     }
                 }
-            </nav>
+            </SidebarGroup>
         </Authorized>
     </AuthorizeView>
-</div>
+</SidebarPanel>
 
 @code {
     /// <summary>Only the icons, for the collapsed strip.</summary>

@@ -43,21 +43,6 @@
 	gap: 12px;
 }
 
-.char-dir-skeleton {
-	height: 124px;
-	border-radius: var(--radius-card);
-	background: var(--surface);
-	border: 1px solid var(--border-soft);
-}
-
-.char-dir-empty {
-	padding: 24px;
-	border: 1px dashed var(--border);
-	border-radius: var(--radius-card);
-	color: var(--text-dim);
-	text-align: center;
-}
-
 /* a narrow zone (an aside) gives the search the whole row */
 @container (max-width: 20rem) {
 	.char-dir-search {

@@ -39,6 +39,11 @@
 
 .kit-row--dim { color: var(--text-dim); }
 
+.kit-row--mono .kit-row-label {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
 .kit-row--unread {
 	font-weight: 700;
 	color: var(--text);

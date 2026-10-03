@@ -1,0 +1,13 @@
+@* One labelled group of sidebar rows (Browse, Folders, Online now): a <nav> named for screen
+   readers by the section label shown above it. *@
+<nav class="kit-side-group @Class" aria-label="@Label">
+    @ChildContent
+</nav>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The group's accessible name; the visible <see cref="SectionLabel"/> sits outside it.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,11 +1,3 @@
-.roleadmin {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: var(--main-pad);
-    min-width: 0;
-}
-
 .ra-grow { flex: 1; min-width: 0; }
 .ra-titles { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
 

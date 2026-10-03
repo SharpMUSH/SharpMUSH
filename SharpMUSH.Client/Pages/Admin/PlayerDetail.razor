@@ -4,16 +4,7 @@
 
 <PageTitle>@Loc["AdmPlayerNumber", Id] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="adm-soon">
-    <PlainPageHeader Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Loc["AdmPlayerNumber", Id]" />
-
-    <KitCard>
-        <div class="adm-soon-empty">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Class="adm-soon-icon" />
-            <div class="adm-soon-text">@Loc["AdmPlayerDetailComingSoon"]</div>
-        </div>
-    </KitCard>
-</div>
+<AdminComingSoon Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Loc["AdmPlayerNumber", Id]" Icon="@Icons.Material.Filled.Person" Message="@Loc["AdmPlayerDetailComingSoon"]" />
 
 @code {
     [Parameter]

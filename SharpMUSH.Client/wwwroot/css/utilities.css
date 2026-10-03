@@ -9,3 +9,16 @@
 	gap: 0.75rem;
 	flex-wrap: wrap;
 }
+
+/* A page or panel body: its sections stacked 16px apart. --padded adds the main column's own
+   padding, for pages whose layout leaves it to them (the admin pages). */
+.page-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
+}
+
+.page-stack--padded {
+	padding: var(--main-pad);
+}

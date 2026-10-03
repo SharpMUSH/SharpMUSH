@@ -27,14 +27,14 @@
         }
         else
         {
-            <div class="recent-scenes-rows">
+            <CardRows Class="recent-scenes-rows">
                 @foreach (var scene in _scenes)
                 {
                     <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(scene)"
                                 Name="@TitleOf(scene)" Label="@TitleOf(scene)" Sub="@(scene.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(scene.LastActivityAtUtc))"
                                 Href="@(scene.IsLive ? $"/scenes/{scene.Id}/live" : $"/scenes/{scene.Id}")" />
                 }
-            </div>
+            </CardRows>
         }
     </KitCard>
 </div>

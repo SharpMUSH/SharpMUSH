@@ -11,7 +11,7 @@
    the page as the wiki home and the profile do. Admins recompose both in the layout editor; a
    layout with nothing in the aside zone (one saved before the zone existed) has no aside at all. *@
 <div class="home-page @(_hasAside ? "home-page--aside" : null)">
-    <div class="home-main">
+    <div class="page-stack home-main">
         <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["HomeWhatsHappening"]" />
         <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
     </div>

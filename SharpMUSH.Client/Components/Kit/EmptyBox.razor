@@ -1,0 +1,7 @@
+@* The dashed box a list or grid shows in its place when it has nothing to list, or could not be read. *@
+<div class="kit-empty-box @Class">@ChildContent</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

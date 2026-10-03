@@ -12,7 +12,7 @@
    indented rows with setting counts, and Maintenance (Import, Export) pinned to the bottom. Hosted
    by ConfigLayout until the shell's page-sidebar slot exists (Phase 1); Collapsed renders the group
    icons only, each linking to the group's first section. *@
-<div class="config-side @(Collapsed ? "config-side--collapsed" : null)">
+<SidebarPanel Class="config-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         @if (_back is not null)
@@ -53,7 +53,7 @@
             }
         }
     </nav>
-    <div class="config-side-spacer"></div>
+    <SidebarSpacer />
     <div class="config-side-maint">
         @if (!Collapsed)
         {
@@ -62,7 +62,7 @@
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Upload" Label="@Loc["Import"]" Href="/admin/config/import" IsCurrent="@_onImport" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Download" Label="@Loc["Export"]" OnClick="ExportAsync" Collapsed="@Collapsed" />
     </div>
-</div>
+</SidebarPanel>
 
 @code {
     /// <summary>Where "‹ Build &amp; manage" goes: the section's first other page this viewer may use, or

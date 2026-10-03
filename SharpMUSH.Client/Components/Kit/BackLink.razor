@@ -1,0 +1,11 @@
+@* The dim "‹ Where you came from" link above a page's header. *@
+<a class="kit-back @Class" href="@Href">
+    <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Class="kit-back-icon" />
+    @ChildContent
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

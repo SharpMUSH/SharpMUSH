@@ -13,7 +13,7 @@
    an aside of the admin tools the viewer may use plus how changes apply. Counts come from the
    schema; when it cannot be read the cards stay usable and the alert says why. *@
 <div class="config-home">
-    <div class="config-home-main">
+    <div class="page-stack config-home-main">
         <PlainPageHeader Kicker="@Loc["ResConfigHomeKicker"]" Title="@Loc["ServerConfiguration"]" Description="@Loc["ManageAllSettings"]" />
 
         @* The six cards need nothing from the schema; only their counts do, so they render at once. *@
@@ -33,7 +33,7 @@
                     var more = g.Sections.Count - shown.Count;
                     <a class="config-cat-card" href="@g.FirstRoute">
                         <div class="config-cat-head">
-                            <span class="config-cat-icon" aria-hidden="true"><MudIcon Icon="@g.Icon" Size="Size.Small" /></span>
+                            <IconTile Icon="@g.Icon" />
                             <div class="config-cat-titles">
                                 <div class="config-cat-title">
                                     @Loc[g.TitleKey]

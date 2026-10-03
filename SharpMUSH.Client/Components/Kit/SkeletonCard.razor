@@ -1,0 +1,7 @@
+@* A placeholder the shape of a card, held in a list's place while it loads. *@
+<div class="kit-skeleton-card" style="@($"height:{Height}px")" aria-hidden="true"></div>
+
+@code {
+    /// <summary>The height of the card it stands in for, in pixels.</summary>
+    [Parameter, EditorRequired] public int Height { get; set; }
+}

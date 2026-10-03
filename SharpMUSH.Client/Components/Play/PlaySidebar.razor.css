@@ -9,18 +9,6 @@
 	gap: 6px;
 }
 
-.play-side-dot {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--text-faint);
-	flex-shrink: 0;
-}
-
-.play-side-dot--on {
-	background: var(--accent);
-}
-
 .play-side-scene,
 .play-side-channels,
 .play-side-pages {

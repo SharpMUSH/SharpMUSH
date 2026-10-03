@@ -48,6 +48,9 @@ else
     [Parameter] public int Unread { get; set; }
     [Parameter] public bool IsCurrent { get; set; }
     [Parameter] public bool Dim { get; set; }
+
+    /// <summary>The label in the mono face, for names spelled as the game spells them (help topics).</summary>
+    [Parameter] public bool Mono { get; set; }
     [Parameter] public bool Collapsed { get; set; }
     [Parameter] public string? Href { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
@@ -67,6 +70,7 @@ else
         IsCurrent ? "kit-row--current" : null,
         Unread > 0 ? "kit-row--unread" : null,
         Dim ? "kit-row--dim" : null,
+        Mono ? "kit-row--mono" : null,
         Collapsed ? "kit-row--collapsed" : null,
         Sub is not null ? "kit-row--two-line" : null,
         Class,

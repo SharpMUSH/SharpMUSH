@@ -1,4 +1,4 @@
-.build-side {
+.kit-side {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
@@ -7,13 +7,6 @@
 	box-sizing: border-box;
 }
 
-.build-side--collapsed {
+.kit-side--collapsed {
 	padding: 12px 4px;
-}
-
-.build-side-group {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	margin-bottom: 8px;
 }

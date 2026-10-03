@@ -9,7 +9,7 @@
 @* D1 §6.5: the plain header over a grid of linked tool cards, laid out like the configuration home
    (board 27). Each card sits behind the same gate as the page it opens, so a viewer is only offered
    the tools they can actually use. *@
-<div class="adm-dash">
+<div class="page-stack page-stack--padded adm-dash">
     <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmDashboardTitle"]" />
 
     @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
@@ -25,14 +25,7 @@
     <div class="adm-dash-grid">
         @foreach (var card in _visible)
         {
-            <a href="@card.Href" class="adm-dash-card">
-                <span class="adm-dash-icon" aria-hidden="true"><MudIcon Icon="@card.Icon" Size="Size.Small" /></span>
-                <span class="adm-dash-text">
-                    <span class="adm-dash-title">@Loc[card.TitleKey]</span>
-                    <span class="adm-dash-desc">@Loc[card.ActionKey]</span>
-                </span>
-                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="adm-dash-chevron" />
-            </a>
+            <LinkCard Class="adm-dash-card" Href="@card.Href" Icon="@card.Icon" Title="@Loc[card.TitleKey]" Description="@Loc[card.ActionKey]" />
         }
     </div>
 </div>

@@ -9,7 +9,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["JobsTitle"]</PageTitle>
-<div class="jobs">
+<div class="page-stack page-stack--padded jobs">
     <PlainPageHeader Kicker="@Loc["AdmJobsKicker"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</CapsuleButton>

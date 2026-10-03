@@ -1,0 +1,7 @@
+@* The 40px accent tile an icon sits in at the head of a card (settings, dashboard, config groups). *@
+<span class="kit-icon-tile @Class" aria-hidden="true"><MudIcon Icon="@Icon" Size="Size.Small" /></span>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string? Class { get; set; }
+}

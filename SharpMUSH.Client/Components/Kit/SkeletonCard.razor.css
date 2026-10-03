@@ -1,0 +1,5 @@
+.kit-skeleton-card {
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
+}

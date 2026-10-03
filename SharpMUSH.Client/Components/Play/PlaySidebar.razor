@@ -16,7 +16,7 @@
     {
         <SidebarHead Title="@Loc["Play"]">
             <Sub>
-                <span class="play-side-dot @(Connected ? "play-side-dot--on" : null)" aria-hidden="true"></span>
+                <StatusDot On="@Connected" />
                 <span>@(Connected && !string.IsNullOrWhiteSpace(CharacterName) ? Loc["NavPlayConnectedAs", CharacterName] : Loc["Disconnected"])</span>
             </Sub>
         </SidebarHead>

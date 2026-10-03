@@ -10,14 +10,14 @@
    that lands on the directory, Online now (up to eight, then "All N online"), Your characters
    with Create a character for a signed-in account, and Browse (All characters, Newest). Collapsed
    keeps the online avatars and the account's own. *@
-<div class="char-side @(Collapsed ? "char-side--collapsed" : null)">
+<SidebarPanel Class="char-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Characters"]">
             <Sub>
                 @if (_online is not null)
                 {
-                    <span class="char-side-dot" aria-hidden="true"></span>
+                    <StatusDot Class="char-side-dot" />
                     <span>@Loc.Plural("NavCharOnlineCount", "count", _online.Count)</span>
                 }
                 @if (_all is not null)
@@ -30,10 +30,10 @@
         <SidebarSearch Placeholder="@Loc["NavCharSearch"]" OnSearch="Search" />
         <SectionLabel>@Loc["NavCharOnlineNow"]</SectionLabel>
     }
-    <nav class="char-side-online" aria-label="@Loc["NavCharOnlineNow"]">
+    <SidebarGroup Class="char-side-online" Label="@Loc["NavCharOnlineNow"]">
         @if (_online is { Count: 0 } && !Collapsed)
         {
-            <div class="char-side-empty">@Loc["NavCharNoneOnline"]</div>
+            <SidebarNote>@Loc["NavCharNoneOnline"]</SidebarNote>
         }
         @foreach (var row in (_online ?? []).Take(OnlineShown))
         {
@@ -46,14 +46,14 @@
         {
             <a class="char-side-all-online" href="/characters?online=1">@Loc.Plural("NavCharAllOnline", "count", _online.Count)</a>
         }
-    </nav>
+    </SidebarGroup>
     @if (_mine.Count > 0 || AccountAuth.IsLoggedIn)
     {
         @if (!Collapsed)
         {
             <SectionLabel>@Loc["NavCharYourCharacters"]</SectionLabel>
         }
-        <nav class="char-side-mine" aria-label="@Loc["NavCharYourCharacters"]">
+        <SidebarGroup Class="char-side-mine" Label="@Loc["NavCharYourCharacters"]">
             @foreach (var mine in _mine)
             {
                 var m = mine;
@@ -71,19 +71,19 @@
                     <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["NavCharCreate"]
                 </a>
             }
-        </nav>
+        </SidebarGroup>
     }
     @if (!Collapsed)
     {
         <SectionLabel>@Loc["NavCharBrowse"]</SectionLabel>
-        <nav class="char-side-browse" aria-label="@Loc["NavCharBrowse"]">
+        <SidebarGroup Class="char-side-browse" Label="@Loc["NavCharBrowse"]">
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Groups" Label="@Loc["NavCharAll"]" Count="@_all?.Count"
                         Href="/characters" IsCurrent="@(_path == "/characters" && _query.Length == 0)" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.StarBorder" Label="@Loc["NavCharNewest"]" Count="@_all?.Count(IsNew)"
                         Href="/characters?new=1" IsCurrent="@(_path == "/characters" && _query == "?new=1")" />
-        </nav>
+        </SidebarGroup>
     }
-</div>
+</SidebarPanel>
 
 @code {
     /// <summary>Only the leads, for the collapsed strip (board 26).</summary>

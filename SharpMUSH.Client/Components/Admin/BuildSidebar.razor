@@ -12,7 +12,7 @@
 @* D1 §3 Build & manage page sidebar: the Build and Manage destinations the viewer may use (the same
    gates as the rail and the drawer, from BuildNavCatalog) and, under Apps, the applications placed
    in either section. Collapsed keeps each row's icon. *@
-<div class="build-side @(Collapsed ? "build-side--collapsed" : null)">
+<SidebarPanel Class="build-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["NavBuildManage"]">
@@ -26,14 +26,14 @@
         {
             <SectionLabel>@label</SectionLabel>
         }
-        <nav class="build-side-group" aria-label="@label">
+        <SidebarGroup Label="@label">
             @foreach (var entry in group)
             {
                 var e = entry;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@e.Icon" Label="@Loc[e.LabelKey]" Href="@e.Href"
                             IsCurrent="@IsCurrent(e.Href, e.ExactMatch)" Collapsed="@Collapsed" />
             }
-        </nav>
+        </SidebarGroup>
     }
     @if (_apps.Count > 0)
     {
@@ -41,16 +41,16 @@
         {
             <SectionLabel>@Loc["NavApps"]</SectionLabel>
         }
-        <nav class="build-side-group" aria-label="@Loc["NavApps"]">
+        <SidebarGroup Label="@Loc["NavApps"]">
             @foreach (var app in _apps)
             {
                 var a = app;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
                             Label="@a.DisplayName" Href="@($"/apps/{a.Slug}")" IsCurrent="@IsCurrent($"/apps/{a.Slug}", false)" Collapsed="@Collapsed" />
             }
-        </nav>
+        </SidebarGroup>
     }
-</div>
+</SidebarPanel>
 
 @code {
     [Parameter] public bool Collapsed { get; set; }
