@@ -222,26 +222,6 @@ jobs:
         run: >-
           dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8
 
-      - name: Report failed tests (temporary diagnostic)
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import glob, xml.etree.ElementTree as ET
-          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
-          names = []
-          for path in glob.glob('TestResults/unit/**/*.trx', recursive=True):
-              for r in ET.parse(path).getroot().iterfind('.//t:UnitTestResult', ns):
-                  if r.get('outcome') != 'Failed':
-                      continue
-                  names.append(r.get('testName'))
-                  msg = r.findtext('.//t:Message', default='', namespaces=ns)
-                  trace = r.findtext('.//t:StackTrace', default='', namespaces=ns)
-                  body = (msg + '\n' + trace)[:2500].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
-                  if len(names) <= 9:
-                      print(f"::error title={r.get('testName')}::{body}")
-          print("::warning title=Failed tests (%d)::%s" % (len(names), '%0A'.join(names)[:6000]))
-          PY
-
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
