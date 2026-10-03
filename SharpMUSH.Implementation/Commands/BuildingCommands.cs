@@ -349,7 +349,7 @@ public partial class Commands
 		// do_destroy names its target with unparse_object (src/destroy.c:377, :391, :405) — the name
 		// plus the dbref and flag letters a viewer allowed to see them gets — not the bare name.
 		// Which of the three player wordings applies is destroy_possessions and really_safe (:369-377).
-		var destroyed = await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj);
+		var destroyed = await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService);
 		var destroyKey = !obj.IsPlayer || !Configuration.CurrentValue.Command.DestroyPossessions
 			? nameof(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat)
 			: reallySafe

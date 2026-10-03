@@ -6,7 +6,8 @@ namespace SharpMUSH.Configuration;
 /// <summary>
 /// A PennMUSH configuration read into SharpMUSH's, and the lines of it that were not carried over,
 /// each with the reason: an <c>include</c> that could not be read, a restriction with no value, one a
-/// later line replaced, or a <c>restrict_*</c> directive SharpMUSH has nothing for.
+/// later line replaced, a <c>restrict_*</c> directive SharpMUSH has nothing for, or a value outside its
+/// option's declared range that was clamped to the bound (<see cref="ConfigBounds"/>).
 /// </summary>
 /// <param name="Named">
 /// The configuration names (<c>http_handler</c>, <c>master_room</c>, ...) the file gave a value. Every other

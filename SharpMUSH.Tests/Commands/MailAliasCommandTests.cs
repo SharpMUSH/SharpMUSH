@@ -76,6 +76,27 @@ public class MailAliasCommandTests
 	}
 
 	/// <summary>
+	/// <c>lookup_player</c> (<c>src/plyrlist.c:163-177</c>) tests <c>#</c> on the name as given and then
+	/// drops one <c>*</c>: <c>*#42</c> is a player named <c>#42</c> and <c>**Name</c> one named
+	/// <c>*Name</c>, so neither is anybody (#1391).
+	/// </summary>
+	[Test]
+	public async ValueTask TheLookupTokenIsDroppedOnceAndOnlyAfterTheDbrefTest()
+	{
+		var owner = await PlayerAsync("MalTok");
+		var member = await PlayerAsync("MalTokMem");
+		var alias = UniqueAlias("T");
+
+		var output = await RunAsync(owner,
+			$"@malias/create {alias}=*{member.Name} *#{member.DbRef.Number} **{member.Name}");
+
+		await Assert.That(output).Contains(m => m.StartsWith("MAIL: ") && m.EndsWith($" added to alias {alias}"));
+		await Assert.That(output).Contains($"MAIL: No such player '*#{member.DbRef.Number}'.");
+		await Assert.That(output).Contains($"MAIL: No such player '**{member.Name}'.");
+		await Assert.That(output).Contains($"MAIL: Alias set '{alias}' defined.");
+	}
+
+	/// <summary>
 	/// A new alias may be used by its owner and members (<c>nflags</c> Owner|Members) and its members seen
 	/// only by its owner (<c>mflags</c> Owner). Admin see the members of any alias they can find.
 	/// </summary>

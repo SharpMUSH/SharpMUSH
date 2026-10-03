@@ -36,7 +36,7 @@ public record ChatOptions(
 		ValidationPattern = @"^\d+$",
 		Group = "Limits",
 		Order = 2,
-		Min = 1,
+		Min = 0,
 		Max = 100)]
 	uint MaxPlayerChannels,
 

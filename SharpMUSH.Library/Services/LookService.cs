@@ -142,7 +142,8 @@ public class LookService(
 		// arrives through a transparent exit.
 		if (!lookThroughExit)
 		{
-			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject);
+			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject,
+				await FlagView.ForAsync(looker, connectionService));
 
 			formattedName = defaultFormattedName;
 			if (realViewing.IsRoom && viewingFromInside)
@@ -283,11 +284,12 @@ public class LookService(
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
 				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+				var flagView = await FlagView.ForAsync(looker, connectionService);
 				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
 				{
 					if (canSeeAll)
 					{
-						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object());
+						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
 					}
 					return MarkupText.Plain(item.Object().Name);
 				}));

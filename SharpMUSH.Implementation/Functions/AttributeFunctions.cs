@@ -279,8 +279,9 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
-					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
+					// fun_flags is unparse_flags (src/flags.c:1638): the type letter, then the flags in bit order.
+					return await MessageFormatting.FlagSymbolsAsync(found.Object(),
+						await FlagView.ForAsync(executor, ConnectionService));
 				}
 
 				var attr = await AttributeService.LazilyGetAttributeAsync(
@@ -647,8 +648,9 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
-					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
+					// fun_lflags is bits_to_string (src/flags.c:1432): names in bit order, no type.
+					return string.Join(" ", (await MessageFormatting.VisibleFlagsAsync(found.Object(),
+						await FlagView.ForAsync(executor, ConnectionService))).Select(x => x.Name));
 				}
 
 				var attr = await AttributeService.LazilyGetAttributeAsync(

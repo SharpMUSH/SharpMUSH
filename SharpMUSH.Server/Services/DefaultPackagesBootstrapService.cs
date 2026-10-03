@@ -105,6 +105,15 @@ public class DefaultPackagesBootstrapService(
 		return installed;
 	}
 
+	/// <inheritdoc />
+	public string? RequiredHandlerOption(string packageId)
+		=> BundledPackages.All.FirstOrDefault(p => p.PackageId == packageId).Requires switch
+		{
+			BundledPackageHandler.Http => "http_handler",
+			BundledPackageHandler.Event => "event_handler",
+			_ => null
+		};
+
 	/// <summary>
 	/// Whether the handler object an attach-mode package lands on is configured; a create-mode package
 	/// needs none.

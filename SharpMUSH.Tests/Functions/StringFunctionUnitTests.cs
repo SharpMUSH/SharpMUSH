@@ -443,11 +443,9 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	// TODO: Fix decomposeweb, and then fix this test.
-	// hr is bright red, which resolves through the xterm palette to #FF5555 rather than to a
-	// System.Drawing named colour.
-	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:#FF5555;background-color:inherit;text-decoration:inherit"">red</span>")]
-	// TODO: decompsoe is not matching 'b' correctly it seems.
+	// decomposeweb() is the HTML render (#1513): text is escaped, colour is the renderer's own markup.
+	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color: #ff5555"">red</span>")]
+	[Arguments("decomposeweb(a<b>&c)", "a&lt;b&gt;&amp;c")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

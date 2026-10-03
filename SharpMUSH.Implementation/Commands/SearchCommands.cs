@@ -71,7 +71,7 @@ public partial class Commands
 				continue;
 			}
 
-			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node), executor);
+			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node, ConnectionService), executor);
 			count++;
 		}
 
@@ -167,6 +167,7 @@ public partial class Commands
 		// heading, or one of do_scan's four "Matched <where>:" one-liners.
 		async ValueTask Report(string key, List<(AnySharpObject Obj, List<string> Attributes)> matches)
 		{
+			var flagView = await FlagView.ForAsync(executor, ConnectionService);
 			foreach (var (obj, attributes) in matches)
 			{
 				var dbref = obj.Object().DBRef.Number;
@@ -175,7 +176,7 @@ public partial class Commands
 				var attributeList = string.Concat(attributes.Select(attribute => $" #{dbref}/{attribute}"));
 
 				await NotifyService.NotifyLocalizedMarkup(executor, key, executor,
-					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object()),
+					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object(), flagView),
 					MarkupText.Plain(attributes.Count.ToString()),
 					MarkupText.Plain(attributeList));
 			}
@@ -381,7 +382,7 @@ public partial class Commands
 		}
 
 		async ValueTask<string> Header(AnySharpObject obj)
-			=> await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj);
+			=> await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService);
 
 		async ValueTask<string> HeaderOrNowhere(DBRef? dbref)
 			=> dbref is { } where && await Mediator.Send(new GetObjectNodeQuery(where)) is AnySharpObject node

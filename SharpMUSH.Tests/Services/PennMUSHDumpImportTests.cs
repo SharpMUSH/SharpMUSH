@@ -99,6 +99,20 @@ public class PennMUSHDumpImportTests
 		await Assert.That((await hall.Expect<SharpRoom>().Location.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// Every flag and power alias a stock 1.8.8 table carries resolves here (#1508), so softcode that
+	/// writes <c>haspower(%#, tel_anywhere)</c> or <c>@set me=vacation</c> keeps working.
+	/// </summary>
+	[Test]
+	public async Task EveryAliasTheStockTableCarriesResolves()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
+
+		await Assert.That(result.Warnings.Where(w => w.Contains("does not answer to") || w.Contains("names it in the source")))
+			.IsEmpty();
+	}
+
 	private static async Task<IsolatedImportWorld> ImportAsync()
 	{
 		var world = await IsolatedImportWorld.CreateAsync();

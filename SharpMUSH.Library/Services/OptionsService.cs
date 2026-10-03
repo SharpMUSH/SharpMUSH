@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
@@ -19,7 +21,8 @@ namespace SharpMUSH.Library.Services;
 /// </remarks>
 public class OptionsService(
 	IExpandedDataStore database,
-	IEnumerable<IValidateOptions<SharpMUSHOptions>> validations) : IOptionsFactory<SharpMUSHOptions>
+	IEnumerable<IValidateOptions<SharpMUSHOptions>> validations,
+	ILogger<OptionsService>? logger = null) : IOptionsFactory<SharpMUSHOptions>
 {
 	public SharpMUSHOptions Create(string name)
 	{
@@ -28,7 +31,7 @@ public class OptionsService(
 
 		if (data is not null)
 		{
-			return Validated(name, data);
+			return Clamped(name, data);
 		}
 
 		// Validated BEFORE it is stored. This branch only runs when nothing is stored, so a rejected
@@ -40,6 +43,31 @@ public class OptionsService(
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return defaultSettings;
+	}
+
+	/// <summary>
+	/// The stored document held to every option's declared range, and stored again when that moved a value.
+	/// A document written before the ranges were enforced can hold a value that is now out of range (a
+	/// queue limit of 0 refuses every queue entry), and only the write paths clamp.
+	/// </summary>
+	private SharpMUSHOptions Clamped(string name, SharpMUSHOptions stored)
+	{
+		var corrections = new List<ConfigBoundCorrection>();
+		var clamped = ConfigBounds.ClampAll(stored, corrections.Add);
+		if (corrections.Count == 0)
+		{
+			return Validated(name, stored);
+		}
+
+		var validated = Validated(name, clamped);
+		database.SetExpandedServerData(nameof(SharpMUSHOptions), validated)
+			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+		foreach (var correction in corrections)
+		{
+			logger?.LogWarning("Stored configuration corrected: {Correction}", correction);
+		}
+
+		return validated;
 	}
 
 	/// <summary>
