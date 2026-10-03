@@ -100,6 +100,14 @@ public partial class Commands
 				continue;
 			}
 
+			// PennMUSH do_cpattr (src/set.c:751-753) skips a destination that is the source attribute itself:
+			// counting it would let @mvattr clear the only copy.
+			if (destObject.Object().DBRef == sourceObject.Object().DBRef
+				&& targetAttrName.Equals(sourceAttr, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
 			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{

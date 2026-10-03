@@ -115,6 +115,44 @@ public class PartialsNormalisationTests
 	}
 
 	/// <summary>
+	/// A refused @chown changes nothing: <c>do_chown</c> runs <c>chown_object</c> only after the transfer
+	/// is allowed (src/set.c:237), so the object keeps its flags and powers.
+	/// </summary>
+	[Test]
+	public async ValueTask RefusedChownKeepsTrustAndPowers()
+	{
+		var holder = await PlayerAsync("ChownHolder");
+		var stranger = await PlayerAsync("ChownStranger");
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("ChownRefused")})");
+		await AsGod($"@chown {thing}={holder.DbRef}");
+		await AsGod($"@set {thing}=!HALT");
+		await AsGod($"@set {thing}=TRUST");
+		await AsGod($"@power {thing}=No_Quota");
+
+		await RunAs(holder, $"@chown {thing}={stranger.DbRef}");
+
+		await Assert.That(await Eval($"owner({thing})")).IsEqualTo($"#{holder.DbRef.Number}");
+		await Assert.That(await Eval($"hasflag({thing},TRUST)")).IsEqualTo("1");
+		await Assert.That(await Eval($"haspower({thing},No_Quota)")).IsEqualTo("1");
+		await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("0");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_cpattr</c> skips a destination that is the source attribute itself
+	/// (src/set.c:751-753), so @mvattr onto itself copies nothing and leaves the attribute in place.
+	/// </summary>
+	[Test]
+	public async ValueTask MvattrOntoItselfKeepsTheAttribute()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MvattrSelf")})");
+		await AsGod($"&KEEPME {thing}=still here");
+
+		await AsGod($"@mvattr {thing}/KEEPME={thing}/keepme");
+
+		await Assert.That(await Eval($"get({thing}/KEEPME)")).IsEqualTo("still here");
+	}
+
+	/// <summary>
 	/// <c>zone(obj, zone)</c> is PennMUSH's <c>do_chzone</c> with no /preserve (src/fundb.c:1604), which
 	/// clears the power set along with WIZARD, ROYALTY and TRUST (src/set.c:477-481).
 	/// </summary>

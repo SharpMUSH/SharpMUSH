@@ -53,7 +53,9 @@ public partial class Commands
 
 						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
 
-						if (!preserve)
+						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
+						// @chown leaves the object as it was.
+						if (!preserve && result.Message?.ToPlainText() != ErrorMessages.Returns.PermissionDenied)
 						{
 							await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
 						}
