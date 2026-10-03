@@ -357,10 +357,16 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// is about to write there; only one that names a seed because it is SharpMUSH's default is unset.
 			var named = await SourceConfigurationReferencesAsync(cancellationToken);
 			var kept = new List<string>();
+			var unset = new List<string>();
 			uint? Unset(string property, uint? value)
 			{
 				if (value is not { } v || !removed.Contains(v)) return value;
-				if (!named.Named(property, value)) return null;
+				if (!named.Named(property, value))
+				{
+					unset.Add(ConfigMetadata.PropertyToAttributeName[property]);
+					return null;
+				}
+
 				kept.Add($"{ConfigMetadata.PropertyToAttributeName[property]} #{v}");
 				return value;
 			}
@@ -387,8 +393,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				options with { Database = cleared }), cancellationToken);
 			context.WrittenDatabaseOptions = cleared;
 			_configurationReload?.SignalChange();
-			context.Warnings.Add("Unset the ancestor, package_manager, http_handler and event_handler options that named " +
-				"the removed objects.");
+			// Only the options this import cleared: one the mush.cnf named was kept, and is reported above.
+			context.Warnings.Add($"Unset {string.Join(", ", unset)}: they named the removed objects.");
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
@@ -967,7 +973,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// The source definitions this server already has, as one line for the lot: a stock PennMUSH table
 	/// overlaps SharpMUSH's almost entirely, and a line each would bury the rest of the report.
 	/// </summary>
-	private static void ReportKept(string kind, List<string> kept, PennMUSHConversionContext context)
+	/// <remarks>The report names the first ten; the server log has every one.</remarks>
+	private void ReportKept(string kind, List<string> kept, PennMUSHConversionContext context)
 	{
 		if (kept.Count == 0)
 		{
@@ -975,7 +982,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		context.Warnings.Add($"{kept.Count} source {kind} definition(s) already exist here, " +
-			$"so SharpMUSH's own are kept ({Sample(kept)})");
+			$"so SharpMUSH's own are kept ({Sample(kept)}{(kept.Count > 10 ? "; the server log lists all of them" : "")})");
+		_logger.LogInformation("Source {Kind} definitions kept as SharpMUSH's own: {Names}", kind, string.Join(" ", kept));
 	}
 
 	private static string Sample(List<string> names)

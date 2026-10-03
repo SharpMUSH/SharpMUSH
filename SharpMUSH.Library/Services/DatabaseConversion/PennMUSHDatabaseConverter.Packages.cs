@@ -151,8 +151,17 @@ public partial class PennMUSHDatabaseConverter
 
 			if (missing.Count > 0)
 			{
-				context.Warnings.Add($"The package(s) {string.Join(", ", missing)} were not installed again: " +
-					"install them from the package manager.");
+				// An attach-mode package is skipped while its handler is unset, which the import does to an option
+				// that named a removed seed; say so, rather than send the administrator to the package manager first.
+				var unsetHandlers = new[] { ("http_handler", database.HttpHandler), ("event_handler", database.EventHandler) }
+					.Where(handler => handler.Item2 is null or 0)
+					.Select(handler => handler.Item1)
+					.ToList();
+				context.Warnings.Add(unsetHandlers.Count == 0
+					? $"The package(s) {string.Join(", ", missing)} were not installed again: install them from the package manager."
+					: $"The package(s) {string.Join(", ", missing)} were not installed again: {string.Join(" and ", unsetHandlers)} " +
+						$"{(unsetHandlers.Count == 1 ? "is" : "are")} not set, and a package that attaches to a handler needs it. " +
+						"Choose the handler in the setup wizard's handler step, or set the option and install them from the package manager.");
 			}
 		}
 		catch (Exception ex)
