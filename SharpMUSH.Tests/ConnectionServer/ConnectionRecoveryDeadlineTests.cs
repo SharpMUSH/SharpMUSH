@@ -57,7 +57,7 @@ public class ConnectionRecoveryDeadlineTests
 		var bus = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus);
 		var replay = Substitute.For<ITerminalReplayStore>();
-		replay.ReadAsync("session", 0, Arg.Any<CancellationToken>()).Returns(new ReplayReadResult(false, []));
+		replay.OpenAsync("session", 0, Arg.Any<CancellationToken>()).Returns(new ReplayOpening(new IncompleteReplay(ReplayGap.Expired)));
 		var tokens = new ResumeTokenService();
 		var pump = Pump(service, bus, replay, tokens, new SessionSinkRegistry());
 		await pump.RestoreDormantAsync(new ConnectionStateData

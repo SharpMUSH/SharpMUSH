@@ -19,8 +19,12 @@ internal static class BenchmarkHelpers
 	private const string NatsImage = "nats:2.14-alpine";
 	private const int MaxPayloadBytes = 6 * 1024 * 1024;
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	// JetStream reserves each stream's MaxBytes against max_file_store when the stream is created, and
+	// left unset that limit is 75% of the disk that happens to be free. Short-lived streams with budgets
+	// (docs/design/messaging-retention.md) would then fail with "insufficient storage resources" on a
+	// nearly full disk; the explicit ceiling makes creation independent of it. Little is actually written.
 	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes(
-		$"max_payload: {MaxPayloadBytes}\njetstream: true\n");
+		$"max_payload: {MaxPayloadBytes}\njetstream {{ max_file_store: 256GB }}\n");
 
 	/// <summary>
 	/// The logger every benchmark process installs as <see cref="Log.Logger"/>.

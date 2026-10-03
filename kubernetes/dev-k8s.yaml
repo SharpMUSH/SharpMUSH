@@ -14,6 +14,10 @@ metadata:
 data:
   nats.conf: |
     max_payload: 6291456
+    jetstream {
+      max_memory_store: 64MB
+      max_file_store: 6GB
+    }
 ---
 # The game's data: the LMDB world (data/lightning) plus wiki asset uploads. One writer process, so
 # ReadWriteOnce is correct and the server deployment below recreates rather than rolls.

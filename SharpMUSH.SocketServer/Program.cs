@@ -114,12 +114,15 @@ public class Program
 		// output + resume tokens survive a ConnectionServer restart / instance change; the retention
 		// window is configurable (Replay:RetentionHours, default 24h). URL resolved lazily for the same
 		// reason as the connection state store above.
-		var replayRetention = TimeSpan.FromHours(builder.Configuration.GetValue("Replay:RetentionHours", 24.0));
+		// Its byte budget (Replay:MaxBytes) and per-reconnect frame budget (Replay:MaxFrames) are set
+		// apart from the bus's transport retention (SHARPMUSH_NATS_MAX_AGE / SHARPMUSH_NATS_MAX_BYTES).
+		var replayOptions = ReplayOptions.FromConfiguration(builder.Configuration);
+		var replayRetention = replayOptions.Retention;
 		builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
 		{
 			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 			return JetStreamTerminalReplayStore
-				.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>(), replayRetention)
+				.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>(), replayOptions)
 				.GetAwaiter().GetResult();
 		});
 		builder.Services.AddSingleton<IResumeTokenStore>(sp =>
@@ -166,6 +169,7 @@ public class Program
 			options =>
 			{
 				options.Url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+				options.MonitoredStreams.Add(JetStreamTerminalReplayStore.ReplayStreamName);
 			},
 			x =>
 			{

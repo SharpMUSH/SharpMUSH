@@ -65,9 +65,11 @@ public class ReplayAndResumeTests
 		clock = now.AddSeconds(45); // past the 30s window
 		await store.AppendAsync("sess", Encoding.UTF8.GetBytes("fresh"));
 
-		var replay = await store.AfterAsync("sess", lastSeq: 0);
+		var replay = await store.AfterAsync("sess", lastSeq: 1);
 
 		await Assert.That(replay.Count).IsEqualTo(1); // only "fresh" survives the age cutoff
+																									// A client that never saw "old" cannot be given a complete history any more.
+		await Assert.That(await store.OpenAsync("sess", 0) is IncompleteReplay { Reason: ReplayGap.Expired }).IsTrue();
 	}
 
 	[Test]
