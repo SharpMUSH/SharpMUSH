@@ -68,13 +68,13 @@ public record ExpandedMailData(
 
 	/// <summary>
 	/// PennMUSH's <c>get_folder_name</c>: the folder's name in upper case, as <c>add_folder_name</c> stores it, or
-	/// <c>unnamed</c>. Folder 0 cannot be renamed here, so it is always <c>unnamed</c>, as it is in PennMUSH until
-	/// a player names it; <see cref="Resolve"/> still takes <see cref="Inbox"/> for it.
+	/// <c>unnamed</c>. Folder 0 is <see cref="Inbox"/>: PennMUSH names it <c>inbox</c> when it creates a player
+	/// (<c>create_player</c>, <c>src/player.c</c>), and it cannot be renamed here.
 	/// </summary>
 	public string DisplayName(int number)
 	{
 		var folder = FolderFor(number);
-		return number == 0 || UnnamedNumber(folder) == number ? "unnamed" : folder.ToUpperInvariant();
+		return number != 0 && UnnamedNumber(folder) == number ? "unnamed" : folder.ToUpperInvariant();
 	}
 
 	/// <summary>

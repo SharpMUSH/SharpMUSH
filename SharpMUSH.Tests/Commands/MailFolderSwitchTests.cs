@@ -74,7 +74,7 @@ public class MailFolderSwitchTests
 
 		await Assert.That(result.Message!.ToPlainText())
 			.DoesNotContain("INVALID SWITCH", StringComparison.OrdinalIgnoreCase);
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 0 [unnamed].", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 0 [INBOX].", StringComparison.Ordinal));
 	}
 
 	/// <summary>
