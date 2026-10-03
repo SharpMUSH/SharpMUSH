@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -20,11 +21,13 @@ public partial class LockService
 		var canonical = LockNames.Canonical(name);
 		if (SystemLocks.ContainsKey(canonical) || target.Object().Locks.ContainsKey(canonical)) return canonical;
 		if (!name.StartsWith("user:", StringComparison.OrdinalIgnoreCase) && await LookupAsync(target, canonical, cancellationToken) is ResolvedLock) return canonical;
-		if (!name.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) return new Error<string>("Unknown lock type.");
+		// check_lock_type (src/lock.c:631-648), in its order.
+		if (!name.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) return new Error<string>(ErrorMessages.Notifications.UnknownLockType);
+		if (name.Contains('|')) return new Error<string>(ErrorMessages.Notifications.LockNameHasPipe);
 		var custom = name[5..].ToUpperInvariant();
 		if (custom.Length is 0 or > 1024 || custom.StartsWith('`') || custom.EndsWith('`') || custom.Contains("``") ||
 			custom.Any(c => !"!\"#$&'*+,-./0123456789;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ_`~".Contains(c)))
-			return new Error<string>("That is not a valid lock name.");
+			return new Error<string>(ErrorMessages.Notifications.InvalidLockName);
 		return LockNames.Canonical(custom);
 	}
 
@@ -36,6 +39,23 @@ public partial class LockService
 
 	public ValueTask<Result<Success>> UnsetAsync(AnySharpObject executor, AnySharpObject target, string name, CancellationToken cancellationToken = default)
 		=> mediator.Send(new UnsetLockCommand(target.Object(), name, executor), cancellationToken);
+
+	/// <summary>
+	/// Puts back a lock exactly as it was recorded — its flags and its creator as well as its key —
+	/// for the paths that undo or restore a write: an object snapshot's restore, and a package
+	/// operation's revert. It is the same permission-checked write as <see cref="SetAsync"/>, so the
+	/// executor must still be able to write the lock both as it is and as it will be.
+	/// </summary>
+	/// <param name="name">The lock's stored (canonical) name; a user lock needs no <c>user:</c> prefix.</param>
+	public ValueTask<Result<Success>> RestoreAsync(AnySharpObject executor, AnySharpObject target, string name, SharpLockData data,
+		CancellationToken cancellationToken = default)
+		=> mediator.Send(new SetLockCommand(target.Object(), SystemLocks.ContainsKey(LockNames.Canonical(name)) ? name : "user:" + name,
+			data.LockString, executor)
+		{
+			Flags = data.Flags,
+			Creator = data.Creator,
+			PreserveCreator = true
+		}, cancellationToken);
 
 	/// <summary>
 	/// A lock the game writes on its own behalf, with no executor and no permission check.
@@ -61,13 +81,25 @@ public partial class LockService
 		target.Object().WithLock(canonical, data);
 	}
 
+	/// <summary>
+	/// PennMUSH <c>do_lset</c> (<c>src/lock.c:905-955</c>) once the object is matched: the flags are
+	/// parsed before the lock is looked up, so an unknown flag is reported ahead of a missing lock.
+	/// </summary>
 	public async ValueTask<Result<Success>> SetFlagsAsync(AnySharpObject executor, AnySharpObject target, string name, string flags, CancellationToken cancellationToken = default)
 	{
 		var canonical = LockNames.Canonical(name);
-		if (!target.Object().Locks.TryGetValue(canonical, out var data) || !await permissions.Value.CanReadLock(executor, target, data.Flags))
-			return new Error<string>("No such lock.");
 		var clear = flags.StartsWith('!');
 		var input = clear ? flags[1..] : flags;
+		if (await ParseLockFlagsAsync(executor, input) is not LockFlags selected)
+			return new Error<string>(ErrorMessages.Notifications.UnrecognizedLockFlag);
+		if (!target.Object().Locks.TryGetValue(canonical, out var data) || !await permissions.Value.CanReadLock(executor, target, data.Flags))
+			return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
+		return await mediator.Send(new SetLockFlagsCommand(target.Object(), canonical, selected, clear, executor), cancellationToken);
+	}
+
+	/// <summary><c>string_to_lockflag</c>: one mask, or nothing when no word names a flag the executor may set.</summary>
+	private async ValueTask<LockFlags?> ParseLockFlagsAsync(AnySharpObject executor, string input)
+	{
 		var yes = LockFlags.Default;
 		var no = LockFlags.Default;
 		var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -95,9 +127,8 @@ public partial class LockService
 		}
 		// Penn do_lset applies one mask; inner negation excludes bits from that mask.
 		var selected = yes & ~no;
-		if (selected == 0 || selected.HasFlag(LockFlags.Wizard) && !await executor.IsSee_All())
-			return new Error<string>("Unrecognized lock flag.");
-		return await mediator.Send(new SetLockFlagsCommand(target.Object(), canonical, selected, clear, executor), cancellationToken);
+		if (selected == 0 || selected.HasFlag(LockFlags.Wizard) && !await executor.IsSee_All()) return null;
+		return selected;
 	}
 
 	public async ValueTask<bool> CanWriteAsync(AnySharpObject executor, AnySharpObject target, SharpLockData data)

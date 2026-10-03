@@ -36,6 +36,7 @@ public sealed class PackageWriteTransaction(
 	IFlagAndPowerStore flags,
 	IPackageRegistryService registry,
 	IApplicationRegistryService applications,
+	ILockService locks,
 	SharpPlayer packageManager) : IAsyncDisposable
 {
 	private readonly Stack<(string What, Func<Task> Revert)> _undo = new();
@@ -254,11 +255,11 @@ public sealed class PackageWriteTransaction(
 
 	// ── Locks ───────────────────────────────────────────────────────────────
 
-	public Task<Result<Success>> SetLockAsync(SharpObject target, string name, string value, CancellationToken cancellationToken) =>
-		WriteLockAsync(target.DBRef, () => mediator.Send(new SetLockCommand(target, name, value, Executor), cancellationToken));
+	public Task<Result<Success>> SetLockAsync(AnySharpObject target, string name, string value, CancellationToken cancellationToken) =>
+		WriteLockAsync(target.Object().DBRef, () => locks.SetAsync(Executor, target, name, value, cancellationToken));
 
-	public Task<Result<Success>> UnsetLockAsync(SharpObject target, string name, CancellationToken cancellationToken) =>
-		WriteLockAsync(target.DBRef, () => mediator.Send(new UnsetLockCommand(target, name, Executor), cancellationToken));
+	public Task<Result<Success>> UnsetLockAsync(AnySharpObject target, string name, CancellationToken cancellationToken) =>
+		WriteLockAsync(target.Object().DBRef, () => locks.UnsetAsync(Executor, target, name, cancellationToken));
 
 	/// <summary>
 	/// A lock write, reverted by restoring the object's whole lock table as it was. A lock name can
@@ -285,17 +286,12 @@ public sealed class PackageWriteTransaction(
 				var target = now.Object();
 				foreach (var name in target.Locks.Keys.Where(k => !previous.ContainsKey(k)).ToList())
 				{
-					await mediator.Send(new UnsetLockCommand(target, name, Executor));
+					await locks.UnsetAsync(Executor, now, name);
 				}
 
 				foreach (var (name, data) in previous.Where(l => !target.Locks.TryGetValue(l.Key, out var live) || live != l.Value))
 				{
-					await mediator.Send(new SetLockCommand(target, name, data.LockString, Executor)
-					{
-						Flags = data.Flags,
-						Creator = data.Creator,
-						PreserveCreator = true
-					});
+					await locks.RestoreAsync(Executor, now, name, data);
 				}
 			});
 		}

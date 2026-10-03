@@ -141,10 +141,10 @@ public partial class PackageInstallService
 		async Task<string?> SetAsync(string value)
 		{
 			var name = Enum.TryParse<LockType>(LockNames.Canonical(change.Element), true, out _) ? change.Element : $"user:{change.Element}";
-			return await writes.SetLockAsync(node.Object(), name, value, cancellationToken) is Error<string> error ? error.Value : null;
+			return await writes.SetLockAsync(node, name, value, cancellationToken) is Error<string> error ? error.Value : null;
 		}
 		async Task<string?> RemoveAsync() =>
-			await writes.UnsetLockAsync(node.Object(), change.Element, cancellationToken) is Error<string> error ? error.Value : null;
+			await writes.UnsetLockAsync(node, change.Element, cancellationToken) is Error<string> error ? error.Value : null;
 
 		switch (change.Action)
 		{

@@ -37,7 +37,8 @@ public partial class PackageInstallService(
 	IPackageLifecycleRunner lifecycle,
 	IManagedPackageInstaller managedInstaller,
 	IMediator mediator,
-	IPackageOperationGate gate) : IPackageInstallService
+	IPackageOperationGate gate,
+	ILockService locks) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -45,7 +46,7 @@ public partial class PackageInstallService(
 
 	/// <summary>Opens the undo log one package operation writes through; see <see cref="PackageWriteTransaction"/>.</summary>
 	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>
-		new(mediator, database, attributeStore, flags, registry, applications, packageManager);
+		new(mediator, database, attributeStore, flags, registry, applications, locks, packageManager);
 
 	private async Task MarkGoingAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)

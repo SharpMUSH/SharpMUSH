@@ -229,10 +229,10 @@ public class BuildingCommandTests
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitDbRef))).Expect<SharpExit>();
 		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 		await Assert.That(destination.Object().DBRef).IsEqualTo(roomDbRef);
-		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
-			nameof(ErrorMessages.Notifications.LinkedExitToRoom), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], exitDbRef.Number) &&
-				Equals(args[1], roomDbRef.Number)));
+		// do_link names the destination through unparse_object (src/create.c:385-386), where
+		// do_real_open prints a bare dbref.
+		await WebAppFactoryArg.Notifications.WaitForAsync(executor,
+			$"Linked exit #{exitDbRef.Number} to LinkExitTestRoom(#{roomDbRef.Number}R");
 	}
 
 	[Test]

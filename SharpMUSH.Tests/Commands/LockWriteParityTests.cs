@@ -202,4 +202,158 @@ public class LockWriteParityTests
 			nameof(ErrorMessages.Notifications.ObjectAlreadyUnlocked),
 			$"{name}(#{DBRef.Parse(target).Number}) - Basic (already) unlocked.", player.DbRef)).IsTrue();
 	}
+
+	private async Task<(TestIsolationHelpers.TestPlayer Player, string Name, string Target)> MortalWithThingAsync(string prefix)
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, prefix);
+		var name = $"{prefix}{Guid.NewGuid():N}";
+		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
+		return (player, name, created.Message!.ToPlainText());
+	}
+
+	private Task<CallState> As(TestIsolationHelpers.TestPlayer player, string command)
+		=> Parser.CommandParse(player.Handle, Connections, MarkupText.Plain(command)).AsTask();
+
+	/// <summary>
+	/// <c>fun_lock</c> with a key is <c>do_lock</c> (<c>src/fundb.c:1311-1335</c>), so it tells the caller
+	/// what <c>@lock</c> tells them, then answers the lock as it now stands.
+	/// </summary>
+	[Test]
+	public async Task LockFunctionReportsWhatTheCommandReports()
+	{
+		var (player, name, target) = await MortalWithThingAsync("LockFnReport");
+
+		var answer = await As(player, $"think lock({target}/Enter,#TRUE)");
+
+		await Assert.That(answer.Message!.ToPlainText()).IsEqualTo("#TRUE");
+		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}(#{DBRef.Parse(target).Number}) - Enter locked.");
+	}
+
+	/// <summary><c>do_lock</c> (<c>src/lock.c:725-727</c>): matched, but not the locker's to lock.</summary>
+	[Test]
+	[Arguments("@lock {0}=#FALSE")]
+	[Arguments("think lock({0},#FALSE)")]
+	public async Task LockingWhatYouDoNotControlIsYouCantLockThat(string template)
+	{
+		var (player, _, _) = await MortalWithThingAsync("LockNotYours");
+		var other = await Create();
+
+		await As(player, string.Format(template, other));
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "You can't lock that!");
+		await Assert.That(await Read($"lock({other})")).IsEqualTo("*UNLOCKED*");
+	}
+
+	/// <summary><c>do_lock</c> (<c>src/lock.c:715-718</c>): its match is silent and words the miss itself.</summary>
+	[Test]
+	public async Task LockingNothingIsIDontSeeWhatYouWantToLock()
+	{
+		var (player, _, _) = await MortalWithThingAsync("LockNothing");
+
+		await As(player, $"@lock LockNoSuchThing{Guid.NewGuid():N}=#TRUE");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "I don't see what you want to lock!");
+	}
+
+	/// <summary>The key is parsed before the lock type is checked (<c>src/lock.c:738-742</c>).</summary>
+	[Test]
+	public async Task ABadKeyIsReportedBeforeABadLockType()
+	{
+		var (player, _, target) = await MortalWithThingAsync("LockBadKey");
+
+		await As(player, $"@lock/NoSuchLockType {target}=#TRUE&");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "I don't understand that key.");
+		await Assert.That(Factory.Notifications.For(player.DbRef)).DoesNotContain(ErrorMessages.Notifications.UnknownLockType);
+	}
+
+	/// <summary><c>check_lock_type</c> (<c>src/lock.c:636-640</c>) has its own word for a <c>|</c>.</summary>
+	[Test]
+	public async Task APipeInAUserLockNameIsNamed()
+	{
+		var (player, _, target) = await MortalWithThingAsync("LockPipe");
+
+		await As(player, $"@lock/user:a|b {target}=#TRUE");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "The character '|' may not be used in lock names.");
+	}
+
+	/// <summary><c>fun_lset</c> is <c>do_lset</c> (<c>src/fundb.c:1296-1308</c>) and reports as <c>@lset</c> does.</summary>
+	[Test]
+	public async Task LsetFunctionReportsWhatTheCommandReports()
+	{
+		var (player, name, target) = await MortalWithThingAsync("LsetFnReport");
+		await As(player, $"@lock {target}=#TRUE");
+
+		await As(player, $"think lset({target}/Basic,visual)");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}/Basic - lock flags set.");
+		await Assert.That(await Read($"lockflags({target})")).Contains("v");
+	}
+
+	/// <summary>
+	/// <c>do_lset</c> resolves the lock the way every other lock write does: an alias or any casing
+	/// lands on the canonical lock, and the report names it as stored.
+	/// </summary>
+	[Test]
+	[Arguments("tport")]
+	[Arguments("TELEPORT")]
+	[Arguments("teleport")]
+	public async Task LsetAcceptsAliasesAndAnyCasing(string spelling)
+	{
+		var (player, name, target) = await MortalWithThingAsync("LsetAlias");
+		await As(player, $"@lock/Teleport {target}=#TRUE");
+
+		await As(player, $"@lset {target}/{spelling}=visual");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}/Teleport - lock flags set.");
+		await Assert.That(await Read($"lockflags({target}/Teleport)")).Contains("v");
+	}
+
+	/// <summary>
+	/// <c>do_lset</c> parses the flags before it looks the lock up (<c>src/lock.c:926-935</c>), so a bad
+	/// flag on a lock that is not there is the bad flag.
+	/// </summary>
+	[Test]
+	public async Task LsetReportsAnUnknownFlagBeforeAMissingLock()
+	{
+		var (player, _, target) = await MortalWithThingAsync("LsetBadFlag");
+
+		await As(player, $"@lset {target}/Basic=zzz");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "Unrecognized lock flag.");
+		await Assert.That(Factory.Notifications.For(player.DbRef)).DoesNotContain(ErrorMessages.Notifications.NoSuchLock);
+	}
+
+	/// <summary><c>do_lset</c> on a lock the object does not have.</summary>
+	[Test]
+	public async Task LsetOnAMissingLockIsNoSuchLock()
+	{
+		var (player, _, target) = await MortalWithThingAsync("LsetMissing");
+
+		await As(player, $"@lset {target}/Basic=visual");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, "No such lock.");
+	}
+
+	/// <summary>
+	/// <c>do_unlock</c> asks <c>getlock</c>, which walks the parent chain (<c>src/lock.c:323-330</c>), so
+	/// an inherited lock is not "(already) unlocked"; <c>delete_lock</c> then finds nothing of the child's
+	/// own and succeeds.
+	/// </summary>
+	[Test]
+	public async Task UnlockingAnInheritedLockReportsUnlocked()
+	{
+		var (player, name, target) = await MortalWithThingAsync("UnlockInherited");
+		var parent = (await As(player, $"@create UnlockParent{Guid.NewGuid():N}")).Message!.ToPlainText();
+		await As(player, $"@lock {parent}=#FALSE");
+		// Every standard lock starts no_inherit; a child only sees one its parent lets go of.
+		await As(player, $"@lset {parent}/Basic=!no_inherit");
+		await As(player, $"@parent {target}={parent}");
+
+		await As(player, $"@unlock {target}");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}(#{DBRef.Parse(target).Number}) - Basic unlocked.");
+	}
 }

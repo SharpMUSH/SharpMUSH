@@ -184,6 +184,7 @@ public static class BuildingHelpers
 		IEventService eventService,
 		IPermissionService permissionService,
 		ILockService lockService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		MString roomName,
 		MString? exitTo,
@@ -206,7 +207,7 @@ public static class BuildingHelpers
 		var dug = await WithRequestedDbrefsAsync(mediator, notifyService, executor,
 			[roomDbref, toDbref, fromDbref],
 			async at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2], openedExits));
+				lockService, attributeService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2], openedExits));
 
 		// Outside the gate. Each exit's do_real_open queues its own event (create.c:181) before do_dig
 		// queues the room's (:526), so the exits come first.
@@ -237,6 +238,7 @@ public static class BuildingHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		MString roomName,
 		MString? exitTo,
@@ -255,7 +257,7 @@ public static class BuildingHelpers
 			owner, roomAt) switch
 		{
 			DBRef dug => await RoomDugAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt, openedExits),
+				lockService, attributeService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt, openedExits),
 			Error<string> refused => refused
 		};
 	}
@@ -272,6 +274,7 @@ public static class BuildingHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		MString roomName,
 		MString? exitTo,
@@ -308,13 +311,13 @@ public static class BuildingHelpers
 		if (Given(exitTo) is not null)
 		{
 			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-				executor, exitTo!, where, room, toAt, openedExits);
+				attributeService, executor, exitTo!, where, $"#{dug.Number}", toAt, openedExits);
 		}
 
 		if (Given(exitFrom) is not null)
 		{
 			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-				executor, exitFrom!, room, where, fromAt, openedExits);
+				attributeService, executor, exitFrom!, room, "here", fromAt, openedExits);
 		}
 
 		return dug;
@@ -334,10 +337,11 @@ public static class BuildingHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		MString exitName,
 		AnySharpContainer from,
-		AnySharpContainer to,
+		string linkTo,
 		DBRef? requestedDbref,
 		List<DBRef> openedExits)
 	{
@@ -349,27 +353,144 @@ public static class BuildingHelpers
 
 		openedExits.Add(opened);
 
+		// unparse_dbref(room) for the exit in, "here" for the exit back (create.c:507, :517).
+		await LinkOpenedExitAsync(mediator, notifyService, permissionService, attributeService, executor, opened,
+			linkTo);
+	}
+
+	/// <summary>
+	/// The source room <c>@open</c> and <c>open()</c> are given: <c>match_result(player, name, TYPE_ROOM,
+	/// MAT_HERE | MAT_ABSOLUTE | MAT_TYPE)</c> (<c>src/create.c:211-212</c>, <c>src/fundb.c:2157-2158</c>),
+	/// so <c>here</c> or a dbref that is a room, and nothing found by name. Silent: each caller words its
+	/// own refusal — "Open from where?" and <c>#-1 INVALID SOURCE ROOM</c>.
+	/// </summary>
+	public static async ValueTask<AnyOptionalSharpContainer> SourceRoomAsync(IMUSHCodeParser parser,
+		ILocateService locateService, AnySharpObject executor, string name)
+		=> await locateService.Locate(parser, executor, executor, name, SourceRoomMatch) is AnySharpObject and SharpRoom room
+			? new AnyOptionalSharpContainer((AnySharpContainer)room)
+			: new AnyOptionalSharpContainer(new None());
+
+	/// <summary><c>MAT_HERE | MAT_ABSOLUTE | MAT_TYPE</c> with <c>TYPE_ROOM</c>.</summary>
+	private const LocateFlags SourceRoomMatch = LocateFlags.MatchHereForLookerLocation | LocateFlags.AbsoluteMatch |
+		LocateFlags.RoomsPreference | LocateFlags.OnlyMatchTypePreference;
+
+	/// <summary>
+	/// The link step of PennMUSH's <c>do_real_open</c> (<c>src/create.c:165-178</c>), which every exit
+	/// a builder opens goes through: <c>@open</c>'s two, <c>open()</c>'s one and <c>@dig</c>'s two.
+	/// "Trying to link..." first, then <c>check_var_link</c> and <c>parse_linkable_room</c>; an exit it
+	/// cannot link is kept, unlinked, as Penn keeps it.
+	/// </summary>
+	/// <remarks>
+	/// <c>parse_linkable_room</c> (<c>create.c:40-66</c>) reads <c>here</c>, <c>home</c> or a dbref
+	/// (an objid too) and nothing else — not a name — and says "That is not a valid object." for the
+	/// rest. <c>variable</c> is <c>check_var_link</c>'s (<c>:68-80</c>). The report prints both dbrefs
+	/// bare, so a home link reads <c>#-3</c> and a variable one <c>#-2</c>: <c>Location(new_exit)</c> is
+	/// <c>HOME</c> or <c>AMBIGUOUS</c> there, and SharpMUSH keeps those two in <c>_LINKTYPE</c>.
+	/// <para>
+	/// Each of <c>@open</c>, <c>open()</c> and <c>@dig</c> had a copy of this, and none of them read the
+	/// keywords: <c>@open</c> matched a name and said why it could not, <c>open()</c> matched a name and
+	/// said only "You can't link to that.", and <c>@dig</c> could link only the room it had dug.
+	/// </para>
+	/// </remarks>
+	/// <returns>The container the exit now leads to; none for an exit left unlinked or linked to a keyword.</returns>
+	public static async ValueTask<AnyOptionalSharpContainer> LinkOpenedExitAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		IAttributeService attributeService,
+		AnySharpObject executor,
+		DBRef opened,
+		string linkTo)
+	{
 		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.TryingToLink),
 			executor);
 
-		// parse_linkable_room refuses a destination the digger may not link into and leaves the exit
-		// unlinked, exactly as do_real_open's own link step does (create.c:165-171).
-		if (!await permissionService.CanLinkToAsync(executor, to.WithExitOption()))
-		{
-			await notifyService.NotifyLocalized(executor.Object().DBRef,
-				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
-			return;
-		}
-
-		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject and SharpExit exit))
+		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject exitObject and SharpExit exit))
 		{
 			throw new InvalidOperationException("The exit just opened must exist.");
 		}
 
-		await mediator.Send(new LinkExitCommand(exit, to));
-		await notifyService.NotifyLocalized(executor.Object().DBRef,
-			nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, opened.Number, to.Object().DBRef.Number);
+		// check_var_link, then parse_linkable_room's "home": both become Location(new_exit) unchecked.
+		var keyword = linkTo.Trim() switch
+		{
+			var word when word.Equals(TeleportHelpers.LinkTypeVariable, StringComparison.OrdinalIgnoreCase)
+				=> (Type: TeleportHelpers.LinkTypeVariable, Number: VariableDbref),
+			var word when word.Equals(TeleportHelpers.LinkTypeHome, StringComparison.OrdinalIgnoreCase)
+				=> (Type: TeleportHelpers.LinkTypeHome, Number: HomeDbref),
+			_ => (Type: (string?)null, Number: 0)
+		};
+
+		if (keyword.Type is { } linkType)
+		{
+			await attributeService.SetAttributeAsync(executor, exitObject, TeleportHelpers.AttrLinkType,
+				MarkupText.Plain(linkType));
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, opened.Number, keyword.Number);
+			return new AnyOptionalSharpContainer(new None());
+		}
+
+		return await LinkableRoomAsync(mediator, notifyService, permissionService, executor, linkTo.Trim()) switch
+		{
+			AnySharpContainer destination => await LinkedOpenedExitAsync(mediator, notifyService, executor, exit,
+				destination),
+			_ => new AnyOptionalSharpContainer(new None())
+		};
 	}
+
+	/// <summary>The new exit's link, once <c>parse_linkable_room</c> has allowed the destination.</summary>
+	private static async ValueTask<AnyOptionalSharpContainer> LinkedOpenedExitAsync(IMediator mediator,
+		INotifyService notifyService, AnySharpObject executor, SharpExit exit, AnySharpContainer destination)
+	{
+		await mediator.Send(new LinkExitCommand(exit, destination));
+		await notifyService.NotifyLocalized(executor.Object().DBRef,
+			nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exit.Object.DBRef.Number,
+			destination.Object().DBRef.Number);
+		return new AnyOptionalSharpContainer(destination);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>parse_linkable_room</c> (<c>src/create.c:40-66</c>) less its <c>home</c> arm, which
+	/// <see cref="LinkOpenedExitAsync"/> reads with the keywords. It reports each refusal itself.
+	/// </summary>
+	private static async ValueTask<AnyOptionalSharpContainer> LinkableRoomAsync(IMediator mediator,
+		INotifyService notifyService, IPermissionService permissionService, AnySharpObject executor, string roomName)
+	{
+		AnyOptionalSharpObject room = roomName.Equals("here", StringComparison.OrdinalIgnoreCase)
+			? (await executor.Where()).WithExitOption()
+			: DBRef.TryParse(roomName, out var dbref) && dbref is { } parsed
+				? await mediator.Send(new GetObjectNodeQuery(parsed))
+				: new AnyOptionalSharpObject(new None());
+
+		if (room is not AnySharpObject found)
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.NotAValidObject), executor);
+			return new AnyOptionalSharpContainer(new None());
+		}
+
+		if (await found.HasFlag("GOING"))
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.RoomBeingDestroyed), executor);
+			return new AnyOptionalSharpContainer(new None());
+		}
+
+		// can_link_to. An exit is never a container in SharpMUSH, so it is refused here too.
+		if (!found.IsContainer || !await permissionService.CanLinkToAsync(executor, found))
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return new AnyOptionalSharpContainer(new None());
+		}
+
+		return new AnyOptionalSharpContainer(found.AsContainer);
+	}
+
+	/// <summary>PennMUSH's <c>HOME</c> (<c>hdrs/dbdefs.h</c>), as <c>do_real_open</c> prints it.</summary>
+	private const int HomeDbref = -3;
+
+	/// <summary>PennMUSH's <c>AMBIGUOUS</c>, a variable link, as <c>do_real_open</c> prints it.</summary>
+	private const int VariableDbref = -2;
 
 	/// <summary>
 	/// PennMUSH <c>can_open_from</c> (<c>hdrs/mushdb.h:94</c>): may <paramref name="player"/> source an
@@ -413,9 +534,8 @@ public static class BuildingHelpers
 	/// is told which dbref it got.
 	/// </summary>
 	/// <remarks>
-	/// The link itself stays with the callers: <c>@open</c> and <c>open()</c> resolve their destination
-	/// through <see cref="ILocateService"/> with different reporting, and <c>@open</c> then reuses the
-	/// destination as the second exit's source room (<c>create.c:236</c>).
+	/// The link is <see cref="LinkOpenedExitAsync"/>, which callers run once the exit exists:
+	/// <c>@open</c> then reuses the destination as the second exit's source room (<c>create.c:236</c>).
 	/// <para>So does <c>OBJECT`CREATE</c> (<c>create.c:181</c>): callers usually hold the requested-dbref
 	/// gate here, and fire <see cref="AnnounceCreatedAsync"/> once it is released.</para>
 	/// </remarks>

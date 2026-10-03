@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -44,6 +45,7 @@ public static class LinkHelpers
 		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		string targetName,
 		string destinationName,
@@ -54,7 +56,7 @@ public static class LinkHelpers
 		if (destinationName.Length == 0)
 		{
 			return await UnlinkAsync(parser, mediator, notifyService, locateService, permissionService,
-				attributeService, executor, targetName) switch
+				attributeService, connectionService, executor, targetName) switch
 			{
 				Success => new Error<string>(ErrorMessages.Returns.MissingArguments),
 				Error<string> refused => refused
@@ -64,8 +66,8 @@ public static class LinkHelpers
 		return await LocatedAsync(parser, locateService, executor, targetName) switch
 		{
 			AnySharpObject target => await LinkedAsync(parser, mediator, notifyService, locateService,
-				permissionService, lockService, attributeService, manipulateSharpObjectService, executor, target,
-				destinationName, preserve),
+				permissionService, lockService, attributeService, manipulateSharpObjectService, connectionService,
+				executor, target, destinationName, preserve),
 			Error<string> unmatched => unmatched
 		};
 	}
@@ -82,6 +84,7 @@ public static class LinkHelpers
 		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		string destinationName,
@@ -89,8 +92,8 @@ public static class LinkHelpers
 		=> target switch
 		{
 			SharpExit exit => await LinkedExitAsync(parser, mediator, notifyService, locateService, permissionService,
-				lockService, attributeService, manipulateSharpObjectService, executor, target, exit, destinationName,
-				preserve),
+				lockService, attributeService, manipulateSharpObjectService, connectionService, executor, target, exit,
+				destinationName, preserve),
 			SharpThing or SharpPlayer => await HomedAsync(parser, mediator, notifyService, locateService,
 				permissionService, executor, target, destinationName),
 			SharpRoom room => await DroppedToAsync(parser, mediator, notifyService, locateService, permissionService,
@@ -118,6 +121,7 @@ public static class LinkHelpers
 		ILocateService locateService,
 		IPermissionService permissionService,
 		IAttributeService attributeService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		string targetName)
 	{
@@ -133,7 +137,7 @@ public static class LinkHelpers
 		return await locateService.Locate(parser, executor, executor, targetName, flags) switch
 		{
 			AnySharpObject target => await UnlinkedAsync(mediator, notifyService, permissionService, attributeService,
-				executor, target),
+				connectionService, executor, target),
 			// create.c:263-265.
 			Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch }
 				=> await RefusedAsync(notifyService, executor, ErrorMessages.Returns.AmbiguousMatch,
@@ -162,6 +166,7 @@ public static class LinkHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		IAttributeService attributeService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target)
 	{
@@ -177,11 +182,13 @@ public static class LinkHelpers
 			// create.c:271-277. _LINKTYPE goes with the relation: HOME and VARIABLE are destinations too,
 			// so leaving one behind would unlink an exit that still leads somewhere.
 			case SharpExit exit:
+				var ledTo = await DestinationNameAsync(permissionService, attributeService, connectionService, executor,
+					target, exit);
 				await attributeService.SetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType,
 					MarkupText.Empty);
 				await mediator.Send(new UnlinkExitCommand(exit));
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit),
-					executor, target.Object().DBRef.Number);
+					executor, target.Object().DBRef.Number, ledTo);
 				return new Success();
 
 			// create.c:278-282.
@@ -213,6 +220,7 @@ public static class LinkHelpers
 		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		SharpExit exit,
@@ -240,18 +248,18 @@ public static class LinkHelpers
 
 			await attributeService.SetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType,
 				MarkupText.Plain(keyword));
-			await notifyService.NotifyLocalized(executor,
-				keyword == TeleportHelpers.LinkTypeHome
-					? nameof(ErrorMessages.Notifications.LinkedToHome)
-					: nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
+			// create.c:385: unparse_object names HOME and AMBIGUOUS as *HOME* and *VARIABLE*.
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToObject),
+				executor, target.Object().DBRef.Number,
+				keyword == TeleportHelpers.LinkTypeHome ? UnparsedHome : UnparsedVariable);
 			return new Success();
 		}
 
 		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
 			AnySharpObject destination => await LinkedExitToAsync(mediator, notifyService, permissionService,
-				lockService, attributeService, manipulateSharpObjectService, executor, target, exit, destination,
-				preserve),
+				lockService, attributeService, manipulateSharpObjectService, connectionService, executor, target, exit,
+				destination, preserve),
 			Error<string> unmatched => unmatched
 		};
 	}
@@ -264,6 +272,7 @@ public static class LinkHelpers
 		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
+		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		SharpExit exit,
@@ -294,8 +303,10 @@ public static class LinkHelpers
 		await attributeService.SetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType, MarkupText.Empty);
 		await mediator.Send(new LinkExitCommand(exit, destination.AsContainer));
 
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor,
-			target.Object().DBRef.Number, destination.Object().DBRef.Number);
+		// create.c:385-386.
+		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToObject), executor,
+			target.Object().DBRef.Number,
+			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination, connectionService));
 		return new Success();
 	}
 
@@ -540,6 +551,39 @@ public static class LinkHelpers
 			Error<CallState> reported => new Error<string>(reported.Value.Message?.ToPlainText()
 				?? ErrorMessages.Returns.NoSuchObject)
 		};
+
+	/// <summary><c>unparse_object</c>'s word for <c>HOME</c> (<c>src/unparse.c:108-109</c>).</summary>
+	private const string UnparsedHome = "*HOME*";
+
+	/// <summary><c>unparse_object</c>'s word for <c>AMBIGUOUS</c>, a variable link (<c>src/unparse.c:106-107</c>).</summary>
+	private const string UnparsedVariable = "*VARIABLE*";
+
+	/// <summary><c>unparse_object</c>'s word for <c>NOTHING</c>, an unlinked exit (<c>src/unparse.c:104-105</c>).</summary>
+	private const string UnparsedNothing = "*NOTHING*";
+
+	/// <summary>
+	/// Where an exit leads, as <c>unparse_object</c> names it: a <c>_LINKTYPE</c> keyword, the
+	/// destination with its dbref when the viewer may see it, or <c>*NOTHING*</c>.
+	/// </summary>
+	private static async ValueTask<string> DestinationNameAsync(IPermissionService permissionService,
+		IAttributeService attributeService, IConnectionService connectionService, AnySharpObject executor,
+		AnySharpObject target, SharpExit exit)
+	{
+		var linkType = await attributeService.GetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType,
+			IAttributeService.AttributeMode.Read, false) is SharpAttribute[] { Length: > 0 } chain
+			? chain[0].Value.ToPlainText().Trim()
+			: string.Empty;
+
+		if (linkType.Equals(TeleportHelpers.LinkTypeHome, StringComparison.OrdinalIgnoreCase)) return UnparsedHome;
+		if (linkType.Equals(TeleportHelpers.LinkTypeVariable, StringComparison.OrdinalIgnoreCase)) return UnparsedVariable;
+
+		return await exit.Home.WithCancellation(CancellationToken.None) switch
+		{
+			AnySharpContainer destination => await MessageFormatting.UnparseObjectAsync(permissionService, executor,
+				destination.WithExitOption(), connectionService),
+			_ => UnparsedNothing
+		};
+	}
 
 	/// <summary>
 	/// A <c>do_link</c> refusal: it says why to the linker and returns 0, which the command reports as

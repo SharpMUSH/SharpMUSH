@@ -822,12 +822,41 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH src/lock.c:949, do_lset.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LockFlagsUnset = "{0}/{1} - lock flags unset.";
+		/// <summary>PennMUSH src/lock.c:726, do_lock: the object matched but the locker does not control it.</summary>
+		public const string CantLockThat = "You can't lock that!";
+		/// <summary>PennMUSH src/lock.c:633, check_lock_type.</summary>
+		public const string UnknownLockType = "Unknown lock type.";
+		/// <summary>PennMUSH src/lock.c:646, check_lock_type.</summary>
+		public const string InvalidLockName = "That is not a valid lock name.";
+		/// <summary>PennMUSH src/lock.c:638, check_lock_type.</summary>
+		public const string LockNameHasPipe = "The character '|' may not be used in lock names.";
+		/// <summary>PennMUSH src/lock.c:928, do_lset.</summary>
+		public const string UnrecognizedLockFlag = "Unrecognized lock flag.";
+		/// <summary>PennMUSH src/lock.c:934, do_lset.</summary>
+		public const string NoSuchLock = "No such lock.";
 
 		// --- Link/Unlink messages aligned with PennMUSH src/create.c ---
+		/// <summary>
+		/// <c>do_real_open</c>'s link report (<c>src/create.c:175</c>), which prints both dbrefs bare —
+		/// <c>@open</c>, <c>open()</c> and the exits <c>@dig</c> makes.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LinkedExitToRoom = "Linked exit #{0} to #{1}";
+		/// <summary>
+		/// <c>do_link</c>'s exit report (<c>src/create.c:385</c>): the destination through
+		/// <c>unparse_object</c>, so <c>*HOME*</c> and <c>*VARIABLE*</c> for the two keywords.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string UnlinkedExit = "Unlinked exit #{0}.";
+		public const string LinkedExitToObject = "Linked exit #{0} to {1}";
+		/// <summary><c>do_unlink</c> (<c>src/create.c:275-276</c>): the old destination through <c>unparse_object</c>.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnlinkedExit = "Unlinked exit #{0} (Used to lead to {1}).";
+		/// <summary><c>do_open</c>'s source-room refusal (<c>src/create.c:214</c>).</summary>
+		public const string OpenFromWhere = "Open from where?";
+		/// <summary><c>parse_linkable_room</c> (<c>src/create.c:56</c>): not here, home or a dbref.</summary>
+		public const string NotAValidObject = "That is not a valid object.";
+		/// <summary><c>parse_linkable_room</c> (<c>src/create.c:59</c>).</summary>
+		public const string RoomBeingDestroyed = "That room is being destroyed. Sorry.";
 		/// <summary>
 		/// <c>do_unlink</c>'s <c>NOTHING</c> arm (<c>src/create.c:261</c>). Its match is silent, so a name
 		/// that resolves to nothing — including one dropped because a mortal does not control it — reports
@@ -875,8 +904,6 @@ public static partial class ErrorMessages
 		public const string ObjectIsProtectedSafe = "That object is protected (SAFE).";
 
 		public const string Destroyed = "Destroyed.";
-		public const string LinkedToHome = "Linked to home.";
-		public const string LinkedToVariable = "Linked to variable.";
 		public const string HomeSet = "Home set.";
 		/// <summary><c>do_name</c>'s confirmation (<c>src/set.c:154</c>), gated on <c>AreQuiet</c>.</summary>
 		public const string NameSet = "Name set.";
@@ -884,7 +911,6 @@ public static partial class ErrorMessages
 		public const string DropToRemoved = "Dropto removed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SparedFromDestructionFormat = "Spared from destruction: {0}";
-		public const string SourceMustBeARoom = "Source must be a room.";
 		/// <summary>
 		/// <c>do_real_open</c>'s first refusal (<c>src/create.c:108-110</c>): an exit is sourced in a
 		/// room or nowhere. Reached by <c>@open</c> with a source that is not a room, and by cloning an

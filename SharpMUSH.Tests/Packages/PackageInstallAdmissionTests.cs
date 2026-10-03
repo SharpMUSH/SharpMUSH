@@ -96,7 +96,8 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageLifecycleRunner>(),
 				managedInstaller,
 				services.GetRequiredService<IMediator>(),
-				services.GetRequiredService<IPackageOperationGate>())
+				services.GetRequiredService<IPackageOperationGate>(),
+				services.GetRequiredService<ILockService>())
 		};
 	}
 
