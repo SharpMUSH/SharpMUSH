@@ -8,12 +8,12 @@
 
 @* The sidebar of a section that exists only because applications name it (README §3: a novel
    section gets a rail item and its apps are its sidebar). *@
-<div class="app-section-side @(Collapsed ? "app-section-side--collapsed" : null)">
+<SidebarPanel Class="app-section-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Section" />
     }
-    <nav class="build-side-group" aria-label="@Section">
+    <SidebarGroup Label="@Section">
         @foreach (var app in _apps)
         {
             var a = app;
@@ -21,8 +21,8 @@
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
                         Label="@a.DisplayName" Href="@href" IsCurrent="@IsCurrent(href)" Collapsed="@Collapsed" />
         }
-    </nav>
-</div>
+    </SidebarGroup>
+</SidebarPanel>
 
 @code {
     [Parameter, EditorRequired] public string Section { get; set; } = string.Empty;

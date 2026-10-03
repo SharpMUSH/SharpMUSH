@@ -56,13 +56,13 @@
         <div class="scenes-list" aria-busy="true">
             @for (var i = 0; i < 4; i++)
             {
-                <div class="scenes-skeleton"></div>
+                <SkeletonCard Height="72" />
             }
         </div>
     }
     else if (_filter == ScenesFilter.Mine && _acting is null)
     {
-        <div class="scenes-empty scenes-mine-none">@Loc["NavScenesMineNone"]</div>
+        <EmptyBox Class="scenes-mine-none">@Loc["NavScenesMineNone"]</EmptyBox>
     }
     else if (_error is not null)
     {
@@ -70,7 +70,7 @@
     }
     else if (_scenes is null || _scenes.Count == 0)
     {
-        <div class="scenes-empty">@Loc["ResNoScenesFound"]</div>
+        <EmptyBox>@Loc["ResNoScenesFound"]</EmptyBox>
     }
     else
     {

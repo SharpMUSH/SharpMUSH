@@ -7,7 +7,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
-<div class="snapshots">
+<div class="page-stack page-stack--padded snapshots">
     <PlainPageHeader Kicker="@Loc["AdmSnapshotsKicker"]" Title="@Loc["SnapshotsTitle"]" Description="@Loc["SnapshotsIntro"]" />
 
     @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }

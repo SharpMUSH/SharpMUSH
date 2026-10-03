@@ -1,11 +1,3 @@
-.assets-page {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: var(--main-pad);
-    min-width: 0;
-}
-
 /* Upload card */
 .assets-upload {
     display: flex;

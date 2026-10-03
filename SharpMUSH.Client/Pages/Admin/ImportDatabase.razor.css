@@ -1,11 +1,3 @@
-.dbimport-page {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-	padding: var(--main-pad);
-	min-width: 0;
-}
-
 .dbimport-body {
 	display: flex;
 	flex-direction: column;

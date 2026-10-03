@@ -25,7 +25,7 @@
         <div class="char-dir-grid" aria-busy="true">
             @for (var i = 0; i < 8; i++)
             {
-                <div class="char-dir-skeleton"></div>
+                <SkeletonCard Height="124" />
             }
         </div>
     }
@@ -33,11 +33,11 @@
     {
         @* The roster could not be read at all. "No characters found" would be a claim about the
            game rather than about this request. *@
-        <div class="char-dir-empty">@Loc["WidUnavailable"]</div>
+        <EmptyBox>@Loc["WidUnavailable"]</EmptyBox>
     }
     else if (Filtered.Count == 0)
     {
-        <div class="char-dir-empty">@Loc["NoCharactersFound"]</div>
+        <EmptyBox>@Loc["NoCharactersFound"]</EmptyBox>
     }
     else
     {

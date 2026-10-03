@@ -11,13 +11,6 @@
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
 }
 
-.home-main {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-	min-width: 0;
-}
-
 .home-aside {
 	display: flex;
 	flex-direction: column;

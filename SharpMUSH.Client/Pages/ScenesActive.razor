@@ -17,7 +17,7 @@
         <div class="scenes-list" aria-busy="true">
             @for (var i = 0; i < 4; i++)
             {
-                <div class="scenes-skeleton"></div>
+                <SkeletonCard Height="72" />
             }
         </div>
     }
@@ -27,7 +27,7 @@
     }
     else if (_scenes.Count == 0)
     {
-        <div class="scenes-empty">@Loc["WidNoActiveScenes"]</div>
+        <EmptyBox>@Loc["WidNoActiveScenes"]</EmptyBox>
     }
     else
     {

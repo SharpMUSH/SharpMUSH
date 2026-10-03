@@ -7,7 +7,7 @@
 
 @* D1 §6.5 settings overview: the plain header and one linked card per settings page, the same
    destinations as the section sidebar. *@
-<div class="settings-page">
+<div class="page-stack settings-page">
     <PlainPageHeader Kicker="@($"{Loc["AppTitle"]} · {Loc["Settings"]}")" Title="@Loc["Settings"]" Description="@Loc["NavSettingsDescription"]" />
 
     <div class="settings-grid">
@@ -16,14 +16,7 @@
            /settings/characters stub that said "Coming soon" and offered a link back to /account. *@
         @foreach (var card in Cards)
         {
-            <a class="settings-link" href="@card.Href">
-                <span class="settings-link-icon" aria-hidden="true"><MudIcon Icon="@card.Icon" Size="Size.Small" /></span>
-                <span class="settings-link-body">
-                    <span class="settings-link-title">@Loc[card.TitleKey]</span>
-                    <span class="settings-link-desc">@Loc[card.DescKey]</span>
-                </span>
-                <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Class="settings-link-arrow" />
-            </a>
+            <LinkCard Href="@card.Href" Icon="@card.Icon" Title="@Loc[card.TitleKey]" Description="@Loc[card.DescKey]" />
         }
     </div>
 </div>

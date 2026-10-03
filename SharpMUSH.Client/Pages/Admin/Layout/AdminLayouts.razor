@@ -6,7 +6,7 @@
 
 <PageTitle>@Loc["LayLayouts"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="laybrowse">
+<div class="page-stack page-stack--padded laybrowse">
     <PlainPageHeader Kicker="@Loc["LayLayoutsKicker"]" Title="@Loc["LayLayouts"]" Description="@Loc["LayLayoutsBlurb"]" />
 
     <div class="laybrowse-grid">
@@ -15,7 +15,7 @@
             var customized = _customized.Contains(scope.Scope);
             <a class="lay-card" href="@($"/admin/layout/{scope.Scope}")">
                 <div class="lay-card-top">
-                    <span class="lay-card-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" /></span>
+                    <IconTile Icon="@Icons.Material.Filled.Dashboard" />
                     <div class="lay-card-titles">
                         <div class="lay-card-name">@Loc[scope.DisplayNameKey]</div>
                         <div class="lay-card-sub">@scope.Scope</div>

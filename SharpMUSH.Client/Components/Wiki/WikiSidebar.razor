@@ -11,7 +11,7 @@
    the wiki home, Browse (Wiki home, Recent changes), the categories as image rows with counts, and
    a dashed New page button for those who may create. Collapsed keeps the category covers. Hosted
    by WikiLayout until the shell's page-sidebar slot exists (Phase 1). *@
-<div class="wiki-side @(Collapsed ? "wiki-side--collapsed" : null)">
+<SidebarPanel Class="wiki-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Wiki"]">
@@ -20,15 +20,15 @@
         <SidebarSearch Placeholder="@Loc["NavWikiSearch"]" OnSearch="Search" />
         <SectionLabel>@Loc["NavWikiBrowse"]</SectionLabel>
     }
-    <nav class="wiki-side-browse" aria-label="@Loc["NavWikiBrowse"]">
+    <SidebarGroup Class="wiki-side-browse" Label="@Loc["NavWikiBrowse"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavWikiHome"]" Href="/wiki" IsCurrent="@(_path == "/wiki")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.History" Label="@Loc["NavWikiRecentChanges"]" Href="/wiki/recent" IsCurrent="@(_path == "/wiki/recent")" Collapsed="@Collapsed" />
-    </nav>
+    </SidebarGroup>
     @if (!Collapsed)
     {
         <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
     }
-    <nav class="wiki-side-cats" aria-label="@Loc["NavWikiCategories"]">
+    <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
         @foreach (var group in _groups)
         {
             var g = group;
@@ -36,8 +36,8 @@
             var route = WikiCategories.Route(g.Key);
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
         }
-    </nav>
-    <div class="wiki-side-spacer"></div>
+    </SidebarGroup>
+    <SidebarSpacer />
     <AuthorizeView Policy="wiki.create">
         <Authorized>
             @if (Collapsed)
@@ -59,7 +59,7 @@
             }
         </Authorized>
     </AuthorizeView>
-</div>
+</SidebarPanel>
 
 @code {
     [Parameter] public bool Collapsed { get; set; }

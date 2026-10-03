@@ -1,11 +1,3 @@
-.sugg-page {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: var(--main-pad);
-    min-width: 0;
-}
-
 .sugg-loading {
     display: flex;
     justify-content: center;

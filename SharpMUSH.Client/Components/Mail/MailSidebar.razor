@@ -11,7 +11,7 @@
    folder (the inbox with its unread pill), the folder on screen marked. Mail belongs to the active
    character, so without one there is no mailbox to list and the sidebar says so. Collapsed keeps
    each row's icon. *@
-<div class="mail-side @(Collapsed ? "mail-side--collapsed" : null)">
+<SidebarPanel Class="mail-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Mail"]">
@@ -27,29 +27,29 @@
     {
         @if (!Collapsed)
         {
-            <div class="mail-side-empty">@Loc["MailNeedsCharacter"]</div>
+            <SidebarNote Class="mail-side-empty">@Loc["MailNeedsCharacter"]</SidebarNote>
         }
     }
     else
     {
-        <nav class="mail-side-compose" aria-label="@Loc["Compose"]">
+        <SidebarGroup Class="mail-side-compose" Label="@Loc["Compose"]">
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Edit" Label="@Loc["Compose"]"
                         Href="/mail/compose" IsCurrent="@(_path == "/mail/compose")" Collapsed="@Collapsed" />
-        </nav>
+        </SidebarGroup>
         @if (!Collapsed)
         {
             <SectionLabel>@Loc["NavMailFolders"]</SectionLabel>
         }
-        <nav class="mail-side-folders" aria-label="@Loc["NavMailFolders"]">
+        <SidebarGroup Class="mail-side-folders" Label="@Loc["NavMailFolders"]">
             @foreach (var folder in _folders)
             {
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@folder"
                             Href="@FolderHref(folder)" IsCurrent="@IsCurrent(folder)"
                             Unread="@(folder == Inbox ? _inboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
             }
-        </nav>
+        </SidebarGroup>
     }
-</div>
+</SidebarPanel>
 
 @code {
     /// <summary>Only the icons, for the collapsed strip.</summary>

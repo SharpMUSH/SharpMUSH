@@ -1,0 +1,21 @@
+@* A card that is one link: icon tile, a title over a dim line, and a chevron that nudges toward the
+   destination on hover. The Settings and admin Dashboard grids are made of these. *@
+<a class="kit-link-card @Class" href="@Href">
+    <IconTile Icon="@Icon" />
+    <span class="kit-link-card-body">
+        <span class="kit-link-card-title">@Title</span>
+        @if (Description is not null)
+        {
+            <span class="kit-link-card-desc">@Description</span>
+        }
+    </span>
+    <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Class="kit-link-card-arrow" />
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

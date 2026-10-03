@@ -1,11 +1,3 @@
-.adm-profiles {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-	padding: var(--main-pad);
-	min-width: 0;
-}
-
 /* inline <code> in the header description and the reset caption (both injected markup) */
 .adm-profiles ::deep code {
 	font-family: var(--font-mono);

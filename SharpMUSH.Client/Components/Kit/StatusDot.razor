@@ -1,0 +1,12 @@
+@* The 7px status dot: accent while something is live or unread, faint when it is not. Decorative
+   beside the text it qualifies; given a Label it is announced on its own ("Unread"). *@
+<span class="kit-dot @(On ? null : "kit-dot--off") @Class" role="@(Label is null ? null : "img")"
+      aria-label="@Label" aria-hidden="@(Label is null ? "true" : null)"></span>
+
+@code {
+    [Parameter] public bool On { get; set; } = true;
+
+    /// <summary>The dot's accessible name, when no text beside it says the same.</summary>
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

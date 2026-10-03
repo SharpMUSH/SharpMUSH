@@ -63,7 +63,7 @@ else
                                 <span class="mail-row-top">
                                     @if (!m.Read)
                                     {
-                                        <span class="mail-row-dot" role="img" aria-label="@Loc["NavMailUnread"]"></span>
+                                        <StatusDot Label="@Loc["NavMailUnread"]" />
                                     }
                                     @if (m.Urgent)
                                     {

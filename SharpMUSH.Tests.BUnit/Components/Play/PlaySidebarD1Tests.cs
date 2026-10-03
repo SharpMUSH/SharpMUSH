@@ -46,11 +46,11 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		var cut = RenderSidebar();
 		await Assert.That(cut.Find(".kit-side-title").TextContent).IsEqualTo("Play");
 		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("Connected as Ilsa Varn");
-		await Assert.That(cut.FindAll(".play-side-dot--on").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".kit-side-sub .kit-dot:not(.kit-dot--off)").Count).IsEqualTo(1);
 
 		var offline = RenderSidebar(connected: false);
 		await Assert.That(offline.Find(".kit-side-sub").TextContent).Contains("Disconnected");
-		await Assert.That(offline.FindAll(".play-side-dot--on").Count).IsEqualTo(0);
+		await Assert.That(offline.FindAll(".kit-side-sub .kit-dot:not(.kit-dot--off)").Count).IsEqualTo(0);
 	}
 
 	[Test]

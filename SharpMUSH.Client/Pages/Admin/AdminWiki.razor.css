@@ -1,11 +1,3 @@
-.adminwiki {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-	padding: var(--main-pad);
-	min-width: 0;
-}
-
 .adminwiki-grid-scroll {
 	overflow-x: auto;
 	min-width: 0;

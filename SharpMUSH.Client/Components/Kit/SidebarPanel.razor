@@ -1,0 +1,11 @@
+@* D1 §3 page sidebar: the column every section sidebar stands in (head, search, labelled groups of
+   rows), 12px in from the pagebar's edges and 4px when collapsed to the icon strip. *@
+<div class="kit-side @(Collapsed ? "kit-side--collapsed" : null) @Class">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Collapsed { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

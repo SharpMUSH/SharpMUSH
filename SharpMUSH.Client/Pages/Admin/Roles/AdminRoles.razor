@@ -11,7 +11,7 @@
 
 <PageTitle>@Loc["RolPageTitle"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="roleadmin">
+<div class="page-stack page-stack--padded roleadmin">
     <PlainPageHeader Kicker="@Loc["RolKicker"]" Title="@Loc["RolHeading"]">
         <Actions>
             <TypeChips Items="@TabItems" Selected="@_tab.ToString()" SelectedChanged="@(v => _tab = Enum.Parse<Tab>(v))"

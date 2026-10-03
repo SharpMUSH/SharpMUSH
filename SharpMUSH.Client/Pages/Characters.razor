@@ -31,7 +31,7 @@
         <div class="char-grid" aria-busy="true">
             @for (var i = 0; i < 8; i++)
             {
-                <div class="char-skeleton"></div>
+                <SkeletonCard Height="150" />
             }
         </div>
     }
@@ -39,11 +39,11 @@
     {
         @* The directory request failed. "No characters found" would state something about the game
            that this page has no evidence for. *@
-        <div class="char-empty">@Loc["WidUnavailable"]</div>
+        <EmptyBox Class="char-empty">@Loc["WidUnavailable"]</EmptyBox>
     }
     else if (Filtered.Count == 0)
     {
-        <div class="char-empty">@Loc["NoCharactersFound"]</div>
+        <EmptyBox Class="char-empty">@Loc["NoCharactersFound"]</EmptyBox>
     }
     else
     {
