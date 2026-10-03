@@ -24,6 +24,15 @@ public class FlagLetterOrderTests : ServerTestBase
 		await Assert.That(await EvalAs(player.DbRef, "lflags(me)")).IsEqualTo("ENTER_OK NO_COMMAND ANSI CONNECTED");
 	}
 
+	/// <summary>TERSE (x) sits before PUPPET (p) in Penn's bit order, however the flag is stored; a new thing is NO_COMMAND (n).</summary>
+	[Test]
+	public async Task TerseTakesTersesPlaceNotCloudys()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("FlagOrderTerse")})");
+		await Cmd($"@set {thing}=terse puppet");
+		await Assert.That(await Eval($"flags({thing})")).IsEqualTo("Tnxp");
+	}
+
 	[Test]
 	public async Task ThingsAndRoomsShowTheirTypeLetterFirst()
 	{
