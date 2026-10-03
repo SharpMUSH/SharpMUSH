@@ -43,4 +43,19 @@ public interface ISessionRecordStore
 	/// <c>SitelockMatcher</c> stay the single implementation of what a rule matches.
 	/// </remarks>
 	ValueTask<string[]> GetSessionOriginIpsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Deletes up to <paramref name="maxCount"/> sessions whose expiry is at or before
+	/// <paramref name="nowUnixMs"/>, earliest first, with every secondary entry they hold. Returns how many
+	/// were deleted.
+	/// </summary>
+	/// <remarks>
+	/// Reads an expiry-ordered index, so the work is the expired head and never the whole session table.
+	/// A session renewed past <paramref name="nowUnixMs"/> is never deleted, and nothing is ever inserted,
+	/// so a sweep cannot reinstate a revoked session either.
+	/// </remarks>
+	ValueTask<int> DeleteExpiredSessionsAsync(long nowUnixMs, int maxCount, CancellationToken cancellationToken = default);
+
+	/// <summary>How many stored sessions have expired at <paramref name="nowUnixMs"/> and are still on disk.</summary>
+	ValueTask<long> CountExpiredSessionsAsync(long nowUnixMs, CancellationToken cancellationToken = default);
 }

@@ -66,4 +66,17 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 				.Where(ip => !string.IsNullOrEmpty(ip))
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 		]);
+
+	public Task<IAccountSessionStore.SessionSweep> SweepExpiredAsync(int maxCount, CancellationToken ct = default)
+	{
+		var now = DateTimeOffset.UtcNow;
+		var expired = _tokens.Where(p => now > p.Value.Expiry).Select(p => p.Key).ToList();
+		var deleted = 0;
+		foreach (var token in expired.Take(maxCount))
+		{
+			if (_tokens.TryRemove(token, out _)) deleted++;
+		}
+
+		return Task.FromResult(new IAccountSessionStore.SessionSweep(deleted, Math.Max(0, expired.Count - deleted)));
+	}
 }
