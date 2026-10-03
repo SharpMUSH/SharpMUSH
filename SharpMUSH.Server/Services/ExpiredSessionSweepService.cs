@@ -43,6 +43,8 @@ public sealed class ExpiredSessionSweepService(IAccountSessionStore sessions, IL
 		}
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
+			// The host is stopping; the next start sweeps whatever this pass left.
+			return;
 		}
 	}
 

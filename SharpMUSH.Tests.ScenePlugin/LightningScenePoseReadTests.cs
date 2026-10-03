@@ -26,7 +26,7 @@ public class LightningScenePoseReadTests
 	[Before(Test)]
 	public async Task Open()
 	{
-		_path = Path.Combine(Path.GetTempPath(), "sharpmush-scene-" + Guid.NewGuid().ToString("N"));
+		_path = Path.Join(Path.GetTempPath(), "sharpmush-scene-" + Guid.NewGuid().ToString("N"));
 		_db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = _path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 		await _db.Migrate();

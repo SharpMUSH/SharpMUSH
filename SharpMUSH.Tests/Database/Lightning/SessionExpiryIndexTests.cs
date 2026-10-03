@@ -142,9 +142,11 @@ public class SessionExpiryIndexTests : LightningDatabaseFixture
 		var sweeps = Enumerable.Range(0, 10).Select(_ => Db.DeleteExpiredSessionsAsync(5_000, 3).AsTask());
 		var renewed = await Task.WhenAll(renewals);
 		await Task.WhenAll(sweeps);
-		while (await Db.DeleteExpiredSessionsAsync(5_000, 100) > 0)
+		int swept;
+		do
 		{
-		}
+			swept = await Db.DeleteExpiredSessionsAsync(5_000, 100);
+		} while (swept > 0);
 
 		for (var i = 0; i < 40; i += 2)
 		{

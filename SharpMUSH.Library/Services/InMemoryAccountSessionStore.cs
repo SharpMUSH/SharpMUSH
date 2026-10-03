@@ -71,11 +71,7 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 	{
 		var now = DateTimeOffset.UtcNow;
 		var expired = _tokens.Where(p => now > p.Value.Expiry).Select(p => p.Key).ToList();
-		var deleted = 0;
-		foreach (var token in expired.Take(maxCount))
-		{
-			if (_tokens.TryRemove(token, out _)) deleted++;
-		}
+		var deleted = expired.Take(maxCount).Count(token => _tokens.TryRemove(token, out _));
 
 		return Task.FromResult(new IAccountSessionStore.SessionSweep(deleted, Math.Max(0, expired.Count - deleted)));
 	}

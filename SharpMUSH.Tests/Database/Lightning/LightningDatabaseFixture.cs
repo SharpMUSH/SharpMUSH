@@ -23,7 +23,7 @@ public abstract class LightningDatabaseFixture
 	[Before(Test)]
 	public async Task OpenWorld()
 	{
-		DbPath = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		DbPath = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		Db = Create(DbPath);
 		await Db.Migrate();
 	}
