@@ -3876,6 +3876,14 @@
     <value>Un complemento cambió — recargando…</value>
     <comment>MT — "plugin" rendered as "complemento"; keep the English word instead if the product uses it elsewhere</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>El juego se actualizó. Recarga para obtener la nueva versión.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Recargar</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Empiece leyendo el wiki, explorando personajes o uniéndose a una escena.</value>
     <comment>MT</comment>

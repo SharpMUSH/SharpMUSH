@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using MarkupString.Ansi;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Logging;
 
@@ -234,7 +234,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 					var raw = text[range].TrimEnd('\r');
 					if (raw.IsEmpty)
 						continue;
-					var line = StripAnsi(raw.ToString());
+					var line = AnsiEscapeParser.Parse(raw.ToString()).ToPlainText();
 					if (line.Length > 0)
 						AddLine(line, TerminalLineSource.Server);
 				}
@@ -356,9 +356,4 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			_ = slot.AppendLineAsync(line).AsTask();
 		LineReceived?.Invoke(line);
 	}
-
-	[GeneratedRegex(@"\x1B\[[0-9;]*[mGKHFJABCDsu]|\x1B\[[\d;]*[HJK]", RegexOptions.Compiled)]
-	private static partial Regex AnsiRegex();
-
-	private static string StripAnsi(string text) => AnsiRegex().Replace(text, string.Empty);
 }

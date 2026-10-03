@@ -14,13 +14,17 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
-	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null);
+	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
+		string? BuildId = null);
 
 	private const string DefaultMudName = "SharpMUSH";
 
 	private static readonly ServerInfoResponse Fallback = new(true, DefaultMudName, GameFeatures.Defaults);
 
 	private Task<ServerInfoResponse?>? _info;
+
+	// The build of the first answer this tab had. Refresh() does not forget it: it names the bundle running here.
+	private string? _firstBuildId;
 
 	/// <summary>
 	/// Whether the server accepts guest logins (<c>Net.Guests</c>). On any fetch failure this degrades
@@ -41,6 +45,22 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// </summary>
 	public virtual async Task<bool> HasFeatureAsync(string feature)
 		=> (await FetchAsync()).Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) ?? false;
+
+	/// <summary>
+	/// The portal build of the first answer this tab had, which is the build it is running; <c>null</c> until
+	/// the server has answered once.
+	/// </summary>
+	public virtual async Task<string?> BuildIdAsync()
+	{
+		await FetchAsync();
+		return _firstBuildId;
+	}
+
+	/// <summary>
+	/// The portal build the server serves now, asked fresh and not remembered; <c>null</c> when the server did
+	/// not answer. Differs from <see cref="BuildIdAsync"/> once the game was deployed under an open tab.
+	/// </summary>
+	public virtual async Task<string?> CurrentBuildIdAsync() => (await FetchCoreAsync())?.BuildId;
 
 	/// <summary>Raised after <see cref="Refresh"/>: what a reader asked before may have changed.</summary>
 	public event Action? Changed;
@@ -69,8 +89,13 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		await httpClientFactory.CreateClient("api")
 				.GetApiAsync<ServerInfoResponse>("api/server-info", "The server returned no server info.") switch
 		{
-			ServerInfoResponse info =>
-				info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName },
+			ServerInfoResponse info => Answered(info),
 			ApiFailure => null
 		};
+
+	private ServerInfoResponse Answered(ServerInfoResponse info)
+	{
+		_firstBuildId ??= info.BuildId;
+		return info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName };
+	}
 }

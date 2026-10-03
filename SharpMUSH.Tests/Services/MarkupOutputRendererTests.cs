@@ -222,25 +222,22 @@ public partial class MarkupOutputRendererTests
 
 	/// <summary>
 	/// MXP line modes share CSI syntax with SGR, so a connection rendering no colour still needs them:
-	/// without <c>ESC[1z</c> the client treats the SEND tag as text. Both ways of arriving at "no
-	/// colour" are covered — a client that negotiated none, and a player who pinned
-	/// <c>SOCKSET colorstyle plain</c>, which since the colour ladder became additive is the only thing
-	/// that turns colour off outright.
+	/// without <c>ESC[1z</c> the client treats the SEND tag as text. Both ways of arriving at no colour are
+	/// covered — a client that negotiated none, which renders attributes only, and a player who pinned
+	/// <c>SOCKSET colorstyle plain</c>.
 	/// </summary>
 	[Test]
 	[Arguments(true, ColorStyles.Plain)]
 	[Arguments(false, null)]
 	public async Task Mxp_ModeSurvivesDisablingAnsi(bool supportsAnsi, string? pin)
 	{
-		var capabilities = new ProtocolCapabilities(
-			SupportsAnsi: supportsAnsi, Format: OutputFormat.Mxp, ColorStylePin: pin);
-		var transform = new OutputTransformService(
-			Microsoft.Extensions.Logging.Abstractions.NullLogger<OutputTransformService>.Instance);
-		var text = Encoding.UTF8.GetString(transform.Transform(
-			Encoding.UTF8.GetBytes("\x1b[1z<SEND HREF=\"help newbie\">\x1b[31mnewbie\x1b[0m</SEND>"),
-			capabilities, new PlayerOutputPreferences(AnsiEnabled: false, ColorEnabled: false)));
+		var link = AnsiMarkup.Create(linkUrl: "help newbie", linkKind: LinkKind.Command);
+		var text = MarkupText.Wrap(link, MarkupText.Wrap(Red, "newbie"));
 
-		await Assert.That(text).IsEqualTo("\x1b[1z<SEND HREF=\"help newbie\">newbie</SEND>");
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: supportsAnsi, Format: OutputFormat.Mxp, ColorStylePin: pin),
+			new PlayerOutputPreferences(AnsiEnabled: false, ColorEnabled: false));
+
+		await Assert.That(rendered).IsEqualTo($"{MxpSecureLineFramer.SecureLine}<SEND HREF=\"help newbie\">newbie</SEND>");
 	}
 
 	[Test]
@@ -367,5 +364,204 @@ public partial class MarkupOutputRendererTests
 		var prefix = MxpSecureLineFramer.SecureLine;
 		await Assert.That(Encoding.UTF8.GetString(result.Data))
 			.IsEqualTo($"{prefix}one\r\n\r\n{prefix}two\r\n{prefix}three");
+	}
+
+	// ── Colour: what the connection can display ─────────────────────────────────
+
+	private static readonly AnsiMarkup Red = AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false));
+	private static readonly AnsiMarkup BoldRed = AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false), bold: true);
+	private static readonly AnsiMarkup RgbRed = AnsiMarkup.Create(foreground: new AnsiColor.Rgb(255, 0, 0));
+	private static readonly AnsiMarkup XtermRed = AnsiMarkup.Create(foreground: new AnsiColor.Xterm(196));
+
+	private static readonly PlayerOutputPreferences AllColour = new(
+		AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true, TruecolorEnabled: true);
+
+	private static string Render(MarkupText text, ProtocolCapabilities capabilities, PlayerOutputPreferences? preferences) =>
+		Encoding.UTF8.GetString(new MarkupOutputRenderer().Render(MarkupTextSerializer.Serialize(text),
+			new RenderContext("telnet", capabilities, preferences)).Data);
+
+	/// <summary>
+	/// The bug this ladder exists to prevent. Logging in publishes the character's colour flags, and a
+	/// character with neither ANSI nor COLOR published <c>false</c> for both, which read as "this player
+	/// refuses colour". The default <c>player_flags</c> grants <c>ansi</c> and never <c>color</c>, so no
+	/// character could get colour without setting the flags by hand. An unset flag is not a refusal.
+	/// </summary>
+	[Test]
+	public async Task Colour_IsKept_WhenFlagsAreUnsetButTerminalClaimsAnsi()
+	{
+		var rendered = Render(MarkupText.Wrap(Red, "Red text"), new ProtocolCapabilities(SupportsAnsi: true),
+			new PlayerOutputPreferences(AnsiEnabled: false, ColorEnabled: false, Xterm256Enabled: false, TruecolorEnabled: false));
+
+		await Assert.That(rendered).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	/// <summary>The same fact one rung up: a terminal that claims 24-bit colour gets it, flags or no flags.</summary>
+	[Test]
+	public async Task Colour_TruecolorIsKept_WhenFlagIsUnsetButTerminalClaimsIt()
+	{
+		var rendered = Render(MarkupText.Wrap(RgbRed, "Red text"),
+			new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true),
+			new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true));
+
+		await Assert.That(rendered).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
+	}
+
+	/// <summary>
+	/// Refusing colour is <c>SOCKSET colorstyle</c>'s job, not a flag's: only a pin renders below what the
+	/// client and the flags between them claim.
+	/// </summary>
+	[Test]
+	public async Task Colour_PinnedPlain_WritesNoSgr()
+	{
+		var text = MarkupText.Concat([MarkupText.Wrap(BoldRed, "Bold Red"), MarkupText.Plain(" "),
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(2, false), underlined: true), "Underline Green")]);
+
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: true, ColorStylePin: ColorStyles.Plain), AllColour);
+
+		await Assert.That(rendered).IsEqualTo("Bold Red Underline Green");
+	}
+
+	/// <summary>PennMUSH's middle rung: the attributes survive and the hues do not, extended colours included.</summary>
+	[Test]
+	public async Task Colour_PinnedHilite_KeepsAttributesAndDropsColour()
+	{
+		var text = MarkupText.Concat([
+			MarkupText.Wrap(BoldRed, "Bold red"), MarkupText.Plain(" "),
+			MarkupText.Wrap(AnsiMarkup.Create(underlined: true), "Underline"), MarkupText.Plain(" "),
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Xterm(196), bold: true), "Xterm"), MarkupText.Plain(" "),
+			MarkupText.Wrap(AnsiMarkup.Create(background: new AnsiColor.Xterm(21)), "Background")]);
+
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite), null);
+
+		await Assert.That(rendered).IsEqualTo(
+			"\x1b[1mBold red\x1b[0m \x1b[4mUnderline\x1b[0m \x1b[1mXterm\x1b[0m Background");
+	}
+
+	/// <summary>A pin renders below the terminal's own claim, which is the whole point of pinning one.</summary>
+	[Test]
+	public async Task Colour_PinnedSixteenColor_DowngradesATruecolorTerminal()
+	{
+		var rendered = Render(MarkupText.Wrap(RgbRed, "Red text"),
+			new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true,
+				ColorStylePin: ColorStyles.SixteenColor), AllColour);
+
+		await Assert.That(rendered).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	/// <summary>
+	/// A pin is the player speaking for themselves, so it also overrides the screen-reader default — somebody
+	/// running a screen reader alongside a colour-capable terminal can ask for the colour.
+	/// </summary>
+	[Test]
+	public async Task Colour_PinOverridesScreenReaderDefault()
+	{
+		var rendered = Render(MarkupText.Wrap(Red, "Red text"),
+			new ProtocolCapabilities(SupportsAnsi: false, ScreenReader: true, ColorStylePin: ColorStyles.SixteenColor), null);
+
+		await Assert.That(rendered).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	[Test]
+	public async Task Colour_ScreenReaderOverridesPlayerColorFlags()
+	{
+		var rendered = Render(MarkupText.Wrap(BoldRed, "Red text"), new ProtocolCapabilities(SupportsAnsi: false, ScreenReader: true), AllColour);
+
+		await Assert.That(rendered).IsEqualTo("Red text");
+	}
+
+	/// <summary>
+	/// sharpflag.md's split, honoured: ANSI is "this client can highlight", COLOR is "this client can colour".
+	/// A player with only the first, on a terminal claiming nothing, gets the attributes; so does a terminal
+	/// that named no colour before anyone logged in.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Colour_NoColourClaimed_RendersHilite(bool ansiFlag)
+	{
+		var text = MarkupText.Concat([MarkupText.Wrap(BoldRed, "Bold red"), MarkupText.Plain(" "), MarkupText.Wrap(Red, "red")]);
+
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: false),
+			ansiFlag ? new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: false) : null);
+
+		await Assert.That(rendered).IsEqualTo("\x1b[1mBold red\x1b[0m red");
+	}
+
+	/// <summary>A flag that says yes is a claim like a terminal's, and the deeper claim wins.</summary>
+	[Test]
+	[Arguments(true, false, false, "\x1b[31mRed text\x1b[0m")]
+	[Arguments(true, true, false, "\x1b[38;5;196mRed text\x1b[0m")]
+	[Arguments(true, false, true, "\x1b[38;2;255;0;0mRed text\x1b[0m")]
+	public async Task Colour_PlayerFlagsOverrideInferredCapability(bool color, bool xterm256, bool truecolor, string expected)
+	{
+		var rendered = Render(MarkupText.Wrap(RgbRed, "Red text"),
+			new ProtocolCapabilities(SupportsAnsi: false, SupportsXterm256: false, SupportsTruecolor: false),
+			new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: color, Xterm256Enabled: xterm256, TruecolorEnabled: truecolor));
+
+		await Assert.That(rendered).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Colour_UsesInferredTruecolorCapabilityBeforeLogin()
+	{
+		var rendered = Render(MarkupText.Wrap(RgbRed, "Red text"),
+			new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true), null);
+
+		await Assert.That(rendered).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
+	}
+
+	/// <summary>
+	/// Colour depth is a ladder: 24-bit becomes the nearest palette entry for a 256-colour client, and a palette
+	/// entry or 24-bit colour becomes the nearest of the sixteen for one that has only those. Background as
+	/// well as foreground, and a colour sharing its sequence with attributes as well as one alone.
+	/// </summary>
+	[Test]
+	[Arguments(true, "\x1b[1;4;38;5;196mText\x1b[0m \x1b[48;5;21mOn blue\x1b[0m \x1b[38;5;196mXterm\x1b[0m")]
+	[Arguments(false, "\x1b[1;4;31mText\x1b[0m \x1b[44mOn blue\x1b[0m \x1b[31mXterm\x1b[0m")]
+	public async Task Colour_DowngradesToWhatTheTerminalClaims(bool xterm256, string expected)
+	{
+		var text = MarkupText.Concat([
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Rgb(255, 0, 0), bold: true, underlined: true), "Text"),
+			MarkupText.Plain(" "),
+			MarkupText.Wrap(AnsiMarkup.Create(background: new AnsiColor.Rgb(0, 0, 255)), "On blue"),
+			MarkupText.Plain(" "),
+			MarkupText.Wrap(XtermRed, "Xterm")]);
+
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: xterm256, SupportsTruecolor: false), null);
+
+		await Assert.That(rendered).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The first sixteen palette entries are the sixteen colours themselves; the bright half is written as
+	/// bold and the base colour (PennMUSH's own form, which every client reads), and a bright background on
+	/// the aixterm row.
+	/// </summary>
+	[Test]
+	[Arguments(9, false, "\x1b[1;31mText\x1b[0m")]
+	[Arguments(1, false, "\x1b[31mText\x1b[0m")]
+	[Arguments(9, true, "\x1b[101mText\x1b[0m")]
+	public async Task Colour_TheFirstSixteenPaletteEntriesAreTheSixteenColours(int index, bool background, string expected)
+	{
+		var colour = new AnsiColor.Xterm((byte)index);
+		var style = background ? AnsiMarkup.Create(background: colour) : AnsiMarkup.Create(foreground: colour);
+
+		var rendered = Render(MarkupText.Wrap(style, "Text"), new ProtocolCapabilities(SupportsAnsi: true), null);
+
+		await Assert.That(rendered).IsEqualTo(expected);
+	}
+
+	/// <summary>Telnet clients do not read OSC 8: a link is its text, at every depth.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Colour_ALinkIsItsText(bool supportsAnsi)
+	{
+		var link = AnsiMarkup.Create(linkUrl: "https://example.com/help", linkKind: LinkKind.Url);
+		var text = MarkupText.Concat([MarkupText.Plain("See "), MarkupText.Wrap(link, "newbie2"), MarkupText.Plain(" for more.")]);
+
+		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: supportsAnsi), AllColour);
+
+		await Assert.That(rendered).IsEqualTo("See newbie2 for more.");
 	}
 }

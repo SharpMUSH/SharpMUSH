@@ -5,9 +5,9 @@ namespace SharpMUSH.SocketServer.Services;
 /// </summary>
 /// <param name="Data">The bytes to write to the connection.</param>
 /// <param name="ApplyOutputTransform">
-/// Whether the caller should still run the capability-based <see cref="IOutputTransformService"/>
-/// over <see cref="Data"/> (true for terminal output; false for the WebSocket markup envelope,
-/// which is JSON the browser renders itself and must not be ANSI/charset-transformed).
+/// Whether the caller should still run the charset <see cref="IOutputTransformService"/> over
+/// <see cref="Data"/> (true for terminal output; false for the WebSocket markup envelope, which is JSON
+/// the browser renders itself).
 /// </param>
 public readonly record struct RenderedOutput(byte[] Data, bool ApplyOutputTransform);
 

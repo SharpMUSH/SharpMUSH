@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Markup;
+
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
@@ -24,5 +26,24 @@ public static class SceneMarkupRenderer
 		{
 			return System.Net.WebUtility.HtmlEncode(markup);
 		}
+	}
+
+	/// <summary>
+	/// A pose as the softcode that writes it, <c>decompose()</c>'s answer: what the Edit box starts from, so
+	/// saving it unchanged keeps every colour. <paramref name="content"/>, the plain text, stands in when
+	/// <paramref name="markup"/> is not a serialized MString envelope.
+	/// </summary>
+	public static string ToSoftcode(string? markup, string content)
+	{
+		MarkupText text;
+		try
+		{
+			text = string.IsNullOrEmpty(markup) ? MarkupText.Plain(content) : MarkupTextSerializer.Deserialize(markup);
+		}
+		catch (System.Text.Json.JsonException)
+		{
+			text = MarkupText.Plain(content);
+		}
+		return SoftcodeDecomposer.Decompose(text);
 	}
 }

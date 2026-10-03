@@ -5,6 +5,7 @@ using NSubstitute.Core;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
@@ -429,6 +430,14 @@ public class SceneRoleplayIntegrationTests
 		Log($"[REWRITE] {rewritten}");
 		await Assert.That(rewritten).IsEqualTo("Well met, all, and welcome.\nSit, please.")
 			.Because("+scene/rewrite replaces the whole text, commas included, and the composer's %r is a line break");
+		// The portal's Edit starts from decompose() of the pose. Sent back unchanged it is the same pose, colours
+		// and escaped specials included. The command line is the one evaluation: a second would run the [OOC]
+		// that the first left behind.
+		const string decomposed = @"[ansi(hr,Well met)]\,%b[tagwrap(b,all)].%r[ansi(c,Sit)]\; please \[OOC\].";
+		await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}={decomposed}");
+		var markup = await Eval($"scenepose({sceneId}, {bobPoseId}, markup)");
+		await Assert.That(SoftcodeDecomposer.Decompose(MarkupTextSerializer.Deserialize(markup))).IsEqualTo(decomposed)
+			.Because("an edit saved without changes must not lose the pose's colours or tags");
 
 		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each

@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.22.1
+version: 1.22.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -331,13 +331,14 @@ objects:
       CMD`EDIT: |-
         $+scene/edit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @assert setr(new,edit(scenepose(,%q<pid>,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q<pid>=%#,%q<new>
 
-      # The whole text at once: the portal's Edit on a pose sends this. Author-only, checked as CMD`EDIT does. %1 is
-      # evaluated once, as the player (objeval), so the composer's %r and %b encoding becomes the text and any
-      # function in it runs with the player's own powers, as it would in their say or pose, never the logger's.
-      # It goes into a register in a command of its own, and @scene/editpose takes the register as it is,
-      # commas and all (it splits off one field).
+      # The whole text at once: the portal's Edit on a pose sends this. Author-only, checked as CMD`EDIT does. The
+      # player's command line is evaluated before it is matched, as the player, so %1 is already the text: the
+      # composer's %r and %b are its line breaks and spaces, and any function in it ran with the player's own
+      # powers, as it would in their say or pose, never the logger's. Nothing here evaluates it again, or a
+      # decompose()d \[ that the first pass left as a [ would run as a function. @scene/editpose takes %1 as it
+      # is, commas and all (it splits off one field); a substitution is not parsed again.
       CMD`REWRITE: |-
-        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @assert 1[setq(new,objeval(%#,s(%1)))]; @scene/editpose %q<pid>=%#,%q<new>
+        $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[get(%!/DATA`DENY_NOT_AUTHOR)]; @scene/editpose %q<pid>=%#,%1
 
       CMD`UNDO: |-
         $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/undo %0

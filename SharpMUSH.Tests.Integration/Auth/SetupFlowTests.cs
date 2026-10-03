@@ -194,7 +194,7 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 	private record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
 		List<string> DependsOn);
 	private record SetupWizardResponse(bool Pending, List<HandlerState> Handlers, List<BundledPackageState> Packages);
-	private record ServerInfoResponse(bool GuestsEnabled, string MudName, List<string>? Features);
+	private record ServerInfoResponse(bool GuestsEnabled, string MudName, List<string>? Features, string? BuildId);
 
 	/// <summary>
 	/// The claim leaves the rest of the wizard pending for the new administrator, who can read it and
@@ -225,6 +225,7 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		// What the portal is told is on is exactly what the wizard reports as installed.
 		var info = await http.GetFromJsonAsync<ServerInfoResponse>("api/server-info");
 		await Assert.That(info!.Features).IsNotNull();
+		await Assert.That(info.BuildId).IsNotEmpty();
 		var installed = wizard.Packages.Where(p => p.Installed).Select(p => p.Id).ToHashSet();
 		await Assert.That(info.Features!.Contains("scenes")).IsEqualTo(installed.Contains("scene"));
 		await Assert.That(info.Features!.Contains("wiki-reader")).IsEqualTo(installed.Contains("wiki-reader"));

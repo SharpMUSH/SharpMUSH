@@ -26,20 +26,21 @@ public class RenderingWorkerRestartTests
 		try
 		{
 			await worker.StartAsync(stopping.Token);
-			var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
-			var first = await renderer.TransformAsync(Encoding.UTF8.GetBytes("\u001b[31mfirst\u001b[0m"), capabilities, null);
-			await Assert.That(Encoding.UTF8.GetString(first)).IsEqualTo("first");
+			// An ASCII client: the worker transcodes, so its answer is distinguishable from the input.
+			var capabilities = new ProtocolCapabilities(Charset: "ASCII");
+			var first = await renderer.TransformAsync(Encoding.UTF8.GetBytes("first café"), capabilities);
+			await Assert.That(Encoding.ASCII.GetString(first)).IsEqualTo("first caf?");
 			await worker.StopAsync(stopping.Token);
 			await worker.DisposeAsync();
 
-			var pending = renderer.TransformAsync(Encoding.UTF8.GetBytes("\u001b[32msecond\u001b[0m"), capabilities, null).AsTask();
+			var pending = renderer.TransformAsync(Encoding.UTF8.GetBytes("second café"), capabilities).AsTask();
 			await logger.Unavailable.Task.WaitAsync(stopping.Token);
 			await Assert.That(pending.IsCompleted).IsFalse();
 
 			worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 			await worker.StartAsync(stopping.Token);
 			var second = await pending.WaitAsync(stopping.Token);
-			await Assert.That(Encoding.UTF8.GetString(second)).IsEqualTo("second");
+			await Assert.That(Encoding.ASCII.GetString(second)).IsEqualTo("second caf?");
 		}
 		finally
 		{
@@ -58,7 +59,7 @@ public class RenderingWorkerRestartTests
 		var logger = new RetryLogger();
 		using var renderer = new RemoteOutputRenderer(configuration, lifetime, logger);
 		using var caller = new CancellationTokenSource();
-		var pending = renderer.TransformAsync("hello"u8.ToArray(), new ProtocolCapabilities(), null, caller.Token).AsTask();
+		var pending = renderer.TransformAsync("hello"u8.ToArray(), new ProtocolCapabilities(), caller.Token).AsTask();
 		await logger.Unavailable.Task.WaitAsync(TimeSpan.FromSeconds(10));
 		caller.Cancel();
 		await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();
@@ -75,7 +76,7 @@ public class RenderingWorkerRestartTests
 			new Dictionary<string, string?> { ["Rendering:SocketPath"] = "/tmp/sm-missing-" + Guid.NewGuid().ToString("N") }).Build();
 		var logger = new RetryLogger();
 		using var renderer = new RemoteOutputRenderer(configuration, lifetime, logger);
-		var pending = renderer.TransformAsync("hello"u8.ToArray(), new ProtocolCapabilities(), null).AsTask();
+		var pending = renderer.TransformAsync("hello"u8.ToArray(), new ProtocolCapabilities()).AsTask();
 		await logger.Unavailable.Task.WaitAsync(TimeSpan.FromSeconds(10));
 		stopping.Cancel();
 		await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();

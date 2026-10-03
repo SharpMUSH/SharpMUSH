@@ -61,7 +61,7 @@ public class OutputConsumerResilienceTests
 	}
 
 	[Test]
-	public async Task BroadcastRendersOncePerValueEqualCapabilitiesAndPreferences()
+	public async Task BroadcastTransformsOncePerValueEqualCapabilities()
 	{
 		var received = new Dictionary<long, byte[]>();
 		ConnectionServerService.ConnectionData Client(long handle, ProtocolCapabilities caps, PlayerOutputPreferences prefs) =>
@@ -74,19 +74,16 @@ public class OutputConsumerResilienceTests
 		var connections = Substitute.For<IConnectionServerService>();
 		connections.GetAll().Returns(clients);
 		var transform = Substitute.For<IOutputTransformService>();
-		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<ProtocolCapabilities>(), Arg.Any<PlayerOutputPreferences?>(), Arg.Any<CancellationToken>())
-			.Returns(call => ValueTask.FromResult(new[]
-			{
-				(byte)(call.Arg<ProtocolCapabilities>().SupportsAnsi ? 1 : 0),
-				(byte)(call.Arg<PlayerOutputPreferences>().ColorEnabled ? 1 : 0)
-			}));
+		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<ProtocolCapabilities>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromResult(new[] { (byte)(call.Arg<ProtocolCapabilities>().SupportsAnsi ? 1 : 0) }));
 		await new BroadcastConsumer(connections, transform, NullLogger<BroadcastConsumer>.Instance)
 			.HandleAsync(new BroadcastMessage("broadcast"u8.ToArray()));
-		await Assert.That(transform.ReceivedCalls().Count()).IsEqualTo(3);
+		// Preferences decide colour, which the renderer has already written; the transform is the character set.
+		await Assert.That(transform.ReceivedCalls().Count()).IsEqualTo(2);
 		await Assert.That(received.Count).IsEqualTo(4);
 		await Assert.That(ReferenceEquals(received[1], received[2])).IsTrue();
+		await Assert.That(ReferenceEquals(received[1], received[4])).IsTrue();
 		await Assert.That(received[3][0]).IsEqualTo((byte)0);
-		await Assert.That(received[4][1]).IsEqualTo((byte)0);
 	}
 
 	[Test]
@@ -104,7 +101,7 @@ public class OutputConsumerResilienceTests
 		connections.Get(1).Returns(client);
 		connections.GetAll().Returns([client]);
 		var transform = Substitute.For<IOutputTransformService>();
-		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<ProtocolCapabilities>(), Arg.Any<PlayerOutputPreferences?>(), Arg.Any<CancellationToken>())
+		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<ProtocolCapabilities>(), Arg.Any<CancellationToken>())
 			.Returns(call =>
 			{
 				caller.Cancel();

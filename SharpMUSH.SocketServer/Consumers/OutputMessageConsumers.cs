@@ -36,8 +36,7 @@ public class TelnetPromptConsumer(
 
 			var transformedData = await transformService.TransformAsync(
 				message.Data,
-				connection.Capabilities,
-				connection.Preferences, cancellationToken);
+				connection.Capabilities, cancellationToken);
 
 			await connection.PromptOutputFunction(transformedData);
 		}
@@ -74,14 +73,14 @@ public class BroadcastConsumer(
 			return;
 		}
 
-		foreach (var group in connections.GroupBy(connection => (connection.Capabilities, connection.Preferences)))
+		foreach (var group in connections.GroupBy(connection => connection.Capabilities))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			byte[] transformedData;
 			try
 			{
 				transformedData = await transformService.TransformAsync(message.Data,
-					group.Key.Capabilities, group.Key.Preferences, cancellationToken);
+					group.Key, cancellationToken);
 			}
 			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 			{

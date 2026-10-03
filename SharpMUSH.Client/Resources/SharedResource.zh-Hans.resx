@@ -3876,6 +3876,14 @@
     <value>有插件发生变更 — 正在重新加载…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>游戏已更新。重新加载以获取新版本。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>重新加载</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>先阅读 wiki、浏览角色，或者直接加入一个场景，就此开始。</value>
     <comment>MT</comment>

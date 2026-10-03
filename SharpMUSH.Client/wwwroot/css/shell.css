@@ -295,6 +295,26 @@
 	flex-shrink: 0;
 }
 
+/* ── Game-updated banner (GameUpdateBanner): above the app bar and drawers (MudBlazor's 1300),
+   below its dialogs (1400) and snackbars ── */
+.game-update-banner {
+	position: fixed;
+	top: 12px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 1350;
+	width: max-content;
+	max-width: calc(100vw - 32px);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.game-update-banner .mud-alert-message {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    Phosphor Refined sidebar (NavMenu) — full-height, logo · groups · profile.
    Mirrors prototype components.jsx Sidebar.

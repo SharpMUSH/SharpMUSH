@@ -62,6 +62,11 @@ public static class MushComposeEncoder
 					builder.Append("%;");
 					index++;
 					break;
+				// An escape and what it escapes travel as they are: "\;" made "\%;", which reads back as "%;".
+				case '\\' when index + 1 < normalised.Length && normalised[index + 1] is not ('\n' or '\t'):
+					builder.Append(current).Append(normalised[index + 1]);
+					index += 2;
+					break;
 				case ' ':
 					var runEnd = index;
 					while (runEnd < normalised.Length && normalised[runEnd] == ' ') runEnd++;

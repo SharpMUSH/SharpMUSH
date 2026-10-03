@@ -3876,6 +3876,14 @@
     <value>Egy bővítmény megváltozott — újratöltés…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>A játék frissült. Töltse újra az új verzióért.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Újratöltés</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Kezdje a wiki elolvasásával, a karakterek böngészésével, vagy csatlakozzon egy jelenethez.</value>
     <comment>MT</comment>

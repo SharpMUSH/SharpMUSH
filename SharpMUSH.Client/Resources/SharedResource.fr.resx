@@ -2218,6 +2218,14 @@
   <data name="WidPluginChangedReloading" xml:space="preserve">
     <value>Un plugin a changé — rechargement…</value>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Le jeu a été mis à jour. Rechargez pour obtenir la nouvelle version.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Recharger</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidWidgetRenderFailed" xml:space="preserve">
     <value>Ce widget n'a pas pu s'afficher.</value>
   </data>

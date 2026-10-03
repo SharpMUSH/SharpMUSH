@@ -7,7 +7,7 @@ namespace SharpMUSH.SocketServer.Consumers;
 /// <summary>
 /// Consumes <see cref="MarkupOutputMessage"/> (serialized markup) and writes it to the connection in
 /// its negotiated wire form via <see cref="IMarkupOutputRenderer"/>. Terminal output is additionally
-/// run through the capability-based <see cref="IOutputTransformService"/>; the WebSocket markup
+/// run through the charset <see cref="IOutputTransformService"/>; the WebSocket markup
 /// envelope is JSON and is sent verbatim. A <see cref="MarkupOutputMessage.Prompt"/> goes to the
 /// prompt channel; one loop handles both, so a connection sees them in the order they were published.
 /// </summary>
@@ -35,7 +35,7 @@ public class MarkupOutputConsumer(
 		{
 			var rendered = await renderer.RenderAsync(message.Markup, connection, message.Prompt, cancellationToken);
 			var data = rendered.ApplyOutputTransform
-				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
+				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, cancellationToken)
 				: rendered.Data;
 
 			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
@@ -85,7 +85,7 @@ public class MarkupPromptConsumer(
 		{
 			var rendered = await renderer.RenderAsync(message.Markup, connection, prompt: true, cancellationToken);
 			var data = rendered.ApplyOutputTransform
-				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
+				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, cancellationToken)
 				: rendered.Data;
 
 			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;

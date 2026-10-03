@@ -3876,6 +3876,14 @@
     <value>Плагин изменился — перезагрузка…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Игра обновлена. Перезагрузите, чтобы получить новую версию.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Перезагрузить</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Начните с чтения wiki, просмотра персонажей или участия в сцене.</value>
     <comment>MT</comment>

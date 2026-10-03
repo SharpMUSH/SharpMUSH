@@ -3876,6 +3876,14 @@
     <value>Ein Plugin wurde geändert — wird neu geladen…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Das Spiel wurde aktualisiert. Neu laden, um die neue Version zu erhalten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Neu laden</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Legen Sie los: Lesen Sie das Wiki, stöbern Sie in den Charakteren oder steigen Sie in eine Szene ein.</value>
     <comment>MT — wiki kept but capitalized as a German noun, consistent with the Wiki-Seite guidance.</comment>

@@ -1,0 +1,45 @@
+# decompose() (PennMUSH's escape_marked_str, src/markup.c): the softcode that, evaluated once, gives back
+# the string it was handed, colours included. The portal's pose editor starts from it, so every shape a
+# pose can take is pinned here: escapes, the space rule, line breaks, each kind of colour, nesting and
+# adjacency, and the round trip through s().
+::case dc.login
+::login wiz Wiz wizpass
+think ok
+
+::case dc.plain  plain text: nothing to escape, the specials, empty
+think [decompose(hello world)]|[decompose()]|[decompose(lit(a,b;c%d[e]f{g}h^j$k(l)m))]
+think [decompose(lit(back\slash))]|[decompose(lit(\[x\]))]
+
+::case dc.spaces  the space rule: leading, trailing, runs of two to four, five and more
+think [decompose(%ba)]|[decompose(a%b)]|[decompose(a%b%bb)]|[decompose(a%b%b%bb)]|[decompose(a%b%b%b%bb)]
+think [decompose(a%b%b%b%b%bb)]|[decompose(a%b%b%b%b%b%b%b%b%b%bb)]|[decompose(%b%b%ba%b%b)]|[decompose(%b)]
+
+::case dc.lines  line breaks and tabs
+think [decompose(a%rb)]|[decompose(a%tb)]|[decompose(%ra%r)]|[decompose(a%r%rb)]
+
+::case dc.colours  each kind of colour and attribute
+think [decompose(ansi(r,x))]|[decompose(ansi(hr,x))]|[decompose(ansi(R,x))]|[decompose(ansi(rB,x))]|[decompose(ansi(hrB,x))]
+think [decompose(ansi(h,x))]|[decompose(ansi(u,x))]|[decompose(ansi(f,x))]|[decompose(ansi(i,x))]|[decompose(ansi(ub,x))]|[decompose(ansi(hu,x))]
+think [decompose(ansi(#ff0000,x))]|[decompose(ansi(/#00ff00,x))]|[decompose(ansi(#ff0000/#0000ff,x))]|[decompose(ansi(+red,x))]
+think [decompose(ansi(d,x))]|[decompose(ansi(D,x))]|[decompose(ansi(n,x))]
+
+::case dc.offcodes  F, H, I and U, the codes that turn an attribute off, and xterm colours
+think [decompose(ansi(U,x))]|[decompose(ansi(uU,x))]|[decompose(ansi(Uu,x))]|[decompose(ansi(F,x))]|[decompose(ansi(I,x))]|[decompose(ansi(hrH,x))]
+think [decompose(ansi(+xterm200,x))]|[decompose(ansi(200,x))]|[decompose(ansi(u200,x))]
+
+::case dc.nesting  colour inside colour: SharpMUSH nests the calls, PennMUSH writes them flat (compatibility output)
+think [decompose(ansi(r,a[ansi(g,b)]c))]|[decompose(ansi(r,a[ansi(u,b)]))]
+
+::case dc.layout  adjacency, and the text around a colour
+think [decompose([ansi(r,a)][ansi(g,b)])]
+think [decompose(a [ansi(r,b)] c)]|[decompose(a%b%b[ansi(r,b c)]%b%bd)]|[decompose([ansi(r,%ba%b)])]
+think [decompose(ansi(r,a\,b%;c))]|[decompose(ansi(r,a%rb))]|[decompose(ansi(r,a%b%b%b%b%bb))]
+
+::case dc.roundtrip  decompose() evaluated once is the string again (0 = equal)
+think [comp(decompose(s(decompose(ansi(hr,Well met)\, all.%r[ansi(c,Sit)]%; please.))),decompose(ansi(hr,Well met)\, all.%r[ansi(c,Sit)]%; please.))]
+think [comp(decompose(s(decompose(a%b%b[ansi(r,b c)]%b%bd))),decompose(a%b%b[ansi(r,b c)]%b%bd))]
+think [comp(decompose(s(decompose(lit(a,b;c%d[e]f{g}h^j$k(l)m)))),lit(a\,b\;c\%d\[e\]f\{g\}h\^j\$k\(l\)m))]
+
+::case dc.markup  an HTML tag: SharpMUSH writes tagwrap(), PennMUSH tag()/endtag() (compatibility output)
+think [decompose(tagwrap(b,bold))]|[decompose(tagwrap(b,ansi(r,x)))]
+::logout wiz

@@ -153,7 +153,17 @@ def main(argv=None) -> int:
         totals = report.write_reports(out, meta, results, stale, fixed, orphans, anchor_table, cov, "tools/parity/scenarios")
         print(f"[parity] report: {out / 'report.md'}")
         print(f"[parity] {totals}")
-        bad = totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed) + len(orphans) + len(not_run)
+        # What failed the run, in the log as well as the report: a CI reader without the artifact sees it.
+        for r in results:
+            if r.status in (cmp.DIFF, cmp.ERROR):
+                print(f"[parity] {r.status} {r.key}: {r.penn.command}")
+                if r.diff:
+                    print("\n".join(f"[parity]   {line}" for line in r.diff.splitlines()))
+        for label, items in (("stale allowlist entry", [e.id for e in stale]), ("baseline step now matches", fixed),
+                             ("orphaned entry", orphans)):
+            for item in items:
+                print(f"[parity] {label}: {item}")
+        bad =totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed) + len(orphans) + len(not_run)
         return 0 if (bad == 0 or args.allow_failures) else 1
     finally:
         sharp.stop()

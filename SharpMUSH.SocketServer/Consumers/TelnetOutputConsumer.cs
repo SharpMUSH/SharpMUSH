@@ -35,8 +35,7 @@ public class TelnetOutputConsumer(
 		{
 			var transformedData = await transformService.TransformAsync(
 				message.Data,
-				connection.Capabilities,
-				connection.Preferences, cancellationToken);
+				connection.Capabilities, cancellationToken);
 
 			await connection.OutputFunction(transformedData);
 		}

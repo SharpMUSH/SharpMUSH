@@ -3876,6 +3876,14 @@
     <value>Un plugin s-a modificat — se reîncarcă…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Jocul a fost actualizat. Reîncărcați pentru a obține versiunea nouă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Reîncarcă</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Începeți prin a citi wiki-ul, a explora personajele sau a intra într-o scenă.</value>
     <comment>MT</comment>

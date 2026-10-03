@@ -92,6 +92,8 @@ internal static class WebHostRegistration
 		services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 		services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
+		services.AddSingleton(PortalBuild.For(environment));
+
 		services.AddCors(options =>
 		{
 			// C-4: Read allowed origins from Cors:AllowedOrigins config array.

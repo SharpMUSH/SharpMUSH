@@ -389,17 +389,23 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("decompose(ansi(hr,red))", @"ansi\(hr\,red\)")]
-	[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
+	// Penn decompose: the text is escaped and each coloured stretch wrapped in [ansi()] after, so it evaluates
+	// back to the same colours.
+	[Arguments("decompose(ansi(hr,red))", "[ansi(hr,red)]")]
+	[Arguments("decompose(ansi(ub,red))", "[ansi(ub,red)]")]
+	// PennMUSH's h with no palette letter to brighten is the hilite bit, bold (SGR 1).
+	[Arguments("decompose(ansi(h,x))", "[ansi(h,x)]")]
+	[Arguments("decompose(ansi(hu,x))", "[ansi(hu,x)]")]
+	[Arguments("decompose(ansi(r,a\\,b) c\\;d)", @"[ansi(r,a\,b)]%bc\;d")]
 	// Penn decompose.3: tab and newline characters → %t and %r
 	[Arguments("decompose(tab\treturn\n)", "tab%treturn%r")]
 	// AnsiColor.Default round-trips through its letter code rather than being dropped silently.
-	[Arguments("decompose(ansi(d,x))", @"ansi\(d\,x\)")]
-	[Arguments("decompose(ansi(D,x))", @"ansi\(D\,x\)")]
+	[Arguments("decompose(ansi(d,x))", "[ansi(d,x)]")]
+	[Arguments("decompose(ansi(D,x))", "[ansi(D,x)]")]
 	// A 24-bit colour reconstructs as an ansi() hex code, '#' included: without it the code reads
 	// back as the letter sequence F, F, 0, 0, 0, 0 and the round trip loses the colour.
-	[Arguments("decompose(ansi(#ff0000,x))", @"ansi\(#ff0000\,x\)")]
-	[Arguments("decompose(ansi(/#ff0000,x))", @"ansi\(/#ff0000\,x\)")]
+	[Arguments("decompose(ansi(#ff0000,x))", "[ansi(#ff0000,x)]")]
+	[Arguments("decompose(ansi(/#ff0000,x))", "[ansi(!#ff0000,x)]")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -422,7 +428,7 @@ public class StringFunctionUnitTests
 
 		var result = (await Parser.FunctionParse(source))?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo(@"ansi\(+xterm200\,x\)");
+		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(+xterm200,x)]");
 	}
 
 	[Test]
@@ -433,7 +439,7 @@ public class StringFunctionUnitTests
 
 		var result = (await Parser.FunctionParse(source))?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo(@"ansi\(/+xterm200\,x\)");
+		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(!+xterm200,x)]");
 	}
 
 	[Test]

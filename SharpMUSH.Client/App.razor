@@ -1,6 +1,8 @@
 @using SharpMUSH.Client.Pages
 @inject IStringLocalizer<SharedResource> Loc
 <ThemeProvider>
+    @* Offers a reload when the game was deployed under this tab; above the router, so every layout has it. *@
+    <GameUpdateBanner />
     <CascadingAuthenticationState>
         <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(NotFound)">
             <Found Context="routeData">

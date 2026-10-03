@@ -738,20 +738,6 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>escaped_chars</c> table (src/tables.c): the characters the parser gives meaning
-	/// to, which escape() backslashes and secure() blanks.
-	/// </summary>
-	[GeneratedRegex(@"[$%(),;\[\\\]^{}]")]
-	private static partial Regex SoftcodeSpecial();
-
-	/// <summary>
-	/// <paramref name="text"/> with a backslash before every <see cref="SoftcodeSpecial"/> character;
-	/// the text comes back unchanged when it holds none of them. This is for decompose(), which has
-	/// flattened its markup into ansi() calls before it gets here; escape() edits the marked-up text.
-	/// </summary>
-	private static string EscapeSoftcode(string text) => SoftcodeSpecial().Replace(text, @"\$0");
-
-	/// <summary>
 	/// fun_escape (src/funstr.c): a leading backslash, then the text with every special escaped
 	/// except one standing first — the leading backslash already protects it.
 	/// </summary>
@@ -768,7 +754,7 @@ public partial class Functions
 		// Each backslash is an insertion into the argument, so the markup around every special stays.
 		var backslash = MarkupText.Plain("\\");
 		var edits = new List<MarkupString.Edit>();
-		foreach (var special in SoftcodeSpecial().EnumerateMatches(text, 1))
+		foreach (var special in SoftcodeDecomposer.SoftcodeSpecial().EnumerateMatches(text, 1))
 		{
 			edits.Add(new MarkupString.Edit(special.Index, 0, backslash));
 		}
@@ -910,133 +896,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var input = parser.CurrentState.Arguments["0"].Message!;
-
-		// TODO: ANSI reconstruction needs to happen after text replacements to preserve
-		// proper nesting structure. Current implementation may produce incorrect output when ANSI codes
-		// interact with special character replacements.
-		var reconstructed = MarkupWalker.EvaluateWith((markupType, innerText) =>
-		{
-			return markupType switch
-			{
-				Ansi ansiMarkup
-					=> ReconstructAnsiCall(ansiMarkup.Style, innerText),
-				_ => innerText
-			};
-		}, input);
-
-		var result = EscapeSoftcode(reconstructed);
-
-		// PennMUSH decompose space algorithm (from escape_marked_str in markup.c):
-		// - 5+ consecutive spaces → [space(N)]
-		// - 1-4 spaces: alternating literal-space / %b pattern
-		//   - At start of string (dospace=1): first space → %b, then alternating space/%b
-		//   - After non-space (dospace=0): alternating space/%b pairs
-		//   - Trailing spaces: last space always becomes %b
-		bool dospaceGlobal = result.Length > 0 && result[0] == ' ';
-		result = SpacesRegex().Replace(result, m =>
-		{
-			int spaces = m.Length;
-			if (spaces >= 5)
-			{
-				return $"[space({spaces})]";
-			}
-
-			var sb = new System.Text.StringBuilder();
-			bool dospace = dospaceGlobal && m.Index == 0;
-
-			// Check if this is a trailing run (at end of string)
-			bool isTrailing = m.Index + m.Length == result.Length;
-
-			if (isTrailing)
-			{
-				spaces--; // reserve last for final %b
-				if (spaces > 0 && dospace) { spaces--; sb.Append("%b"); }
-				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
-				sb.Append("%b"); // final %b for trailing
-			}
-			else
-			{
-				if (dospace) { spaces--; sb.Append("%b"); }
-				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
-			}
-			return sb.ToString();
-		});
-
-		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
-
-		return ValueTask.FromResult(new CallState(result));
-	}
-
-	/// <summary>
-	/// Reconstructs an ansi() function call from AnsiStyle and inner text
-	/// </summary>
-	internal static string ReconstructAnsiCall(AnsiStyle ansiDetails, string innerText)
-	{
-		var attributes = new List<string>();
-
-		// Build formatting prefix (h for bold, u for underline, f for blink, i for invert)
-		var formatPrefix = "";
-		if (ansiDetails.Bold) formatPrefix += "h";
-		if (ansiDetails.Underlined) formatPrefix += "u";
-		if (ansiDetails.Blink) formatPrefix += "f";
-		if (ansiDetails.Inverted) formatPrefix += "i";
-
-		// Add foreground color (with formatting prefix if any)
-		if (ansiDetails.Foreground is not null)
-		{
-			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
-			if (!string.IsNullOrEmpty(colorCode))
-			{
-				// If there's a formatting prefix and the color is a single character,
-				// combine them (e.g., "ub" instead of "u,b")
-				if (!string.IsNullOrEmpty(formatPrefix) && colorCode.Length == 1)
-				{
-					attributes.Add(formatPrefix + colorCode);
-					formatPrefix = ""; // Clear format prefix since it's been used
-				}
-				else
-				{
-					// Add formatting prefix as separate attribute if not combined
-					if (!string.IsNullOrEmpty(formatPrefix))
-					{
-						attributes.Add(formatPrefix);
-						formatPrefix = "";
-					}
-					attributes.Add(colorCode);
-				}
-			}
-			else if (!string.IsNullOrEmpty(formatPrefix))
-			{
-				// No valid color code, add format prefix anyway
-				attributes.Add(formatPrefix);
-				formatPrefix = "";
-			}
-		}
-		else if (!string.IsNullOrEmpty(formatPrefix))
-		{
-			// No foreground color, add format prefix as standalone attribute
-			attributes.Add(formatPrefix);
-			formatPrefix = "";
-		}
-
-		// Add background color
-		if (ansiDetails.Background is not null)
-		{
-			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
-			if (!string.IsNullOrEmpty(colorCode))
-				attributes.Add(colorCode);
-		}
-
-		if (attributes.Count > 0)
-		{
-			var attributeString = string.Join(",", attributes);
-			return $"ansi({attributeString},{innerText})";
-		}
-
-		return innerText;
-	}
+		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!)));
 
 	/// <summary>
 	/// Encodes angle brackets for HTML/Web safety
@@ -1074,34 +934,6 @@ public partial class Functions
 				? "underline"
 				: "inherit")}\">{innerText}</span>";
 	}
-
-	/// <summary>The <c>ansi()</c> letter for each standard palette index, foreground and background.</summary>
-	private const string ForegroundLetters = "xrgybmcw";
-	private const string BackgroundLetters = "XRGYBMCW";
-
-	/// <summary>
-	/// Converts an <see cref="AnsiColor"/> back to the PennMUSH <c>ansi()</c> code that produces it.
-	/// The terminal default has no code — it is the absence of one — so it converts to nothing.
-	/// </summary>
-	internal static string ConvertAnsiColorToCode(AnsiColor? color, bool isBackground = false) => color switch
-	{
-		null => string.Empty,
-		AnsiColor.Default => isBackground ? "D" : "d",
-		// The leading '#' is what makes this an ansi() hex code; without it the code came back as a
-		// letter sequence ("FF0000" reads as bright white, bright magenta, …), so decompose() did not
-		// round-trip through ansi(). Lower case to match the syntax help and ansi()'s own output.
-		AnsiColor.Rgb rgb => isBackground
-			? $"/#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
-			: $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
-		AnsiColor.Standard standard =>
-			(standard.Bright ? "h" : string.Empty)
-			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),
-		AnsiColor.Xterm xterm => isBackground ? $"/+xterm{xterm.Index}" : $"+xterm{xterm.Index}",
-		// AnsiColor is a closed hierarchy (Default/Standard/Xterm/Rgb, private constructor); the
-		// compiler cannot see that, so this arm exists only to satisfy exhaustiveness. Reaching it
-		// means a fifth case was added to AnsiColor without updating this switch.
-		_ => throw new UnreachableException($"Unhandled {nameof(AnsiColor)} subtype {color.GetType()}.")
-	};
 
 	/// <summary>
 	/// Resolves an <see cref="AnsiColor"/> to 24-bit RGB for the web renderer.
@@ -1592,11 +1424,11 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MarkupText.Concat(shuffled));
 	}
 
-	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeSpecial"/> character becomes a space.</summary>
+	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeDecomposer.SoftcodeSpecial"/> character becomes a space.</summary>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!
-			.Apply(text => SoftcodeSpecial().Replace(text, " ")));
+			.Apply(text => SoftcodeDecomposer.SoftcodeSpecial().Replace(text, " ")));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -2118,9 +1950,6 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
 	}
 
-	[GeneratedRegex(" +")]
-	private static partial Regex SpacesRegex();
-
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
@@ -2183,245 +2012,17 @@ public partial class Functions
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var colors = ColorConfiguration?.CurrentValue;
 
-		// TODO: Move ANSI color processing to AnsiMarkup module for better integration.
-		// This would allow align() and other markup functions to work directly with parsed ANSI structures.
-		AnsiColor? foreground = null;
-		AnsiColor? background = null;
-		var blink = false;
-		var bold = false;
-		var clear = false;
-		var invert = false;
-		var underline = false;
+		// The codes are read by MarkupString's AnsiCodeParser, the one parser of them; the game supplies only
+		// its colour names (colors.json).
+		var markup = AnsiCodeParser.Parse(args["0"].Message!.ToPlainText(),
+			name => colors is not null && colors.ColorsByName.TryGetValue(name, out var color)
+				? ColorTranslator.FromHtml(color.rgb).ToAnsiColor()
+				: null);
 
-		// NOT a plain Split(' '): PennMUSH's angle-bracket RGB form is "a list of red, green and
-		// blue values from 0-255, in angle brackets" (help ANSI()), so <255 0 0> contains the very
-		// separator the code list is split on. Splitting naively tore it into "<255", "0", "0>" -
-		// the <...> branch below could never fire, and the stray "0" was then read as xterm 0, so
-		// ansi(<255 0 0>,test) silently produced some other colour entirely.
-		var ansiCodes = AnsiCodeTokenRegex().Matches(args["0"].Message!.ToPlainText());
-		var colorsConfig = ColorConfiguration?.CurrentValue;
-
-		foreach (Match token in ansiCodes)
-		{
-			var code = token.ValueSpan;
-			var curHilight = false;
-			var isBackground = false;
-
-			if (code.StartsWith("/"))
-			{
-				isBackground = true;
-				code = code[1..];
-			}
-
-			if (code.StartsWith("#"))
-			{
-				// Handle RGB color (hex code)
-				var color = ColorTranslator.FromHtml(code.ToString()).ToAnsiColor();
-				if (isBackground)
-					background = color;
-				else
-					foreground = color;
-				continue;
-			}
-
-			if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))
-			{
-				// Handle named color from colors.json
-				var colorName = code[1..].ToString();
-				if (colorsConfig != null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
-				{
-					var hexColor = colorIdentity.rgb;
-					var color = ColorTranslator.FromHtml(hexColor).ToAnsiColor();
-					if (isBackground)
-						background = color;
-					else
-						foreground = color;
-				}
-				continue;
-			}
-
-			var xterm = 0;
-			if (
-				(int.TryParse(code, out xterm) && xterm >= 0 && xterm < 256) ||
-				(code.StartsWith("+xterm") && int.TryParse(code[6..], out xterm) && xterm >= 0 && xterm < 256))
-			{
-				// Handle xterm color (0-255)
-				if (colorsConfig != null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
-				{
-					var hexColor = xtermColors[0].rgb;
-					var color = ColorTranslator.FromHtml(hexColor).ToAnsiColor();
-					if (isBackground)
-						background = color;
-					else
-						foreground = color;
-				}
-				continue;
-			}
-
-			if (code.StartsWith(['<']) && code.EndsWith(['>']))
-			{
-				// Handle RGB color as <r g b> format
-				var rgbValues = code[1..^1].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				if (rgbValues.Length == 3 &&
-					int.TryParse(rgbValues[0], out var r) && r >= 0 && r <= 255 &&
-					int.TryParse(rgbValues[1], out var g) && g >= 0 && g <= 255 &&
-					int.TryParse(rgbValues[2], out var b) && b >= 0 && b <= 255)
-				{
-					var color = Color.FromArgb(r, g, b).ToAnsiColor();
-					if (isBackground)
-						background = color;
-					else
-						foreground = color;
-				}
-				continue;
-			}
-
-			// Reset isBackground for character-by-character processing
-			isBackground = false;
-			foreach (var chr in code)
-			{
-				switch (chr)
-				{
-					case 'i':
-						invert = true;
-						break;
-					case 'I':
-						invert = false;
-						break;
-					case 'f':
-						blink = true;
-						break;
-					case 'F':
-						blink = false;
-						break;
-					case 'u':
-						underline = true;
-						break;
-					case 'U':
-						underline = false;
-						break;
-					case 'h':
-						// A per-token modifier that raises the FOLLOWING foreground letter to its bright
-						// variant (hr is AnsiColor.Standard(1, bright: true)); a background has no bright
-						// variant, so there it means bold instead. On its own it carries nothing, which
-						// matches AnsiCodeParser — the two must agree, or ansi() and the parsed form of
-						// the same code produce different markup.
-						curHilight = true;
-						break;
-					case 'H':
-						curHilight = false;
-						break;
-					case 'n':
-						// ANSI 'n' (clear/normal) resets all formatting to defaults.
-						// Setting clear=true adds a clear ANSI code to the output,
-						// while resetting the fields ensures the structure has no formatting.
-						clear = true;
-						foreground = null;
-						background = null;
-						blink = false;
-						bold = false;
-						invert = false;
-						underline = false;
-						curHilight = false;
-						break;
-					case 'd':
-						foreground = AnsiColor.Default.Instance;
-						break;
-					case 'x':
-						foreground = new AnsiColor.Standard(0, curHilight);
-						break;
-					case 'r':
-						foreground = new AnsiColor.Standard(1, curHilight);
-						break;
-					case 'g':
-						foreground = new AnsiColor.Standard(2, curHilight);
-						break;
-					case 'y':
-						foreground = new AnsiColor.Standard(3, curHilight);
-						break;
-					case 'b':
-						foreground = new AnsiColor.Standard(4, curHilight);
-						break;
-					case 'm':
-						foreground = new AnsiColor.Standard(5, curHilight);
-						break;
-					case 'c':
-						foreground = new AnsiColor.Standard(6, curHilight);
-						break;
-					case 'w':
-						foreground = new AnsiColor.Standard(7, curHilight);
-						break;
-					case 'D':
-						background = AnsiColor.Default.Instance;
-						break;
-					case 'X':
-						background = new AnsiColor.Standard(0, false);
-						bold |= curHilight;
-						break;
-					case 'R':
-						background = new AnsiColor.Standard(1, false);
-						bold |= curHilight;
-						break;
-					case 'G':
-						background = new AnsiColor.Standard(2, false);
-						bold |= curHilight;
-						break;
-					case 'Y':
-						background = new AnsiColor.Standard(3, false);
-						bold |= curHilight;
-						break;
-					case 'B':
-						background = new AnsiColor.Standard(4, false);
-						bold |= curHilight;
-						break;
-					case 'M':
-						background = new AnsiColor.Standard(5, false);
-						bold |= curHilight;
-						break;
-					case 'C':
-						background = new AnsiColor.Standard(6, false);
-						bold |= curHilight;
-						break;
-					case 'W':
-						background = new AnsiColor.Standard(7, false);
-						bold |= curHilight;
-						break;
-					default:
-						// Do nothing. Just skip.
-						// Should probably warn about invalid ansi codes.
-						break;
-				}
-			}
-		}
-
-		var details = new AnsiStyle
-		{
-			Foreground = foreground,
-			Background = background,
-			Blink = blink,
-			Bold = bold,
-			Clear = clear,
-			Inverted = invert,
-			Underlined = underline,
-			Faint = false,
-			Italic = false,
-			Overlined = false,
-			StrikeThrough = false,
-			LinkText = null,
-			LinkUrl = null
-		};
-
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(new Ansi(details), args["1"].Message ?? MarkupText.Empty)));
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(markup, args["1"].Message ?? MarkupText.Empty)));
 	}
-
-	/// <summary>
-	/// One <c>ansi()</c> code token: either a run ending in an angle-bracketed group (so
-	/// <c>&lt;255 0 0&gt;</c> and <c>/&lt;255 0 0&gt;</c> survive intact, spaces and all), or an
-	/// ordinary run of non-space characters.
-	/// </summary>
-	[GeneratedRegex(@"[^\s<]*<[^>]*>|\S+")]
-	private static partial Regex AnsiCodeTokenRegex();
 
 	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)

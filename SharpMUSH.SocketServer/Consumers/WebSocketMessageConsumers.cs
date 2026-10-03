@@ -8,8 +8,8 @@ namespace SharpMUSH.SocketServer.Consumers;
 /// <summary>
 /// Consumes WebSocket output messages from NATS JetStream and sends to connections.
 /// The payload is an out-of-band JSON envelope (e.g. <c>{ "type": "html", ... }</c>) that the
-/// browser parses itself, so it is forwarded verbatim — running it through the ANSI/charset
-/// <see cref="IOutputTransformService"/> would corrupt the JSON.
+/// browser parses itself, so it is forwarded verbatim — running it through the charset
+/// <see cref="IOutputTransformService"/> could corrupt the JSON.
 /// </summary>
 public class WebSocketOutputConsumer(
 	IConnectionServerService connectionService,

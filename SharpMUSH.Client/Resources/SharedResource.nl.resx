@@ -3876,6 +3876,14 @@
     <value>Een plug-in is gewijzigd — opnieuw laden…</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGameUpdated" xml:space="preserve">
+    <value>Het spel is bijgewerkt. Laad opnieuw voor de nieuwe versie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGameUpdatedReload" xml:space="preserve">
+    <value>Opnieuw laden</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Begin met de wiki lezen, personages bekijken of meteen een scène in duiken.</value>
     <comment>MT</comment>

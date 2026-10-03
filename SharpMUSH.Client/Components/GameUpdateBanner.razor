@@ -1,0 +1,65 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services.Interfaces
+@implements IDisposable
+@inject IConnectionStateService Connection
+@inject ServerInfoService ServerInfo
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Tells a tab left open across a deploy that it is running the previous portal. A deploy restarts the
+   server, so the game connection drops and comes back; each time it becomes connected (a reconnect, or the
+   first connect after logging in on a tab that sat on the login page) the server is asked which build it
+   serves now, and that is compared with the build of the first answer this tab had. Mounted above the
+   router, so the first answer is read at boot whatever the route. The reader reloads when they are ready:
+   reloading on its own would throw away an open wiki edit. Drafts, command history and the terminal screen
+   survive a reload. *@
+
+@if (_updated)
+{
+    <div class="game-update-banner" role="status">
+        <MudAlert Severity="Severity.Info" Dense="true">
+            <span class="game-update-text">@Loc["WidGameUpdated"]</span>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="game-update-reload"
+                       OnClick="Reload">@Loc["WidGameUpdatedReload"]</MudButton>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    private HubConnectionState _state;
+    private bool _updated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = Connection.ConnectionState;
+        Connection.OnConnectionStateChanged += HandleConnectionStateChanged;
+        // The build this tab is running: the server's first answer, asked for now.
+        await ServerInfo.BuildIdAsync();
+    }
+
+    private void HandleConnectionStateChanged()
+    {
+        var previous = _state;
+        _state = Connection.ConnectionState;
+        // The event may arrive on a hub callback thread.
+        if (_state == HubConnectionState.Connected && previous != HubConnectionState.Connected) _ = InvokeAsync(CheckAsync);
+    }
+
+    private async Task CheckAsync()
+    {
+        if (_updated) return;
+        // The first answer is settled before the server is asked again, so a fresh answer is never the baseline
+        // while an earlier one exists.
+        var running = await ServerInfo.BuildIdAsync();
+        if (await ServerInfo.CurrentBuildIdAsync() is not { } current || running is null || current == running) return;
+        _updated = true;
+        StateHasChanged();
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+
+    public void Dispose()
+    {
+        Connection.OnConnectionStateChanged -= HandleConnectionStateChanged;
+    }
+}
