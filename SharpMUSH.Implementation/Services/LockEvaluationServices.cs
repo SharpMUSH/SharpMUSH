@@ -15,6 +15,7 @@ public sealed class LockEvaluationServices(
 	Lazy<ILockService> locks,
 	Lazy<IMUSHCodeParser> parser,
 	Lazy<IPermissionService> permissions,
+	Lazy<IConnectionService> connections,
 	ILogger<LockEvaluationServices> logger) : ILockEvaluationServices
 {
 	/// <remarks>
@@ -103,7 +104,7 @@ public sealed class LockEvaluationServices(
 		var showReference = await permissions.Value.CanExamine(viewer, obj)
 			|| await permissions.Value.CanLinkToAsync(viewer, obj) || await obj.HasFlag("JUMP_OK")
 			|| await obj.HasFlag("CHOWN_OK") || await obj.HasFlag("DESTROY_OK");
-		return showReference ? await MessageFormatting.FormatObjectWithDbref(obj.Object()) : obj.Object().Name;
+		return showReference ? await MessageFormatting.FormatObjectWithDbref(obj.Object(), await FlagView.ForAsync(viewer, connections.Value)) : obj.Object().Name;
 	}
 
 }

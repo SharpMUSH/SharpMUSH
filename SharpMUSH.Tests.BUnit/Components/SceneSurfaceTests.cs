@@ -623,7 +623,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-title input").Input("The Lantern Room");
 		cut.Find(".scene-start-submit").Click();
 
-		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+		// Waited for: the form asks the terminal who it is and reads the roster before it sends.
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create The Lantern Room"),
+			TimeSpan.FromSeconds(5));
 	}
 
 	/// <summary>
@@ -681,7 +684,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-title input").Input("The Lantern Room");
 		cut.Find(".scene-start-submit").Click();
 
-		await _terminal.Received().SendAsync("+scene/create The Lantern Room");
+		// Waited for: the form asks the terminal who it is and reads the roster before it sends.
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create The Lantern Room"),
+			TimeSpan.FromSeconds(5));
 		await _terminal.DidNotReceive().SendAsync("+scene/private");
 	}
 
@@ -700,7 +706,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.Find(".scene-start-public input").Change(false);
 		cut.Find(".scene-start-submit").Click();
 
-		await _terminal.Received().SendAsync("+scene/create A quiet corner");
+		// Waited for: the form asks the terminal who it is and reads the roster before it sends.
+		cut.WaitForAssertion(
+			() => _terminal.Received().SendAsync("+scene/create A quiet corner"),
+			TimeSpan.FromSeconds(5));
 		// Waited for: the form polls the roster before saying anything else, because it will not send
 		// this until it can see the scene exists.
 		cut.WaitForAssertion(

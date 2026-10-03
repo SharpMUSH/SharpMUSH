@@ -883,66 +883,17 @@ public partial class Functions
 		return errors.Complete(new CallState(MarkupText.Concat(pieces)));
 	}
 
+	/// <summary>
+	/// The string as HTML: MarkupString's HTML renderer writes its markup (colour, bold, links, tags,
+	/// the shared vocabulary) and encodes the text, so the result can be placed in a page as is.
+	/// </summary>
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(
-			MarkupWalker.EvaluateWith((markupType, innerText)
-				=> markupType switch
-				{
-					Ansi ansiMarkup
-						=> ReconstructWebCall(ansiMarkup.Style, WebEncodeAngleBrackets(innerText)),
-					_ => WebEncodeAngleBrackets(innerText)
-				}, parser.CurrentState.Arguments["0"].Message!));
+		=> ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message!.Render(MarkupFormat.Html)));
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!)));
-
-	/// <summary>
-	/// Encodes angle brackets for HTML/Web safety
-	/// </summary>
-	private string WebEncodeAngleBrackets(string text)
-	{
-		return text.Replace("<", "&lt;").Replace(">", "&gt;");
-	}
-
-	/// <summary>
-	/// Reconstructs an ansi() function call from AnsiStyle and inner text
-	/// </summary>
-	private string ReconstructWebCall(AnsiStyle ansiDetails, string innerText)
-	{
-		Color foregroundColor = Color.Empty;
-		Color backgroundColor = Color.Empty;
-
-		if (ansiDetails.Foreground is not null)
-		{
-			foregroundColor = ConvertAnsiColorToRGB(ansiDetails.Foreground);
-		}
-
-		if (ansiDetails.Background is not null)
-		{
-			backgroundColor = ConvertAnsiColorToRGB(ansiDetails.Background);
-		}
-
-		return
-			$"<span style=\"color:{(
-				foregroundColor != Color.Empty
-					? ColorTranslator.ToHtml(foregroundColor)
-					: "inherit")};background-color:{(backgroundColor != Color.Empty
-					? ColorTranslator.ToHtml(backgroundColor)
-					: "inherit")};text-decoration:{(ansiDetails.Underlined
-				? "underline"
-				: "inherit")}\">{innerText}</span>";
-	}
-
-	/// <summary>
-	/// Resolves an <see cref="AnsiColor"/> to 24-bit RGB for the web renderer.
-	/// <see cref="Color.Empty"/> when the colour is unset or the terminal default, neither of which
-	/// has a value the server knows.
-	/// </summary>
-	private static Color ConvertAnsiColorToRGB(AnsiColor? color) =>
-		color?.ToRgb() is { } rgb ? Color.FromArgb(rgb.R, rgb.G, rgb.B) : Color.Empty;
-
 
 	[SharpFunction(Name = "formdecode", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
