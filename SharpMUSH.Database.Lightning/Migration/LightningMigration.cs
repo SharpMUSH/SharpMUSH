@@ -165,6 +165,8 @@ public partial class LightningDatabase
 			UpsertFlag(tx, name, symbol, aliases ?? [], setPerms, unsetPerms, typeRestrictions, system: true);
 		}
 
+		MergeRenamedFlag(tx, "ON_VACATION", "ON-VACATION");
+
 		foreach (var flag in _pluginFlags)
 		{
 			UpsertFlag(tx, flag.Name, flag.Symbol, flag.Aliases, flag.SetPermissions, flag.UnsetPermissions, flag.TypeRestrictions, flag.System);
@@ -248,6 +250,47 @@ public partial class LightningDatabase
 		}
 
 		tx.Delete(Tables.Power, oldKey);
+	}
+
+	/// <summary>
+	/// <see cref="MergeRenamedPower"/> for a flag: a seeded flag whose canonical name changed (ON_VACATION
+	/// to PennMUSH's ON-VACATION, #1405). Holders are edges keyed by the flag's name, so they move onto the
+	/// new key, the new record keeps the old one's <c>Disabled</c> state, and the old record is dropped.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private static void MergeRenamedFlag(ITx tx, string oldName, string newName)
+	{
+		var oldKey = Keys.Upper(oldName);
+		if (!tx.TryGet(Tables.Flag, oldKey, out var oldRecord))
+		{
+			return;
+		}
+
+		// A flag an administrator created under the old name is not the seed's to move.
+		var old = Codec.Deserialize<FlagRecord>(oldRecord);
+		if (!old.System)
+		{
+			return;
+		}
+
+		var newKey = Keys.Upper(newName);
+		if (old.Disabled && tx.TryGet(Tables.Flag, newKey, out var newRecord))
+		{
+			tx.Put(Tables.Flag, newKey, Codec.Serialize(Codec.Deserialize<FlagRecord>(newRecord) with { Disabled = true }));
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, oldKey).Select(value => Keys.ReadDbref(value)).ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), newKey);
+			tx.Put(Tables.ObjFlag.Reverse, newKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), oldKey);
+			tx.Delete(Tables.ObjFlag.Reverse, oldKey, Keys.Dbref(holder));
+		}
+
+		tx.Delete(Tables.Flag, oldKey);
 	}
 
 	/// <summary>

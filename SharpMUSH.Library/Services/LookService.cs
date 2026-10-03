@@ -51,8 +51,9 @@ public class LookService(
 		var lookThroughExit = key.HasFlag(LookKey.Trans) || key.HasFlag(LookKey.Cloudy);
 
 		// look.c:492 and look.c:503: an automatic look — the one a mover gets on arrival — shows a
-		// TERSE player no description at all.
-		var terse = key.HasFlag(LookKey.Auto) && await looker.HasFlag("TERSE");
+		// Terse() looker no description at all: one whose owner is a TERSE player, or a TERSE thing
+		// (dbdefs.h:91).
+		var terse = key.HasFlag(LookKey.Auto) && await IsTerseAsync(looker);
 
 		// look.c:492 for a container viewed from inside, look.c:503-504 for a room: LOOK_TRANS puts
 		// the description back even when the look is coming through an exit.
@@ -450,5 +451,17 @@ public class LookService(
 		var template = localizationService.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
 			?? ErrorMessages.Notifications.ExitNameToDestFormat;
 		return MarkupTemplateFormatter.Format(template, exitName, MarkupText.Plain(destName));
+	}
+
+	/// <summary>dbdefs.h <c>Terse(x)</c>: the object's owner is a TERSE player, or it is itself a TERSE thing.</summary>
+	private static async ValueTask<bool> IsTerseAsync(AnySharpObject looker)
+	{
+		if (looker.IsThing && await looker.HasFlag("TERSE"))
+		{
+			return true;
+		}
+
+		AnySharpObject owner = await looker.Object().Owner.WithCancellation(CancellationToken.None);
+		return await owner.HasFlag("TERSE");
 	}
 }
