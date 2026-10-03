@@ -303,3 +303,47 @@ test('the compact-screen watch reports the screen now and on every turn, and sto
     queries[1].fire(true);
     assert.equal(calls.length, 1);
 });
+
+test('the short-screen watch is the landscape half of the compact one, and is a watch of its own', () => {
+    const queries = [];
+    const context = vm.createContext({
+        window: {
+            matchMedia: media => {
+                const listeners = new Set();
+                const query = {
+                    media,
+                    matches: false,
+                    addEventListener: (name, handler) => listeners.add(handler),
+                    removeEventListener: (name, handler) => listeners.delete(handler),
+                    fire: matches => listeners.forEach(handler => handler({ matches })),
+                    listeners
+                };
+                queries.push(query);
+                return query;
+            }
+        },
+        document: { addEventListener: () => { } },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    const layout = context.window.sharpmushLayout;
+    const calls = [];
+    const ref = { invokeMethodAsync: (name, value) => { calls.push([name, value]); return Promise.resolve(); } };
+
+    layout.watchCompactScreen(ref);
+    assert.equal(layout.watchShortScreen(ref), false);
+    const [compact, short] = queries;
+    assert.equal(short.media, '(orientation: landscape) and (max-height: 32rem)');
+    assert.ok(compact.media.startsWith(short.media + ','), 'the short screen is the compact screen held sideways');
+
+    short.fire(true);
+    compact.fire(true);
+    assert.deepEqual(calls, [['OnShortScreenChanged', true], ['OnCompactScreenChanged', true]]);
+
+    // Unwatching one leaves the other listening.
+    layout.unwatchShortScreen();
+    assert.equal(short.listeners.size, 0);
+    assert.equal(compact.listeners.size, 1);
+    layout.unwatchCompactScreen();
+    assert.equal(compact.listeners.size, 0);
+});

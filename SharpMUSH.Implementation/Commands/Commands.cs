@@ -83,6 +83,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
+	private IStorageCapacityService StorageCapacity { get; }
+
+	private IHistoryRetentionService HistoryRetention { get; }
+
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
 
 	private IPageLogService PageLog { get; }
@@ -135,6 +139,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
+		IStorageCapacityService storageCapacity,
+		IHistoryRetentionService historyRetention,
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
 		ILibraryProvider<FunctionDefinition> functions)
@@ -177,6 +183,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
+		StorageCapacity = storageCapacity;
+		HistoryRetention = historyRetention;
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;
 		Functions = functions;

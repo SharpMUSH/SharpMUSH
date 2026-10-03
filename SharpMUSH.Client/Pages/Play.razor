@@ -71,7 +71,7 @@ else
        its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
-        <div class="play full-bleed full-height @(_focus ? "play--focus" : null) @(Room.Info is null ? null : "play--room")">
+        <div class="play full-bleed full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
                 @if (BannerShown)
                 {
@@ -88,7 +88,8 @@ else
                 <div class="play-card" hidden="@(_commKey is not null)">
                     <PlaySceneCard Title="@ViewerName" Subtitle="@CardSubtitle" HeaderImage="@CardImage"
                                    OnSubtitle="@(BannerFolded ? EventCallback.Factory.Create(this, OpenFoldedBanner) : default)"
-                                   SubtitleAction="@Loc["NavBannerRestore"]" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                                   SubtitleAction="@Loc["NavBannerRestore"]" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged"
+                                   Footer="@(View == PlayView.Story ? StoryComposer : null)">
                         <Lead>@ViewerAvatar</Lead>
                         <Controls>
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@
@@ -136,13 +137,6 @@ else
                                 </div>
                             </div>
                         </ChildContent>
-                        <Footer>
-                            @if (View == PlayView.Story)
-                            {
-                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
-                                              DraftKey="@DraftKey" />
-                            }
-                        </Footer>
                     </PlaySceneCard>
                 </div>
             </div>
@@ -242,6 +236,12 @@ else
 
     /// <summary>A phone, either way up (layout.js compactScreenQuery).</summary>
     private bool _compactScreen;
+
+    /// <summary>
+    /// A phone held sideways (layout.js shortScreenQuery): wider than the narrow tier, so the tablet layout,
+    /// but short of height for it. Play.razor.css tightens that layout under play--short (#1506).
+    /// </summary>
+    private bool _shortScreen;
 
     /// <summary>The player opened the full banner on a larger screen; remembered (play.banner = open).</summary>
     private bool _bannerOpen;
@@ -490,6 +490,16 @@ else
     };
 
     /// <summary>
+    /// The card's footer in the Story view. The Terminal view has no footer at all, rather than an empty one:
+    /// the card's footer pads itself, and a sideways phone has no 12px to give away under the terminal's input.
+    /// </summary>
+    private RenderFragment StoryComposer => __builder =>
+    {
+        <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
+                      DraftKey="@DraftKey" />
+    };
+
+    /// <summary>
     /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
     /// header keeps the buttons used all the time and the name opens the room's details, as a chat app's channel
     /// name does. Focus mode, the terminal settings and Disconnect; Connect and Login stay in the header.
@@ -617,6 +627,16 @@ else
         {
             // No layout script (prerender, tests): the banner follows the stored choice.
         }
+        try
+        {
+            var shortScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchShortScreen", _self);
+            changed |= shortScreen != _shortScreen;
+            _shortScreen = shortScreen;
+        }
+        catch (JSException)
+        {
+            // No layout script: the tablet layout as it is.
+        }
         var touchChrome = await IsTouchChromeAsync();
         changed |= touchChrome != _touchChrome;
         _touchChrome = touchChrome;
@@ -632,6 +652,14 @@ else
         if (_mobileSheet is not null) await CloseMobileSheet();
         // A window that narrows to a phone's width changes chrome as well.
         _touchChrome = await IsTouchChromeAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>The screen turned into or out of the short tier (layout.js watchShortScreen).</summary>
+    [JSInvokable]
+    public Task OnShortScreenChanged(bool shortScreen) => InvokeAsync(() =>
+    {
+        _shortScreen = shortScreen;
         StateHasChanged();
     });
 
@@ -920,6 +948,7 @@ else
         try
         {
             await JS.InvokeVoidAsync("sharpmushLayout.unwatchCompactScreen");
+            await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
         }
         catch (Exception e) when (e is JSException or JSDisconnectedException)
         {

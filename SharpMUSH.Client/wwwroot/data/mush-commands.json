@@ -125,6 +125,7 @@
   "@SQL",
   "@SQUOTA",
   "@STATS",
+  "@STORAGE",
   "@SUGGEST",
   "@SW",
   "@SWEEP",

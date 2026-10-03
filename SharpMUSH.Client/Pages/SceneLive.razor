@@ -190,8 +190,8 @@ else
 
         _composeText = string.Empty;
 
-        // Down the terminal websocket, already open as this character. The hub's SendCommand
-        // publishes to a subject nothing consumes; the hub is kept for RECEIVING the pose back.
+        // Down the terminal websocket, already open as this character; the hub is for RECEIVING the
+        // pose back.
         await Terminal.SendAsync(command);
     }
 

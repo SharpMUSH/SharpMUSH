@@ -28,6 +28,12 @@ public sealed class ErrorOrMailList : IUnion
 	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) => new(x);
 }
 
+/// <summary>A message and where <c>@mail</c> finds it: its folder's number (or name) and its 1-based position there.</summary>
+public readonly record struct MailPosition(SharpMail Mail, string Folder, int Index)
+{
+	public override string ToString() => $"{Folder}:{Index}";
+}
+
 public static class MessageListHelper
 {
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, AnySharpObject executor)
@@ -39,10 +45,45 @@ public static class MessageListHelper
 			return mailData.ActiveFolder!;
 		}
 
-		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
-		await objectDataService.SetExpandedDataAsync(mailData, executor.Object());
+		mailData = (mailData ?? new ExpandedMailData()) with
+		{
+			Folders = mailData?.Folders ?? [ExpandedMailData.Inbox],
+			ActiveFolder = ExpandedMailData.Inbox
+		};
+		await objectDataService.SetExpandedDataAsync(mailData, executor.Object(), ignoreNull: true);
 
 		return mailData.ActiveFolder!;
+	}
+
+	/// <summary>
+	/// Each message with where <c>@mail</c> finds it: <c>&lt;folder number&gt;:&lt;position&gt;</c>, the position
+	/// counted from 1 within its folder, as PennMUSH's <c>fun_maillist</c> and <c>do_mail_file</c> write it. A
+	/// folder with no number is written by name.
+	/// </summary>
+	public static async ValueTask<List<MailPosition>> WithPositionsAsync(IMediator mediator,
+		SharpPlayer mailbox, ExpandedMailData folders, IAsyncEnumerable<SharpMail> mailList)
+	{
+		var messages = await mailList.ToListAsync();
+		var positions = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
+		var result = new List<MailPosition>(messages.Count);
+		foreach (var mail in messages)
+		{
+			if (!positions.TryGetValue(mail.Folder, out var inFolder))
+			{
+				inFolder = await mediator.CreateStream(new GetMailListQuery(mailbox, mail.Folder))
+					.Select((m, index) => (Id: m.Id ?? string.Empty, Position: index + 1))
+					.ToDictionaryAsync(x => x.Id, x => x.Position);
+				positions[mail.Folder] = inFolder;
+			}
+
+			if (mail.Id is { } id && inFolder.TryGetValue(id, out var position))
+			{
+				var folder = folders.NumberOf(mail.Folder) is int number ? number.ToString() : mail.Folder;
+				result.Add(new MailPosition(mail, folder, position));
+			}
+		}
+
+		return result;
 	}
 
 	/// <summary>Tells the executor why a message list could not be read, and answers with the same words.</summary>
@@ -60,17 +101,23 @@ public static class MessageListHelper
 			throw new InvalidOperationException("Only a player has a mail list.");
 		}
 
-		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
+		var msgList = arg0?.ToPlainText().Trim() ?? "folder";
 		var folderSplit = msgList.Split(':');
-		var rangeSplit = msgList.Split('-');
 		IAsyncEnumerable<SharpMail> mailList;
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetMailListQuery(player, folderSplit[0]));
+			// parse_message_spec (extmail.c:3153): <folder>:<messages>, the folder a number or, here, a name.
+			// parse_msglist takes "all" with strcasecmp (extmail.c:3000), as it does every keyword below.
+			if (MailFolders.Resolve(await MailFolders.LoadAsync(objectDataService, player), folderSplit[0]) is not MailFolder folder)
+			{
+				return new Error<string>("MAIL: Invalid message specification");
+			}
+
+			mailList = mediator!.CreateStream(new GetMailListQuery(player, folder.Name));
 			msgList = folderSplit[1];
 		}
-		else if (msgList == "all")
+		else if (msgList.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			mailList = mediator!.CreateStream(new GetAllMailListQuery(player));
 		}
@@ -80,6 +127,8 @@ public static class MessageListHelper
 			mailList = mediator!.CreateStream(new GetMailListQuery(player, currentFolder));
 		}
 
+		msgList = msgList.ToLower();
+		var rangeSplit = msgList.Split('-');
 		ErrorOrMailList filteredList = msgList switch
 		{
 			_ when msgList.Contains(' ')
@@ -106,7 +155,7 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left + 1)),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),
@@ -167,7 +216,7 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left + 1)),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),

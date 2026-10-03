@@ -28,6 +28,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 			return Task.CompletedTask;
 		};
 		Services.AddSingleton(Substitute.For<ITerminalService>());
+		Services.AddSingleton(sp => new GameCommandService(sp.GetRequiredService<IHttpClientFactory>()));
 		_api.Extra[SceneJson.Recent] = SceneJson.List(
 			SceneJson.Scene("S1", "Salt Market at Dusk"),
 			SceneJson.Scene("S2", "Lamplighters' Vigil"),

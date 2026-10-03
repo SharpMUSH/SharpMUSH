@@ -194,6 +194,10 @@ internal static class EngineRegistration
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
 		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
+		// Portal commands (POST api/commands): run as the session's character, its output copied back.
+		services.AddSingleton<ICommandOutputCapture, CommandOutputCapture>();
+		services.Configure<PortalCommandOptions>(configuration.GetSection(PortalCommandOptions.Section));
+		services.AddSingleton<IPortalCommandService, PortalCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IPageLogService, PageLogService>();

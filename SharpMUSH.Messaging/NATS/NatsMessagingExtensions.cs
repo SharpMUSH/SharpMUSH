@@ -24,6 +24,7 @@ public static class NatsMessagingExtensions
 			StreamName = "SHARPMUSH-CS",
 			SubjectPrefix = "sharpmush.cs",
 		};
+		options.ApplyEnvironment(Environment.GetEnvironmentVariable);
 		configureOptions(options);
 		return services.AddNatsMessagingCore(options);
 	}
@@ -47,6 +48,7 @@ public static class NatsMessagingExtensions
 			ConsumeStreamName = "SHARPMUSH-MS",
 			ConsumeSubjectPrefix = "sharpmush.ms",
 		};
+		options.ApplyEnvironment(Environment.GetEnvironmentVariable);
 		configureOptions(options);
 		return services.AddNatsMessagingCore(options, configureConsumers, "connectionserver");
 	}
@@ -64,6 +66,7 @@ public static class NatsMessagingExtensions
 			StreamName = "SHARPMUSH-MS",
 			SubjectPrefix = "sharpmush.ms",
 		};
+		options.ApplyEnvironment(Environment.GetEnvironmentVariable);
 		configureOptions(options);
 		return services.AddNatsMessagingCore(options);
 	}
@@ -87,6 +90,7 @@ public static class NatsMessagingExtensions
 			ConsumeStreamName = "SHARPMUSH-CS",
 			ConsumeSubjectPrefix = "sharpmush.cs",
 		};
+		options.ApplyEnvironment(Environment.GetEnvironmentVariable);
 		configureOptions(options);
 		return services.AddNatsMessagingCore(options, configureConsumers, "mainprocess");
 	}
@@ -97,11 +101,14 @@ public static class NatsMessagingExtensions
 		Action<INatsConsumerConfigurator>? configureConsumers = null,
 		string groupPrefix = "")
 	{
+		options.Validate();
 		services.AddSingleton(options);
+		services.AddSingleton<NatsMessagingMetrics>();
 		services.AddSingleton<NatsJetStreamMessageBus>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<NatsJetStreamMessageBus>>();
-			return NatsJetStreamMessageBus.CreateAsync(options, logger).GetAwaiter().GetResult();
+			return NatsJetStreamMessageBus.CreateAsync(options, logger, metrics: sp.GetRequiredService<NatsMessagingMetrics>())
+				.GetAwaiter().GetResult();
 		});
 		services.AddSingleton<IMessageBus>(sp => sp.GetRequiredService<NatsJetStreamMessageBus>());
 
@@ -114,6 +121,8 @@ public static class NatsMessagingExtensions
 			services.AddSingleton(registry);
 			services.AddHostedService<NatsJetStreamConsumerService>();
 		}
+		services.AddHostedService(sp => new NatsBrokerMonitor(options, sp.GetRequiredService<NatsMessagingMetrics>(),
+			sp.GetRequiredService<ILogger<NatsBrokerMonitor>>(), sp.GetService<NatsConsumerRegistry>()));
 
 		return services;
 	}

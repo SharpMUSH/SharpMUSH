@@ -242,9 +242,10 @@ public static class TestHelpers
 	/// Creates the <see cref="INotifyService"/> substitute used by the test factories. The real
 	/// <see cref="SharpMUSH.Library.Services.NotifyService"/> consults
 	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpOutputCapture"/> before delivering to
-	/// connections (inbound-HTTP output becomes the response body); tests replace INotifyService
-	/// with a mock, so the mock must mirror that one behavior or HTTP integration tests would see
-	/// empty bodies. Received()-style assertions are unaffected — When/Do does not change call
+	/// connections (inbound-HTTP output becomes the response body), and offers the same output to
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.ICommandOutputCapture"/> (a portal command's
+	/// answer); tests replace INotifyService with a mock, so the mock must mirror both or HTTP and
+	/// portal-command integration tests would see empty bodies. Received()-style assertions are unaffected — When/Do does not change call
 	/// recording, and capture state lives in an AsyncLocal so non-HTTP test flows are no-ops.
 	/// </summary>
 	/// <param name="recorder">
@@ -254,6 +255,8 @@ public static class TestHelpers
 	public static INotifyService CreateNotifyServiceSubstitute(NotificationRecorder? recorder = null)
 	{
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
+		// The portal command route's copy of a character's output (POST api/commands), also mirrored.
+		var commandCapture = new SharpMUSH.Library.Services.CommandOutputCapture();
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
@@ -263,6 +266,7 @@ public static class TestHelpers
 			AnySharpObject? sender = null,
 			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
+			commandCapture.Offer(recipient.Number, message);
 			capture.TryCapture(recipient.Number, message);
 			recorder?.Record(recipient, message);
 			recorder?.RecordDelivery(recipient, message, sender, type);
@@ -277,6 +281,7 @@ public static class TestHelpers
 			INotifyService.NotificationType type)
 		{
 			var text = PlainText(message);
+			commandCapture.Offer(recipient.Number, text);
 			capture.TryCapture(recipient.Number, text);
 			recorder?.Record(recipient, text);
 			recorder?.RecordRaw(recipient, message);

@@ -3182,6 +3182,14 @@
     <value>Fant ikke scenen.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Scenen ble ikke startet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scenen ble startet, men den kunne ikke gjøres privat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Søk etter en konto for å administrere rollene dens.</value>
     <comment>MT</comment>
@@ -3228,14 +3236,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>La alle se på</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Terminalen i denne fanen spiller {0}, ikke {1}. Start scenen fra en fane som spiller {1}, eller bytt tilbake til {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Kunne ikke bekrefte hvilken karakter terminalen i denne fanen spiller. Prøv igjen om et øyeblikk.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">

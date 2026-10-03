@@ -140,6 +140,11 @@ graph LR
   + `next_edit` chain the history. **Undo/redo move the `current_edit` pointer**;
   a fresh edit after an undo truncates the forward versions and appends.
 - **Soft-delete** sets `Pose.IsDeleted`; the slot stays in the `pose_next` chain.
+  Its content and edit history stay stored until a retention policy says otherwise
+  (`SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` hard-purges a pose that long after its
+  deletion; `SHARPMUSH_HISTORY_SCENE_EDITS_*` bounds every pose's versions, never
+  touching the current one or anything redo can reach). The default keeps
+  everything; see "History retention" in `deploy/README.md`.
 - **Meta** is generic key/value. Known scene keys (`status`, `public`,
   `scheduledfor`, `istemp`, `room`, `owner`, `plot`, `title`, `summary`,
   `icdate`, `location`, `type`, `warning`) route to the first-class field/edge;
@@ -296,7 +301,7 @@ logger object must be **WIZARD** (it is the Executor for `@scene`/`scene…`).
 The poser's focus (`member` edge `isCurrent`) must match the room's active scene,
 so passers-by and people focused elsewhere aren't logged. **Web pose-authoring
 reuses this exact path** — the portal pose editor sends a normal `POSE`/`SAY`/
-`SEMIPOSE` via `GameHub.SendCommand` on the play connection; the *same* override
+`SEMIPOSE` on the play connection (the terminal websocket); the *same* override
 fires, so there is **one capture path, no double-capture, no echo loop** (room
 emit and the `game.scene.{id}` broadcast are two renderings of one stored pose,
 keyed by pose id). `@EMIT` is **not** hooked — the editor must not pose via it.
@@ -429,7 +434,7 @@ struck-through `IsDeleted` (owner only), a tag-filter chip bar built from the
 **distinct union of pose `Tags`** (no fixed set; untagged poses bucket at the
 bottom — `portal-no-game-policy`). `SceneLive` rides `JoinScene` +
 `OnSceneEventReceived`, patches by pose id, and its pose editor submits a normal
-captured `POSE`/`SAY`/`SEMIPOSE` via `GameHub.SendCommand` (no `ISceneService`
+captured `POSE`/`SAY`/`SEMIPOSE` on the play connection (no `ISceneService`
 write — the legacy `SceneLive.razor:148` `PostMessageAsync` call is **removed**).
 `Scenes`/`/active` get plot grouping + cohort/RSVP counts; `+schedule` drives a
 calendar/agenda surface. Client models use **`long` Unix-millis**

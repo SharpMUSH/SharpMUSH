@@ -5,6 +5,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -246,6 +247,84 @@ public class MailTests
 
 		await AssertFolderCounts(recipient, new() { ["INBOX"] = 2, ["SAVED"] = 1 });
 		(await _db.SendMailAsync(sender.Object, recipient, NewMail("Refused", "r"), limit: 2)).Expect<MailboxFull>();
+	}
+
+	/// <summary>
+	/// #1494: a world whose folders were kept by name alone gets PennMUSH folder numbers on the next migrate.
+	/// INBOX is 0 and is not listed; a folder stored under its number's digits (as the PennMUSH importer wrote an
+	/// unnamed one) keeps that number; the rest, including a folder the player made that holds no mail now, take
+	/// the lowest free numbers in name order. The mail itself is not touched, and what the player's data already
+	/// held stays.
+	/// </summary>
+	[Test]
+	public async Task MigrateNumbersMailFoldersThatPredateFolderNumbers()
+	{
+		var sender = await NewPlayer("MailNumberSender");
+		var recipient = await NewPlayer("MailNumberRecipient");
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Inbox", "a"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Work", "b", "Work"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Saved", "c", "SAVED"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Unnamed", "d", "1"));
+		await _db.SetExpandedObjectData(recipient.Object.Id!, nameof(ExpandedMailData),
+			new Dictionary<string, object> { ["Folders"] = new[] { "Old", "Work" }, ["ActiveFolder"] = "Work" });
+
+		await _db.Store.WriteAsync(tx => tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailFolderNumberMigrationId)));
+		await _db.Migrate();
+
+		var data = await _db.GetExpandedObjectData<ExpandedMailData>(recipient.Object.Id!, nameof(ExpandedMailData));
+		await Assert.That(data).IsNotNull();
+		await Assert.That(data!.FolderNumbers).IsEquivalentTo(new Dictionary<string, int>
+		{
+			["1"] = 1, ["Old"] = 2, ["SAVED"] = 3, ["Work"] = 4
+		});
+		await Assert.That(data.ActiveFolder).IsEqualTo("Work");
+		await Assert.That(data.Folders).IsEquivalentTo(["Old", "Work"]);
+		await Assert.That((await _db.GetIncomingMailsAsync(recipient, "Work").ToListAsync()).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["Work"]);
+
+		// The numbers are the player's from now on: a second migrate leaves them as they are.
+		await _db.SetExpandedObjectData(recipient.Object.Id!, nameof(ExpandedMailData),
+			new Dictionary<string, object> { ["FolderNumbers"] = new Dictionary<string, int> { ["Work"] = 9 } });
+		await _db.Migrate();
+		var after = await _db.GetExpandedObjectData<ExpandedMailData>(recipient.Object.Id!, nameof(ExpandedMailData));
+		await Assert.That(after!.FolderNumbers).IsEquivalentTo(new Dictionary<string, int> { ["Work"] = 9 });
+	}
+
+	/// <summary>
+	/// A player whose folders hold no mail today still has them: the folders its data lists, and its current one,
+	/// are numbered even though no mailbox row names the player.
+	/// </summary>
+	[Test]
+	public async Task MigrateNumbersTheFoldersOfAPlayerWithNoMail()
+	{
+		var player = await NewPlayer("MailNumberNoMail");
+		await _db.SetExpandedObjectData(player.Object.Id!, nameof(ExpandedMailData),
+			new Dictionary<string, object> { ["Folders"] = new[] { "Work", "Old" }, ["ActiveFolder"] = "Spare" });
+
+		await _db.Store.WriteAsync(tx => tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailFolderNumberMigrationId)));
+		await _db.Migrate();
+
+		var data = await _db.GetExpandedObjectData<ExpandedMailData>(player.Object.Id!, nameof(ExpandedMailData));
+		await Assert.That(data!.FolderNumbers).IsEquivalentTo(new Dictionary<string, int>
+		{
+			["Old"] = 1, ["Spare"] = 2, ["Work"] = 3
+		});
+		await Assert.That(data.ActiveFolder).IsEqualTo("Spare");
+	}
+
+	/// <summary>A mailbox holding only INBOX mail needs no folder table.</summary>
+	[Test]
+	public async Task MigrateLeavesAnInboxOnlyMailboxWithoutFolderNumbers()
+	{
+		var sender = await NewPlayer("MailInboxOnlySender");
+		var recipient = await NewPlayer("MailInboxOnlyRecipient");
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Inbox", "a"));
+
+		await _db.Store.WriteAsync(tx => tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailFolderNumberMigrationId)));
+		await _db.Migrate();
+
+		await Assert.That(await _db.GetExpandedObjectData<ExpandedMailData>(recipient.Object.Id!, nameof(ExpandedMailData)))
+			.IsNull();
 	}
 
 	[Test]

@@ -1,9 +1,9 @@
-﻿using Mediator;
+using Mediator;
 using MarkupString;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -12,49 +12,67 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ReadMail
 {
+	/// <summary>
+	/// <c>do_mail_read</c> (<c>extmail.c:670</c>): every message <paramref name="msgList"/> names, in the current
+	/// folder or the one a <c>&lt;folder&gt;:</c> prefix names, each headed with its folder number and position.
+	/// </summary>
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser,
 		IExpandedObjectDataService objectDataService,
 		IMediator mediator,
 		INotifyService notifyService,
-		int messageNumber, string[] switches)
+		MString? msgList, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MarkupText.Plain("-").Repeat(78);
 		if (executor is not SharpPlayer player)
 		{
 			throw new InvalidOperationException("@mail reads a player's own mail, and its dispatcher routes only players here.");
 		}
 
-		var folder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-
-		var actualMail = await mediator.Send(new GetMailQuery(player, messageNumber, folder));
-
-		if (actualMail is null)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgList, executor) switch
 		{
-			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}", executor);
+			IAsyncEnumerable<SharpMail> list => await ReadAsync(objectDataService, mediator, notifyService, player, list),
+			Error<string> error => await MessageListHelper.RefuseAsync(notifyService, executor, error.Value)
+		};
+	}
+
+	private static async ValueTask<MString> ReadAsync(IExpandedObjectDataService objectDataService, IMediator mediator,
+		INotifyService notifyService, SharpPlayer player, IAsyncEnumerable<SharpMail> list)
+	{
+		var executor = new AnySharpObject(player);
+		var folders = await MailFolders.LoadAsync(objectDataService, player);
+		var messages = await MessageListHelper.WithPositionsAsync(mediator, player, folders, list);
+		if (messages.Count == 0)
+		{
+			await notifyService.Notify(executor, "MAIL: You don't have that many matching messages!", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
-
-		var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
-		var messageBuilder = new List<MString>
+		var line = MarkupText.Plain("-").Repeat(78);
+		var outputs = new List<MString>();
+		foreach (var (actualMail, folder, number) in messages)
 		{
-			line,
-			MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
-			MarkupText.Plain($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
-			MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
-			MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
-			line,
-			actualMail.Content,
-			line
-		};
+			var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
 
-		var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
-		await notifyService.Notify(executor, output, executor);
+			var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
+			var messageBuilder = new List<MString>
+			{
+				line,
+				MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
+				MarkupText.Plain($"Date: {dateline,-20} Folder: {folder,2} Message: {number,5}"),
+				MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
+				MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
+				line,
+				actualMail.Content,
+				line
+			};
 
-		await mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
+			var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
+			await notifyService.Notify(executor, output, executor);
+			outputs.Add(output);
 
-		return output;
+			await mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
+		}
+
+		return MarkupText.Join(MarkupText.NewLine, outputs);
 	}
 }

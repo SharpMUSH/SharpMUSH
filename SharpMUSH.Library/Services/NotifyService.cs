@@ -26,7 +26,8 @@ public class NotifyService(
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
 	IHttpOutputCapture? httpOutputCapture = null,
-	IOptionsWrapper<SharpMUSHOptions>? configuration = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
+	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
+	ICommandOutputCapture? commandOutputCapture = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
 {
 	/// <summary>Connection metadata naming a socket owner that takes prompts in order with output ("1").</summary>
 	public const string OrderedPromptsMetadata = ConnectionEstablishedMessage.OrderedPromptsMetadata;
@@ -214,17 +215,22 @@ public class NotifyService(
 			return false;
 		}
 
-		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
-		// the handler becomes the HTTP response body instead of going to a (nonexistent)
-		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
-		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0) && httpOutputCapture?.TryCapture(who.Number,
-				context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
-				{
-					MString markupString => markupString.ToPlainText(),
-					string str => str
-				}) == true)
+		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0)
+			&& (httpOutputCapture is not null || commandOutputCapture is not null))
 		{
-			return false;
+			var text = context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
+			{
+				MString markupString => markupString.ToPlainText(),
+				string str => str
+			};
+
+			// A portal command's answer is a copy: the character still hears it everywhere it is connected.
+			commandOutputCapture?.Offer(who.Number, text);
+
+			// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
+			// the handler becomes the HTTP response body instead of going to a (nonexistent)
+			// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
+			if (httpOutputCapture?.TryCapture(who.Number, text) == true) return false;
 		}
 
 		if (listenerRoutingService != null && mediator != null && sender != null)
@@ -398,10 +404,16 @@ public class NotifyService(
 	/// HTTP output capture for localized notifications: these resolve per-connection (locale),
 	/// so without this check a localized message to a connectionless http_handler would silently
 	/// vanish instead of joining the response body (e.g. @include's "No such attribute: …").
-	/// Captured text uses the neutral locale.
+	/// Captured text uses the neutral locale. A portal command's copy (<see cref="ICommandOutputCapture"/>)
+	/// is taken here too, and never stops delivery.
 	/// </summary>
 	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
-		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
+	{
+		if (httpOutputCapture is null && commandOutputCapture is null) return false;
+		var neutral = localizationService.Format(key, null, args);
+		commandOutputCapture?.Offer(who.Number, neutral);
+		return httpOutputCapture?.TryCapture(who.Number, neutral) == true;
+	}
 
 	public ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
 		=> NotifyLocalized(who, key, sender: null, args: args);
@@ -458,10 +470,11 @@ public class NotifyService(
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
 		if (!await CanReceive(who, sender)) return;
-		if (httpOutputCapture is not null)
+		if (httpOutputCapture is not null || commandOutputCapture is not null)
 		{
-			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
-			if (httpOutputCapture.TryCapture(who.Number, neutral.ToPlainText()))
+			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args).ToPlainText();
+			commandOutputCapture?.Offer(who.Number, neutral);
+			if (httpOutputCapture?.TryCapture(who.Number, neutral) == true)
 			{
 				return;
 			}

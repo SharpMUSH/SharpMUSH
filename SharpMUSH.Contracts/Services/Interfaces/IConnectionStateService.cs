@@ -52,10 +52,4 @@ public interface IConnectionStateService
 	/// there is no live connection to rebind.
 	/// </summary>
 	Task ReconnectAsync();
-
-	/// <summary>
-	/// Sends a raw command string to the game engine via the hub.
-	/// Throws <see cref="InvalidOperationException"/> when not connected.
-	/// </summary>
-	Task SendCommandAsync(string command);
 }

@@ -2,6 +2,7 @@ using System.Buffers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using SharpMUSH.SocketServer.Configuration;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -16,34 +17,55 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	// ages out, and the matching v2 token upgrade deliberately requires one fresh connection.
 	private const string StreamName = "TERMINAL_REPLAY_V2";
 	private const string SubjectPrefix = "terminal.replay2";
-	private static readonly TimeSpan DefaultRetention = TimeSpan.FromHours(24);
+	public const string ReplayStreamName = StreamName;
+
+	/// <summary>How long an abandoned replay reader survives on the broker if this process dies mid-replay.</summary>
+	private static readonly TimeSpan ReaderInactiveThreshold = TimeSpan.FromSeconds(60);
 	private readonly NatsConnection _nats;
 	private readonly INatsJSContext _js;
 	private readonly TimeSpan _publishTimeout;
+	private readonly ReplayOptions _options;
 	private readonly ILogger<JetStreamTerminalReplayStore> _logger;
 
-	internal JetStreamTerminalReplayStore(NatsConnection nats, INatsJSContext js, ILogger<JetStreamTerminalReplayStore> logger, TimeSpan? publishTimeout = null)
+	internal JetStreamTerminalReplayStore(NatsConnection nats, INatsJSContext js, ILogger<JetStreamTerminalReplayStore> logger,
+		TimeSpan? publishTimeout = null, ReplayOptions? options = null)
 	{
 		_publishTimeout = publishTimeout ?? TimeSpan.FromSeconds(2);
 		ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_publishTimeout, TimeSpan.Zero);
+		_options = options ?? new ReplayOptions();
+		_options.Validate();
 		_nats = nats;
 		_js = js;
 		_logger = logger;
 	}
 
-	public static async Task<JetStreamTerminalReplayStore> CreateAsync(
-		string url, ILogger<JetStreamTerminalReplayStore> logger, TimeSpan? retention = null, CancellationToken ct = default)
+	/// <summary>
+	/// The replay stream is an archive read back by sequence, so it keeps limits retention; when its
+	/// byte budget is reached the oldest frames go (discard-old), never a session's newest output. This
+	/// process is its only writer and owns its configuration.
+	/// </summary>
+	internal static StreamConfig StreamConfiguration(ReplayOptions options) => new(StreamName, [$"{SubjectPrefix}.>"])
 	{
-		var maxAge = retention ?? DefaultRetention;
+		Retention = StreamConfigRetention.Limits,
+		Discard = StreamConfigDiscard.Old,
+		MaxAge = options.Retention,
+		MaxBytes = options.MaxBytes,
+	};
+
+	public static async Task<JetStreamTerminalReplayStore> CreateAsync(
+		string url, ILogger<JetStreamTerminalReplayStore> logger, ReplayOptions? options = null, CancellationToken ct = default)
+	{
+		options ??= new ReplayOptions();
+		options.Validate();
 		var nats = new NatsConnection(new NatsOpts { Url = url });
 		try
 		{
 			await nats.ConnectAsync();
 			var js = new NatsJSContext(nats);
-			await js.CreateOrUpdateStreamAsync(new StreamConfig(StreamName, [$"{SubjectPrefix}.>"])
-			{ MaxAge = maxAge }, ct);
-			logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge})", StreamName, maxAge);
-			return new JetStreamTerminalReplayStore(nats, js, logger);
+			await js.CreateOrUpdateStreamAsync(StreamConfiguration(options), ct);
+			logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge}, MaxBytes {MaxBytes})",
+				StreamName, options.Retention, options.MaxBytes);
+			return new JetStreamTerminalReplayStore(nats, js, logger, options: options);
 		}
 		catch
 		{
@@ -89,58 +111,89 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		return (seq, SeqEnvelope.Wrap(seq, rawUtf8));
 	}
 
-	public async ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
+	public async ValueTask<ReplayOpening> OpenAsync(string session, long lastSeq, CancellationToken ct = default)
 	{
 		ArgumentOutOfRangeException.ThrowIfNegative(lastSeq);
-		var result = new List<byte[]>();
+		var subject = Subject(session);
 		var name = $"replay-read-{Guid.NewGuid():N}";
+		// Start AT the client's last frame when it has one. A session's frames leave the stream oldest
+		// first — by age, by the byte budget, by a purge — so finding that frame still retained proves
+		// every later one is too. A client with nothing yet (lastSeq 0) has no such anchor.
 		var consumer = await _js.CreateOrUpdateConsumerAsync(StreamName, new ConsumerConfig
 		{
 			Name = name,
-			FilterSubject = Subject(session),
-			DeliverPolicy = ConsumerConfigDeliverPolicy.ByStartSequence,
-			OptStartSeq = checked((ulong)lastSeq + 1),
+			FilterSubject = subject,
+			DeliverPolicy = lastSeq == 0 ? ConsumerConfigDeliverPolicy.All : ConsumerConfigDeliverPolicy.ByStartSequence,
+			OptStartSeq = lastSeq == 0 ? 0 : checked((ulong)lastSeq),
 			AckPolicy = ConsumerConfigAckPolicy.None,
-			InactiveThreshold = TimeSpan.FromSeconds(10),
+			InactiveThreshold = ReaderInactiveThreshold,
 		}, ct);
+		var handedOff = false;
 		try
 		{
 			// Snapshot the available count once: pagination must not run forever on a busy session.
 			// The session sink serializes replay/attachment with appends to preserve live ordering.
-			var remaining = consumer.Info.NumPending;
+			var pending = consumer.Info.NumPending;
+			if (lastSeq > 0)
+			{
+				if (pending == 0 || await FirstSequenceAsync(consumer, ct) != checked((ulong)lastSeq))
+					return new IncompleteReplay(ReplayGap.Expired);
+				pending--;
+			}
+			if (_options.MaxFrames > 0 && pending > (ulong)_options.MaxFrames)
+				return new IncompleteReplay(ReplayGap.OverBudget);
+			handedOff = true;
+			return new PagedFrames(this, consumer, name, session, pending);
+		}
+		finally
+		{
+			if (!handedOff) await DeleteReaderAsync(name, session);
+		}
+	}
+
+	private static async Task<ulong?> FirstSequenceAsync(INatsJSConsumer consumer, CancellationToken ct)
+	{
+		await foreach (var msg in consumer.FetchNoWaitAsync<byte[]>(new NatsJSFetchOpts { MaxMsgs = 1 }, cancellationToken: ct))
+			return msg.Metadata?.Sequence.Stream;
+		return null;
+	}
+
+	private async ValueTask DeleteReaderAsync(string name, string session)
+	{
+		try { await _js.DeleteConsumerAsync(StreamName, name, CancellationToken.None); }
+		// Best effort: the reader's inactivity threshold removes it on the broker regardless.
+		catch (Exception ex) { _logger.LogDebug(ex, "Replay consumer cleanup failed for session {Session}", session); }
+	}
+
+	/// <summary>
+	/// A replay read from its own ephemeral consumer, at most <see cref="ReplayOptions.PageSize"/> frames
+	/// from the broker at a time, each page handed on before the next is fetched.
+	/// </summary>
+	private sealed class PagedFrames(JetStreamTerminalReplayStore store, INatsJSConsumer consumer, string name,
+		string session, ulong count) : ReplayFrames
+	{
+		public override async IAsyncEnumerable<byte[]> ReadAsync(
+			[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			var remaining = count;
 			while (remaining > 0)
 			{
 				var fetched = 0;
 				await foreach (var msg in consumer.FetchNoWaitAsync<byte[]>(
-					new NatsJSFetchOpts { MaxMsgs = (int)Math.Min(remaining, 500UL) }, cancellationToken: ct))
+					new NatsJSFetchOpts { MaxMsgs = (int)Math.Min(remaining, (ulong)store._options.PageSize) }, cancellationToken: ct))
 				{
 					fetched++;
 					remaining--;
 					if (msg.Data is null || msg.Metadata is not { } metadata)
 						throw new InvalidDataException("Replay message lacks payload or sequence metadata.");
-					result.Add(SeqEnvelope.Wrap(checked((long)metadata.Sequence.Stream), msg.Data));
+					yield return SeqEnvelope.Wrap(checked((long)metadata.Sequence.Stream), msg.Data);
 				}
 				if (fetched == 0)
-					throw new IncompleteReplayException();
+					throw new ReplayInterruptedException();
 			}
-			return result;
 		}
-		finally
-		{
-			try { await _js.DeleteConsumerAsync(StreamName, name, CancellationToken.None); }
-			catch (Exception ex) { _logger.LogDebug(ex, "Replay consumer cleanup failed for session {Session}", session); }
-		}
-	}
 
-	public async ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default)
-	{
-		try { return new(true, await AfterAsync(session, lastSeq, ct)); }
-		catch (IncompleteReplayException) { return new(false, []); }
-	}
-
-	public sealed class IncompleteReplayException : Exception
-	{
-		public IncompleteReplayException() : base("The requested replay history is no longer complete.") { }
+		public override async ValueTask DisposeAsync() => await store.DeleteReaderAsync(name, session);
 	}
 
 	public async ValueTask DropAsync(string session, CancellationToken ct = default)
