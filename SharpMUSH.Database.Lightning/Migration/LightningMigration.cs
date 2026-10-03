@@ -159,7 +159,8 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// Gives every mail folder a PennMUSH folder number, once, for worlds whose folders were kept by name alone:
-	/// each recipient's folders that hold mail, and those its <see cref="ExpandedMailData"/> lists, are numbered by
+	/// each player's folders that hold mail, and those its <see cref="ExpandedMailData"/> lists or makes current
+	/// (whether or not the player holds any mail), are numbered by
 	/// <see cref="ExpandedMailData.WithFolders"/> into its <see cref="ExpandedMailData.FolderNumbers"/>. Messages
 	/// stay under the names they are stored under, so no mail row changes.
 	/// </summary>
@@ -183,6 +184,19 @@ public partial class LightningDatabase
 			}
 
 			held.Add(folder);
+		}
+
+		// A player can have folders and a current folder with no mail in them; their data numbers those.
+		var dataType = nameof(ExpandedMailData);
+		foreach (var (key, _) in tx.Range(Tables.ExpandedObj, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (key.Length <= 8) continue;
+			var owner = Keys.ReadDbref(key.AsSpan(0, 8));
+			if (!folders.ContainsKey(owner) && key.AsSpan().SequenceEqual(Keys.Composite(owner, dataType)))
+			{
+				folders[owner] = new SortedSet<string>(StringComparer.Ordinal);
+			}
 		}
 
 		foreach (var (recipient, held) in folders)

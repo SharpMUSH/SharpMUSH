@@ -108,6 +108,7 @@ public static class MessageListHelper
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
 			// parse_message_spec (extmail.c:3153): <folder>:<messages>, the folder a number or, here, a name.
+			// parse_msglist takes "all" with strcasecmp (extmail.c:3000), as it does every keyword below.
 			if (MailFolders.Resolve(await MailFolders.LoadAsync(objectDataService, player), folderSplit[0]) is not MailFolder folder)
 			{
 				return new Error<string>("MAIL: Invalid message specification");
@@ -116,7 +117,7 @@ public static class MessageListHelper
 			mailList = mediator!.CreateStream(new GetMailListQuery(player, folder.Name));
 			msgList = folderSplit[1];
 		}
-		else if (msgList == "all")
+		else if (msgList.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			mailList = mediator!.CreateStream(new GetAllMailListQuery(player));
 		}

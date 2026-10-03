@@ -100,14 +100,25 @@ public static class FolderMail
 		INotifyService notifyService, IAsyncEnumerable<SharpMail> list, AnySharpObject executor, SharpPlayer player,
 		string folderSpec, bool all)
 	{
-		if (await MailFolders.FileTargetAsync(objectDataService, player, folderSpec) is not MailFolder target)
+		// do_mail_file refuses the folder before it says whether any message matched.
+		var data = await MailFolders.LoadAsync(objectDataService, player);
+		var messages = await MessageListHelper.WithPositionsAsync(mediator, player, data, list);
+		if (await MailFolders.FileIntoAsync(objectDataService, player, folderSpec, async folder =>
+				{
+					foreach (var origin in messages)
+					{
+						await mediator.Send(new MoveMailFolderCommand(origin.Mail, folder.Name));
+						if (origin.Mail.Cleared)
+						{
+							await mediator.Send(new UpdateMailCommand(origin.Mail, MailUpdate.ClearEdit(false)));
+						}
+					}
+				}) is not MailFolder target)
 		{
 			await notifyService.Notify(executor, "MAIL: Invalid folder specification");
 			return MarkupText.Empty;
 		}
 
-		var data = await MailFolders.LoadAsync(objectDataService, player);
-		var messages = await MessageListHelper.WithPositionsAsync(mediator, player, data, list);
 		if (messages.Count == 0)
 		{
 			await notifyService.Notify(executor, "MAIL: You don't have any matching messages!");
@@ -116,13 +127,6 @@ public static class FolderMail
 
 		foreach (var origin in messages)
 		{
-			var mail = origin.Mail;
-			await mediator.Send(new MoveMailFolderCommand(mail, target.Name));
-			if (mail.Cleared)
-			{
-				await mediator.Send(new UpdateMailCommand(mail, MailUpdate.ClearEdit(false)));
-			}
-
 			if (!all)
 			{
 				await notifyService.Notify(executor,

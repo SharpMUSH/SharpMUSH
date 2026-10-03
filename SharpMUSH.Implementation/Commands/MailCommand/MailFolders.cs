@@ -38,40 +38,55 @@ public static class MailFolders
 		=> new(number, data.FolderFor(number), data.DisplayName(number));
 
 	/// <summary>
-	/// The folder <paramref name="spec"/> names, for filing a message into: a number or one of the player's
-	/// folders, or a new alphanumeric name, which becomes a folder with the lowest free number. Not found when
-	/// the spec names no folder and none can be made.
+	/// Files into the folder <paramref name="spec"/> names: a number or one of the player's folders, or a new
+	/// alphanumeric name, which becomes a folder with the lowest free number. <paramref name="file"/> moves the
+	/// messages, and runs under the same gate as the lookup, so a rename or unfolder cannot come between them and
+	/// leave a message under a name the table no longer lists. Not found, and nothing filed, when the spec names
+	/// no folder and none can be made.
 	/// </summary>
-	public static async ValueTask<Found<MailFolder>> FileTargetAsync(IExpandedObjectDataService objectData,
-		SharpPlayer player, string spec)
+	public static async ValueTask<Found<MailFolder>> FileIntoAsync(IExpandedObjectDataService objectData,
+		SharpPlayer player, string spec, Func<MailFolder, ValueTask> file)
 	{
 		spec = spec.Trim();
 		var gate = GateFor(player);
 		await gate.WaitAsync();
 		try
 		{
-			var data = await LoadAsync(objectData, player);
-			if (Resolve(data, spec) is MailFolder existing)
-			{
-				return await RecordedAsync(objectData, player, data, existing);
-			}
-
-			if (spec.Length == 0 || char.IsAsciiDigit(spec[0]) || !spec.All(char.IsAsciiLetterOrDigit)
-					|| data.WithFolder(spec) is not ExpandedMailData numbered)
+			if (await TargetAsync(objectData, player, spec) is not MailFolder target)
 			{
 				return new NotFound();
 			}
 
-			await SaveAsync(objectData, player, numbered with
-			{
-				Folders = [.. (numbered.Folders ?? []).Append(spec).Distinct()]
-			});
-			return Resolve(numbered, spec);
+			await file(target);
+			return target;
 		}
 		finally
 		{
 			gate.Release();
 		}
+	}
+
+	/// <summary>The folder <paramref name="spec"/> names or makes; the caller holds the gate.</summary>
+	private static async ValueTask<Found<MailFolder>> TargetAsync(IExpandedObjectDataService objectData,
+		SharpPlayer player, string spec)
+	{
+		var data = await LoadAsync(objectData, player);
+		if (Resolve(data, spec) is MailFolder existing)
+		{
+			return await RecordedAsync(objectData, player, data, existing);
+		}
+
+		if (spec.Length == 0 || char.IsAsciiDigit(spec[0]) || !spec.All(char.IsAsciiLetterOrDigit)
+				|| data.WithFolder(spec) is not ExpandedMailData numbered)
+		{
+			return new NotFound();
+		}
+
+		await SaveAsync(objectData, player, numbered with
+		{
+			Folders = [.. (numbered.Folders ?? []).Append(spec).Distinct()]
+		});
+		return Resolve(numbered, spec);
 	}
 
 	/// <summary>

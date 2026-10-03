@@ -44,6 +44,9 @@ public class MailFolderNumberTests
 		await run("@mail/file 2=3");
 
 		await Assert.That(await eval("maillist(all)")).IsEqualTo("0:1 3:1");
+		// parse_msglist matches "all" with strcasecmp (extmail.c:3000).
+		await Assert.That(await eval("maillist(ALL)")).IsEqualTo("0:1 3:1");
+		await Assert.That(await eval("maillist(All)")).IsEqualTo("0:1 3:1");
 		await Assert.That(await eval("maillist(3:)")).IsEqualTo("3:1");
 		await Assert.That(await eval("mailsubject(3:1)")).IsEqualTo(second);
 		await Assert.That(await eval("mailsubject(me,3:1)")).IsEqualTo(second);

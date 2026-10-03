@@ -235,13 +235,14 @@ public static partial class MailDelivery
 		switch (filtered)
 		{
 			case FilterOutcome.Filed
-				when await MailFolders.FileTargetAsync(services.ObjectData, target, folderSpec) is MailFolder folder:
-				if (folder.Number != 0)
+				when await MailFolders.FileIntoAsync(services.ObjectData, target, folderSpec, async filed =>
 				{
-					mail.Id = admission.Id;
-					await services.Mediator.Send(new MoveMailFolderCommand(mail, folder.Name));
-				}
-
+					if (filed.Number != 0)
+					{
+						mail.Id = admission.Id;
+						await services.Mediator.Send(new MoveMailFolderCommand(mail, filed.Name));
+					}
+				}) is MailFolder folder:
 				await services.Notify.Notify(target,
 					$"MAIL: Msg 0:{admission.Number} filed in folder {folder.Number} [{folder.DisplayName}]");
 				break;

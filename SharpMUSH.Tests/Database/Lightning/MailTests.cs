@@ -290,6 +290,28 @@ public class MailTests
 		await Assert.That(after!.FolderNumbers).IsEquivalentTo(new Dictionary<string, int> { ["Work"] = 9 });
 	}
 
+	/// <summary>
+	/// A player whose folders hold no mail today still has them: the folders its data lists, and its current one,
+	/// are numbered even though no mailbox row names the player.
+	/// </summary>
+	[Test]
+	public async Task MigrateNumbersTheFoldersOfAPlayerWithNoMail()
+	{
+		var player = await NewPlayer("MailNumberNoMail");
+		await _db.SetExpandedObjectData(player.Object.Id!, nameof(ExpandedMailData),
+			new Dictionary<string, object> { ["Folders"] = new[] { "Work", "Old" }, ["ActiveFolder"] = "Spare" });
+
+		await _db.Store.WriteAsync(tx => tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailFolderNumberMigrationId)));
+		await _db.Migrate();
+
+		var data = await _db.GetExpandedObjectData<ExpandedMailData>(player.Object.Id!, nameof(ExpandedMailData));
+		await Assert.That(data!.FolderNumbers).IsEquivalentTo(new Dictionary<string, int>
+		{
+			["Old"] = 1, ["Spare"] = 2, ["Work"] = 3
+		});
+		await Assert.That(data.ActiveFolder).IsEqualTo("Spare");
+	}
+
 	/// <summary>A mailbox holding only INBOX mail needs no folder table.</summary>
 	[Test]
 	public async Task MigrateLeavesAnInboxOnlyMailboxWithoutFolderNumbers()
