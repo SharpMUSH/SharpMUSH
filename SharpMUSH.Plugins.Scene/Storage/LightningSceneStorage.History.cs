@@ -75,9 +75,8 @@ public sealed partial class LightningSceneStorage
 					var stillPurgeable = Purgeable(tx, tx.Range(scenes._log, prefix).ToList(), rule, now)
 						.Select(row => Convert.ToHexString(row.Key))
 						.ToHashSet(StringComparer.Ordinal);
-					foreach (var candidate in group)
+					foreach (var candidate in group.Where(c => stillPurgeable.Contains(Convert.ToHexString(c.Key))))
 					{
-						if (!stillPurgeable.Contains(Convert.ToHexString(candidate.Key))) continue;
 						if (!tx.TryGet(scenes._log, candidate.Key, out var current)) continue;
 						tx.Delete(scenes._log, candidate.Key);
 						deleted++;

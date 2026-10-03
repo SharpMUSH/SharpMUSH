@@ -53,7 +53,7 @@ public sealed record HistoryRetentionRule
 		(true, { } age) => $"keep the newest {KeepNewest}, purge the rest once older than {DescribeAge(age)}"
 	};
 
-	private static string DescribeAge(TimeSpan age) => age.TotalDays >= 1 && age.TotalDays == Math.Floor(age.TotalDays)
+	private static string DescribeAge(TimeSpan age) => age >= TimeSpan.FromDays(1) && age.Ticks % TimeSpan.TicksPerDay == 0
 		? $"{age.TotalDays:0}d"
 		: age.ToString();
 }

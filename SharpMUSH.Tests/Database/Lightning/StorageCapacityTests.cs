@@ -169,9 +169,9 @@ public class StorageCapacityTests
 	public async Task ALongReaderDefersPageReuseAndTheFileGrowsMeanwhile()
 	{
 		var path = TempPath();
-		var store = new LightningStore(new LightningStoreOptions { Path = path, MapSize = MapSize });
 		try
 		{
+			using var store = new LightningStore(new LightningStoreOptions { Path = path, MapSize = MapSize });
 			var value = new byte[4000];
 			Random.Shared.NextBytes(value);
 
@@ -225,7 +225,6 @@ public class StorageCapacityTests
 		}
 		finally
 		{
-			store.Dispose();
 			Delete(path);
 		}
 	}

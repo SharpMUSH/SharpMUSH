@@ -447,11 +447,7 @@ public sealed partial class LightningStore : IDisposable
 			// The two meta pages, then the main database (which holds the named tables' catalogue).
 			var used = 2L + main.BranchPages + main.LeafPages + main.OverflowPages;
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
-			foreach (var db in _tables.Values)
-			{
-				var stats = tx.GetStats(db);
-				used += stats.BranchPages + stats.LeafPages + stats.OverflowPages;
-			}
+			used += _tables.Values.Select(tx.GetStats).Sum(stats => stats.BranchPages + stats.LeafPages + stats.OverflowPages);
 
 			return new LightningEnvironmentUsage(info.MapSize, main.PageSize, (long)info.LastPageNumber + 1, used);
 		}

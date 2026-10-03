@@ -75,9 +75,8 @@ public partial class LightningDatabase
 					var stillPurgeable = Purgeable(tx, tx.Range(Tables.WikiRev, prefix).ToList(), rule, now)
 						.Select(row => Convert.ToHexString(row.Key))
 						.ToHashSet(StringComparer.Ordinal);
-					foreach (var candidate in group)
+					foreach (var candidate in group.Where(c => stillPurgeable.Contains(Convert.ToHexString(c.Key))))
 					{
-						if (!stillPurgeable.Contains(Convert.ToHexString(candidate.Key))) continue;
 						if (!tx.TryGet(Tables.WikiRev, candidate.Key, out var current)) continue;
 						tx.Delete(Tables.WikiRev, candidate.Key);
 						deleted++;
