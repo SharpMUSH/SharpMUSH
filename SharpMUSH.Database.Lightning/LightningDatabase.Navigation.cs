@@ -158,7 +158,7 @@ public partial class LightningDatabase
 
 	public IAsyncEnumerable<DBRef> GetContentRefsAsync(DBRef container, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.Location.Reverse, Keys.Dbref(container.Number),
-			ContentRef, ct: ct));
+			(tx, value) => IsSubject(tx, container) ? ContentRef(tx, value) : null, ct: ct));
 
 	/// <summary>The full id of the content an edge value names, or null when its object is gone or is a room.</summary>
 	private DBRef? ContentRef(ITx tx, byte[] value)
@@ -230,7 +230,7 @@ public partial class LightningDatabase
 
 	public IAsyncEnumerable<DBRef> GetZoneMemberRefsAsync(DBRef zone, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.Zone.Reverse, Keys.Dbref(zone.Number),
-			(tx, value) => HeaderRef(tx, Keys.ReadDbref(value)), ct: ct));
+			(tx, value) => IsSubject(tx, zone) ? HeaderRef(tx, Keys.ReadDbref(value)) : null, ct: ct));
 
 	/// <summary>The base object an edge value names, or null when it is gone.</summary>
 	private SharpObject? ReadSharpObject(ITx tx, byte[] value)
