@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.22.3
+version: 1.22.4
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -308,8 +308,10 @@ objects:
         $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
+      # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its
+      # owner: @scene/member sets the role outright, so it is skipped for them.
       CMD`JOIN: |-
-        $+scene/join *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
+        $+scene/join *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @if not(strmatch(scenemember(%0,%#,role),owner))={@scene/member %0/participant=%#}; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<SceneID> BEFORE @scene/focus clears it (@assert sets the

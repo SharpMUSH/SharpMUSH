@@ -315,6 +315,31 @@ public class OobEntryParserTests
 		await Assert.That(info.Scene).IsNull();
 	}
 
+	/// <summary>The viewer's place in the scene (room-contents 2.2): their role, or null, and whether they are focused on it.</summary>
+	[Test]
+	public async Task V2_room_info_scene_carries_the_viewers_role_and_focus()
+	{
+		var member = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","title":"T","cast":3,"role":"owner","focus":true}}""")!;
+		var watcher = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","title":"T","cast":3,"role":null,"focus":false}}""")!;
+
+		await Assert.That(member.Scene).IsEqualTo(new RoomScene("42", "T", 3, "owner", true));
+		await Assert.That(member.Scene!.Outside).IsFalse();
+		await Assert.That(watcher.Scene).IsEqualTo(new RoomScene("42", "T", 3, null, false));
+		await Assert.That(watcher.Scene!.Outside).IsTrue();
+	}
+
+	/// <summary>An older handler says nothing about focus; that is not "outside", so the composer stays.</summary>
+	[Test]
+	public async Task V2_room_info_scene_without_focus_is_not_outside()
+	{
+		var info = OobEntryParser.ParseRoomInfo("""{"v":2,"name":"R","scene":{"id":"42","cast":3}}""")!;
+
+		await Assert.That(info.Scene!.Focus).IsNull();
+		await Assert.That(info.Scene!.Outside).IsFalse();
+	}
+
 	[Test]
 	public async Task V2_softcode_room_info_with_a_scene()
 	{

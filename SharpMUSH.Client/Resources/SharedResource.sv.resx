@@ -5045,6 +5045,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scen</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Du tittar på den här scenen. Gå med för att posera här.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Dina poser hamnar i en annan scen. Gå med i den här för att posera här.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Gå med i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Lämna scenen</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>
   </data>

@@ -116,9 +116,10 @@ public class PlayPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private void PushRoom(bool scene = true)
+	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null)
 	{
-		var sceneJson = scene ? ""","scene":{"id":"42","title":"Salt Market at Dusk","cast":5}""" : string.Empty;
+		var focusJson = focus is { } f ? $$""","role":"participant","focus":{{(f ? "true" : "false")}}""" : string.Empty;
+		var sceneJson = scene ? $$""","scene":{"id":"{{sceneId}}","title":"Salt Market at Dusk","cast":5{{focusJson}}}""" : string.Empty;
 		_store.Set(OobEntryParser.RoomInfoPackage,
 			$$"""{"v":2,"dbref":"#1201","objid":"#1201:1","name":"Lower Docks","area":"Harbour Ward","image":{"url":"/r/docks.jpg"}{{sceneJson}}}""");
 		_store.Set(OobEntryParser.RoomContentsPackage,
@@ -193,6 +194,63 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scene-card-foot").Count).IsEqualTo(0)
 			.Because("no empty footer either: it pads itself, and a sideways phone has no height to give it (#1506)");
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A viewer not focused on the room's scene would pose into the room and never into the story, so the
+	/// Story's footer says so and offers to join instead of the composer.
+	/// </summary>
+	[Test]
+	public async Task NotFocusedOnTheScene_TheStoryOffersToJoin_InsteadOfTheComposer()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
+
+		cut.Find("button.play-join-btn").Click();
+		await _play.Received(1).SendAsync("+scene/join 42");
+	}
+
+	/// <summary>The room.info that follows a join brings the composer back, with a Leave beside it.</summary>
+	[Test]
+	public async Task OnceFocused_TheComposerIsBack_AndLeaveLeavesTheScene()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+
+		PushRoom(focus: true);
+		cut.WaitForAssertion(() => cut.Find(".composer"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-join").Count).IsEqualTo(0);
+
+		cut.Find("button[aria-label='Leave scene']").Click();
+		await _play.Received(1).SendAsync("+scene/leave");
+	}
+
+	/// <summary>
+	/// The page follows the room's scene as it changes: a scene that stops leaves the terminal, and a scene
+	/// that starts later opens in the Story even if the player chose the terminal in the last one.
+	/// </summary>
+	[Test]
+	public async Task TheSceneEnding_LeavesTheTerminal_AndANewSceneOpensInTheStory()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find("[role='radiogroup'][aria-label='View']"), TimeSpan.FromSeconds(5));
+		cut.FindAll(".scene-card-radio")[1].Click();
+		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
+
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".play-story").Count != 0) throw new InvalidOperationException("story still shown");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsFalse();
+
+		PushRoom(sceneId: "43");
+		cut.WaitForAssertion(() => cut.Find(".play-story"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-story").ClassList).DoesNotContain("play-view--off");
 	}
 
 	[Test]

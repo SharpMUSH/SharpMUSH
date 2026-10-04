@@ -169,6 +169,12 @@ public static class OobEntryParser
 	private static string? Text(JsonElement parent, string property) =>
 		Str(parent, property) is { Length: > 0 } text ? text : null;
 
+	/// <summary>A JSON boolean, or null when the property is absent or not a boolean.</summary>
+	private static bool? Flag(JsonElement parent, string property) =>
+		parent.TryGetProperty(property, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+			? value.GetBoolean()
+			: null;
+
 	private static bool True(JsonElement parent, string property) =>
 		parent.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.True;
 
@@ -283,7 +289,7 @@ public static class OobEntryParser
 			|| SceneId(scene) is not { } id)
 			return null;
 
-		return new RoomScene(id, Str(scene, "title"), Count(scene, "cast"));
+		return new RoomScene(id, Str(scene, "title"), Count(scene, "cast"), Str(scene, "role"), Flag(scene, "focus"));
 	}
 
 	/// <summary>The contract's id is a string; board <c>12</c> drew a number, so a whole number reads too.</summary>

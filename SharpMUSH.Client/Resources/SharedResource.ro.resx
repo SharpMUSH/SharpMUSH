@@ -5045,6 +5045,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>În scenă</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Urmărești această scenă. Alătură-te pentru a poza aici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Pozele tale merg într-o altă scenă. Alătură-te acesteia pentru a poza aici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Alătură-te scenei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Părăsește scena</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Canale</value>
   </data>

@@ -98,6 +98,10 @@ else
                                 {
                                     @TerminalSettings
                                 }
+                                else if (SceneHere is { Focus: true })
+                                {
+                                    @LeaveSceneControl
+                                }
                             </span>
                             @RoomControl
                             @if (PlayTerminal.IsConnected)
@@ -232,6 +236,9 @@ else
     /// <summary>The player's choice of view in a scene; null until they choose (Story, by default).</summary>
     private PlayView? _chosenView;
 
+    /// <summary>The scene <see cref="_chosenView"/> was chosen in: a scene that starts later opens in Story again.</summary>
+    private string? _chosenFor;
+
     private bool _focus;
 
     /// <summary>A phone, either way up (layout.js compactScreenQuery).</summary>
@@ -355,7 +362,9 @@ else
     }
 
     /// <summary>Story in a scene unless the player chose Terminal; outside a scene there is only the terminal.</summary>
-    private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;
+    private PlayView View => SceneHere is { } scene
+        ? (_chosenFor == scene.Id ? _chosenView : null) ?? PlayView.Story
+        : PlayView.Terminal;
 
     /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
     private string? SidebarCurrent => _commKey ?? (View == PlayView.Story ? null : string.Empty);
@@ -495,14 +504,43 @@ else
     /// </summary>
     private RenderFragment StoryComposer => __builder =>
     {
-        <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
-                      DraftKey="@DraftKey" />
+        if (SceneHere is { Outside: true } scene)
+        {
+            @* Not focused on the room's scene: a pose sent from here would reach the room and never the story,
+               so the footer offers to join instead. Joining focuses the viewer, and the room.info that follows
+               brings the composer back. *@
+            <div class="play-join" role="status">
+                <span class="play-join-text">@(scene.Role is null ? Loc["NavPlaySceneWatching"] : Loc["NavPlaySceneFocusedElsewhere"])</span>
+                <button type="button" class="play-join-btn" disabled="@(!PlayTerminal.IsConnected)" @onclick="() => JoinSceneAsync(scene)">
+                    @Loc["NavPlaySceneJoin"]
+                </button>
+            </div>
+        }
+        else
+        {
+            <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
+                          DraftKey="@DraftKey" />
+        }
     };
+
+    /// <summary>Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again.</summary>
+    private RenderFragment LeaveSceneControl => __builder =>
+    {
+        <button type="button" class="play-conn" aria-label="@Loc["NavPlaySceneLeave"]" title="@Loc["NavPlaySceneLeave"]"
+                disabled="@(!PlayTerminal.IsConnected)" @onclick="LeaveSceneAsync">
+            <MudIcon Icon="@Icons.Material.Outlined.Logout" Size="Size.Small" />
+        </button>
+    };
+
+    private Task JoinSceneAsync(RoomScene scene) => SendAsync($"+scene/join {scene.Id}");
+
+    private Task LeaveSceneAsync() => SendAsync("+scene/leave");
 
     /// <summary>
     /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
     /// header keeps the buttons used all the time and the name opens the room's details, as a chat app's channel
-    /// name does. Focus mode, the terminal settings and Disconnect; Connect and Login stay in the header.
+    /// name does. Focus mode, the terminal settings (or Leave, in a scene's Story) and Disconnect; Connect and Login
+    /// stay in the header.
     /// </summary>
     private RenderFragment BannerControls => __builder =>
     {
@@ -514,6 +552,10 @@ else
             @if (View == PlayView.Terminal)
             {
                 @TerminalSettings
+            }
+            else if (SceneHere is { Focus: true })
+            {
+                @LeaveSceneControl
             }
             @if (PlayTerminal.IsConnected)
             {
@@ -686,7 +728,13 @@ else
     /// <summary>The open banner's minimise folds it back into the card header.</summary>
     private Task OnBannerMinimisedAsync(bool minimised) => SetBannerOpenAsync(!minimised);
 
-    private void OnViewChanged(PlayView view) => _chosenView = view;
+    private void OnViewChanged(PlayView view) => ChooseView(view);
+
+    private void ChooseView(PlayView view)
+    {
+        _chosenView = view;
+        _chosenFor = SceneHere?.Id;
+    }
 
     private void OnFocusChanged(bool focus) => _focus = focus;
 
@@ -890,7 +938,7 @@ else
     private void OpenScene()
     {
         _commKey = null;
-        _chosenView = PlayView.Story;
+        ChooseView(PlayView.Story);
     }
 
     /// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>

@@ -5045,6 +5045,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>Jelenetben</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Ezt a jelenetet nézed. Csatlakozz, hogy itt pózolhass.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>A pózaid egy másik jelenetbe kerülnek. Csatlakozz ehhez, hogy itt pózolhass.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Csatlakozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Jelenet elhagyása</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Csatornák</value>
   </data>
