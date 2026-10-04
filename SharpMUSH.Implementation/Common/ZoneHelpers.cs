@@ -113,7 +113,7 @@ public static class ZoneHelpers
 		//
 		// PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(), which ask nobody's
 		// permission, so its one controls() check above is the whole authorization. These go through
-		// IObjectRelationshipService, which checks Controls itself — and Controls reads the object's
+		// IFlagAndPowerService, which checks Controls itself — and Controls reads the object's
 		// *current* zone (PermissionService.Controls, Zone Master Object branch). Once the zone has
 		// moved, an executor who held the object only through the zone it is leaving no longer controls
 		// it, the strip is refused, and @CHZONE reports "Zone changed." over an object that kept every
