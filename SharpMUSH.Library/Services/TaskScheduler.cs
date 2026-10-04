@@ -983,7 +983,7 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
 	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
-	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
 	{
 		if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
@@ -999,7 +999,7 @@ public partial class TaskScheduler(
 			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
 			if (attr is not SharpAttribute[] chain) return new CallState("#-1");
 			return await ExecuteList(chain.Last().Value, parserState);
-		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
+		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null, enactor: enactor);
 	}
 
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
@@ -1310,7 +1310,7 @@ public partial class TaskScheduler(
 		var group = SchedulerKeys.Delay(state.Executor);
 		delay = Nonnegative(delay);
 		var due = DateTimeOffset.UtcNow + delay;
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		QueueEntry entry;

@@ -478,6 +478,75 @@ public class QueueAdmissionTests
 		await Assert.That(told).IsEquivalentTo(quiet ? Array.Empty<int>() : [12]);
 	}
 
+	/// <summary>
+	/// A delayed entry (<c>@wait</c>) and an attribute callback (<c>@http</c>, <c>@mapsql</c>) keep the
+	/// enactor they were queued with, so the notice reaches it rather than the executor.
+	/// </summary>
+	[Test]
+	[Arguments("delayed")]
+	[Arguments("attribute")]
+	public async Task ExecutionLimitNoticeKeepsTheEnactorOnEveryAdmissionPath(string path)
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var dbRef = call.Arg<GetObjectNodeQuery>().DBRef;
+			var player = new SharpPlayer
+			{
+				Object = new SharpObject
+				{
+					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => Array.Empty<SharpObjectFlag>().ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+				},
+				Location = null!, Home = null!, PasswordHash = "", Quota = 0
+			};
+			player.Object.Owner = new(_ => Task.FromResult(player));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		static async ValueTask<CallState?> Spin()
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return null;
+		}
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => Spin());
+		var notifications = Substitute.For<INotifyService>();
+		var told = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var quartz = Substitute.For<IScheduler>();
+		long generation = 0;
+		quartz.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				generation = (long)call.Arg<IJobDetail>().JobDataMap["Generation"];
+				return Task.FromResult(call.Arg<ITrigger>().StartTimeUtc);
+			});
+		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications, scheduler: quartz);
+		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
+			.Returns(call => { told.TrySetResult(call.Arg<AnySharpObject>().Object().DBRef.Number); return ValueTask.CompletedTask; });
+		var state = ParserState.RootFor(new DBRef(10)) with { Enactor = new DBRef(12) };
+
+		if (path == "delayed")
+		{
+			var delayed = await queue.AdmitCommandList(MarkupText.Plain("spin"), state, TimeSpan.FromHours(1));
+			await Assert.That(delayed.Accepted).IsTrue();
+			// What Quartz's DelayedTask does when the trigger fires.
+			await queue.ReleaseScheduledWork(delayed.Pid!.Value, false, generation);
+		}
+		else
+		{
+			var admission = await queue.AdmitAsyncAttribute(async () =>
+			{
+				await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+				return state;
+			}, new DbRefAttribute(new DBRef(10), ["CALLBACK"]), new DBRef(10), new DBRef(12));
+			await Assert.That(admission.Accepted).IsTrue();
+		}
+
+		await Assert.That(await told.Task.WaitAsync(TimeSpan.FromSeconds(10))).IsEqualTo(12);
+	}
+
 	[Test]
 	public async Task ReservedCompletionCountsQuotaAndPublishesAtFifoTailExactlyOnce()
 	{

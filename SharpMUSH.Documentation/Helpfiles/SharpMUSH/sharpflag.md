@@ -454,7 +454,7 @@ If a PUPPET is also set LISTEN, it will respond to what it hears according to it
 
 This flag suppresses several acknowledgement messages from commands, such as 'Set', 'Triggered', 'Teleported', etc.
 
-A QUIET player hears none of them. A player who is not QUIET still hears none about a QUIET object they own: its `&` and `@set` attribute writes, `@edit`, `@parent`, `@link` home, `@lock`, `@power` and flag changes. `@notify` and `@drain` say nothing when the object running them, or its owner, is QUIET, and `@channel/title` says nothing to a QUIET player. Setting or clearing QUIET itself is always reported.
+A QUIET player hears none of those. A player who is not QUIET still hears none about a QUIET object they own: its `&` and `@set` attribute writes, `@edit`, `@parent`, `@link` home, `@lock`, `@power` and flag changes. `@notify` and `@drain` say nothing when the object running them, or its owner, is QUIET, and `@channel/title` says nothing to a QUIET player. Three confirmations are never suppressed, as in PennMUSH: "Dropto set." from `@link`, "Owner changed." from `@chown`, and setting or clearing QUIET itself.
 
 # SAFE
 
