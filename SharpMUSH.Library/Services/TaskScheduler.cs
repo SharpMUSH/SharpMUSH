@@ -453,14 +453,14 @@ public partial class TaskScheduler(
 
 		// pay_queue tells the owner, then do_halt does unless the owner is QUIET (src/cque.c:304,
 		// :2176-2178). Both name the object by its plain dbref.
-		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
+		if (notifyService is not null && DBRef.TryParse(owner, out var parsedOwner) && parsedOwner is { } ownerRef)
 		{
 			var dbref = $"#{offender.Number}";
-			await notifyService.NotifyLocalized(ownerRef!.Value,
+			await notifyService.NotifyLocalized(ownerRef,
 				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, dbref);
-			if (await mediator.Send(new GetObjectNodeQuery(ownerRef.Value), ExecutionBudget.CurrentToken) is AnySharpObject ownerObject
+			if (await mediator.Send(new GetObjectNodeQuery(ownerRef), ExecutionBudget.CurrentToken) is AnySharpObject ownerObject
 				&& !await ownerObject.HasFlag("QUIET", ExecutionBudget.CurrentToken))
-				await notifyService.NotifyLocalized(ownerRef.Value,
+				await notifyService.NotifyLocalized(ownerRef,
 					nameof(ErrorMessages.Notifications.HaltedNoticeFormat), name, dbref);
 		}
 
