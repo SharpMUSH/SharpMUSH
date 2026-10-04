@@ -86,7 +86,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 	}
 
@@ -100,7 +100,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 	}
 
@@ -114,7 +114,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 	}
 
@@ -132,7 +132,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 
 		var header = endpoints.Browse.Response.Headers["X-Total-Count"].ToString();
@@ -156,11 +156,58 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 
 		var header = endpoints.Browse.Response.Headers["X-Total-Count"].ToString();
 		await Assert.That(header).IsEqualTo("2");
+	}
+
+	[Test]
+	public async Task GetCounts_CountsDraftsOnlyForACallerWhoMaySeeThem()
+	{
+		var (wiki, _) = await SeedUnpublishedPage();
+		var published = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
+		await wiki.SetProtectionAsync(published.Id, true);
+		var protectedDraft = (await wiki.CreateAsync("Locked Draft", "# draft", "#1")).Expect<WikiPage>();
+		await wiki.SetMetadataAsync(protectedDraft.Id, null, [], published: false);
+		await wiki.SetProtectionAsync(protectedDraft.Id, true);
+
+		static WikiPageCountsDto Counts(IActionResult result) => (WikiPageCountsDto)((OkObjectResult)result).Value!;
+
+		await Assert.That(Counts(await MakeEndpoints(wiki, authenticated: true).Browse.GetCounts()))
+			.IsEqualTo(new WikiPageCountsDto(Total: 3, Published: 1, Drafts: 2, Protected: 2));
+		await Assert.That(Counts(await MakeEndpoints(wiki, authenticated: false).Browse.GetCounts()))
+			.IsEqualTo(new WikiPageCountsDto(Total: 1, Published: 1, Drafts: 0, Protected: 1))
+			.Because("drafts the caller may not list are not counted for them either");
+	}
+
+	[Test]
+	public async Task Listings_ClampTakeAndSkip()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		for (var i = 0; i < 3; i++) await wiki.CreateAsync($"Page {i}", "# body", "#1");
+		var endpoints = MakeEndpoints(wiki, authenticated: true);
+
+		static List<WikiPageSummaryDto> Rows(IActionResult result) => ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
+
+		await Assert.That(Rows(await endpoints.Browse.ListAllPages(skip: -5, take: 2))).Count().IsEqualTo(2);
+		await Assert.That(Rows(await endpoints.Browse.ListAllPages(skip: 0, take: -1))).IsEmpty();
+		await Assert.That(Rows(await endpoints.Browse.GetRecentChanges(count: int.MaxValue))).Count().IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task ListingRows_CarryTheBannerImageAndNoBody()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		await wiki.CreateAsync("Quay", "![quay](/api/wiki-assets/a/quay.jpg)\n\nSome long body.", "#1");
+		var endpoints = MakeEndpoints(wiki, authenticated: true);
+
+		var row = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)await endpoints.Browse.ListAllPages()).Value!).Single();
+
+		await Assert.That(row.Image).IsEqualTo("/api/wiki-assets/a/quay.jpg");
+		var json = System.Text.Json.JsonSerializer.Serialize(row, System.Text.Json.JsonSerializerOptions.Web);
+		await Assert.That(json).DoesNotContain("Some long body");
 	}
 
 	[Test]

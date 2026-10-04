@@ -309,12 +309,14 @@
 
     private async Task LoadStatsAsync()
     {
-        var (all, total) = await Wiki.GetAllPagesAsync(skip: 0, take: 2000);
-        _totalPages = total;
-        _published = all.Count(p => p.Published);
-        _drafts = all.Count(p => !p.Published);
-        _protected_ = all.Count(p => p.IsProtected);
-        _statsLoaded = true;
+        if (await Wiki.GetCountsAsync() is WikiPageCountsDto counts)
+        {
+            _totalPages = counts.Total;
+            _published = counts.Published;
+            _drafts = counts.Drafts;
+            _protected_ = counts.Protected;
+            _statsLoaded = true;
+        }
     }
 
     private async Task<GridData<WikiPageSummary>> LoadServerData(GridState<WikiPageSummary> state, CancellationToken _)

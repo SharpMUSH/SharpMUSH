@@ -40,6 +40,12 @@ public interface IWikiStore
 	/// <summary>A page whose stored published flag is absent counts as published.</summary>
 	Task<int> CountPagesAsync(string? ns, bool includeDrafts);
 
+	/// <summary>
+	/// Every page counted by state, across namespaces. With <paramref name="includeDrafts"/> false, drafts
+	/// count as zero and are left out of the protected count too.
+	/// </summary>
+	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
+
 	/// <summary>Pages in <paramref name="category"/>, case-insensitively, ordered by title.</summary>
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);

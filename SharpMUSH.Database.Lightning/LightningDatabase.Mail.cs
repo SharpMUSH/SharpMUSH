@@ -170,6 +170,40 @@ public partial class LightningDatabase
 			? Store.RangeMapAsync(Tables.MailBox, Keys.Dbref(recipient), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct)
 			: Store.RangeMapAsync(Tables.MailFolder, MailFolderPrefix(recipient, folder), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct);
 
+	public IAsyncEnumerable<MailSummary> GetIncomingMailSummariesAsync(SharpPlayer id, string folder,
+		CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<MailSummary>(ct => GetIncomingMailSummariesCoreAsync((long)id.Object.Key, folder, ct));
+
+	private async IAsyncEnumerable<MailSummary> GetIncomingMailSummariesCoreAsync(long recipient, string folder,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		var summaries = Store.Read(tx =>
+		{
+			var names = new Dictionary<long, string?>();
+			var list = new List<MailSummary>();
+			foreach (var mailId in MailFolderIds(tx, recipient, folder))
+			{
+				if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
+				var record = Codec.Deserialize<MailSummaryRecord>(bytes);
+				if (!names.TryGetValue(record.Sender, out var sender))
+				{
+					sender = ReadObject(tx, record.Sender)?.Record.Name;
+					names[record.Sender] = sender;
+				}
+
+				list.Add(new MailSummary(MailId(mailId), DateTimeOffset.FromUnixTimeMilliseconds(record.DateSent), record.Read,
+					record.Urgent, record.Folder, MarkupTextSerializer.Deserialize(record.Subject), sender));
+			}
+
+			return list;
+		});
+		foreach (var summary in summaries)
+		{
+			ct.ThrowIfCancellationRequested();
+			yield return summary;
+		}
+	}
+
 	public IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync((long)id.Object.Key, null, ct));
 

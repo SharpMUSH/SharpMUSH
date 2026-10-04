@@ -73,10 +73,12 @@ public class PackageRegistryTests
 
 		var objects = await Registry.GetPackageObjectsAsync(Id("obj-pkg"));
 		await Assert.That(objects.Count).IsEqualTo(2);
+		await Assert.That(await Registry.CountPackageObjectsAsync(Id("obj-pkg"))).IsEqualTo(2);
 		await Assert.That(objects.First(o => o.Ref == "global_thing").Objid).IsEqualTo("#950:456");
 
 		await Registry.RemovePackageObjectAsync(Id("obj-pkg"), "lounge");
 		await Assert.That((await Registry.GetPackageObjectsAsync(Id("obj-pkg"))).Count).IsEqualTo(1);
+		await Assert.That(await Registry.CountPackageObjectsAsync(Id("obj-pkg"))).IsEqualTo(1);
 
 		await Registry.RemoveInstalledPackageAsync(Id("obj-pkg"));
 		await Assert.That((await Registry.GetPackageObjectsAsync(Id("obj-pkg"))).Count).IsEqualTo(0);
@@ -99,6 +101,8 @@ public class PackageRegistryTests
 
 		var byPackage = await Registry.GetManagedAttributesAsync(Id("attr-pkg"));
 		await Assert.That(byPackage.Count).IsEqualTo(2);
+		await Assert.That(await Registry.CountManagedAttributesAsync(Id("attr-pkg"))).IsEqualTo(2);
+		await Assert.That(await Registry.CountManagedAttributesAsync(Id("attr-pkg2"))).IsEqualTo(1);
 		await Assert.That(byPackage.First(a => a.Attribute == "CMD_+BBREAD").BaselineValue)
 			.IsEqualTo(baseline.BaselineValue);
 
@@ -164,6 +168,10 @@ public class PackageRegistryTests
 
 		var dependents = await Registry.GetPackageDependentsAsync(Id("dep-core"));
 		await Assert.That(dependents.Count).IsEqualTo(2);
+		var everyEdge = (await Registry.GetAllPackageDependenciesAsync()).Where(d => d.PackageId.EndsWith(Run)).ToList();
+		await Assert.That(everyEdge.Select(d => (d.PackageId, d.DependsOnId)).ToArray())
+			.IsEquivalentTo([(Id("dep-bbs"), Id("dep-core")), (Id("dep-jobs"), Id("dep-core"))], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(everyEdge[0].Constraint).IsEqualTo(">=1.0 <2.0");
 		await Assert.That(dependents.Select(d => d.PackageId).Order().ToArray())
 			.IsEquivalentTo((string[])[Id("dep-bbs"), Id("dep-jobs")]);
 

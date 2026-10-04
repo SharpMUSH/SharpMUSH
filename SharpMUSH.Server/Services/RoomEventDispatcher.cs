@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Reality;
@@ -26,14 +27,23 @@ public sealed class RoomEventDispatcher(IHubContext<GameHub, IGameHubClient> hub
 			logger.LogWarning("Dropping room event for {Room}: enabled reality requires a full actor objid", roomRef);
 			return;
 		}
+		// The source is resolved once for the event, not once per subscriber. An event naming a source that
+		// no longer exists reaches nobody, as each subscriber's check refused it before.
+		AnySharpObject? sender = null;
+		if (hasSource)
+		{
+			if (await projection.ResolveEventSourceAsync(source!.Value, ct) is not AnySharpObject resolved) return;
+			sender = resolved;
+		}
+
 		await Parallel.ForEachAsync(registry.Subscribers(roomRef),
 			new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = ct }, async (subscription, token) =>
 		{
 			try
 			{
 				if (!registry.IsCurrent(subscription)
-					|| !(hasSource
-						? await projection.CanReceiveRoomEventAsync(subscription.Actor, roomRef, source!.Value, message.EventType, token)
+					|| !(sender is not null
+						? await projection.CanReceiveRoomEventAsync(subscription.Actor, roomRef, sender, message.EventType, token)
 						: await projection.CanSubscribeRoomAsync(subscription.Actor, roomRef, token))
 					|| !registry.IsCurrent(subscription)) return;
 				await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message).WaitAsync(token);

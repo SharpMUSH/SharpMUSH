@@ -28,6 +28,9 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 		=> store.CountPagesAsync(ns is { } value ? Namespace(value) : null, includeDrafts);
 
+	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+		=> store.CountPagesByStateAsync(includeDrafts);
+
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
 		=> store.GetPagesByCategoryAsync(WikiHelpers.NormalizeCategory(category), skip, take, visibility ?? WikiVisibility.All);
 

@@ -169,9 +169,16 @@ public abstract class WikiControllerBase(
 		return await ToDtoAsync(localized, available);
 	}
 
+	/// <summary>The most rows one listing request returns, whatever <c>take</c> or <c>count</c> asks for.</summary>
+	protected const int MaxListTake = 500;
+
+	/// <summary>Clamps a listing's paging arguments: no negative skip, and at most <see cref="MaxListTake"/> rows.</summary>
+	protected static (int Skip, int Take) ClampPage(int skip, int take) =>
+		(Math.Max(0, skip), Math.Clamp(take, 0, MaxListTake));
+
 	/// <summary>
-	/// Localizes a listing into the reader's locale, one DTO per page. <c>AvailableLocales</c> is left
-	/// empty here on purpose: a listing does not drive language chips or hreflang, and loading every
+	/// Localizes a listing into the reader's locale, one body-less summary per page. Locales a page is
+	/// available in are not loaded: a listing does not drive language chips or hreflang, and loading every
 	/// page's translation set to fill it would be N extra queries for data nothing reads.
 	/// </summary>
 	/// <remarks>
@@ -179,14 +186,18 @@ public abstract class WikiControllerBase(
 	/// different rule from translation visibility, and a localized listing that dropped it would leak
 	/// unpublished pages while every locale assertion stayed green.
 	/// </remarks>
-	protected async Task<IEnumerable<WikiPageDto>> LocalizedListAsync(IEnumerable<WikiPage> pages, string? lang)
+	protected async Task<IEnumerable<WikiPageSummaryDto>> LocalizedListAsync(IEnumerable<WikiPage> pages, string? lang)
 	{
 		var visible = FilterVisible(pages).ToList();
 		var localized = await Localization.LocalizeAllAsync(visible, lang, IncludeDrafts);
-		var dtos = new List<WikiPageDto>();
+		var dtos = new List<WikiPageSummaryDto>();
 		foreach (var page in localized)
 		{
-			dtos.Add(await ToDtoAsync(page, []));
+			dtos.Add(new WikiPageSummaryDto(
+				page.Page.Id, page.Page.Slug, page.Title, page.Page.Namespace, page.UpdatedAt, page.Page.IsProtected,
+				page.RevisionNumber, page.Page.Category, page.Page.Tags, page.Published, page.Locale, page.IsFallback,
+				WikiImages.FirstImageUrl(page.RenderedHtml),
+				await Names.NameOfAsync(page.LastEditorDbref, HttpContext.RequestAborted)));
 		}
 
 		return dtos;

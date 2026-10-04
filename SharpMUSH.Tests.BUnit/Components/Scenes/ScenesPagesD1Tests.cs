@@ -240,6 +240,35 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-chips button[aria-checked='true']").TextContent).IsEqualTo("combat");
 	}
 
+	/// <summary>
+	/// A log longer than one streamed batch renders whole, and the chips and cast cover poses that arrived in
+	/// the last batch — they are worked out again once the stream ends.
+	/// </summary>
+	[Test]
+	public async Task ALongLog_StreamsInWhole_WithChipsAndCastFromTheLastBatch()
+	{
+		var count = SceneService.PoseStreamBatch * 2 + 7;
+		static string PoseJson(int i, string author, string tag) =>
+			"{\"id\":\"L" + i + "\",\"sceneId\":\"S9\",\"authorDbref\":\"#313\",\"authorName\":\"" + author + "\",\"showAsName\":\"" + author
+			+ "\",\"originDbref\":\"#40\",\"originName\":\"Lower Docks\",\"source\":\"pose\",\"tags\":[" + (tag.Length == 0 ? "" : "\"" + tag + "\"")
+			+ "],\"meta\":{},\"createdAt\":" + (1700000000000 + i) + ",\"isDeleted\":false,\"content\":\"line " + i + "\",\"markup\":\"line " + i
+			+ "\",\"editCount\":1,\"lastEditedAt\":null,\"lastEditorDbref\":null,\"lastEditorName\":null}";
+		_api.Extra["/api/scenes/S9"] = SceneJson.Scene("S9", "A Long Night", room: "Lower Docks", poses: count);
+		_api.Extra["/api/scenes/S9/poses"] = "[" + string.Join(",", Enumerable.Range(0, count)
+			.Select(i => i == count - 1 ? PoseJson(i, "Late Arrival", "finale") : PoseJson(i, "Ilsa Varn", ""))) + "]";
+
+		var cut = RenderDetail("S9");
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains($"line {count - 1}", StringComparison.Ordinal)) throw new InvalidOperationException("log still streaming");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).Contains("line 0");
+		await Assert.That(cut.Markup).Contains($"line {SceneService.PoseStreamBatch + 3}");
+		await Assert.That(cut.FindAll(".kit-chips button").Select(c => c.TextContent)).IsEquivalentTo(new[] { "All", "finale" });
+		await Assert.That(cut.FindAll(".scene-detail-cast a.mention").Select(a => a.TextContent.Trim())).Contains("Late Arrival");
+	}
+
 	[Test]
 	public async Task AMissingScene_SaysSo_AndLinksBack()
 	{

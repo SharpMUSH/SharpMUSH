@@ -120,6 +120,9 @@ public partial class LightningDatabase
 		return Task.FromResult<IReadOnlyList<PackageObjectRecord>>(results);
 	}
 
+	public Task<int> CountPackageObjectsAsync(string packageId)
+		=> Task.FromResult(Store.Read(tx => tx.Range(Tables.PkgObj, Keys.Composite(packageId, "")).Count()));
+
 	public async Task RemovePackageObjectAsync(string packageId, string @ref)
 		=> await Store.WriteAsync(tx => tx.Delete(Tables.PkgObj, Keys.Composite(packageId, @ref)));
 
@@ -155,6 +158,9 @@ public partial class LightningDatabase
 			.ToList());
 		return Task.FromResult<IReadOnlyList<ManagedAttributeRecord>>(results);
 	}
+
+	public Task<int> CountManagedAttributesAsync(string packageId)
+		=> Task.FromResult(Store.Read(tx => tx.Range(Tables.PkgAttr, Keys.Composite(packageId, "")).Count()));
 
 	public Task<IReadOnlyList<ManagedAttributeRecord>> GetManagedAttributesForObjectAsync(string objid)
 	{
@@ -241,6 +247,17 @@ public partial class LightningDatabase
 			.Select(e => Codec.Deserialize<Records.PackageDependencyRecord>(e.Value))
 			.Where(r => r.DependsOnId == packageId)
 			.OrderBy(r => r.PackageId, StringComparer.Ordinal)
+			.Select(MapDependency)
+			.ToList());
+		return Task.FromResult<IReadOnlyList<PackageDependencyRecord>>(results);
+	}
+
+	public Task<IReadOnlyList<PackageDependencyRecord>> GetAllPackageDependenciesAsync()
+	{
+		var results = Store.Read(tx => tx.Range(Tables.PkgDep, [])
+			.Select(e => Codec.Deserialize<Records.PackageDependencyRecord>(e.Value))
+			.OrderBy(r => r.PackageId, StringComparer.Ordinal)
+			.ThenBy(r => r.DependsOnId, StringComparer.Ordinal)
 			.Select(MapDependency)
 			.ToList());
 		return Task.FromResult<IReadOnlyList<PackageDependencyRecord>>(results);

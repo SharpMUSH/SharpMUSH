@@ -16,7 +16,15 @@ public interface IVisibleWorldProjection
 	ValueTask<SharpPlayer?> ResolveCharacterAsync(CapabilityActor actor, CancellationToken ct = default);
 	ValueTask<bool> CanObserveRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default);
 	ValueTask<bool> CanSubscribeRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default);
-	ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, DBRef source, RoomEventType type, CancellationToken ct = default);
+	/// <summary>
+	/// The object a room event names as its source, resolved once per event and handed to
+	/// <see cref="CanReceiveRoomEventAsync"/> for every subscriber; <see cref="None"/> when it is not an
+	/// existing object with exactly that objid.
+	/// </summary>
+	ValueTask<AnyOptionalSharpObject> ResolveEventSourceAsync(DBRef source, CancellationToken ct = default);
+
+	/// <param name="sender">The event's source, from <see cref="ResolveEventSourceAsync"/>.</param>
+	ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, AnySharpObject sender, RoomEventType type, CancellationToken ct = default);
 	ValueTask<EngineStateResponse?> GetStateAsync(CapabilityActor actor, CancellationToken ct = default);
 }
 
@@ -57,14 +65,20 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		return await CurrentLocationAsync(player, ct) is { } location && location.Object().DBRef == room;
 	}
 
-	public async ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, DBRef source,
+	public async ValueTask<AnyOptionalSharpObject> ResolveEventSourceAsync(DBRef source, CancellationToken ct = default)
+		=> source.IsObjid && await mediator.Send(new GetObjectNodeQuery(source), ct) is AnySharpObject sender
+			&& sender.Object().DBRef == source
+				? sender
+				: new None();
+
+	public async ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, AnySharpObject sender,
 		RoomEventType type, CancellationToken ct = default)
 	{
+		var source = sender.Object().DBRef;
 		if (!room.IsObjid || !source.IsObjid || !Enum.IsDefined(type)
 			|| await ResolveCharacterAsync(actor, ct) is not { } player) return false;
 		if (await CurrentLocationAsync(player, ct) is not { } location || location.Object().DBRef != room) return false;
-		if (await mediator.Send(new GetObjectNodeQuery(source), ct) is not AnySharpObject sender || sender.Object().DBRef != source
-			|| !await reality.CanPerceiveAsync(player.Object.DBRef, source, ct)) return false;
+		if (!await reality.CanPerceiveAsync(player.Object.DBRef, source, ct)) return false;
 		// Legacy permission implementations have no token parameter. Give built-in reads the
 		// dispatch lifetime and bound this read-only await for implementations without cancellation.
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
