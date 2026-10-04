@@ -287,6 +287,10 @@
   {
    "key": "65-halt-chown/hc.chown#3",
    "command": "Wiz wizpass"
+  },
+  {
+   "key": "70-search-window/sw.setup#0",
+   "command": "Alice alicepass"
   }
  ]
 }
