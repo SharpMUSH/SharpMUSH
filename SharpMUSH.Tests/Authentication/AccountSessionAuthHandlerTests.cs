@@ -81,18 +81,16 @@ public class AccountSessionAuthHandlerTests
 		PortalRole role, params string[] scopes)
 	{
 		var roleDerivation = Substitute.For<IRoleDerivationService>();
-		var roleRegistry = Substitute.For<IRoleRegistryService>();
-		var permissionResolver = Substitute.For<IPermissionResolver>();
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 
-		roleDerivation.DeriveAccountRole(Arg.Any<IEnumerable<(int DbrefNumber, IEnumerable<SharpObjectFlag> Flags)>>())
+		roleDerivation.DeriveRole(Arg.Any<int>(), Arg.Any<IEnumerable<SharpObjectFlag>>(), Arg.Any<IEnumerable<SharpPower>>())
 			.Returns(role);
-		roleRegistry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>(scopes));
+		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
+			.Returns(new HashSet<string>(scopes));
 
 		var cache = new FusionCache(
 			new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
-		return new AccountClaimsService(accountServiceForClaims, roleDerivation, roleRegistry, permissionResolver,
+		return new AccountClaimsService(accountServiceForClaims, roleDerivation, capabilities,
 			cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 	}
 
@@ -172,7 +170,7 @@ public class AccountSessionAuthHandlerTests
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
 		accountService.GetCharactersAsync("node_accounts/1")
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[MakePlayer(1, "Alice")]));
-		// AccountClaimsService.ComputeAccountRoleAsync only calls DeriveAccountRole (mocked below
+		// AccountClaimsService.ComputeAccountRoleAsync only calls DeriveRole (mocked below
 		// to return Wizard) when the account has at least one character; an empty list short-
 		// circuits to the Guest floor regardless of the mock.
 		accountServiceForClaims.GetCharactersAsync("node_accounts/1", Arg.Any<CancellationToken>())

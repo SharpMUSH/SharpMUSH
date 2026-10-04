@@ -28,8 +28,7 @@ public class AuthControllerDebugOttTests
 			new SharpMUSH.Server.Authentication.AccountClaimsService(
 				Substitute.For<SharpMUSH.Library.Services.Interfaces.IAccountService>(),
 				Substitute.For<SharpMUSH.Library.Authorization.IRoleDerivationService>(),
-				Substitute.For<SharpMUSH.Library.Services.Interfaces.IRoleRegistryService>(),
-				Substitute.For<SharpMUSH.Library.Authorization.IPermissionResolver>(),
+				Substitute.For<SharpMUSH.Library.Authorization.IAdministrativeCapabilityService>(),
 				claimsCache,
 				new SharpMUSH.Server.Authentication.AccountClaimsInvalidator(claimsCache),
 				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.AccountClaimsService>>()),

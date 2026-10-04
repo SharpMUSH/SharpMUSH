@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# poza} few {# pozy} many {# póz} other {# pozy}}</value>
     <comment>MT — plural value taken verbatim from the pl locale sheet</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>W razie konfliktu wygrywa wyższa wartość</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Priorytet</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Tematy ahelp. Tylko dla Czarodziejów i Boga, w portalu tak samo jak w grze.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Decyduje jawna reguła o najwyższym priorytecie; przy remisie wygrywa odmowa. Dziedziczenie działa tylko bez jawnej reguły. Bez zezwolenia dostęp jest zabroniony. Delegowani administratorzy mogą zarządzać tylko posiadanymi uprawnieniami o niższym priorytecie, bez zmiany własnych ról i ograniczeń.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Bieżący dostęp: {0}; priorytet {1}; role {2}; rozstrzygnięcie {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Nie udało się zaimportować konfiguracji: {0}</value>
@@ -5236,5 +5231,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>System scen nie jest włączony w tej grze.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Pozycja w hierarchii. Możesz zarządzać tylko rolami poniżej swojej najwyższej roli.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Każda Twoja rola, która zezwala na uprawnienie, nadaje je bez względu na priorytet; Odmowa blokuje tylko to, na co nie zezwala żadna rola. Wyjątek konta ma pierwszeństwo przed każdą rolą, a rola zezwalająca na Administratora nadaje wszystko. Priorytet decyduje tylko o tym, kto kim zarządza: możesz zmieniać tylko role i konta poniżej swojej najwyższej roli i nadawać tylko to, co sam masz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Wyjątki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Brak wyjątków</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Usuń wyjątek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Uprawnienie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Wyjątek na tym koncie ma pierwszeństwo przed wszystkimi jego rolami.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Zapisano wyjątek dla {0}.</value>
+    <comment>MT</comment>
   </data>
 </root>

@@ -145,7 +145,7 @@ public class SetupController(
 			var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 
 			var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-			var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+			var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
 			// Net.Logins intentionally is NOT checked here (unlike AccountLogin): this is the
 			// first-run bootstrap flow, and the claimer IS the staff account being created.

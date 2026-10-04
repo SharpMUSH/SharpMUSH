@@ -24,8 +24,7 @@ namespace SharpMUSH.Server.Authentication;
 public class AccountClaimsService(
 	IAccountService accountService,
 	IRoleDerivationService roleDerivation,
-	IRoleRegistryService roleRegistry,
-	IPermissionResolver permissionResolver,
+	IAdministrativeCapabilityService capabilities,
 	IFusionCache cache,
 	IAccountClaimsInvalidator invalidator,
 	ILogger<AccountClaimsService> logger)
@@ -72,11 +71,13 @@ public class AccountClaimsService(
 			if (characters.Count == 0)
 				return activeRole;
 
-			var perCharacter = await characters.ToAsyncEnumerable()
-				.Select(async (c, innerCt) => (c.Object.Key, (IEnumerable<SharpObjectFlag>)await c.Object.Flags.Value.ToListAsync(innerCt)))
-				.ToListAsync(ct);
+			var accountRole = PortalRole.Guest;
+			foreach (var character in characters)
+			{
+				var role = await roleDerivation.DeriveRoleAsync(character, ct);
+				if (role > accountRole) accountRole = role;
+			}
 
-			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
 			return accountRole > activeRole ? accountRole : activeRole;
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
@@ -98,34 +99,17 @@ public class AccountClaimsService(
 		ComputeAccountRoleAsync(accountId, PortalRole.Guest, ct);
 
 	/// <summary>
-	/// Computes the granted permission scopes for an account: the account's effective roles are
-	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
-	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
+	/// The account's granted permission scopes, account-wide (no active character), resolved by
+	/// <see cref="IAdministrativeCapabilityService"/> exactly as every policy gate resolves them.
 	/// </summary>
-	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role, CancellationToken ct = default)
+	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, CancellationToken ct = default)
 		// The factory's token, not the caller's: it is the one FusionCache cancels when the hard
 		// timeout expires, and with background completion off that is how the role queries stop.
-		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
-			async token => await ComputeGrantedScopesCoreAsync(accountId, role, token),
+		=> await cache.GetOrSetAsync($"account-scopes:{accountId}",
+			async token => await capabilities.GetGrantedScopesAsync(new CapabilityActor(accountId), token),
 			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
 			token: ct);
-
-	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role, CancellationToken ct)
-	{
-		var derivedSlug = BuiltInRoles.SlugFor(role);
-		var derived = (await roleRegistry.GetRolesAsync(ct))
-			.FirstOrDefault(r => string.Equals(r.Slug, derivedSlug, StringComparison.OrdinalIgnoreCase));
-
-		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		if (derived is not null)
-			effective[derived.Slug] = derived;
-		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId, ct))
-			effective[assigned.Slug] = assigned;
-
-		// The resolver includes safe implications; never expand afterward, which would restore denied children.
-		return permissionResolver.Resolve(effective.Values);
-	}
 
 	/// <summary>
 	/// Clears both the cached role and granted-scope entries for <paramref name="accountId"/>

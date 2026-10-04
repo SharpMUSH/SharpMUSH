@@ -50,6 +50,8 @@ public static class Tables
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
 	public static readonly TableDef AccountUser = TableDef.Index("account.user");
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
+	/// <summary>Account key → its per-account permission overrides (scope → state), one record per account.</summary>
+	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);

@@ -3,63 +3,116 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// Resolves the set of granted permission scopes from an account's effective roles using the
-/// Discord-style priority/three-state rule.
+/// Everything that decides one account's permissions: the roles it holds (the <c>everyone</c> role,
+/// its flag-derived tier roles and its assigned roles), its per-account overrides, and whether it is
+/// the owner (the account linked to player #1).
+/// </summary>
+/// <param name="Roles">Every role the account holds, <c>everyone</c> included.</param>
+/// <param name="Overrides">Per-account Allow/Deny by scope. Absent scopes are Inherit.</param>
+/// <param name="IsOwner">True for the account linked to player #1, which holds every scope.</param>
+public sealed record PermissionContext(
+	IReadOnlyCollection<SharpRole> Roles,
+	IReadOnlyDictionary<string, PermissionState> Overrides,
+	bool IsOwner)
+{
+	/// <summary>A context that grants nothing: no roles, no overrides, not the owner.</summary>
+	public static readonly PermissionContext None = new([], new Dictionary<string, PermissionState>(), false);
+
+	/// <summary>The highest priority among the held roles, or <see cref="int.MinValue"/> with none.</summary>
+	public int TopPriority => Roles.Count == 0 ? int.MinValue : Roles.Max(r => r.Priority);
+}
+
+/// <summary>
+/// Resolves the granted permission scopes for a <see cref="PermissionContext"/> with Discord's rules.
 /// </summary>
 public interface IPermissionResolver
 {
-	/// <summary>
-	/// For each <see cref="PortalPermission"/> scope, the highest-<see cref="SharpRole.Priority"/>
-	/// role that explicitly sets Allow/Deny decides; on a same-priority tie an explicit Deny wins
-	/// (fail closed); a scope nobody opts into is denied. Returns the granted scopes.
-	/// </summary>
-	IReadOnlySet<string> Resolve(IEnumerable<SharpRole> effectiveRoles);
+	/// <summary>The scopes <paramref name="context"/> is granted.</summary>
+	IReadOnlySet<string> Resolve(PermissionContext context);
+
+	/// <summary>Whether <paramref name="context"/> holds <paramref name="scope"/>, and which layer decided it.</summary>
+	PermissionExplanation Explain(PermissionContext context, string scope);
 }
 
-/// <inheritdoc />
+/// <summary>
+/// Discord's permission computation, with one scope at a time standing in for one permission bit:
+/// <list type="number">
+/// <item>The owner holds every scope.</item>
+/// <item>A held role that allows <see cref="PortalPermission.Administrator"/> grants every scope, and
+/// per-account overrides do not apply.</item>
+/// <item>A per-account override (Discord's member overwrite, RhostMUSH's <c>@power</c>/<c>@depower</c>)
+/// decides the scope when it says Allow or Deny.</item>
+/// <item>Otherwise any held role that allows the scope grants it, whatever its priority; failing that,
+/// a role that denies it refuses it (Discord pools role denies, then role allows, so an Allow on any
+/// role beats a Deny on another).</item>
+/// <item>Otherwise the <c>everyone</c> role decides, and a scope nobody allows is denied.</item>
+/// </list>
+/// Priority plays no part in this; it only orders roles for who may manage whom
+/// (see <see cref="RoleHierarchy"/>). A layer's opinion on a scope it leaves on Inherit is its opinion
+/// on the umbrella scope that implies it (<c>wiki.admin</c> covers <c>wiki.edit</c>), so an explicit
+/// child setting always beats the umbrella within the same layer.
+/// </summary>
 public sealed class PermissionResolver : IPermissionResolver
 {
-	public IReadOnlySet<string> Resolve(IEnumerable<SharpRole> effectiveRoles)
-	{
-		var roles = effectiveRoles as IReadOnlyCollection<SharpRole> ?? effectiveRoles.ToList();
-		var granted = new HashSet<string>(StringComparer.Ordinal);
+	public IReadOnlySet<string> Resolve(PermissionContext context)
+		=> PortalPermission.AllScopes.Where(scope => Explain(context, scope).Allowed).ToHashSet(StringComparer.Ordinal);
 
-		foreach (var scope in PortalPermission.AllScopes)
-		{
-			if (Explain(roles, scope).Allowed)
-				granted.Add(scope);
-		}
-
-		return granted;
-	}
-	/// <summary>
-	/// Explicit child opinions resolve first by priority, with Deny winning ties. Only an
-	/// unopinionated child inherits a granted umbrella. Thus even a higher umbrella cannot
-	/// bypass a resolved child denial; an explicit higher child Allow can replace that denial.
-	/// </summary>
-	public PermissionExplanation Explain(IReadOnlyCollection<SharpRole> roles, string scope)
+	public PermissionExplanation Explain(PermissionContext context, string scope)
 	{
 		if (!PortalPermission.IsKnown(scope))
 			return new(false, null, [], "unknown-scope");
-		var top = roles.Where(r => r.Permissions.Any(p =>
-			string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit))
-			.GroupBy(r => r.Priority).OrderByDescending(g => g.Key).FirstOrDefault();
-		if (top is not null)
-			return new(top.All(r => r.Permissions.Where(p =>
-				string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit)
-				.All(p => p.Value == PermissionState.Allow)),
-				top.Key, top.Select(r => r.Slug).Order().ToArray(), "explicit");
-		var parents = PortalPermission.AllScopes.Where(parent => PortalPermission.ImpliedScopes(parent)
-			.Contains(scope, StringComparer.OrdinalIgnoreCase));
-		foreach (var parent in parents)
+		if (context.IsOwner)
+			return new(true, null, [], "owner");
+
+		var administrators = context.Roles
+			.Where(r => StateOf(r.Permissions, PortalPermission.Administrator) == PermissionState.Allow).ToArray();
+		if (administrators.Length > 0)
+			return Decided(true, administrators, "administrator");
+
+		switch (StateOf(context.Overrides, scope))
 		{
-			var decision = Explain(roles, parent);
-			if (decision.Allowed)
-				return decision with { Reason = $"implied:{parent}" };
+			case PermissionState.Allow: return new(true, null, [], "account-allow");
+			case PermissionState.Deny: return new(false, null, [], "account-deny");
 		}
-		return new(false, null, [], "default-deny");
+
+		var everyone = context.Roles.Where(BuiltInRoles.IsEveryone).ToArray();
+		var held = context.Roles.Where(r => !BuiltInRoles.IsEveryone(r)).ToArray();
+		var allowing = held.Where(r => StateOf(r.Permissions, scope) == PermissionState.Allow).ToArray();
+		if (allowing.Length > 0)
+			return Decided(true, allowing, "role-allow");
+		var denying = held.Where(r => StateOf(r.Permissions, scope) == PermissionState.Deny).ToArray();
+		if (denying.Length > 0)
+			return Decided(false, denying, "role-deny");
+
+		return everyone.Any(r => StateOf(r.Permissions, scope) == PermissionState.Allow)
+			? Decided(true, everyone, "everyone-allow")
+			: new(false, null, [], "default-deny");
 	}
 
+	/// <summary>
+	/// One layer's stance on <paramref name="scope"/>: its explicit Allow/Deny, else its stance on an
+	/// umbrella scope that implies it (Allow over Deny when two umbrellas disagree), else Inherit.
+	/// </summary>
+	public static PermissionState StateOf(IReadOnlyDictionary<string, PermissionState> permissions, string scope)
+	{
+		var explicitState = permissions
+			.Where(p => string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase))
+			.Select(p => p.Value).FirstOrDefault(PermissionState.Inherit);
+		if (explicitState != PermissionState.Inherit) return explicitState;
+		var inherited = PortalPermission.ParentScopes(scope).Select(parent => StateOf(permissions, parent)).ToArray();
+		return inherited.Contains(PermissionState.Allow) ? PermissionState.Allow
+			: inherited.Contains(PermissionState.Deny) ? PermissionState.Deny
+			: PermissionState.Inherit;
+	}
+
+	private static PermissionExplanation Decided(bool allowed, IReadOnlyCollection<SharpRole> roles, string reason)
+		=> new(allowed, roles.Max(r => r.Priority), roles.Select(r => r.Slug).Order(StringComparer.Ordinal).ToArray(), reason);
 }
 
+/// <summary>
+/// Why a scope was granted or refused. <paramref name="Priority"/> is the highest priority among the
+/// deciding <paramref name="Roles"/>, null when no role decided. <paramref name="Reason"/> is one of
+/// <c>owner</c>, <c>administrator</c>, <c>account-allow</c>, <c>account-deny</c>, <c>role-allow</c>,
+/// <c>role-deny</c>, <c>everyone-allow</c>, <c>default-deny</c> or <c>unknown-scope</c>.
+/// </summary>
 public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason);

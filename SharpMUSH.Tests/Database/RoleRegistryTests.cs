@@ -106,7 +106,7 @@ public class RoleRegistryTests
 	{
 		var god = (await Registry.GetRoleAsync("god")).Expect<SharpRole>();
 		await Assert.That(god.IsSystem).IsTrue();
-		await Assert.That(god.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Allow);
+		await Assert.That(god.Permissions[PortalPermission.Administrator]).IsEqualTo(PermissionState.Allow);
 
 		var wizard = (await Registry.GetRoleAsync("wizard")).Expect<SharpRole>();
 		await Assert.That(wizard.IsSystem).IsTrue();

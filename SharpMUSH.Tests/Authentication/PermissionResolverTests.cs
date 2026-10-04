@@ -4,155 +4,164 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Tests.Authentication;
 
 /// <summary>
-/// Unit tests for <see cref="PermissionResolver"/> — the Discord-style priority/three-state
-/// permission resolution (highest-priority explicit Allow/Deny wins, Deny wins same-priority
-/// ties, default deny).
+/// <see cref="PermissionResolver"/> against Discord's permission computation: owner, administrator,
+/// per-account override, pooled role allows over pooled role denies, then <c>everyone</c>.
 /// </summary>
 public class PermissionResolverTests
 {
 	private static readonly IPermissionResolver Resolver = new PermissionResolver();
 
-	private static SharpRole Role(string slug, int priority, params (string Scope, PermissionState State)[] perms)
-		=> new()
-		{
-			Slug = slug,
-			Name = slug,
-			Priority = priority,
-			Permissions = perms.ToDictionary(p => p.Scope, p => p.State)
-		};
+	private static readonly Dictionary<string, PermissionState> NoOverrides = new();
+
+	private static SharpRole Role(string slug, int priority, params (string Scope, PermissionState State)[] perms) => new()
+	{
+		Slug = slug,
+		Name = slug,
+		Priority = priority,
+		Permissions = perms.ToDictionary(p => p.Scope, p => p.State)
+	};
+
+	private static SharpRole Everyone(params (string Scope, PermissionState State)[] perms)
+		=> Role(BuiltInRoles.EveryoneSlug, 0, perms);
+
+	private static PermissionContext Context(params SharpRole[] roles) => new(roles, NoOverrides, false);
+
+	private static PermissionContext Context(Dictionary<string, PermissionState> overrides, params SharpRole[] roles)
+		=> new(roles, overrides, false);
+
+	private static (string, PermissionState) Allow(string scope) => (scope, PermissionState.Allow);
+	private static (string, PermissionState) Deny(string scope) => (scope, PermissionState.Deny);
 
 	[Test]
-	public async ValueTask NoRoles_GrantsNothing()
+	public async ValueTask NothingHeld_GrantsNothing()
 	{
-		var granted = Resolver.Resolve([]);
-		await Assert.That(granted.Count).IsEqualTo(0);
+		await Assert.That(Resolver.Resolve(PermissionContext.None)).IsEmpty();
 	}
 
 	[Test]
-	public async ValueTask SingleAllow_IsGranted()
+	public async ValueTask Owner_HoldsEveryScope_EvenWithDenies()
 	{
-		var granted = Resolver.Resolve([Role("editor", 50, (PortalPermission.WikiAdmin, PermissionState.Allow))]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.ServerAdmin)).IsFalse();
+		var context = new PermissionContext([Role("r", 5, Deny(PortalPermission.RolesAdmin))],
+			new Dictionary<string, PermissionState> { [PortalPermission.RolesAdmin] = PermissionState.Deny }, IsOwner: true);
+		await Assert.That(Resolver.Resolve(context).Count).IsEqualTo(PortalPermission.AllScopes.Count);
+		await Assert.That(Resolver.Explain(context, PortalPermission.RolesAdmin).Reason).IsEqualTo("owner");
 	}
 
 	[Test]
-	public async ValueTask InheritOnly_DefaultsToDeny()
+	public async ValueTask Administrator_GrantsEverything_AndIgnoresAccountDenies()
 	{
-		var granted = Resolver.Resolve([Role("r", 50, (PortalPermission.WikiAdmin, PermissionState.Inherit))]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
+		var context = Context(new Dictionary<string, PermissionState> { [PortalPermission.ServerAdmin] = PermissionState.Deny },
+			Role("admin", 1, Allow(PortalPermission.Administrator)), Role("limits", 50, Deny(PortalPermission.ServerAdmin)));
+		var explanation = Resolver.Explain(context, PortalPermission.ServerAdmin);
+		await Assert.That(explanation.Allowed).IsTrue();
+		await Assert.That(explanation.Reason).IsEqualTo("administrator");
+		await Assert.That(explanation.Roles).IsEquivalentTo(["admin"]);
 	}
 
 	[Test]
-	public async ValueTask HigherPriorityDeny_BeatsLowerPriorityAllow()
+	[Arguments(1, 50)]
+	[Arguments(50, 1)]
+	[Arguments(10, 10)]
+	public async ValueTask AnyRoleAllow_BeatsAnyRoleDeny_WhateverThePriorities(int allowPriority, int denyPriority)
 	{
-		var allow = Role("members", 10, (PortalPermission.WikiAdmin, PermissionState.Allow));
-		var deny = Role("muted", 100, (PortalPermission.WikiAdmin, PermissionState.Deny));
-		var granted = Resolver.Resolve([allow, deny]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
+		var context = Context(Role("allows", allowPriority, Allow(PortalPermission.WikiDelete)),
+			Role("denies", denyPriority, Deny(PortalPermission.WikiDelete)));
+		var explanation = Resolver.Explain(context, PortalPermission.WikiDelete);
+		await Assert.That(explanation.Allowed).IsTrue();
+		await Assert.That(explanation.Reason).IsEqualTo("role-allow");
+		await Assert.That(explanation.Priority).IsEqualTo(allowPriority);
 	}
 
 	[Test]
-	public async ValueTask HigherPriorityAllow_BeatsLowerPriorityDeny()
+	public async ValueTask RoleDeny_RemovesWhatEveryoneAllows()
 	{
-		var deny = Role("base", 10, (PortalPermission.WikiAdmin, PermissionState.Deny));
-		var allow = Role("admins", 100, (PortalPermission.WikiAdmin, PermissionState.Allow));
-		var granted = Resolver.Resolve([deny, allow]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsTrue();
+		var context = Context(Everyone(Allow(PortalPermission.WikiRead)), Role("suspended", 1, Deny(PortalPermission.WikiRead)));
+		var explanation = Resolver.Explain(context, PortalPermission.WikiRead);
+		await Assert.That(explanation.Allowed).IsFalse();
+		await Assert.That(explanation.Reason).IsEqualTo("role-deny");
 	}
 
 	[Test]
-	public async ValueTask SamePriorityTie_DenyWins()
+	public async ValueTask Everyone_DecidesWhenNoOtherRoleHasAnOpinion()
 	{
-		var allow = Role("a", 50, (PortalPermission.WikiAdmin, PermissionState.Allow));
-		var deny = Role("b", 50, (PortalPermission.WikiAdmin, PermissionState.Deny));
-		var granted = Resolver.Resolve([allow, deny]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
+		var context = Context(Everyone(Allow(PortalPermission.WikiRead)), Role("player", 10));
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiRead).Reason).IsEqualTo("everyone-allow");
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiEdit).Reason).IsEqualTo("default-deny");
 	}
 
 	[Test]
-	public async ValueTask LowerPriorityOpinion_AppliesWhenHigherIsInherit()
+	public async ValueTask EveryoneDeny_DoesNotCancelARoleAllow()
 	{
-		var high = Role("high", 100, (PortalPermission.WikiAdmin, PermissionState.Inherit));
-		var low = Role("low", 10, (PortalPermission.WikiAdmin, PermissionState.Allow));
-		var granted = Resolver.Resolve([high, low]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsTrue();
+		var context = Context(Everyone(Deny(PortalPermission.WikiEdit)), Role("player", 10, Allow(PortalPermission.WikiEdit)));
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiEdit).Allowed).IsTrue();
 	}
 
 	[Test]
-	public async ValueTask BuiltInGod_GrantsEveryScope()
+	[Arguments(PermissionState.Deny, false, "account-deny")]
+	[Arguments(PermissionState.Allow, true, "account-allow")]
+	[Arguments(PermissionState.Inherit, true, "role-allow")]
+	public async ValueTask AccountOverride_BeatsEveryRole(PermissionState state, bool allowed, string reason)
 	{
-		var god = BuiltInRoles.All.Single(r => r.Slug == "god");
-		var granted = Resolver.Resolve([god]);
-		foreach (var scope in PortalPermission.AllScopes)
-			await Assert.That(granted.Contains(scope)).IsTrue();
+		var context = Context(new Dictionary<string, PermissionState> { [PortalPermission.WikiEdit] = state },
+			Role("player", 10, Allow(PortalPermission.WikiEdit)), Role("wizard", 30, Allow(PortalPermission.WikiEdit)));
+		var explanation = Resolver.Explain(context, PortalPermission.WikiEdit);
+		await Assert.That(explanation.Allowed).IsEqualTo(allowed);
+		await Assert.That(explanation.Reason).IsEqualTo(reason);
 	}
 
 	[Test]
-	public async ValueTask BuiltInWizard_GrantsAllExceptServerAdmin()
+	public async ValueTask AccountAllow_GrantsWithoutAnyRole()
 	{
-		var wizard = BuiltInRoles.All.Single(r => r.Slug == "wizard");
-		var granted = Resolver.Resolve([wizard]);
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.ServerAdmin)).IsFalse();
+		var context = Context(new Dictionary<string, PermissionState> { [PortalPermission.WikiDelete] = PermissionState.Allow });
+		await Assert.That(Resolver.Resolve(context)).IsEquivalentTo([PortalPermission.WikiDelete]);
 	}
 
 	[Test]
-	public async ValueTask BuiltInPlayer_GrantsContributorScopesOnly()
+	public async ValueTask Umbrella_CoversChildrenLeftOnInherit()
 	{
-		var player = BuiltInRoles.All.Single(r => r.Slug == "player");
-		var granted = Resolver.Resolve([player]);
-
-		await Assert.That(granted.Contains(PortalPermission.WikiRead)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.WikiCreate)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.WikiEdit)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.MediaUpload)).IsTrue();
-		await Assert.That(granted.Contains(PortalPermission.SoftcodeUse)).IsTrue();
-
-		await Assert.That(granted.Contains(PortalPermission.WikiDelete)).IsFalse();
-		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
-		await Assert.That(granted.Contains(PortalPermission.PlayersView)).IsFalse();
-		await Assert.That(granted.Contains(PortalPermission.MediaAdmin)).IsFalse();
+		var granted = Resolver.Resolve(Context(Role("wiki", 5, Allow(PortalPermission.WikiAdmin))));
+		await Assert.That(granted).Contains(PortalPermission.WikiRead);
+		await Assert.That(granted).Contains(PortalPermission.WikiCreate);
+		await Assert.That(granted).Contains(PortalPermission.WikiEdit);
+		await Assert.That(granted).Contains(PortalPermission.WikiDelete);
+		await Assert.That(granted).DoesNotContain(PortalPermission.MediaUpload);
 	}
 
 	[Test]
-	public async ValueTask BuiltInSoftcodeUse_GrantedToPlayerAndUp_NotGuest()
+	public async ValueTask ExplicitChild_BeatsItsUmbrella_WithinTheSameRole()
 	{
-		// softcode.use defaults to Player and every higher tier, but never to Guest/anonymous.
-		foreach (var slug in new[] { "player", "builder", "royalty", "wizard", "god" })
-		{
-			var role = BuiltInRoles.All.Single(r => r.Slug == slug);
-			var granted = Resolver.Resolve([role]);
-			await Assert.That(granted.Contains(PortalPermission.SoftcodeUse)).IsTrue();
-		}
-
-		var guest = BuiltInRoles.All.Single(r => r.Slug == "guest");
-		await Assert.That(Resolver.Resolve([guest]).Contains(PortalPermission.SoftcodeUse)).IsFalse();
-		await Assert.That(Resolver.Resolve([]).Contains(PortalPermission.SoftcodeUse)).IsFalse();
+		var context = Context(Role("wiki", 5, Allow(PortalPermission.WikiAdmin), Deny(PortalPermission.WikiDelete)));
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiDelete).Allowed).IsFalse();
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiEdit).Allowed).IsTrue();
 	}
 
 	[Test]
-	public async ValueTask Expand_UmbrellaScopes_ImplyFinerScopes()
+	public async ValueTask ChildDenyOnOneRole_LosesToUmbrellaAllowOnAnother()
 	{
-		var wiki = PortalPermission.Expand([PortalPermission.WikiAdmin]);
-		await Assert.That(wiki.Contains(PortalPermission.WikiRead)).IsTrue();
-		await Assert.That(wiki.Contains(PortalPermission.WikiCreate)).IsTrue();
-		await Assert.That(wiki.Contains(PortalPermission.WikiEdit)).IsTrue();
-		await Assert.That(wiki.Contains(PortalPermission.WikiDelete)).IsTrue();
-
-		var media = PortalPermission.Expand([PortalPermission.MediaAdmin]);
-		await Assert.That(media.Contains(PortalPermission.MediaUpload)).IsTrue();
-
-		var players = PortalPermission.Expand([PortalPermission.PlayersModerate]);
-		await Assert.That(players.Contains(PortalPermission.PlayersView)).IsTrue();
+		var context = Context(Role("restricted", 50, Deny(PortalPermission.JobsManageOwn)),
+			Role("operator", 1, Allow(PortalPermission.JobsManage)));
+		await Assert.That(Resolver.Explain(context, PortalPermission.JobsManageOwn).Allowed).IsTrue();
 	}
 
 	[Test]
-	public async ValueTask Expand_NonUmbrellaScope_IsUnchanged()
+	public async ValueTask AccountDenyOnUmbrella_CoversItsChildren()
 	{
-		var expanded = PortalPermission.Expand([PortalPermission.WikiCreate]);
-		await Assert.That(expanded.Count).IsEqualTo(1);
-		await Assert.That(expanded.Contains(PortalPermission.WikiCreate)).IsTrue();
-		await Assert.That(expanded.Contains(PortalPermission.WikiEdit)).IsFalse();
+		var context = Context(new Dictionary<string, PermissionState> { [PortalPermission.WikiAdmin] = PermissionState.Deny },
+			Role("player", 10, Allow(PortalPermission.WikiEdit)));
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiEdit).Reason).IsEqualTo("account-deny");
+	}
+
+	[Test]
+	public async ValueTask UnknownScope_IsRefused()
+	{
+		var context = new PermissionContext([], NoOverrides, IsOwner: true);
+		await Assert.That(Resolver.Explain(context, "no.such.scope").Reason).IsEqualTo("unknown-scope");
+	}
+
+	[Test]
+	public async ValueTask StateOf_IsCaseInsensitive()
+	{
+		var permissions = new Dictionary<string, PermissionState> { ["WIKI.EDIT"] = PermissionState.Allow };
+		await Assert.That(PermissionResolver.StateOf(permissions, PortalPermission.WikiEdit)).IsEqualTo(PermissionState.Allow);
 	}
 }

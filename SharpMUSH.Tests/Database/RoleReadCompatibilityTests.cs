@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Database.Lightning;
@@ -34,6 +35,8 @@ public class RoleReadCompatibilityTests
 		public Task RemoveRoleFromAccountAsync(string accountId, string slug) => throw new NotSupportedException();
 		public Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string slug) => throw new NotSupportedException();
+		public Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
+		public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state) => throw new NotSupportedException();
 	}
 
 	[Test]

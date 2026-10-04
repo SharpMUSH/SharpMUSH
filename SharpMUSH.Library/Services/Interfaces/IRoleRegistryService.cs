@@ -1,11 +1,13 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// Storage for portal roles (Discord-style RBAC) and account↔role assignments. Implemented by
-/// every database provider; system data, never visible to softcode, travels with backups.
+/// Storage for roles, account↔role assignments and per-account permission overrides. Implemented by
+/// every database provider; system data that travels with backups. Rules about who may change what
+/// live in <c>IRoleManagementService</c>, not here.
 /// Roles are keyed by <see cref="SharpRole.Slug"/>; assignments link an account id to a role slug.
 /// Single-fetch returns <see cref="Found{T}"/>, matching the other registries.
 /// </summary>
@@ -42,4 +44,13 @@ public interface IRoleRegistryService
 
 	/// <summary>The account ids a role is assigned to.</summary>
 	Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string roleSlug);
+
+	/// <summary>
+	/// An account's per-account overrides (Discord's member overwrite; RhostMUSH's <c>@power</c> and
+	/// <c>@depower</c>): scope → Allow or Deny. Scopes left on Inherit are absent.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken cancellationToken = default);
+
+	/// <summary>Sets one per-account override; <see cref="PermissionState.Inherit"/> removes it.</summary>
+	Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state);
 }

@@ -1,10 +1,8 @@
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// A role's stance on a single permission scope. Discord-style three-state:
-/// the highest-<see cref="Models.SharpRole.Priority"/> role that explicitly sets
-/// <see cref="Allow"/> or <see cref="Deny"/> wins; roles left on <see cref="Inherit"/>
-/// don't vote, and a scope nobody allows defaults to denied.
+/// A role's (or a per-account override's) stance on one permission scope, the three states of a
+/// Discord permission overwrite. See <see cref="PermissionResolver"/> for how they combine.
 /// </summary>
 public enum PermissionState
 {

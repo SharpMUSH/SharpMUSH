@@ -122,7 +122,8 @@
 | [CTIME()]        | [ELOCK()]        | [FINDABLE()]     | [FLAGS()]        |
 | [ALIAS()]    | [FULLNAME()]     | [GETPIDS()]      | [HASATTR()]      |
 | [HASATTR()]     | [HASFLAG()]      | [HASPOWER()]     | [HASTYPE()]      |
-| [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       | [LOCK()]         |
+| [HASROLE()]      | [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       |
+| [LOCK()]         | [PERMISSION()]   | [ROLES()]        |                  |
 | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LLOCKS()]        | [LPIDS()]        |
 | [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MTIME()]        |
 | [MTIME()]        | [MUDNAME()]      | [MUDNAME()]       | [NAME()]         |
@@ -2076,6 +2077,22 @@ think hasflag(me, wizard)
 - [@power]
 - [@power]
 - [HASFLAG()]
+# HASROLE()
+`hasrole(<player>, <role>)`
+
+  Returns 1 if `<player>` holds the role named `<role>` while playing that character, and 0 if not. `<role>` is the role's short name as @role/list shows it. Every player with an account holds `everyone`, and a player holds the tier roles that follow its flags (`player`, `builder`, `royalty`, `wizard`, `god`) as well as any roles assigned to its account. A player without an account holds no roles.
+
+  Example:
+```sharp
+think hasrole(*Ariel, moderator)
+1
+```
+
+
+**See Also:**
+- [ROLES()]
+- [PERMISSION()]
+- [@role]
 # HASTYPE()
 `hastype(<object>, <type list>)`
 
@@ -3806,6 +3823,22 @@ You say, "#1 #7 #56 #-1"
 - [@prompt]
 - [@nspemit]
 - [PROMPT_NEWLINES]
+# PERMISSION()
+`permission(<player>, <permission>)`
+
+  Returns 1 if `<player>` holds `<permission>` while playing that character, and 0 if not. The answer is the same one the game and the web portal use when that player tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all. A player without an account holds nothing.
+
+  Example:
+```sharp
+think permission(me, wiki.delete)
+0
+```
+
+
+**See Also:**
+- [HASROLE()]
+- [roles]
+- [@role]
 # PI()
 `pi()`
 
@@ -4304,6 +4337,22 @@ You say, "-   foo-"
 - [NUM()]
 - [RLOC()]
 - [ROOM()]
+# ROLES()
+`roles(<player>)`
+
+  Returns the short names of the roles `<player>` holds while playing that character, highest priority first, with `everyone` last. Returns nothing for a player without an account.
+
+  Example:
+```sharp
+think roles(*Ariel)
+moderator player everyone
+```
+
+
+**See Also:**
+- [HASROLE()]
+- [PERMISSION()]
+- [@role]
 # ROOM()
 `room(<object>)`
 

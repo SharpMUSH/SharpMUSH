@@ -106,4 +106,31 @@ public partial class LightningDatabase
 			.ToList());
 		return Task.FromResult<IReadOnlyList<string>>(accountIds);
 	}
+
+	public Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var key = ParseAccountId(accountId);
+		var overrides = Store.Read(tx => ReadOverrides(tx, key));
+		return Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
+			overrides.ToDictionary(kvp => kvp.Key, kvp => (PermissionState)kvp.Value, StringComparer.OrdinalIgnoreCase));
+	}
+
+	public async Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state)
+	{
+		var key = ParseAccountId(accountId);
+		await Store.WriteAsync(tx =>
+		{
+			var overrides = ReadOverrides(tx, key);
+			if (state == PermissionState.Inherit) overrides.Remove(scope);
+			else overrides[scope] = (int)state;
+			if (overrides.Count == 0) tx.Delete(Tables.AccountPermission, Keys.Str(key));
+			else tx.Put(Tables.AccountPermission, Keys.Str(key), Codec.Serialize(overrides));
+		});
+	}
+
+	private static Dictionary<string, int> ReadOverrides(ITx tx, string accountKey)
+		=> tx.TryGet(Tables.AccountPermission, Keys.Str(accountKey), out var bytes)
+			? new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(bytes), StringComparer.OrdinalIgnoreCase)
+			: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 }

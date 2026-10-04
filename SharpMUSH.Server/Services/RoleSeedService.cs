@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -8,53 +7,21 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Seeds the built-in portal roles (God/Wizard/Royalty/Builder/Player/Guest) at startup.
-/// Seeds absent roles and upgrades the approved administrative capabilities once. Explicit
-/// permissions and other administrator edits survive restarts. Runs after the DB
-/// migration, which Program awaits right after the host is built and before any hosted service
-/// starts.
+/// Seeds the roles a world starts with (<see cref="BuiltInRoles"/>). A missing system role is written
+/// on every start; an existing one keeps whatever an administrator made of it. The starter roles are
+/// written only into a world that has no roles at all, so deleting one is permanent. Runs after the
+/// database migration, which Program awaits before any hosted service starts.
 /// </summary>
-public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService> logger, IExpandedDataStore store) : IHostedService
+public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService> logger) : IHostedService
 {
-	public const string CapabilityMigrationKey = "sharpmush.roles.administrative-capabilities.v1";
-	public sealed record CapabilityMigration(int Version);
-	private static readonly string[] AddedCapabilities =
-	[
-		PortalPermission.SnapshotCapture, PortalPermission.SnapshotRestore,
-		PortalPermission.JobsManageOwn, PortalPermission.JobsManage,
-		PortalPermission.QueueInspectOwn, PortalPermission.QueueInspect,
-		PortalPermission.QueueControlOwn, PortalPermission.QueueControl,
-		PortalPermission.DiagnosticsProfile, PortalPermission.RealityAdmin
-	];
-
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		var migration = await store.GetExpandedServerData<CapabilityMigration>(CapabilityMigrationKey, cancellationToken);
-		var upgrade = migration is null;
+		var existing = (await roles.GetRolesAsync(cancellationToken)).Select(r => r.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		var templates = existing.Count == 0 ? BuiltInRoles.All.Concat(BuiltInRoles.Starters) : BuiltInRoles.All;
 		var seeded = 0;
-		foreach (var template in BuiltInRoles.All)
+		foreach (var template in templates.Where(t => !existing.Contains(t.Slug)))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (await roles.GetRoleAsync(template.Slug) is SharpRole current)
-			{
-				if (upgrade && current.IsSystem)
-				{
-					var permissions = new Dictionary<string, PermissionState>(current.Permissions);
-					foreach (var scope in AddedCapabilities)
-						if (template.Permissions.TryGetValue(scope, out var grant) &&
-							!permissions.Keys.Contains(scope, StringComparer.OrdinalIgnoreCase))
-							permissions.Add(scope, grant);
-					if (permissions.Count != current.Permissions.Count)
-						await roles.UpsertRoleAsync(new SharpRole
-						{
-							Id = current.Id, Slug = current.Slug, Name = current.Name, Color = current.Color,
-							Priority = current.Priority, IsSystem = current.IsSystem, CreatedAt = current.CreatedAt,
-							UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), Permissions = permissions
-						});
-				}
-				continue;
-			}
-
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 			await roles.UpsertRoleAsync(new SharpRole
 			{
@@ -62,7 +29,7 @@ public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService
 				Name = template.Name,
 				Color = template.Color,
 				Priority = template.Priority,
-				IsSystem = true,
+				IsSystem = template.IsSystem,
 				Permissions = new Dictionary<string, PermissionState>(template.Permissions),
 				CreatedAt = now,
 				UpdatedAt = now
@@ -70,13 +37,8 @@ public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService
 			seeded++;
 		}
 
-		// Completion follows all durable writes. Retries preserve existing explicit choices;
-		// after completion, removing a grant remains effective across restarts.
-		if (upgrade)
-			await store.SetExpandedServerData(CapabilityMigrationKey, new CapabilityMigration(1), cancellationToken);
-
 		if (seeded > 0)
-			logger.LogInformation("Seeded {Count} built-in portal role(s).", seeded);
+			logger.LogInformation("Seeded {Count} role(s).", seeded);
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

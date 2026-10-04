@@ -1,10 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Authentication;
@@ -12,79 +8,62 @@ namespace SharpMUSH.Tests.Authentication;
 public class RoleSeedServiceTests
 {
 	[Test]
-	public async Task ExistingStaffReceiveMissingCapabilitiesWithoutReplacingEdits()
+	public async Task NewWorldGetsSystemAndStarterRoles()
 	{
-		var roles = Substitute.For<IRoleRegistryService>();
-		var existing = BuiltInRoles.All.ToDictionary(x => x.Slug, x => new SharpRole
-		{
-			Slug = x.Slug, Name = "Custom " + x.Name, IsSystem = x.IsSystem, Color = "#123456", Priority = 123,
-			Permissions = new Dictionary<string, PermissionState> { [PortalPermission.QueueControl] = PermissionState.Deny, ["JOBS.MANAGE"] = PermissionState.Deny, [PortalPermission.QueueInspectOwn] = PermissionState.Inherit }
-		});
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<Found<SharpRole>>(existing[c.Arg<string>()]));
-		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(c => { existing[c.Arg<SharpRole>().Slug] = c.Arg<SharpRole>(); return Task.CompletedTask; });
-		var store = Substitute.For<IExpandedDataStore>();
-		RoleSeedService.CapabilityMigration? migration = null;
-		store.GetExpandedServerData<RoleSeedService.CapabilityMigration>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => migration);
-		store.SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>()).Returns(c =>
-		{
-			migration = (RoleSeedService.CapabilityMigration)c[1];
-			return ValueTask.CompletedTask;
-		});
-		var service = new RoleSeedService(roles, NullLogger<RoleSeedService>.Instance, store);
-		await service.StartAsync(default);
-		foreach (var slug in new[] { "god", "wizard" })
-		{
-			await Assert.That(existing[slug].Permissions.GetValueOrDefault(PortalPermission.QueueInspect)).IsEqualTo(PermissionState.Allow);
-			await Assert.That(existing[slug].Permissions.GetValueOrDefault(PortalPermission.RealityAdmin)).IsEqualTo(PermissionState.Allow);
-			await Assert.That(existing[slug].Permissions[PortalPermission.QueueControl]).IsEqualTo(PermissionState.Deny);
-			await Assert.That(existing[slug].Permissions.ContainsKey(PortalPermission.JobsManage)).IsFalse();
-			await Assert.That(new PermissionResolver().Resolve([existing[slug]]).Contains(PortalPermission.JobsManage)).IsFalse();
-			await Assert.That(existing[slug].Permissions[PortalPermission.QueueInspectOwn]).IsEqualTo(PermissionState.Inherit);
-			await Assert.That(existing[slug].Name).IsEqualTo("Custom " + (slug == "god" ? "God" : "Wizard"));
-			await Assert.That(existing[slug].Priority).IsEqualTo(123);
-		}
-		await Assert.That(existing["player"].Permissions.ContainsKey(PortalPermission.RealityAdmin)).IsFalse();
-		// An administrator can remove a migrated grant afterwards without restart undoing it.
-		existing["god"].Permissions.Remove(PortalPermission.QueueInspect);
-		await service.StartAsync(default);
-		await Assert.That(existing["god"].Permissions.ContainsKey(PortalPermission.QueueInspect)).IsFalse();
-	}
-	[Test]
-	public async Task FailedRoleWriteDoesNotMarkMigrationCompleteOrMutateReadState()
-	{
-		var roles = Substitute.For<IRoleRegistryService>();
-		var oldRole = new SharpRole { Slug = "god", Name = "God", IsSystem = true };
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(Task.FromResult<Found<SharpRole>>(oldRole));
-		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(Task.FromException(new IOException("write rejected")));
-		var store = Substitute.For<IExpandedDataStore>();
-		var service = new RoleSeedService(roles, NullLogger<RoleSeedService>.Instance, store);
-		await Assert.That(() => service.StartAsync(default)).Throws<IOException>();
-		await Assert.That(oldRole.Permissions.Count).IsEqualTo(0);
-		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
+		var registry = new InMemoryRoleRegistry();
+		await new RoleSeedService(registry, NullLogger<RoleSeedService>.Instance).StartAsync(default);
+		var slugs = (await registry.GetRolesAsync()).Select(r => r.Slug).ToArray();
+		await Assert.That(slugs).IsEquivalentTo(BuiltInRoles.All.Concat(BuiltInRoles.Starters).Select(r => r.Slug));
+		await Assert.That((await registry.GetRolesAsync()).Single(r => r.Slug == "moderator").IsSystem).IsFalse();
 	}
 
 	[Test]
-	public async Task NewWorldSeedsDefaultsAndRecordsUpgradeOnlyOnce()
+	public async Task ExistingWorldKeepsEditsAndDeletedStarters()
 	{
-		var roles = Substitute.For<IRoleRegistryService>();
-		var saved = new Dictionary<string, SharpRole>();
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<Found<SharpRole>>(
-			saved.TryGetValue(c.Arg<string>(), out var role) ? role : new NotFound()));
-		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(c => { saved[c.Arg<SharpRole>().Slug] = c.Arg<SharpRole>(); return Task.CompletedTask; });
-		var store = Substitute.For<IExpandedDataStore>();
-		RoleSeedService.CapabilityMigration? migration = null;
-		store.GetExpandedServerData<RoleSeedService.CapabilityMigration>(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => migration);
-		store.SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>()).Returns(c =>
+		var registry = new InMemoryRoleRegistry();
+		registry.Add(new SharpRole
 		{
-			migration = (RoleSeedService.CapabilityMigration)c[1];
-			return ValueTask.CompletedTask;
+			Slug = "player", Name = "Citizen", Priority = 10, IsSystem = true,
+			Permissions = new() { [PortalPermission.WikiEdit] = PermissionState.Deny }
 		});
-		var service = new RoleSeedService(roles, NullLogger<RoleSeedService>.Instance, store);
-		await service.StartAsync(default);
-		await service.StartAsync(default);
-		await Assert.That(saved.Count).IsEqualTo(BuiltInRoles.All.Count);
-		await roles.Received(BuiltInRoles.All.Count).UpsertRoleAsync(Arg.Any<SharpRole>());
-		await store.Received(1).SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
+		await new RoleSeedService(registry, NullLogger<RoleSeedService>.Instance).StartAsync(default);
+		var roles = await registry.GetRolesAsync();
+		var player = roles.Single(r => r.Slug == "player");
+		await Assert.That(player.Name).IsEqualTo("Citizen");
+		await Assert.That(player.Permissions[PortalPermission.WikiEdit]).IsEqualTo(PermissionState.Deny);
+		await Assert.That(roles.Select(r => r.Slug)).Contains(BuiltInRoles.EveryoneSlug);
+		await Assert.That(roles.Select(r => r.Slug)).DoesNotContain("moderator");
 	}
 
+	[Test]
+	public async Task DefaultsGrantEachTierWhatItShould()
+	{
+		var resolver = new PermissionResolver();
+		var everyone = BuiltInRoles.All.Single(BuiltInRoles.IsEveryone);
+		IReadOnlySet<string> Tier(PortalRole tier) => resolver.Resolve(new PermissionContext(
+			BuiltInRoles.TierSlugs(tier).Select(slug => BuiltInRoles.All.Single(r => r.Slug == slug)).Append(everyone).ToArray(),
+			new Dictionary<string, PermissionState>(), tier == PortalRole.God));
+
+		await Assert.That(Tier(PortalRole.Guest)).IsEquivalentTo([PortalPermission.WikiRead]);
+		await Assert.That(Tier(PortalRole.Player)).Contains(PortalPermission.WikiEdit);
+		await Assert.That(Tier(PortalRole.Player)).Contains(PortalPermission.SnapshotRestore);
+		await Assert.That(Tier(PortalRole.Player)).DoesNotContain(PortalPermission.WikiDelete);
+		await Assert.That(Tier(PortalRole.Builder)).Contains(PortalPermission.DiagnosticsProfile);
+		await Assert.That(Tier(PortalRole.Royalty)).Contains(PortalPermission.WikiDelete);
+		await Assert.That(Tier(PortalRole.Royalty)).Contains(PortalPermission.SoftcodeUse);
+		await Assert.That(Tier(PortalRole.Royalty)).DoesNotContain(PortalPermission.RolesAdmin);
+		await Assert.That(Tier(PortalRole.Wizard)).Contains(PortalPermission.RolesAdmin);
+		await Assert.That(Tier(PortalRole.Wizard)).DoesNotContain(PortalPermission.ServerAdmin);
+		await Assert.That(Tier(PortalRole.God).Count).IsEqualTo(PortalPermission.AllScopes.Count);
+	}
+
+	[Test]
+	public async Task SystemRolePrioritiesFollowTheTierOrder()
+	{
+		var priorities = Enum.GetValues<PortalRole>()
+			.Select(tier => BuiltInRoles.All.Single(r => r.Slug == BuiltInRoles.SlugFor(tier)).Priority).ToArray();
+		await Assert.That(priorities).IsInOrder();
+		await Assert.That(BuiltInRoles.Starters.Single(r => r.Slug == "moderator").Priority)
+			.IsBetween((int)PortalRole.Royalty, (int)PortalRole.Wizard);
+	}
 }

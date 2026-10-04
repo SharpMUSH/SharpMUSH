@@ -48,6 +48,12 @@ public static class PortalPermission
 	public const string ServerAdmin = "server.admin";
 
 	/// <summary>
+	/// Discord's ADMINISTRATOR: a role that allows it holds every scope, and no per-account Deny
+	/// override applies to it. It cannot be granted or denied as a per-account override.
+	/// </summary>
+	public const string Administrator = "administrator";
+
+	/// <summary>
 	/// Display metadata for one scope, used by the role-editor permission matrix. Everything but
 	/// <paramref name="Scope"/> is a <c>SharedResource</c> key rather than text — a static list cannot
 	/// reach the render site's localizer, so the matrix resolves these through <c>Loc[...]</c>.
@@ -91,6 +97,7 @@ public static class PortalPermission
 		new(PlayersModerate, "EnumPermPlayersModerate", GroupManage, "EnumPermPlayersModerateDesc"),
 		new(LayoutAdmin, "EnumPermLayoutAdmin", GroupManage, "EnumPermLayoutAdminDesc"),
 		new(ServerAdmin, "EnumPermServerAdmin", GroupManage, "EnumPermServerAdminDesc"),
+		new(Administrator, "EnumPermAdministrator", GroupManage, "EnumPermAdministratorDesc"),
 	];
 
 	/// <summary>
@@ -108,6 +115,14 @@ public static class PortalPermission
 			[MediaAdmin] = [MediaUpload],
 			[PlayersModerate] = [PlayersView],
 		};
+
+	/// <summary>The umbrella scopes that directly imply <paramref name="scope"/>.</summary>
+	public static IEnumerable<string> ParentScopes(string scope) =>
+		Implications.Where(pair => pair.Value.Contains(scope, StringComparer.OrdinalIgnoreCase)).Select(pair => pair.Key);
+
+	/// <summary>The catalog spelling of <paramref name="scope"/>, or null when it is not a known scope.</summary>
+	public static string? Canonical(string scope) =>
+		AllScopes.FirstOrDefault(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>Scopes directly implied by an umbrella grant.</summary>
 	public static IReadOnlyList<string> ImpliedScopes(string scope) =>

@@ -559,7 +559,7 @@ public class RecurringJobTests
 		var backing = Get<IRoleRegistryService>();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var armed = false;
-		registry.GetRoleAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		registry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(async call =>
 		{
 			var ct = call.Arg<CancellationToken>();
 			if (armed)
@@ -567,10 +567,12 @@ public class RecurringJobTests
 				entered.TrySetResult(ct);
 				await Task.Delay(Timeout.InfiniteTimeSpan, ct);
 			}
-			return await backing.GetRoleAsync(call.Arg<string>(), ct);
+			return await backing.GetRolesAsync(ct);
 		});
 		registry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => backing.GetRolesForAccountAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
+		registry.GetAccountOverridesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => backing.GetAccountOverridesAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
 		var capabilities = new AdministrativeCapabilityService(accounts, registry, Get<IRoleDerivationService>(), Get<IPermissionResolver>());
 		var service = Service(context.Clock, context.Queue, context.QueueReader, capabilities);
 		await service.InitializeAsync();

@@ -1,36 +1,90 @@
 using System.Collections.Immutable;
 using NSubstitute;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Authentication;
 
+/// <summary>
+/// Which roles <see cref="AdministrativeCapabilityService"/> says an actor holds: everyone, the
+/// stacked tier roles its character's flags select, its assigned roles and its overrides.
+/// </summary>
 public class AdministrativeCapabilityTests
 {
 	[Test]
-	[Arguments(0, 100, PermissionState.Deny, false)]
-	[Arguments(100, 0, PermissionState.Deny, false)]
-	[Arguments(100, 100, PermissionState.Deny, false)]
-	[Arguments(0, 100, PermissionState.Inherit, true)]
-	[Arguments(100, 0, PermissionState.Allow, true)]
-	public async Task ExplicitChildCeiling(int parentPriority, int childPriority, PermissionState state, bool expected)
+	public async Task EveryActiveAccountHoldsEveryone()
 	{
-		var roles = new[] { Role("parent", parentPriority, PortalPermission.JobsManage, PermissionState.Allow),
-			Role("child", childPriority, PortalPermission.JobsManageOwn, state) };
-		await Assert.That(new PermissionResolver().Resolve(roles).Contains(PortalPermission.JobsManageOwn)).IsEqualTo(expected);
+		var (service, _, _, _) = Build();
+		var context = await service.GetContextAsync(new("a"));
+		await Assert.That(context.Roles.Select(r => r.Slug)).Contains(BuiltInRoles.EveryoneSlug);
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.WikiRead)).IsTrue();
+	}
+
+	[Test]
+	public async Task AccountWithoutCharactersHoldsGuestOnly()
+	{
+		var (service, _, _, _) = Build();
+		var slugs = (await service.GetContextAsync(new("a"))).Roles.Select(r => r.Slug).ToArray();
+		await Assert.That(slugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, "guest"]);
+	}
+
+	[Test]
+	public async Task WizardHoldsEveryTierBelowIt()
+	{
+		var (service, accounts, _, _) = Build();
+		var wizard = Player(7, flags: ["WIZARD"]);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([wizard]));
+		var slugs = (await service.GetContextAsync(new("a", wizard.Object.DBRef, wizard.Object.DBRef))).Roles.Select(r => r.Slug).ToArray();
+		await Assert.That(slugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, "player", "builder", "royalty", "wizard"]);
+	}
+
+	[Test]
+	public async Task BuilderPowerSelectsTheBuilderTier()
+	{
+		var (service, accounts, _, _) = Build();
+		var builder = Player(7, powers: ["Builder"]);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([builder]));
+		await Assert.That(await service.AuthorizeAsync(new("a", builder.Object.DBRef, builder.Object.DBRef), PortalPermission.DiagnosticsProfile)).IsTrue();
+	}
+
+	[Test]
+	public async Task PlayerOneIsTheOwner()
+	{
+		var (service, accounts, _, _) = Build();
+		var god = Player(1);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([god]));
+		var context = await service.GetContextAsync(new("a"));
+		await Assert.That(context.IsOwner).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.ServerAdmin)).IsTrue();
+	}
+
+	[Test]
+	public async Task AssignedRolesAndOverridesApply()
+	{
+		var (service, accounts, registry, _) = Build();
+		var player = Player(7);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
+		await registry.AssignRoleToAccountAsync("a", "helper");
+		await registry.SetAccountOverrideAsync("a", PortalPermission.WikiEdit, PermissionState.Deny);
+		var actor = new CapabilityActor("a", player.Object.DBRef, player.Object.DBRef);
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.PlayersView)).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.WikiEdit)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.WikiCreate)).IsTrue();
 	}
 
 	[Test]
 	public async Task ExecutionRechecksRevocationAndAccountStatus()
 	{
-		var (service, accounts, registry, account) = Build();
-		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.SnapshotCapture)).IsTrue();
-		registry.GetRolesForAccountAsync("a", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.SnapshotCapture)).IsFalse();
+		var (service, _, registry, account) = Build();
+		await registry.AssignRoleToAccountAsync("a", "helper");
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.PlayersView)).IsTrue();
+		await registry.RemoveRoleFromAccountAsync("a", "helper");
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.PlayersView)).IsFalse();
+		await registry.AssignRoleToAccountAsync("a", "helper");
 		account.Status = AccountStatus.Disabled;
-		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.SnapshotCapture)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.PlayersView)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.WikiRead)).IsFalse();
 	}
 
 	[Test]
@@ -49,15 +103,16 @@ public class AdministrativeCapabilityTests
 	}
 
 	[Test]
-	public async Task LinkedWizardDoesNotElevateAnotherActiveCharacter()
+	public async Task LinkedOwnerDoesNotElevateAnotherActiveCharacter()
 	{
-		var (service, accounts, registry, _) = Build();
-		var wizard = Player(1);
+		var (service, accounts, _, _) = Build();
+		var god = Player(1);
 		var player = Player(7);
-		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([wizard, player]));
-		registry.GetRoleAsync("god", Arg.Any<CancellationToken>()).Returns(BuiltInRoles.All.Single(r => r.Slug == "god"));
-		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.SnapshotRestore)).IsTrue();
-		await Assert.That(await service.AuthorizeAsync(new("a", player.Object.DBRef, player.Object.DBRef), PortalPermission.SnapshotRestore)).IsFalse();
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([god, player]));
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.ServerAdmin)).IsTrue();
+		var actor = new CapabilityActor("a", player.Object.DBRef, player.Object.DBRef);
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.ServerAdmin)).IsFalse();
+		await Assert.That((await service.GetContextAsync(actor)).IsOwner).IsFalse();
 	}
 
 	[Test]
@@ -73,54 +128,28 @@ public class AdministrativeCapabilityTests
 		await Assert.That(await service.GetGameActorAsync(executor)).IsNull();
 	}
 
-	[Test]
-	public async Task HigherExplicitChildAllowOverridesLowerChildDeny()
-	{
-		var roles = new[] { Role("parent", 100, PortalPermission.JobsManage, PermissionState.Allow),
-			Role("restricted", 1, PortalPermission.JobsManageOwn, PermissionState.Deny),
-			Role("exception", 2, PortalPermission.JobsManageOwn, PermissionState.Allow) };
-		var explanation = new PermissionResolver().Explain(roles, PortalPermission.JobsManageOwn);
-		await Assert.That(explanation.Allowed).IsTrue();
-		await Assert.That(explanation.Priority).IsEqualTo(2);
-		await Assert.That(explanation.Roles.Single()).IsEqualTo("exception");
-	}
-
-	[Test]
-	[Arguments(99, true)]
-	[Arguments(100, false)]
-	[Arguments(101, false)]
-	public async Task RoleEditsCannotDenyGodRecovery(int priority, bool expected)
-	{
-		var god = Role("god", 100, PortalPermission.RolesAdmin, PermissionState.Allow);
-		var restricted = Role("restricted", priority, PortalPermission.RolesAdmin, PermissionState.Deny);
-		await Assert.That(RoleRecoveryPolicy.PreservesRecovery(restricted, [god])).IsEqualTo(expected);
-		await Assert.That(RoleRecoveryPolicy.PreservesRecovery(god, [restricted])).IsEqualTo(expected);
-	}
-
-	private static SharpPlayer Player(int number) => new()
+	internal static SharpPlayer Player(int number, string[]? flags = null, string[]? powers = null) => new()
 	{
 		PasswordHash = "", Quota = 0, Home = null!, Location = null!,
 		Object = new()
 		{
-			Key = number, CreationTime = 1, Name = "player", Type = "PLAYER", Locks = ImmutableDictionary<string, SharpLockData>.Empty,
-			Owner = null!, Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
-			Flags = new(() => Array.Empty<SharpObjectFlag>().ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+			Key = number, CreationTime = 1, Name = "player" + number, Type = "PLAYER", Locks = ImmutableDictionary<string, SharpLockData>.Empty,
+			Owner = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+			Flags = new(() => (flags ?? []).Select(f => new SharpObjectFlag
+			{ Name = f, Symbol = f[..1], SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [], System = true }).ToAsyncEnumerable()),
+			Powers = new(() => (powers ?? []).Select(p => new SharpPower
+			{ Name = p, System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] }).ToAsyncEnumerable()),
+			Parent = null!, Zone = null!, Children = null!
 		}
 	};
 
-	private static SharpRole Role(string slug, int priority, string scope, PermissionState state) => new()
-	{ Slug = slug, Name = slug, Priority = priority, Permissions = new() { [scope] = state } };
-
-	private static (AdministrativeCapabilityService, IAccountService, IRoleRegistryService, SharpAccount) Build()
+	private static (AdministrativeCapabilityService, IAccountService, InMemoryRoleRegistry, SharpAccount) Build()
 	{
 		var accounts = Substitute.For<IAccountService>();
-		var registry = Substitute.For<IRoleRegistryService>();
+		var registry = InMemoryRoleRegistry.Seeded();
 		var account = new SharpAccount { Id = "a", Username = "a", PasswordHash = "" };
 		accounts.GetByIdAsync("a", Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
-		registry.GetRoleAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new NotFound());
-		registry.GetRolesForAccountAsync("a", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>(
-			[Role("operator", 5, PortalPermission.SnapshotCapture, PermissionState.Allow)]));
 		return (new(accounts, registry, new RoleDerivationService(), new PermissionResolver()), accounts, registry, account);
 	}
 }

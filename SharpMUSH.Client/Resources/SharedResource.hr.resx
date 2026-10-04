@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# poza} few {# poze} other {# poza}}</value>
     <comment>MT — verbatim from the locale sheet</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Viši prioritet ima prednost u slučaju konflikta</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritet</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Teme iz ahelpa. Samo za Čarobnjake i Boga, na portalu kao i u igri.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Odlučuje izričito pravilo najvišeg prioriteta; pri jednakosti zabrana ima prednost. Nasljeđivanje vrijedi samo bez izričitog pravila. Bez dopuštenja pristup je odbijen. Delegirani administratori mogu upravljati samo dopuštenjima koja imaju s nižim prioritetom, bez promjene vlastitih uloga ili ograničenja.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Trenutačni pristup: {0}; prioritet {1}; uloge {2}; odluka {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Konfiguraciju nije moguće uvesti: {0}</value>
@@ -5236,5 +5231,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Sustav scena nije uključen u ovoj igri.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Položaj u hijerarhiji. Možete upravljati samo ulogama ispod svoje najviše uloge.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Svaka vaša uloga koja dopušta neko dopuštenje dodjeljuje ga, bez obzira na prioritet; Zabrana blokira samo ono što nijedna uloga ne dopušta. Iznimka na računu nadjačava svaku ulogu, a uloga koja dopušta Administrator daje sve. Prioritet određuje samo tko kim upravlja: možete mijenjati samo uloge i račune ispod svoje najviše uloge i dopuštati samo ono što imate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Iznimke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Nema iznimki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Ukloni iznimku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Dopuštenje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Iznimka na ovom računu nadjačava sve njegove uloge.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Iznimka za {0} je spremljena.</value>
+    <comment>MT</comment>
   </data>
 </root>

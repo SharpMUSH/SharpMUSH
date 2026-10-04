@@ -1632,6 +1632,32 @@
       "parameterNames": [],
       "switches": []
     },
+    "@ROLE": {
+      "helpFull": "`@role[/list]`<br>\n`@role[/info] <role>`<br>\n`@role/player [<player>]`<br>\n`@role/scopes`<br>\n`@role/create <role>[=<display name>]`<br>\n`@role/delete <role>`<br>\n`@role/rename <role>=<display name>`<br>\n`@role/color <role>=<#rrggbb|none>`<br>\n`@role/priority <role>=<number>`<br>\n`@role/allow <role>=<permission> [<permission> ...]`<br>\n`@role/deny <role>=<permission> [<permission> ...]`<br>\n`@role/clear <role>=<permission> [<permission> ...]`<br>\n`@role/assign <player>=<role>`<br>\n`@role/unassign <player>=<role>`<br>\n`@role/allow *<player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)\n\n@role shows and manages roles: named sets of permissions that decide what a player may do in the game's administrative commands and in the web portal. See [roles] for how roles combine.\n\nA role is named by its short name (`moderator`), which is lowercase letters, digits, `-` and `_`. Its display name, colour and priority can change; its short name cannot.\n\n## Viewing roles\n\n`@role` and `@role/list` list every role, highest priority first. `@role <role>` shows one role: its priority, colour, and what it allows and denies. `@role/scopes` lists every permission, with the narrower permissions each umbrella permission covers.\n\n`@role/player` shows your own roles, any overrides on your account, and the permissions you hold and lack. `@role/player <player>` shows another player's, and needs the `players.view` or `roles.admin` permission.\n\nAnyone may list roles and look at one.\n\n## Creating and editing roles\n\n`@role/create <role>` makes a new role at priority 1 that allows nothing; give it a display name with `=<display name>`. Then use `@role/allow` to say what it grants and `@role/priority` to place it.\n\n`@role/allow`, `@role/deny` and `@role/clear` set each listed permission on the role to Allow, Deny or neither. `@role/rename`, `@role/color` and `@role/priority` change those fields; `@role/color <role>=none` removes the colour. `@role/delete` removes a role and takes it away from everyone who held it.\n\nThe system roles (`everyone` and the tiers `guest`, `player`, `builder`, `royalty`, `wizard` and `god`) cannot be created, deleted or moved, but what they allow can be edited like any other role.\n\nExamples:\n```sharp\n@role/create storyteller=Storyteller\n@role/priority storyteller=14\n@role/allow storyteller=wiki.delete media.admin\n```\n\n## Assigning roles\n\nRoles belong to accounts, not characters, so a role given to one character is held by every character on the same account. `@role/assign <player>=<role>` gives the role to the account `<player>` is linked to, and `@role/unassign` takes it away. A player without an account cannot hold roles.\n\nThe system roles are never assigned by hand. Every account holds `everyone`. The tier roles follow the character being played: a WIZARD holds `wizard`, `royalty`, `builder` and `player`; ROYALTY holds `royalty`, `builder` and `player`; a character with the Builder power holds `builder` and `player`; any other character holds `player`. Player #1 holds `god` and every permission.\n\nExamples:\n```sharp\n@role/assign Ariel=moderator\n@role/unassign Ariel=moderator\n```\n\n## Per-player overrides\n\nPut `*` before a player's name to set a permission on that player's account instead of on a role. An override beats every role the player holds: `@role/deny *Twink=wiki.edit` takes wiki editing away even though the `player` role allows it, and `@role/allow *Ariel=wiki.delete` grants it without a role. `@role/clear *<player>=<permission>` removes the override. This is RhostMUSH's `@power` and `@depower`, and Discord's per-member permission override.\n\nAn override cannot touch `administrator`, and nothing overrides a role that allows `administrator`.\n\nExamples:\n```sharp\n@role/deny *Twink=wiki.edit media.upload\n@role/clear *Twink=wiki.edit\n```\n\n## Who may change what\n\nEvery change needs the `roles.admin` permission, and follows Discord's role hierarchy:\n\n- You can create, edit, delete, assign or unassign only roles whose priority is below your own highest role.\n- You can change the roles and overrides of a player only when their highest role is below yours. You cannot change your own.\n- You can only allow permissions you hold yourself.\n\nPlayer #1 is exempt from all of these.\n\n**See Also:**\n- [roles]\n- [ROLES()]\n- [HASROLE()]\n- [PERMISSION()]\n- [@power]",
+      "helpPreview": "`@role[/list]`<br>\n`@role[/info] <role>`<br>\n`@role/player [<player>]`<br>",
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "role or player",
+        "value"
+      ],
+      "switches": [
+        "LIST",
+        "INFO",
+        "PLAYER",
+        "SCOPES",
+        "CREATE",
+        "DELETE",
+        "RENAME",
+        "COLOR",
+        "PRIORITY",
+        "ALLOW",
+        "DENY",
+        "CLEAR",
+        "ASSIGN",
+        "UNASSIGN"
+      ]
+    },
     "@RWALL": {
       "helpFull": "`@wall[/emit][/noeval] <message>`<br>\n`@rwall[/emit][/noeval] <message>`<br>\n`@wizwall[/emit][/noeval] <message>`\n\n@wall sends `<message>` to all connected players. @rwall only sends the message to connected wizards and royalty, and @wizwall is seen only be wizards.\n\n`<message>` can be prefixed with : or ; to pose or semi-pose it, respectively, or the `/emit` switch can be given to emit the message. If `<message>` begins with a \" and the chat_strip_quote option is on, the \" will be stripped.\n\nThe message is prefixed with the value of the wall_prefix, rwall_prefix or wizwall_prefix options, depending on the command used.\n\n\n**See Also:**\n- [@wall]\n- [@wall]",
       "helpPreview": "`@wall[/emit][/noeval] <message>`<br>\n`@rwall[/emit][/noeval] <message>`<br>\n`@wizwall[/emit][/noeval] <message>`",
@@ -4767,6 +4793,16 @@
         "power"
       ]
     },
+    "hasrole": {
+      "helpFull": "`hasrole(<player>, <role>)`\n\n  Returns 1 if `<player>` holds the role named `<role>` while playing that character, and 0 if not. `<role>` is the role's short name as @role/list shows it. Every player with an account holds `everyone`, and a player holds the tier roles that follow its flags (`player`, `builder`, `royalty`, `wizard`, `god`) as well as any roles assigned to its account. A player without an account holds no roles.\n\n  Example:\n```sharp\nthink hasrole(*Ariel, moderator)\n1\n```\n\n\n**See Also:**\n- [ROLES()]\n- [PERMISSION()]\n- [@role]",
+      "helpPreview": "`hasrole(<player>, <role>)`\nReturns 1 if `<player>` holds the role named `<role>` while playing that character, and 0 if not. `<role>` is the role's short name as @role/list shows it. Every player with an account holds `everyone`, and a player holds the tier roles that follow its flags (`player`, `builder`, `royalty`, `wizard`, `god`) as well as any roles assigned to its account. A player without an account holds no roles.\nExample:",
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "player",
+        "role"
+      ]
+    },
     "hastype": {
       "helpFull": "`hastype(<object>, <type list>)`\n\n  Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE.\n\n  Example:\n```sharp\n@create Test Object\nthink hastype(test object, PLAYER EXIT)\n0\nthink hastype(test object, PLAYER THING)\n1\n```\n\n\n**See Also:**\n- [TYPES OF OBJECTS]\n- [TYPE()]",
       "helpPreview": "`hastype(<object>, <type list>)`\nReturns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE.\nExample:",
@@ -6620,6 +6656,16 @@
         "message"
       ]
     },
+    "permission": {
+      "helpFull": "`permission(<player>, <permission>)`\n\n  Returns 1 if `<player>` holds `<permission>` while playing that character, and 0 if not. The answer is the same one the game and the web portal use when that player tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all. A player without an account holds nothing.\n\n  Example:\n```sharp\nthink permission(me, wiki.delete)\n0\n```\n\n\n**See Also:**\n- [HASROLE()]\n- [roles]\n- [@role]",
+      "helpPreview": "`permission(<player>, <permission>)`\nReturns 1 if `<player>` holds `<permission>` while playing that character, and 0 if not. The answer is the same one the game and the web portal use when that player tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all. A player without an account holds nothing.\nExample:",
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "player",
+        "permission"
+      ]
+    },
     "pfun": {
       "helpFull": "`pfun(<attribute>[, <arg0>[, ... , <arg29>]])`\n\nThis function evaluates `<attribute>` from the caller's @parent, passing up to 30 `<arg>`s as %0-%9 and v(10)-v(29). When the caller doesn't have an `<attribute>` attribute set, this is the same as\n\n`ufun(me/<attribute>[, <args>])`\n\nIt differs from ufun() when the caller does have the attribute set - pfun() will ignore the attribute on the child, and evaluate the attribute as it would be inherited from the parent.\n\nExample:\n```sharp\n@create ParentObject\n@parent me=ParentObject\n&foo me=ChildFoo\n&foo ParentObject=ParentFoo\nthink ufun(me/foo)\nChildFoo\nthink pfun(foo)\nParentFoo\n```\n\n## Evaluation permissions\n\nThis function does not have the security problems of using\n\n`ufun(parent(me)/<attribute>)`\n\nas the attribute is inherited (and evaluated by you, not the parent) - you don't need to be able to examine the parent object, and safer_ufun does not stop the evaluation. Note that no_inherit attribute flags are still checked, as with normal attribute inheritence.\n\nThis function is particularly useful when you want to inherit an attribute tree from a parent, but add further branches.\n\n\n**See Also:**\n- [u()]\n- [GET()]\n- [PARENT()]\n- [ZFUN()]\n- [parent]\n\n## Branch inheritance examples\n\nExample:\n\n```sharp\n> &root Parent=ParentRoot\n> &root`foo parent=ParentRoot`foo\n> think ufun(me/root) / [ufun(me/root`foo)]\nParentRoot / ParentRoot`foo\n> &root`bar me=ChildRoot`bar\n> think ufun(me/root) / [ufun(me/root`foo)]\n / ParentRoot`foo\n```\n\nSetting a ROOT`FOO attribute on the child automatically creates an empty ROOT attribute, which blocks the inherited ROOT attribute. The pfun() function allows you to get around this:\n\n```sharp\n> &root me=pfun(root)\n> think ufun(me/root) / [ufun(me/root`foo)] / [ufun(me/root`bar)]\nParentRoot / ParentRoot`foo / ChildRoot`bar\n```\n\nGood for inherited @chatformats which use CHATFORMAT``<channel>` leaf attrs to store channel-specific formats and the like.",
       "helpPreview": "`pfun(<attribute>[, <arg0>[, ... , <arg29>]])`\nThis function evaluates `<attribute>` from the caller's @parent, passing up to 30 `<arg>`s as %0-%9 and v(10)-v(29). When the caller doesn't have an `<attribute>` attribute set, this is the same as\n`ufun(me/<attribute>[, <args>])`",
@@ -7319,6 +7365,15 @@
       "parameterNames": [
         "object",
         "levels"
+      ]
+    },
+    "roles": {
+      "helpFull": "`roles(<player>)`\n\n  Returns the short names of the roles `<player>` holds while playing that character, highest priority first, with `everyone` last. Returns nothing for a player without an account.\n\n  Example:\n```sharp\nthink roles(*Ariel)\nmoderator player everyone\n```\n\n\n**See Also:**\n- [HASROLE()]\n- [PERMISSION()]\n- [@role]",
+      "helpPreview": "`roles(<player>)`\nReturns the short names of the roles `<player>` holds while playing that character, highest priority first, with `everyone` last. Returns nothing for a player without an account.\nExample:",
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "player"
       ]
     },
     "room": {

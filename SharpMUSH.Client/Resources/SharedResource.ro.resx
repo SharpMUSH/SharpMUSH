@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# poză} few {# poze} other {# de poze}}</value>
     <comment>MT</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>La conflict câștigă valoarea mai mare</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritate</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Subiectele ahelp. Doar pentru Vrăjitori și Dumnezeu, atât în portal, cât și în joc.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Decide regula explicită cu prioritatea cea mai mare; refuzul câștigă la egalitate. Moștenirea se aplică numai fără o regulă explicită. Fără permisiune, accesul este refuzat. Administratorii delegați pot gestiona doar permisiunile deținute cu prioritate mai mică, fără a-și schimba propriile roluri sau restricții.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Acces curent: {0}; prioritate {1}; roluri {2}; decizie {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Configurația nu a putut fi importată: {0}</value>
@@ -5236,5 +5231,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Sistemul de scene nu este activat în acest joc.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Poziția în ierarhie. Poți gestiona doar rolurile aflate sub cel mai înalt rol al tău.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Orice rol pe care îl ai și care permite o permisiune o acordă, indiferent de prioritate; un Refuz blochează doar ce nu permite niciun rol. O excepție de cont are întâietate față de orice rol, iar un rol care permite Administrator acordă totul. Prioritatea decide doar cine pe cine gestionează: poți modifica doar roluri și conturi aflate sub cel mai înalt rol al tău și poți permite doar ce ai.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Excepții</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Nicio excepție</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Elimină excepția</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Permisiune</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>O excepție pe acest cont are întâietate față de toate rolurile lui.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Excepția pentru {0} a fost salvată.</value>
+    <comment>MT</comment>
   </data>
 </root>

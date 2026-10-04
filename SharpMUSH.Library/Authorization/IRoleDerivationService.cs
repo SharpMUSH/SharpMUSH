@@ -16,6 +16,12 @@ public interface IRoleDerivationService
 	PortalRole DeriveRole(int dbrefNumber, IEnumerable<SharpObjectFlag> flags);
 
 	/// <summary>
+	/// As <see cref="DeriveRole(int, IEnumerable{SharpObjectFlag})"/>, and a character holding the
+	/// <c>Builder</c> power (and nothing higher) is a Builder.
+	/// </summary>
+	PortalRole DeriveRole(int dbrefNumber, IEnumerable<SharpObjectFlag> flags, IEnumerable<SharpPower> powers);
+
+	/// <summary>
 	/// Returns the highest <see cref="PortalRole"/> among all characters linked to an account.
 	/// Each tuple is (dbrefNumber, flags).
 	/// </summary>

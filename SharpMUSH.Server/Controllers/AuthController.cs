@@ -248,7 +248,7 @@ public class AuthController(
 			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
 		// Bind the session to the primary character up front, so there is never a "has characters but
 		// the token names none" state for a request handler to paper over. Switching mints a new token.
@@ -299,7 +299,7 @@ public class AuthController(
 	private async Task<IActionResult> RegisteredAsync(SharpAccount account)
 	{
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
