@@ -38,9 +38,8 @@
         {
             var current = Draft.String(Property);
             <div class="cfg-pills" role="group" aria-label="@DisplayName" aria-describedby="@DescribedBy">
-                @foreach (var opt in Property.Options)
+                @foreach (var option in Property.Options)
                 {
-                    var option = opt;
                     var selected = current == option.Key;
                     <button type="button" class="cfg-pill @(selected ? "cfg-pill--on" : "")" aria-pressed="@(selected ? "true" : "false")"
                             @onclick="@(() => Edit(() => Draft.Set(Property, option.Key)))">
