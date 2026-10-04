@@ -128,25 +128,27 @@ public class WikiServiceTests : TrackingTestContext
 	}
 
 	[Test]
-	public async Task UpdatePageAsync_404_ReturnsErrorString()
+	public async Task UpdatePageAsync_404_ReturnsNotFoundFailure()
 	{
 		var service = BuildService(HttpStatusCode.NotFound, "Not Found", out _);
 
 		var result = await service.UpdatePageAsync("does-not-exist", "# X", null);
 
-		var text = result.Expect<string>();
-		await Assert.That(text).Contains("404");
+		var failure = result.Expect<ApiFailure>();
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.NotFound);
+		await Assert.That(failure.Status).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
 	[Test]
-	public async Task UpdatePageAsync_500_ReturnsErrorString()
+	public async Task UpdatePageAsync_500_ReturnsTheServersSentence()
 	{
 		var service = BuildService(HttpStatusCode.InternalServerError, "oops", out _);
 
 		var result = await service.UpdatePageAsync("home", "# X", null);
 
-		var text = result.Expect<string>();
-		await Assert.That(text).Contains("500");
+		var failure = result.Expect<ApiFailure>();
+		await Assert.That(failure.Status).IsEqualTo(HttpStatusCode.InternalServerError);
+		await Assert.That(failure.Message).IsEqualTo("oops");
 	}
 
 	[Test]
@@ -261,14 +263,15 @@ public class WikiServiceTests : TrackingTestContext
 	}
 
 	[Test]
-	public async Task CreatePageAsync_409_ReturnsErrorString()
+	public async Task CreatePageAsync_409_ReturnsTheServersReason()
 	{
 		var service = BuildService(HttpStatusCode.Conflict, """{"error":"slug already exists"}""", out _);
 
 		var result = await service.CreatePageAsync("Duplicate", "# Dup");
 
-		var text = result.Expect<string>();
-		await Assert.That(text).Contains("409");
+		var failure = result.Expect<ApiFailure>();
+		await Assert.That(failure.Status).IsEqualTo(HttpStatusCode.Conflict);
+		await Assert.That(failure.Message).IsEqualTo("slug already exists");
 	}
 
 	[Test]

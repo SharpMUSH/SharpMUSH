@@ -22,22 +22,24 @@ public static class ChannelEmit
 {
 	public static async ValueTask<CallState> Handle(
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		MString channelName,
 		MString message,
 		bool spoof)
-		=> await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+		=> await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator,
 				notifyService, executor, channelName, notify: true) switch
 		{
-			SharpChannel channel => await EmitAsync(permissionService, mediator, notifyService, executor, channel, message,
+			SharpChannel channel => await EmitAsync(permissionService, channelPermissions, mediator, notifyService, executor, channel, message,
 				spoof),
 			Error<CallState> error => error.Value
 		};
 
 	private static async ValueTask<CallState> EmitAsync(
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
@@ -45,7 +47,7 @@ public static class ChannelEmit
 		MString message,
 		bool spoof)
 	{
-		var check = await ChannelHelper.CemitRefusal(permissionService, executor, channel);
+		var check = await ChannelHelper.CemitRefusal(channelPermissions, executor, channel);
 		if (check.Refused)
 		{
 			await notifyService.Notify(executor, check.Refusal!, executor);

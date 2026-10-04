@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
@@ -31,6 +32,11 @@ public static class ApiCall
 	/// <param name="whenEmpty">What to say when the call succeeded and the body was <c>null</c>.</param>
 	public static Task<ApiResult<T>> GetApiAsync<T>(this HttpClient http, string url, string whenEmpty) =>
 		ReadingAsync<T>(() => http.GetAsync(url), whenEmpty);
+
+	/// <summary>GETs a <typeparamref name="T"/> read with <paramref name="options"/> rather than the web defaults.</summary>
+	public static Task<ApiResult<T>> GetApiAsync<T>(
+		this HttpClient http, string url, string whenEmpty, JsonSerializerOptions options) =>
+		ReadingAsync<T>(() => http.GetAsync(url), whenEmpty, options: options);
 
 	/// <summary>
 	/// GETs a body that is the payload itself — a file to hand the user — rather than a value to
@@ -70,6 +76,11 @@ public static class ApiCall
 	/// <summary>PUTs <paramref name="body"/> as JSON where the answer is only whether it worked.</summary>
 	public static async Task<ApiResult<Success>> PutApiAsync<TBody>(this HttpClient http, string url, TBody body) =>
 		await SucceededAsync(() => http.PutAsJsonAsync(url, body));
+
+	/// <summary>PUTs <paramref name="body"/> written with <paramref name="options"/>, where the answer is only whether it worked.</summary>
+	public static async Task<ApiResult<Success>> PutApiAsync<TBody>(
+		this HttpClient http, string url, TBody body, JsonSerializerOptions options) =>
+		await SucceededAsync(() => http.PutAsJsonAsync(url, body, options));
 
 	/// <summary>
 	/// Sends a request the caller built and reads a <typeparamref name="T"/> back, giving up when
@@ -116,11 +127,12 @@ public static class ApiCall
 	}
 
 	private static async Task<ApiResult<T>> ReadingAsync<T>(
-		Func<Task<HttpResponseMessage>> send, string whenEmpty, CancellationToken cancellationToken = default)
+		Func<Task<HttpResponseMessage>> send, string whenEmpty, CancellationToken cancellationToken = default,
+		JsonSerializerOptions? options = null)
 	{
 		try
 		{
-			return await ReadAsync<T>(await send(), whenEmpty, cancellationToken);
+			return await ReadAsync<T>(await send(), whenEmpty, options, cancellationToken);
 		}
 		catch (Exception ex)
 		{
@@ -129,7 +141,7 @@ public static class ApiCall
 	}
 
 	private static async Task<ApiResult<T>> ReadAsync<T>(
-		HttpResponseMessage response, string whenEmpty, CancellationToken cancellationToken)
+		HttpResponseMessage response, string whenEmpty, JsonSerializerOptions? options, CancellationToken cancellationToken)
 	{
 		using (response)
 		{
@@ -138,10 +150,10 @@ public static class ApiCall
 
 			try
 			{
-				return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
+				return await response.Content.ReadFromJsonAsync<T>(options, cancellationToken)
 					?? (ApiResult<T>)new ApiFailure(ApiFailureKind.Unexpected, whenEmpty, response.StatusCode);
 			}
-			catch (Exception ex) when (ex is System.Text.Json.JsonException or NotSupportedException)
+			catch (Exception ex) when (ex is JsonException or NotSupportedException)
 			{
 				return ApiFailure.Malformed(ex, response.StatusCode);
 			}

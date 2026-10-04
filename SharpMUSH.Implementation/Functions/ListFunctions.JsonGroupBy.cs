@@ -28,7 +28,7 @@ public partial class Functions
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// A blank list has nothing to group.
-		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText())))
+		if (IsBlankList(list))
 		{
 			return errors.Complete(new CallState("{}"));
 		}

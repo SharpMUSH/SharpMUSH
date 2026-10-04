@@ -12,6 +12,12 @@ public readonly record struct NumericEvaluation(bool TinyMath, bool NullEqualsZe
 	private const NumberStyles Integer = NumberStyles.AllowLeadingSign;
 	private const NumberStyles Real = Integer | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent;
 
+	/// <summary>
+	/// PennMUSH's strict tests (<c>is_strict_integer</c>, <c>is_strict_uinteger</c>, <c>src/parse.c:485,556</c>):
+	/// neither TINY_MATH nor NULL_EQ_ZERO applies, so an empty argument is not a number.
+	/// </summary>
+	public static NumericEvaluation Strict => new(TinyMath: false, NullEqualsZero: false);
+
 	public static NumericEvaluation For(IMUSHCodeParser parser)
 	{
 		var options = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Compatibility;

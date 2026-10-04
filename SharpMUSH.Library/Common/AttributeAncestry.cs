@@ -49,7 +49,7 @@ public static class AttributeAncestry
 	/// </summary>
 	/// <remarks>
 	/// Cycle-guarded and depth-capped. A <c>@parent</c> cycle would otherwise spin here forever —
-	/// defence in depth, since the write-side guards (<c>SafeToAddParent</c>,
+	/// defence in depth, since the write-side guards (<c>SafeToAddParentAsync</c>,
 	/// <c>ExceedsMaxParentDepthAsync</c>) should already prevent one from existing at all.
 	/// <paramref name="maxDepth"/> counts parents, not targets, so the chain is at most
 	/// <c>maxDepth + 1</c> long.
@@ -132,7 +132,7 @@ public static class AttributeAncestry
 			var parentObj = parent.Object();
 
 			// A @parent cycle would otherwise spin here forever - defence in depth, since the
-			// write-side guards (SafeToAddParent, ExceedsMaxParentDepthAsync) should already
+			// write-side guards (SafeToAddParentAsync, ExceedsMaxParentDepthAsync) should already
 			// prevent one from existing at all. See ChainAsync, which mirrors this.
 			if (!visited.Add(parentObj.DBRef.Number)) break;
 

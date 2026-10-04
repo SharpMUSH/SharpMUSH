@@ -151,10 +151,10 @@ public class CharacterProfileServiceTests : IDisposable
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
 		var directory = new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance);
 
-		await Assert.That(await directory.ListAsync()).IsTypeOf<ServerResult<IReadOnlyList<CharacterDirectoryService.CharacterSummary>>>();
+		(await directory.ListAsync()).Expect<ApiFailure>();
 		fail = false;
 		var burst = await Task.WhenAll(directory.ListAsync(), directory.ListAsync(), directory.ListAsync());
-		await Assert.That(burst.All(r => r.Value is IReadOnlyList<CharacterDirectoryService.CharacterSummary>)).IsTrue();
+		await Assert.That(burst.All(r => r is IReadOnlyList<CharacterDirectoryService.CharacterSummary>)).IsTrue();
 		await Assert.That(requests).IsEqualTo(2).Because("one failed read, then one read shared by the three callers");
 	}
 

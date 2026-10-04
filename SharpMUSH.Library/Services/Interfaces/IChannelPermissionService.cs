@@ -8,10 +8,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// Channel commands, functions and services depend on this; nothing else needs it.
 /// </summary>
 /// <remarks>
-/// <see cref="IPermissionService"/> extends this interface, so the registered permission service is
-/// also the channel permission service and a caller holding the wider interface can pass it where this
-/// one is wanted. <see cref="IPermissionService"/> still declares these members itself, for plugins
-/// compiled against it; new code calls them through this interface.
+/// It is not part of <see cref="IPermissionService"/>: a caller that needs both asks for both. The
+/// engine registers one <c>PermissionService</c> under the two interfaces, so they share a single instance.
 /// </remarks>
 public interface IChannelPermissionService
 {

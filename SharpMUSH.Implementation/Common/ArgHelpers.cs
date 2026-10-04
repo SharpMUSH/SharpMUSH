@@ -16,6 +16,59 @@ namespace SharpMUSH.Implementation.Common;
 
 public static partial class ArgHelpers
 {
+	/// <summary>
+	/// An integer argument as PennMUSH reads one: <c>is_integer</c>, then <c>parse_integer</c>
+	/// (<c>src/parse.c:373</c>). Leading whitespace is skipped and anything after the digits refuses it;
+	/// an empty argument is 0 under NULL_EQ_ZERO, and under TINY_MATH every argument is an integer
+	/// (its leading digits, or 0).
+	/// </summary>
+	public static bool TryInteger(IMUSHCodeParser parser, string? text, out int value)
+		=> NumericEvaluation.For(parser).TryInt32(text, out value);
+
+	/// <summary>
+	/// PennMUSH's <c>is_uinteger</c> (<c>src/parse.c:429</c>): <see cref="TryInteger"/>, but the first
+	/// character after the whitespace must be a digit or <c>+</c>. A negative value is refused under
+	/// TINY_MATH too, where PennMUSH would wrap it to a huge unsigned one.
+	/// </summary>
+	public static bool TryUnsignedInteger(IMUSHCodeParser parser, string? text, out int value)
+	{
+		var numbers = NumericEvaluation.For(parser);
+		if (!numbers.TinyMath && !StartsUnsigned(text))
+		{
+			value = 0;
+			return false;
+		}
+
+		return numbers.TryInt32(text, out value) && value >= 0;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>is_strict_integer</c> (<c>src/parse.c:556</c>): an integer whatever TINY_MATH and
+	/// NULL_EQ_ZERO say, so an empty argument is refused.
+	/// </summary>
+	public static bool TryStrictInteger(string? text, out int value)
+		=> NumericEvaluation.Strict.TryInt32(text, out value);
+
+	/// <inheritdoc cref="TryStrictInteger"/>
+	public static bool TryStrictInteger(string? text, out long value)
+		=> NumericEvaluation.Strict.TryInt64(text, out value);
+
+	/// <summary>PennMUSH's <c>is_strict_uinteger</c> (<c>src/parse.c:485</c>).</summary>
+	public static bool TryStrictUnsignedInteger(string? text, out int value)
+	{
+		if (!StartsUnsigned(text))
+		{
+			value = 0;
+			return false;
+		}
+
+		return NumericEvaluation.Strict.TryInt32(text, out value);
+	}
+
+	/// <summary><c>isdigit(*str) || *str == '+'</c> after the leading whitespace.</summary>
+	private static bool StartsUnsigned(string? text)
+		=> text.AsSpan().TrimStart(" \t\r\n\v\f") is [] or [('+' or (>= '0' and <= '9')), ..];
+
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
 		MString defaultValue)
 	{

@@ -56,7 +56,7 @@ public static class PortalControllers
 		IChannelMessageIdSource? ids = null) =>
 		new(
 			factory.Services.GetRequiredService<IMediator>(),
-			factory.Services.GetRequiredService<IPermissionService>(),
+			factory.Services.GetRequiredService<IChannelPermissionService>(),
 			factory.Services.GetRequiredService<INotifyService>(),
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
 			factory.Services.GetRequiredService<CommTextComposer>(),

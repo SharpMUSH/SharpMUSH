@@ -994,10 +994,12 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chownall #{owner.DbRef.Number}"));
 
 		// Read from the recorder, keyed on this test's own player: the session-shared substitute's
-		// call list is not this test's to rely on (#1251).
+		// call list is not this test's to rely on (#1251). do_chownall tells the executor alone,
+		// "Ownership changed for %d objects." (src/wiz.c:1002) — the player itself is not swept.
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(executor).Skip(before).Any(delivery =>
-			delivery.Message.StartsWith("Changed ownership of ", StringComparison.Ordinal)
-			&& delivery.Message.Contains($" from {owner.Name} to ", StringComparison.Ordinal))).IsTrue();
+			delivery.Message == "Ownership changed for 1 objects.")).IsTrue();
+		await Assert.That(WebAppFactoryArg.Notifications.For(owner.DbRef)
+			.Any(message => message.StartsWith("Ownership changed for ", StringComparison.Ordinal))).IsFalse();
 	}
 
 	[Test]

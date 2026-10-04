@@ -45,48 +45,48 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		return result;
 	}
 
+	/// <summary>Sends the changed values; the server answers with the configuration it now runs with.</summary>
 	/// <remarks>
 	/// Not on <see cref="ApiCall"/>, deliberately: a refused save answers
 	/// <c>{ "errors": { "&lt;path&gt;": "…", "_global": "…" } }</c>, and the editor places each message
-	/// next to its field. <see cref="ApiFailure.ServerSentence"/> keeps one sentence, so this hands the
-	/// page the body whole.
+	/// next to its field. <see cref="ApiFailure.ServerSentence"/> keeps one sentence, so a body of that
+	/// shape comes back as a <see cref="ConfigSaveRefusal"/>; any other failure is an
+	/// <see cref="ApiFailure"/> like every other call's.
 	/// </remarks>
-	public async Task<Result<ConfigurationResponse>> UpdateConfigAsync(
-		Dictionary<string, object?> changes)
+	public async Task<ConfigSaveResult> UpdateConfigAsync(Dictionary<string, object?> changes)
 	{
 		try
 		{
-			var client = httpClient.CreateClient("api");
-			var response = await client.PatchAsJsonAsync("/api/configuration", changes);
+			using var response = await Client.PatchAsJsonAsync("/api/configuration", changes);
 
 			if (!response.IsSuccessStatusCode)
 			{
-				var errorContent = await response.Content.ReadAsStringAsync();
-				logger.LogError("Config update failed: {StatusCode} {Error}", response.StatusCode, errorContent);
-				return new Error<string>(errorContent);
+				var body = await response.Content.ReadAsStringAsync();
+				logger.LogError("Config update failed: {StatusCode} {Error}", response.StatusCode, body);
+				return ConfigSaveRefusal.Parse(body) switch
+				{
+					ConfigSaveRefusal refusal => refusal,
+					NotFound => ApiFailure.FromStatus(response.StatusCode, body)
+				};
 			}
 
-			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
-			if (configResponse?.Configuration != null)
-			{
-				_currentOptions = configResponse.Configuration;
-			}
-			return configResponse!;
+			if (await response.Content.ReadFromJsonAsync<ConfigurationResponse>() is not { } saved)
+				return new ApiFailure(ApiFailureKind.Unexpected, "The server returned no configuration.", response.StatusCode);
+
+			if (saved.Configuration != null)
+				_currentOptions = saved.Configuration;
+
+			return saved;
 		}
-		catch (HttpRequestException ex)
+		catch (Exception ex) when (ex is System.Text.Json.JsonException or NotSupportedException)
 		{
 			logger.LogError(ex, "Error updating configuration");
-			return new Error<string>(ex.Message);
+			return ApiFailure.Malformed(ex);
 		}
-		catch (TaskCanceledException ex)
+		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error updating configuration");
-			return new Error<string>(ex.Message);
-		}
-		catch (System.Text.Json.JsonException ex)
-		{
-			logger.LogError(ex, "Error updating configuration");
-			return new Error<string>(ex.Message);
+			return ApiFailure.Transport(ex);
 		}
 	}
 

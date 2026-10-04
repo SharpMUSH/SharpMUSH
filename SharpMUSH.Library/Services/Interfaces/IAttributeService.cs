@@ -96,7 +96,7 @@ public interface IAttributeService
 	/// Mirrors PennMUSH's <c>do_parent</c> <c>MAX_PARENTS</c> guard (<c>src/set.c:1442-1446</c>): true
 	/// when <paramref name="prospectiveParent"/> already has at least <c>Limit.MaxParents</c> ancestors
 	/// above it, meaning attaching a child under it would grow the child's own chain past the cap.
-	/// This is independent of cycle detection (<see cref="HelperFunctions.SafeToAddParent"/>) - a
+	/// This is independent of cycle detection (<see cref="IRelationshipCycleChecker.SafeToAddParentAsync"/>) - a
 	/// caller wiring up <c>@parent</c> needs both checks.
 	/// </summary>
 	ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default);

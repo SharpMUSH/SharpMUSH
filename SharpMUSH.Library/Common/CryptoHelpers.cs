@@ -2,7 +2,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SharpMUSH.Implementation.Common;
+namespace SharpMUSH.Library.Common;
 
 public static class CryptoHelpers
 {

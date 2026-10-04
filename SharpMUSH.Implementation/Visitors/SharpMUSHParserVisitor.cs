@@ -76,7 +76,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		: this(logger, parser, Configuration,
 			new EvaluationServices(parser.ServiceProvider, Mediator, NotifyService, ConnectionService, LocateService,
 				CommandDiscoveryService, AttributeService, HookService, LockService,
-				locateOptional: parser is MUSHCodeParser),
+				locateOptional: parser.LocatesOptionalServices),
 			source)
 	{
 	}

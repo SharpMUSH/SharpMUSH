@@ -126,11 +126,7 @@ public partial class Functions
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => await JsonMapAsync(jsonStr, osep, userArgs, separatorResult.HadErrors,
-				callArgs => AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
-				{
-					Arguments = callArgs,
-					EnvironmentRegisters = callArgs
-				}), function)),
+				callArgs => CallAttributeWithArgumentsAsync(parser, function, callArgs)),
 			CallState refusal => refusal with { HadErrors = separatorResult.HadErrors },
 		};
 	}

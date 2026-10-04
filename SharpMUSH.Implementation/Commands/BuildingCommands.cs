@@ -43,7 +43,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
+		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
 			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
 			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
@@ -721,7 +721,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.DigAsync(parser, Mediator, Database, Configuration, NotifyService, EventService,
+		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
 			PermissionService, LockService, AttributeService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
@@ -800,7 +800,7 @@ public partial class Commands
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt,
 		List<DBRef> opened)
 	{
-		var result = await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+		var result = await BuildingHelpers.OpenExitAsync(Mediator, RelationshipCycles, Configuration, NotifyService,
 			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, forwardAt);
 		if (result is not DBRef forward)
 		{
@@ -836,7 +836,7 @@ public partial class Commands
 		}
 
 		if (BuildingHelpers.Argument(args, "2") is { } returnName
-				&& await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+				&& await BuildingHelpers.OpenExitAsync(Mediator, RelationshipCycles, Configuration, NotifyService,
 					PermissionService, LockService, executor, returnName, destination, backAt) is DBRef back)
 		{
 			opened.Add(back);
@@ -864,7 +864,7 @@ public partial class Commands
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService,
 				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
 				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,

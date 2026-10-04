@@ -29,40 +29,25 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 {
 	/// <summary>
 	/// Uploads an asset via multipart form data.
-	/// Returns the uploaded asset info or a string error message.
+	/// Returns the uploaded asset info, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<UploadedAssetInfo>> UploadAsync(
+	public async ValueTask<ApiResult<UploadedAssetInfo>> UploadAsync(
 		Stream content,
 		string fileName,
 		string contentType)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
+		using var form = new MultipartFormDataContent();
+		using var streamContent = new StreamContent(content);
+		streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+		form.Add(streamContent, "file", fileName);
 
-			using var form = new MultipartFormDataContent();
-			using var streamContent = new StreamContent(content);
-			streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-			form.Add(streamContent, "file", fileName);
+		var result = await httpClientFactory.CreateClient("api")
+			.PostContentApiAsync<UploadedAssetInfo>("api/wiki-assets", form, "Server returned an empty response.");
 
-			var response = await http.PostAsync("api/wiki-assets", form);
+		if (result is ApiFailure failure)
+			logger.LogError("UploadAsync failed for fileName={FileName}: {Reason}", fileName, failure.Message);
 
-			if (response.IsSuccessStatusCode)
-			{
-				var dto = await response.Content.ReadFromJsonAsync<UploadedAssetInfo>();
-				return dto is null
-					? "Server returned an empty response."
-					: dto;
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Upload failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "UploadAsync failed for fileName={FileName}", fileName);
-			return ex.Message;
-		}
+		return result;
 	}
 
 	/// <summary>
@@ -84,20 +69,16 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 	}
 
 	/// <summary>
-	/// Deletes an asset. Returns true when the server confirmed the deletion.
+	/// Deletes an asset: <see cref="Success"/> once the server confirmed it, or the
+	/// <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<bool> DeleteAsync(string id)
+	public async ValueTask<ApiResult<Success>> DeleteAsync(string id)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/wiki-assets/{Uri.EscapeDataString(id)}");
-			return response.IsSuccessStatusCode;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "DeleteAsync failed for id={Id}", id);
-			return false;
-		}
+		var result = await httpClientFactory.CreateClient("api").DeleteApiAsync($"api/wiki-assets/{Uri.EscapeDataString(id)}");
+
+		if (result is ApiFailure failure)
+			logger.LogError("DeleteAsync failed for id={Id}: {Reason}", id, failure.Message);
+
+		return result;
 	}
 }

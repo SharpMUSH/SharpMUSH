@@ -14,7 +14,7 @@ public class PermissionService(
 	IOptionsMonitor<SharpMUSHOptions> options,
 	IRealityPolicy reality,
 	IConnectionService connectionService,
-	Lazy<IAttributeService> attributeService) : IPermissionService
+	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService
 {
 	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
 	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options)

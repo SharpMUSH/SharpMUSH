@@ -75,6 +75,12 @@ public partial class TaskScheduler(
 		public PendingInputCommand? PendingInput { get; init; }
 
 		/// <summary>
+		/// The entry's enactor, who hears "CPU usage exceeded." when it runs out of time
+		/// (<c>src/parse.c:2083-2084</c>). Its executor when the work has no other enactor.
+		/// </summary>
+		public DBRef? Enactor { get; init; }
+
+		/// <summary>
 		/// Whether this entry is part of the queue quota. False for a typed line and
 		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
 		/// </summary>
@@ -284,7 +290,7 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
-	 bool chargesOwner = true)
+	 bool chargesOwner = true, DBRef? enactor = null)
 	{
 		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
@@ -359,6 +365,7 @@ public partial class TaskScheduler(
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
 					PendingInput = pendingInput,
+					Enactor = enactor ?? executor,
 					ChargesOwner = chargesOwner,
 					ChargedObject = chargedObject
 				};
@@ -786,6 +793,12 @@ public partial class TaskScheduler(
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested) { }
 	}
 
+	/// <summary>
+	/// PennMUSH's notice for a queue entry that ran out of <c>queue_entry_cpu_time</c>: once per entry,
+	/// <c>if (GoodObject(enactor) &amp;&amp; !Quiet(enactor)) notify(enactor, T("CPU usage exceeded."))</c>
+	/// (<c>src/parse.c:2077-2084</c>). The enactor hears it, not the owner, and only the enactor's own
+	/// QUIET flag silences it. A line typed before login has no enactor object; its connection hears it.
+	/// </summary>
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
 		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
@@ -795,10 +808,14 @@ public partial class TaskScheduler(
 		using var reportScope = reportBudget.Enter();
 		try
 		{
-			if (DBRef.TryParse(entry.Owner, out var owner))
-				await foreach (var connection in connectionService.Get(owner!.Value)) await notifyService.Notify(connection.Handle, ExecutionBudget.Error);
+			if (entry.Enactor is { } enactorRef)
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(enactorRef), ExecutionBudget.CurrentToken) is AnySharpObject enactor
+					&& !await enactor.HasFlag("QUIET", ExecutionBudget.CurrentToken))
+					await notifyService.NotifyLocalized(enactor, nameof(ErrorMessages.Notifications.CpuUsageExceeded));
+			}
 			else if (SchedulerKeys.TryHandleOwner(entry.Owner, out var handle))
-				await notifyService.Notify(handle, ExecutionBudget.Error);
+				await notifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.CpuUsageExceeded));
 		}
 		catch (Exception ex) { logger.LogWarning(ex, "Could not report execution limit for PID {Pid}", entry.Pid); }
 	}
@@ -951,13 +968,13 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		return await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state));
+		return await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 	}
 
 	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false);
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false, enactor: state.Enactor);
 		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
 		var pid = admission.Pid!.Value;
 		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
@@ -966,7 +983,7 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
 	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
-	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
 	{
 		if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
@@ -982,7 +999,7 @@ public partial class TaskScheduler(
 			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
 			if (attr is not SharpAttribute[] chain) return new CallState("#-1");
 			return await ExecuteList(chain.Last().Value, parserState);
-		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
+		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null, enactor: enactor);
 	}
 
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
@@ -1004,7 +1021,7 @@ public partial class TaskScheduler(
 		if (await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
 		var group = SchedulerKeys.Semaphore(dbRefAttribute);
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, semaphoreTarget: target.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, semaphoreTarget: target.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount, enactor: state.Enactor);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		lock (_admissionLock) _semaphorePublications.Add(pid);
@@ -1293,7 +1310,7 @@ public partial class TaskScheduler(
 		var group = SchedulerKeys.Delay(state.Executor);
 		delay = Nonnegative(delay);
 		var due = DateTimeOffset.UtcNow + delay;
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		QueueEntry entry;

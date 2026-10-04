@@ -1,6 +1,7 @@
 @page "/admin/wiki/assets"
 @attribute [Authorize(Policy = "media.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -114,8 +115,8 @@
                 case UploadedAssetInfo uploaded:
                     Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success);
                     break;
-                case string error:
-                    Snackbar.Add(error, Severity.Error);
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
                     break;
             }
         }
@@ -161,7 +162,7 @@
             return;
         }
 
-        if (await AssetService.DeleteAsync(asset.Id))
+        if (await AssetService.DeleteAsync(asset.Id) is Success)
         {
             Snackbar.Add(Loc["WkAssetDeleted", asset.FileName], Severity.Success);
             await RefreshAsync();

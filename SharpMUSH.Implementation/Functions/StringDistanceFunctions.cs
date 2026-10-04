@@ -24,9 +24,7 @@ public partial class Functions
 	public ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var val)
-			? val.Message!.ToPlainText().ToLowerInvariant()
-			: "soundex";
+		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg1 switch
 		{
@@ -42,9 +40,7 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val)
-			? val.Message!.ToPlainText().ToLowerInvariant()
-			: "soundex";
+		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg2 switch
 		{

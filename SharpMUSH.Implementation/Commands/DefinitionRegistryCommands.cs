@@ -1504,10 +1504,10 @@ public partial class Commands : ICommandRestrictionApplier
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags), ErrorMessages.Returns.NoFlagsSpecified) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags), executor);
-				return new CallState(ErrorMessages.Returns.NoFlagsSpecified);
+				return usage;
 			}
 
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
@@ -1583,10 +1583,10 @@ public partial class Commands : ICommandRestrictionApplier
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), ErrorMessages.Returns.NoNewNameSpecified) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
-				return new CallState(ErrorMessages.Returns.NoNewNameSpecified);
+				return usage;
 			}
 
 			var newName = args["1"].Message?.ToPlainText();

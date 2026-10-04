@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Tests.Shared;
 
@@ -240,7 +241,7 @@ public class LayoutServiceTests : TrackingTestContext
 		var svc = Build(handler);
 
 		var read = svc.GetLayoutAsync(LayoutScopes.Home);
-		await Assert.That(await svc.SaveLayoutAsync(LayoutScopes.Home, saved)).IsTrue();
+		(await svc.SaveLayoutAsync(LayoutScopes.Home, saved)).Expect<Success>();
 		handler.Release();
 
 		await Assert.That(ReferenceEquals(await read, saved)).IsTrue();
@@ -296,21 +297,19 @@ public class LayoutServiceTests : TrackingTestContext
 			Settings = new LayoutSettings(LeftSidebarEnabled: true, RightSidebarEnabled: true)
 		};
 
-		var ok = await svc.SaveLayoutAsync(LayoutScopes.Home, modified);
+		(await svc.SaveLayoutAsync(LayoutScopes.Home, modified)).Expect<Success>();
 
-		await Assert.That(ok).IsTrue();
 		await Assert.That(firedScope).IsEqualTo(LayoutScopes.Home);
 		var cached = await svc.GetLayoutAsync(LayoutScopes.Home);
 		await Assert.That(cached.Settings.LeftSidebarEnabled).IsTrue();
 	}
 
 	[Test]
-	public async Task SaveLayoutAsync_ServerRejects_ReturnsFalse()
+	public async Task SaveLayoutAsync_ServerRejects_ReturnsTheFailure()
 	{
 		var svc = Build(new ScriptedHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden)));
 
-		var ok = await svc.SaveLayoutAsync(LayoutScopes.Home, svc.GetDefaultLayout(LayoutScopes.Home));
-		await Assert.That(ok).IsFalse();
+		(await svc.SaveLayoutAsync(LayoutScopes.Home, svc.GetDefaultLayout(LayoutScopes.Home))).Expect<ApiFailure>();
 	}
 
 	[Test]
@@ -327,8 +326,7 @@ public class LayoutServiceTests : TrackingTestContext
 		var before = await svc.GetLayoutAsync(LayoutScopes.WikiIndex);
 		await Assert.That(before.Settings.LeftSidebarEnabled).IsTrue();
 
-		var ok = await svc.ResetLayoutAsync(LayoutScopes.WikiIndex);
-		await Assert.That(ok).IsTrue();
+		(await svc.ResetLayoutAsync(LayoutScopes.WikiIndex)).Expect<Success>();
 
 		var after = await svc.GetLayoutAsync(LayoutScopes.WikiIndex);
 		await Assert.That(after.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WikiIndex");

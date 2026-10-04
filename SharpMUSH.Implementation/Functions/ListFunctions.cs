@@ -112,14 +112,15 @@ public partial class Functions
 		var length = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MushText.One).ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
-		if (!int.TryParse(first, out var firstNumber))
+		// fun_extract checks both before splitting the list, with e_ints for either (src/funlist.c:1529-1538).
+		if (!ArgHelpers.TryInteger(parser, first, out var firstNumber))
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST (arg 2)"));
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
-		if (!int.TryParse(length, out var lengthNumber))
+		if (!ArgHelpers.TryInteger(parser, length, out var lengthNumber))
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
 		return new CallState(MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber));
@@ -332,22 +333,12 @@ public partial class Functions
 		var iteration = 0;
 		for (var i = startIndex; i < list.Length; i++)
 		{
-			var newParser = parser.Push(parser.CurrentState with
+			accumulator = errors.Record(await CallAttributeWithArgumentsAsync(parser, function, new Dictionary<string, CallState>
 			{
-				Arguments = new Dictionary<string, CallState>
-				{
-					{ "0", new CallState(accumulator) },
-					{ "1", new CallState(list[i]) },
-					{ "2", new CallState(iteration) }
-				},
-				EnvironmentRegisters = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(accumulator),
-					["1"] = new CallState(list[i]),
-					["2"] = new CallState(iteration)
-				}
-			});
-			accumulator = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function));
+				["0"] = new CallState(accumulator),
+				["1"] = new CallState(list[i]),
+				["2"] = new CallState(iteration)
+			}));
 			iteration++;
 		}
 
@@ -416,12 +407,12 @@ public partial class Functions
 		var firstArg = args["2"].Message!.ToPlainText();
 		var lengthArg = args["3"].Message!.ToPlainText();
 
-		if (!int.TryParse(firstArg, out var first))
+		if (!ArgHelpers.TryInteger(parser, firstArg, out var first))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		if (!int.TryParse(lengthArg, out var length))
+		if (!ArgHelpers.TryInteger(parser, lengthArg, out var length))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -670,21 +661,12 @@ public partial class Functions
 		for (var i = 0; i < length; i++)
 		{
 			var args = new Dictionary<string, CallState>();
-			var envRegs = new Dictionary<string, CallState>();
-
 			for (var j = 0; j < lists.Count; j++)
 			{
-				var value = i < lists[j].Length ? lists[j][i] : MarkupText.Empty;
-				args[j.ToString()] = new CallState(value);
-				envRegs[j.ToString()] = new CallState(value);
+				args[j.ToString()] = new CallState(i < lists[j].Length ? lists[j][i] : MarkupText.Empty);
 			}
 
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = args,
-				EnvironmentRegisters = envRegs
-			});
-			attrResult.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
+			attrResult.Add(errors.Record(await CallAttributeWithArgumentsAsync(parser, function, args)));
 		}
 
 		return attrResult;
@@ -731,12 +713,7 @@ public partial class Functions
 	private async ValueTask<MString> MungeTransformByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
 		Dictionary<string, CallState> mungeArgs, ListEvaluationErrors errors)
 	{
-		var newParser = parser.Push(parser.CurrentState with
-		{
-			Arguments = mungeArgs,
-			EnvironmentRegisters = new Dictionary<string, CallState>(mungeArgs)
-		});
-		return errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function));
+		return errors.Record(await CallAttributeWithArgumentsAsync(parser, function, mungeArgs));
 	}
 
 	/// <summary>
@@ -1032,20 +1009,11 @@ public partial class Functions
 	private async Task<int> CompareViaAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
 		MString a, MString b, ListEvaluationErrors errors)
 	{
-		var newParser = parser.Push(parser.CurrentState with
+		var result = errors.Record(await CallAttributeWithArgumentsAsync(parser, function, new Dictionary<string, CallState>
 		{
-			Arguments = new Dictionary<string, CallState>
-			{
-				{ "0", new CallState(a) },
-				{ "1", new CallState(b) }
-			},
-			EnvironmentRegisters = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(a),
-				["1"] = new CallState(b)
-			}
-		});
-		var result = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText();
+			["0"] = new CallState(a),
+			["1"] = new CallState(b)
+		})).ToPlainText();
 		return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
 	}
 
@@ -1173,7 +1141,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
+		if (!ArgHelpers.TryInteger(parser, stepArg, out var step) || step < 1 || step > 30)
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -1217,20 +1185,12 @@ public partial class Functions
 		for (var i = 0; i < list.Length; i += step)
 		{
 			var args = new Dictionary<string, CallState>();
-			var envRegs = new Dictionary<string, CallState>();
-
 			for (var j = 0; j < step && (i + j) < list.Length; j++)
 			{
 				args[j.ToString()] = new CallState(list[i + j]);
-				envRegs[j.ToString()] = new CallState(list[i + j]);
 			}
 
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = args,
-				EnvironmentRegisters = envRegs
-			});
-			attrResult.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
+			attrResult.Add(errors.Record(await CallAttributeWithArgumentsAsync(parser, function, args)));
 		}
 
 		return attrResult;
@@ -1316,12 +1276,12 @@ public partial class Functions
 			fieldWidthArg = fieldWidthArg[1..];
 		}
 
-		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
+		if (!ArgHelpers.TryInteger(parser, fieldWidthArg, out var fieldWidth))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidFieldWidth);
 		}
 
-		if (!int.TryParse(lineWidthArg, out var lineWidth))
+		if (!ArgHelpers.TryInteger(parser, lineWidthArg, out var lineWidth))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidLineWidth);
 		}
@@ -1416,7 +1376,7 @@ public partial class Functions
 		var numberArg = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
-		if (!int.TryParse(numberArg, out var number))
+		if (!ArgHelpers.TryInteger(parser, numberArg, out var number))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
@@ -1457,15 +1417,9 @@ public partial class Functions
 		return errors.Complete(new CallState(count.ToString()));
 	}
 
-	/// <summary>PennMUSH's <c>insert()</c>, an alias of <c>linsert()</c>.</summary>
-	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
-		ParameterNames = ["list", "position", "new-item", "delim"])]
-	public ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ListInsert(parser, _2);
-	}
-
+	/// <summary><c>linsert()</c>, and PennMUSH's <c>insert()</c>, an alias of it.</summary>
 	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
 	public async ValueTask<CallState> ListInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -1637,6 +1591,22 @@ public partial class Functions
 
 		return results;
 	}
+
+	/// <summary>
+	/// One call of a fetched attribute with <paramref name="arguments"/> as both its arguments and its
+	/// %0-%9: the push every attribute-driven function in the list family makes for each call.
+	/// </summary>
+	private ValueTask<CallState> CallAttributeWithArgumentsAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Dictionary<string, CallState> arguments)
+		=> AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
+		{
+			Arguments = arguments,
+			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
+		}), function);
+
+	/// <summary>A list with nothing in it: no items, or the one empty item splitting an empty string gives.</summary>
+	private static bool IsBlankList(MString[] list)
+		=> list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText()));
 
 	/// <summary>
 	/// Runs a fetched attribute for each item in a list, the item as %0 and

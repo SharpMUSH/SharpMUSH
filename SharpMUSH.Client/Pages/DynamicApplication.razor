@@ -156,10 +156,10 @@
             return;
         }
 
-        _schema = await Schema.GetSchemaAsync(schemaUrl);
+        _schema = await Schema.GetSchemaAsync(schemaUrl) is PortalSchemaDocument schema ? schema : null;
         if (dataUrl is not null)
         {
-            _data = await Schema.GetDataAsync(dataUrl);
+            _data = await Schema.GetDataAsync(dataUrl) is SchemaData data ? data : null;
         }
     }
 

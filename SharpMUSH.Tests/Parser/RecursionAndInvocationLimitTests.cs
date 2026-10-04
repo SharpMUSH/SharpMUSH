@@ -422,7 +422,7 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "NestedRec");
 		// Unbounded self-recursion: u() re-invokes the same attribute, tripping the per-attribute
-		// FunctionRecursionLimit (100) well before the invocation limit (100000).
+		// FunctionRecursionLimit (50) well before the invocation limit (25000).
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&NESTED_REC_UNIQUE {objDbRef}=[u({objDbRef}/NESTED_REC_UNIQUE)]"));
 

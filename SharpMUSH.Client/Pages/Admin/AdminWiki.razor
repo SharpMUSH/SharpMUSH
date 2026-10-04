@@ -436,7 +436,7 @@
         finally { _busy = false; }
     }
 
-    private void ReportBatchResult(MessageResult<WikiBatchResult> result)
+    private void ReportBatchResult(ApiResult<WikiBatchResult> result)
     {
         switch (result)
         {
@@ -446,8 +446,8 @@
                 if (ok.Failed.Count > 0)
                     Snackbar.Add(Loc.Plural("WikiBatchFailed", "count", ok.Failed.Count), Severity.Error);
                 break;
-            case string err:
-                Snackbar.Add(err, Severity.Error);
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
                 break;
         }
     }
@@ -489,8 +489,8 @@
                 case WikiArticle:
                     Snackbar.Add(string.Format(Loc["WikiMetadataSaved"], _metadataTarget.Title), Severity.Success);
                     break;
-                case string err:
-                    Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], err), Severity.Error);
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], failure.Message), Severity.Error);
                     break;
             }
             _showMetadataDialog = false;

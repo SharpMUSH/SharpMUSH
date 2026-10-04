@@ -771,6 +771,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
+	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public async ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var result = await ListSearch(parser, _2);
@@ -786,12 +787,6 @@ public partial class Functions
 			: resultStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
 		return new CallState(count);
-	}
-
-	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
-	public ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return NumberOfListSearch(parser, _2);
 	}
 
 	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1037,7 +1032,7 @@ public partial class Functions
 						return ErrorMessages.Returns.PermissionDenied;
 					}
 
-					if (!await HelperFunctions.SafeToAddZone(Mediator, Database, target, zone))
+					if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
 					{
 						return ErrorMessages.Returns.ZoneLoop;
 					}
