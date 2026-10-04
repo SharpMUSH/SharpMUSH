@@ -89,14 +89,7 @@ public partial class Functions
 		wrappedIteration.Iteration++;
 
 		// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
-		var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
-
-		var stepParser = parser.Push(parser.CurrentState with
-		{
-			Arguments = new Dictionary<string, CallState>(env),
-			EnvironmentRegisters = env
-		});
-
-		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
+		return errors.Record(await CallAttributeWithArgumentsAsync(parser, function,
+			new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) }));
 	}
 }

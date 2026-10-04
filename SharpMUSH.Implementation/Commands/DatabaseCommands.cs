@@ -239,7 +239,7 @@ public partial class Commands
 						{
 							var headerState = CallbackState(SqlRowArguments.ForHeader(row.Keys));
 							var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
-								() => ValueTask.FromResult(headerState), callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
+								() => ValueTask.FromResult(headerState), callbackAttribute, targetRef, headerState.Enactor), ExecutionBudget.CurrentToken);
 
 							if (!headerAdmission.Accepted)
 							{
@@ -254,7 +254,7 @@ public partial class Commands
 						// back for every row, and a callback that read it when it ran would see the last.
 						var rowState = CallbackState(SqlRowArguments.ForRow(row, rowNumber));
 						var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
-							() => ValueTask.FromResult(rowState), callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
+							() => ValueTask.FromResult(rowState), callbackAttribute, targetRef, rowState.Enactor), ExecutionBudget.CurrentToken);
 
 						if (!rowAdmission.Accepted)
 						{

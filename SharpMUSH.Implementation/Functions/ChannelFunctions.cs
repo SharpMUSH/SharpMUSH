@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using SharpMUSH.Implementation.Common;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -38,7 +39,7 @@ public partial class Functions
 
 		// extchat.c:2434 (fun_ctitle) / :2491 (fun_cstatus) — "You must pass the channel's see-lock".
 		async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)> WithChannel(AnySharpObject player)
-			=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 					NotifyService, executor, MarkupText.Plain(channelName), false) switch
 			{
 				Error<CallState> error => (player, null, error.Value),
@@ -52,7 +53,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
 		Func<SharpChannel, ValueTask<CallState>> channelFunc)
-		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+		=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator, NotifyService, executor,
 				channelName, false) switch
 		{
 			Error<CallState> error => error.Value,
@@ -62,7 +63,7 @@ public partial class Functions
 	/// <inheritdoc cref="WithVisibleChannel(AnySharpObject, MString, Func{SharpChannel, ValueTask{CallState}})"/>
 	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
 		Func<SharpChannel, CallState> channelFunc)
-		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+		=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator, NotifyService, executor,
 				channelName, false) switch
 		{
 			Error<CallState> error => error.Value,
@@ -136,7 +137,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await ChannelEmit.Handle(PermissionService, Mediator, NotifyService, executor,
+		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message!,
 			parser.CurrentState.Arguments["1"].Message!,
 			spoof);
@@ -254,12 +255,12 @@ public partial class Functions
 				var status = await ChannelHelper.ChannelMemberStatus(player, channel);
 				if (status is null
 						|| (!privWho && (status.Status.Hide ?? false))
-						|| !await ChannelHelper.CanSeeChannel(PermissionService, executor, channel))
+						|| !await ChannelHelper.CanSeeChannel(ChannelPermissions, executor, channel))
 				{
 					continue;
 				}
 			}
-			else if (!await ChannelHelper.CanSeeChannel(PermissionService, executor, channel))
+			else if (!await ChannelHelper.CanSeeChannel(ChannelPermissions, executor, channel))
 			{
 				continue;
 			}
@@ -359,7 +360,7 @@ public partial class Functions
 		MString Argument(string key)
 			=> arguments.TryGetValue(key, out var value) ? value.Message! : MarkupText.Empty;
 
-		return await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
+		return await ChannelRecall.SelectAsync(ChannelPermissions, Mediator, NotifyService, executor,
 			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false) switch
 		{
 			ChannelRecall.RecallWindow window => RecalledLines(window, arguments),
@@ -531,9 +532,7 @@ public partial class Functions
 	public async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var infoType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
-			? typeArg.Message!.ToPlainText().ToLowerInvariant()
-			: "name";
+		var infoType = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "name").ToPlainText().ToLowerInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await WithVisibleChannel(executor, channelName, async channel =>

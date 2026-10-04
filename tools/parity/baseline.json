@@ -229,6 +229,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "37-integer-arguments/int.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "40-compat-choices/choice.dropto#0",
    "command": "Wiz wizpass"
   },
@@ -287,6 +291,14 @@
   {
    "key": "65-halt-chown/hc.chown#3",
    "command": "Wiz wizpass"
+  },
+  {
+   "key": "66-quiet-chownall/quiet.loud#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "66-quiet-chownall/quiet.loud#2",
+   "command": "Quinn quinnpass"
   },
   {
    "key": "70-edit/edit.set#0",

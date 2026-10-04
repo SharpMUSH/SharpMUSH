@@ -38,10 +38,10 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.QuotaSetUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSetUsage), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
+				return usage;
 			}
 
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -207,10 +207,10 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var isQuiet = switches.Contains("QUIET");
 
-		if (parser.CurrentState.Arguments.Count < 1)
+		if (await RejectIfTooFewArguments(parser, 1, executor,
+				nameof(ErrorMessages.Notifications.AllQuotaUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllQuotaUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return usage;
 		}
 
 		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -259,10 +259,10 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		if (parser.CurrentState.Arguments.Count < 1)
+		if (await RejectIfTooFewArguments(parser, 1, executor,
+				nameof(ErrorMessages.Notifications.PoorUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PoorUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return usage;
 		}
 
 		if (!Configuration.CurrentValue.Limit.UseQuota)

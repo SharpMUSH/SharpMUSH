@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Commands.WikiCommand;
 using SharpMUSH.Library.Attributes;
@@ -25,9 +26,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
-		var field = args.TryGetValue("1", out var fieldArg)
-			? fieldArg.Message!.ToPlainText().Trim().ToLowerInvariant()
-			: "text";
+		var field = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "text").ToPlainText().Trim().ToLowerInvariant();
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target);

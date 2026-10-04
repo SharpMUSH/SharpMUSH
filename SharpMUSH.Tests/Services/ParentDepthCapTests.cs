@@ -55,7 +55,7 @@ public class ParentDepthCapTests
 	/// <summary>
 	/// Builds a chain of <paramref name="ancestorCount"/> objects above a fresh head object -
 	/// head's parent is Anc0, Anc0's parent is Anc1, ..., and the topmost ancestor has no parent -
-	/// by sending <see cref="SetObjectParentCommand"/> directly, bypassing <c>SafeToAddParent</c>
+	/// by sending <see cref="SetObjectParentCommand"/> directly, bypassing <c>SafeToAddParentAsync</c>
 	/// exactly as <see cref="ZoneParentCycleTests"/> does. The point here is to construct a
 	/// pre-existing chain, not to exercise the guard under test.
 	/// </summary>

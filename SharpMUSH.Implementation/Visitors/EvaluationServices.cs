@@ -31,7 +31,7 @@ internal sealed class EvaluationServices
 	/// <param name="provider">Where the optional services are located.</param>
 	/// <param name="locateOptional">
 	/// Whether the optional services are located at all. A visitor constructed directly over a parser
-	/// that is not a <see cref="MUSHCodeParser"/> never had them.
+	/// whose <see cref="IMUSHCodeParser.LocatesOptionalServices"/> is false never had them.
 	/// </param>
 	public EvaluationServices(
 		IServiceProvider provider,

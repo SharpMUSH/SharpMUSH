@@ -481,7 +481,12 @@ public static class LinkHelpers
 		}
 
 		await mediator.Send(new SetObjectHomeCommand(target.AsContent, destination.AsContainer));
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
+		// create.c:419: `if (!Quiet(player) && !(Quiet(thing) && (Owner(thing) == player)))`, which is
+		// AreQuiet(player, thing). "Dropto set." below has no such test (create.c:439).
+		if (!await target.Object().AreQuietAsync(executor))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
+		}
 		return new Success();
 	}
 

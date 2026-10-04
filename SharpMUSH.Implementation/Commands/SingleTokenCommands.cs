@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Attributes;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -101,8 +102,11 @@ public partial class Commands
 							$"{realLocated.Object().Name}/{attrNameParsed}"),
 						Error<string> failure => (failure.Value, string.Empty)
 					};
-					// A player's alias list was reported by the write itself (PlayerAliases).
-					if (!PlayerAliases.Applies(realLocated, attrName))
+					// A player's alias list was reported by the write itself (PlayerAliases). A refusal is
+					// always told; the confirmation passes do_set_atr's QUIET gate (src/attrib.c:2446).
+					if (!PlayerAliases.Applies(realLocated, attrName)
+						&& (clearResult is Error<string>
+							|| !await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, realLocated, attrName)))
 					{
 						await NotifyService.Notify(executor, clearMessage, executor);
 					}
@@ -133,7 +137,9 @@ public partial class Commands
 						$"{realLocated.Object().Name}/{attrNameParsed}"),
 					Error<string> failure => (failure.Value, string.Empty)
 				};
-				if (!PlayerAliases.Applies(realLocated, attrName))
+				if (!PlayerAliases.Applies(realLocated, attrName)
+					&& (setResult is Error<string>
+						|| !await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, realLocated, attrName)))
 				{
 					await NotifyService.Notify(executor, setMessage, executor);
 				}

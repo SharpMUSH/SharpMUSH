@@ -7,6 +7,7 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Hubs;
 using System.Diagnostics.CodeAnalysis;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Server.Services;
 

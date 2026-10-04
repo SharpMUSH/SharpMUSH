@@ -86,12 +86,9 @@ public partial class Functions
 	// PennMUSH registers no CNAND; SharpMUSH offers it as a second spelling of NCAND
 	// ({"NCAND", fun_cand, 1, INT_MAX, …}, function.c:385) and so declares NCAND's arity.
 	[SharpFunction(Name = "cnand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "ncand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: false, truthy: false);
-
-	[SharpFunction(Name = "ncand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
-	public ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> CancellingNegativeAnd(parser, _2);
 
 	[SharpFunction(Name = "neq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value..."])]
 	public ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)

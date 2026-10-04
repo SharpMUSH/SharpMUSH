@@ -188,7 +188,7 @@ else
             return;
         }
 
-        MessageResult<WikiArticle> result;
+        ApiResult<WikiArticle> result;
 
         if (string.IsNullOrEmpty(draft.Slug))
         {
@@ -218,8 +218,8 @@ else
                 _editDraft = null;
                 Mode = WikiMode.View;
                 break;
-            case string err:
-                _saveError = err;
+            case ApiFailure failure:
+                _saveError = failure.Message;
                 break;
         }
     }

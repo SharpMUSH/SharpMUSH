@@ -100,7 +100,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
+		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
 			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
 			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
@@ -122,7 +122,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await BuildingHelpers.DigAsync(parser, Mediator, Database, Configuration, NotifyService, EventService,
+		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
 			PermissionService, LockService, AttributeService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
@@ -178,7 +178,7 @@ public partial class Functions
 	/// <summary>The exit itself, and on success the link <c>fun_open</c>'s second argument asks for.</summary>
 	private async ValueTask<Result<DBRef>> OpenedExitAsync(AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? requestedDbref)
-		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+		=> await BuildingHelpers.OpenExitAsync(Mediator, RelationshipCycles, Configuration, NotifyService,
 			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, requestedDbref) switch
 		{
 			DBRef exitDbRef => await LinkOpenedExitAsync(executor, args, exitDbRef),
@@ -241,7 +241,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService,
 				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
 				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,

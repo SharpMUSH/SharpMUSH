@@ -241,7 +241,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		if (await BooleanExpressionParser.BindAsync(args["0"].Message!.ToPlainText(), executor) is not string expression)
 			return new CallState(ErrorMessages.Returns.InvalidBoolexp);
-		var delimiter = args.TryGetValue("2", out var separator) ? separator.Message!.ToPlainText() : " ";
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		if (delimiter.Length != 1) return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		var results = new List<string>();
 		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))

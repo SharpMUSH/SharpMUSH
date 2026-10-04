@@ -235,8 +235,8 @@
                 Snackbar.Add(Loc["WkRestoredToRevision", rev.RevisionNumber], Severity.Success);
                 Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug));
                 break;
-            case string err:
-                Snackbar.Add(Loc["WkRestoreFailed", err], Severity.Error);
+            case ApiFailure failure:
+                Snackbar.Add(Loc["WkRestoreFailed", failure.Message], Severity.Error);
                 break;
         }
     }

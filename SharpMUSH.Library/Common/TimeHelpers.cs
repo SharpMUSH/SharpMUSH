@@ -1,4 +1,4 @@
-namespace SharpMUSH.Implementation.Common;
+namespace SharpMUSH.Library.Common;
 
 public static class TimeHelpers
 {

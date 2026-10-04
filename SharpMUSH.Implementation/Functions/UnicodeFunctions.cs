@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using MarkupString;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -19,8 +20,7 @@ public partial class Functions
 	public ValueTask<CallState> Graphemes(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
 		var text = parser.CurrentState.Arguments["0"].Message!;
-		var separator = parser.CurrentState.Arguments.TryGetValue("1", out var argument)
-			? argument.Message! : MarkupText.Space;
+		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space);
 		var outputLength = text.Length + (long)Math.Max(0, text.GraphemeCount - 1) * separator.Length;
 		if (FunctionLimits.ExceedsOutput(parser.CurrentState, outputLength))
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));

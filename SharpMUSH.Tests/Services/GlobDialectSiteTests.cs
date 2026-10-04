@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Tests.Services;
 

@@ -54,14 +54,7 @@ public partial class Functions
 	private async ValueTask<MString> JiterStepAsync(IMUSHCodeParser parser, AttributeFunction function,
 		MString input, ListEvaluationErrors errors)
 	{
-		var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
-
-		var stepParser = parser.Push(parser.CurrentState with
-		{
-			Arguments = new Dictionary<string, CallState>(env),
-			EnvironmentRegisters = env
-		});
-
-		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
+		return errors.Record(await CallAttributeWithArgumentsAsync(parser, function,
+			new Dictionary<string, CallState> { ["0"] = new CallState(input) }));
 	}
 }

@@ -981,6 +981,8 @@ public static partial class ErrorMessages
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";
 		public const string Notified = "Notified.";
+		/// <summary>PennMUSH <c>cmd_notify_drain</c> (<c>src/cque.c:1539</c>), unless the executor or its owner is QUIET.</summary>
+		public const string Drained = "Drained.";
 		public const string YouDoNotHavePermissionToSpoofEmits = "You do not have permission to spoof emits.";
 		public const string NoSuchCommandAtLogin = "No such command available at login.";
 		public const string InvalidRoomSpecified = "Invalid room specified.";
@@ -1383,8 +1385,9 @@ public static partial class ErrorMessages
 		public const string PurgeComplete = "Purge complete.";
 
 		public const string ChownAllUsage = "Usage: @chownall <player>[=<new owner>]";
+		/// <summary>PennMUSH <c>do_chownall</c> (<c>src/wiz.c:1002</c>), to the executor: <c>{0}</c> objects chowned.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
+		public const string ChownAllCompleteFormat = "Ownership changed for {0} objects.";
 
 		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";

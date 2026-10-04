@@ -77,7 +77,7 @@ else
             var resolvedSchema = Substitute(schemaUrl!, objid);
             if (resolvedSchema is not null)
             {
-                _schema = await Schema.GetSchemaAsync(resolvedSchema);
+                _schema = await Schema.GetSchemaAsync(resolvedSchema) is PortalSchemaDocument schema ? schema : null;
             }
 
             if (_schema is not null && _oobPackage is not null)
@@ -90,7 +90,7 @@ else
                 // A data route needing {objid} we couldn't resolve → skip data (schema still renders).
                 if (resolvedData is not null)
                 {
-                    _data = await Schema.GetDataAsync(resolvedData);
+                    _data = await Schema.GetDataAsync(resolvedData) is SchemaData data ? data : null;
                 }
             }
         }

@@ -2,10 +2,9 @@ using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Softcode;
 using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// Composes the softcode layout engine (<see cref="SoftcodeLayout"/>) and the shared semantic-token

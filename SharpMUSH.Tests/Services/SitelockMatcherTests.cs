@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Tests.Services;
 

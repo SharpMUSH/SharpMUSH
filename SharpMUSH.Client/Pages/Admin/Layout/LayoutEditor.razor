@@ -1,5 +1,6 @@
 @page "/admin/layout/{Scope}"
 @using System.Text.Json
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "layout.admin")]
 @inject IStringLocalizer<SharedResource> Loc
@@ -480,10 +481,10 @@
         }
 
         _saving = true;
-        var ok = await LayoutService.SaveLayoutAsync(Scope, BuildPreviewLayout());
+        var saved = await LayoutService.SaveLayoutAsync(Scope, BuildPreviewLayout());
         _saving = false;
 
-        if (ok)
+        if (saved is Success)
         {
             _dirty = false;
             Snackbar.Add(Loc["LayPublished", ScopeLabel], Severity.Success);
@@ -512,10 +513,10 @@
         }
 
         _saving = true;
-        var ok = await LayoutService.ResetLayoutAsync(Scope);
+        var reset = await LayoutService.ResetLayoutAsync(Scope);
         _saving = false;
 
-        if (ok)
+        if (reset is Success)
         {
             await LoadAsync();
             Snackbar.Add(Loc["LayResetDone", ScopeLabel], Severity.Success);

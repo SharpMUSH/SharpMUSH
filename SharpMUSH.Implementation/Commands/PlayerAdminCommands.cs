@@ -17,6 +17,7 @@ using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
 using System.Buffers;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -525,10 +526,10 @@ public partial class Commands
 
 		if (switches.Contains("ADD"))
 		{
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.SuggestAddUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddUsage), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
+				return usage;
 			}
 
 			var category = args["0"].Message!.ToPlainText().ToLower();
@@ -560,10 +561,10 @@ public partial class Commands
 
 		if (switches.Contains("DELETE"))
 		{
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.SuggestDeleteUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestDeleteUsage), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
+				return usage;
 			}
 
 			var category = args["0"].Message!.ToPlainText().ToLower();

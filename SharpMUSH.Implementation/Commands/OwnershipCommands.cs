@@ -120,7 +120,7 @@ public partial class Commands
 	/// <summary>Binds this command instance's services to <see cref="ZoneHelpers.ChangeZoneAsync"/>.</summary>
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
-		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
+		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
 			DidItService, ManipulateSharpObjectService, Configuration, ConnectionService, executor, target, zone, preserve,
 			noisy);
 
@@ -144,10 +144,10 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var preserve = switches.Contains("PRESERVE");
 
-		if (args.Count < 1)
+		if (await RejectIfTooFewArguments(parser, 1, executor,
+				nameof(ErrorMessages.Notifications.ChownAllUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return usage;
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
@@ -218,7 +218,9 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
+		// do_chownall: `notify_format(player, T("Ownership changed for %d objects."), count)` (src/wiz.c:1002),
+		// to the executor alone, whatever the count.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count);
 
 		return CallState.Empty;
 	}

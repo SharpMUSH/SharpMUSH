@@ -18,9 +18,10 @@ public interface IRelationshipCycleChecker
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Whether <paramref name="newZone"/> may become <paramref name="start"/>'s zone. Collapsed to a bool;
-	/// see <see cref="HelperFunctions.SafeToAddZone"/> for why.
+	/// Whether <paramref name="newZone"/> may become <paramref name="start"/>'s zone. The rule is the
+	/// parent rule; it keeps self-reference and a cycle apart because PennMUSH's <c>do_chzone</c> words
+	/// them differently too (<c>src/set.c:421-444</c>).
 	/// </summary>
-	ValueTask<bool> SafeToAddZoneAsync(AnySharpObject start, AnySharpObject newZone,
+	ValueTask<RelationshipSafety> SafeToAddZoneAsync(AnySharpObject start, AnySharpObject newZone,
 		CancellationToken cancellationToken = default);
 }

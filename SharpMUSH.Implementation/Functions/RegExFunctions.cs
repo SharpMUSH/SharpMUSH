@@ -457,9 +457,7 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var pattern = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var replacement = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		var flags = parser.CurrentState.Arguments.TryGetValue("3", out var flagsArg)
-			? flagsArg.Message!.ToPlainText().ToLowerInvariant()
-			: "";
+		var flags = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, "").ToPlainText().ToLowerInvariant();
 
 		try
 		{

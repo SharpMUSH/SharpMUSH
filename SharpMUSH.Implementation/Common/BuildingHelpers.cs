@@ -32,7 +32,7 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> CreateThingAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IValidateService validateService,
 		INotifyService notifyService,
@@ -71,7 +71,7 @@ public static class BuildingHelpers
 				into, owner, home, at[0])) switch
 		{
 			// Outside the gate: CreatedAsync fires OBJECT`CREATE, which runs its handler inline.
-			DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
+			DBRef thing => await CreatedAsync(parser, mediator, cycleChecker, notifyService, eventService, executor,
 				thing),
 			Error<string> refused => refused
 		};
@@ -84,7 +84,7 @@ public static class BuildingHelpers
 	private static async ValueTask<Result<DBRef>> CreatedAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		IEventService eventService,
 		AnySharpObject executor,
@@ -93,7 +93,7 @@ public static class BuildingHelpers
 		// A new object inherits its creator's zone, once the cycle guard allows it.
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
 			await mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject created &&
-			await HelperFunctions.SafeToAddZone(mediator, database, created, zone))
+			await cycleChecker.SafeToAddZoneAsync(created, zone) is RelationshipSafety.Safe)
 		{
 			await mediator.Send(new SetObjectZoneCommand(created, zone));
 		}
@@ -178,7 +178,7 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> DigAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IEventService eventService,
@@ -206,7 +206,7 @@ public static class BuildingHelpers
 		var openedExits = new List<DBRef>();
 		var dug = await WithRequestedDbrefsAsync(mediator, notifyService, executor,
 			[roomDbref, toDbref, fromDbref],
-			async at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
+			async at => await DugAsync(mediator, cycleChecker, configuration, notifyService, permissionService,
 				lockService, attributeService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2], openedExits));
 
 		// Outside the gate. Each exit's do_real_open queues its own event (create.c:181) before do_dig
@@ -233,7 +233,7 @@ public static class BuildingHelpers
 	/// <summary>The digging itself, once every requested dbref has passed its gate.</summary>
 	private static async ValueTask<Result<DBRef>> DugAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -256,7 +256,7 @@ public static class BuildingHelpers
 		return await RoomChargedAsync(mediator, configuration, notifyService, executor, roomName.ToPlainText(),
 			owner, roomAt) switch
 		{
-			DBRef dug => await RoomDugAsync(mediator, database, configuration, notifyService, permissionService,
+			DBRef dug => await RoomDugAsync(mediator, cycleChecker, configuration, notifyService, permissionService,
 				lockService, attributeService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt, openedExits),
 			Error<string> refused => refused
 		};
@@ -269,7 +269,7 @@ public static class BuildingHelpers
 	/// </summary>
 	private static async ValueTask<Result<DBRef>> RoomDugAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -294,7 +294,7 @@ public static class BuildingHelpers
 
 		// Zone(room) = Zone(player) (create.c:494), once the cycle guard allows it.
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
-			&& await HelperFunctions.SafeToAddZone(mediator, database, room, zone))
+			&& await cycleChecker.SafeToAddZoneAsync(room, zone) is RelationshipSafety.Safe)
 		{
 			await mediator.Send(new SetObjectZoneCommand(room, zone));
 		}
@@ -310,13 +310,13 @@ public static class BuildingHelpers
 		// not.
 		if (Given(exitTo) is not null)
 		{
-			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+			await DugExitAsync(mediator, cycleChecker, configuration, notifyService, permissionService, lockService,
 				attributeService, executor, exitTo!, where, $"#{dug.Number}", toAt, openedExits);
 		}
 
 		if (Given(exitFrom) is not null)
 		{
-			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+			await DugExitAsync(mediator, cycleChecker, configuration, notifyService, permissionService, lockService,
 				attributeService, executor, exitFrom!, room, "here", fromAt, openedExits);
 		}
 
@@ -332,7 +332,7 @@ public static class BuildingHelpers
 	/// </summary>
 	private static async ValueTask DugExitAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -345,7 +345,7 @@ public static class BuildingHelpers
 		DBRef? requestedDbref,
 		List<DBRef> openedExits)
 	{
-		if (await OpenExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+		if (await OpenExitAsync(mediator, cycleChecker, configuration, notifyService, permissionService, lockService,
 				executor, exitName, from, requestedDbref) is not DBRef opened)
 		{
 			return;
@@ -541,7 +541,7 @@ public static class BuildingHelpers
 	/// </remarks>
 	public static async ValueTask<Result<DBRef>> OpenExitAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -571,7 +571,7 @@ public static class BuildingHelpers
 		return await ExitChargedAsync(mediator, configuration, notifyService, executor, parts[0], parts[1..],
 			sourceRoom, owner, requestedDbref, modified) switch
 		{
-			DBRef opened => await OpenedAsync(mediator, database, notifyService, executor, opened),
+			DBRef opened => await OpenedAsync(mediator, cycleChecker, notifyService, executor, opened),
 			Error<string> refused => refused
 		};
 	}
@@ -655,14 +655,14 @@ public static class BuildingHelpers
 	/// <summary>The bookkeeping every freshly opened exit gets: the opener's zone, and the report.</summary>
 	private static async ValueTask<Result<DBRef>> OpenedAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		DBRef exit)
 	{
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
 			await mediator.Send(new GetObjectNodeQuery(exit)) is AnySharpObject opened &&
-			await HelperFunctions.SafeToAddZone(mediator, database, opened, zone))
+			await cycleChecker.SafeToAddZoneAsync(opened, zone) is RelationshipSafety.Safe)
 		{
 			await mediator.Send(new SetObjectZoneCommand(opened, zone));
 		}
@@ -793,7 +793,7 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> CloneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -856,7 +856,7 @@ public static class BuildingHelpers
 		// (fundb.c:2192-2212); both reach make_first_free_wrapper — power, syntax and availability —
 		// before do_clone builds anything, and hold the slot for as long as the build takes.
 		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
-			async at => await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService,
+			async at => await CreateCloneAsync(mediator, cycleChecker, configuration, notifyService, permissionService,
 				lockService, executor, target, name, into, owner, modified, at[0])) switch
 		{
 			// Outside the gate: ClonedAsync fires OBJECT`CREATE and the plugin hook, and queues ACLONE.
@@ -966,7 +966,7 @@ public static class BuildingHelpers
 	/// </summary>
 	private static async ValueTask<Result<DBRef>> CreateCloneAsync(
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -994,7 +994,7 @@ public static class BuildingHelpers
 				// is: the source must be a room (:108-110), can_open_from must admit the cloner (:127),
 				// and only then is a slot charged (:130). Charging the clone directly skipped the first
 				// two, so a mortal could clone an exit into a room they may not open in.
-				return await OpenExitAsync(mediator, database, configuration, notifyService, permissionService,
+				return await OpenExitAsync(mediator, cycleChecker, configuration, notifyService, permissionService,
 					lockService, executor, MarkupText.Plain(name), into, requestedDbref, modified) switch
 				{
 					DBRef cloned => await ReopenedAsync(mediator, notifyService, permissionService, executor, exit,

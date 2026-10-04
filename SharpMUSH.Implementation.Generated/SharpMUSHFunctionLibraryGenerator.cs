@@ -16,12 +16,13 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 	{
 		var provider = context.SyntaxProvider.ForAttributeWithMetadataName(ATTRIBUTENAME,
 				static (node, _) => node is MethodDeclarationSyntax,
-				static (ctx, _) => (
-					Method: (MethodDeclarationSyntax)ctx.TargetNode,
-					Attribute: ctx.Attributes.First(a =>
-						a.AttributeClass?.ToDisplayString() == ATTRIBUTENAME
-					)
-				))
+				// A method may carry several [SharpFunction]s: each is one more name for the same
+				// implementation, and each becomes an entry of its own.
+				static (ctx, _) => ctx.Attributes
+					.Where(a => a.AttributeClass?.ToDisplayString() == ATTRIBUTENAME)
+					.Select(a => (Method: (MethodDeclarationSyntax)ctx.TargetNode, Attribute: a))
+					.ToImmutableArray())
+			.SelectMany(static (x, _) => x)
 			.Where(static x => x.Method is not null && x.Attribute is not null);
 
 		var compilation = context.CompilationProvider.Combine(provider.Collect());

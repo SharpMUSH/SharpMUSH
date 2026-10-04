@@ -53,31 +53,7 @@ public class UserDefinedFunctionTests
 			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			Services,
-			state: new ParserState(
-				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: executor,
-				Enactor: executor,
-				Caller: executor,
-				Handle: 1,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag())
-			{
-				MoveDepth = new InvocationCounter()
-			});
+			state: ParserState.RootFor(executor) with { Command = "think", Handle = 1 });
 
 		return (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 	}

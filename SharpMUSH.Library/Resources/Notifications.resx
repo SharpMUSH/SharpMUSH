@@ -939,6 +939,9 @@
   <data name="Notified" xml:space="preserve">
     <value>Notified.</value>
   </data>
+  <data name="Drained" xml:space="preserve">
+    <value>Drained.</value>
+  </data>
   <data name="YouDoNotHavePermissionToSpoofEmits" xml:space="preserve">
     <value>You do not have permission to spoof emits.</value>
   </data>
@@ -2494,7 +2497,7 @@
     <value>Usage: @chownall &lt;player&gt;[=&lt;new owner&gt;]</value>
   </data>
   <data name="ChownAllCompleteFormat" xml:space="preserve">
-    <value>Changed ownership of {0} object(s) from {1} to {2}.</value>
+    <value>Ownership changed for {0} objects.</value>
   </data>
 
   <data name="CommandUnknownSwitchFormat" xml:space="preserve">
@@ -2789,6 +2792,7 @@
     <value>Invalid descriptor.</value>
   </data>
   <data name="QueueRejected" xml:space="preserve"><value>Queue admission rejected: {0}.</value></data>
+  <data name="CpuUsageExceeded" xml:space="preserve"><value>CPU usage exceeded.</value></data>
   <data name="QueueUsage" xml:space="preserve"><value>Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.</value></data>
   <data name="QueueRejections" xml:space="preserve"><value>Queue rejections ({0}): {1}.</value></data>
   <data name="InputSessionCancelled" xml:space="preserve">
