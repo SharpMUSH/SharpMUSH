@@ -329,9 +329,9 @@ public class AccountAuthService(
 		// The claim itself succeeded whenever we get here. api/setup/complete normally mints a session
 		// exactly like account-login (auto-login as the new administrator) — but if post-claim
 		// enrichment failed server-side, it degrades to an empty token instead of a 500 so the claim
-		// isn't lost. Don't persist an empty/missing session: that would leave IsLoggedIn true with a
-		// token that can't authenticate anything.
-		if (string.IsNullOrEmpty(session.AccountSessionToken))
+		// isn't lost. Don't persist an empty/missing session, or one missing its name or roster: that
+		// would leave IsLoggedIn true with a session the tab cannot use.
+		if (!AccountApiClient.IsComplete(session))
 			return false;
 
 		// Same for a session this tab cannot store: the claim stands, only the automatic sign-in is lost.

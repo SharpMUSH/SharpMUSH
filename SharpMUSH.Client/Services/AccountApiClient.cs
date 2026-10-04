@@ -52,18 +52,37 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	private sealed record ChangeUsernameRequest(string NewUsername);
 
 	private const string NoSession = "The server answered without a session.";
+	private const string IncompleteSession = "The server's sign-in answer was missing its session, name or roster.";
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password) =>
-		Client.PostApiAsync<LoginRequest, LoginResponse>(
-			"api/auth/account-login", new LoginRequest(identifier, password), NoSession);
+	public async Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password) =>
+		Complete(await Client.PostApiAsync<LoginRequest, LoginResponse>(
+			"api/auth/account-login", new LoginRequest(identifier, password), NoSession));
 
-	public Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password) =>
-		Client.PostApiAsync<RegisterRequest, LoginResponse>(
+	public async Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password) =>
+		Complete(await Client.PostApiAsync<RegisterRequest, LoginResponse>(
 			"api/auth/account-register",
 			new RegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password),
-			NoSession);
+			NoSession));
+
+	/// <summary>
+	/// A sign-in answer the tab can adopt whole. JSON that parses but leaves out the token, the name or
+	/// the roster is refused here, before anything is persisted, so a caller never holds a half-adopted
+	/// session.
+	/// </summary>
+	private static ApiResult<LoginResponse> Complete(ApiResult<LoginResponse> result) => result switch
+	{
+		LoginResponse session when IsComplete(session) => session,
+		LoginResponse => new ApiFailure(ApiFailureKind.Unexpected, IncompleteSession),
+		ApiFailure failure => failure,
+	};
+
+	/// <summary>Whether <paramref name="session"/> carries everything a sign-in adopts.</summary>
+	public static bool IsComplete(LoginResponse session) =>
+		!string.IsNullOrEmpty(session.AccountSessionToken)
+		&& session.Username is not null
+		&& session.Characters is not null;
 
 	public Task<ApiResult<SetupStatusResponse>> SetupStatusAsync() =>
 		Client.GetApiAsync<SetupStatusResponse>("api/setup/status", "The server did not say whether setup is needed.");
