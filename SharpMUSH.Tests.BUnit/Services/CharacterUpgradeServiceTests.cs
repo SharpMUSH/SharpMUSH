@@ -75,8 +75,8 @@ public class CharacterUpgradeServiceTests : TrackingBunitContext, IAsyncDisposab
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
-		var (ok, err, _) = await auth.LoginAsync("wiz", "pw");
-		if (!ok) throw new InvalidOperationException($"login failed: {err}");
+		if (await auth.LoginAsync("wiz", "pw") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"login failed: {loginFailure.Message}");
 
 		var commandFirst = Substitute.For<ITerminalService>();
 		var commandSecond = Substitute.For<ITerminalService>();

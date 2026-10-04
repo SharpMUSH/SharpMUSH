@@ -185,7 +185,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 
 		var ott = await sut.SwitchCharacterAsync(new CharacterSummary(7, 1000L, "Wizard", ""));
 
-		await Assert.That(ott).IsNull();
+		ott.Expect<ApiFailure>();
 		await Assert.That(sut.ActiveCharacter).IsEqualTo(before);
 	}
 
@@ -208,9 +208,8 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 
 		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), []);
 
-		var (success, _, characters) = await sut.LoginAsync("headwiz", "password-one");
+		var characters = (await sut.LoginAsync("headwiz", "password-one")).Expect<IReadOnlyList<CharacterSummary>>();
 
-		await Assert.That(success).IsTrue();
 		await Assert.That(characters.Count).IsEqualTo(3);
 		await Assert.That(sut.ActiveCharacter).IsNotNull();
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(first.DbrefNumber);
@@ -306,10 +305,9 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		var sut = await MakeUnlinkableServiceAsync([a, b, c]);
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 
-		var (success, error) = await sut.UnlinkCharacterAsync(a.DbrefNumber);
+		var unlinked = (await sut.UnlinkCharacterAsync(a.DbrefNumber)).Expect<AccountAuthService.CharacterUnlinked>();
 
-		await Assert.That(success).IsTrue();
-		await Assert.That(error).IsNull();
+		await Assert.That(unlinked.Advisory).IsNull();
 		await Assert.That(sut.Characters.Select(x => x.DbrefNumber)).IsEquivalentTo([b.DbrefNumber, c.DbrefNumber]);
 		await Assert.That(sut.ActiveCharacter).IsNotNull();
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(b.DbrefNumber);
@@ -330,10 +328,9 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 		await Assert.That(sut.IsLoggedIn).IsTrue();
 
-		var (success, error) = await sut.UnlinkCharacterAsync(a.DbrefNumber);
+		var unlinked = (await sut.UnlinkCharacterAsync(a.DbrefNumber)).Expect<AccountAuthService.CharacterUnlinked>();
 
-		await Assert.That(success).IsTrue();
-		await Assert.That(error).IsNull();
+		await Assert.That(unlinked.Advisory).IsNull();
 		await Assert.That(sut.Characters).IsEmpty();
 		await Assert.That(sut.ActiveCharacter).IsNull();
 	}
@@ -352,10 +349,9 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		var sut = await MakeUnlinkableServiceAsync([a, b, c]);
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 
-		var (success, error) = await sut.UnlinkCharacterAsync(b.DbrefNumber);
+		var unlinked = (await sut.UnlinkCharacterAsync(b.DbrefNumber)).Expect<AccountAuthService.CharacterUnlinked>();
 
-		await Assert.That(success).IsTrue();
-		await Assert.That(error).IsNull();
+		await Assert.That(unlinked.Advisory).IsNull();
 		await Assert.That(sut.Characters.Select(x => x.DbrefNumber)).IsEquivalentTo([a.DbrefNumber, c.DbrefNumber]);
 		await Assert.That(sut.ActiveCharacter).IsNotNull();
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
@@ -379,12 +375,11 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		await sut.LoginAsync("headwiz", "password-one");
 
 		// A (the acting character) goes; the rebind to B is refused by the server.
-		var (success, error) = await sut.UnlinkCharacterAsync(a.DbrefNumber);
+		var unlinked = (await sut.UnlinkCharacterAsync(a.DbrefNumber)).Expect<AccountAuthService.CharacterUnlinked>();
 
-		// The unlink itself stands, so Success is true — but the caller must be able to tell that it
+		// The unlink itself stands, so it is not a failure — but the caller must be able to tell that it
 		// was left with no acting character rather than rebound to a fresh one.
-		await Assert.That(success).IsTrue();
-		await Assert.That(error).IsNotNull();
+		await Assert.That(unlinked.Advisory).IsNotNull();
 		await Assert.That(sut.ActiveCharacter).IsNull();
 	}
 }

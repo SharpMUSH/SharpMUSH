@@ -88,8 +88,8 @@ public sealed class CharactersApiFake : HttpMessageHandler
 		factory.CreateClient("api").Returns(client);
 		var auth = new AccountAuthService(factory, ctx.JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		await auth.InitAsync();
-		var (success, error, _) = await auth.LoginAsync("player", "password");
-		if (!success) throw new InvalidOperationException($"Test setup login failed: {error}");
+		if (await auth.LoginAsync("player", "password") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"Test setup login failed: {loginFailure.Message}");
 		return auth;
 	}
 

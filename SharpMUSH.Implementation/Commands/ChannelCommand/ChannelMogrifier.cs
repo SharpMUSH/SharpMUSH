@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? obj = null)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? obj = null)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -31,7 +31,7 @@ public static class ChannelMogrifier
 	}
 
 	private static async ValueTask<CallState> SetMogrifierAsync(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
 		SharpChannel channel, MString? obj)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))

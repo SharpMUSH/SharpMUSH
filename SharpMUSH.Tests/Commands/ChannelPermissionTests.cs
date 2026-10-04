@@ -32,7 +32,7 @@ public class ChannelPermissionTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+	private IChannelPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IChannelPermissionService>();
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 

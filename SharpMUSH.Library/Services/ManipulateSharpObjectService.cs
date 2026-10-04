@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Services;
 
 public class ManipulateSharpObjectService(
 	IMediator mediator,
-	IObjectStore database,
+	IRelationshipCycleChecker cycleChecker,
 	IPermissionService permissionService,
 	IPasswordService passwordService,
 	IValidateService validateService,
@@ -616,7 +616,7 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		var parentSafety = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
+		var parentSafety = await cycleChecker.SafeToAddParentAsync(obj, newParent);
 
 		if (parentSafety != RelationshipSafety.Safe)
 		{
@@ -687,7 +687,7 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
+		var safeToAdd = await cycleChecker.SafeToAddZoneAsync(obj, newZone);
 
 		if (!safeToAdd)
 		{

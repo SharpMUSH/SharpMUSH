@@ -4,8 +4,9 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// What a <c>name(...)</c> does with the text between its parentheses. This — not "is it a function" —

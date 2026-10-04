@@ -3,7 +3,7 @@ using SharpMUSH.Library.Models;
 using System.Drawing;
 using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// Maps <see cref="SemanticTokenType"/> values to ANSI colours for terminal

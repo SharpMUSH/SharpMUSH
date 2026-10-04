@@ -99,9 +99,8 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		await service.InitAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
 
-		var (success, _, _) = await service.LoginAsync("headwiz", "password-one");
+		(await service.LoginAsync("headwiz", "password-one")).Expect<IReadOnlyList<AccountAuthService.CharacterSummary>>();
 
-		await Assert.That(success).IsTrue();
 		await Assert.That(service.ExplicitlyLoggedOut).IsFalse();
 	}
 
@@ -169,12 +168,18 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// A corrupted permissions blob is the other way hydration used to fault: the deserialize sits
-	/// after the session token is restored, so the failure poisoned a session that was otherwise
-	/// perfectly good.
+	/// A corrupted permissions blob is the other way hydration used to fault: the deserialize sat after
+	/// the session token was restored, so the failure poisoned a session that was otherwise perfectly
+	/// good. Stored grants are no longer read at all — the session read restores them from the server —
+	/// so the blob can neither fault hydration nor leak into the tab's authority.
 	/// </summary>
+	/// <remarks>
+	/// This used to assert a signed-out tab, which it only got because the substitute factory handed back
+	/// no <see cref="HttpClient"/> and the session read threw. The session read now reports a failure the
+	/// way every other API call does, so the test serves a real answer and checks where the grants came from.
+	/// </remarks>
 	[TUnit.Core.Test]
-	public async Task InitAsync_CorruptPermissionsBlob_DegradesToSignedOutRatherThanFaulting()
+	public async Task InitAsync_CorruptPermissionsBlob_IsNotReadAndTheServerSuppliesTheGrants()
 	{
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
@@ -183,15 +188,24 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("God");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("{not json");
 
-		var service = new AccountAuthService(
-			Substitute.For<IHttpClientFactory>(),
-			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, []);
+		using var http = new HttpClient(SharpMUSH.Tests.Shared.CapturingHttpHandler.WithBody(HttpStatusCode.OK, new
+		{
+			username = "headwiz",
+			mustChangePassword = false,
+			role = "Builder",
+			permissions = new[] { "build" },
+		}))
+		{ BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient("api").Returns(http);
+
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 		await service.InitAsync();
 
-		await Assert.That(service.IsLoggedIn).IsFalse();
-		await Assert.That(service.Permissions).IsEmpty();
+		await Assert.That(service.IsLoggedIn).IsTrue();
+		await Assert.That(service.Role).IsEqualTo("Builder");
+		await Assert.That(service.Permissions).IsEquivalentTo(["build"]);
 	}
 }

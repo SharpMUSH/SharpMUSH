@@ -21,7 +21,7 @@ public static class ChannelList
 		$"{"Name".PadRight(ChannelHelper.MaxChannelNameLength)} {"Users",-5} {"Msgs",8} {"Chan Type",-16} {"Status",-9} {"Buf",-3}";
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
 		IConnectionService ConnectionService, MString arg0, MString arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

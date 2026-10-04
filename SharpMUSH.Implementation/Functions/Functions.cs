@@ -24,6 +24,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
 	private IPermissionService PermissionService { get; }
+	/// <summary>The channel rules of <see cref="PermissionService"/>, which is also the channel permission service.</summary>
+	private IChannelPermissionService ChannelPermissions => PermissionService;
 	private ICommandDiscoveryService CommandDiscoveryService { get; }
 	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
 	private IOptionsWrapper<ColorsOptions> ColorConfiguration { get; }

@@ -272,7 +272,7 @@ public static class ChannelHelper
 	/// <c>Chan_Can_See</c> requires a member to also pass <c>Chan_Can_Speak</c>, so without it a gagged or
 	/// speak-locked member would be told their own channel does not exist.</para>
 	/// </summary>
-	public static async ValueTask<bool> CanSeeChannel(IPermissionService permissionService, AnySharpObject viewer,
+	public static async ValueTask<bool> CanSeeChannel(IChannelPermissionService permissionService, AnySharpObject viewer,
 		SharpChannel channel)
 		=> await permissionService.ChannelCanSeeAsync(viewer, channel)
 			 || await IsMemberOfChannel(viewer, channel);
@@ -329,7 +329,7 @@ public static class ChannelHelper
 			: name;
 
 	/// <summary>Whether a channel is a candidate for this scope at all.</summary>
-	private static async ValueTask<bool> InScope(IPermissionService permissionService, AnySharpObject viewer,
+	private static async ValueTask<bool> InScope(IChannelPermissionService permissionService, AnySharpObject viewer,
 		SharpChannel channel, ChannelMatchScope scope)
 		=> scope switch
 		{
@@ -344,7 +344,7 @@ public static class ChannelHelper
 	/// <see cref="ChannelMatchScope.Any"/> still has a test left to make; the other two scopes already
 	/// established visibility (or membership, which implies it) in <see cref="InScope"/>.
 	/// </summary>
-	private static async ValueTask<bool> VisibleInScope(IPermissionService permissionService, AnySharpObject viewer,
+	private static async ValueTask<bool> VisibleInScope(IChannelPermissionService permissionService, AnySharpObject viewer,
 		SharpChannel channel, ChannelMatchScope scope)
 		=> scope != ChannelMatchScope.Any || await CanSeeChannel(permissionService, viewer, channel);
 
@@ -364,7 +364,7 @@ public static class ChannelHelper
 	/// membership.</para>
 	/// </summary>
 	public static async ValueTask<ChannelMatch> MatchChannel(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		AnySharpObject viewer,
 		MString channelName,
@@ -467,7 +467,7 @@ public static class ChannelHelper
 	/// edit that wants to explain a not-found here has to keep the two cases sharing an answer.</para>
 	/// </summary>
 	public static async ValueTask<ChannelOrError> GetVisibleChannelOrError(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject viewer,
@@ -507,7 +507,7 @@ public static class ChannelHelper
 	/// <see cref="GetVisibleChannelOrError"/>; enumerating them has to apply the same rule or
 	/// <c>@channel/hide</c> with no argument becomes a way to list what that gate hides.
 	/// </summary>
-	public static async ValueTask<SharpChannel[]> VisibleChannels(IPermissionService permissionService,
+	public static async ValueTask<SharpChannel[]> VisibleChannels(IChannelPermissionService permissionService,
 		AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
 	{
 		var visible = new List<SharpChannel>();
@@ -527,7 +527,7 @@ public static class ChannelHelper
 	/// PennMUSH <c>Chan_Ok_Type</c> (hdrs/extchat.h:196) with the refusal <c>src/extchat.c:1533</c>
 	/// prints. Returns <see langword="null"/> when the object is of a type the channel accepts.
 	/// </summary>
-	public static string? WrongTypeRefusal(IPermissionService permissionService, AnySharpObject who,
+	public static string? WrongTypeRefusal(IChannelPermissionService permissionService, AnySharpObject who,
 		SharpChannel channel)
 		=> permissionService.ChannelOkType(who, channel)
 			? null
@@ -548,7 +548,7 @@ public static class ChannelHelper
 	/// (<c>src/extchat.c:1261-1268</c>): a wizard actor who fails the check is warned rather than
 	/// refused. The override is the ACTOR's privilege, not the victim's.
 	/// </summary>
-	public static async ValueTask<JoinCheck> JoinRefusal(IPermissionService permissionService,
+	public static async ValueTask<JoinCheck> JoinRefusal(IChannelPermissionService permissionService,
 		AnySharpObject actor, AnySharpObject victim, SharpChannel channel)
 	{
 		if (WrongTypeRefusal(permissionService, victim, channel) is not null)
@@ -575,7 +575,7 @@ public static class ChannelHelper
 	/// <c>LOUD</c> bypasses. A speaker who cannot even see the channel is told it does not exist rather
 	/// than that they may not speak on it.
 	/// </summary>
-	public static async ValueTask<string?> SpeechRefusal(IPermissionService permissionService, AnySharpObject who,
+	public static async ValueTask<string?> SpeechRefusal(IChannelPermissionService permissionService, AnySharpObject who,
 		SharpChannel channel)
 	{
 		if (WrongTypeRefusal(permissionService, who, channel) is { } wrongType)
@@ -609,7 +609,7 @@ public static class ChannelHelper
 	/// Otherwise the type gate and <c>Chan_Can_Cemit</c> apply. Note <c>LOUD</c> does NOT bypass this —
 	/// Penn only consults it in <c>do_chat</c>.
 	/// </summary>
-	public static async ValueTask<CemitCheck> CemitRefusal(IPermissionService permissionService,
+	public static async ValueTask<CemitCheck> CemitRefusal(IChannelPermissionService permissionService,
 		AnySharpObject who, SharpChannel channel)
 	{
 		if (await who.IsSee_All() && await who.HasPower("Pemit_All"))

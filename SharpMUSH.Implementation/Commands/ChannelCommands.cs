@@ -534,7 +534,7 @@ public partial class Commands
 		string lockType, string lockKey)
 	{
 		// An absent modify lock grants no additional rights beyond the owner and wizard gates.
-		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (!await ChannelPermissions.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

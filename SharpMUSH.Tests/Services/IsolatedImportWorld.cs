@@ -65,6 +65,7 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	public IPasswordService Passwords => _services.GetRequiredService<IPasswordService>();
 
 	public IPermissionService Permissions => _services.GetRequiredService<IPermissionService>();
+	public IChannelPermissionService ChannelPermissions => _services.GetRequiredService<IChannelPermissionService>();
 
 	internal string LightningPath => _lightningPath;
 
