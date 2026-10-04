@@ -299,6 +299,10 @@
   {
    "key": "66-quiet-chownall/quiet.loud#2",
    "command": "Quinn quinnpass"
+  },
+  {
+   "key": "70-search-window/sw.setup#0",
+   "command": "Alice alicepass"
   }
  ]
 }
