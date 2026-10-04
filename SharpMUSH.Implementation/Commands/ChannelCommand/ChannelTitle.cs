@@ -23,7 +23,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelTitle
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
 		IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString? title)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

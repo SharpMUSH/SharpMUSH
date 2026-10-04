@@ -223,7 +223,7 @@ public class LazyAttributeParentParityTests
 		var a = await CreateAsync("LazyCycleA");
 		var b = await CreateAsync("LazyCycleB");
 
-		// Bypasses SafeToAddParent on both edges, the way AttributeReadParentCycleTests does.
+		// Bypasses SafeToAddParentAsync on both edges, the way AttributeReadParentCycleTests does.
 		await Mediator.Send(new SetObjectParentCommand(a, b));
 		await Mediator.Send(new SetObjectParentCommand(b, a));
 		await AttributeService.SetAttributeAsync(a, a, "LAZYCYCLE_HERE", MarkupText.Plain("hello"));

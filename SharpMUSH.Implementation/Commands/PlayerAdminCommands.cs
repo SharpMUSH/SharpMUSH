@@ -17,6 +17,7 @@ using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
 using System.Buffers;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Implementation.Commands;
 

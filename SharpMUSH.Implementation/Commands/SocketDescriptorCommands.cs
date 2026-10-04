@@ -15,6 +15,7 @@ using System.Globalization;
 using System.Text;
 using System.Buffers;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Common;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;

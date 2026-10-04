@@ -112,14 +112,15 @@ public partial class Functions
 		var length = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MushText.One).ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
-		if (!int.TryParse(first, out var firstNumber))
+		// fun_extract checks both before splitting the list, with e_ints for either (src/funlist.c:1529-1538).
+		if (!ArgHelpers.TryInteger(parser, first, out var firstNumber))
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST (arg 2)"));
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
-		if (!int.TryParse(length, out var lengthNumber))
+		if (!ArgHelpers.TryInteger(parser, length, out var lengthNumber))
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
 		return new CallState(MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber));
@@ -416,12 +417,12 @@ public partial class Functions
 		var firstArg = args["2"].Message!.ToPlainText();
 		var lengthArg = args["3"].Message!.ToPlainText();
 
-		if (!int.TryParse(firstArg, out var first))
+		if (!ArgHelpers.TryInteger(parser, firstArg, out var first))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		if (!int.TryParse(lengthArg, out var length))
+		if (!ArgHelpers.TryInteger(parser, lengthArg, out var length))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -1173,7 +1174,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
+		if (!ArgHelpers.TryInteger(parser, stepArg, out var step) || step < 1 || step > 30)
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -1316,12 +1317,12 @@ public partial class Functions
 			fieldWidthArg = fieldWidthArg[1..];
 		}
 
-		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
+		if (!ArgHelpers.TryInteger(parser, fieldWidthArg, out var fieldWidth))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidFieldWidth);
 		}
 
-		if (!int.TryParse(lineWidthArg, out var lineWidth))
+		if (!ArgHelpers.TryInteger(parser, lineWidthArg, out var lineWidth))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidLineWidth);
 		}
@@ -1416,7 +1417,7 @@ public partial class Functions
 		var numberArg = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
-		if (!int.TryParse(numberArg, out var number))
+		if (!ArgHelpers.TryInteger(parser, numberArg, out var number))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}

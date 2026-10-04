@@ -1,8 +1,9 @@
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using Range = SharpMUSH.Library.Models.Range;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// Where the softcode in an attribute value actually starts.

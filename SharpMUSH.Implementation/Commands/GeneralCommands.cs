@@ -21,6 +21,7 @@ using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Implementation.Commands;
 

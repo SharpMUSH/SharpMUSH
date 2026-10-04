@@ -11,14 +11,11 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library;
 
 /// <summary>
-/// Outcome of <see cref="HelperFunctions.SafeToAddRelationship"/>: whether adding a parent/zone
-/// relationship is safe and, if not, which of PennMUSH's two distinct <c>do_parent</c> guards it
-/// would violate (<c>src/set.c:1432</c> self-reference vs. <c>:1477</c> a cycle reachable through
-/// the existing chain) - the two produce different player-facing text and callers that show that
-/// text need to tell them apart. <see cref="HelperFunctions.SafeToAddZone"/> collapses this back
-/// to a single bool: <c>do_chzone</c> (<c>src/set.c:421-444</c>) has its own, differently-worded
-/// self/cycle messages, so a zone caller reusing parent wording here would be wrong, not just
-/// imprecise - see the zone note on <see cref="HelperFunctions.SafeToAddZone"/>.
+/// Outcome of <see cref="Services.Interfaces.IRelationshipCycleChecker"/>: whether adding a parent or
+/// zone relationship is safe and, if not, which guard it would violate — a self-reference or a cycle
+/// reachable through the existing chain. Both <c>do_parent</c> (<c>src/set.c:1432</c>, <c>:1477</c>)
+/// and <c>do_chzone</c> (<c>src/set.c:421-444</c>) word the two differently, so callers that report
+/// the refusal need to tell them apart.
 /// </summary>
 public enum RelationshipSafety
 {
@@ -502,49 +499,6 @@ public static partial class HelperFunctions
 			? null
 			: new AttributeWithOptionalObject(string.IsNullOrEmpty(obj) ? null : obj, attr);
 	}
-
-	/// <summary>
-	/// Detects self-reference and cycles when combining parent and zone chains. Checks whether
-	/// adding a relationship would create a cycle by following both parent and zone links from the
-	/// new relationship target.
-	/// </summary>
-	/// <param name="start">The object that will have a new relationship set</param>
-	/// <param name="newRelated">The object being set as parent or zone</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>
-	/// <see cref="RelationshipSafety.Safe"/> if adding the relationship is safe;
-	/// <see cref="RelationshipSafety.SelfReference"/> if <paramref name="start"/> and
-	/// <paramref name="newRelated"/> are the same object; <see cref="RelationshipSafety.Cycle"/> if
-	/// <paramref name="start"/> is otherwise reachable from <paramref name="newRelated"/>.
-	/// </returns>
-	/// <remarks>
-	/// The rule lives in <see cref="Services.RelationshipCycleChecker"/>; a service takes
-	/// <see cref="Services.Interfaces.IRelationshipCycleChecker"/> instead of a store. These statics stay
-	/// for the command and function helpers that already hold an <see cref="IObjectStore"/>, and for
-	/// plugins; <paramref name="mediator"/> is unused and kept only for the published signature.
-	/// </remarks>
-	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
-		=> await Services.RelationshipCycleChecker.SafeToAddAsync(database, start, newRelated, cancellationToken);
-
-	/// <summary>
-	/// Detects self-reference and cycles in the parent chain. Distinguishes the two
-	/// (<see cref="RelationshipSafety"/>) because PennMUSH's <c>do_parent</c> notifies the player
-	/// with different text for each (<c>src/set.c:1432,1477</c>).
-	/// </summary>
-	public static async ValueTask<RelationshipSafety> SafeToAddParent(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
-		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
-
-	/// <summary>
-	/// Detects cycles in the zone chain. Collapsed to a bool - unlike <see cref="SafeToAddParent"/>,
-	/// no caller here needs to tell self-reference from a cycle apart: PennMUSH's <c>do_chzone</c>
-	/// (<c>src/set.c:421-444</c>) has its own self ("You shouldn't zone objects to themselves!") and
-	/// cycle ("You can't make circular zones!") messages, both worded differently from
-	/// <c>do_parent</c>'s and neither currently reproduced here, so there is nothing parent-specific
-	/// to route to. If zone messaging is split to match Penn later, wire it from
-	/// <see cref="SafeToAddRelationship"/> directly rather than reusing the parent-flavoured keys.
-	/// </summary>
-	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
-		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
 	/// <summary>
 	/// Takes the pattern of 'Object[/attribute]' and splits it out if possible.

@@ -41,7 +41,7 @@ public static class ZoneHelpers
 	public static async ValueTask<Result<Success>> ChangeZoneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
@@ -83,7 +83,7 @@ public static class ZoneHelpers
 			return refusedZone;
 		}
 
-		if (await CycleRefusedAsync(mediator, database, notifyService, executor, target, destination, noisy)
+		if (await CycleRefusedAsync(cycleChecker, notifyService, executor, target, destination, noisy)
 			is Error<string> refusedCycle)
 		{
 			return refusedCycle;
@@ -305,14 +305,13 @@ public static class ZoneHelpers
 	/// difference for the compatibility profile (#1134), not a gap to close in this method.
 	/// </remarks>
 	private static async ValueTask<Result<Success>> CycleRefusedAsync(
-		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnySharpObject destination,
 		bool noisy)
-		=> await HelperFunctions.SafeToAddRelationship(mediator, database, target, destination) switch
+		=> await cycleChecker.SafeToAddZoneAsync(target, destination) switch
 		{
 			RelationshipSafety.SelfReference
 				=> await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.ZoneLoop,

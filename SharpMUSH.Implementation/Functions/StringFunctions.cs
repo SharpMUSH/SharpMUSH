@@ -27,6 +27,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using DotNext;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -317,8 +318,8 @@ public partial class Functions
 		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		if (!int.TryParse(first, out var index)
-				|| !int.TryParse(len, out var length))
+		if (!ArgHelpers.TryInteger(parser, first, out var index)
+				|| !ArgHelpers.TryInteger(parser, len, out var length))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
@@ -340,7 +341,7 @@ public partial class Functions
 		var positionStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var insert = parser.CurrentState.Arguments["2"].Message!;
 
-		if (!int.TryParse(positionStr, out var position) || position < 0)
+		if (!ArgHelpers.TryInteger(parser, positionStr, out var position) || position < 0)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
@@ -362,12 +363,12 @@ public partial class Functions
 		var lengthStr = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 		var text = parser.CurrentState.Arguments["3"].Message!;
 
-		if (!int.TryParse(startStr, out var start) || start < 0)
+		if (!ArgHelpers.TryInteger(parser, startStr, out var start) || start < 0)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
-		if (!int.TryParse(lengthStr, out var length))
+		if (!ArgHelpers.TryInteger(parser, lengthStr, out var length))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -602,7 +603,7 @@ public partial class Functions
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var rightFill = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, fill);
 
-		if (!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
+		if (!ArgHelpers.TryUnsignedInteger(parser, width.ToPlainText(), out var widthInt))
 		{
 			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
@@ -617,7 +618,7 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (!int.TryParse(arg0, out var charInt) || charInt < 0)
+		if (!ArgHelpers.TryStrictUnsignedInteger(arg0, out var charInt))
 		{
 			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
@@ -1129,9 +1130,13 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return !int.TryParse(len, out var strlen) || strlen < 0
-			? ValueTask.FromResult<CallState>(ErrorMessages.Returns.PositiveInteger)
-			: ValueTask.FromResult<CallState>(str.Substring(0, int.Min(strlen, str.Length)));
+		// fun_left: e_int, then e_range for a negative length (src/funstr.c:303-312).
+		return ArgHelpers.TryInteger(parser, len, out var strlen) switch
+		{
+			false => ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer),
+			true when strlen < 0 => ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange),
+			true => ValueTask.FromResult<CallState>(str.Substring(0, int.Min(strlen, str.Length)))
+		};
 	}
 
 	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
@@ -1143,7 +1148,7 @@ public partial class Functions
 			MarkupText.Space);
 		var truncate = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Plain("")).ToPlainText();
 
-		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
+		if (!ArgHelpers.TryUnsignedInteger(parser, width, out var widthInt))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
@@ -1204,17 +1209,31 @@ public partial class Functions
 		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var length = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		if (!int.TryParse(first, out var firstInt)
-				|| firstInt < 0
-				|| !int.TryParse(length, out var lengthInt))
+		// fun_mid (pennmush src/funstr.c:266-295): both numbers must be integers, a negative start is out of
+		// range, and a negative length counts back from the start. safe_ansi_string clips the slice to the string.
+		if (!ArgHelpers.TryInteger(parser, first, out var position)
+				|| !ArgHelpers.TryInteger(parser, length, out var count))
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.Integers);
 		}
 
-		var strLength = str.Length;
-		var midLength = lengthInt < 0 ? strLength + lengthInt : lengthInt;
+		if (position < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.OutOfRange);
+		}
 
-		return ValueTask.FromResult<CallState>(str.Substring(firstInt, midLength));
+		if (count < 0)
+		{
+			position = Math.Max(position + count + 1, 0);
+			count = -count;
+		}
+
+		if (position >= str.Length || count < 1)
+		{
+			return ValueTask.FromResult<CallState>(MString.Empty);
+		}
+
+		return ValueTask.FromResult<CallState>(str.Substring(position, Math.Min(count, str.Length - position)));
 	}
 
 	[SharpFunction(Name = "ncond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
@@ -1374,7 +1393,7 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var repeatNumberStr = parser.CurrentState.Arguments["1"].Message!;
 
-		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber))
+		if (!ArgHelpers.TryInteger(parser, repeatNumberStr.ToPlainText(), out var repeatNumber))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -1392,9 +1411,15 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(len, out var strlen) || strlen < 0)
+		// fun_right: e_int, then e_range for a negative length (src/funstr.c:325-334).
+		if (!ArgHelpers.TryInteger(parser, len, out var strlen))
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.PositiveInteger);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
+		}
+
+		if (strlen < 0)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange);
 		}
 
 		var startPos = int.Max(0, str.Length - strlen);
@@ -1412,7 +1437,7 @@ public partial class Functions
 			MarkupText.Space);
 		var truncate = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Plain("")).ToPlainText();
 
-		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
+		if (!ArgHelpers.TryUnsignedInteger(parser, width, out var widthInt))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
@@ -1440,7 +1465,7 @@ public partial class Functions
 	{
 		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message!;
 
-		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber) || repeatNumber < 0)
+		if (!ArgHelpers.TryStrictUnsignedInteger(repeatNumberStr.ToPlainText(), out var repeatNumber))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}

@@ -30,7 +30,7 @@ public class GetCommandAttributesQueryHandler(
 
 		// Walk parent chain for inherited commands, capped at Limit.MaxParents with a cycle guard -
 		// mirrors AttributeService.ParentChainAsync. Defence in depth: the write-side guards
-		// (SafeToAddParent, ExceedsMaxParentDepthAsync) should already keep a cycle from existing.
+		// (SafeToAddParentAsync, ExceedsMaxParentDepthAsync) should already keep a cycle from existing.
 		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
 		var visited = new HashSet<int> { sharpObj.Object().DBRef.Number };
 		var current = sharpObj.Object();
