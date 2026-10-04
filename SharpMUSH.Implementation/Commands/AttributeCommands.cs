@@ -343,7 +343,8 @@ public partial class Commands
 		var objAttrArg = args.ElementAtOrDefault(0).Value;
 		if (objAttrArg == null || objAttrArg.Message == null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
+			// src/set.c:971
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -377,7 +378,8 @@ public partial class Commands
 		var searchArg = args.ElementAtOrDefault(1).Value;
 		var replaceArg = args.ElementAtOrDefault(2).Value;
 
-		if (searchArg == null || searchArg.Message == null)
+		// src/set.c:985 — an empty search string is nothing to do, as is a missing one.
+		if (searchArg?.Message is not { Length: > 0 })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditMustSpecifySearchAndReplace), executor);
 			return new CallState(ErrorMessages.Returns.MissingArguments);
@@ -423,21 +425,30 @@ public partial class Commands
 			var attrValue = attr.Value;
 			var originalText = attrValue.ToPlainText();
 			string newText;
+			bool matched;
 
 			if (isRegexp)
 			{
-				var edited = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				(var edited, matched) = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
 				newText = edited.Message!.ToPlainText();
 				hadErrors |= edited.HadErrors;
 			}
 			else
 			{
 				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
+				matched = search is "^" or "$" || originalText.Contains(search, StringComparison.Ordinal);
 			}
 
-			if (newText == originalText)
+			// edit_helper (src/set.c:917): an attribute counts as edited when the search matched, even if the
+			// replacement leaves it as it was, and one that did not match is reported unless /quiet.
+			if (!matched)
 			{
 				unchangedCount++;
+				if (!isQuiet)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeUnchangedFormat), executor, attrName);
+				}
+
 				continue;
 			}
 
@@ -445,11 +456,12 @@ public partial class Commands
 
 			if (!isQuiet && !isCheck)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName, newText);
 			}
 			else if (!isQuiet && isCheck)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditWouldChangeToFormat), executor, attrName, newText);
+				// src/set.c:943 — /check shows the same line it would have set, and sets nothing.
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName, newText);
 			}
 
 			if (!isCheck)
@@ -458,11 +470,11 @@ public partial class Commands
 			}
 		}
 
-		if (isQuiet || (modifiedCount + unchangedCount > 1))
+		// src/set.c:1003 — only /quiet ends with a count, and it says the same under /check.
+		if (isQuiet)
 		{
-			var checkPrefix = isCheck ? "Would edit" : "Edited";
-			await NotifyService.Notify(executor,
-				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditQuietSummaryFormat), executor,
+				modifiedCount, unchangedCount);
 		}
 
 		return new CallState(string.Empty) { HadErrors = hadErrors };
@@ -483,7 +495,7 @@ public partial class Commands
 		}
 		else if (firstOnly)
 		{
-			int index = text.IndexOf(search);
+			var index = text.IndexOf(search, StringComparison.Ordinal);
 			if (index >= 0)
 			{
 				return text[..index] + replace + text[(index + search.Length)..];
@@ -492,7 +504,7 @@ public partial class Commands
 		}
 		else
 		{
-			return text.Replace(search, replace);
+			return text.Replace(search, replace, StringComparison.Ordinal);
 		}
 	}
 
@@ -501,13 +513,14 @@ public partial class Commands
 	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
 	/// text is never pasted into the replacement.
 	/// </summary>
-	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
+	private async ValueTask<(CallState Result, bool Matched)> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		var hadErrors = false;
 		Match[] matches = [];
 		var replacements = Array.Empty<string>();
 		var firstEvaluated = 0;
+		var matched = false;
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
 		try
@@ -524,6 +537,7 @@ public partial class Commands
 			{
 				// Evaluated last match first, as the replacements may have side effects; spliced once.
 				matches = regex.Matches(text).ToArray();
+				matched = matches.Length > 0;
 				replacements = new string[matches.Length];
 				firstEvaluated = matches.Length;
 				for (var i = matches.Length - 1; i >= 0; i--)
@@ -541,22 +555,23 @@ public partial class Commands
 				var match = regex.Match(text);
 				if (match.Success)
 				{
+					matched = true;
 					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
 					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
 				}
 			}
 
-			return new CallState(text) { HadErrors = hadErrors };
+			return (new CallState(text) { HadErrors = hadErrors }, matched);
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
 			// Same answer as an unusable pattern: the text keeps only the replacements evaluated before the failure.
-			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+			return (new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors }, matched);
 		}
 		catch (ArgumentException)
 		{
-			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+			return (new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors }, matched);
 		}
 		finally
 		{
