@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using SharpMUSH.Implementation.Common;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -531,9 +532,7 @@ public partial class Functions
 	public async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var infoType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
-			? typeArg.Message!.ToPlainText().ToLowerInvariant()
-			: "name";
+		var infoType = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "name").ToPlainText().ToLowerInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await WithVisibleChannel(executor, channelName, async channel =>
