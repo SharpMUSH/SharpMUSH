@@ -43,24 +43,20 @@ public class TopLevelFunctionParseTests
 			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			Services,
-			state: new ParserState(
-				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: executor,
-				Enactor: executor,
-				Caller: executor,
-				Handle: 1));
+			state: ParserState.ForTrackedEvaluation(null) with
+			{
+				Executor = executor,
+				Enactor = executor,
+				Caller = executor,
+				Command = "think",
+				Handle = 1,
+				// Untracked: none of the counters a tracked evaluation carries.
+				CallDepth = null,
+				FunctionRecursionDepths = null,
+				TotalInvocations = null,
+				LimitExceeded = null,
+				MoveDepth = null
+			});
 
 	[Test]
 	public async Task FunctionParse_FromAnUntrackedRootState_EvaluatesTheFunction()

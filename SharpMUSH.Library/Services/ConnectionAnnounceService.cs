@@ -329,37 +329,8 @@ public class ConnectionAnnounceService(
 
 			var ownerRef = owner.Object().DBRef;
 			var playerRef = player.Object().DBRef;
-			var isEmpty = parser.State.IsEmpty;
-
-			var evalParser = parser.Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: argsDict,
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: isEmpty
-					? _ => ValueTask.FromResult(new Option<CallState>(new None()))
-					: parser.CurrentState.CommandInvoker,
-				Switches: [],
-				Arguments: argsDict,
-				Executor: ownerRef,
-				Enactor: playerRef,
-				Caller: playerRef,
-				Handle: isEmpty ? null : parser.CurrentState.Handle,
-				CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
-				FunctionRecursionDepths: isEmpty
-					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag())
-			{
-				MoveDepth = isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter()
-			});
+			var evalParser = parser.Push(ParserState.ForAttributeHook(
+				parser.State.IsEmpty ? null : parser.CurrentState, ownerRef, playerRef, playerRef, argsDict));
 
 			var attributeText = hook.Last().Value.ToPlainText();
 			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
