@@ -105,7 +105,11 @@ public class ObjectRelationshipService(
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
-			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+			}
+
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
