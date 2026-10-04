@@ -1294,6 +1294,9 @@ public static partial class ErrorMessages
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
+		// PennMUSH fill_search_spec (src/wiz.c:2388-2399): START and COUNT are 1-based and at least one.
+		public const string SearchInvalidStart = "Invalid start index";
+		public const string SearchInvalidCount = "Invalid count index";
 		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
 		public const string SearchRoomsHeader = "\nROOMS:";
 		public const string SearchExitsHeader = "\nEXITS:";

@@ -2206,6 +2206,12 @@
   <data name="SearchNothingFound" xml:space="preserve">
     <value>Nothing found.</value>
   </data>
+  <data name="SearchInvalidStart" xml:space="preserve">
+    <value>Invalid start index</value>
+  </data>
+  <data name="SearchInvalidCount" xml:space="preserve">
+    <value>Invalid count index</value>
+  </data>
 
   <!-- @listmotd command -->
   <data name="ListMotdCurrentSettingsHeader" xml:space="preserve">

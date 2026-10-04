@@ -87,6 +87,6 @@ public class SearchSpecEngineVanishedRowTests
 			[new SearchSpecEngine.SearchPair("ELOCK", "#TRUE")],
 			useRegex: false);
 
-		await Assert.That(result.Matches.Select(o => o.Key)).IsEquivalentTo([survivor.Object().Key]);
+		await Assert.That(result.Expect<SearchSpecEngine.SearchResult>().Matches.Select(o => o.Key)).IsEquivalentTo([survivor.Object().Key]);
 	}
 }

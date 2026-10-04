@@ -348,9 +348,24 @@ public partial class Commands
 			ownerFilter = owner.Object().DBRef;
 		}
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, ownerFilter, pairs, useRegex: false);
+		return await SearchSpecEngine.ExecuteResultAsync(
+				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+				executor, ownerFilter, pairs, useRegex: false) switch
+		{
+			SearchSpecEngine.SearchResult search => await ReportSearchResultAsync(executor, search),
+			Error<string> rejected => await RejectSearchAsync(executor, rejected.Value)
+		};
+	}
+
+	/// <summary>do_search when fill_search_spec rejects the spec: the searcher is told why, and nothing is searched.</summary>
+	private async ValueTask<Option<CallState>> RejectSearchAsync(AnySharpObject executor, string notification)
+	{
+		await NotifyService.NotifyLocalized(executor, notification, executor);
+		return new CallState(ErrorMessages.Returns.Nothing);
+	}
+
+	private async ValueTask<Option<CallState>> ReportSearchResultAsync(AnySharpObject executor, SearchSpecEngine.SearchResult search)
+	{
 		var matches = search.Matches;
 
 		if (matches.Count == 0)
