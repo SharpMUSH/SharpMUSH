@@ -647,11 +647,23 @@ public partial class Functions
 		var value2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var type = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "A").ToPlainText().ToUpperInvariant();
 
+		// fun_comp compares N only as strict integers and F only as strict numbers, refusing anything
+		// else with e_ints and e_nums (src/funstr.c:475-490) instead of comparing it as text.
+		if (type == "N" && !(ArgHelpers.TryStrictInteger(value1, out int _) && ArgHelpers.TryStrictInteger(value2, out int _)))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
+		}
+
+		if (type == "F" && !(NumericEvaluation.Strict.TryDecimal(value1, out _) && NumericEvaluation.Strict.TryDecimal(value2, out _)))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+
 		int result = type switch
 		{
 			"I" => string.Compare(value1, value2, StringComparison.OrdinalIgnoreCase),
-			"N" when int.TryParse(value1, out var int1) && int.TryParse(value2, out var int2) => int1.CompareTo(int2),
-			"F" when decimal.TryParse(value1, out var dec1) && decimal.TryParse(value2, out var dec2) => dec1.CompareTo(dec2),
+			"N" when ArgHelpers.TryStrictInteger(value1, out int int1) && ArgHelpers.TryStrictInteger(value2, out int int2) => int1.CompareTo(int2),
+			"F" when NumericEvaluation.Strict.TryDecimal(value1, out var dec1) && NumericEvaluation.Strict.TryDecimal(value2, out var dec2) => dec1.CompareTo(dec2),
 			"D" => CompareDbRefs(value1, value2),
 			_ => string.Compare(value1, value2, StringComparison.Ordinal)
 		};
@@ -1834,18 +1846,31 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = args["0"].Message!;
-		var width = args["1"].Message!.ToPlainText();
-		var firstLineWidth = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Plain(width)).ToPlainText();
 		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
-		if (!int.TryParse(width, out var widthInt) || !int.TryParse(firstLineWidth, out var firstLineInt))
+		// fun_wrap (src/funstr.c:1644-1669): an empty text is answered as it is, before the widths are
+		// read; each width goes through int_check (72 by default, the first line defaulting to the
+		// width, and 0 for it meaning the width); and a width below 2 is too small.
+		if (str.ToPlainText().Length == 0)
+		{
+			return str;
+		}
+
+		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message!.ToPlainText(), 72, out var widthInt)
+			|| !ArgHelpers.TryIntCheck(parser, args.TryGetValue("2", out var firstArg) ? firstArg.Message?.ToPlainText() ?? "" : null,
+				widthInt, out var firstLineInt))
 		{
 			return ErrorMessages.Returns.Integer;
 		}
 
-		if (widthInt <= 0 || firstLineInt <= 0)
+		if (firstLineInt == 0)
 		{
-			return ErrorMessages.Returns.PositiveInteger;
+			firstLineInt = widthInt;
+		}
+
+		if (widthInt < 2 || firstLineInt < 2)
+		{
+			return ErrorMessages.Returns.WidthTooSmall;
 		}
 
 		return MarkupText.Join(lineSeparator, WrapLines(str, widthInt, firstLineInt));

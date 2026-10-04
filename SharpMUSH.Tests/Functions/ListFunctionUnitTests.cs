@@ -197,6 +197,18 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>fun_v</c> reads <c>%0</c>-<c>%9</c> only for a single digit (<c>src/fundb.c:452-468</c>);
+	/// <c>v(10)</c> is the attribute named 10, not the eleventh argument.
+	/// </summary>
+	[Test]
+	public async Task VReadsOnlyASingleDigitAsAnArgument()
+	{
+		var objNum = await CreateObjectWithAttribute("v_digit_obj", "V_DIGIT", "[v(10)]|[v(1)]");
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"u(#{objNum}/V_DIGIT,a,b,c,d,e,f,g,h,i,j,k)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("|b");
+	}
+
 	[Test]
 	[Arguments("filter(test/IS_ODD_FILTER,1 2 3 4 5 6)", "1 3 5")]
 	public async Task Filter(string function, string expected)

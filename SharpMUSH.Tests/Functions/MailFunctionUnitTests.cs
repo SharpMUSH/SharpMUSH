@@ -1,3 +1,6 @@
+using SharpMUSH.Implementation;
+using SharpMUSH.Configuration.Options;
+using NSubstitute;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
@@ -102,6 +105,31 @@ public class MailFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain("mail(1)")))?.Message!;
 		var content = result.ToPlainText();
 		await Assert.That(content).Contains($"TESTMAIL-{TestRunId}");
+	}
+
+	/// <summary>
+	/// <c>parse_message_spec</c> reads a message number with <c>is_integer</c>
+	/// (<c>src/extmail.c:3171-3174</c>), so under TINY_MATH its leading digits name the message.
+	/// </summary>
+	[Test]
+	[Arguments(true, "mail(1x)", true)]
+	[Arguments(false, "mail(1x)", false)]
+	public async Task AMessageNumberIsReadAsIsInteger(bool tinyMath, string str, bool readsMessage)
+	{
+		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyMath = tinyMath } });
+		var original = (MUSHCodeParser)Parser;
+		var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
+
+		var result = (await parser.FunctionParse(MarkupText.Plain(str)))!.Message!.ToPlainText();
+		await Assert.That(result.Contains($"TESTMAIL-{TestRunId}")).IsEqualTo(readsMessage);
+	}
+
+	private sealed class OptionsProvider(IServiceProvider inner, IOptionsWrapper<SharpMUSHOptions> options) : IServiceProvider
+	{
+		public object? GetService(Type serviceType) => serviceType == typeof(IOptionsWrapper<SharpMUSHOptions>)
+			? options : inner.GetService(serviceType);
 	}
 
 	[Test]

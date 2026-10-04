@@ -396,4 +396,31 @@ public class ExplicitFailureReturnTests
 
 		await Assert.That(await EvalAsGod("hidden(987654321)")).IsEqualTo(ErrorMessages.Returns.NoSuchDescriptor);
 	}
+
+	/// <summary>
+	/// A descriptor is asked for only with a strict integer (<c>lookup_desc</c>, <c>src/bsd.c:6634</c>;
+	/// <c>fun_hidden</c>, <c>:6600</c>). A number past an int is not one, so it is looked up as a
+	/// player name and fails as one.
+	/// </summary>
+	[Test]
+	[Arguments("host(99999999999)", ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied)]
+	[Arguments("ipaddr(99999999999)", ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied)]
+	[Arguments("hidden(99999999999)", ErrorMessages.Returns.NoSuchDescriptor)]
+	public async Task ANumberPastAnIntIsNotADescriptor(string call, string descriptorAnswer)
+		=> await Assert.That(await EvalAsGod(call)).IsNotEqualTo(descriptorAnswer);
+
+	/// <summary><c>fun_connlog</c> takes a before/after time only as a strict integer (<c>src/connlog.c:635, 656</c>).</summary>
+	[Test]
+	[NotInParallel(nameof(TestOptionsOverride))]
+	[Arguments("connlog(all,after,soon)")]
+	[Arguments("connlog(all,before,1x)")]
+	public async Task AConnectionLogTimeMustBeAnInteger(string call)
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Log = options.Log with { UseConnLog = true }
+		});
+
+		await Assert.That(await EvalAsGod(call)).IsEqualTo(ErrorMessages.Returns.Integer);
+	}
 }

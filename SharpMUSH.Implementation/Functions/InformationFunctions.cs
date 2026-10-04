@@ -75,7 +75,8 @@ public partial class Functions
 		{
 			var arg = args["0"].Message!.ToPlainText();
 
-			if (int.TryParse(arg, out var folderNum) && folderNum >= 0 && folderNum <= 15)
+			// A folder number is a strict integer (src/extmail.c:2057).
+			if (ArgHelpers.TryStrictInteger(arg, out int folderNum) && folderNum >= 0 && folderNum <= 15)
 			{
 				folderSpec = arg;
 			}
@@ -166,9 +167,10 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
 
-		if (!long.TryParse(pidStr, out var pid))
+		// fun_pidinfo refuses anything but a strict unsigned integer with e_uint (src/cque.c:1747-1749).
+		if (!ArgHelpers.TryStrictUnsignedInteger(pidStr, out int pid))
 		{
-			return new CallState(ErrorMessages.Returns.InvalidPid);
+			return new CallState(ErrorMessages.Returns.UInteger);
 		}
 
 		var field = args.TryGetValue("1", out var fieldArg)
@@ -1309,10 +1311,15 @@ public partial class Functions
 
 		var code = args["0"].Message!;
 
-		if (!int.TryParse((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var iterations) || iterations <= 0)
+		// fun_benchmark reads the count with is_number/parse_number, truncates it, and refuses one below
+		// 1 with e_uint (src/funmisc.c:1492-1501).
+		if (!ArgHelpers.TryNumber(parser, (args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var count)
+			|| !(count >= 1 && count <= int.MaxValue))
 		{
-			return new CallState(ErrorMessages.Returns.Numbers);
+			return new CallState(ErrorMessages.Returns.UInteger);
 		}
+
+		var iterations = (int)count;
 
 		var outputFormat = "ms";
 		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))

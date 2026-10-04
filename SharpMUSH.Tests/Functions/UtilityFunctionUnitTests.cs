@@ -470,7 +470,8 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_TwoDice()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("die(2,6)")))?.Message!;
+		// Every roll only when the third argument asks for it (src/funmisc.c:848-849, :855-862).
+		var result = (await Parser.FunctionParse(MarkupText.Plain("die(2,6,1)")))?.Message!;
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsEqualTo(2);
 		foreach (var roll in rolls)

@@ -293,7 +293,8 @@ public class InformationFunctionUnitTests
 
 	[Test]
 	[Arguments("pidinfo(999)", "#-1 NO SUCH PID")]
-	[Arguments("pidinfo(abc)", "#-1 INVALID PID")]
+	// fun_pidinfo refuses a non-number with e_uint (src/cque.c:1747-1749).
+	[Arguments("pidinfo(abc)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Pidinfo_Invalid(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

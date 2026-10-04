@@ -85,6 +85,66 @@ public class NumericCompatibilityTests
 	[Arguments(false, false, "ldelete(a b c,2x)", "a b c")]
 	[Arguments(true, true, "ldelete(a b c,2x)", "a c")]
 	[Arguments(true, true, "lreplace(a b c,2x,X)", "a X c")]
+	// beep: is_integer, then 1..5 (src/funstr.c:1415-1427).
+	[Arguments(false, false, "beep(x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments(false, false, "beep(0)", "#-1 OUT OF RANGE")]
+	[Arguments(false, false, "beep(6)", "#-1 OUT OF RANGE")]
+	// xwho family: strict integers or e_int, start and count of at least 1 (src/bsd.c:6455-6466).
+	[Arguments(false, false, "xwho(x,1)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments(false, false, "xmwhoid(1,x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments(false, false, "xwhoid(1,0)", "#-1 ARGUMENT OUT OF RANGE")]
+	[Arguments(false, false, "xmwho(1,0)", "#-1 ARGUMENT OUT OF RANGE")]
+	// entrances: each bound a strict integer or a dbref, else e_ints (src/wiz.c:1808-1827).
+	[Arguments(false, false, "entrances(here,a,x)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments(false, false, "entrances(here,a,0,1x)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	// pidinfo: a strict unsigned integer, else e_uint (src/cque.c:1747-1749).
+	[Arguments(false, false, "pidinfo(-1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	// benchmark: is_number, truncated, at least 1, else e_uint (src/funmisc.c:1492-1501).
+	[Arguments(false, false, "benchmark(1,0)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	[Arguments(false, false, "benchmark(1,0.5)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	[Arguments(false, false, "benchmark(1,x)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	// randextract: an empty count is 0 and answers nothing; a given one must be strict
+	// (src/funlist.c:1160-1167).
+	[Arguments(false, false, "randextract(a b c,)", "")]
+	[Arguments(false, false, "randextract(a b c,0)", "")]
+	[Arguments(false, false, "randextract(a b c,1x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	// A sortby() comparison and a numeric sort key are parse_integer of their text (src/sort.c:146,
+	// :346-349), so their leading digits count.
+	[Arguments(false, false, "sortby(lit(#lambda/[sub(%0,%1)]x),3 1 2)", "1 2 3")]
+	[Arguments(false, false, "sortkey(lit(#lambda/%0),10x 9x 1x,n)", "1x 9x 10x")]
+	[Arguments(false, false, "unique(1 1x 2,n)", "1 2")]
+	// r(): a level is any strict number, truncated, and anything else a bad register name
+	// (src/funmisc.c:752-756).
+	[Arguments(false, false, "iter(a b,r(0.9,iter))", "a b")]
+	[Arguments(false, false, "iter(a,r(x,iter))", "#-1 REGISTER NAME INVALID")]
+	[Arguments(false, false, "switch(a,a,r(x,switch))", "#-1 REGISTER NAME INVALID")]
+	// suggest: is_integer, else e_int (src/help.c:1843-1847).
+	[Arguments(false, false, "suggest(nosuchcategory,word,,x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	// comp: N and F take strict numbers only (src/funstr.c:475-490).
+	[Arguments(false, false, "comp(1,x,N)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments(false, false, "comp(1,x,F)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments(false, false, "comp(2,10,N)", "-1")]
+	// wrap: empty text first, then int_check widths, then at least 2 (src/funstr.c:1644-1669).
+	[Arguments(false, false, "wrap(,x)", "")]
+	[Arguments(false, false, "wrap(abc,1)", "#-1 WIDTH TOO SMALL")]
+	[Arguments(false, false, "wrap(abc,x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments(false, false, "wrap(abc def,)", "abc def")]
+	[Arguments(false, true, "wrap(abc def,)", "#-1 WIDTH TOO SMALL")]
+	[Arguments(false, false, "wrap(abc def,3,0)", "abc\ndef")]
+	// timestring: a pad is_uinteger refuses is e_uints (src/funtime.c:494-497).
+	[Arguments(false, false, "timestring(5,x)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	[Arguments(false, false, "timestring(5,-1)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	// etime: is_integer width, a negative one out of range (src/funtime.c:375-383).
+	[Arguments(false, false, "etime(5,-1)", "#-1 OUT OF RANGE")]
+	[Arguments(true, false, "etime(61,5x)", "1m")]
+	// die: is_uinteger counts, 1..700 dice, and a boolean for every roll (src/funmisc.c:834-866).
+	[Arguments(false, false, "die(x,6)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	[Arguments(false, false, "die(-1,6)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	[Arguments(false, false, "die(0,6)", "#-1 NUMBER OUT OF RANGE")]
+	[Arguments(false, false, "die(701,6)", "#-1 NUMBER OUT OF RANGE")]
+	[Arguments(false, false, "die(3,1)", "3")]
+	[Arguments(false, false, "die(3,1,1)", "1 1 1")]
+	[Arguments(false, false, "die(2,0,1)", "0 0")]
 	[Arguments(true, true, "iter(a b,[inum(0x)])", "#-1 ARGUMENT MUST BE INTEGER #-1 ARGUMENT MUST BE INTEGER")]
 	public async Task LiveOptionsControlValidationAndEvaluation(bool tinyMath, bool nullEqualsZero, string expression, string expected)
 	{

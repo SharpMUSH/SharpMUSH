@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Commands.MailCommand;
+﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -38,7 +39,8 @@ public partial class Functions
 			}
 
 			folder = named.Name;
-			if (!int.TryParse(parts[1].Trim(), out messageIndex) || messageIndex < 1)
+			// parse_message_spec reads a message number with is_integer (src/extmail.c:3171-3174).
+			if (!ArgHelpers.TryInteger(parser, parts[1], out messageIndex) || messageIndex < 1)
 			{
 				return (folder, -1);
 			}
@@ -46,7 +48,7 @@ public partial class Functions
 		else
 		{
 			folder = await MessageListHelper.CurrentMailFolder(parser, ObjectDataService, player);
-			if (!int.TryParse(messageSpec.Trim(), out messageIndex) || messageIndex < 1)
+			if (!ArgHelpers.TryInteger(parser, messageSpec, out messageIndex) || messageIndex < 1)
 			{
 				return (folder, -1);
 			}

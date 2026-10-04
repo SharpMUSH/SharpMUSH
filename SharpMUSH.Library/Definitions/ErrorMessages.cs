@@ -116,6 +116,10 @@ public static partial class ErrorMessages
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
+		/// <summary><c>fun_die</c>'s answer for a count of dice outside 1..700 (<c>src/funmisc.c:851-852</c>).</summary>
+		public const string NumberOutOfRange = "#-1 NUMBER OUT OF RANGE";
+		/// <summary><c>fun_wrap</c>'s answer for a width below 2 (<c>src/funstr.c:1666-1668</c>).</summary>
+		public const string WidthTooSmall = "#-1 WIDTH TOO SMALL";
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";

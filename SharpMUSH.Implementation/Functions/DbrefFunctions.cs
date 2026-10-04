@@ -184,6 +184,12 @@ public partial class Functions
 		}
 	}
 
+	/// <summary>An <c>entrances()</c> bound: a strict integer or a dbref (<c>src/wiz.c:1809-1812</c>).</summary>
+	private static int? EntranceBound(string text)
+		=> ArgHelpers.TryStrictInteger(text, out int number) ? number
+			: HelperFunctions.ParseDbRef(text) is DBRef dbref ? dbref.Number
+			: null;
+
 	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -208,22 +214,29 @@ public partial class Functions
 			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
 		}
 
+		// fun_entrances takes each bound as a strict integer or a dbref and refuses anything else with
+		// e_ints (src/wiz.c:1808-1827); a bound that names no object (negative here) falls back to the
+		// whole database (:1828-1833).
 		var beginFilter = 0;
 		if (args.TryGetValue("2", out var beginArg))
 		{
-			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			if (EntranceBound(beginArg.Message!.ToPlainText()) is not { } begin)
 			{
-				beginFilter = begin;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			beginFilter = begin < 0 ? 0 : begin;
 		}
 
 		var endFilter = int.MaxValue;
 		if (args.TryGetValue("3", out var endArg))
 		{
-			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			if (EntranceBound(endArg.Message!.ToPlainText()) is not { } end)
 			{
-				endFilter = end;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			endFilter = end < 0 ? int.MaxValue : end;
 		}
 
 		var entrances = Mediator.CreateStream(new GetEntrancesQuery(target.Object().DBRef))

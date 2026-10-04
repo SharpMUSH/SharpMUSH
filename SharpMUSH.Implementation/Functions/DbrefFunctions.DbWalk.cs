@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -191,7 +192,8 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> WalkWindow(IMUSHCodeParser parser, WalkType types, bool skipDark)
 	{
-		if (!int.TryParse(Arg(parser, "1"), out var start) || !int.TryParse(Arg(parser, "2"), out var count))
+		// Strict integers, as fun_dbwalker asks (src/fundb.c:802).
+		if (!ArgHelpers.TryStrictInteger(Arg(parser, "1"), out int start) || !ArgHelpers.TryStrictInteger(Arg(parser, "2"), out int count))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}

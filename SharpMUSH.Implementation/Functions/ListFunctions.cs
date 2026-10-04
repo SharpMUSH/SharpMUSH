@@ -822,14 +822,22 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var countArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MushText.One).ToPlainText();
+		var countArg = args.TryGetValue("1", out var countValue) ? countValue.Message?.ToPlainText() ?? "" : "1";
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var typeArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("R")).ToPlainText().ToUpper();
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		if (!int.TryParse(countArg, out var count))
+		// fun_randword: a count that is given must be a strict integer, but an empty one is not checked
+		// and reads as 0 (src/funlist.c:1160-1164); a count below 1 then answers nothing (:1165-1167).
+		if (countArg.Length > 0 && !ArgHelpers.TryStrictInteger(countArg, out int _))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+		}
+
+		var count = ArgHelpers.ParseInteger(countArg);
+		if (count < 1)
+		{
+			return ValueTask.FromResult(CallState.Empty);
 		}
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
@@ -988,7 +996,8 @@ public partial class Functions
 					{ "0", new CallState(a) },
 					{ "1", new CallState(b) }
 				}));
-			return int.TryParse(result.ToPlainText(), out var cmp) ? (cmp > 0 ? 1 : cmp < 0 ? -1 : 0) : 0;
+			// u_comp reads the result with parse_integer (src/sort.c:146).
+			return Math.Sign(ArgHelpers.ParseInteger(result.ToPlainText()));
 		}
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -1016,7 +1025,8 @@ public partial class Functions
 			["0"] = new CallState(a),
 			["1"] = new CallState(b)
 		})).ToPlainText();
-		return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
+		// u_comp reads the result with parse_integer (src/sort.c:146).
+		return Math.Sign(ArgHelpers.ParseInteger(result));
 	}
 
 	/// <summary>
@@ -1082,7 +1092,8 @@ public partial class Functions
 		var indexes = Enumerable.Range(0, list.Length);
 		var sortedIndexes = sortType.ToPlainText().ToLower() switch
 		{
-			"n" => indexes.OrderBy(i => int.TryParse(keys[i], out var n) ? n : 0),
+			// gen_num: a numeric key is parse_integer of its text (src/sort.c:346-349).
+			"n" => indexes.OrderBy(i => ArgHelpers.ParseInteger(keys[i])),
 			"f" => indexes.OrderBy(i => double.TryParse(keys[i], out var f) ? f : 0.0),
 			"i" => indexes.OrderBy(i => keys[i], StringComparer.OrdinalIgnoreCase),
 			_ => indexes.OrderBy(i => keys[i])
@@ -1361,7 +1372,8 @@ public partial class Functions
 		static bool SameItem(string sortType, string current, string previous) => sortType switch
 		{
 			"f" => double.TryParse(current, out var c) && double.TryParse(previous, out var p) && Math.Abs(c - p) < 0.0000001,
-			"n" => int.TryParse(current, out var c) && int.TryParse(previous, out var p) && c == p,
+			// Numeric items compare as gen_num reads them, by parse_integer (src/sort.c:346-349).
+			"n" => ArgHelpers.ParseInteger(current) == ArgHelpers.ParseInteger(previous),
 			_ => current == previous
 		};
 

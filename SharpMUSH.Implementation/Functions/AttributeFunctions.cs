@@ -607,8 +607,8 @@ public partial class Functions
 		IMUSHCodeParser parser, string calledAs, bool checkParents, IAttributeService.AttributePatternMode mode)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (!int.TryParse(args["1"].Message!.ToPlainText(), out var start) ||
-			!int.TryParse(args["2"].Message!.ToPlainText(), out var count))
+		if (!ArgHelpers.TryStrictInteger(args["1"].Message!.ToPlainText(), out int start) ||
+			!ArgHelpers.TryStrictInteger(args["2"].Message!.ToPlainText(), out int count))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
 		}
@@ -1111,7 +1111,9 @@ public partial class Functions
 			case "c" or "C":
 				return Substitutions.Substitutions.CommandBeforeEvaluation(parser);
 			default:
-				if (int.TryParse(plainText, out _))
+				// fun_v reads %0-%9 only for a single digit (src/fundb.c:452-468); anything longer,
+				// "10" included, is an attribute name.
+				if (plainText is [>= '0' and <= '9'])
 				{
 					return parser.CurrentState.EnvironmentRegisters.TryGetValue(plainText, out var value)
 						? value

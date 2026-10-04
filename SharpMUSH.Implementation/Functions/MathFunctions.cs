@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Utilities;
 using MoreLinq;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -1420,41 +1421,29 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		if (!int.TryParse((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var count) || count < 0)
+		// fun_die (src/funmisc.c:834-866): both numbers as is_uinteger reads them, or e_uints; 1 to 700
+		// dice, or NUMBER OUT OF RANGE; and the third argument is a boolean asking for every roll
+		// rather than their total.
+		if (!ArgHelpers.TryUnsignedInteger(parser, (args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var count)
+			|| !ArgHelpers.TryUnsignedInteger(parser, (args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var sides))
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-		if (!int.TryParse((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var sides) || sides <= 0)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-
-		// Optional third argument for how many rolls to show (vs just return sum)
-		var showCount = count;
-		if (args.Count == 3)
-		{
-			if (!int.TryParse((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out showCount) || showCount < 0)
-			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-			}
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.UIntegers));
 		}
 
-		var rolls = new List<int>();
-		var total = 0;
-
-		for (int i = 0; i < count; i++)
+		if (count is 0 or > 700)
 		{
-			var roll = Random.Shared.Next(1, sides + 1);
-			rolls.Add(roll);
-			total += roll;
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
 		}
 
-		if (showCount < count)
-		{
-			return ValueTask.FromResult(new CallState(total.ToString()));
-		}
+		// get_random_u32(1, 0) answers 0 (src/utils.c:585-586), so zero-sided dice roll zeroes.
+		var rolls = Enumerable.Range(0, count)
+			.Select(_ => sides == 0 ? 0L : Random.Shared.NextInt64(1, (long)sides + 1))
+			.ToArray();
 
-		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
+		var showAll = args.TryGetValue("2", out var showArg) && showArg.Message.Truthy(parser);
+		return ValueTask.FromResult(new CallState(showAll
+			? string.Join(" ", rolls)
+			: rolls.Sum().ToString(CultureInfo.InvariantCulture)));
 	}
 
 	/// <summary>
@@ -1482,7 +1471,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Random.Shared.NextDouble()));
 		}
 
-		if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText().Trim(), out var first))
+		// fun_rand: strict integers, e_int for the first and e_ints for the second (src/funmisc.c:790, :808).
+		if (!ArgHelpers.TryStrictInteger((arg0.Message ?? MarkupText.Empty).ToPlainText(), out int first))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -1505,7 +1495,7 @@ public partial class Functions
 		}
 		else
 		{
-			if (!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText().Trim(), out var second))
+			if (!ArgHelpers.TryStrictInteger((arg1.Message ?? MarkupText.Empty).ToPlainText(), out int second))
 			{
 				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 			}
