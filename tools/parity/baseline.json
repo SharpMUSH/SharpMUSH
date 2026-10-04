@@ -229,6 +229,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "37-integer-arguments/int.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "40-compat-choices/choice.dropto#0",
    "command": "Wiz wizpass"
   },

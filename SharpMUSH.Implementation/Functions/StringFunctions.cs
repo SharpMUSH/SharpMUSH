@@ -1209,17 +1209,31 @@ public partial class Functions
 		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var length = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		if (!ArgHelpers.TryInteger(parser, first, out var firstInt)
-				|| firstInt < 0
-				|| !ArgHelpers.TryInteger(parser, length, out var lengthInt))
+		// fun_mid (pennmush src/funstr.c:266-295): both numbers must be integers, a negative start is out of
+		// range, and a negative length counts back from the start. safe_ansi_string clips the slice to the string.
+		if (!ArgHelpers.TryInteger(parser, first, out var position)
+				|| !ArgHelpers.TryInteger(parser, length, out var count))
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.Integers);
 		}
 
-		var strLength = str.Length;
-		var midLength = lengthInt < 0 ? strLength + lengthInt : lengthInt;
+		if (position < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.OutOfRange);
+		}
 
-		return ValueTask.FromResult<CallState>(str.Substring(firstInt, midLength));
+		if (count < 0)
+		{
+			position = Math.Max(position + count + 1, 0);
+			count = -count;
+		}
+
+		if (position >= str.Length || count < 1)
+		{
+			return ValueTask.FromResult<CallState>(MString.Empty);
+		}
+
+		return ValueTask.FromResult<CallState>(str.Substring(position, Math.Min(count, str.Length - position)));
 	}
 
 	[SharpFunction(Name = "ncond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]

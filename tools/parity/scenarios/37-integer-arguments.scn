@@ -14,6 +14,9 @@ think [table(a b c,5 ,20)]
 ::case int.suffix  text after the digits refuses the argument
 think [extract(a b c,2x,1)]|[left(abcde,2x)]|[right(abcde,2x)]|[repeat(ab,2x)]|[ljust(a,3x)]|[mid(abcde,1,2x)]
 
+::case int.mid  mid() counts a negative length back from the start and clips the slice to the string
+think [mid(abcde,3,-2)]|[mid(abcde,1,-5)]|[mid(abcde,-1,2)]|[mid(abcde,3,10)]|[mid(abcde,5,1)]
+
 ::case int.sign  a sign is part of the number; is_uinteger refuses a minus
 think [left(abcde,+2)]|[left(abcde,-1)]|[right(abcde,-1)]|[ljust(a,-1)]|[rjust(a,+3)]|[center(a,-3)]
 think [space(-1)]|[space(+2)]|[chr(+65)]|[chr(-1)]
