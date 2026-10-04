@@ -445,9 +445,10 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
+		// set_power reports all four outcomes only when !AreQuiet(player, thing) (src/flags.c:1978).
 		if (await obj.HasPower(found.Name))
 		{
-			if (notify)
+			if (notify && !await obj.Object().AreQuietAsync(executor))
 			{
 				await notifyService.Notify(executor,
 					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadyGranted, obj.Object().Name, found.Name));
@@ -457,7 +458,7 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new SetObjectPowerCommand(obj, found));
 
-		if (notify)
+		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
 			await notifyService.Notify(executor,
 				string.Format(Definitions.ErrorMessages.Notifications.PowerGranted, obj.Object().Name, found.Name));
@@ -510,7 +511,7 @@ public class ManipulateSharpObjectService(
 
 		if (!await obj.HasPower(found.Name))
 		{
-			if (notify)
+			if (notify && !await obj.Object().AreQuietAsync(executor))
 			{
 				await notifyService.Notify(executor,
 					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadyRemoved, obj.Object().Name, found.Name));
@@ -520,7 +521,7 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
 
-		if (notify)
+		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
 			await notifyService.Notify(executor,
 				string.Format(Definitions.ErrorMessages.Notifications.PowerRemoved, obj.Object().Name, found.Name));
@@ -647,7 +648,8 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new SetObjectParentCommand(obj, newParent));
 
-		if (notify)
+		// do_parent: `if (!AreQuiet(player, thing)) notify(player, T("Parent changed."))` (src/set.c:1488).
+		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
 			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet), executor);
 		}
@@ -666,7 +668,8 @@ public class ManipulateSharpObjectService(
 		await mediator.Send(new UnsetObjectParentCommand(obj));
 
 		// PennMUSH's do_parent (src/set.c) says "Parent changed." for "none" too.
-		if (notify)
+		// do_parent: `if (!AreQuiet(player, thing)) notify(player, T("Parent changed."))` (src/set.c:1488).
+		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
 			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet), executor);
 		}

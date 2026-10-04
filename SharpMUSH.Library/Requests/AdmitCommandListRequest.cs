@@ -15,7 +15,8 @@ public record AdmitCommandListRequest(
 public record AdmitAttributeRequest(
 	Func<ValueTask<ParserState>> Input,
 	DbRefAttribute DbRefAttribute,
-	DBRef? Executor = null) : IRequest<QueueAdmissionResult>;
+	DBRef? Executor = null,
+	DBRef? Enactor = null) : IRequest<QueueAdmissionResult>;
 
 public record AdmitDelayedCommandListRequest(
 	MString Command,

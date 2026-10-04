@@ -218,7 +218,9 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
+		// do_chownall: `notify_format(player, T("Ownership changed for %d objects."), count)` (src/wiz.c:1002),
+		// to the executor alone, whatever the count.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count);
 
 		return CallState.Empty;
 	}

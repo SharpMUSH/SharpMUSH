@@ -545,17 +545,15 @@ public partial class Commands
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			counted.Persist, counted.Reconcile, qRegisters);
-		if (notifyType == "SETQ")
+		if (notifyType == "SETQ" && changed == 0)
 		{
-			if (changed == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore), executor);
-				return new CallState(ErrorMessages.Returns.NoWaitingTask);
-			}
-			return new None();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore), executor);
+			return new CallState(ErrorMessages.Returns.NoWaitingTask);
 		}
 
-		if (!parser.CurrentState.Switches.Contains("QUIET"))
+		// cmd_notify_drain says "Notified." through quiet_notify, which an executor that is QUIET, or
+		// whose owner is, does not hear (src/cque.c:1509, :1541; hdrs/notify.h:153-155) — /setq too.
+		if (!parser.CurrentState.Switches.Contains("QUIET") && !await executor.Object().IsQuietAsync())
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Notified), executor);
 		}
@@ -905,6 +903,12 @@ public partial class Commands
 		else
 		{
 			if (await DrainAttribute(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)) is { } error) return error;
+		}
+
+		// cmd_notify_drain: `quiet_notify(executor, T("Drained."))` (src/cque.c:1539).
+		if (!await executor.Object().IsQuietAsync())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Drained), executor);
 		}
 
 		return CallState.Empty;

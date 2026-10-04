@@ -416,6 +416,9 @@ public partial class Commands
 		var isQuiet = switches.Contains("QUIET");
 		var isAll = switches.Contains("ALL");
 		var isNoCase = switches.Contains("NOCASE");
+		// do_edit's "- Set" line also needs !AreQuiet(player, thing) (src/set.c:936, :1163); the
+		// /check preview does not, since nothing was set.
+		var areQuiet = await targetObject.Object().AreQuietAsync(executor);
 
 		foreach (var attr in attrList)
 		{
@@ -443,7 +446,7 @@ public partial class Commands
 
 			modifiedCount++;
 
-			if (!isQuiet && !isCheck)
+			if (!isQuiet && !isCheck && !areQuiet)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName);
 			}

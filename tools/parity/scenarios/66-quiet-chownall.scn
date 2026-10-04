@@ -1,0 +1,58 @@
+# QUIET acknowledgements and @chownall's summary. AreQuiet(player, thing) and IsQuiet(x)
+# (pennmush hdrs/dbdefs.h:197-198) gate do_set_atr (src/attrib.c:2446), do_edit (src/set.c:936),
+# do_parent (src/set.c:1488), do_link's "Home set." (src/create.c:419), set_flag (src/flags.c:1855,
+# 1914), set_power (src/flags.c:1978) and @notify/@drain's quiet_notify (src/cque.c:1509-1541).
+# do_chownall says "Ownership changed for %d objects." (src/wiz.c:1002). @edit is in the QUIET cases
+# only: its unsuppressed line ("QA - Set: beta") is a separate gap.
+
+::case quiet.loud  a player who is not QUIET hears every acknowledgement
+::login wiz Wiz wizpass
+::as wiz
+@pcreate Quinn=quinnpass
+::login quinn Quinn quinnpass
+::as quinn
+@create QT1
+@create QT2
+&QA QT1=alpha
+@desc QT1=A thing.
+@parent QT1=QT2
+@link QT1=me
+@notify QT1
+@drain QT1
+&QA QT1
+
+::case quiet.player  a QUIET player hears none of them
+@set me=QUIET
+&QA QT1=alpha
+@set QT1=QB:gamma
+@desc QT1=A quiet thing.
+@edit QT1/QA=alpha,beta
+@parent QT1=none
+@link QT1=me
+@set QT1=DARK
+@notify QT1
+@drain QT1
+&QA QT1
+@set me=!QUIET
+
+::case quiet.thing  nor does the owner of a QUIET object, about that object
+@set QT1=QUIET
+&QA QT1=alpha
+@set QT1=QB:delta
+@edit QT1/QA=alpha,beta
+@parent QT1=QT2
+@link QT1=me
+@set QT1=!DARK
+@set QT1=!QUIET
+
+::case quiet.power  set_power reports to the grantor unless the object is QUIET and theirs
+::as wiz
+@create QP
+@set QP=QUIET
+@power QP=Builder
+@set QP=!QUIET
+@power QP=!Builder
+
+::case quiet.chownall  @chownall tells the executor how many objects it moved
+@chownall *Quinn
+think [owner(locate(*Quinn,QT1,i))]

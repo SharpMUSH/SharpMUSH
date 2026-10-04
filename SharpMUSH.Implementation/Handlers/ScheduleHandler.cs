@@ -23,7 +23,7 @@ public class AdmissionAsyncScheduleHandler(ITaskScheduler scheduler) : IRequestH
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitAttributeRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute, request.Executor);
+		return await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute, request.Executor, request.Enactor);
 	}
 }
 

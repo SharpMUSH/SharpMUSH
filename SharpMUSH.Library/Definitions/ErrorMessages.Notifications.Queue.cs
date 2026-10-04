@@ -14,6 +14,8 @@ public static partial class ErrorMessages
 		public const string QueueControlEmpty = "No accessible matching queue entries.";
 		public const string QueuePausedHint = "Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.";
 		public const string QueueRejected = "Queue admission rejected: {0}.";
+		/// <summary>PennMUSH <c>process_expression</c> (<c>src/parse.c:2083-2084</c>): to a queue entry's enactor, unless QUIET, when the entry runs past <c>queue_entry_cpu_time</c>.</summary>
+		public const string CpuUsageExceeded = "CPU usage exceeded.";
 		public const string QueueUsage = "Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.";
 		public const string QueueRejections = "Queue rejections ({0}): {1}.";
 

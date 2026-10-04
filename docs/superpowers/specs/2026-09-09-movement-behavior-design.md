@@ -203,7 +203,7 @@ or look again. Three cycle classes, with different guards.
 `@describe` of `u(%#/describe)` looked at by its own owner, or two players whose `@describe` each
 evaluate the other's, recurse inside a single evaluation. `AttributeService` already guards this:
 `ParserState.FunctionRecursionDepths` is keyed by **attribute name** and checked against
-`Limit.FunctionRecursionLimit` (default 100), alongside the shared `CallDepth` counter and
+`Limit.FunctionRecursionLimit` (default 50), alongside the shared `CallDepth` counter and
 `LimitExceeded` flag. Because the key is the attribute name rather than the object, the two-player
 mutual case is caught by the same counter as the self-referential one.
 

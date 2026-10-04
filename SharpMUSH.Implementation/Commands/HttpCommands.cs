@@ -113,7 +113,7 @@ public partial class Commands
 							EnvironmentRegisters = contentDict
 						};
 					},
-					dbRefAttribute, parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+					dbRefAttribute, parser.CurrentState.Executor, parser.CurrentState.Enactor), ExecutionBudget.CurrentToken);
 
 				if (!admission.Accepted)
 				{
