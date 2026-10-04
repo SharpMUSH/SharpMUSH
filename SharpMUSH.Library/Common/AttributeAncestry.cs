@@ -2,7 +2,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Common;
 
 /// <summary>
 /// PennMUSH's <c>can_read_attr_internal</c> tree walk (<c>src/attrib.c:318-356</c>), which decides

@@ -2,6 +2,7 @@ using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Softcode;
 using Range = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.Tests.Formatting;

@@ -3,7 +3,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
-public interface IPermissionService
+public interface IPermissionService : IChannelPermissionService
 {
 	/// <summary>
 	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). <c>can_interact</c>
@@ -132,27 +132,65 @@ public interface IPermissionService
 
 	ValueTask<bool> CanIdle(AnySharpObject executor);
 
-	bool ChannelOkType(AnySharpObject target, SharpChannel channel);
+	// The channel members below are IChannelPermissionService's, redeclared here so that a plugin
+	// compiled against IPermissionService, which binds each call to this interface's own slot, still
+	// finds them. The permission service implements both slots with one method. New code calls them
+	// through IChannelPermissionService; the attribute steers it there.
 
-	ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType);
+	[Obsolete(ChannelMemberMoved)]
+	new bool ChannelOkType(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType);
 
-	ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType);
 
-	ValueTask<bool> ChannelCanJoin(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanSpeak(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanJoin(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanSpeak(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanHide(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanHide(AnySharpObject target, SharpChannel channel);
 
-	ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel);
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel);
+
+	[Obsolete(ChannelMemberMoved)]
+	new ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel);
+
+	// A plugin implementation built against the old shape fills only the slots above; these route the
+	// IChannelPermissionService slots to them, so such a plugin still loads and channel code calling
+	// through the narrow interface reaches it. A class implementing both, as PermissionService does,
+	// overrides these with its own methods.
+#pragma warning disable CS0618
+	bool IChannelPermissionService.ChannelOkType(AnySharpObject target, SharpChannel channel) => ChannelOkType(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelStandardCan(AnySharpObject target, string[] channelType) => ChannelStandardCan(target, channelType);
+	ValueTask<bool> IChannelPermissionService.ChannelCanPriv(AnySharpObject target, string[] channelType) => ChannelCanPriv(target, channelType);
+	ValueTask<bool> IChannelPermissionService.ChannelCanAccess(AnySharpObject target, SharpChannel channel) => ChannelCanAccess(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanJoin(AnySharpObject target, SharpChannel channel) => ChannelCanJoin(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanSpeak(AnySharpObject target, SharpChannel channel) => ChannelCanSpeak(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanCemit(AnySharpObject target, SharpChannel channel) => ChannelCanCemit(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) => ChannelCanModifyAsync(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel) => ChannelCanSeeAsync(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanHide(AnySharpObject target, SharpChannel channel) => ChannelCanHide(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel) => ChannelCanNukeAsync(target, channel);
+	ValueTask<bool> IChannelPermissionService.ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel) => ChannelCanDecomposeAsync(target, channel);
+#pragma warning restore CS0618
+
+	private const string ChannelMemberMoved = "Channel permissions are IChannelPermissionService's; call them through that interface.";
 }

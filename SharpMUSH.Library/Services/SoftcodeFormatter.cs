@@ -2,6 +2,7 @@ using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Softcode;
 using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Library.Services;

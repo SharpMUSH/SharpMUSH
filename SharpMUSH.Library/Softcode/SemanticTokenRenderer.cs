@@ -1,7 +1,7 @@
 using SharpMUSH.Library.Models;
 using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Softcode;
 
 /// <summary>
 /// Renders a source <see cref="MString"/> styled by a list of <see cref="SemanticToken"/>s.

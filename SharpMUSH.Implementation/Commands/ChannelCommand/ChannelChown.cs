@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelChown
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString newOwner)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString newOwner)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -31,7 +31,7 @@ public static class ChannelChown
 
 	/// <summary>Hands a channel the executor may modify to the player <paramref name="newOwner"/> names.</summary>
 	private static async ValueTask<CallState> ChownAsync(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
 		SharpChannel channel, MString newOwner)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))

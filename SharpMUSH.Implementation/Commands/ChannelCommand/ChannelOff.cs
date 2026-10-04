@@ -63,12 +63,13 @@ public static class ChannelOff
 		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
 	{
 		var channelLabel = channel.Name.ToPlainText();
+		IChannelPermissionService channelPermissions = PermissionService;
 
 		// extchat.c:1289 — "You must control either the victim or the channel". Without this, any mortal
 		// could remove any other player from any channel.
 		if (target.Id() != executor.Id()
 				&& !await PermissionService.Controls(executor, target)
-				&& !await PermissionService.ChannelCanModifyAsync(executor, channel))
+				&& !await channelPermissions.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatInvalidTarget, executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
