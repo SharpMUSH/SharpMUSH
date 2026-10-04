@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Common;
 
 /// <summary>
 /// Shared sitelock host-rule matcher used by both the <c>@SITELOCK/CHECK</c> command and

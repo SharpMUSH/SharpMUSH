@@ -27,6 +27,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using DotNext;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Implementation.Functions;
 

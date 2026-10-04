@@ -14,6 +14,7 @@ using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Softcode;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
