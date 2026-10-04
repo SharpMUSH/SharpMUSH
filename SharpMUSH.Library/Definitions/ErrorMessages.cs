@@ -178,7 +178,6 @@ public static partial class ErrorMessages
 		public const string InvalidFormat = "#-1 INVALID FORMAT";
 		public const string InvalidInfoType = "#-1 INVALID INFO TYPE";
 		public const string InvalidJsonMessage = "#-1 INVALID JSON MESSAGE";
-		public const string InvalidLevel = "#-1 INVALID LEVEL";
 		public const string InvalidLineWidth = "#-1 INVALID LINE WIDTH";
 		public const string InvalidLocation = "#-1 INVALID LOCATION";
 		public const string InvalidLock = "#-1 INVALID LOCK";

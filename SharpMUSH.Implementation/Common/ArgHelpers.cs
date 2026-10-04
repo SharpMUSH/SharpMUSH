@@ -26,6 +26,23 @@ public static partial class ArgHelpers
 		=> NumericEvaluation.For(parser).TryInt32(text, out value);
 
 	/// <summary>
+	/// PennMUSH's <c>parse_integer</c> (<c>hdrs/parse.h:54</c>, <c>parse_int</c> at <c>src/parse.c:674</c>):
+	/// <c>strtol</c> with no format check, so the leading digits are the value, text with none is 0, and
+	/// a value past an <c>int</c> is clamped to it. For the arguments PennMUSH reads without asking
+	/// <c>is_integer</c> first, which therefore never fail.
+	/// </summary>
+	public static int ParseInteger(string? text)
+	{
+		if (new NumericEvaluation(TinyMath: true, NullEqualsZero: true).TryInt64(text, out long value))
+		{
+			return (int)Math.Clamp(value, int.MinValue, int.MaxValue);
+		}
+
+		// More digits than a long holds: strtol saturates in the direction of the sign.
+		return text.AsSpan().TrimStart(" \t\r\n\v\f").StartsWith("-") ? int.MinValue : int.MaxValue;
+	}
+
+	/// <summary>
 	/// PennMUSH's <c>is_uinteger</c> (<c>src/parse.c:429</c>): <see cref="TryInteger"/>, but the first
 	/// character after the whitespace must be a digit or <c>+</c>. A negative value is refused under
 	/// TINY_MATH too, where PennMUSH would wrap it to a huge unsigned one.

@@ -158,6 +158,12 @@ public class InformationFunctionUnitTests
 	[Test]
 	[Arguments("first(rloc(%#,0),:)", "%#")]
 	[Arguments("first(rloc(%#,1),:)", "%l")]
+	// fun_rloc reads the depth with parse_integer and clamps it to 0..20 (src/fundb.c:1563-1572): no
+	// depth is an error, a negative or non-numeric one climbs nothing, and the leading digits count.
+	[Arguments("first(rloc(%#,-1),:)", "%#")]
+	[Arguments("first(rloc(%#,foo),:)", "%#")]
+	[Arguments("first(rloc(%#,1x),:)", "%l")]
+	[Arguments("first(rloc(%#,99999999999999999999),:)", "%l")]
 	public async Task Rloc(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

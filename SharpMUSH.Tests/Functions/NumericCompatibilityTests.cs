@@ -75,6 +75,16 @@ public class NumericCompatibilityTests
 	[Arguments(true, true, "strinsert(abc,1x,X)", "aXbc")]
 	[Arguments(true, true, "space(2x)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	[Arguments(true, true, "chr(65x)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	// List positions go through find_list_position, which asks is_integer (src/funlist.c:197-202); one
+	// it refuses names no element, and linsert() then answers the list as it was (:1819-1821).
+	[Arguments(false, false, "linsert(a b c,2x,X)", "a b c")]
+	[Arguments(false, true, "linsert(a b c,,X)", "a b c")]
+	[Arguments(true, true, "linsert(a b c,2x,X)", "a X b c")]
+	[Arguments(false, false, "elements(a b c,2x 3)", "c")]
+	[Arguments(true, true, "elements(a b c,2x 3)", "b c")]
+	[Arguments(false, false, "ldelete(a b c,2x)", "a b c")]
+	[Arguments(true, true, "ldelete(a b c,2x)", "a c")]
+	[Arguments(true, true, "lreplace(a b c,2x,X)", "a X c")]
 	[Arguments(true, true, "iter(a b,[inum(0x)])", "#-1 ARGUMENT MUST BE INTEGER #-1 ARGUMENT MUST BE INTEGER")]
 	public async Task LiveOptionsControlValidationAndEvaluation(bool tinyMath, bool nullEqualsZero, string expression, string expected)
 	{

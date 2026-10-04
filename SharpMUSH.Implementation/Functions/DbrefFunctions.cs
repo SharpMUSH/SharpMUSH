@@ -882,13 +882,9 @@ public partial class Functions
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
-		{
-			return new CallState(ErrorMessages.Returns.InvalidLevel);
-		}
-
-		// fun_rloc (src/fundb.c:1569) climbs at most 20 levels.
-		levels = Math.Min(levels, 20);
+		// fun_rloc (src/fundb.c:1563-1572) reads the depth with parse_integer, which never fails, and
+		// clamps it to 0..20: a depth that is not a number, or is negative, climbs no levels at all.
+		var levels = Math.Clamp(ArgHelpers.ParseInteger(levelsArg), 0, 20);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
