@@ -310,7 +310,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			return await prs.FunctionParse(argument, emitSubstDebug);
 		}
 
-		var evalParser = MUSHCodeParser.ResolveTrackingParser(prs);
+		var evalParser = prs.ForTrackedEvaluation();
 
 		// A fresh visitor per call mirrors ParseInternalCore's "new SharpMUSHParserVisitor(...)
 		// per parse": its diagnostic-suppression flag must start false for THIS argument alone, not

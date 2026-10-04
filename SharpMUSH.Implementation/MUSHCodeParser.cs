@@ -331,40 +331,36 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return (result, visitor.SuppressSubstitutionOnlyDebugTrace);
 	}
 
-	/// <summary>
-	/// Returns a parser bound to a state guaranteed to carry invocation/recursion tracking
-	/// (<see cref="ParserState.TotalInvocations"/>, <see cref="ParserState.CallDepth"/>, etc.),
-	/// pushing a fresh <see cref="ParserState"/> only when the current state stack has none yet
-	/// (i.e. a genuinely top-level entry point — <see cref="State"/> is empty, or the top frame
-	/// predates any tracking counters). Extracted from <see cref="FunctionParse(MString)"/> /
-	/// <see cref="FunctionParse(MString, bool)"/> so other callers that want to evaluate a
-	/// function-position subtree without re-lexing/re-parsing (see
-	/// <c>CommandArgumentSplitter.EvaluateArgumentSubtree</c>) can reuse the exact same
-	/// "needsTracking" decision.
-	/// </summary>
+	/// <inheritdoc/>
 	/// <remarks>
+	/// It pushes a fresh state only at a genuinely top-level entry point: <see cref="State"/> is empty,
+	/// or the top frame predates any tracking counters. <see cref="FunctionParse(MString)"/>,
+	/// <see cref="FunctionParse(MString, bool)"/> and <c>CommandArgumentSplitter.EvaluateArgumentSubtree</c>
+	/// (which evaluates a retained subtree without re-lexing it) share this one decision.
+	/// <para>
 	/// Executor/Enactor/Caller are always carried over from <see cref="CurrentState"/>. The no-debug
 	/// <see cref="FunctionParse(MString)"/> overload used to drop them, so a top-level parse entered
 	/// with actors but without tracking counters evaluated every function against a null executor —
 	/// <c>FunctionInvocationPipeline</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
 	/// single call, was caught, logged with a full stack trace, and returned an empty result. The
 	/// nightly benchmark run that flushed this out logged two million of those stack traces.
+	/// </para>
 	/// </remarks>
-	internal IMUSHCodeParser ResolveTrackingParser() => ResolveTrackingParser(this);
-
-	/// <inheritdoc cref="ResolveTrackingParser()"/>
-	internal static IMUSHCodeParser ResolveTrackingParser(IMUSHCodeParser parser)
+	public IMUSHCodeParser ForTrackedEvaluation()
 	{
-		var needsTracking = parser.State.IsEmpty || parser.CurrentState.TotalInvocations == null;
+		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
 		if (!needsTracking)
 		{
-			return parser;
+			return this;
 		}
 
 		// CurrentState => State.Peek() throws on an empty stack, so only read the actors when there
 		// IS a frame to read them from.
-		return parser.Push(ParserState.ForTrackedEvaluation(parser.State.IsEmpty ? null : parser.CurrentState));
+		return Push(ParserState.ForTrackedEvaluation(State.IsEmpty ? null : CurrentState));
 	}
+
+	/// <inheritdoc/>
+	public bool LocatesOptionalServices => true;
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
 	{
@@ -373,7 +369,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser();
+		var parser = ForTrackedEvaluation();
 
 		var (result, _) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
@@ -397,7 +393,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		try
 		{
 			budget.ThrowIfExceeded();
-			var parser = ResolveTrackingParser();
+			var parser = ForTrackedEvaluation();
 			var rawText = text.ToPlainText();
 			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 			budget.ThrowIfExceeded();

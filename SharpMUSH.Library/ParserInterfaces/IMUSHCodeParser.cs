@@ -36,6 +36,23 @@ public interface IMUSHCodeParser
 	Option<ParserState> StateHistory(uint index);
 
 	/// <summary>
+	/// This parser, bound to a state guaranteed to carry invocation and recursion tracking: itself
+	/// when its current state already has it, otherwise itself with
+	/// <see cref="ParserState.ForTrackedEvaluation(ParserState?)"/> pushed over its current state.
+	/// Evaluating a function-position subtree goes through this, so a top-level evaluation is counted
+	/// and bounded like one entered through <see cref="FunctionParse(MString)"/>.
+	/// </summary>
+	IMUSHCodeParser ForTrackedEvaluation();
+
+	/// <summary>
+	/// Whether <see cref="ServiceProvider"/> is a host's container, in which evaluation looks up the
+	/// services a host may leave unregistered (telemetry, <c>@function</c>s, plugin hooks, reality
+	/// policy). A parser that does not run evaluation in a host answers <see langword="false"/>, and
+	/// evaluation then runs without them.
+	/// </summary>
+	bool LocatesOptionalServices { get; }
+
+	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
 	/// </summary>
 	/// <param name="text">The text to tokenize.</param>
