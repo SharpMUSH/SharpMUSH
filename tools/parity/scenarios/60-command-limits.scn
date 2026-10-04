@@ -1,0 +1,46 @@
+# Command and queue limits: the in-place nesting depth (do_entry, cque.c:1182) and player_queue_limit
+# per object (pay_queue / queue_limit, cque.c:226-313). Shipped defaults on both servers.
+
+::case cl.include-depth  an in-place action list nests at most 50 deep; each level carries on after it
+::login wiz Wiz wizpass
+::as wiz
+&CNT me=0
+&AFTER me=0
+&INC me=&CNT me=[inc(v(CNT))];@include me/INC;&AFTER me=[inc(v(AFTER))]
+@include me/INC
+think [v(CNT)] [v(AFTER)]
+
+::case cl.include-depth-mixed  every kind of in-place list counts towards the same depth
+&CNT me=0
+&INC2 me=&CNT me=[inc(v(CNT))];@switch/inplace 1=1,{@include me/INC2}
+@include me/INC2
+think [v(CNT)]
+&INC
+&INC2
+&CNT
+&AFTER
+
+::case cl.queue-per-object  player_queue_limit counts each object on its own (owner_queues is off)
+# The waits are short and their output goes to objects nobody hears, so nothing needs cleaning up.
+@power *Alice=No_Pay
+::login alice Alice alicepass
+::as alice
+@create QA
+@create QB
+&GO QA=@dolist [lnum(60)]=@wait 5=think a
+&GO QB=@dolist [lnum(60)]=@wait 5=think b
+@trigger QA/GO
+::settle
+@trigger QB/GO
+::settle
+think [hasflag(QA,HALT)] [hasflag(QB,HALT)]
+
+::case cl.runaway  one object past player_queue_limit is halted
+# Alice logs out first: PennMUSH runs the whole cascade before the next typed line and SharpMUSH a moment
+# later, so her runaway notices would land in different steps. QueueAdmissionTests covers their text.
+&GO QB=@dolist [lnum(120)]=@wait 5=think b
+::logout alice
+::as wiz
+@trigger [locate(*Alice,QB,i)]/GO
+::settle
+think [hasflag(locate(*Alice,QB,i),HALT)]

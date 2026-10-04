@@ -942,21 +942,13 @@ public partial class Commands
 				}
 
 				var combined = string.Join(" ; ", texts);
-				// Key recursion tracking by the chain's own target-list identity (mirroring how single-target
-				// @include keys on the attribute LongName): the SAME chain nested within itself shares a
-				// bucket, so genuine whole-chain recursion is still caught, while DIFFERENT chains get
-				// DIFFERENT buckets, so ordinary non-recursive nesting is not falsely limited. (A constant key
-				// would collapse every chain into one bucket; the first link's name would collide unrelated
-				// chains that share that link.) The "@INCLUDE`CHAIN`" prefix cannot collide with a real
-				// attribute LongName. Recursion originating in a SINGLE link is caught independently of this
-				// key: a nested @include of that link runs through RunOne under the link's own LongName.
-				var chainRecursionKey = "@INCLUDE`CHAIN`" + string.Join("`", targets).ToUpperInvariant();
+				// Nesting is bounded by the in-place depth (ParserState.MaxInplaceDepth), as do_entry bounds it,
+				// whichever chain or link re-enters.
 				var chainPropagation = new BreakPropagation { PreserveNext = true };
-				lastResult = await ExecuteAttributeWithTracking(parser, chainRecursionKey, async () =>
-					await parser.With(
-						state => state with
-						{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = chainPropagation },
-						p => p.CommandListParse(MarkupText.Plain(combined))) ?? CallState.Empty);
+				lastResult = await parser.With(
+					state => state with
+					{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = chainPropagation },
+					p => p.CommandListParse(MarkupText.Plain(combined))) ?? CallState.Empty;
 
 				RaiseBreakForCaller(chainPropagation);
 
@@ -1050,19 +1042,16 @@ public partial class Commands
 		// Execute one already-read target in-place with the shared env args, containing an @break when /nobreak.
 		async ValueTask<CallState> RunOne(SharpAttribute attribute, string text)
 		{
-			return await ExecuteAttributeWithTracking(parser, attribute.LongName!.ToUpper(), async () =>
-			{
-				var propagation = new BreakPropagation { PreserveNext = true };
+			var propagation = new BreakPropagation { PreserveNext = true };
 
-				var execResult = await parser.With(
-					state => state with
-					{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = propagation },
-					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MarkupText.Plain(text))));
+			var execResult = await parser.With(
+				state => state with
+				{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = propagation },
+				p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MarkupText.Plain(text))));
 
-				RaiseBreakForCaller(propagation);
+			RaiseBreakForCaller(propagation);
 
-				return execResult ?? CallState.Empty;
-			});
+			return execResult ?? CallState.Empty;
 		}
 
 		// @include inserts the included actions into the CALLING list, so a guard inside them stops

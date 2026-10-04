@@ -434,9 +434,9 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainRecSelf");
 
-		// The recursion originates in ONE link of the group: S2 includes ITSELF. That nested single-target
-		// @include runs through RunOne, tracked under S2's own LongName — independent of the chain key — so
-		// it hits the recursion limit and the chain RETURNS instead of looping forever.
+		// The recursion originates in ONE link of the group: S2 includes ITSELF. Each nested @include is one
+		// more in-place level, so it stops at the in-place depth limit and the chain RETURNS instead of
+		// looping forever.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S1 {obj}=@pemit #1=ChainRecSelf_S1_88011"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S2 {obj}=@pemit #1=ChainRecSelf_S2_88011;@include {obj}/S2"));
 
@@ -456,8 +456,8 @@ public class ControlFlowCommandTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainRecWhole");
 
 		// The recursion again originates in ONE link, but this time S2 re-runs the WHOLE chain (the same
-		// target list). That is tracked under the chain's target-list key, which is identical on every
-		// re-entry, so the counter climbs and the recursion limit fires — the chain RETURNS.
+		// target list). Every re-entry is another in-place level, so the depth limit stops it — the chain
+		// RETURNS.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S1 {obj}=@pemit #1=ChainRecWhole_S1_43307"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S2 {obj}=@include/chain {obj}/S1 {obj}/S2"));
 

@@ -271,6 +271,14 @@
   {
    "key": "50-mail/mail.fwd-by-name#2",
    "command": "home"
+  },
+  {
+   "key": "60-command-limits/cl.include-depth#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "60-command-limits/cl.queue-per-object#1",
+   "command": "Alice alicepass"
   }
  ]
 }

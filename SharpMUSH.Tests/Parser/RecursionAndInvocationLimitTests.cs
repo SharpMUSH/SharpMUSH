@@ -292,8 +292,7 @@ public class RecursionAndInvocationLimitTests
 	}
 
 	/// <summary>
-	/// Test that @INCLUDE now properly tracks recursion when evaluating attributes.
-	/// Verifies ExecuteAttributeWithTracking is used and basic execution works.
+	/// Test that a u() recursing past the limit inside an @INCLUDEd attribute terminates.
 	/// </summary>
 	[Test]
 	public async Task RecursionLimit_IncludeCommand_TracksRecursion()
@@ -301,7 +300,6 @@ public class RecursionAndInvocationLimitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "InclRecurse");
 
-		// @INCLUDE uses ExecuteAttributeWithTracking helper to track recursion.
 		// When u() exceeds the recursion limit the error string becomes the command text,
 		// which is unrecognised → "Huh?" notification. Verify @include completes without crash
 		// and that NotifyService was called (command dispatched some notification).
@@ -320,8 +318,7 @@ public class RecursionAndInvocationLimitTests
 	}
 
 	/// <summary>
-	/// Test that @TRIGGER properly tracks recursion when evaluating attributes.
-	/// Verifies ExecuteAttributeWithTracking is used and basic execution works.
+	/// Test that a u() recursing past the limit inside a @TRIGGERed attribute terminates.
 	/// </summary>
 	[Test]
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()

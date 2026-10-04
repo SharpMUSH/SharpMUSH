@@ -186,8 +186,16 @@ public class DatabaseCommandTests
 			sql.IsAvailable.Returns(true);
 			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, sql);
 			await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+			// A quota refusal is reported by the runaway notice alone (pay_queue, src/cque.c:304).
+			var runaway = reason == QueueRejectionReason.OwnerLimit;
+			bool RunawayNoticed() => TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+				nameof(ErrorMessages.Notifications.RunawayObjectFormat), player.DbRef);
+			if (runaway)
+				for (var deadline = DateTime.UtcNow.AddSeconds(10); !RunawayNoticed() && DateTime.UtcNow < deadline;)
+					await Task.Delay(20);
+			await Assert.That(RunawayNoticed()).IsEqualTo(runaway);
 			await Assert.That(SqlWebAppFactoryArg.Notifications.ForHandle(player.Handle)
-				.Count(message => message.StartsWith("Queue admission rejected:"))).IsEqualTo(1);
+				.Count(message => message.StartsWith("Queue admission rejected:"))).IsEqualTo(runaway ? 0 : 1);
 			await ExpectSelfNotified(player.DbRef, text => text == new QueueAdmissionResult(null, reason).Error, 0);
 			sql.DidNotReceive().ExecuteStreamQueryAsync(Arg.Any<string>());
 			await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(0);

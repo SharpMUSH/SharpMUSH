@@ -75,10 +75,19 @@ public partial class TaskScheduler(
 		public PendingInputCommand? PendingInput { get; init; }
 
 		/// <summary>
-		/// Whether this entry is part of <see cref="Owner"/>'s queue quota. False for a typed line and
+		/// Whether this entry is part of the queue quota. False for a typed line and
 		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
 		/// </summary>
 		public bool ChargesOwner { get; init; } = true;
+
+		/// <summary>
+		/// The object whose own <c>player_queue_limit</c> count this entry is in when <c>owner_queues</c>
+		/// is off: its executor, or <see cref="Owner"/> for an entry with no executor. With
+		/// <c>owner_queues</c> on, <see cref="Owner"/>'s count is the one admission reads (PennMUSH
+		/// <c>pay_queue</c>, <c>src/cque.c:303</c>). Both counts are kept for every entry, so turning the
+		/// option over leaves no pending entry uncounted.
+		/// </summary>
+		public string ChargedObject { get; init; } = Owner;
 	}
 
 	// Stored only on admitted entries. An escape cannot retain a future-start tombstone.
@@ -179,14 +188,20 @@ public partial class TaskScheduler(
 			=> HashCode.Combine(Handle, RuntimeHelpers.GetHashCode(Metadata), Transport);
 	}
 
-	// Pending entries charged to each owner, and pending typed lines per connection incarnation.
+	// Pending charged entries per object and per owner (owner_queues picks which one admission reads),
+	// and pending typed lines per connection incarnation.
 	// Kept with _pendingEntries under _admissionLock so admission never enumerates it (#1336).
+	private readonly Dictionary<string, int> _chargedPerObject = new();
 	private readonly Dictionary<string, int> _chargedPerOwner = new();
 	private readonly Dictionary<IncarnationKey, int> _typedPerIncarnation = new();
 
 	private void Count(QueueEntry entry)
 	{
-		if (entry.ChargesOwner) _chargedPerOwner[entry.Owner] = _chargedPerOwner.GetValueOrDefault(entry.Owner) + 1;
+		if (entry.ChargesOwner)
+		{
+			_chargedPerObject[entry.ChargedObject] = _chargedPerObject.GetValueOrDefault(entry.ChargedObject) + 1;
+			_chargedPerOwner[entry.Owner] = _chargedPerOwner.GetValueOrDefault(entry.Owner) + 1;
+		}
 		if (entry.PendingInput is { } input)
 		{
 			var key = new IncarnationKey(input);
@@ -196,7 +211,11 @@ public partial class TaskScheduler(
 
 	private void Uncount(QueueEntry entry)
 	{
-		if (entry.ChargesOwner) Decrement(_chargedPerOwner, entry.Owner);
+		if (entry.ChargesOwner)
+		{
+			Decrement(_chargedPerObject, entry.ChargedObject);
+			Decrement(_chargedPerOwner, entry.Owner);
+		}
 		if (entry.PendingInput is { } input) Decrement(_typedPerIncarnation, new IncarnationKey(input));
 	}
 
@@ -215,16 +234,20 @@ public partial class TaskScheduler(
 	{
 		lock (_admissionLock)
 		{
-			var owners = _pendingEntries.Values.Where(e => e.ChargesOwner)
-				.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count());
+			var charged = _pendingEntries.Values.Where(e => e.ChargesOwner).ToList();
+			var objects = charged.GroupBy(e => e.ChargedObject).ToDictionary(g => g.Key, g => g.Count());
+			var owners = charged.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count());
 			var typed = _pendingEntries.Values.Where(e => e.PendingInput is not null)
 				.GroupBy(e => new IncarnationKey(e.PendingInput!)).ToDictionary(g => g.Key, g => g.Count());
-			return (DescribeTallies(_chargedPerOwner, _typedPerIncarnation), DescribeTallies(owners, typed));
+			return (DescribeTallies(_chargedPerObject, _chargedPerOwner, _typedPerIncarnation),
+				DescribeTallies(objects, owners, typed));
 		}
 	}
 
-	private static string DescribeTallies(IReadOnlyDictionary<string, int> owners, IReadOnlyDictionary<IncarnationKey, int> typed)
-		=> string.Join(';', owners.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={pair.Value}")
+	private static string DescribeTallies(IReadOnlyDictionary<string, int> objects, IReadOnlyDictionary<string, int> owners,
+		IReadOnlyDictionary<IncarnationKey, int> typed)
+		=> string.Join(';', objects.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"object {pair.Key}={pair.Value}")
+			.Concat(owners.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"owner {pair.Key}={pair.Value}"))
 			.Concat(typed.OrderBy(pair => pair.Key.Handle).ThenBy(pair => pair.Key.Transport, StringComparer.Ordinal)
 				.ThenBy(pair => pair.Value)
 				.Select(pair => $"#{pair.Key.Handle}/{pair.Key.Transport}={pair.Value}")));
@@ -263,7 +286,7 @@ public partial class TaskScheduler(
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
 	 bool chargesOwner = true)
 	{
-		// A typed line is invisible to the owner quota, as it is in PennMUSH: run_user_input builds its
+		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
 		// reaches insert_que, never reaches pay_queue, and never touches the add_to tally queue_limit
 		// reads (:226-235). It can therefore neither be refused by the quota nor be the reason someone
@@ -276,6 +299,8 @@ public partial class TaskScheduler(
 		string owner = handle is not null ? SchedulerKeys.Owner(handle)
 			: chargesOwner ? SchedulerKeys.SystemOwner
 			: SchedulerKeys.SocketOwner;
+		string? chargedObject = null;
+		var pooled = false;
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		var executorIsPlayer = false;
 		if (executor is not null)
@@ -299,17 +324,26 @@ public partial class TaskScheduler(
 					SchedulerKeys.KindOf(group), QueueOutcome.Halted);
 				return Reject(QueueRejectionReason.Halted);
 			}
-			if (await target.IsWizard(ExecutionBudget.CurrentToken) || await target.HasPower("Queue", ExecutionBudget.CurrentToken))
+			// pay_queue charges queue_limit(QUEUE_PER_OWNER ? Owner(player) : player) (src/cque.c:303):
+			// each object has a count of its own unless owner_queues pools them on the owner, and
+			// HugeQueue asks about whichever of the two is charged (:231).
+			pooled = configuration?.CurrentValue.Command.OwnerQueues == true;
+			var targetOwner = await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+			var charged = pooled ? new AnySharpObject(targetOwner) : target;
+			if (await charged.IsWizard(ExecutionBudget.CurrentToken) || await charged.HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
-			owner = (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
+			owner = targetOwner.Object.DBRef.ToString();
+			chargedObject = target.Object().DBRef.ToString();
 		}
+		chargedObject ??= owner;
 		QueueAdmissionResult result;
 		lock (_admissionLock)
 		{
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
 			// Only charged entries are in the tally, so a typed line cannot make its owner a runaway.
-			else if (chargesOwner && _chargedPerOwner.GetValueOrDefault(owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (chargesOwner && (pooled ? _chargedPerOwner.GetValueOrDefault(owner) : _chargedPerObject.GetValueOrDefault(chargedObject)) >= ownerLimit)
+				result = Reject(QueueRejectionReason.OwnerLimit);
 			// Per connection incarnation, not per numeric handle: a replaced socket reuses the handle,
 			// and work the previous occupant left behind (which the entry's own session check will
 			// discard when it reaches the consumer) must not spend the new one's allowance.
@@ -325,7 +359,8 @@ public partial class TaskScheduler(
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
 					PendingInput = pendingInput,
-					ChargesOwner = chargesOwner
+					ChargesOwner = chargesOwner,
+					ChargedObject = chargedObject
 				};
 				StoreEntry(entry);
 				_orderedPids.Add(pid);
@@ -355,11 +390,15 @@ public partial class TaskScheduler(
 		// (src/game.c:1181) refuses only what the queue carries for them. An uncharged entry can no
 		// longer be refused for the owner limit at all, so no group test is needed here.
 		//
-		// Scheduled before the rejection notice, which is best-effort and can fail: telling nobody
-		// about a runaway is survivable, leaving one running is not.
+		// Scheduled before any notice, which is best-effort and can fail: telling nobody about a
+		// runaway is survivable, leaving one running is not.
 		if (result.Reason == QueueRejectionReason.OwnerLimit && executor is { } offender)
 			QueueRunawayHalt(offender, owner);
-		if (!result.Accepted && notifyOnRejection && notifyService is not null)
+		// An object refused for its quota hears about it from the runaway path alone, as pay_queue
+		// prints only "Runaway object" (src/cque.c:304); what else it queues before the HALT lands is
+		// dropped silently, as insert_que drops a halted object's work (:530).
+		if (!result.Accepted && notifyOnRejection && notifyService is not null
+			&& !(result.Reason == QueueRejectionReason.OwnerLimit && executor is not null))
 		{
 			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
 			else if (DBRef.TryParse(owner, out var player))
@@ -429,11 +468,20 @@ public partial class TaskScheduler(
 			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(haltable, haltFlag), ExecutionBudget.CurrentToken);
 		}
 
-		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
-			await notifyService.NotifyLocalized(ownerRef!.Value,
-				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, offender.ToString());
+		// pay_queue tells the owner, then do_halt does unless the owner is QUIET (src/cque.c:304,
+		// :2176-2178). Both name the object by its plain dbref.
+		if (notifyService is not null && DBRef.TryParse(owner, out var parsedOwner) && parsedOwner is { } ownerRef)
+		{
+			var dbref = $"#{offender.Number}";
+			await notifyService.NotifyLocalized(ownerRef,
+				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, dbref);
+			if (await mediator.Send(new GetObjectNodeQuery(ownerRef), ExecutionBudget.CurrentToken) is AnySharpObject ownerObject
+				&& !await ownerObject.HasFlag("QUIET", ExecutionBudget.CurrentToken))
+				await notifyService.NotifyLocalized(ownerRef,
+					nameof(ErrorMessages.Notifications.HaltedNoticeFormat), name, dbref);
+		}
 
-		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its owner's queue quota; commands halted",
+		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its queue quota; commands halted",
 			name, offender);
 	}
 
@@ -684,7 +732,7 @@ public partial class TaskScheduler(
 			if (executor is AnySharpObject { IsPlayer: false } thing && await thing.HasFlag("HALT", ExecutionBudget.CurrentToken)) return null;
 		}
 		// Deferred bodies cannot consume the submitting command list's break/include state.
-		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0 }).CommandListParse(command);
+		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0, InplaceDepth = 0 }).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
 	private readonly CancellationTokenSource _shutdownCts = new();

@@ -45,6 +45,8 @@ When including attribute contents, @include ignores any ^...: or $...: at the st
 
 The including environment (%0-%9) is available to the included actions. If arguments are provided to @include, they are substituted for the environment's %0, %1, etc. while the included action list is running. The environment is then restored after the @include.
 
+In-place action lists — those run by @include, @trigger, @force, @switch/inplace, @dolist/inplace and the like — nest at most 50 deep within one queue entry. A list nested any deeper is skipped without a message, and the list that included it carries on with its next command. An attribute that includes itself therefore runs 50 times.
+
 ## Include switches
 
 @include takes the following switches to alter its behaviour:
