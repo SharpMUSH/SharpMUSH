@@ -30,10 +30,17 @@ public class CharacterSwitchService(
 
 		// The switch's own OTT goes to the play terminal; the command terminal mints its own, since a
 		// terminal consumes its OTT on connect.
-		await RebindAsync(playTerminal, character, ott);
-		await RebindAsync(commandTerminal, character, null);
+		// The tab already holds the new token: the hub re-authenticates with it even if a terminal fails.
+		try
+		{
+			await RebindAsync(playTerminal, character, ott);
+			await RebindAsync(commandTerminal, character, null);
+		}
+		finally
+		{
+			await connectionState.ReconnectAsync();
+		}
 
-		await connectionState.ReconnectAsync();
 		return true;
 	}
 

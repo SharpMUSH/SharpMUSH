@@ -211,10 +211,11 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 
 		// The terminal and the Play page follow the switch: both connections quit the previous
 		// character and connect again as Beta.
+		var beta = new TerminalIdentity("headwiz", "#2:2");
 		cut.WaitForAssertion(() => playTerminal.Second.Received(1)
-			.ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
+			.ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", beta));
 		cut.WaitForAssertion(() => terminal.Second.Received(1)
-			.ConnectWithOttAsync(Arg.Any<string>(), "command-ott", Arg.Any<TerminalIdentity?>()));
+			.ConnectWithOttAsync(Arg.Any<string>(), "command-ott", beta));
 		await terminal.First.Received(1).SendAsync("QUIT");
 		await playTerminal.First.Received(1).SendAsync("QUIT");
 	}

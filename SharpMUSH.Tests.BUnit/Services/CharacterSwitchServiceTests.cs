@@ -119,10 +119,11 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 
 		await rig.PlayFirst.Received(1).SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisposeAsync();
-		await rig.PlaySecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", Arg.Any<TerminalIdentity?>());
+		var beta = new TerminalIdentity("current", "#2:2");
+		await rig.PlaySecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", beta);
 		await rig.CommandFirst.Received(1).SendAsync("QUIT");
 		await rig.CommandFirst.Received(1).DisposeAsync();
-		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "minted-ott", Arg.Any<TerminalIdentity?>());
+		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "minted-ott", beta);
 		await Assert.That(rig.PlaySecond.ConnectedPlayerName).IsEqualTo("Beta");
 	}
 

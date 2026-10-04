@@ -101,5 +101,7 @@ public class SceneRoomRefreshTests
 			.ReturnsForAnyArgs(ValueTask.FromException(new InvalidOperationException("boom")));
 
 		await SceneRoomRefresh.RefreshAsync(parser, "#12");
+
+		await events.ReceivedWithAnyArgs(1).TriggerEventAsync(default!, default!, default, default(string[])!);
 	}
 }

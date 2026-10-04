@@ -5050,7 +5050,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Dina poses hamnar i en annan scen. Gå med i den här för att posera här.</value>
+    <value>Dina poser hamnar i en annan scen. Gå med i den här för att posera här.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">

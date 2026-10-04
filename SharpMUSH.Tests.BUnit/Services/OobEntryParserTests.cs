@@ -330,6 +330,16 @@ public class OobEntryParserTests
 		await Assert.That(watcher.Scene!.Outside).IsTrue();
 	}
 
+	/// <summary>An older handler says nothing about focus; that is not "outside", so the composer stays.</summary>
+	[Test]
+	public async Task V2_room_info_scene_without_focus_is_not_outside()
+	{
+		var info = OobEntryParser.ParseRoomInfo("""{"v":2,"name":"R","scene":{"id":"42","cast":3}}""")!;
+
+		await Assert.That(info.Scene!.Focus).IsNull();
+		await Assert.That(info.Scene!.Outside).IsFalse();
+	}
+
 	[Test]
 	public async Task V2_softcode_room_info_with_a_scene()
 	{
