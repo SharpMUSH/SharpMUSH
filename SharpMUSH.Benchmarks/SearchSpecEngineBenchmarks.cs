@@ -19,8 +19,9 @@ namespace SharpMUSH.Benchmarks;
 /// the object lookups to it, and visible attributes are each object's own, read as God sees them.
 /// <para>
 /// <see cref="WorldSize"/> grows the scan; <see cref="Selective"/> decides whether one object in a
-/// hundred or every object carries the $-command the search asks for; <see cref="BodyBytes"/> sizes a
-/// third attribute that a visible-attribute read hydrates though no restriction tests it; and
+/// hundred or every object carries the $-command the search asks for; <see cref="ExtraAttributes"/>
+/// attributes of <see cref="BodyBytes"/> each sit beside the $-command and ^-listen, which a
+/// visible-attribute read hydrates though no restriction tests them; and
 /// <see cref="ParentDepth"/> puts every object under a parent chain whose far end holds the attribute
 /// an attribute lock (<c>FLAVOR:sweet</c>, resolved through parents as a lock key is) reads.
 /// </para>
@@ -40,6 +41,9 @@ public class SearchSpecEngineBenchmarks
 
 	[Params(true, false)]
 	public bool Selective { get; set; }
+
+	[Params(1, 16)]
+	public int ExtraAttributes { get; set; }
 
 	[Params(16, 4096)]
 	public int BodyBytes { get; set; }
@@ -97,7 +101,7 @@ public class SearchSpecEngineBenchmarks
 			[
 				new(["CMD"], MarkupText.Plain(answers ? "$+bench *:think hit" : "$+other *:think miss"), player, []),
 				new(["HEAR"], MarkupText.Plain("^*hello*:think heard"), player, []),
-				new(["DESC"], body, player, [])
+				.. Enumerable.Range(0, ExtraAttributes).Select(n => new AttributeWrite([$"EXTRA{n:D2}"], body, player, []))
 			];
 			if (head is null) writes.Add(new(["FLAVOR"], MarkupText.Plain("sweet"), player, []));
 			await _database.SetAttributesAsync(thing, writes);
@@ -218,13 +222,13 @@ public class SearchSpecEngineBenchmarks
 
 		private static string CostDirectory => Path.Join(Path.GetTempPath(), "sharpmush-bench-search-costs");
 
-		private static string FileFor(int worldSize, bool selective, int bodyBytes, int parentDepth)
-			=> Path.Join(CostDirectory, $"{worldSize}-{selective}-{bodyBytes}-{parentDepth}.json");
+		private static string FileFor(int worldSize, bool selective, int extraAttributes, int bodyBytes, int parentDepth)
+			=> Path.Join(CostDirectory, $"{worldSize}-{selective}-{extraAttributes}-{bodyBytes}-{parentDepth}.json");
 
 		public static void Save(SearchSpecEngineBenchmarks benchmark, Dictionary<string, ReadCost> costs)
 		{
 			Directory.CreateDirectory(CostDirectory);
-			var file = FileFor(benchmark.WorldSize, benchmark.Selective, benchmark.BodyBytes, benchmark.ParentDepth);
+			var file = FileFor(benchmark.WorldSize, benchmark.Selective, benchmark.ExtraAttributes, benchmark.BodyBytes, benchmark.ParentDepth);
 			var merged = File.Exists(file)
 				? JsonSerializer.Deserialize<Dictionary<string, ReadCost>>(File.ReadAllText(file)) ?? []
 				: [];
@@ -248,13 +252,14 @@ public class SearchSpecEngineBenchmarks
 		{
 			if (benchmarkCase.Parameters[nameof(WorldSize)] is not int worldSize
 					|| benchmarkCase.Parameters[nameof(Selective)] is not bool selective
+					|| benchmarkCase.Parameters[nameof(ExtraAttributes)] is not int extraAttributes
 					|| benchmarkCase.Parameters[nameof(BodyBytes)] is not int bodyBytes
 					|| benchmarkCase.Parameters[nameof(ParentDepth)] is not int parentDepth)
 			{
 				return "?";
 			}
 
-			var file = FileFor(worldSize, selective, bodyBytes, parentDepth);
+			var file = FileFor(worldSize, selective, extraAttributes, bodyBytes, parentDepth);
 			if (!File.Exists(file)) return "?";
 			var costs = JsonSerializer.Deserialize<Dictionary<string, ReadCost>>(File.ReadAllText(file));
 			if (costs is null || !costs.TryGetValue(benchmarkCase.Descriptor.WorkloadMethod.Name, out var cost)) return "?";
