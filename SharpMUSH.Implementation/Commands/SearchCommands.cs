@@ -578,8 +578,9 @@ public partial class Commands
 
 		var targetObject = target.Object();
 
-		var isUnfindable = await targetObject.Flags.Value
-			.AnyAsync(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
+		// Unfind(x) is has_flag_by_name(x, "UNFINDABLE", NOTYPE) (hdrs/dbdefs.h:160): by name or alias,
+		// never by letter.
+		var isUnfindable = await targetObject.HasFlag("UNFINDABLE");
 
 		if (isUnfindable)
 		{
