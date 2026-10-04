@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Hubs;
 
@@ -12,7 +11,7 @@ namespace SharpMUSH.Server.Authentication;
 
 /// <summary>
 /// Authenticates REST and SignalR requests bearing an account-session token, resolving
-/// role/permission claims server-side (so bans/role changes take effect on the next request)
+/// the role claim server-side (permission scopes come from <see cref="FreshPermissionClaimsTransformation"/>) (so bans/role changes take effect on the next request)
 /// and emitting the <see cref="GameHub.CharacterDbrefClaim"/> the hub authorizes on.
 /// </summary>
 /// <remarks>
@@ -77,8 +76,9 @@ public class AccountSessionAuthenticationHandler(
 		if (account is null || !account.IsActive)
 			return AuthenticateResult.Fail("Account not found or not active.");
 
+		// Permission-scope claims are not added here: FreshPermissionClaimsTransformation replaces them
+		// from the account's current authority after every successful authenticate.
 		var role = await accountClaims.ComputeAccountRoleAsync(accountId);
-		var scopes = await accountClaims.ComputeGrantedScopesAsync(accountId, role);
 
 		var claims = new List<Claim>
 		{
@@ -86,7 +86,6 @@ public class AccountSessionAuthenticationHandler(
 			new(ClaimTypes.Name, account.Username),
 			new(ClaimTypes.Role, role.ToString()),
 		};
-		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		var characters = await accountService.GetCharactersAsync(accountId);
 		var acting = ActingCharacterResolver.Resolve(session.Value, characters);
