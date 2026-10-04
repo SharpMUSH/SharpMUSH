@@ -420,17 +420,44 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// direct player input (equivalent to PennMUSH dropping the QUEUE_NOLIST flag here).
 		// A list run from inside a command shares its %c/%u (PE_INFO_SHARE); a queued one arrives
 		// through FromState without any, and starts its own.
+		var depth = 0;
+		if (!State.IsEmpty)
+		{
+			if (NestedInplaceDepth(CurrentState) is not { } nested) return ValueTask.FromResult<CallState?>(CallState.Empty);
+			depth = nested;
+		}
 		var freshParser = State.IsEmpty ? this : Push(CurrentState with
 		{
 			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
 			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
-			CommandText = CurrentState.CommandText ?? new CommandText()
+			CommandText = CurrentState.CommandText ?? new CommandText(),
+			InplaceDepth = depth
 		});
 		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
 	}
 
+	/// <summary>
+	/// The <see cref="ParserState.InplaceDepth"/> a list run from <paramref name="state"/> has, or
+	/// nothing when it would nest deeper than <see cref="ParserState.MaxInplaceDepth"/> and is dropped.
+	/// A state that has no <c>%c</c>/<c>%u</c> yet is a queue entry's own list, not one in place.
+	/// </summary>
+	private static int? NestedInplaceDepth(ParserState state)
+	{
+		if (state.CommandText is null) return 0;
+		var depth = state.InplaceDepth + 1;
+		return depth > ParserState.MaxInplaceDepth ? null : depth;
+	}
+
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
+		// The same in-place nesting bound as CommandListParse, checked before any lexing.
+		var depth = 0;
+		if (!State.IsEmpty)
+		{
+			if (NestedInplaceDepth(CurrentState) is not { } nested) return () => ValueTask.FromResult<CallState?>(CallState.Empty);
+			depth = nested;
+		}
+
 		var plaintext = text.ToPlainText();
 		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor));
 
@@ -462,7 +489,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var parserForList = State.IsEmpty ? this : Push(CurrentState with
 		{
 			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
-			CommandText = CurrentState.CommandText ?? new CommandText()
+			CommandText = CurrentState.CommandText ?? new CommandText(),
+			InplaceDepth = depth
 		});
 
 		SharpMUSHParserVisitor visitor = new(Logger, parserForList, Configuration, Services, text);

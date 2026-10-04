@@ -387,6 +387,20 @@ public partial record ParserState(
 	/// <summary>Synchronous command-modifier nesting, bounded by MaxDepth and reset for independent queued actions.</summary>
 	public uint CommandModifierDepth { get; init; }
 
+	/// <summary>
+	/// How many in-place action lists — <c>@include</c>, <c>@trigger</c>, <c>@switch/inplace</c>,
+	/// <c>@dolist/inplace</c>, <c>@break</c>'s action and the like — enclose this one inside its queue
+	/// entry. A list that starts a queue entry of its own starts again from zero.
+	/// </summary>
+	public int InplaceDepth { get; init; }
+
+	/// <summary>
+	/// The deepest an in-place action list may nest. PennMUSH's <c>do_entry</c> runs a nested in-place
+	/// entry only while <c>include_recurses &lt; 50</c> (<c>src/cque.c:1182</c>), and drops one deeper
+	/// without a word; the list that queued it carries on. It is not configurable there either.
+	/// </summary>
+	public const int MaxInplaceDepth = 50;
+
 	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
 	public ExecutionBudget? ExecutionBudget { get; init; }
 
@@ -440,6 +454,7 @@ public partial record ParserState(
 		LimitExceeded = new(),
 		MoveDepth = new(),
 		CommandModifierDepth = 0,
+		InplaceDepth = 0,
 		ExecutionBudget = null,
 		CommandText = null
 	};

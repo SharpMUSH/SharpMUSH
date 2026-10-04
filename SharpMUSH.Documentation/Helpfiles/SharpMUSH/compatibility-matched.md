@@ -80,6 +80,10 @@ Not yet at parity; may change in a future release.
   written, where PennMUSH shows it evaluated in a queued list, and a computed `&` attribute name as
   written (`ATTRIB_SET/[CAT(F,OO)]`), where PennMUSH shows the name it evaluated to
   (`ATTRIB_SET/FOO`).
+- **`@trigger` and `@force` count toward the in-place depth.** Both run their list in place rather
+  than queueing it, so it is one more of the 50 in-place levels a queue entry may nest (see
+  `help @include`). An attribute that `@trigger`s itself stops after 50 rounds, where PennMUSH
+  queues each round as a new entry and goes on.
 - **Characters above U+FFFF** (emoji and other supplementary-plane characters) are stored as UTF-16
   surrogate pairs. This is internally consistent, but a substitution or slice that lands between the
   two halves of a pair could split it. Rare in practice.

@@ -395,7 +395,8 @@ public class InputSessionServiceTests
 		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionTimeoutRejected");
 		h.Notify.ClearReceivedCalls();
 		await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "ordinary", "test", h.Actor.Object.DBRef);
-		await Assert.That(QueueRejectionNotices(h)).IsEqualTo(1);
+		// An object refused for its quota is told by the runaway notice instead (pay_queue, src/cque.c:304).
+		await Assert.That(QueueRejectionNotices(h)).IsEqualTo(ownerLimit ? 0 : 1);
 	}
 
 	/// <summary>

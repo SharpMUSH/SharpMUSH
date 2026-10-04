@@ -455,7 +455,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				Executor = obj.Object().DBRef,
 				Enactor = prs.CurrentState.Executor,
 				Caller = prs.CurrentState.Executor,
-				CommandText = new CommandText()
+				// No %c/%u yet: CommandListParse starts them, and treats the body as a queue entry's own
+				// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182).
+				CommandText = null
 			});
 
 			var result = await newParser.CommandListParse(body);
