@@ -61,7 +61,7 @@ public class RealityPluginCompatibilityTests
 		var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName($"LegacyPermissions{Guid.NewGuid():N}"), AssemblyBuilderAccess.Run);
 		var builder = assembly.DefineDynamicModule("plugin").DefineType("LegacyPermissions", TypeAttributes.Public);
 		builder.AddInterfaceImplementation(typeof(IPermissionService));
-		foreach (var method in typeof(IPermissionService).GetMethods())
+		foreach (var method in typeof(IPermissionService).GetInterfaces().Prepend(typeof(IPermissionService)).SelectMany(i => i.GetMethods()))
 		{
 			var parameters = method.GetParameters();
 			if (!method.IsAbstract || method.Name == nameof(IPermissionService.CanInteract) && parameters.Length == 4) continue;
