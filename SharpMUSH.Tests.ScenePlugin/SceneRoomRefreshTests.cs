@@ -37,7 +37,7 @@ public class SceneRoomRefreshTests
 	}
 
 	private static Task Fired(IEventService events, IMUSHCodeParser parser, string room) =>
-		events.Received(1).TriggerEventAsync(parser, SharpEvents.RoomContents, Enactor,
+		events.Received(1).TriggerEventAsync(parser, SharpEvents.RoomContents, null,
 			Arg.Is<string[]>(a => a.SequenceEqual(new[] { room, SceneRoomRefresh.Cause }))).AsTask();
 
 	[Test]

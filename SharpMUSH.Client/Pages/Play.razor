@@ -539,7 +539,8 @@ else
     /// <summary>
     /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
     /// header keeps the buttons used all the time and the name opens the room's details, as a chat app's channel
-    /// name does. Focus mode, the terminal settings and Disconnect; Connect and Login stay in the header.
+    /// name does. Focus mode, the terminal settings (or Leave, in a scene's Story) and Disconnect; Connect and Login
+    /// stay in the header.
     /// </summary>
     private RenderFragment BannerControls => __builder =>
     {
@@ -551,6 +552,10 @@ else
             @if (View == PlayView.Terminal)
             {
                 @TerminalSettings
+            }
+            else if (SceneHere is { Focus: true })
+            {
+                @LeaveSceneControl
             }
             @if (PlayTerminal.IsConnected)
             {

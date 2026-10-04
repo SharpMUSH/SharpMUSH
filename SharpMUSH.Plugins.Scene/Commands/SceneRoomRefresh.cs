@@ -77,7 +77,12 @@ public static class SceneRoomRefresh
 			await RefreshAsync(parser, room);
 	}
 
-	/// <summary>Fires the event once for each distinct room named.</summary>
+	/// <summary>
+	/// Fires the event once for each distinct room named, as a system event (God the enactor). The handler
+	/// finds the room's scene with the enactor's visibility; the player who caused the change may just have
+	/// lost theirs (leaving a private scene unmembers them), which would hide the scene from every viewer.
+	/// Each viewer's own visibility is still applied per viewer.
+	/// </summary>
 	public static async ValueTask RefreshAsync(IMUSHCodeParser parser, params string?[] rooms)
 	{
 		if (parser.ServiceProvider.GetService<IEventService>() is not { } events) return;
@@ -86,7 +91,7 @@ public static class SceneRoomRefresh
 		{
 			try
 			{
-				await events.TriggerEventAsync(parser, SharpEvents.RoomContents, parser.CurrentState.Enactor, room!, Cause);
+				await events.TriggerEventAsync(parser, SharpEvents.RoomContents, null, room!, Cause);
 			}
 			catch (Exception ex)
 			{

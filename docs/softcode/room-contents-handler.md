@@ -56,7 +56,9 @@ private, or its cast or a viewer's focus on it changed (`@scene/set` of
 `status`, `title`, `public` or `room`, `@scene/member`, `@scene/unmember`,
 `@scene/focus`, and their side-effect functions). Only the scene block changed,
 and it differs per viewer, so every connected viewer in the room gets a fresh
-`room.info` and nothing else, whoever the enactor is. ``FN`PREPARE`` is skipped;
+`room.info` and nothing else. The plugin fires it as a system event (God the
+enactor): the player who caused it may just have lost sight of a private scene
+by leaving it, and ``FN`SCENE`` finds the scene with the enactor's visibility. ``FN`PREPARE`` is skipped;
 the room's base info is the one register filled.
 
 What depends on who is looking, which is why one JSON for the whole room
