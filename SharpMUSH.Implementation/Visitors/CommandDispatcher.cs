@@ -405,7 +405,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			// had nothing to say. Surface it instead, following FunctionInvocationPipeline's precedent.
 			var correlationId = ExceptionReport.NewCorrelationId();
 			visitor.Logger.LogError(ex, "{Method} threw for command {Command} (correlation {CorrelationId})",
-				nameof(SharpMUSHParserVisitor.EvaluateCommands), command ?? "(unknown)", correlationId);
+				"EvaluateCommands", command ?? "(unknown)", correlationId);
 
 			return await ReportCommandException(parser, visitor.Logger, ex, command, correlationId);
 		}

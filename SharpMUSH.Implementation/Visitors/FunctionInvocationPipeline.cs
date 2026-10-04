@@ -284,7 +284,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		}
 		catch (Exception ex)
 		{
-			visitor.Logger.LogError(ex, nameof(SharpMUSHParserVisitor.CallFunction));
+			visitor.Logger.LogError(ex, "CallFunction");
 			success = false;
 
 			// KnownExecutorObject throws when there is no executor — which is exactly the state at the

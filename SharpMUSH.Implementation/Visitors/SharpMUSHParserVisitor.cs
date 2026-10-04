@@ -636,39 +636,6 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		return result;
 	}
 
-	/// <summary>
-	/// Parses and executes a function call.
-	/// </summary>
-	/// <param name="name">Function Name</param>
-	/// <param name="src">The source MarkupString</param>
-	/// <param name="context">Function Context for Depth</param>
-	/// <param name="args">Arguments</param>
-	/// <param name="visitor">The visitor the call is evaluated with.</param>
-	/// <returns>The resulting CallState.</returns>
-	public ValueTask<CallState> CallFunction(string name, MString src,
-		FunctionContext context, EvaluationStringContext?[] args, SharpMUSHParserVisitor visitor)
-		=> _services.Functions.InvokeAsync(visitor, name, context, args);
-
-	/// <summary>
-	/// Evaluates the command, with the parser info given.
-	/// </summary>
-	/// <remarks>
-	/// Call State is expected to be empty on return.
-	/// But if one wanted to implement a @pipe command that can pass a result from say, a @dig command, 
-	/// there would be a need for some way of passing on secondary data.
-	/// </remarks>
-	/// <param name="src">Original string</param>
-	/// <param name="context">Command Context</param>
-	/// <param name="isCommandList">Whether this command is part of a command list.</param>
-	/// <param name="visitChildren">Parser function to visit children.</param>
-	/// <returns>An empty Call State</returns>
-	public ValueTask<Option<CallState>> EvaluateCommands(
-		MString src,
-		CommandContext context,
-		bool isCommandList,
-		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
-		=> _services.Dispatcher.DispatchAsync(this, src, context);
-
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
 		GetContextText(context),
