@@ -42,6 +42,22 @@ public class InplaceDepthLimitTests
 	}
 
 	[Test]
+	public async ValueTask AnInplaceCommandBodyCountsItsDepthFromZero()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InplaceBody");
+		var command = TestIsolationHelpers.GenerateUniqueName("inplacebody").ToLowerInvariant();
+		await Run($"&CNT {obj}=0");
+		await Run($"&INC {obj}=&CNT {obj}=[inc(get({obj}/CNT))];@include {obj}/INC");
+		await Run($"&CMD {obj}=${command}:@include {obj}/INC");
+
+		// A typed line runs the matched body in place, as a queue entry of its own (src/game.c:1224-1225).
+		await Run(command);
+
+		await Assert.That(await Get(obj, "CNT")).IsEqualTo("50")
+			.Because("the body is depth 0, like a typed line, so its includes run at depths 1 through 50");
+	}
+
+	[Test]
 	public async ValueTask EveryKindOfInplaceListCountsTowardsTheSameDepth()
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InplaceMixed");

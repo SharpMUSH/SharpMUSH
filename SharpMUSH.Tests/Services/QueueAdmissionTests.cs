@@ -23,14 +23,14 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize, bool ownerQueues = false)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize, bool ownerQueues = false, Func<bool>? ownerQueuesNow = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with
+		options.CurrentValue.Returns(_ => config with
 		{
 			Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst },
-			Command = config.Command with { OwnerQueues = ownerQueues }
+			Command = config.Command with { OwnerQueues = ownerQueuesNow?.Invoke() ?? ownerQueues }
 		});
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
@@ -2415,6 +2415,28 @@ public class QueueAdmissionTests
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think eleven"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason)
 			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("#11 is charged to #5, whose count #10 has filled");
+	}
+
+	/// <summary>
+	/// <c>owner_queues</c> can be set while entries are pending; each pending entry still counts under
+	/// whichever grouping admission reads next, so turning the option over frees no quota.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task TurningOwnerQueuesOverKeepsPendingEntriesCounted(bool pooledFirst)
+	{
+		var pooled = pooledFirst;
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator(), ownerQueuesNow: () => pooled);
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		pooled = !pooledFirst;
+
+		// Pooled now: #11 shares #5's count, which #10 filled. Unpooled now: #10's own count is full.
+		var next = pooled ? new DBRef(11) : new DBRef(10);
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think next"), ParserState.RootFor(next), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("the entry admitted before the change still counts");
+		await AssertTalliesMatchLedger(queue, "both groupings follow the ledger");
 	}
 
 	/// <summary>
