@@ -9,7 +9,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -424,24 +423,21 @@ public partial class Commands
 			var attrName = attr.LongName!;
 			var attrValue = attr.Value;
 			var originalText = attrValue.ToPlainText();
-			string newText;
-			bool matched;
+			AttributeEdit edit;
 
 			if (isRegexp)
 			{
-				(var edited, matched) = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
-				newText = edited.Message!.ToPlainText();
-				hadErrors |= edited.HadErrors;
+				(edit, var regexHadErrors) = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				hadErrors |= regexHadErrors;
 			}
 			else
 			{
-				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
-				matched = search is "^" or "$" || originalText.Contains(search, StringComparison.Ordinal);
+				edit = AttributeEdit.Simple(originalText, search, replace, isFirst);
 			}
 
 			// edit_helper (src/set.c:917): an attribute counts as edited when the search matched, even if the
 			// replacement leaves it as it was, and one that did not match is reported unless /quiet.
-			if (!matched)
+			if (!edit.Matched)
 			{
 				unchangedCount++;
 				if (!isQuiet)
@@ -456,17 +452,17 @@ public partial class Commands
 
 			if (!isQuiet && !isCheck)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName, newText);
+				await NotifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, MarkupText.Plain(attrName), edit.Shown);
 			}
 			else if (!isQuiet && isCheck)
 			{
 				// src/set.c:943 — /check shows the same line it would have set, and sets nothing.
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName, newText);
+				await NotifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, MarkupText.Plain(attrName), edit.Shown);
 			}
 
 			if (!isCheck)
 			{
-				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(newText));
+				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(edit.Text));
 			}
 		}
 
@@ -481,46 +477,17 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Perform simple string replacement
-	/// </summary>
-	private string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
-	{
-		if (search == "^")
-		{
-			return replace + text;
-		}
-		else if (search == "$")
-		{
-			return text + replace;
-		}
-		else if (firstOnly)
-		{
-			var index = text.IndexOf(search, StringComparison.Ordinal);
-			if (index >= 0)
-			{
-				return text[..index] + replace + text[(index + search.Length)..];
-			}
-			return text;
-		}
-		else
-		{
-			return text.Replace(search, replace, StringComparison.Ordinal);
-		}
-	}
-
-	/// <summary>
 	/// Perform regex replacement with evaluation: PennMUSH's <c>do_edit_regexp</c> (<c>src/set.c</c>).
 	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
 	/// text is never pasted into the replacement.
 	/// </summary>
-	private async ValueTask<(CallState Result, bool Matched)> PerformRegexEdit(IMUSHCodeParser parser, string text,
+	private async ValueTask<(AttributeEdit Edit, bool HadErrors)> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		var hadErrors = false;
 		Match[] matches = [];
 		var replacements = Array.Empty<string>();
 		var firstEvaluated = 0;
-		var matched = false;
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
 		try
@@ -537,7 +504,6 @@ public partial class Commands
 			{
 				// Evaluated last match first, as the replacements may have side effects; spliced once.
 				matches = regex.Matches(text).ToArray();
-				matched = matches.Length > 0;
 				replacements = new string[matches.Length];
 				firstEvaluated = matches.Length;
 				for (var i = matches.Length - 1; i >= 0; i--)
@@ -548,57 +514,34 @@ public partial class Commands
 					firstEvaluated = i;
 				}
 
-				text = SpliceReplacements(text, matches, replacements, firstEvaluated);
+				return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 			}
 			else
 			{
 				var match = regex.Match(text);
-				if (match.Success)
+				if (!match.Success)
 				{
-					matched = true;
-					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
-					hadErrors |= replacement.HadErrors;
-					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
+					return (AttributeEdit.Unmatched(text), hadErrors);
 				}
-			}
 
-			return (new CallState(text) { HadErrors = hadErrors }, matched);
+				var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
+				hadErrors |= replacement.HadErrors;
+				return (AttributeEdit.Spliced(text, [match], [replacement.Message!.ToPlainText()], 0), hadErrors);
+			}
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
 			// Same answer as an unusable pattern: the text keeps only the replacements evaluated before the failure.
-			return (new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors }, matched);
+			return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 		}
 		catch (ArgumentException)
 		{
-			return (new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors }, matched);
+			return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 		}
 		finally
 		{
 			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
-	}
-
-	/// <summary>
-	/// Builds <paramref name="text"/> with <c>matches[from..]</c> replaced by the matching
-	/// <paramref name="replacements"/>, copying each unchanged stretch once.
-	/// </summary>
-	private static string SpliceReplacements(string text, Match[] matches, string[] replacements, int from)
-	{
-		if (from >= matches.Length)
-		{
-			return text;
-		}
-
-		var builder = new StringBuilder(text.Length);
-		var position = 0;
-		for (var i = from; i < matches.Length; i++)
-		{
-			builder.Append(text, position, matches[i].Index - position).Append(replacements[i]);
-			position = matches[i].Index + matches[i].Length;
-		}
-
-		return builder.Append(text, position, text.Length - position).ToString();
 	}
 
 	/// <summary>
