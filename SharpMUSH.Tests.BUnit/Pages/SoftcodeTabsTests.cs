@@ -117,6 +117,22 @@ public class SoftcodeTabsTests
 	}
 
 	[Test]
+	public async Task Close_ATabBeforeTheActiveOne_KeepsTheActiveTab()
+	{
+		var obj = Obj(8, ("A", "a"), ("B", "b"), ("C", "c"));
+		var tabs = new SoftcodeTabs();
+		tabs.Open(obj, Attr(obj, "A"));
+		var b = tabs.Open(obj, Attr(obj, "B"));
+		tabs.Open(obj, Attr(obj, "C"));
+		tabs.Switch(1);
+
+		var active = tabs.Close(0);
+
+		await Assert.That(active).IsSameReferenceAs(b);
+		await Assert.That(tabs.ActiveIndex).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Close_KeepsAnotherTabsUnsavedBuffer()
 	{
 		var obj = Obj(8, ("A", "a"), ("B", "b"));

@@ -104,11 +104,19 @@ public sealed class SoftcodeTabs
 		return true;
 	}
 
-	/// <summary>Closes the tab at <paramref name="index"/>, keeping the active position within the tabs left.</summary>
+	/// <summary>
+	/// Closes the tab at <paramref name="index"/>. Closing another tab keeps the active one active; closing
+	/// the active tab activates the one that takes its place, or the one before it at the end of the strip.
+	/// </summary>
 	/// <returns>The tab active afterwards, or <c>null</c> when none is left open.</returns>
 	public SoftcodeTab? Close(int index)
 	{
 		_tabs.RemoveAt(index);
+		if (index < ActiveIndex)
+		{
+			ActiveIndex--;
+		}
+
 		ActiveIndex = _tabs.Count == 0 ? -1 : Math.Clamp(ActiveIndex, 0, _tabs.Count - 1);
 		return Active;
 	}

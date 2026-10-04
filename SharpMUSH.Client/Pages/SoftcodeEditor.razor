@@ -562,8 +562,9 @@
 
     private async Task CloseTabAsync(int idx)
     {
-        if (idx == _tabs.ActiveIndex)
-            await CaptureEditorAsync();
+        // The editor is reloaded from the tab left active, so its unsaved text is captured first
+        // even when the tab being closed is another one.
+        await CaptureEditorAsync();
         var active = _tabs.Close(idx);
         if (_monacoEditor is not null)
             await SetEditorValueAsync(active?.WorkingContent ?? string.Empty);
