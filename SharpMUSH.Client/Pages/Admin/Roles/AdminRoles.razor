@@ -4,6 +4,7 @@
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "roles.admin")]
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Client.Components.Admin
 @inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
@@ -23,7 +24,7 @@
         </Actions>
     </PlainPageHeader>
 
-    @if (_loading)
+    @if (List.Loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
     }
@@ -38,8 +39,8 @@
                 @foreach (var role in SortedRoles)
                 {
                     var r = role;
-                    var on = _selected?.Slug == r.Slug;
-                    <button type="button" class="ra-card @(on ? "ra-card--on" : "")" @onclick="@(() => Select(r))">
+                    var on = List.IsSelected(r);
+                    <button type="button" class="ra-card @(on ? "ra-card--on" : "")" @onclick="@(() => List.Select(r))">
                         <span class="ra-dot" style="@($"background:{SafeColor(r.Color)};")"></span>
                         <div class="ra-grow">
                             <div class="ra-card-name">@r.Name</div>
@@ -55,7 +56,7 @@
             </div>
 
             <KitCard Class="roleadmin-detail">
-                @if (_editing is null)
+                @if (List.Selected is not { } editing)
                 {
                     <div class="ra-empty-detail">
                         <MudIcon Icon="@Icons.Material.Filled.Shield" Class="ra-ico ra-ico--empty" />
@@ -71,13 +72,13 @@
                         <span class="ra-detail-dot" style="@($"background:{SafeColor(_editColor)};")"></span>
                         <div class="ra-grow">
                             <div class="ra-titles">
-                                <h2 class="ra-detail-name">@(_editing.IsSystem ? _editing.Name : (string.IsNullOrWhiteSpace(_editName) ? Loc["RolUntitled"] : _editName))</h2>
-                                @if (_editing.IsSystem)
+                                <h2 class="ra-detail-name">@(editing.IsSystem ? editing.Name : (string.IsNullOrWhiteSpace(_editName) ? Loc["RolUntitled"] : _editName))</h2>
+                                @if (editing.IsSystem)
                                 {
                                     <span class="ra-badge">@Loc["RolSystemBadge"]</span>
                                 }
                             </div>
-                            <div class="ra-detail-slug">@_editing.Slug</div>
+                            <div class="ra-detail-slug">@editing.Slug</div>
                         </div>
                     </div>
 
@@ -140,7 +141,7 @@
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="SaveRole" disabled="@_saving">
                             <MudIcon Icon="@Icons.Material.Filled.Save" Class="ra-ico" /> @Loc["RolSaveRole"]
                         </button>
-                        @if (!_editing.IsSystem)
+                        @if (!editing.IsSystem)
                         {
                             <button type="button" class="ra-btn ra-btn--danger" @onclick="DeleteRole" disabled="@_saving">
                                 <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
@@ -204,7 +205,7 @@
                             @foreach (var slug in _account.RoleSlugs)
                             {
                                 var s = slug;
-                                var role = _roles.FirstOrDefault(r => r.Slug == s);
+                                var role = List.Items.FirstOrDefault(r => r.Slug == s);
                                 <span class="ra-chip">
                                     <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(role?.Color ?? "#888")};")"></span>
                                     @(role?.Name ?? s)
@@ -252,12 +253,19 @@
         [(nameof(Tab.Roles), Loc["RolTabRoles"].Value), (nameof(Tab.Assignments), Loc["RolTabAssignments"].Value)];
 
     private Tab _tab = Tab.Roles;
-    private bool _loading = true;
     private bool _saving;
-    private List<PortalRoleModel> _roles = [];
 
-    private PortalRoleModel? _selected;
-    private PortalRoleModel? _editing;
+    private AdminRecordList<PortalRoleModel>? _list;
+
+    /// <summary>The roles; the selected one is the role being edited, its fields refilled on every reload.</summary>
+    private AdminRecordList<PortalRoleModel> List => _list ??= new(
+        DialogService, Snackbar, FetchAsync, role => role.Slug)
+    {
+        SelectionChanged = role =>
+        {
+            if (role is not null) LoadEditor(role);
+        }
+    };
     private string _editName = "";
     private string _editColor = "#6cde9a";
     private int _editPriority;
@@ -269,7 +277,7 @@
     private AccountRolesModel? _account;
 
     private List<PortalRoleModel> SortedRoles =>
-        _roles.OrderByDescending(r => r.Priority).ThenBy(r => r.Name).ToList();
+        List.Items.OrderByDescending(r => r.Priority).ThenBy(r => r.Name).ToList();
 
     private List<PortalRoleModel> Assignable =>
         _account is null
@@ -278,58 +286,25 @@
 
     private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override Task OnInitializedAsync() => List.LoadAsync();
 
-    private async Task LoadAsync()
+    private async Task<IEnumerable<PortalRoleModel>> FetchAsync()
     {
-        _loading = true;
-        _roles = (await Roles.ListAsync()).ToList();
+        var roles = await Roles.ListAsync();
         _effective = await Roles.EffectiveAsync();
-        _loading = false;
-
-        if (_selected is not null)
-        {
-            var refreshed = _roles.FirstOrDefault(r => r.Slug == _selected.Slug);
-            if (refreshed is not null)
-            {
-                Select(refreshed);
-            }
-            else
-            {
-                _selected = null;
-                _editing = null;
-            }
-        }
+        return roles;
     }
 
-    private void Select(PortalRoleModel role)
+    private void LoadEditor(PortalRoleModel role)
     {
-        _selected = role;
-        _editing = role;
         _editName = role.Name;
         _editColor = role.Color;
         _editPriority = role.Priority;
         _editPerms = new Dictionary<string, string>(role.Permissions);
     }
 
-    private async Task NewRole()
-    {
-        // FullWidth is required: the dialog body declares container-type, and inline-size
-        // containment zeroes its contribution to the paper's shrink-to-fit width.
-        var dialog = await DialogService.ShowAsync<RoleEditDialog>(
-            Loc["RolNewRole"], new DialogOptions { FullWidth = true });
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled)
-        {
-            var slug = result.Data as string;
-            await LoadAsync();
-            if (slug is not null)
-            {
-                var created = _roles.FirstOrDefault(r => r.Slug == slug);
-                if (created is not null) Select(created);
-            }
-        }
-    }
+    /// <summary>The dialog closes with the new role's slug, which is then selected.</summary>
+    private Task NewRole() => List.EditAsync<RoleEditDialog>(Loc["RolNewRole"]);
 
     private void OnPriorityChange(string? raw)
     {
@@ -356,7 +331,7 @@
 
     private async Task SaveRole()
     {
-        if (_editing is null) return;
+        if (List.Selected is not { } editing) return;
 
         if (string.IsNullOrWhiteSpace(_editName))
         {
@@ -366,13 +341,13 @@
 
         _saving = true;
         var model = new PortalRoleModel(
-            _editing.Slug,
+            editing.Slug,
             _editName.Trim(),
             string.IsNullOrWhiteSpace(_editColor) ? "#6cde9a" : _editColor.Trim(),
             _editPriority,
-            _editing.IsSystem,
+            editing.IsSystem,
             new Dictionary<string, string>(_editPerms),
-            _editing.CreatedAt,
+            editing.CreatedAt,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         var result = await Roles.UpsertAsync(model);
@@ -382,7 +357,7 @@
         {
             case Success:
                 Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
-                await LoadAsync();
+                await List.LoadAsync();
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
@@ -392,28 +367,17 @@
 
     private async Task DeleteRole()
     {
-        if (_editing is null || _editing.IsSystem) return;
+        if (List.Selected is not { IsSystem: false } role) return;
 
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["RolDeleteTitle"],
-            Loc["RolDeleteConfirm", _editing.Name, _editing.Slug],
-            yesText: Loc["Delete"], cancelText: Loc["Cancel"]);
-
-        if (confirmed == true)
-        {
-            switch (await Roles.DeleteAsync(_editing.Slug))
-            {
-                case Success:
-                    Snackbar.Add(Loc["RolDeleted", _editing.Slug], Severity.Success);
-                    _selected = null;
-                    _editing = null;
-                    await LoadAsync();
-                    break;
-                case ApiFailure failure:
-                    Snackbar.Add(Loc["RolDeleteFailed", failure.Message], Severity.Error);
-                    break;
-            }
-        }
+        await List.DeleteAsync(role,
+            new AdminDeleteText(
+                Loc["RolDeleteTitle"],
+                Loc["RolDeleteConfirm", role.Name, role.Slug],
+                Loc["Delete"],
+                Loc["Cancel"],
+                Loc["RolDeleted", role.Slug],
+                failure => Loc["RolDeleteFailed", failure.Message]),
+            () => Roles.DeleteAsync(role.Slug));
     }
 
     private async Task OnLookupKeyDown(KeyboardEventArgs args)
