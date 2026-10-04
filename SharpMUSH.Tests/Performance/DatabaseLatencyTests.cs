@@ -64,20 +64,18 @@ public class DatabaseLatencyTests
 		const int iterations = 100;
 		const int warmup = 10;
 
-		var masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
-
 		for (var i = 0; i < warmup; i++)
-			await ConsumeAsync(Database.GetContentsAsync(masterRoom));
+			await ConsumeAsync(Database.GetContentRefsAsync(new DBRef(2)));
 
 		var timings = new long[iterations];
 		for (var i = 0; i < iterations; i++)
 		{
 			var sw = Stopwatch.StartNew();
-			await ConsumeAsync(Database.GetContentsAsync(masterRoom));
+			await ConsumeAsync(Database.GetContentRefsAsync(new DBRef(2)));
 			timings[i] = sw.ElapsedTicks;
 		}
 
-		PrintReport("GetContentsAsync(MasterRoom)", timings, iterations);
+		PrintReport("GetContentRefsAsync(MasterRoom)", timings, iterations);
 	}
 
 	[Test]
@@ -87,17 +85,17 @@ public class DatabaseLatencyTests
 		const int warmup = 10;
 
 		for (var i = 0; i < warmup; i++)
-			await Database.GetLocationAsync(new DBRef(1));
+			await Database.GetLocationRefAsync(new DBRef(1));
 
 		var timings = new long[iterations];
 		for (var i = 0; i < iterations; i++)
 		{
 			var sw = Stopwatch.StartNew();
-			await Database.GetLocationAsync(new DBRef(1));
+			await Database.GetLocationRefAsync(new DBRef(1));
 			timings[i] = sw.ElapsedTicks;
 		}
 
-		PrintReport("GetLocationAsync(#1)", timings, iterations);
+		PrintReport("GetLocationRefAsync(#1)", timings, iterations);
 	}
 
 	private static async Task ConsumeAsync<T>(IAsyncEnumerable<T> source)

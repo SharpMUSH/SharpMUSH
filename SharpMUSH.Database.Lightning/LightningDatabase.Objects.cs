@@ -495,6 +495,15 @@ public partial class LightningDatabase
 		}
 	}
 
+	public IAsyncEnumerable<DBRef> GetPlayerRefsByNameOrAliasAsync(string name, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.ObjName, Keys.Lower(name), (tx, value) =>
+		{
+			var dbref = Keys.ReadDbref(value);
+			return ReadObjectHeader(tx, dbref) is { } header && header.Type == DatabaseConstants.TypePlayer
+				? new DBRef((int)dbref, header.CreationTime)
+				: (DBRef?)null;
+		}, ct: ct));
+
 	public IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpObject>(ct => GetAllObjectsCoreAsync(ct));
 
@@ -1105,6 +1114,25 @@ public partial class LightningDatabase
 	/// <summary>Point read of an object's row. Returns <see langword="null"/> when no such dbref exists.</summary>
 	internal (long Dbref, ObjectRecord Record)? ReadObject(ITx tx, long dbref)
 		=> tx.TryGet(Tables.Obj, Keys.Dbref(dbref), out var bytes) ? (dbref, Codec.Deserialize<ObjectRecord>(bytes)) : null;
+
+	/// <summary>
+	/// Point read of an object's row decoding only its <see cref="ObjectHeaderRecord"/> (type and creation
+	/// time), for a ref projection that needs no object. Null when no such dbref exists.
+	/// </summary>
+	internal static ObjectHeaderRecord? ReadObjectHeader(ITx tx, long dbref)
+		=> tx.TryGet(Tables.Obj, Keys.Dbref(dbref), out var bytes) ? Codec.Deserialize<ObjectHeaderRecord>(bytes) : null;
+
+	/// <summary>The full object id (number and creation time) of <paramref name="dbref"/>, or null when it is gone.</summary>
+	internal static DBRef? HeaderRef(ITx tx, long dbref)
+		=> ReadObjectHeader(tx, dbref) is { } header ? new DBRef((int)dbref, header.CreationTime) : null;
+
+	/// <summary>
+	/// Whether <paramref name="subject"/> still names the stored object: always for a bare number, and for a
+	/// full object id only while the stored creation time matches it, so a recycled number reads as gone.
+	/// </summary>
+	private static bool IsSubject(ITx tx, DBRef subject)
+		=> subject.CreationMilliseconds is null
+			|| ReadObjectHeader(tx, subject.Number)?.CreationTime == subject.CreationMilliseconds;
 
 	/// <summary>
 	/// Builds the typed Library model for an object already read from <see cref="Tables.Obj"/>. Every

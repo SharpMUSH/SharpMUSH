@@ -19,28 +19,24 @@ namespace SharpMUSH.Database.Lightning;
 /// </summary>
 public partial class LightningDatabase
 {
-	public ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetOptionalRelatedCore(Tables.Parent.Forward, ParseDbref(id)));
+	public ValueTask<Found<DBRef>> GetRelationRefAsync(ObjectRelationKind relation, DBRef subject,
+		CancellationToken cancellationToken = default)
+	{
+		var forward = relation switch
+		{
+			ObjectRelationKind.Owner => Tables.Owner.Forward,
+			ObjectRelationKind.Parent => Tables.Parent.Forward,
+			ObjectRelationKind.Zone => Tables.Zone.Forward,
+			// A room's drop-to and an exit's destination reuse the home edge; there is no table of their own.
+			ObjectRelationKind.Home => Tables.Home.Forward,
+			_ => throw new ArgumentOutOfRangeException(nameof(relation), relation, "Not a single-valued object relation.")
+		};
 
-	public ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetOwnerCore(ParseDbref(id)));
-
-	public ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetOptionalRelatedCore(Tables.Zone.Forward, ParseDbref(id)));
-
-	// GetHomeAsync/GetDropToAsync/GetExitDestinationAsync all read the same has_home-equivalent edge
-	// (Tables.Home.Forward) — a room's drop-to and an exit's destination both reuse the home edge.
-	// They differ only in whether a missing edge is an error (a home is
-	// mandatory for a player/thing) or a legitimate absence (an unset drop-to, or a freshly @open'd or
-	// @unlink'd exit).
-	public ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetRequiredContainerRelation(Tables.Home.Forward, ParseDbref(typedId)));
-
-	public ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomTypedId, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, ParseDbref(roomTypedId)));
-
-	public ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string exitTypedId, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, ParseDbref(exitTypedId)));
+		return ValueTask.FromResult(Store.Read<Found<DBRef>>(tx =>
+			IsSubject(tx, subject) && GetSingleEdge(tx, forward, subject.Number) is { } target && HeaderRef(tx, target) is { } found
+				? found
+				: new NotFound()));
+	}
 
 	public IAsyncEnumerable<SharpObject> GetParentsAsync(string id, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpObject>(ct => GetParentsCoreAsync(ParseDbref(id), ct));
@@ -120,48 +116,22 @@ public partial class LightningDatabase
 			? Hydrate(found.Dbref, found.Record).AsContent
 			: null;
 
-	public ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default)
-	{
-		var result = Store.Read<AnyOptionalSharpContainer>(tx =>
-		{
-			var found = ReadObject(tx, obj.Number);
-			if (found is null)
-			{
-				return new None();
-			}
-
-			if (obj.CreationMilliseconds is not null && found.Value.Record.CreationTime != obj.CreationMilliseconds)
-			{
-				return new None();
-			}
-
-			return GetLocationFromKey(tx, found.Value.Dbref, depth);
-		});
-		return ValueTask.FromResult(result);
-	}
-
-	public ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, obj.Object().Key, depth)) switch
-		{
-			AnySharpContainer location => location,
-			None => throw new InvalidOperationException($"No location found for {obj.Object().DBRef}")
-		});
-
-	public ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, ParseDbref(id), depth)) switch
-		{
-			AnySharpContainer location => location,
-			None => throw new InvalidOperationException($"No location found for {id}")
-		});
+	public ValueTask<Found<DBRef>> GetLocationRefAsync(DBRef subject, int depth = 1, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read<Found<DBRef>>(tx =>
+			ReadObjectHeader(tx, subject.Number) is { } header
+			&& (subject.CreationMilliseconds is null || header.CreationTime == subject.CreationMilliseconds)
+			&& GetLocationRefFromKey(tx, subject.Number, depth) is { } location
+				? location
+				: new NotFound()));
 
 	/// <summary>
 	/// Walks the location chain from <paramref name="startKey"/>, exactly <paramref name="depth"/> hops
 	/// (<c>-1</c> meaning "until there is no further edge", capped at 999). A <paramref name="depth"/>
-	/// of 0 takes no hops at all, so it returns <see cref="None"/> rather than the starting object itself.
-	/// If the chain runs out of edges before <paramref name="depth"/> hops are taken, the last container
-	/// actually reached is returned rather than erroring.
+	/// of 0 takes no hops at all, so it returns null rather than the starting object itself. If the chain
+	/// runs out of edges before <paramref name="depth"/> hops are taken, the last container actually reached
+	/// is returned rather than erroring. Null too when that container is gone.
 	/// </summary>
-	private AnyOptionalSharpContainer GetLocationFromKey(ITx tx, long startKey, int depth)
+	private DBRef? GetLocationRefFromKey(ITx tx, long startKey, int depth)
 	{
 		var currentKey = startKey;
 		var maxHops = depth == -1 ? 999 : depth;
@@ -181,32 +151,23 @@ public partial class LightningDatabase
 			hops++;
 		}
 
-		if (lastValidKey is null)
-		{
-			return new None();
-		}
-
-		var found = ReadObject(tx, lastValidKey.Value);
-		if (found is null)
-		{
-			return new None();
-		}
-
-		// .AsContainer throws for an exit: a location chain cannot use an exit as a container; an exit's
-		// own Location is its source.
-		return Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
+		// The caller resolves the ref through the object node cache, which builds the container once; it is
+		// the caller that refuses an exit, which cannot be anyone's container.
+		return lastValidKey is { } key ? HeaderRef(tx, key) : null;
 	}
 
-	public IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpContent>(ct => GetContentsCoreAsync(obj.Number, ct));
+	public IAsyncEnumerable<DBRef> GetContentRefsAsync(DBRef container, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.Location.Reverse, Keys.Dbref(container.Number),
+			ContentRef, ct: ct));
 
-	public IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpContent>(ct => GetContentsCoreAsync(node.Object().Key, ct));
-
-	/// <summary>The objects whose location edge points at <paramref name="containerKey"/>, in dbref order, paged
-	/// (see <see cref="LightningStore.DupsMapAsync{T}"/>).</summary>
-	private IAsyncEnumerable<AnySharpContent> GetContentsCoreAsync(long containerKey, CancellationToken ct)
-		=> Store.DupsMapAsync(Tables.Location.Reverse, Keys.Dbref(containerKey), ReadContent, ct: ct);
+	/// <summary>The full id of the content an edge value names, or null when its object is gone or is a room.</summary>
+	private DBRef? ContentRef(ITx tx, byte[] value)
+	{
+		var dbref = Keys.ReadDbref(value);
+		return ReadObjectHeader(tx, dbref) is { } header && header.Type != DatabaseConstants.TypeRoom
+			? new DBRef((int)dbref, header.CreationTime)
+			: null;
+	}
 
 	public IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpExit>(ct => GetExitsCoreAsync(obj.Number, ct));
@@ -216,7 +177,7 @@ public partial class LightningDatabase
 
 	/// <remarks>Tables.Exit.Forward is room -> exit directly (set alongside Location when the exit was
 	/// created), so this is a single key's duplicates rather than a type-filtered scan of every reverse
-	/// content entry the way <see cref="GetContentsCoreAsync"/> has to be.</remarks>
+	/// content entry the way <see cref="GetContentRefsAsync"/> has to be.</remarks>
 	private IAsyncEnumerable<SharpExit> GetExitsCoreAsync(long containerKey, CancellationToken ct)
 		=> Store.DupsMapAsync(Tables.Exit.Forward, Keys.Dbref(containerKey),
 			(tx, value) => ReadObject(tx, Keys.ReadDbref(value)) is not { } found
@@ -267,11 +228,9 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
-	public IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<SharpObject>(ct => GetObjectsByZoneCoreAsync(zone.Object().Key, ct));
-
-	private IAsyncEnumerable<SharpObject> GetObjectsByZoneCoreAsync(long zoneKey, CancellationToken ct)
-		=> Store.DupsMapAsync(Tables.Zone.Reverse, Keys.Dbref(zoneKey), ReadSharpObject, ct: ct);
+	public IAsyncEnumerable<DBRef> GetZoneMemberRefsAsync(DBRef zone, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.Zone.Reverse, Keys.Dbref(zone.Number),
+			(tx, value) => HeaderRef(tx, Keys.ReadDbref(value)), ct: ct));
 
 	/// <summary>The base object an edge value names, or null when it is gone.</summary>
 	private SharpObject? ReadSharpObject(ITx tx, byte[] value)

@@ -404,6 +404,13 @@ public interface IObjectStore
 	IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// The full object ids of the players named or aliased <paramref name="name"/> (case-insensitive), paged and
+	/// read from the headers only. The cached <c>GetPlayerQuery</c> resolves each through the object node cache,
+	/// so a miss builds each player once rather than once here and again there.
+	/// </summary>
+	IAsyncEnumerable<DBRef> GetPlayerRefsByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Get all objects in the database as a streaming AsyncEnumerable.
 	/// This allows for efficient filtering and searching without loading all objects into memory.
 	/// </summary>

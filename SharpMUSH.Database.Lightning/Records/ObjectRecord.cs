@@ -66,3 +66,15 @@ public sealed record LockRecord
 	public string Flags { get; init; } = "";
 	public string? Creator { get; init; }
 }
+
+/// <summary>
+/// The two fields of an <see cref="ObjectRecord"/> a ref projection needs: the type (contents leave rooms out,
+/// a player lookup keeps only players) and the creation time that makes a full object id. Decoded from the
+/// same <c>Tables.Obj</c> row, skipping everything else (name, aliases, password hash, locks), so a ref read
+/// builds no object; the object node cache builds it once when the ref is resolved.
+/// </summary>
+public sealed record ObjectHeaderRecord
+{
+	public string Type { get; init; } = "";
+	public long CreationTime { get; init; }
+}

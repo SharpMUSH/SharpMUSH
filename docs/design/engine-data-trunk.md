@@ -30,7 +30,12 @@ read via the objid-checking `GetObjectNodeQuery`, so a number recycled since the
 resolves to nothing rather than to the object that took its place; so it hands out the node cache's instance and nothing needs re-pointing when
 that instance is mutated. Such a result still carries an `obj:#N` tag per object it names, because
 the result itself can change when that object is written (a rename changes which player a name
-finds). Each such type implements `IObjectShaped<T>` and says for itself which node it accepts. A loaded `SharpObject` is a snapshot; a handler that mutates one calls its
+finds). Each such type implements `IObjectShaped<T>` and says for itself which node it accepts. The
+handler behind such a query reads refs, not objects: the store's ref projections
+(`GetContentRefsAsync`, `GetZoneMemberRefsAsync`, `GetRelationRefAsync`, `GetLocationRefAsync`,
+`GetPlayerRefsByNameOrAliasAsync`) decode only an object's type and creation time, and the handler
+resolves each ref through `GetObjectNodeQuery`. A miss then builds each object once, in the node
+cache, and the behaviour's own re-resolve is a hit. A loaded `SharpObject` is a snapshot; a handler that mutates one calls its
 `With…`/`Without…` methods and invalidates the key.
 
 **Why not decorators or per-method policy:** a caching decorator over the provider surface puts

@@ -128,8 +128,8 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var markerDbref = DBRef.Parse(markerObjid);
 
 		// The object must be in #2 purely because AINSTALL's `@teleport %!=#2` ran — no manual move.
-		var location = (await Database.GetLocationAsync(markerDbref)).Expect<AnySharpContainer>();
-		await Assert.That(location.Object().DBRef.Number).IsEqualTo(2)
+		var location = (await Database.GetLocationRefAsync(markerDbref)).Expect<DBRef>();
+		await Assert.That(location.Number).IsEqualTo(2)
 			.Because("AINSTALL `@teleport %!=#2` must land the package object in the master room (#2)");
 
 		await Assert.That((await Installer.UninstallAsync(pkg)).Value).IsTypeOf<Success>();
