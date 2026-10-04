@@ -21,6 +21,39 @@ namespace SharpMUSH.Implementation.Commands;
 internal sealed class StandardAttributeCommand(EvaluationServices services)
 {
 	/// <summary>
+	/// The entry an <c>@attrname</c> command means when no entry has that exact name: an exact match
+	/// (case-insensitive) first, then the shortest <c>prefixmatch</c> entry the name begins, ties broken
+	/// alphabetically. One pass over the entries, keeping the best so far.
+	/// </summary>
+	private async ValueTask<SharpAttributeEntry?> BestStandardAttributeMatchAsync(string name)
+	{
+		SharpAttributeEntry? best = null;
+		var bestExact = false;
+		await foreach (var entry in services.Mediator.CreateStream(new GetAllAttributeEntriesQuery()))
+		{
+			var exact = entry.Name.Equals(name, StringComparison.OrdinalIgnoreCase);
+			if (!exact && !(entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase)
+					&& entry.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
+			{
+				continue;
+			}
+
+			// Strictly better only, so the first of equals is kept, as a stable sort would keep it.
+			if (best is null
+					|| (exact && !bestExact)
+					|| (exact == bestExact && (entry.Name.Length < best.Name.Length
+						|| (entry.Name.Length == best.Name.Length
+							&& StringComparer.OrdinalIgnoreCase.Compare(entry.Name, best.Name) < 0))))
+			{
+				best = entry;
+				bestExact = exact;
+			}
+		}
+
+		return best;
+	}
+
+	/// <summary>
 	/// Handles standard attribute commands like @describe, @success, @failure, etc.
 	/// These commands set the named standard attribute on the target object.
 	/// Supports prefix matching when the attribute has the "prefixmatch" flag.
@@ -44,18 +77,12 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return new None();
 		}
 
-		// Find matching standard attribute entry: exact match first, then shortest prefix match
-		// Uses a single streaming query without materializing the full list
-		var matchedEntry = await services.Mediator.CreateStream(new GetAllAttributeEntriesQuery())
-			.Where(entry =>
-				entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase) ||
-				(entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase) &&
-				 entry.Name.StartsWith(potentialAttrName, StringComparison.OrdinalIgnoreCase)))
-			.OrderByDescending(entry =>
-				entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase)) // Exact matches first
-			.ThenBy(entry => entry.Name.Length) // Then prefer shorter names (DESCRIBE over DESCFORMAT)
-			.ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase) // Alphabetical tiebreaker
-			.FirstOrDefaultAsync();
+		// Find matching standard attribute entry: exact match first, then shortest prefix match. The exact
+		// name is one keyed lookup; only when it misses are the entries walked, once, for the best prefix.
+		var matchedEntry = await services.Mediator.Send(new GetAttributeEntryQuery(potentialAttrName)) is { } exact
+			&& exact.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase)
+				? exact
+				: await BestStandardAttributeMatchAsync(potentialAttrName);
 
 		if (matchedEntry == null)
 		{

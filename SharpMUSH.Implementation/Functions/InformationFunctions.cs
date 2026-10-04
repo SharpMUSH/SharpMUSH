@@ -772,7 +772,12 @@ public partial class Functions
 			classObj = classFound;
 		}
 
-		var results = Mediator.CreateStream(new GetAllObjectsQuery())
+		// A class is an owner: its objects come from the owner index (ascending dbref order, as the
+		// world scan returned them), and the owner is still compared exactly per object.
+		var candidates = classObj is null
+			? Mediator.CreateStream(new GetAllObjectsQuery())
+			: Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = classObj.Object().DBRef }));
+		var results = candidates
 			.Where(async (obj, _) => classObj is null
 				|| (await obj.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == classObj.Object().DBRef)
 			.Where(async (obj, _) => await obj.Attributes.Value.AnyAsync(attr =>

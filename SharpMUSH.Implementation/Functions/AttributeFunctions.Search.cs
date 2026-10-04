@@ -219,12 +219,12 @@ public partial class Functions
 	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Regex,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Regex,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)

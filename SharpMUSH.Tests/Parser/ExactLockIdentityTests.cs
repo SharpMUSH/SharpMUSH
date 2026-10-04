@@ -70,4 +70,42 @@ public class ExactLockIdentityTests
 		await Assert.That(await parser.Compile($"={key.Object().DBRef}")(other, other)).IsFalse();
 		_ = mediator.DidNotReceive().CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>());
 	}
+
+	private async Task<AnySharpObject> Parse(string expression)
+	{
+		var made = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(made!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+	}
+
+	/// <summary>
+	/// A carry key asks whether the key is in the unlocker's contents. A room's contents list the exits
+	/// leading out of it, and never a room — not even one whose drop-to is the unlocker, though a drop-to
+	/// is stored where a location is. The key's own location answers the same question as the inventory.
+	/// </summary>
+	[Test]
+	[Arguments("")]
+	[Arguments("+")]
+	public async Task CarryKeyMatchesTheContentsListForExitsAndRooms(string prefix)
+	{
+		var room = await Parse($"dig(CarryRoom_{Guid.NewGuid():N})");
+		var elsewhere = await Parse($"dig(CarryElsewhere_{Guid.NewGuid():N})");
+		var exit = await Parse($"open(CarryExit_{Guid.NewGuid():N},#{elsewhere.Object().DBRef.Number},#{room.Object().DBRef.Number})");
+		var droppingRoom = await Parse($"dig(CarryDropping_{Guid.NewGuid():N})");
+		await Factory.FunctionParser.FunctionParse(MarkupText.Plain(
+			$"link(#{droppingRoom.Object().DBRef.Number},#{room.Object().DBRef.Number})"));
+		var unrelated = await Create("CarryGate");
+
+		var contents = await Mediator.CreateStream(new GetContentsQuery(room.AsContainer))
+			.Select(item => item.Object().DBRef.Number).ToListAsync();
+		await Assert.That(contents).Contains(exit.Object().DBRef.Number)
+			.Because("precondition: a room's contents list the exits leading out of it");
+		await Assert.That(contents).DoesNotContain(droppingRoom.Object().DBRef.Number)
+			.Because("precondition: a room whose drop-to is this room is not in its contents");
+
+		await Assert.That(await Locks.Compile($"{prefix}#{exit.Object().DBRef.Number}")(unrelated, room)).IsTrue();
+		await Assert.That(await Locks.Compile($"{prefix}{exit.Object().DBRef}")(unrelated, room)).IsTrue();
+		await Assert.That(await Locks.Compile($"{prefix}#{exit.Object().DBRef.Number}")(unrelated, elsewhere)).IsFalse();
+		await Assert.That(await Locks.Compile($"{prefix}#{droppingRoom.Object().DBRef.Number}")(unrelated, room)).IsFalse()
+			.Because("a drop-to is not carrying");
+	}
 }

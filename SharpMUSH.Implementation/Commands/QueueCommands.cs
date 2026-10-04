@@ -324,14 +324,13 @@ public partial class Commands
 		await Mediator.Send(new HaltObjectQueueRequest(victimObject.DBRef));
 		if (!victim.IsPlayer) return;
 
-		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+		// The owner index names the player's objects; the world is not scanned for them. Halting changes
+		// no ownership, so the stream is read as it goes.
+		await foreach (var obj in Mediator.CreateStream(new GetFilteredObjectsQuery(
+			new ObjectSearchFilter { Owner = victimObject.DBRef })))
 		{
 			if (obj.DBRef.Number == victimObject.DBRef.Number) continue;
-			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
-			if (objOwner.Object.DBRef.Number == victimObject.DBRef.Number)
-			{
-				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-			}
+			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 		}
 	}
 
@@ -1132,12 +1131,13 @@ public partial class Commands
 			return await QueueInspectionUnsupported(executor);
 		}
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
-		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
+		// Only the command queue's size is reported, so it is counted rather than collected.
+		var enqueueCount = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).CountAsync();
 
 		if (switches.Contains("SUMMARY"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSummaryHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
@@ -1147,7 +1147,7 @@ public partial class Commands
 		if (switches.Contains("QUICK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQuickHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 			return CallState.Empty;
@@ -1155,7 +1155,7 @@ public partial class Commands
 
 		var targetName = target.Object().DBRef.ToString();
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, targetName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 

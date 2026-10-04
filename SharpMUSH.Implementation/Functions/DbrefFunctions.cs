@@ -281,14 +281,18 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var targetDbref = found.Object().DBRef.ToString();
+				// PennMUSH's fun_followers reads the leader's own FOLLOWERS list, which add_follower and
+				// del_follower keep beside each follower's FOLLOWING (MovementCommands does the same), in
+				// the order they began following; it does not scan every object's FOLLOWING. Read as GOD,
+				// as MovementCommands reads it: FOLLOWERS carries the wizard attribute flag.
+				var followers = await AttributeService.GetAttributeAsync(
+					await HelperFunctions.GetGod(Mediator), found, "FOLLOWERS",
+					IAttributeService.AttributeMode.Read, parent: false);
 
-				var followers = Mediator.CreateStream(new GetAllObjectsQuery())
-					.Where(async (obj, _) => await obj.Attributes.Value
-						.AnyAsync(attr => attr.LongName == "FOLLOWING" && attr.Value.Text == targetDbref))
-					.Select(obj => obj.DBRef.ToString());
-
-				return new CallState(string.Join(" ", await followers.ToArrayAsync()));
+				return followers is SharpAttribute[] chain
+					? new CallState(string.Join(" ", chain.Last().Value.ToPlainText()
+						.Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+					: new CallState(string.Empty);
 			});
 	}
 
