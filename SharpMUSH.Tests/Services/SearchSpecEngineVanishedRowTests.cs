@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Implementation.Common;
@@ -30,6 +31,7 @@ public class SearchSpecEngineVanishedRowTests
 			Type = "THING",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(async _ => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(AsyncEnumerable.Empty<SharpPower>),
 			Attributes = new(AsyncEnumerable.Empty<SharpAttribute>),
 			LazyAttributes = new(AsyncEnumerable.Empty<LazySharpAttribute>),

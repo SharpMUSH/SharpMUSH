@@ -80,10 +80,12 @@ For example, to lock "Bob's Tools" to only people with a name beginning with Bob
 # @LOCK-FLAG
 # @LOCK-TYPE
 # @LOCK-POWER
+# @LOCK-ROLE
+# @LOCK-PERM
 # @LOCK-CHANNEL
 
 ## BIT LOCKS
-You can test for set flags, powers, or object types in a lock directly, without using an evaluation lock, with these formats:
+You can test for set flags, powers, roles, permissions, or object types in a lock directly, without using an evaluation lock, with these formats:
 
 `@lock <object>=flag^<flag>`<br>
 `@lock <object>=power^<power>`<br>
@@ -94,6 +96,17 @@ These locks act like the object the lock is on does a hasflag(%#, *<flag>*), or 
 For example:
 ```sharp
 @lock/use Admin Commands=flag^wizard|flag^royalty
+```
+
+To test for a role or a permission (see [roles]):
+
+`@lock <object>=role^<role>`<br>
+`@lock <object>=perm^<permission>`
+
+`role^<role>` passes when the object trying the lock holds the role, its own or its account's, as hasrole() reports. `perm^<permission>` passes when it holds the permission, as permission() reports.
+
+```sharp
+@lock/use Staff Board=role^moderator|perm^players.moderate
 ```
 
 You can also test for channel membership with:

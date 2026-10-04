@@ -119,30 +119,47 @@ create a character. They cannot enter scenes or send mail.
 (pre-character-selection state). `ConnectionService.Bind` transitions to
 LoggedIn (character-bound state).
 
-### 1.4 Permissions: Roles (Discord-style, Rhost-flavoured)
+### 1.4 Permissions: Roles (Discord-style)
 
 **Decision:** Permissions are atomic scopes (`PortalPermission`) granted by roles.
-An account holds `everyone`, the tier roles its characters' flags select
-(stacked: a Wizard holds `player`, `builder`, `royalty` and `wizard`), and any
-roles assigned to it. A scope resolves as Discord resolves a channel permission:
+Game objects and accounts both hold roles and overrides (`ObjectGrants`). An
+object holds `everyone`, the roles assigned to it, and, for a character linked
+to an active account, the account's roles; a player that is not a guest holds
+`player`, and #1 holds `god`. Nothing is inherited from an object's owner. A
+scope resolves as Discord resolves a channel permission (`PermissionResolver`):
 
-1. The owner (the account playing #1) holds every scope.
+1. The owner (#1, or the account playing it) holds every scope.
 2. A role allowing `administrator` grants every scope and ignores overrides.
-3. A per-account override (Rhost's `@power`/`@depower`) decides.
-4. Any held role allowing the scope grants it; allows are pooled and beat denies.
-5. Otherwise a role denying it refuses it.
-6. Otherwise `everyone` decides; anything not allowed is denied.
+3. An override on the object decides.
+4. An override on its account decides.
+5. Any held role allowing the scope grants it; allows are pooled and beat denies.
+6. Otherwise a role denying it refuses it.
+7. Otherwise `everyone` decides; anything not allowed is denied.
 
 An umbrella scope (`wiki.admin`) covers its children left on Inherit within a
 role. A role's priority is only its place in the hierarchy: a manager needs
 `roles.admin`, and may create, edit, assign or take away only roles below its
-own highest role, on accounts whose highest role is below it, never on itself,
-and may allow only scopes it holds. System roles (`everyone` and the tiers) keep
-their slug and priority and are never assigned by hand. The owner is exempt.
+own highest role, on objects and accounts whose highest role is below it,
+never on itself, and may allow only scopes it holds (a `game.wizard` holder may
+allow any `game.` scope). An object may give a role it holds to a thing it owns.
+The implicit roles (`everyone`, `player`, `god`) are never assigned. The owner
+is exempt. Priority never decides control.
 
-Starter roles (`helper`, `moderator`, after Rhost's Guildmaster and Councilor)
-are seeded once into a new world. Roles are managed in game with `@role` and
-in the portal's Roles page; `roles()`, `hasrole()` and `permission()` read them.
+PennMUSH privilege is roles and scopes (`RoleFlags`, `GamePowers`): the WIZARD
+and ROYALTY flags are the `wizard` and `royalty` roles; each built-in power is
+a `game.<power>` scope, set by `@power` as an object override, with Builder and
+Guest the `builder` and `guest` roles. `Wizard()`, `haspower()`, `hasflag()` and
+the `FLAG^`/`POWER^` lock keys read grants, and `Controls()` reads `control.all`
+on the actor and `protect.wizard`/`protect.admin` on the target. The provider
+writes a role-backed flag or power as a role or override, so the PennMUSH
+importer and every seed land there, and its migration moves stored WIZARD,
+ROYALTY and power edges once. The flag and power definitions stay for
+`@flag/list`, letters and `@power <name>`.
+
+Starter roles (`helper`, `moderator`) are seeded once into a new world. Roles
+are managed in game with `@role` and in the portal's Roles page; `roles()`,
+`hasrole()`, `permission()` and the `ROLE^`/`PERM^` lock keys read them, and
+`examine` shows an object's roles and overrides.
 
 ### 1.5 Login Methods: Password + Discord OAuth (Progressive)
 

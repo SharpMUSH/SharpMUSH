@@ -15,7 +15,8 @@ public interface IAccountClaimsInvalidator
 {
 	/// <summary>
 	/// Drops every cached role/permission entry for <paramref name="accountId"/>, so the next
-	/// authenticated request recomputes them from the account's current characters.
+	/// authenticated request recomputes them from the account's current characters, and the cached
+	/// grants of the game objects, which include the account's roles on each linked character.
 	/// </summary>
 	ValueTask InvalidateAsync(string accountId, CancellationToken ct = default);
 }

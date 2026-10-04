@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -24,6 +26,13 @@ public readonly record struct RoleRefusal(RoleRefusalKind Kind, string Message);
 /// <summary>A role change's result, or why it was refused.</summary>
 public union RoleOutcome<T>(T, RoleRefusal);
 
+/// <summary>
+/// Who is making a role change: a signed-in account (from the portal, or a character played through
+/// one), or a game object acting as itself, which holds what its <see cref="ObjectGrants"/> say whether
+/// or not it has an account.
+/// </summary>
+public union RoleActor(CapabilityActor, AnySharpObject);
+
 /// <summary>The editable fields of a role, as a create or an edit proposes them.</summary>
 public sealed record RoleDraft(
 	string Slug,
@@ -33,41 +42,57 @@ public sealed record RoleDraft(
 	IReadOnlyDictionary<string, PermissionState> Permissions);
 
 /// <summary>
-/// Every change to roles, assignments and per-account overrides, from the portal and from the game,
-/// goes through here so both apply the same rules (<see cref="RoleHierarchy"/>):
+/// Every change to roles, assignments and overrides, from the portal and from the game (<c>@role</c>,
+/// and <c>@set</c>/<c>@power</c> on WIZARD, ROYALTY and the powers), goes through here so all of them
+/// apply the same rules (<see cref="RoleHierarchy"/>):
 /// <list type="bullet">
 /// <item>Every change needs <see cref="PortalPermission.RolesAdmin"/>.</item>
 /// <item>A role can be created, edited, deleted, assigned or removed only when it sits below the
-/// actor's highest role, and only an account whose highest role is below the actor's can have its
-/// roles or overrides changed.</item>
-/// <item>A role or override can allow only scopes the actor holds.</item>
+/// actor's highest role, and only an account or object whose highest role is below the actor's can
+/// have its roles or overrides changed.</item>
+/// <item>A role or override can allow only scopes the actor holds; a holder of
+/// <see cref="PortalPermission.GameWizard"/> may also allow any in-game scope.</item>
 /// <item>Nobody but the owner changes their own roles or overrides.</item>
-/// <item>System roles keep their slug and priority, cannot be deleted and are never assigned by hand.</item>
+/// <item>System roles keep their slug and priority and cannot be deleted. The implicit ones
+/// (<c>everyone</c>, <c>player</c>, <c>god</c>) are never assigned.</item>
+/// <item>An object may give a role it holds to a non-player object it owns, and take it back, without
+/// <see cref="PortalPermission.RolesAdmin"/>: PennMUSH lets a wizard set WIZARD, and royalty set
+/// ROYALTY, on their own things.</item>
 /// </list>
-/// The owner (the account linked to player #1) is exempt from the hierarchy rules.
+/// The owner (player #1 and the account linked to it) is exempt from the hierarchy rules. Role order
+/// decides only who may manage whom; it grants no control over objects.
 /// </summary>
 public interface IRoleManagementService
 {
 	/// <summary>Creates a role, or replaces an existing role's editable fields.</summary>
-	Task<RoleOutcome<SharpRole>> SaveRoleAsync(CapabilityActor actor, RoleDraft draft, CancellationToken ct = default);
+	Task<RoleOutcome<SharpRole>> SaveRoleAsync(RoleActor actor, RoleDraft draft, CancellationToken ct = default);
 
 	/// <summary>Edits an existing role: <paramref name="change"/> turns the stored role into a draft.</summary>
-	Task<RoleOutcome<SharpRole>> EditRoleAsync(CapabilityActor actor, string slug, Func<SharpRole, RoleDraft> change, CancellationToken ct = default);
+	Task<RoleOutcome<SharpRole>> EditRoleAsync(RoleActor actor, string slug, Func<SharpRole, RoleDraft> change, CancellationToken ct = default);
 
 	/// <summary>Deletes a role and every assignment of it.</summary>
-	Task<RoleOutcome<Success>> DeleteRoleAsync(CapabilityActor actor, string slug, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> DeleteRoleAsync(RoleActor actor, string slug, CancellationToken ct = default);
 
 	/// <summary>Gives an account a role.</summary>
-	Task<RoleOutcome<Success>> AssignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> AssignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default);
 
 	/// <summary>Takes a role away from an account.</summary>
-	Task<RoleOutcome<Success>> UnassignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> UnassignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default);
 
 	/// <summary>
 	/// Sets per-account overrides, all or none: every scope is checked before any is written.
 	/// <see cref="PermissionState.Inherit"/> clears them.
 	/// </summary>
-	Task<RoleOutcome<Success>> SetOverridesAsync(CapabilityActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
+
+	/// <summary>Gives a game object a role.</summary>
+	Task<RoleOutcome<Success>> AssignToObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default);
+
+	/// <summary>Takes a role away from a game object.</summary>
+	Task<RoleOutcome<Success>> UnassignFromObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default);
+
+	/// <summary>Sets overrides on a game object, all or none, as <see cref="SetOverridesAsync"/> does for accounts.</summary>
+	Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -76,7 +101,8 @@ public sealed partial class RoleManagementService(
 	IAccountService accounts,
 	IAdministrativeCapabilityService capabilities,
 	IPermissionResolver resolver,
-	IAccountClaimsInvalidator invalidator) : IRoleManagementService
+	IAccountClaimsInvalidator invalidator,
+	IMediator mediator) : IRoleManagementService
 {
 	/// <summary>Validation and the write it guards run one at a time, so two changes cannot both pass a stale check.</summary>
 	private readonly SemaphoreSlim _gate = new(1, 1);
@@ -87,70 +113,56 @@ public sealed partial class RoleManagementService(
 	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
 	private static partial Regex ColorPattern();
 
-	public Task<RoleOutcome<SharpRole>> SaveRoleAsync(CapabilityActor actor, RoleDraft draft, CancellationToken ct = default)
+	public Task<RoleOutcome<SharpRole>> SaveRoleAsync(RoleActor actor, RoleDraft draft, CancellationToken ct = default)
 		=> Gated(async () => await SaveCoreAsync(actor, draft, ct), ct);
 
-	public Task<RoleOutcome<SharpRole>> EditRoleAsync(CapabilityActor actor, string slug, Func<SharpRole, RoleDraft> change, CancellationToken ct = default)
+	public Task<RoleOutcome<SharpRole>> EditRoleAsync(RoleActor actor, string slug, Func<SharpRole, RoleDraft> change, CancellationToken ct = default)
 		=> Gated(async () => await registry.GetRoleAsync(slug, ct) switch
 		{
 			SharpRole role => await SaveCoreAsync(actor, change(role) with { Slug = role.Slug }, ct),
 			_ => Refuse<SharpRole>(RoleRefusalKind.NotFound, $"No role named '{slug}'.")
 		}, ct);
 
-	public Task<RoleOutcome<Success>> DeleteRoleAsync(CapabilityActor actor, string slug, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> DeleteRoleAsync(RoleActor actor, string slug, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
 			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
 				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
 			if (role.IsSystem)
 				return Refuse<Success>(RoleRefusalKind.Invalid, $"{role.Name} is a system role and cannot be deleted.");
-			var me = await capabilities.GetContextAsync(actor, ct);
+			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
 
 			var holders = await registry.GetAccountIdsForRoleAsync(role.Slug);
 			foreach (var holder in holders)
 				await registry.RemoveRoleFromAccountAsync(holder, role.Slug);
+			foreach (var number in await registry.GetObjectsForRoleAsync(role.Slug, ct))
+				await registry.RemoveRoleFromObjectAsync(number, role.Slug);
 			await registry.RemoveRoleAsync(role.Slug);
 			foreach (var holder in holders)
 				await invalidator.InvalidateAsync(holder, ct);
+			await mediator.Send(new InvalidateGrantsCommand(null), ct);
 			return new Success();
 		}, ct);
 
-	public Task<RoleOutcome<Success>> AssignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> AssignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: true, ct);
 
-	public Task<RoleOutcome<Success>> UnassignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> UnassignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: false, ct);
 
-	public Task<RoleOutcome<Success>> SetOverridesAsync(CapabilityActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
-			if (scopes.Count == 0)
-				return Refuse<Success>(RoleRefusalKind.Invalid, "Name at least one permission.");
-			if (!Enum.IsDefined(state))
-				return Refuse<Success>(RoleRefusalKind.Invalid, "Unknown permission state.");
-			var canonical = new List<string>();
-			foreach (var scope in scopes)
-			{
-				if (PortalPermission.Canonical(scope) is not { } known)
-					return Refuse<Success>(RoleRefusalKind.Invalid, $"Unknown permission '{scope}'.");
-				if (known == PortalPermission.Administrator)
-					return Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set on an account.");
-				canonical.Add(known);
-			}
+			if (OverrideScopes(scopes, state) is not List<string> canonical)
+				return OverrideRefusal(scopes, state);
 
-			var me = await capabilities.GetContextAsync(actor, ct);
+			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (await TargetAsync(actor, me, accountId, ct) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
-			if (state == PermissionState.Allow)
-			{
-				var held = resolver.Resolve(me);
-				var unheld = canonical.Where(scope => !held.Contains(scope)).ToArray();
-				if (unheld.Length > 0)
-					return Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.");
-			}
+			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
 				await registry.SetAccountOverrideAsync(target, scope, state);
@@ -158,34 +170,168 @@ public sealed partial class RoleManagementService(
 			return new Success();
 		}, ct);
 
-	private Task<RoleOutcome<Success>> ChangeAssignmentAsync(CapabilityActor actor, string accountId, string slug, bool assign, CancellationToken ct)
+	private Task<RoleOutcome<Success>> ChangeAssignmentAsync(RoleActor actor, string accountId, string slug, bool assign, CancellationToken ct)
 		=> Gated(async () =>
 		{
 			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
 				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
-			if (role.IsSystem && assign)
-				return SystemRole(role, "assigned");
-			var me = await capabilities.GetContextAsync(actor, ct);
+			if (BuiltInRoles.IsImplicit(role.Slug))
+				return ImplicitRole(role);
+			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
 			if (await TargetAsync(actor, me, accountId, ct) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
-			// A system role can still be taken off an account that holds it by assignment (an older
-			// world could assign one), so that grant stays revocable; the tier itself is not removable.
-			if (role.IsSystem && !(await registry.GetRolesForAccountAsync(target, ct))
-					.Any(held => string.Equals(held.Slug, role.Slug, StringComparison.OrdinalIgnoreCase)))
-				return SystemRole(role, "removed");
-
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
 			else await registry.RemoveRoleFromAccountAsync(target, role.Slug);
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
 
-	private static RoleOutcome<Success> SystemRole(SharpRole role, string verb)
-		=> Refuse<Success>(RoleRefusalKind.Invalid, $"{role.Name} is a system role; it follows a character's flags and cannot be {verb} by hand.");
+	private static RoleOutcome<Success> ImplicitRole(SharpRole role)
+		=> Refuse<Success>(RoleRefusalKind.Invalid, role.Slug switch
+		{
+			BuiltInRoles.EveryoneSlug => $"{role.Name} is held by everyone and is never assigned.",
+			BuiltInRoles.PlayerSlug => $"{role.Name} is held by every player character that is not a guest and is never assigned.",
+			_ => $"{role.Name} is held by player #1 alone and is never assigned."
+		});
 
-	private async Task<RoleOutcome<SharpRole>> SaveCoreAsync(CapabilityActor actor, RoleDraft draft, CancellationToken ct)
+	public Task<RoleOutcome<Success>> AssignToObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default)
+		=> ChangeObjectAssignmentAsync(actor, target, slug, assign: true, ct);
+
+	public Task<RoleOutcome<Success>> UnassignFromObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default)
+		=> ChangeObjectAssignmentAsync(actor, target, slug, assign: false, ct);
+
+	private Task<RoleOutcome<Success>> ChangeObjectAssignmentAsync(RoleActor actor, AnySharpObject target, string slug, bool assign, CancellationToken ct)
+		=> Gated(async () =>
+		{
+			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
+				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
+			if (BuiltInRoles.IsImplicit(role.Slug))
+				return ImplicitRole(role);
+			var me = await ActorGrantsAsync(actor, ct);
+			if (!await SharesWithOwnThingAsync(actor, me, target, role, ct))
+			{
+				if (Unauthorized(me.Context) is { } refusal) return refusal;
+				if (!RoleHierarchy.Outranks(me.Context, role.Priority)) return NotBelow<Success>(role, me.Context);
+				if (await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
+			}
+
+			var number = target.Object().Key;
+			if (assign) await registry.AssignRoleToObjectAsync(number, role.Slug);
+			else await registry.RemoveRoleFromObjectAsync(number, role.Slug);
+			await ObjectChangedAsync(target, ct);
+			return new Success();
+		}, ct);
+
+	public Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			if (OverrideScopes(scopes, state) is not List<string> canonical)
+				return OverrideRefusal(scopes, state);
+
+			var me = (await ActorGrantsAsync(actor, ct)).Context;
+			if (Unauthorized(me) is { } refusal) return refusal;
+			if (await ObjectTargetRefusalAsync(actor, me, target, ct) is { } targetRefusal) return targetRefusal;
+			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
+
+			foreach (var scope in canonical.Distinct())
+				await registry.SetObjectOverrideAsync(target.Object().Key, scope, state);
+			await ObjectChangedAsync(target, ct);
+			return new Success();
+		}, ct);
+
+	/// <summary>What the actor holds, read fresh: a game object's own grants, or the account's context.</summary>
+	private async Task<ObjectGrants> ActorGrantsAsync(RoleActor actor, CancellationToken ct) => actor switch
+	{
+		AnySharpObject obj => await capabilities.GetObjectGrantsAsync(obj, ct),
+		CapabilityActor account => ObjectGrants.FromContext(await capabilities.GetContextAsync(account, ct)),
+	};
+
+	/// <summary>The account acting, or the one the acting character is linked to.</summary>
+	private async Task<string?> ActorAccountIdAsync(RoleActor actor, CancellationToken ct) => actor switch
+	{
+		CapabilityActor account => account.AccountId,
+		AnySharpObject { IsPlayer: true } obj => (await accounts.GetAccountForCharacterAsync(obj.Object().DBRef, ct))?.Id,
+		_ => null
+	};
+
+	/// <summary>The game object acting, when the actor is one or is playing one.</summary>
+	private static DBRef? ActingObject(RoleActor actor) => actor switch
+	{
+		AnySharpObject obj => obj.Object().DBRef,
+		CapabilityActor account => account.Executor,
+	};
+
+	/// <summary>
+	/// PennMUSH's own-thing rule: an object may give a role it holds itself to, or take it from, a
+	/// non-player object it owns.
+	/// </summary>
+	private static async Task<bool> SharesWithOwnThingAsync(RoleActor actor, ObjectGrants me, AnySharpObject target, SharpRole role, CancellationToken ct)
+	{
+		if (target.IsPlayer || ActingObject(actor) is not { } acting || !me.HoldsRole(role.Slug)) return false;
+		var owner = await target.Object().Owner.WithCancellation(ct);
+		return owner.Object.DBRef.Number == acting.Number;
+	}
+
+	/// <summary>Why the actor may not change <paramref name="target"/>'s roles or overrides, or null when it may.</summary>
+	private async Task<RoleOutcome<Success>?> ObjectTargetRefusalAsync(RoleActor actor, PermissionContext me, AnySharpObject target, CancellationToken ct)
+	{
+		if (me.IsOwner) return null;
+		if (ActingObject(actor) is { } acting && acting.Number == target.Object().Key)
+			return Refuse<Success>(RoleRefusalKind.Forbidden, "You cannot change your own roles or permissions.");
+		var theirs = (await capabilities.GetObjectGrantsAsync(target, ct)).Context;
+		return theirs.IsOwner || !RoleHierarchy.Outranks(me, theirs.TopPriority)
+			? Refuse<Success>(RoleRefusalKind.Forbidden, $"{target.Object().Name}'s highest role is not below yours ({me.TopPriority}).")
+			: null;
+	}
+
+	/// <summary>Expires the object's cached grants and, for a linked character, its account's portal claims.</summary>
+	private async Task ObjectChangedAsync(AnySharpObject target, CancellationToken ct)
+	{
+		await mediator.Send(new InvalidateGrantsCommand(target.Object().Key), ct);
+		if (target.IsPlayer && await accounts.GetAccountForCharacterAsync(target.Object().DBRef, ct) is { Id: { } accountId })
+			await invalidator.InvalidateAsync(accountId, ct);
+	}
+
+	/// <summary>The catalog spelling of each scope when every one may be overridden, else null.</summary>
+	private static List<string>? OverrideScopes(IReadOnlyCollection<string> scopes, PermissionState state)
+	{
+		if (scopes.Count == 0 || !Enum.IsDefined(state)) return null;
+		var canonical = new List<string>();
+		foreach (var scope in scopes)
+		{
+			if (PortalPermission.Canonical(scope) is not { } known || known == PortalPermission.Administrator) return null;
+			canonical.Add(known);
+		}
+
+		return canonical;
+	}
+
+	/// <summary>Why <see cref="OverrideScopes"/> refused.</summary>
+	private static RoleOutcome<Success> OverrideRefusal(IReadOnlyCollection<string> scopes, PermissionState state)
+	{
+		if (scopes.Count == 0)
+			return Refuse<Success>(RoleRefusalKind.Invalid, "Name at least one permission.");
+		if (!Enum.IsDefined(state))
+			return Refuse<Success>(RoleRefusalKind.Invalid, "Unknown permission state.");
+		var bad = scopes.First(scope => PortalPermission.Canonical(scope) is not { } known || known == PortalPermission.Administrator);
+		return PortalPermission.Canonical(bad) is null
+			? Refuse<Success>(RoleRefusalKind.Invalid, $"Unknown permission '{bad}'.")
+			: Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set as an override.");
+	}
+
+	/// <summary>The refusal for allowing scopes the actor may not grant, or null when it may grant them all.</summary>
+	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes)
+	{
+		var held = resolver.Resolve(me);
+		var unheld = scopes.Where(scope => !RoleHierarchy.CanGrant(held, scope)).ToArray();
+		return unheld.Length > 0
+			? Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.")
+			: null;
+	}
+
+	private async Task<RoleOutcome<SharpRole>> SaveCoreAsync(RoleActor actor, RoleDraft draft, CancellationToken ct)
 	{
 		var slug = draft.Slug.Trim();
 		if (!SlugPattern().IsMatch(slug))
@@ -203,7 +349,7 @@ public sealed partial class RoleManagementService(
 			if (state != PermissionState.Inherit) permissions[canonical] = state;
 		}
 
-		var me = await capabilities.GetContextAsync(actor, ct);
+		var me = (await ActorGrantsAsync(actor, ct)).Context;
 		if (Unauthorized(me) is { } refusal) return refusal;
 		var existing = await registry.GetRoleAsync(slug, ct) is SharpRole found ? found : null;
 		if (existing is { IsSystem: true } && existing.Priority != draft.Priority)
@@ -233,25 +379,26 @@ public sealed partial class RoleManagementService(
 		await registry.UpsertRoleAsync(role);
 		foreach (var holder in await registry.GetAccountIdsForRoleAsync(role.Slug))
 			await invalidator.InvalidateAsync(holder, ct);
+		await mediator.Send(new InvalidateGrantsCommand(null), ct);
 		return role;
 	}
 
 	/// <summary>The target account's canonical id when the actor may change it, else null.</summary>
-	private async Task<string?> TargetAsync(CapabilityActor actor, PermissionContext me, string accountId, CancellationToken ct)
+	private async Task<string?> TargetAsync(RoleActor actor, PermissionContext me, string accountId, CancellationToken ct)
 	{
 		var account = await accounts.GetByIdAsync(accountId, ct);
 		if (account?.Id is null) return null;
 		if (me.IsOwner) return account.Id;
-		if (account.Id == actor.AccountId) return null;
+		if (account.Id == await ActorAccountIdAsync(actor, ct)) return null;
 		var target = await capabilities.GetContextAsync(new CapabilityActor(account.Id), ct);
 		return target.IsOwner || !RoleHierarchy.Outranks(me, target.TopPriority) ? null : account.Id;
 	}
 
-	private async Task<RoleOutcome<Success>> TargetRefusalAsync(CapabilityActor actor, PermissionContext me, string accountId, CancellationToken ct)
+	private async Task<RoleOutcome<Success>> TargetRefusalAsync(RoleActor actor, PermissionContext me, string accountId, CancellationToken ct)
 	{
 		var account = await accounts.GetByIdAsync(accountId, ct);
 		if (account?.Id is null) return Refuse<Success>(RoleRefusalKind.NotFound, "No such account.");
-		if (account.Id == actor.AccountId) return Refuse<Success>(RoleRefusalKind.Forbidden, "You cannot change your own roles or permissions.");
+		if (account.Id == await ActorAccountIdAsync(actor, ct)) return Refuse<Success>(RoleRefusalKind.Forbidden, "You cannot change your own roles or permissions.");
 		return Refuse<Success>(RoleRefusalKind.Forbidden,
 			$"{account.Username}'s highest role is not below yours ({me.TopPriority}).");
 	}

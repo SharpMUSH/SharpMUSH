@@ -223,8 +223,8 @@ public partial class PackageInstallService
 
 		// Full live object structure for the three-way structure merge.
 		var sharpObject = known.Object();
-		var flags = await sharpObject.Flags.Value.Select(f => f.Name).ToListAsync(cancellationToken);
-		var powers = await sharpObject.Powers.Value.Select(p => p.Name).ToListAsync(cancellationToken);
+		var flags = (await sharpObject.ReadOwnFlagNamesAsync(cancellationToken)).ToList();
+		var powers = (await sharpObject.ReadOwnPowerNamesAsync(cancellationToken)).ToList();
 		var locks = sharpObject.Locks.ToDictionary(
 			kv => kv.Key, kv => kv.Value.LockString, StringComparer.OrdinalIgnoreCase);
 

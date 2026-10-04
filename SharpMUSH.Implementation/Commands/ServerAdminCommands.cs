@@ -1055,8 +1055,8 @@ public partial class Commands
 
 		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 		{
-			await Tally(flagSets, obj.Flags.Value.Select(f => f.Name));
-			await Tally(powerSets, obj.Powers.Value.Select(p => p.Name));
+			await Tally(flagSets, (await obj.ReadFlagsAsync(ExecutionBudget.CurrentToken)).Flags.Select(f => f.Name).ToAsyncEnumerable());
+			await Tally(powerSets, (await obj.ReadPowersAsync(ExecutionBudget.CurrentToken)).Select(p => p.Name).ToAsyncEnumerable());
 		}
 
 		await ReportFlagspaceAsync(executor, "FLAG", await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync(), flagSets);

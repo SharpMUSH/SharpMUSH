@@ -37,6 +37,12 @@ public class RoleReadCompatibilityTests
 		public Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string slug) => throw new NotSupportedException();
 		public Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
 		public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state) => throw new NotSupportedException();
+		public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
+		public Task AssignRoleToObjectAsync(int number, string slug) => throw new NotSupportedException();
+		public Task RemoveRoleFromObjectAsync(int number, string slug) => throw new NotSupportedException();
+		public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string slug, CancellationToken token = default) => throw new NotSupportedException();
+		public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
+		public Task SetObjectOverrideAsync(int number, string scope, PermissionState state) => throw new NotSupportedException();
 	}
 
 	[Test]

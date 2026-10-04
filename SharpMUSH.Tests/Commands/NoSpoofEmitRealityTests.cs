@@ -41,11 +41,7 @@ public class NoSpoofEmitRealityTests
 		executor.Expect<SharpPlayer>().Id = "executor";
 		enactor.Expect<SharpPlayer>().Id = "enactor";
 		recipient.Expect<SharpPlayer>().Id = "recipient";
-		executor.Object().Powers = new(() => new[] { new SharpPower
-		{
-			Name = "Can_Spoof", Aliases = [], System = true,
-			SetPermissions = [], UnsetPermissions = [], TypeRestrictions = []
-		} }.ToAsyncEnumerable());
+		executor.Grant(powers: ["Can_spoof"]);
 		var reality = Substitute.For<IRealityPolicy>();
 		reality.CanPerceiveAsync(recipient.Object().DBRef, executor.Object().DBRef).Returns(executorVisible);
 		reality.CanPerceiveAsync(recipient.Object().DBRef, enactor.Object().DBRef).Returns(enactorVisible);

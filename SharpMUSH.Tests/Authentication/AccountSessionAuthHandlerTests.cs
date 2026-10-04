@@ -48,6 +48,7 @@ public class AccountSessionAuthHandlerTests
 			Type = "Player",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -80,17 +81,17 @@ public class AccountSessionAuthHandlerTests
 	private static AccountClaimsService MakeAccountClaims(IAccountService accountServiceForClaims,
 		PortalRole role, params string[] scopes)
 	{
-		var roleDerivation = Substitute.For<IRoleDerivationService>();
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 
-		roleDerivation.DeriveRole(Arg.Any<int>(), Arg.Any<IEnumerable<SharpObjectFlag>>(), Arg.Any<IEnumerable<SharpPower>>())
-			.Returns(role);
+		capabilities.GetContextAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
+			.Returns(new PermissionContext(BuiltInRoles.All.Where(r => r.Slug == BuiltInRoles.SlugFor(role)).ToArray(),
+				new Dictionary<string, PermissionState>(), role == PortalRole.God));
 		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
 			.Returns(new HashSet<string>(scopes));
 
 		var cache = new FusionCache(
 			new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
-		return new AccountClaimsService(accountServiceForClaims, roleDerivation, capabilities,
+		return new AccountClaimsService(capabilities,
 			cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 	}
 

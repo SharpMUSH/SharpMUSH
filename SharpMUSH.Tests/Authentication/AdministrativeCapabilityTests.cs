@@ -7,8 +7,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Authentication;
 
 /// <summary>
-/// Which roles <see cref="AdministrativeCapabilityService"/> says an actor holds: everyone, the
-/// stacked tier roles its character's flags select, its assigned roles and its overrides.
+/// Which roles <see cref="AdministrativeCapabilityService"/> says an actor holds: everyone, the roles
+/// and overrides on the character being played, and the account's own.
 /// </summary>
 public class AdministrativeCapabilityTests
 {
@@ -22,30 +22,53 @@ public class AdministrativeCapabilityTests
 	}
 
 	[Test]
-	public async Task AccountWithoutCharactersHoldsGuestOnly()
+	public async Task AccountWithoutCharactersHoldsEveryoneOnly()
 	{
 		var (service, _, _, _) = Build();
-		var slugs = (await service.GetContextAsync(new("a"))).Roles.Select(r => r.Slug).ToArray();
-		await Assert.That(slugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, "guest"]);
+		var context = await service.GetContextAsync(new("a"));
+		await Assert.That(context.Roles.Select(r => r.Slug).ToArray()).IsEquivalentTo([BuiltInRoles.EveryoneSlug]);
+		await Assert.That(BuiltInRoles.TierOf(context)).IsEqualTo(PortalRole.Guest);
 	}
 
 	[Test]
-	public async Task WizardHoldsEveryTierBelowIt()
+	public async Task CharacterRolesApplyWhilePlayingIt()
 	{
-		var (service, accounts, _, _) = Build();
-		var wizard = Player(7, flags: ["WIZARD"]);
-		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([wizard]));
+		var (service, accounts, registry, _) = Build();
+		var wizard = Player(7);
+		var alt = Player(8);
+		await registry.AssignRoleToObjectAsync(7, BuiltInRoles.WizardSlug);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([wizard, alt]));
 		var slugs = (await service.GetContextAsync(new("a", wizard.Object.DBRef, wizard.Object.DBRef))).Roles.Select(r => r.Slug).ToArray();
-		await Assert.That(slugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, "player", "builder", "royalty", "wizard"]);
+		await Assert.That(slugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, BuiltInRoles.PlayerSlug, BuiltInRoles.WizardSlug]);
+		var altSlugs = (await service.GetContextAsync(new("a", alt.Object.DBRef, alt.Object.DBRef))).Roles.Select(r => r.Slug).ToArray();
+		await Assert.That(altSlugs).IsEquivalentTo([BuiltInRoles.EveryoneSlug, BuiltInRoles.PlayerSlug]);
 	}
 
 	[Test]
-	public async Task BuilderPowerSelectsTheBuilderTier()
+	public async Task WithNoCharacterChosenAnAccountHoldsItsCharactersRoles()
 	{
-		var (service, accounts, _, _) = Build();
-		var builder = Player(7, powers: ["Builder"]);
+		var (service, accounts, registry, _) = Build();
+		var builder = Player(7);
+		await registry.AssignRoleToObjectAsync(7, BuiltInRoles.BuilderSlug);
+		await registry.SetObjectOverrideAsync(7, PortalPermission.WikiEdit, PermissionState.Deny);
 		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([builder]));
-		await Assert.That(await service.AuthorizeAsync(new("a", builder.Object.DBRef, builder.Object.DBRef), PortalPermission.DiagnosticsProfile)).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.DiagnosticsProfile)).IsTrue();
+		// A character's override applies only while playing it.
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.WikiEdit)).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(new("a", builder.Object.DBRef, builder.Object.DBRef), PortalPermission.WikiEdit)).IsFalse();
+	}
+
+	[Test]
+	public async Task ObjectOverrideBeatsAccountOverride()
+	{
+		var (service, accounts, registry, _) = Build();
+		var player = Player(7);
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
+		await registry.SetAccountOverrideAsync("a", PortalPermission.WikiDelete, PermissionState.Allow);
+		await registry.SetObjectOverrideAsync(7, PortalPermission.WikiDelete, PermissionState.Deny);
+		var actor = new CapabilityActor("a", player.Object.DBRef, player.Object.DBRef);
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.WikiDelete)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.WikiDelete)).IsTrue();
 	}
 
 	[Test]
@@ -128,7 +151,7 @@ public class AdministrativeCapabilityTests
 		await Assert.That(await service.GetGameActorAsync(executor)).IsNull();
 	}
 
-	internal static SharpPlayer Player(int number, string[]? flags = null, string[]? powers = null) => new()
+	internal static SharpPlayer Player(int number, string[]? flags = null, string[]? powers = null, ObjectGrants? grants = null) => new()
 	{
 		PasswordHash = "", Quota = 0, Home = null!, Location = null!,
 		Object = new()
@@ -137,6 +160,7 @@ public class AdministrativeCapabilityTests
 			Owner = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 			Flags = new(() => (flags ?? []).Select(f => new SharpObjectFlag
 			{ Name = f, Symbol = f[..1], SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [], System = true }).ToAsyncEnumerable()),
+			Grants = new(_ => Task.FromResult(grants ?? ObjectGrants.None)),
 			Powers = new(() => (powers ?? []).Select(p => new SharpPower
 			{ Name = p, System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] }).ToAsyncEnumerable()),
 			Parent = null!, Zone = null!, Children = null!
@@ -150,6 +174,6 @@ public class AdministrativeCapabilityTests
 		var account = new SharpAccount { Id = "a", Username = "a", PasswordHash = "" };
 		accounts.GetByIdAsync("a", Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
-		return (new(accounts, registry, new RoleDerivationService(), new PermissionResolver()), accounts, registry, account);
+		return (new(accounts, registry, new PermissionResolver()), accounts, registry, account);
 	}
 }

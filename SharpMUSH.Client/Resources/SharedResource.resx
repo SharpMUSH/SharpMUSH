@@ -4787,6 +4787,261 @@
     <value>Administrator</value>
   </data>
   <data name="EnumPermAdministratorDesc" xml:space="preserve">
-    <value>Grants every permission and ignores per-account overrides.</value>
+    <value>Grants every permission and ignores overrides.</value>
+  </data>
+  <data name="EnumPermGroupGame" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="EnumPermGameWizard" xml:space="preserve">
+    <value>Game · Wizard</value>
+  </data>
+  <data name="EnumPermGameWizardDesc" xml:space="preserve">
+    <value>Acts as a wizard in game: the WIZARD flag, wizard-only commands and functions.</value>
+  </data>
+  <data name="EnumPermGameRoyalty" xml:space="preserve">
+    <value>Game · Royalty</value>
+  </data>
+  <data name="EnumPermGameRoyaltyDesc" xml:space="preserve">
+    <value>Acts as royalty in game: the ROYALTY flag and royalty-only commands and functions.</value>
+  </data>
+  <data name="EnumPermControlAll" xml:space="preserve">
+    <value>Game · Control everything</value>
+  </data>
+  <data name="EnumPermControlAllDesc" xml:space="preserve">
+    <value>Controls every object but player #1's, whoever owns it.</value>
+  </data>
+  <data name="EnumPermProtectWizard" xml:space="preserve">
+    <value>Game · Wizard protection</value>
+  </data>
+  <data name="EnumPermProtectWizardDesc" xml:space="preserve">
+    <value>Only holders of Control everything can control this character or object.</value>
+  </data>
+  <data name="EnumPermProtectAdmin" xml:space="preserve">
+    <value>Game · Admin protection</value>
+  </data>
+  <data name="EnumPermProtectAdminDesc" xml:space="preserve">
+    <value>Nobody without Admin protection can control this character or object.</value>
+  </data>
+  <data name="EnumPermPowerAnnounce" xml:space="preserve">
+    <value>Power · Announce</value>
+  </data>
+  <data name="EnumPermPowerAnnounceDesc" xml:space="preserve">
+    <value>Can broadcast to every connected player with @wall.</value>
+  </data>
+  <data name="EnumPermPowerBoot" xml:space="preserve">
+    <value>Power · Boot</value>
+  </data>
+  <data name="EnumPermPowerBootDesc" xml:space="preserve">
+    <value>Can disconnect other players with @boot.</value>
+  </data>
+  <data name="EnumPermPowerBuilder" xml:space="preserve">
+    <value>Power · Builder</value>
+  </data>
+  <data name="EnumPermPowerBuilderDesc" xml:space="preserve">
+    <value>Can build when building is restricted to builders.</value>
+  </data>
+  <data name="EnumPermPowerCanDark" xml:space="preserve">
+    <value>Power · CAN_DARK</value>
+  </data>
+  <data name="EnumPermPowerCanDarkDesc" xml:space="preserve">
+    <value>Can go DARK and drop off the WHO list.</value>
+  </data>
+  <data name="EnumPermPowerCanHttp" xml:space="preserve">
+    <value>Power · CAN_HTTP</value>
+  </data>
+  <data name="EnumPermPowerCanHttpDesc" xml:space="preserve">
+    <value>Can make outgoing HTTP requests.</value>
+  </data>
+  <data name="EnumPermPowerCanSpoof" xml:space="preserve">
+    <value>Power · Can_spoof</value>
+  </data>
+  <data name="EnumPermPowerCanSpoofDesc" xml:space="preserve">
+    <value>Can use @nspemit and the other emits that skip the nospoof tag.</value>
+  </data>
+  <data name="EnumPermPowerChatPrivs" xml:space="preserve">
+    <value>Power · Chat_Privs</value>
+  </data>
+  <data name="EnumPermPowerChatPrivsDesc" xml:space="preserve">
+    <value>Can create and administer channels.</value>
+  </data>
+  <data name="EnumPermPowerDebit" xml:space="preserve">
+    <value>Power · DEBIT</value>
+  </data>
+  <data name="EnumPermPowerDebitDesc" xml:space="preserve">
+    <value>Can take money from other players with give.</value>
+  </data>
+  <data name="EnumPermPowerFunctions" xml:space="preserve">
+    <value>Power · Functions</value>
+  </data>
+  <data name="EnumPermPowerFunctionsDesc" xml:space="preserve">
+    <value>Can add and remove global functions with @function.</value>
+  </data>
+  <data name="EnumPermPowerGuest" xml:space="preserve">
+    <value>Power · Guest</value>
+  </data>
+  <data name="EnumPermPowerGuestDesc" xml:space="preserve">
+    <value>Marks a guest character, barred from building and from changing settings.</value>
+  </data>
+  <data name="EnumPermPowerHalt" xml:space="preserve">
+    <value>Power · Halt</value>
+  </data>
+  <data name="EnumPermPowerHaltDesc" xml:space="preserve">
+    <value>Can @halt any object's queue.</value>
+  </data>
+  <data name="EnumPermPowerHide" xml:space="preserve">
+    <value>Power · Hide</value>
+  </data>
+  <data name="EnumPermPowerHideDesc" xml:space="preserve">
+    <value>Can hide from the WHO list.</value>
+  </data>
+  <data name="EnumPermPowerHook" xml:space="preserve">
+    <value>Power · HOOK</value>
+  </data>
+  <data name="EnumPermPowerHookDesc" xml:space="preserve">
+    <value>Can attach command hooks with @hook.</value>
+  </data>
+  <data name="EnumPermPowerIdle" xml:space="preserve">
+    <value>Power · Idle</value>
+  </data>
+  <data name="EnumPermPowerIdleDesc" xml:space="preserve">
+    <value>Is never disconnected for idling.</value>
+  </data>
+  <data name="EnumPermPowerImmortal" xml:space="preserve">
+    <value>Power · Immortal</value>
+  </data>
+  <data name="EnumPermPowerImmortalDesc" xml:space="preserve">
+    <value>Needs no money or quota and cannot be killed.</value>
+  </data>
+  <data name="EnumPermPowerLinkAnywhere" xml:space="preserve">
+    <value>Power · Link_Anywhere</value>
+  </data>
+  <data name="EnumPermPowerLinkAnywhereDesc" xml:space="preserve">
+    <value>Can @link to any room.</value>
+  </data>
+  <data name="EnumPermPowerLogin" xml:space="preserve">
+    <value>Power · Login</value>
+  </data>
+  <data name="EnumPermPowerLoginDesc" xml:space="preserve">
+    <value>Can connect while logins are disabled.</value>
+  </data>
+  <data name="EnumPermPowerLongFingers" xml:space="preserve">
+    <value>Power · Long_Fingers</value>
+  </data>
+  <data name="EnumPermPowerLongFingersDesc" xml:space="preserve">
+    <value>Can get, look at and use objects from a distance.</value>
+  </data>
+  <data name="EnumPermPowerManyAttribs" xml:space="preserve">
+    <value>Power · MANY_ATTRIBS</value>
+  </data>
+  <data name="EnumPermPowerManyAttribsDesc" xml:space="preserve">
+    <value>Can set more attributes than the per-object limit.</value>
+  </data>
+  <data name="EnumPermPowerNoPay" xml:space="preserve">
+    <value>Power · No_Pay</value>
+  </data>
+  <data name="EnumPermPowerNoPayDesc" xml:space="preserve">
+    <value>Never pays for commands.</value>
+  </data>
+  <data name="EnumPermPowerNoQuota" xml:space="preserve">
+    <value>Power · No_Quota</value>
+  </data>
+  <data name="EnumPermPowerNoQuotaDesc" xml:space="preserve">
+    <value>Has unlimited building quota.</value>
+  </data>
+  <data name="EnumPermPowerOpenAnywhere" xml:space="preserve">
+    <value>Power · Open_Anywhere</value>
+  </data>
+  <data name="EnumPermPowerOpenAnywhereDesc" xml:space="preserve">
+    <value>Can @open exits from any room.</value>
+  </data>
+  <data name="EnumPermPowerPemitAll" xml:space="preserve">
+    <value>Power · Pemit_All</value>
+  </data>
+  <data name="EnumPermPowerPemitAllDesc" xml:space="preserve">
+    <value>Can @pemit to players who are HAVEN or page-locked.</value>
+  </data>
+  <data name="EnumPermPowerPickDbrefs" xml:space="preserve">
+    <value>Power · PICK_DBREFS</value>
+  </data>
+  <data name="EnumPermPowerPickDbrefsDesc" xml:space="preserve">
+    <value>Can choose the dbref of an object it creates.</value>
+  </data>
+  <data name="EnumPermPowerPlayerCreate" xml:space="preserve">
+    <value>Power · Player_Create</value>
+  </data>
+  <data name="EnumPermPowerPlayerCreateDesc" xml:space="preserve">
+    <value>Can create players with @pcreate.</value>
+  </data>
+  <data name="EnumPermPowerPoll" xml:space="preserve">
+    <value>Power · Poll</value>
+  </data>
+  <data name="EnumPermPowerPollDesc" xml:space="preserve">
+    <value>Can set the WHO list's poll message with @poll.</value>
+  </data>
+  <data name="EnumPermPowerQueue" xml:space="preserve">
+    <value>Power · Queue</value>
+  </data>
+  <data name="EnumPermPowerQueueDesc" xml:space="preserve">
+    <value>Has the larger command queue limit wizards have.</value>
+  </data>
+  <data name="EnumPermPowerQuotas" xml:space="preserve">
+    <value>Power · Quotas</value>
+  </data>
+  <data name="EnumPermPowerQuotasDesc" xml:space="preserve">
+    <value>Can see other players' quotas.</value>
+  </data>
+  <data name="EnumPermPowerSearch" xml:space="preserve">
+    <value>Power · Search</value>
+  </data>
+  <data name="EnumPermPowerSearchDesc" xml:space="preserve">
+    <value>Can @search, @find and @stats other players' objects.</value>
+  </data>
+  <data name="EnumPermPowerSeeAll" xml:space="preserve">
+    <value>Power · See_All</value>
+  </data>
+  <data name="EnumPermPowerSeeAllDesc" xml:space="preserve">
+    <value>Can examine and see everything, without changing it.</value>
+  </data>
+  <data name="EnumPermPowerSeeQueue" xml:space="preserve">
+    <value>Power · See_Queue</value>
+  </data>
+  <data name="EnumPermPowerSeeQueueDesc" xml:space="preserve">
+    <value>Can see every object's queue with @ps.</value>
+  </data>
+  <data name="EnumPermPowerSeeOob" xml:space="preserve">
+    <value>Power · See_OOB</value>
+  </data>
+  <data name="EnumPermPowerSeeOobDesc" xml:space="preserve">
+    <value>Can see out-of-band traffic from other connections.</value>
+  </data>
+  <data name="EnumPermPowerSendOob" xml:space="preserve">
+    <value>Power · Send_OOB</value>
+  </data>
+  <data name="EnumPermPowerSendOobDesc" xml:space="preserve">
+    <value>Can send out-of-band messages such as Pueblo and GMCP.</value>
+  </data>
+  <data name="EnumPermPowerSqlOk" xml:space="preserve">
+    <value>Power · SQL_OK</value>
+  </data>
+  <data name="EnumPermPowerSqlOkDesc" xml:space="preserve">
+    <value>Can run SQL queries.</value>
+  </data>
+  <data name="EnumPermPowerTportAnything" xml:space="preserve">
+    <value>Power · Tport_Anything</value>
+  </data>
+  <data name="EnumPermPowerTportAnythingDesc" xml:space="preserve">
+    <value>Can @teleport any object.</value>
+  </data>
+  <data name="EnumPermPowerTportAnywhere" xml:space="preserve">
+    <value>Power · Tport_Anywhere</value>
+  </data>
+  <data name="EnumPermPowerTportAnywhereDesc" xml:space="preserve">
+    <value>Can @teleport to any location.</value>
+  </data>
+  <data name="EnumPermPowerUnkillable" xml:space="preserve">
+    <value>Power · Unkillable</value>
+  </data>
+  <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
+    <value>Cannot be killed.</value>
   </data>
 </root>

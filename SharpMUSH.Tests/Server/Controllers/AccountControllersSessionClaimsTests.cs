@@ -96,7 +96,7 @@ public class AccountControllersSessionClaimsTests
 	private static AdminAccountsController Admin(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user,
 		FusionCache cache)
 	{
-		var claims = new AccountClaimsService(accounts, Substitute.For<IRoleDerivationService>(),
+		var claims = new AccountClaimsService(
 			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 		return new AdminAccountsController(accounts, sessions, claims, NullLogger<AdminAccountsController>.Instance)
 		{ ControllerContext = Context(user, "token") };

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using System.Collections.Immutable;
@@ -30,6 +31,7 @@ public class TestObjectFactory
 				Type = "Room",
 				Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -77,6 +79,7 @@ public class TestObjectFactory
 					? selfPlayer
 					: null!;
 			}),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -133,6 +136,7 @@ public class TestObjectFactory
 				await ValueTask.CompletedTask;
 				return owner is SharpPlayer ownerPlayer ? ownerPlayer : null!;
 			}),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -180,6 +184,7 @@ public class TestObjectFactory
 			Type = "Exit",
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),

@@ -30,7 +30,9 @@
 
 `@power/list` lists the defined powers (see [@power]), optionally restricted to those whose names match `<power name pattern>`, a wildcard pattern; each is shown with its one-character abbreviation, if it has one. A list of standard powers with explanations is given in [@power]. When given a power name as an argument, @power displays information about that power — its name, its character, its aliases, the object types it applies to, and the permissions needed to set and reset it. It does *not* list the powers held by an object; use powers() for that.
 
-The third form manipulates powers on objects, and is limited to Wizards. `@power <object>=<power>` grants the given power; `@power <object>=!<power>` revokes it. Several powers may be given at once, separated by spaces, and each may independently carry the `!` prefix. Powers cannot be granted to players set UNREGISTERED, and only God may alter God's powers.
+The third form manipulates powers on objects. `@power <object>=<power>` grants the given power; `@power <object>=!<power>` revokes it. Several powers may be given at once, separated by spaces, and each may independently carry the `!` prefix. Powers cannot be granted to players set UNREGISTERED, and only God may alter God's powers.
+
+The standard powers are permissions (see [roles flags]): granting See_All sets an Allow override on `game.see_all` on the object, and revoking it clears the override. Builder and Guest assign and remove the `builder` and `guest` roles. These follow the rules of [@role rank], so a Wizard may grant any of them to an object whose roles are below its own. A power that the object still holds afterwards, through a role or its account, is reported. A power added with `@power/add` is stored on the object, and only Wizards may grant it.
 
 God can add, delete, and otherwise manipulate power definitions. See help @power registry syntax for these commands.
 
@@ -38,6 +40,7 @@ God can add, delete, and otherwise manipulate power definitions. See help @power
 **See Also:**
 - [POWERS()]
 - [@flag]
+- [roles]
 
 ## Power registry syntax
 

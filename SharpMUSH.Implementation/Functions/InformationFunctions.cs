@@ -385,7 +385,7 @@ public partial class Functions
 			case 1:
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
-					async found => string.Join(' ', await found.Object().Powers.Value.Select(x => x.Name).ToArrayAsync()));
+					async found => string.Join(' ', (await found.Object().ReadPowersAsync(ExecutionBudget.CurrentToken)).Select(x => x.Name)));
 
 			default:
 				{

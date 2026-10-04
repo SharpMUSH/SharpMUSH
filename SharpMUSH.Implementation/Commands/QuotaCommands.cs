@@ -201,7 +201,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
+		CommandLock = "FLAG^WIZARD|POWER^QUOTAS", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
 	public async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

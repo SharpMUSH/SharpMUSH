@@ -29,7 +29,9 @@
 -->
 # roles
 
-A role is a named set of permissions, held by accounts. Roles decide who may use SharpMUSH's administrative features (snapshots, recurring jobs, queue control, profiling, reality layers) and what each account may do in the web portal (wiki, media, packages, configuration, and so on). They work like the roles on a Discord server, and borrow the per-player override from RhostMUSH's `@depower`.
+A role is a named set of permissions. Roles decide what an object may do: in the game (being a wizard, the PennMUSH powers, controlling other objects) and in the web portal (wiki, media, packages, configuration, and so on). They work like the roles on a Discord server.
+
+Both objects and accounts hold roles. An object holds the roles assigned to it; a character linked to an account also holds the account's. Nothing is inherited from an object's owner.
 
 Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@role/scopes` for the list of permissions.
 
@@ -38,44 +40,52 @@ Each role sets every permission to one of three states: Allow, Deny, or neither 
 For each permission, the first of these that applies decides:
 
 1. Player #1 holds every permission.
-2. If any role you hold allows `administrator`, you hold every permission, and overrides do not apply.
-3. If your account has an override for the permission (`@role/allow *you=...` or `@role/deny *you=...`), the override decides.
-4. If any role you hold allows it, you hold it. A Deny on one role never cancels an Allow on another, whatever their priorities.
-5. If a role you hold denies it, you lack it, even when the `everyone` role allows it.
-6. Otherwise, the `everyone` role decides. A permission nobody allows is denied.
+2. If any role held allows `administrator`, every permission is held, and overrides do not apply.
+3. If the object has an override for the permission (`@role/allow/object`, `@power`), the override decides.
+4. If its account has an override for it (`@role/allow/account`), that override decides.
+5. If any role held allows it, it is held. A Deny on one role never cancels an Allow on another, whatever their priorities.
+6. If a role held denies it, it is not held, even when the `everyone` role allows it.
+7. Otherwise, the `everyone` role decides. A permission nobody allows is denied.
 
-Priority does not decide any of this. It only orders roles for management: you can manage only roles, and players, below your own highest role.
+Priority does not decide any of this, and it does not decide control. It only orders roles for management: you can manage only roles, objects and accounts below your own highest role.
 
 Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
-To take a permission away from one player, use an override (`@role/deny *player=...`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
+To take a permission away from one object, use an override (`@role/deny/object`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
 
 ## Roles a new game starts with
 
 | Priority | Role | Allows |
 |---|---|---|
 | 40 | god | administrator |
-| 30 | wizard | every permission except `server.admin` and `administrator` |
+| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `control.all`, `protect.wizard`, `protect.admin` |
 | 25 | moderator | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `queue.control`, `roles.admin` |
-| 20 | royalty | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect` |
-| 15 | builder | `diagnostics.profile` |
+| 20 | royalty | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
+| 15 | builder | `diagnostics.profile`, `game.builder` |
 | 12 | helper | `players.view`, `queue.inspect` |
 | 10 | player | `wiki.create`, `wiki.edit`, `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
-| 0 | guest | nothing |
+| 0 | guest | `game.guest` |
 | 0 | everyone | `wiki.read` |
 
-Tier roles stack, so a wizard also has everything royalty, builder and player allow. `helper` and `moderator` are ordinary roles, modelled on RhostMUSH's Guildmaster and Councilor ranks: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
+`helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 
 Permissions that act on objects still check ownership and locks. For example, `snapshots.restore` lets a player restore only objects they control.
 
 ## Roles, flags and powers
 
-Roles sit beside PennMUSH's flags and powers and do not change them: a WIZARD's in-game powers come from the flag as always. The flags only choose which tier roles a character holds (see [@role assigning]).
+The privilege flags and the PennMUSH powers are roles and permissions:
 
-Roles belong to accounts. A character that is not linked to an account holds no roles, so the administrative features above refuse it.
+- The WIZARD flag is the `wizard` role, and ROYALTY the `royalty` role. `@set` assigns and removes them; `hasflag()`, `flags()` and `FLAG^` locks answer from them.
+- Each power is a `game.` permission: See_All is `game.see_all`. `@power` sets an Allow override on the object, and `haspower()`, `powers()` and `POWER^` locks answer from what the object holds, so a role that allows `game.see_all` gives every holder See_All. The Builder and Guest powers are the `builder` and `guest` roles.
+- Control reads permissions too. `control.all` controls everything except #1 and holders of `protect.wizard`; a holder of `protect.admin` is controlled only by another holder of it. Ownership, zones and locks still decide control as in PennMUSH.
+
+A power made with `@power/add` is stored on the object as before.
+
+A PennMUSH database imported into SharpMUSH keeps every privilege: WIZARD and ROYALTY become role assignments and each power an override, on the same objects.
 
 **See Also:**
 - [@role]
 - [ROLES()]
 - [HASROLE()]
 - [PERMISSION()]
+- [lock keys]

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -38,6 +39,8 @@ public class LockFlagPowerOperandTests
 			Type = "Thing",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(async _ => { await ValueTask.CompletedTask; return null!; }),
+			// A built-in power is a permission the object holds; any other is stored.
+			Grants = TestHelpers.GrantsFor(998, false, powers: powers.Select(p => p.Name).ToArray()),
 			Powers = new(() => powers.ToAsyncEnumerable()),
 			Attributes = new(AsyncEnumerable.Empty<SharpAttribute>),
 			LazyAttributes = new(AsyncEnumerable.Empty<LazySharpAttribute>),

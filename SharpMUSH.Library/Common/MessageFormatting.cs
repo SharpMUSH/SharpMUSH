@@ -79,7 +79,7 @@ public static class MessageFormatting
 	public static async ValueTask<SharpObjectFlag[]> VisibleFlagsAsync(SharpObject obj, FlagView? view = null)
 	{
 		var flags = new List<SharpObjectFlag>();
-		await foreach (var flag in obj.Flags.Value)
+		foreach (var flag in (await obj.ReadFlagsAsync()).Flags)
 		{
 			if (flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase)) continue;
 			if (view is not null && !await view.CanSeeAsync(obj, flag)) continue;

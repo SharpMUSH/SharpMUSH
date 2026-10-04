@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -190,7 +191,15 @@ public static class SearchSpecEngine
 		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
 		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
 
-		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
+		// WIZARD, ROYALTY and the built-in powers are held through roles, which no index lists, so they are
+		// tested on each object rather than in the database filter.
+		var heldFlag = hasFlag is not null && RoleFlags.Find(hasFlag) is not null ? hasFlag : null;
+		var heldPower = hasPower is not null && GamePowers.Find(hasPower) is not null ? hasPower : null;
+		if (heldFlag is not null) hasFlag = null;
+		if (heldPower is not null) hasPower = null;
+
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria
+			|| heldFlag is not null || heldPower is not null;
 
 		// PennMUSH's raw_search: a non-wizard (non-See_All/Search_All) searcher only sees objects
 		// they could @examine, unless they're searching only their own objects. The one exception is
@@ -255,6 +264,16 @@ public static class SearchSpecEngine
 			bool matches = true;
 
 			if (visOnly && !await permissionService.CanExamine(executor, typedObj))
+			{
+				matches = false;
+			}
+
+			if (matches && heldFlag is not null && !await typedObj.HasFlag(heldFlag))
+			{
+				matches = false;
+			}
+
+			if (matches && heldPower is not null && !await typedObj.HasPower(heldPower))
 			{
 				matches = false;
 			}

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
@@ -106,10 +107,10 @@ public class MigrationTests
 			var held = db.Store.Read(tx =>
 				tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(1)).Select(v => Keys.ReadStr(v)).ToArray());
 
-			await Assert.That(held).Contains("SEND_OOB")
+			await Assert.That(held).IsEmpty()
+				.Because("Send_OOB is a permission, so the renamed grant moves on into an override");
+			await Assert.That((await db.GetObjectOverridesAsync(1))[PortalPermission.GamePower("Send_OOB")]).IsEqualTo(PermissionState.Allow)
 				.Because("the grant has to follow the rename, as it does in PennMUSH");
-			await Assert.That(held).DoesNotContain("PUEBLO_SEND")
-				.Because("leaving the old edge behind would double-count the power");
 
 			var orphan = db.Store.Read(tx => tx.TryGet(Tables.Power, Keys.Upper("Pueblo_Send"), out _));
 			await Assert.That(orphan).IsFalse()

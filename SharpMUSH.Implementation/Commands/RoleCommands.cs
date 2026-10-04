@@ -17,16 +17,21 @@ public partial class Commands
 		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN"];
 
 	/// <summary>
-	/// <c>@role</c>: list, inspect and manage roles, their assignments and per-player overrides. Every
-	/// change goes through <see cref="IRoleManagementService"/>, the same rules the portal applies.
+	/// <c>@role</c>: list, inspect and manage roles, who holds them, and per-object or per-account
+	/// overrides. Every change goes through <see cref="IRoleManagementService"/>, the same rules the
+	/// portal applies, with the executor as the actor: an object needs no account to manage roles.
 	/// </summary>
-	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN"],
+	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "OBJECT", "ACCOUNT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2,
-		ParameterNames = ["role or player", "value"])]
+		ParameterNames = ["role or object", "value"])]
 	public async ValueTask<Option<CallState>> Role(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.Where(RoleOperations.Contains).ToArray();
+		var allSwitches = parser.CurrentState.Switches.ToArray();
+		var switches = allSwitches.Where(RoleOperations.Contains).ToArray();
+		var holder = allSwitches.Contains("ACCOUNT") ? RoleHolder.Account
+			: allSwitches.Contains("OBJECT") ? RoleHolder.Object
+			: RoleHolder.Default;
 		var args = parser.CurrentState.Arguments;
 		var left = (args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();
 		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
@@ -35,6 +40,8 @@ public partial class Commands
 		string output;
 		if (switches.Length > 1)
 			output = "Choose one @role operation.";
+		else if (allSwitches.Contains("ACCOUNT") && allSwitches.Contains("OBJECT"))
+			output = "Choose /object or /account, not both.";
 		else
 		{
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
@@ -43,13 +50,21 @@ public partial class Commands
 				"LIST" => await RoleListAsync(parser),
 				"INFO" => await RoleInfoAsync(parser, left),
 				"SCOPES" => RoleScopes(),
-				"PLAYER" => await RolePlayerAsync(parser, executor, left.Length == 0 ? null : left),
-				_ => await RoleChangeAsync(parser, executor, operation, left, right, hasRight)
+				"PLAYER" => await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left),
+				_ => await RoleChangeAsync(parser, executor, operation, holder, left, right, hasRight)
 			};
 		}
 
-		await NotifyService.Notify(executor, output);
+		if (output.Length > 0) await NotifyService.Notify(executor, output);
 		return new CallState(output);
+	}
+
+	/// <summary>Who an assignment or override is for: the named role, the object, or its account.</summary>
+	private enum RoleHolder
+	{
+		Default,
+		Object,
+		Account
 	}
 
 	private static async ValueTask<string> RoleListAsync(IMUSHCodeParser parser)
@@ -68,7 +83,15 @@ public partial class Commands
 			return $"No role named '{slug}'. See @role/list.";
 		var output = new StringBuilder($"Role: {role.Name} ({role.Slug})  Priority: {role.Priority}");
 		if (role.Color is not null) output.Append($"  Colour: {role.Color}");
-		if (role.IsSystem) output.Append(BuiltInRoles.IsEveryone(role) ? "  System: held by every account" : "  System: follows character flags");
+		if (role.IsSystem) output.Append(role.Slug switch
+		{
+			BuiltInRoles.EveryoneSlug => "  System: held by everything",
+			BuiltInRoles.PlayerSlug => "  System: held by every player that is not a guest",
+			BuiltInRoles.GodSlug => "  System: held by #1",
+			_ when RoleFlags.ForRole(role.Slug) is { } flag => $"  System: the {flag.Name} flag",
+			_ when GamePowers.ForRole(role.Slug) is { } power => $"  System: the {power.Name} power",
+			_ => "  System"
+		});
 		output.Append($"\nAllows: {ScopeList(role.Permissions, PermissionState.Allow)}");
 		output.Append($"\nDenies: {ScopeList(role.Permissions, PermissionState.Deny)}");
 		return output.ToString();
@@ -86,51 +109,53 @@ public partial class Commands
 		return output.ToString();
 	}
 
-	private async ValueTask<string> RolePlayerAsync(IMUSHCodeParser parser, AnySharpObject executor, string? name)
+	/// <summary><c>@role/player &lt;object&gt;</c>: every role the object holds and where from, its overrides, and what they resolve to.</summary>
+	private async ValueTask<string> RoleExplainAsync(IMUSHCodeParser parser, AnySharpObject executor, string name)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		SharpPlayer player;
-		if (name is null)
-		{
-			if (executor is not SharpPlayer self) return "Only a player holds roles.";
-			player = self;
-		}
-		else if (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, name.TrimStart('*'))
-						 is AnySharpObject and SharpPlayer found)
-			player = found;
-		else
-			return $"No player named '{name}'.";
+		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All)
+				is not AnySharpObject target)
+			return "";
 
 		var capabilities = Capabilities(parser);
-		if (!player.Object.DBRef.Equals(executor.Object().DBRef)
-				&& !await ActorHolds(parser, executor, PortalPermission.PlayersView)
-				&& !await ActorHolds(parser, executor, PortalPermission.RolesAdmin))
-			return $"Seeing another player's permissions needs the {PortalPermission.PlayersView} permission.";
-		if (await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, ct) is not { Id: not null } account)
-			return $"{player.Object.Name} has no account, and roles belong to accounts.";
+		var mine = await capabilities.GetObjectGrantsAsync(executor, ct);
+		if (!target.Object().DBRef.Equals(executor.Object().DBRef)
+				&& !mine.Has(PortalPermission.PlayersView)
+				&& !mine.Has(PortalPermission.RolesAdmin)
+				&& !await PermissionService.CanExamine(executor, target))
+			return $"Seeing another object's permissions needs the {PortalPermission.PlayersView} permission.";
 
-		var actor = new CapabilityActor(account.Id, player.Object.DBRef, player.Object.DBRef);
-		var context = await capabilities.GetContextAsync(actor, ct);
-		var explained = await capabilities.ExplainAsync(actor, ct);
-		var ranked = RoleHierarchy.Ranked(context.Roles).Select(r => $"{r.Name} ({r.Priority})").ToArray();
-		var output = new StringBuilder($"{player.Object.Name} (account {account.Username})");
-		if (context.IsOwner) output.Append(" is the owner and holds every permission.");
-		output.Append($"\nRoles: {(ranked.Length > 0 ? string.Join(", ", ranked) : "none")}, plus everyone");
-		output.Append($"\nOverrides: allow {ScopeList(context.Overrides, PermissionState.Allow)}; deny {ScopeList(context.Overrides, PermissionState.Deny)}");
-		output.Append($"\nHolds: {Joined(explained.Where(e => e.Value.Allowed).Select(e => e.Key))}");
-		output.Append($"\nLacks: {Joined(explained.Where(e => !e.Value.Allowed).Select(e => e.Key))}");
+		var grants = await capabilities.GetObjectGrantsAsync(target, ct);
+		var account = target.IsPlayer ? await AccountService.GetAccountForCharacterAsync(target.Object().DBRef, ct) : null;
+		var output = new StringBuilder(target.Object().Name);
+		if (account is not null) output.Append($" (account {account.Username})");
+		if (grants.IsOwner) output.Append(" is the owner and holds every permission.");
+		var roles = RoleHierarchy.Ranked(grants.Roles.Select(held => held.Role).DistinctBy(role => role.Slug).ToArray())
+			.Select(role => $"{role.Name} ({role.Priority}{SourceNote(grants, role.Slug)})")
+			.ToArray();
+		output.Append($"\nRoles: {(roles.Length > 0 ? string.Join(", ", roles) : "none")}, plus everyone");
+		output.Append($"\nOverrides: allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny)}");
+		if (account is not null)
+			output.Append($"\nAccount overrides: allow {ScopeList(grants.Context.Overrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny)}");
+		output.Append($"\nHolds: {Joined(PortalPermission.AllScopes.Where(grants.Has))}");
+		output.Append($"\nLacks: {Joined(PortalPermission.AllScopes.Where(scope => !grants.Has(scope)))}");
 		return output.ToString();
 	}
 
+	private static string SourceNote(ObjectGrants grants, string slug)
+	{
+		var sources = grants.Roles.Where(held => held.Role.Slug == slug).Select(held => held.Source).ToHashSet();
+		return sources.Contains(RoleSource.Account) && !sources.Contains(RoleSource.Object) ? ", account" : "";
+	}
+
 	private async ValueTask<string> RoleChangeAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,
-		string left, string right, bool hasRight)
+		RoleHolder holder, string left, string right, bool hasRight)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		if (left.Length == 0 || (operation is not ("DELETE" or "CREATE") && !hasRight))
 			return $"Usage: @role/{operation.ToLowerInvariant()} {RoleUsage(operation)}. See help @role.";
-		if (await Capabilities(parser).GetGameActorAsync(executor.Object().DBRef, ct) is not { } actor)
-			return "Managing roles needs a player linked to an active account.";
 		var management = parser.ServiceProvider.GetRequiredService<IRoleManagementService>();
+		RoleActor actor = executor;
 
 		switch (operation)
 		{
@@ -157,37 +182,61 @@ public partial class Commands
 				if (scopes.Length == 0) return "Name at least one permission. See @role/scopes.";
 				if (scopes.FirstOrDefault(s => !PortalPermission.IsKnown(s)) is { } unknown)
 					return $"Unknown permission '{unknown}'. See @role/scopes.";
-				return left.StartsWith('*')
-					? await PlayerOverrideAsync(parser, executor, actor, management, left[1..], scopes, state)
-					: Done(await management.EditRoleAsync(actor, left, role =>
+				var changed = $"{StateWord(state)} {string.Join(", ", scopes)}";
+				return holder switch
+				{
+					RoleHolder.Object => await RoleTargetAsync(parser, executor, left) switch
+					{
+						AnySharpObject target => Done(await management.SetObjectOverridesAsync(actor, target, scopes, state, ct),
+							_ => $"{target.Object().Name}: {changed}."),
+						Error<string> error => error.Value
+					},
+					RoleHolder.Account => await RoleAccountAsync(parser, executor, left) switch
+					{
+						(SharpPlayer player, SharpAccount account) => Done(await management.SetOverridesAsync(actor, account.Id!, scopes, state, ct),
+							_ => $"{player.Object.Name} (account {account.Username}): {changed}."),
+						_ => $"No player named '{left}' with an account."
+					},
+					_ => Done(await management.EditRoleAsync(actor, left, role =>
 						{
 							var permissions = new Dictionary<string, PermissionState>(role.Permissions, StringComparer.OrdinalIgnoreCase);
 							foreach (var scope in scopes) permissions[scope] = state;
 							return Draft(role) with { Permissions = permissions };
 						}, ct),
-						role => $"Role {role.Name}: {StateWord(state)} {string.Join(", ", scopes)}.");
+						role => $"Role {role.Name}: {changed}.")
+				};
 			default:
 				var assign = operation == "ASSIGN";
-				if (await AccountFor(parser, executor, left) is not { } target) return $"No player named '{left}' with an account.";
-				return Done(assign
-						? await management.AssignAsync(actor, target.Account.Id!, right, ct)
-						: await management.UnassignAsync(actor, target.Account.Id!, right, ct),
-					_ => assign
-						? $"{target.Player.Object.Name} (account {target.Account.Username}) now holds {right}."
-						: $"{target.Player.Object.Name} (account {target.Account.Username}) no longer holds {right}.");
+				if (holder == RoleHolder.Account)
+				{
+					if (await RoleAccountAsync(parser, executor, left) is not var (player, account))
+						return $"No player named '{left}' with an account.";
+					return Done(assign
+							? await management.AssignAsync(actor, account.Id!, right, ct)
+							: await management.UnassignAsync(actor, account.Id!, right, ct),
+						_ => $"{player.Object.Name} (account {account.Username}) {(assign ? "now holds" : "no longer holds")} {right}.");
+				}
+
+				return await RoleTargetAsync(parser, executor, left) switch
+				{
+					AnySharpObject target => Done(assign
+							? await management.AssignToObjectAsync(actor, target, right, ct)
+							: await management.UnassignFromObjectAsync(actor, target, right, ct),
+						_ => $"{target.Object().Name} {(assign ? "now holds" : "no longer holds")} {right}."),
+					Error<string> error => error.Value
+				};
 		}
 	}
 
-	private async ValueTask<string> PlayerOverrideAsync(IMUSHCodeParser parser, AnySharpObject executor, CapabilityActor actor,
-		IRoleManagementService management, string name, string[] scopes, PermissionState state)
-	{
-		if (await AccountFor(parser, executor, name) is not { } target) return $"No player named '{name}' with an account.";
-		if (await management.SetOverridesAsync(actor, target.Account.Id!, scopes, state, ExecutionBudget.CurrentToken) is RoleRefusal refusal)
-			return refusal.Message;
-		return $"{target.Player.Object.Name} (account {target.Account.Username}): {StateWord(state)} {string.Join(", ", scopes)}.";
-	}
+	private async ValueTask<Result<AnySharpObject>> RoleTargetAsync(IMUSHCodeParser parser, AnySharpObject executor, string name)
+		=> await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All) switch
+		{
+			AnySharpObject found => found,
+			// Locate has already told the executor why.
+			_ => new Error<string>("")
+		};
 
-	private async ValueTask<(SharpPlayer Player, SharpAccount Account)?> AccountFor(IMUSHCodeParser parser, AnySharpObject executor, string name)
+	private async ValueTask<(SharpPlayer Player, SharpAccount Account)?> RoleAccountAsync(IMUSHCodeParser parser, AnySharpObject executor, string name)
 	{
 		if (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, name.TrimStart('*'))
 				is not (AnySharpObject and SharpPlayer player))
@@ -196,10 +245,6 @@ public partial class Commands
 			? (player, account)
 			: null;
 	}
-
-	private static async ValueTask<bool> ActorHolds(IMUSHCodeParser parser, AnySharpObject executor, string scope)
-		=> await Capabilities(parser).GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken) is { } actor
-			 && await Capabilities(parser).AuthorizeAsync(actor, scope, ExecutionBudget.CurrentToken);
 
 	private static IRoleRegistryService RoleRegistry(IMUSHCodeParser parser)
 		=> parser.ServiceProvider.GetRequiredService<IRoleRegistryService>();
@@ -233,8 +278,8 @@ public partial class Commands
 		"RENAME" => "<role>=<name>",
 		"COLOR" => "<role>=<#rrggbb|none>",
 		"PRIORITY" => "<role>=<number>",
-		"ALLOW" or "DENY" or "CLEAR" => "<role or *player>=<permission> [<permission> ...]",
-		"ASSIGN" or "UNASSIGN" => "<player>=<role>",
+		"ALLOW" or "DENY" or "CLEAR" => "[/object|/account] <role, object or player>=<permission> [<permission> ...]",
+		"ASSIGN" or "UNASSIGN" => "[/account] <object>=<role>",
 		"CREATE" => "<role>[=<display name>]",
 		_ => "<role>"
 	};

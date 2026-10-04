@@ -3,13 +3,14 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// Everything that decides one account's permissions: the roles it holds (the <c>everyone</c> role,
-/// its flag-derived tier roles and its assigned roles), its per-account overrides, and whether it is
-/// the owner (the account linked to player #1).
+/// Everything that decides one holder's permissions, whether the holder is a game object, a
+/// character played through an account, or an account in the portal: the roles it holds
+/// (<c>everyone</c>, the implicit <c>player</c>, its object roles and its account's roles), the
+/// overrides on its account and on the object itself, and whether it is the owner (player #1).
 /// </summary>
-/// <param name="Roles">Every role the account holds, <c>everyone</c> included.</param>
-/// <param name="Overrides">Per-account Allow/Deny by scope. Absent scopes are Inherit.</param>
-/// <param name="IsOwner">True for the account linked to player #1, which holds every scope.</param>
+/// <param name="Roles">Every role held, <c>everyone</c> included.</param>
+/// <param name="Overrides">Account Allow/Deny by scope. Absent scopes are Inherit.</param>
+/// <param name="IsOwner">True for player #1 and the account linked to it, which hold every scope.</param>
 public sealed record PermissionContext(
 	IReadOnlyCollection<SharpRole> Roles,
 	IReadOnlyDictionary<string, PermissionState> Overrides,
@@ -17,6 +18,12 @@ public sealed record PermissionContext(
 {
 	/// <summary>A context that grants nothing: no roles, no overrides, not the owner.</summary>
 	public static readonly PermissionContext None = new([], new Dictionary<string, PermissionState>(), false);
+
+	/// <summary>
+	/// Allow/Deny set on the game object itself (PennMUSH's powers). They outrank account overrides,
+	/// being the more specific setting. Absent scopes are Inherit.
+	/// </summary>
+	public IReadOnlyDictionary<string, PermissionState> ObjectOverrides { get; init; } = new Dictionary<string, PermissionState>();
 
 	/// <summary>The highest priority among the held roles, or <see cref="int.MinValue"/> with none.</summary>
 	public int TopPriority => Roles.Count == 0 ? int.MinValue : Roles.Max(r => r.Priority);
@@ -40,8 +47,8 @@ public interface IPermissionResolver
 /// <item>The owner holds every scope.</item>
 /// <item>A held role that allows <see cref="PortalPermission.Administrator"/> grants every scope, and
 /// per-account overrides do not apply.</item>
-/// <item>A per-account override (Discord's member overwrite, RhostMUSH's <c>@power</c>/<c>@depower</c>)
-/// decides the scope when it says Allow or Deny.</item>
+/// <item>An override on the object decides the scope when it says Allow or Deny, then one on the
+/// account (Discord's member overwrite). PennMUSH's powers are object overrides.</item>
 /// <item>Otherwise any held role that allows the scope grants it, whatever its priority; failing that,
 /// a role that denies it refuses it (Discord pools role denies, then role allows, so an Allow on any
 /// role beats a Deny on another).</item>
@@ -68,6 +75,12 @@ public sealed class PermissionResolver : IPermissionResolver
 			.Where(r => StateOf(r.Permissions, PortalPermission.Administrator) == PermissionState.Allow).ToArray();
 		if (administrators.Length > 0)
 			return Decided(true, administrators, "administrator");
+
+		switch (StateOf(context.ObjectOverrides, scope))
+		{
+			case PermissionState.Allow: return new(true, null, [], "object-allow");
+			case PermissionState.Deny: return new(false, null, [], "object-deny");
+		}
 
 		switch (StateOf(context.Overrides, scope))
 		{
@@ -112,7 +125,8 @@ public sealed class PermissionResolver : IPermissionResolver
 /// <summary>
 /// Why a scope was granted or refused. <paramref name="Priority"/> is the highest priority among the
 /// deciding <paramref name="Roles"/>, null when no role decided. <paramref name="Reason"/> is one of
-/// <c>owner</c>, <c>administrator</c>, <c>account-allow</c>, <c>account-deny</c>, <c>role-allow</c>,
+/// <c>owner</c>, <c>administrator</c>, <c>object-allow</c>, <c>object-deny</c>, <c>account-allow</c>,
+/// <c>account-deny</c>, <c>role-allow</c>,
 /// <c>role-deny</c>, <c>everyone-allow</c>, <c>default-deny</c> or <c>unknown-scope</c>.
 /// </summary>
 public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason);

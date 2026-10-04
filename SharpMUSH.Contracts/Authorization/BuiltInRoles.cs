@@ -5,35 +5,48 @@ namespace SharpMUSH.Library.Authorization;
 /// <summary>
 /// The roles a fresh world starts with.
 ///
-/// <para><b>System roles</b> (<see cref="All"/>) cannot be deleted, re-slugged, re-prioritised or
-/// assigned by hand: <c>everyone</c> (Discord's @everyone) is held by every active account, and the
-/// tier roles follow a character's flags the way PennMUSH and RhostMUSH ranks do. An account holds its
-/// highest tier and every tier below it down to <c>player</c> (a Wizard holds wizard, royalty, builder
-/// and player), so each tier lists only what it adds. An account without characters holds
-/// <c>guest</c>. Their name, colour and permissions stay editable.</para>
+/// <para><b>System roles</b> (<see cref="All"/>) cannot be deleted, re-slugged or re-prioritised. Three
+/// are implicit and never assigned by hand: <c>everyone</c> (Discord's @everyone) is held by every
+/// holder, <c>player</c> by every player character that is not a guest, and <c>god</c> by player #1.
+/// The others are PennMUSH's privileges: <c>wizard</c> is the WIZARD flag, <c>royalty</c> the ROYALTY
+/// flag, <c>builder</c> the Builder power and <c>guest</c> the Guest power, so <c>@set</c> and
+/// <c>@power</c> assign them and so can <c>@role</c>. Their name, colour and permissions stay editable.</para>
 ///
-/// <para><b>Starter roles</b> (<see cref="Starters"/>) are ordinary roles seeded once into a new
-/// world, modelled on RhostMUSH's Guildmaster and Councilor staff ranks. They are assigned by hand
-/// and may be edited or deleted like any other role.</para>
+/// <para><b>Starter roles</b> (<see cref="Starters"/>) are ordinary staff roles seeded once into a new
+/// world. They are assigned by hand and may be edited or deleted like any other role.</para>
 /// </summary>
 public static class BuiltInRoles
 {
-	/// <summary>Discord's @everyone: held by every active account, priority 0.</summary>
+	/// <summary>Discord's @everyone: held by every holder, priority 0.</summary>
 	public const string EveryoneSlug = "everyone";
+
+	public const string GuestSlug = "guest";
+	public const string PlayerSlug = "player";
+	public const string BuilderSlug = "builder";
+	public const string RoyaltySlug = "royalty";
+	public const string WizardSlug = "wizard";
+	public const string GodSlug = "god";
 
 	/// <summary>True when <paramref name="role"/> is the <c>everyone</c> role.</summary>
 	public static bool IsEveryone(SharpRole role) => role.Slug == EveryoneSlug;
 
-	/// <summary>The built-in role slug for a derived <see cref="PortalRole"/> (e.g. Wizard → "wizard").</summary>
+	/// <summary>True for the roles held by being something rather than by assignment: everyone, player and god.</summary>
+	public static bool IsImplicit(string slug) => slug is EveryoneSlug or PlayerSlug or GodSlug;
+
+	/// <summary>The built-in role slug for a <see cref="PortalRole"/> (e.g. Wizard → "wizard").</summary>
 	public static string SlugFor(PortalRole role) => role.ToString().ToLowerInvariant();
 
 	/// <summary>
-	/// The tier role slugs an account at <paramref name="tier"/> holds: <c>guest</c> alone for an
-	/// account without characters, otherwise <c>player</c> up to and including the tier.
+	/// The portal tier a context reads as, for the coarse role claim: God for the owner, otherwise the
+	/// highest tier role held, otherwise Guest.
 	/// </summary>
-	public static IReadOnlyList<string> TierSlugs(PortalRole tier) => tier == PortalRole.Guest
-		? [SlugFor(PortalRole.Guest)]
-		: Enum.GetValues<PortalRole>().Where(r => r >= PortalRole.Player && r <= tier).Select(SlugFor).ToArray();
+	public static PortalRole TierOf(PermissionContext context)
+		=> context.IsOwner
+			? PortalRole.God
+			: Enum.GetValues<PortalRole>()
+				.Where(tier => context.Roles.Any(role => string.Equals(role.Slug, SlugFor(tier), StringComparison.OrdinalIgnoreCase)))
+				.Append(PortalRole.Guest)
+				.Max();
 
 	private static readonly string[] PlayerScopes =
 	[
@@ -48,7 +61,9 @@ public static class BuiltInRoles
 		PortalPermission.QueueControlOwn,
 	];
 
-	private static readonly string[] BuilderScopes = [PortalPermission.DiagnosticsProfile];
+	private static readonly string[] GuestScopes = [PortalPermission.GamePower("Guest")];
+
+	private static readonly string[] BuilderScopes = [PortalPermission.DiagnosticsProfile, PortalPermission.GamePower("Builder")];
 
 	private static readonly string[] RoyaltyScopes =
 	[
@@ -56,6 +71,23 @@ public static class BuiltInRoles
 		PortalPermission.WikiAdmin,
 		PortalPermission.MediaAdmin,
 		PortalPermission.QueueInspect,
+		PortalPermission.GameRoyalty,
+		PortalPermission.ProtectAdmin,
+	];
+
+	/// <summary>
+	/// Every portal scope but server.admin and administrator, and the wizard's in-game standing. Not the
+	/// power scopes or game.royalty: a PennMUSH wizard holds no powers and no ROYALTY flag, and softcode
+	/// asking <c>haspower()</c> or <c>hasflag()</c> of a wizard expects that answer.
+	/// </summary>
+	private static readonly string[] WizardScopes =
+	[
+		.. PortalPermission.AllScopes.Where(s => !PortalPermission.IsGameScope(s)
+			&& s is not (PortalPermission.ServerAdmin or PortalPermission.Administrator)),
+		PortalPermission.GameWizard,
+		PortalPermission.ControlAll,
+		PortalPermission.ProtectWizard,
+		PortalPermission.ProtectAdmin,
 	];
 
 	private static readonly string[] HelperScopes = [PortalPermission.PlayersView, PortalPermission.QueueInspect];
@@ -80,6 +112,51 @@ public static class BuiltInRoles
 		Template("moderator", "Moderator", 25, "#ff9f6b", false, ModeratorScopes),
 	];
 
+	/// <summary>
+	/// The roles to write so a world has its defaults, given the roles it already has: every missing
+	/// system role; the starter roles too when the world has no roles at all, so a deleted starter stays
+	/// deleted; and, on a system role that already exists, each in-game scope its defaults allow and the
+	/// stored role leaves on Inherit. Those scopes are what the WIZARD and ROYALTY flags and the Guest
+	/// and Builder powers mean, so a world seeded before they existed gains them; any other edit an
+	/// administrator made is kept.
+	/// </summary>
+	public static IReadOnlyList<SharpRole> SeedChanges(IReadOnlyCollection<SharpRole> existing, long now)
+	{
+		var stored = existing.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
+		var changes = new List<SharpRole>();
+		foreach (var template in stored.Count == 0 ? All.Concat(Starters) : All)
+		{
+			if (!stored.TryGetValue(template.Slug, out var role))
+			{
+				changes.Add(Stamp(template, new Dictionary<string, PermissionState>(template.Permissions), now, now));
+				continue;
+			}
+
+			var missing = template.Permissions
+				.Where(p => PortalPermission.IsGameScope(p.Key) && PermissionResolver.StateOf(role.Permissions, p.Key) == PermissionState.Inherit)
+				.ToArray();
+			if (!role.IsSystem || missing.Length == 0) continue;
+			var permissions = new Dictionary<string, PermissionState>(role.Permissions);
+			foreach (var (scope, state) in missing) permissions[scope] = state;
+			changes.Add(Stamp(role, permissions, role.CreatedAt, now));
+		}
+
+		return changes;
+	}
+
+	private static SharpRole Stamp(SharpRole role, Dictionary<string, PermissionState> permissions, long created, long updated) => new()
+	{
+		Id = role.Id,
+		Slug = role.Slug,
+		Name = role.Name,
+		Color = role.Color,
+		Priority = role.Priority,
+		IsSystem = role.IsSystem,
+		Permissions = permissions,
+		CreatedAt = created,
+		UpdatedAt = updated
+	};
+
 	private static IReadOnlyList<SharpRole> BuildSystem()
 	{
 		var roles = new List<SharpRole> { Template(EveryoneSlug, "Everyone", 0, "#7d8790", true, [PortalPermission.WikiRead]) };
@@ -88,12 +165,11 @@ public static class BuiltInRoles
 			string[] scopes = role switch
 			{
 				PortalRole.God => [PortalPermission.Administrator],
-				PortalRole.Wizard => PortalPermission.AllScopes
-					.Where(s => s is not (PortalPermission.ServerAdmin or PortalPermission.Administrator)).ToArray(),
+				PortalRole.Wizard => WizardScopes,
 				PortalRole.Royalty => RoyaltyScopes,
 				PortalRole.Builder => BuilderScopes,
 				PortalRole.Player => PlayerScopes,
-				_ => []
+				_ => GuestScopes
 			};
 			roles.Add(Template(SlugFor(role), role.ToString(), (int)role, ColorFor(role), true, scopes));
 		}

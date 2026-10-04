@@ -1,6 +1,7 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Seed;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using System.Text.Json;
@@ -34,6 +35,8 @@ public partial class LightningDatabase
 		{
 			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
 			InvalidateDefinitions();
+			await Store.WriteAsync(SeedRoles, cancellationToken);
+			await Store.WriteAsync(MoveRoleBackedHolders, cancellationToken);
 
 			var initialSeedApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialSeedMigrationId), out _));
 			if (!initialSeedApplied)
@@ -435,6 +438,53 @@ public partial class LightningDatabase
 		}));
 	}
 
+	/// <summary>
+	/// Writes what <see cref="BuiltInRoles.SeedChanges"/> asks for: the missing system roles, the starter
+	/// roles into a world with none, and new in-game scopes on existing system roles. Runs on every start,
+	/// here rather than in a hosted service, because the privilege checks read roles from the first
+	/// command on.
+	/// </summary>
+	private static void SeedRoles(ITx tx)
+	{
+		var existing = tx.Range(Tables.Role, []).Select(e => MapRole(Codec.Deserialize<RoleRecord>(e.Value))).ToList();
+		foreach (var role in BuiltInRoles.SeedChanges(existing, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()))
+		{
+			tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role)));
+		}
+	}
+
+	/// <summary>
+	/// Moves WIZARD, ROYALTY and the built-in powers off the flag and power edges onto what stands for
+	/// them now (see <see cref="RoleFlags"/> and <see cref="GamePowers"/>): an object role, or an Allow
+	/// override on the power's scope. A world written before roles held privileges keeps every one.
+	/// Idempotent: once the edges are gone a later start finds nothing to move.
+	/// </summary>
+	private static void MoveRoleBackedHolders(ITx tx)
+	{
+		foreach (var flag in RoleFlags.All)
+		{
+			var flagKey = Keys.Upper(flag.Name);
+			foreach (var holder in tx.Dups(Tables.ObjFlag.Reverse, flagKey).Select(value => Keys.ReadDbref(value)).ToArray())
+			{
+				PutObjectRole(tx, holder, flag.Role);
+				tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), flagKey);
+				tx.Delete(Tables.ObjFlag.Reverse, flagKey, Keys.Dbref(holder));
+			}
+		}
+
+		foreach (var power in GamePowers.All)
+		{
+			var powerKey = Keys.Upper(power.Name);
+			foreach (var holder in tx.Dups(Tables.ObjPower.Reverse, powerKey).Select(value => Keys.ReadDbref(value)).ToArray())
+			{
+				if (power.Role is { } role) PutObjectRole(tx, holder, role);
+				else WriteObjectOverride(tx, holder, power.Scope, PermissionState.Allow);
+				tx.Delete(Tables.ObjPower.Forward, Keys.Dbref(holder), powerKey);
+				tx.Delete(Tables.ObjPower.Reverse, powerKey, Keys.Dbref(holder));
+			}
+		}
+	}
+
 	/// <summary>Seeds objects #0-#9 (names/types/edges/flags from <see cref="InitialObjectSeed"/>) and sets <c>next_dbref</c> to 10. Runs once, gated by <see cref="InitialSeedMigrationId"/>.</summary>
 	private static void ApplyInitialObjectSeed(ITx tx)
 	{
@@ -467,6 +517,11 @@ public partial class LightningDatabase
 				var flagKey = Keys.Upper(flagName);
 				tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(dbref), flagKey);
 				tx.Put(Tables.ObjFlag.Reverse, flagKey, Keys.Dbref(dbref));
+			}
+
+			foreach (var role in seedObject.Roles)
+			{
+				PutObjectRole(tx, dbref, role);
 			}
 		}
 

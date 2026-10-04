@@ -520,7 +520,7 @@ public class RecurringJobTests
 		var accounts = Substitute.For<IAccountService>();
 		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
-		var capabilities = new AdministrativeCapabilityService(accounts, Get<IRoleRegistryService>(), Get<IRoleDerivationService>(), Get<IPermissionResolver>());
+		var capabilities = new AdministrativeCapabilityService(accounts, Get<IRoleRegistryService>(), Get<IPermissionResolver>());
 		var service = Service(context.Clock, context.Queue, context.QueueReader, capabilities);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
@@ -573,7 +573,7 @@ public class RecurringJobTests
 			.Returns(call => backing.GetRolesForAccountAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
 		registry.GetAccountOverridesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => backing.GetAccountOverridesAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
-		var capabilities = new AdministrativeCapabilityService(accounts, registry, Get<IRoleDerivationService>(), Get<IPermissionResolver>());
+		var capabilities = new AdministrativeCapabilityService(accounts, registry, Get<IPermissionResolver>());
 		var service = Service(context.Clock, context.Queue, context.QueueReader, capabilities);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));

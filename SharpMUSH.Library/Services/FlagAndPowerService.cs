@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -11,12 +12,18 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-/// <summary>Sets and clears an object's flags and powers, under PennMUSH's <c>can_set_flag</c> and <c>set_power</c> rules.</summary>
+/// <summary>
+/// Sets and clears an object's flags and powers, under PennMUSH's <c>can_set_flag</c> and <c>set_power</c>
+/// rules. WIZARD, ROYALTY and the built-in powers are roles and overrides (<see cref="RoleFlags"/>,
+/// <see cref="GamePowers"/>): setting one goes through <see cref="IRoleManagementService"/>, under the
+/// same rules as <c>@role</c>, and keeps PennMUSH's messages.
+/// </summary>
 public class FlagAndPowerService(
 	IMediator mediator,
 	IPermissionService permissionService,
 	INotifyService notifyService,
-	IPublisher publisher)
+	IPublisher publisher,
+	IRoleManagementService roles)
 	: IFlagAndPowerService
 {
 	public async ValueTask<CallState> SetOrUnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias,
@@ -58,6 +65,11 @@ public class FlagAndPowerService(
 			}
 
 			return ErrorMessages.Returns.InvalidFlag;
+		}
+
+		if (RoleFlags.Find(realFlag.Name) is { } roleFlag)
+		{
+			return await SetOrUnsetRoleFlag(executor, obj, realFlag, roleFlag, unset, notify);
 		}
 
 		// Visibility/effect metadata does not grant or require a privilege.
@@ -149,6 +161,86 @@ public class FlagAndPowerService(
 	}
 
 	/// <summary>
+	/// <c>@set</c> on WIZARD or ROYALTY: assigns or removes the object's role, under the role rules in
+	/// place of the flag's set permissions. PennMUSH's messages are kept; a refusal is its
+	/// "Permission denied."
+	/// </summary>
+	private async ValueTask<CallState> SetOrUnsetRoleFlag(AnySharpObject executor, AnySharpObject obj,
+		SharpObjectFlag realFlag, RoleFlags.Flag roleFlag, bool unset, bool notify)
+	{
+		var name = obj.Object().Name;
+		if (unset ? !await obj.HasFlag(realFlag.Name) : await obj.HasFlag(realFlag.Name))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, string.Format(
+					unset ? Definitions.ErrorMessages.Notifications.FlagAlreadyReset : Definitions.ErrorMessages.Notifications.FlagAlreadySet,
+					name, realFlag.Name));
+			}
+
+			return true;
+		}
+
+		var outcome = unset
+			? await roles.UnassignFromObjectAsync(executor, obj, roleFlag.Role)
+			: await roles.AssignToObjectAsync(executor, obj, roleFlag.Role);
+		if (outcome is RoleRefusal)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+			}
+
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, string.Format(
+				unset ? Definitions.ErrorMessages.Notifications.FlagReset : Definitions.ErrorMessages.Notifications.FlagSet,
+				name, realFlag.Name));
+			if (unset)
+			{
+				await NotifyIfStillHeld(executor, obj, roleFlag.Scope, roleFlag.Role);
+			}
+		}
+
+		await publisher.Publish(new ObjectFlagChangedNotification(obj, realFlag.Name, "FLAG", !unset, executor.Object().DBRef));
+		return true;
+	}
+
+	/// <summary>
+	/// <c>@power</c> on a built-in power: the Guest and Builder powers assign or remove the role, every
+	/// other one sets or clears an Allow override on its scope. A refusal is PennMUSH's
+	/// "Permission denied."
+	/// </summary>
+	private async ValueTask<bool> ChangeGamePower(AnySharpObject executor, AnySharpObject obj, GamePowers.Power power, bool grant)
+	{
+		var outcome = power.Role is { } role
+			? grant
+				? await roles.AssignToObjectAsync(executor, obj, role)
+				: await roles.UnassignFromObjectAsync(executor, obj, role)
+			: await roles.SetObjectOverridesAsync(executor, obj, [power.Scope], grant ? PermissionState.Allow : PermissionState.Inherit);
+		return outcome is not RoleRefusal;
+	}
+
+	/// <summary>
+	/// After a role or override came off a character, says so when its account still grants the same
+	/// thing: the command acted, but what softcode sees has not changed.
+	/// </summary>
+	private async ValueTask NotifyIfStillHeld(AnySharpObject executor, AnySharpObject obj, string scope, string what)
+	{
+		var grants = await obj.Object().Grants.WithCancellation(ExecutionBudget.CurrentToken);
+		if (grants.Shows(scope)
+				&& (grants.Roles.Any(r => r.Source == RoleSource.Account && PermissionResolver.StateOf(r.Role.Permissions, scope) == PermissionState.Allow)
+						|| PermissionResolver.StateOf(grants.Context.Overrides, scope) == PermissionState.Allow))
+		{
+			await notifyService.Notify(executor,
+				string.Format(Definitions.ErrorMessages.Notifications.StillHeldThroughAccount, obj.Object().Name, what));
+		}
+	}
+
+	/// <summary>
 	/// Resolves a power by name or alias.
 	/// </summary>
 	public ValueTask<SharpPower?> FindPower(string powerOrPowerAlias) =>
@@ -162,15 +254,6 @@ public class FlagAndPowerService(
 	public async ValueTask<CallState> SetOrUnsetPowers(AnySharpObject executor, AnySharpObject obj,
 		string powerSpecification, bool notify)
 	{
-		if (!await executor.IsWizard())
-		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
-			}
-			return ErrorMessages.Returns.PermissionDenied;
-		}
-
 		if (await obj.HasFlag("UNREGISTERED"))
 		{
 			if (notify)
@@ -273,7 +356,21 @@ public class FlagAndPowerService(
 			return true;
 		}
 
-		await mediator.Send(new SetObjectPowerCommand(obj, found));
+		if (GamePowers.Find(found.Name) is { } gamePower)
+		{
+			if (!await ChangeGamePower(executor, obj, gamePower, grant: true))
+			{
+				return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.PermissionDenied);
+			}
+		}
+		else if (!await executor.IsWizard())
+		{
+			return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
+		}
+		else
+		{
+			await mediator.Send(new SetObjectPowerCommand(obj, found));
+		}
 
 		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
@@ -336,12 +433,31 @@ public class FlagAndPowerService(
 			return true;
 		}
 
-		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
+		var gamePower = GamePowers.Find(found.Name);
+		if (gamePower is not null)
+		{
+			if (!await ChangeGamePower(executor, obj, gamePower, grant: false))
+			{
+				return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.PermissionDenied);
+			}
+		}
+		else if (!await executor.IsWizard())
+		{
+			return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
+		}
+		else
+		{
+			await mediator.Send(new UnsetObjectPowerCommand(obj, found));
+		}
 
 		if (notify && !await obj.Object().AreQuietAsync(executor))
 		{
 			await notifyService.Notify(executor,
 				string.Format(Definitions.ErrorMessages.Notifications.PowerRemoved, obj.Object().Name, found.Name));
+			if (gamePower is not null)
+			{
+				await NotifyIfStillHeld(executor, obj, gamePower.Scope, gamePower.Name);
+			}
 		}
 
 		// Powers trigger the same OBJECT`FLAG event as flags.
@@ -353,6 +469,16 @@ public class FlagAndPowerService(
 			executor.Object().DBRef));
 
 		return true;
+	}
+
+	private async ValueTask<CallState> PowerRefused(AnySharpObject executor, bool notify, string message)
+	{
+		if (notify)
+		{
+			await notifyService.Notify(executor, message);
+		}
+
+		return ErrorMessages.Returns.PermissionDenied;
 	}
 
 	public async ValueTask<CallState> ClearAllPowers(AnySharpObject executor, AnySharpObject obj, bool notify)
@@ -457,28 +583,6 @@ public class FlagAndPowerService(
 		// God can do (almost) anything after the generic check passes
 		if (executor.IsGod())
 			return false;
-
-		if (flagName == "WIZARD")
-		{
-			if (!negate)
-			{
-				// Setting WIZARD: must be Wizard, own the target, and target must not be a player
-				return !(await executor.IsWizard() && await executor.Owns(obj) && !obj.IsPlayer);
-			}
-			else
-			{
-				// Unsetting WIZARD: must be Wizard and target must not be a player
-				return !(await executor.IsWizard() && !obj.IsPlayer);
-			}
-		}
-
-		if (flagName == "ROYALTY")
-		{
-			// Must not be guest target, and either Wizard or (Royalty + owns + not player)
-			return await obj.IsGuest()
-				|| !(await executor.IsWizard()
-					|| (await executor.IsRoyalty() && await executor.Owns(obj) && !obj.IsPlayer));
-		}
 
 		return false; // no additional restriction
 	}

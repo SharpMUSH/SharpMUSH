@@ -11,6 +11,8 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	private readonly Dictionary<string, SharpRole> _roles = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, HashSet<string>> _assignments = new();
 	private readonly Dictionary<string, Dictionary<string, PermissionState>> _overrides = new();
+	private readonly Dictionary<int, HashSet<string>> _objectRoles = new();
+	private readonly Dictionary<int, Dictionary<string, PermissionState>> _objectOverrides = new();
 
 	/// <summary>A registry seeded like a new world: system and starter roles.</summary>
 	public static InMemoryRoleRegistry Seeded()
@@ -79,6 +81,37 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state)
 	{
 		if (!_overrides.TryGetValue(accountId, out var overrides)) _overrides[accountId] = overrides = new(StringComparer.OrdinalIgnoreCase);
+		if (state == PermissionState.Inherit) overrides.Remove(scope);
+		else overrides[scope] = state;
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<string>>(_objectRoles.TryGetValue(number, out var set) ? set.Order().ToList() : []);
+
+	public Task AssignRoleToObjectAsync(int number, string roleSlug)
+	{
+		if (!_objectRoles.TryGetValue(number, out var set)) _objectRoles[number] = set = new(StringComparer.OrdinalIgnoreCase);
+		set.Add(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveRoleFromObjectAsync(int number, string roleSlug)
+	{
+		if (_objectRoles.TryGetValue(number, out var set)) set.Remove(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string roleSlug, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<int>>(_objectRoles.Where(o => o.Value.Contains(roleSlug)).Select(o => o.Key).Order().ToList());
+
+	public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
+			_objectOverrides.TryGetValue(number, out var overrides) ? new Dictionary<string, PermissionState>(overrides) : new Dictionary<string, PermissionState>());
+
+	public Task SetObjectOverrideAsync(int number, string scope, PermissionState state)
+	{
+		if (!_objectOverrides.TryGetValue(number, out var overrides)) _objectOverrides[number] = overrides = new(StringComparer.OrdinalIgnoreCase);
 		if (state == PermissionState.Inherit) overrides.Remove(scope);
 		else overrides[scope] = state;
 		return Task.CompletedTask;

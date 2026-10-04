@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -18,6 +19,13 @@ namespace SharpMUSH.Database.Lightning;
 /// both opened <c>fixedDuplicates: false</c> since a name is variable-length. <see cref="ReadObjectFlags"/>
 /// and <see cref="ReadObjectPowers"/> are the shared per-object reads <c>Hydrate</c> (in
 /// <c>LightningDatabase.Objects.cs</c>) and the object-search flag predicate both use.
+/// <para>
+/// A role-backed name is not stored as a flag or power at all: WIZARD and ROYALTY (<see cref="RoleFlags"/>)
+/// are the object's <c>wizard</c> and <c>royalty</c> roles, the Guest and Builder powers its <c>guest</c>
+/// and <c>builder</c> roles, and every other built-in power (<see cref="GamePowers"/>) an Allow override on
+/// its scope. Setting or clearing one here writes that instead, so every writer (an import, a seed, a
+/// restore) lands it where the privilege checks read it.
+/// </para>
 /// </summary>
 public partial class LightningDatabase
 {
@@ -84,6 +92,8 @@ public partial class LightningDatabase
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
 		var dbrefKey = (long)dbref.Object().Key;
+		if (RoleFlags.Find(flag.Name) is { } roleFlag)
+			return await Store.WriteAsync(tx => AddObjectRole(tx, dbrefKey, roleFlag.Role), cancellationToken);
 		return await Store.WriteAsync(tx =>
 		{
 			if (HasMembershipEdge(Tables.ObjFlag.Forward, tx, dbrefKey, flag.Name)) return false;
@@ -96,6 +106,8 @@ public partial class LightningDatabase
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
 		var dbrefKey = (long)dbref.Object().Key;
+		if (RoleFlags.Find(flag.Name) is { } roleFlag)
+			return await Store.WriteAsync(tx => RemoveObjectRole(tx, dbrefKey, roleFlag.Role), cancellationToken);
 		return await Store.WriteAsync(tx =>
 		{
 			if (!HasMembershipEdge(Tables.ObjFlag.Forward, tx, dbrefKey, flag.Name)) return false;
@@ -199,6 +211,10 @@ public partial class LightningDatabase
 	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
 		var dbrefKey = (long)dbref.Object().Key;
+		if (GamePowers.Find(power.Name) is { } gamePower)
+			return await Store.WriteAsync(tx => gamePower.Role is { } role
+				? AddObjectRole(tx, dbrefKey, role)
+				: AllowObjectScope(tx, dbrefKey, gamePower.Scope), cancellationToken);
 		return await Store.WriteAsync(tx =>
 		{
 			if (HasMembershipEdge(Tables.ObjPower.Forward, tx, dbrefKey, power.Name)) return false;
@@ -211,6 +227,10 @@ public partial class LightningDatabase
 	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
 		var dbrefKey = (long)dbref.Object().Key;
+		if (GamePowers.Find(power.Name) is { } gamePower)
+			return await Store.WriteAsync(tx => gamePower.Role is { } role
+				? RemoveObjectRole(tx, dbrefKey, role)
+				: ClearObjectScope(tx, dbrefKey, gamePower.Scope), cancellationToken);
 		return await Store.WriteAsync(tx =>
 		{
 			if (!HasMembershipEdge(Tables.ObjPower.Forward, tx, dbrefKey, power.Name)) return false;
@@ -285,6 +305,38 @@ public partial class LightningDatabase
 	/// match, the first definition in key order listing it.</summary>
 	private static FlagRecord? FindFlagRecord(DefinitionMap<FlagRecord> definitions, string name)
 		=> string.IsNullOrEmpty(name) ? null : definitions.ByName(name) ?? definitions.ByAlias(name);
+
+	/// <summary>Assigns <paramref name="role"/> to the object; false when it already holds it.</summary>
+	private static bool AddObjectRole(ITx tx, long dbref, string role)
+	{
+		if (ReadObjectRoles(tx, dbref).Contains(role, StringComparer.OrdinalIgnoreCase)) return false;
+		PutObjectRole(tx, dbref, role);
+		return true;
+	}
+
+	/// <summary>Takes <paramref name="role"/> off the object; false when it does not hold it.</summary>
+	private static bool RemoveObjectRole(ITx tx, long dbref, string role)
+	{
+		if (!ReadObjectRoles(tx, dbref).Contains(role, StringComparer.OrdinalIgnoreCase)) return false;
+		DeleteObjectRole(tx, dbref, role);
+		return true;
+	}
+
+	/// <summary>Sets an Allow override on <paramref name="scope"/>; false when one is already set.</summary>
+	private static bool AllowObjectScope(ITx tx, long dbref, string scope)
+	{
+		if (ReadObjectOverrides(tx, dbref).TryGetValue(scope, out var state) && state == (int)PermissionState.Allow) return false;
+		WriteObjectOverride(tx, dbref, scope, PermissionState.Allow);
+		return true;
+	}
+
+	/// <summary>Clears an Allow override on <paramref name="scope"/> (a Deny stays); false when none is set.</summary>
+	private static bool ClearObjectScope(ITx tx, long dbref, string scope)
+	{
+		if (!ReadObjectOverrides(tx, dbref).TryGetValue(scope, out var state) || state != (int)PermissionState.Allow) return false;
+		WriteObjectOverride(tx, dbref, scope, PermissionState.Inherit);
+		return true;
+	}
 
 	private static bool HasMembershipEdge(TableDef forward, ITx tx, long dbref, string name)
 	{

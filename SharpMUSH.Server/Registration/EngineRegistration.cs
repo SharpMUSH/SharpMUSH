@@ -156,7 +156,6 @@ internal static class EngineRegistration
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();
-		services.AddHostedService<RoleSeedService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();

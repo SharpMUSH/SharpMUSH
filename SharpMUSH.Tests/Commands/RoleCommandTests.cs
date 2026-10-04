@@ -78,14 +78,29 @@ public class RoleCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task PlayerOverrideBeatsTheirRoles()
+	public async Task ObjectOverrideBeatsTheirRoles()
 	{
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
-		await Assert.That(await As(_wizard, $"@role/deny *{_mortal.Name}=wiki.edit")).Contains("denies wiki.edit");
+		await Assert.That(await As(_wizard, $"@role/deny/object {_mortal.Name}=wiki.edit")).Contains("denies wiki.edit");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("0");
 		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("deny wiki.edit");
-		await As(_wizard, $"@role/clear *{_mortal.Name}=wiki.edit");
+		await As(_wizard, $"@role/clear/object {_mortal.Name}=wiki.edit");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AccountOverrideAndRoleReachTheCharacter()
+	{
+		await Assert.That(await As(_wizard, $"@role/allow/account {_mortal.Name}=wiki.delete")).Contains("(account ");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("1");
+		await As(_wizard, $"@role/clear/account {_mortal.Name}=wiki.delete");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("0");
+
+		await Assert.That(await As(_wizard, $"@role/assign/account {_mortal.Name}=helper")).Contains("now holds helper");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"hasrole(*{_mortal.Name},helper)")).IsEqualTo("1");
+		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("Helper (12, account)");
+		await As(_wizard, $"@role/unassign/account {_mortal.Name}=helper");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"hasrole(*{_mortal.Name},helper)")).IsEqualTo("0");
 	}
 
 	[Test]
@@ -106,11 +121,14 @@ public class RoleCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task PlayersWithoutAnAccountHoldNothing()
+	public async Task PlayersWithoutAnAccountHoldTheirOwnRoles()
 	{
-		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_unlinked.Name})")).IsEqualTo("");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_unlinked.Name},wiki.read)")).IsEqualTo("0");
-		await Assert.That(await As(_wizard, $"@role/assign {_unlinked.Name}=helper")).Contains("with an account");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_unlinked.Name})")).IsEqualTo("player everyone");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_unlinked.Name},wiki.read)")).IsEqualTo("1");
+		await Assert.That(await As(_wizard, $"@role/assign {_unlinked.Name}=helper")).Contains("now holds helper");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_unlinked.Name})")).IsEqualTo("helper player everyone");
+		await Assert.That(await As(_wizard, $"@role/assign/account {_unlinked.Name}=helper")).Contains("with an account");
+		await As(_wizard, $"@role/unassign {_unlinked.Name}=helper");
 	}
 
 	[Test]

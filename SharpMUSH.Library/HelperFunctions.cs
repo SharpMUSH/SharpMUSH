@@ -1,5 +1,6 @@
 ﻿using Mediator;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -38,8 +39,13 @@ public static partial class HelperFunctions
 			? god
 			: throw new InvalidOperationException("God (#1) does not exist.");
 
+	/// <summary>The object's grants: its roles, overrides and the scopes they resolve to.</summary>
+	public static Task<ObjectGrants> GrantsAsync(this AnySharpObject obj, CancellationToken cancellationToken)
+		=> obj.Object().Grants.WithCancellation(cancellationToken);
+
 	/// <summary>
-	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
+	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x). The WIZARD flag is the <c>wizard</c> role, so
+	/// this asks for <see cref="PortalPermission.GameWizard"/>, which any role may allow.
 	/// </summary>
 	public static ValueTask<bool> IsWizard(this AnySharpObject obj)
 		=> obj.IsWizard(ExecutionBudget.CurrentToken);
@@ -47,18 +53,17 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		return obj.IsGod() || await obj.Object().Flags.Value
-			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase), cancellationToken);
+		return obj.IsGod() || (await obj.GrantsAsync(cancellationToken)).Has(PortalPermission.GameWizard);
 	}
 
 	public static ValueTask<bool> IsRoyalty(this AnySharpObject obj)
 		=> obj.IsRoyalty(ExecutionBudget.CurrentToken);
 
+	/// <summary>PennMUSH: Royalty(x) = has_flag(x, ROYALTY), the <c>royalty</c> role.</summary>
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		return await obj.Object().Flags.Value
-			.AnyAsync(x => x.Name.Equals("ROYALTY", StringComparison.OrdinalIgnoreCase), cancellationToken);
+		return (await obj.GrantsAsync(cancellationToken)).Shows(PortalPermission.GameRoyalty);
 	}
 
 	public static ValueTask<bool> IsMistrust(this AnySharpObject obj)
@@ -249,8 +254,78 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasPower(this SharpObject obj, string power)
 		=> obj.HasPower(power, ExecutionBudget.CurrentToken);
 
+	/// <remarks>
+	/// A built-in power (<see cref="GamePowers"/>) is the object holding its scope through a role or an
+	/// override; only a power added with <c>@power/add</c> is read from the object's stored powers.
+	/// </remarks>
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
-		=> await obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
+		=> GamePowers.Find(power) is { } gamePower
+			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(gamePower.Scope)
+			: await obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
+
+	/// <summary>
+	/// The powers the object shows, as <c>powers()</c> and examine list them: each built-in power whose
+	/// scope a role or override allows it, then the powers stored on it.
+	/// </summary>
+	public static async ValueTask<IReadOnlyList<SharpPower>> ReadPowersAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		var grants = await obj.Grants.WithCancellation(cancellationToken);
+		var stored = await obj.Powers.Value.Where(p => GamePowers.Find(p.Name) is null).ToListAsync(cancellationToken);
+		return [.. GamePowers.All.Where(p => grants.Shows(p.Scope)).Select(PowerFor), .. stored];
+	}
+
+	public static ValueTask<IReadOnlyList<SharpPower>> ReadPowersAsync(this AnySharpObject obj)
+		=> obj.Object().ReadPowersAsync(ExecutionBudget.CurrentToken);
+
+	private static SharpPower PowerFor(GamePowers.Power power) => new()
+	{
+		Name = power.Name,
+		Aliases = power.Aliases,
+		Symbol = string.Empty,
+		System = true,
+		SetPermissions = [],
+		UnsetPermissions = [],
+		TypeRestrictions = []
+	};
+
+	/// <summary>
+	/// The flags set on the object itself, by name: those stored on it and the role-backed ones
+	/// (WIZARD, ROYALTY) it holds as its own roles, not through an account. What a package or a copy of
+	/// the object carries.
+	/// </summary>
+	public static async ValueTask<IReadOnlyList<string>> ReadOwnFlagNamesAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		var grants = await obj.Grants.WithCancellation(cancellationToken);
+		var stored = await obj.Flags.Value.Select(f => f.Name).ToListAsync(cancellationToken);
+		return [.. stored, .. grants.Roles.Where(held => held.Source == RoleSource.Object)
+			.Select(held => RoleFlags.ForRole(held.Role.Slug)?.Name).OfType<string>()];
+	}
+
+	/// <summary>
+	/// The powers set on the object itself, by name: a built-in power's Allow override or role on the
+	/// object, then the powers added with <c>@power/add</c> stored on it.
+	/// </summary>
+	public static async ValueTask<IReadOnlyList<string>> ReadOwnPowerNamesAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		var grants = await obj.Grants.WithCancellation(cancellationToken);
+		var stored = await obj.Powers.Value.Select(p => p.Name).ToListAsync(cancellationToken);
+		var own = GamePowers.All.Where(power => power.Role is { } role
+			? grants.Roles.Any(held => held.Source == RoleSource.Object && held.Role.Slug == role)
+			: PermissionResolver.StateOf(grants.Context.ObjectOverrides, power.Scope) == PermissionState.Allow);
+		return [.. own.Select(power => power.Name), .. stored];
+	}
+
+	/// <summary>The role-backed flags (<see cref="RoleFlags"/>) a role or override shows on the object.</summary>
+	public static IEnumerable<SharpObjectFlag> RoleFlagsShown(ObjectGrants grants)
+		=> RoleFlags.All.Where(flag => grants.Shows(flag.Scope)).Select(flag => new SharpObjectFlag
+		{
+			Name = flag.Name,
+			Symbol = flag.Symbol,
+			System = true,
+			SetPermissions = [],
+			UnsetPermissions = [],
+			TypeRestrictions = ["ROOM", "PLAYER", "EXIT", "THING"]
+		});
 
 	/// <summary>
 	/// PennMUSH's <c>Hearer</c> (<c>src/game.c:1564</c>) walks <c>ATTR_FOR_EACH(thing, ptr)</c>,
@@ -345,17 +420,23 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasFlag(this SharpObject obj, string flag)
 		=> HasFlag(obj, flag, ExecutionBudget.CurrentToken);
 
+	/// <para>
+	/// WIZARD and ROYALTY are roles (<see cref="RoleFlags"/>): they answer from the object's grants.
+	/// </para>
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
-		=> await obj.Flags.Value
-			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
-									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
+		=> RoleFlags.Find(flag) is { } roleFlag
+			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(roleFlag.Scope)
+			: await obj.Flags.Value
+				.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
+										 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
-	/// Reads the object's flags once, for a caller that asks several flag questions about it. See
-	/// <see cref="ObjectFlagSet"/>: each of its questions answers as the per-read helper here does.
+	/// Reads the object's flags and grants once, for a caller that asks several flag questions about it,
+	/// or lists the flags to show (the role-backed ones included). See <see cref="ObjectFlagSet"/>: each
+	/// of its questions answers as the per-read helper here does.
 	/// </summary>
 	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
-		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken));
+		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
 
 	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
 		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);
@@ -375,7 +456,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasFlagOrLetter(this SharpObject obj, string nameOrLetter)
 		=> await obj.HasFlag(nameOrLetter)
 			|| (nameOrLetter.Length == 1
-					&& await obj.Flags.Value.AnyAsync(x => x.Symbol == nameOrLetter, ExecutionBudget.CurrentToken));
+					&& (await obj.ReadFlagsAsync(ExecutionBudget.CurrentToken)).HasOrLetter(nameOrLetter));
 
 	/// <summary>
 	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and

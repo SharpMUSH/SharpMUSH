@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Mediator;
@@ -30,7 +31,6 @@ public class AuthController(
 	IOttStore ottStore,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	IRoleDerivationService roleDerivation,
 	AccountClaimsService accountClaims,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
@@ -143,8 +143,7 @@ public class AuthController(
 
 		if (!options.CurrentValue.Net.Logins)
 		{
-			var flags = await player.Object.Flags.Value.ToListAsync();
-			if (roleDerivation.DeriveRole(player.Object.Key, flags) < PortalRole.Wizard)
+			if (!await new AnySharpObject(player).IsWizard())
 				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 		}
 
@@ -352,10 +351,10 @@ public class AuthController(
 
 	/// <summary>
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or WIZARD-flagged / higher).
+	/// if ANY linked character is staff (character #1, or a wizard).
 	/// </summary>
 	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
-			roleDerivation.DeriveRole(character.Object.Key, await character.Object.Flags.Value.ToListAsync(ct)) >= PortalRole.Wizard);
+			await new AnySharpObject(character).IsWizard(ct));
 }
 

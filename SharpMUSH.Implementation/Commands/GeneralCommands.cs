@@ -1,6 +1,7 @@
 ﻿using SharpMUSH.Database;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
@@ -283,8 +284,20 @@ public partial class Commands
 				outputSections.Add(MarkupText.Plain(await FormatLockLineAsync(executor, lockKvp.Key, lockKvp.Value)));
 			}
 
-			var powersList = await obj.Powers.Value.Select(x => x.Name).ToArrayAsync();
+			var powersList = (await obj.ReadPowersAsync(ExecutionBudget.CurrentToken)).Select(x => x.Name);
 			outputSections.Add(MarkupText.Plain($"Powers: {string.Join(" ", powersList)}"));
+
+			// Not PennMUSH: privileges are roles here, so examine says which an object holds and where from.
+			var grants = await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken);
+			if (ObjectGrantsDisplay.Roles(grants) is { Length: > 0 } rolesLine)
+			{
+				outputSections.Add(MarkupText.Plain($"Roles: {rolesLine}"));
+			}
+
+			if (ObjectGrantsDisplay.Overrides(grants) is { Length: > 0 } overridesLine)
+			{
+				outputSections.Add(MarkupText.Plain($"Overrides: {overridesLine}"));
+			}
 
 			var warningsStr = obj.Warnings != WarningType.None
 				? WarningTypeHelper.UnparseWarnings(obj.Warnings)

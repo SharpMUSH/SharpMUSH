@@ -314,7 +314,7 @@
     private List<PortalRoleModel> Assignable =>
         _account is null
             ? []
-            : SortedRoles.Where(r => !r.IsSystem && !_account.RoleSlugs.Contains(r.Slug)).ToList();
+            : SortedRoles.Where(r => !BuiltInRoles.IsImplicit(r.Slug) && !_account.RoleSlugs.Contains(r.Slug)).ToList();
 
     /// <summary>Every scope but administrator, which only a role can carry.</summary>
     private static readonly IReadOnlyList<string> OverridableScopes =

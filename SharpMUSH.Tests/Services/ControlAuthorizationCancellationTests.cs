@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -24,7 +25,8 @@ public class ControlAuthorizationCancellationTests
 	[Arguments("inherit-owner")]
 	[Arguments("inherit-flags")]
 	[Arguments("mistrust-flags")]
-	[Arguments("guest-powers")]
+	[Arguments("actor-grants")]
+	[Arguments("target-grants")]
 	[Arguments("actor-wizard")]
 	[Arguments("target-wizard")]
 	[Arguments("target-royalty")]
@@ -60,11 +62,6 @@ public class ControlAuthorizationCancellationTests
 			if (++flagReads > skip) await Block<bool>(token);
 			yield break;
 		}
-		async IAsyncEnumerable<SharpPower> Powers([EnumeratorCancellation] CancellationToken token = default)
-		{
-			await Block<bool>(token);
-			yield break;
-		}
 		switch (stage)
 		{
 			case "zone": target.Object().Zone = new(token => Block<AnyOptionalSharpObject>(token)); break;
@@ -84,7 +81,8 @@ public class ControlAuthorizationCancellationTests
 			case "target-wizard":
 			case "target-royalty": target.Object().Flags = new(() => Flags()); break;
 			case "shared-flags": owner.Object().Flags = new(() => Flags()); break;
-			case "guest-powers": actor.Object().Powers = new(() => Powers()); break;
+			case "actor-grants": actor.Object().Grants = new(token => Block<ObjectGrants>(token)); break;
+			case "target-grants": target.Object().Grants = new(token => Block<ObjectGrants>(token)); break;
 		}
 		using var cancellation = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);

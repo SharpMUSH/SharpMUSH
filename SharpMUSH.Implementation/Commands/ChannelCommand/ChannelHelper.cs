@@ -712,7 +712,7 @@ public static class ChannelHelper
 	/// (<c>hdrs/mushtype.h</c>), which is privileged status or the <c>Who</c> power.
 	/// </summary>
 	public static async ValueTask<bool> PrivilegedWho(AnySharpObject viewer)
-		=> await viewer.IsPriv() || await viewer.HasPower("Who");
+		=> await viewer.IsPriv() || await viewer.HasPower("See_All");
 
 	/// <summary>
 	/// The channel's membership with each member's connection state attached, so the callers can apply

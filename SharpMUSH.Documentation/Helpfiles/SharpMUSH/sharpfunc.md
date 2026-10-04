@@ -2078,9 +2078,9 @@ think hasflag(me, wizard)
 - [@power]
 - [HASFLAG()]
 # HASROLE()
-`hasrole(<player>, <role>)`
+`hasrole(<object>, <role>)`
 
-  Returns 1 if `<player>` holds the role named `<role>` while playing that character, and 0 if not. `<role>` is the role's short name as @role/list shows it. Every player with an account holds `everyone`, and a player holds the tier roles that follow its flags (`player`, `builder`, `royalty`, `wizard`, `god`) as well as any roles assigned to its account. A player without an account holds no roles.
+  Returns 1 if `<object>` holds the role named `<role>`, and 0 if not. `<role>` is the role's short name as @role/list shows it. An object holds `everyone`, the roles assigned to it, and, for a character linked to an account, the account's roles. A player that is not a guest also holds `player`, and #1 holds `god`.
 
   Example:
 ```sharp
@@ -3824,9 +3824,9 @@ You say, "#1 #7 #56 #-1"
 - [@nspemit]
 - [PROMPT_NEWLINES]
 # PERMISSION()
-`permission(<player>, <permission>)`
+`permission(<object>, <permission>)`
 
-  Returns 1 if `<player>` holds `<permission>` while playing that character, and 0 if not. The answer is the same one the game and the web portal use when that player tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all. A player without an account holds nothing.
+  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all.
 
   Example:
 ```sharp
@@ -4338,9 +4338,9 @@ You say, "-   foo-"
 - [RLOC()]
 - [ROOM()]
 # ROLES()
-`roles(<player>)`
+`roles(<object>)`
 
-  Returns the short names of the roles `<player>` holds while playing that character, highest priority first, with `everyone` last. Returns nothing for a player without an account.
+  Returns the short names of the roles `<object>` holds, its own and its account's, highest priority first, with `everyone` last.
 
   Example:
 ```sharp

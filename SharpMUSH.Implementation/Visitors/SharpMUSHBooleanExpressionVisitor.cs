@@ -266,6 +266,18 @@ public class SharpMUSHBooleanExpressionVisitor(
 		return (_, unlockerObj) => unlockerObj.HasPower(power);
 	}
 
+	public override LockPredicate VisitBitRoleExpr(SharpMUSHBoolExpParser.BitRoleExprContext context)
+	{
+		var role = LockLiteralText.Read(context.literal()).Trim();
+		return async (_, unlockerObj) => (await unlockerObj.GrantsAsync(ExecutionBudget.CurrentToken)).HoldsRole(role);
+	}
+
+	public override LockPredicate VisitBitPermExpr(SharpMUSHBoolExpParser.BitPermExprContext context)
+	{
+		var scope = LockLiteralText.Read(context.literal()).Trim().ToLowerInvariant();
+		return async (_, unlockerObj) => (await unlockerObj.GrantsAsync(ExecutionBudget.CurrentToken)).Has(scope);
+	}
+
 	public override LockPredicate VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
 		var typeText = context.objectType().GetText().ToUpper().Trim();

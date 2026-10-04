@@ -28,6 +28,9 @@ public interface IObjectRelationLoader
 	/// <summary>The drop-to of the room <paramref name="roomTypedId"/>, if it has one.</summary>
 	Task<AnyOptionalSharpContainer> DropToOf(string roomTypedId, string objectId, int number, CancellationToken cancellationToken);
 
+	/// <summary>What object <paramref name="number"/> is granted: its roles, overrides and scopes.</summary>
+	Task<Authorization.ObjectGrants> GrantsOf(int number, bool isPlayer, CancellationToken cancellationToken);
+
 	/// <summary>The destination of the exit <paramref name="exitTypedId"/>, if it is linked.</summary>
 	Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken);
 }

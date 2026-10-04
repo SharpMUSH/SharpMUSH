@@ -81,7 +81,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
 	{
-		await PrivilegeHelpers.ResetForNewOwnerAsync(FlagAndPowerService, executor, obj);
+		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, FlagAndPowerService, executor, obj);
 		await HaltQueuesAsync(obj, newOwner);
 	}
 

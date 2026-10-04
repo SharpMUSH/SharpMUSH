@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using SharpMUSH.Library.Authorization;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
@@ -54,12 +55,14 @@ public class QueueAdmissionTests
 				Object = new SharpObject
 				{
 					Key = dbRef.Number, CreationTime = 1, Name = "Semaphore", Type = "PLAYER", Locks = null!, Owner = null!,
-					Powers = new(() => (queuePower ? new[] { new SharpPower { Name = "Queue", Aliases = [], System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
-					Flags = new(() => (wizard ? new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+					Grants = new(_ => Task.FromResult(ObjectGrants.None)),
+					Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
 				},
 				Location = null!, Home = null!, PasswordHash = "", Quota = 0
 			};
 			player.Object.Owner = new(_ => Task.FromResult(player));
+			new AnySharpObject(player).Grant(wizard ? ["wizard"] : null, queuePower ? ["Queue"] : null);
 			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
 		});
 	}
@@ -234,7 +237,7 @@ public class QueueAdmissionTests
 
 		if (expression == "FLAG^WIZARD")
 		{
-			target.Object().Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }.ToAsyncEnumerable());
+			target.Grant(roles: ["wizard"]);
 			using var fresh = new ExecutionBudget(TimeSpan.FromSeconds(3));
 			using var scope = fresh.Enter();
 			await Assert.That(await compiled(target, target)).IsTrue();
@@ -443,12 +446,14 @@ public class QueueAdmissionTests
 				Object = new SharpObject
 				{
 					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 					Flags = new(() => flags.ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
 				},
 				Location = null!, Home = null!, PasswordHash = "", Quota = 0
 			};
 			player.Object.Owner = new(_ => Task.FromResult(player));
+			new AnySharpObject(player).Grant(wizard ? ["wizard"] : null, queuePower ? ["Queue"] : null);
 			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
 		});
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -496,12 +501,14 @@ public class QueueAdmissionTests
 				Object = new SharpObject
 				{
 					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 					Flags = new(() => Array.Empty<SharpObjectFlag>().ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
 				},
 				Location = null!, Home = null!, PasswordHash = "", Quota = 0
 			};
 			player.Object.Owner = new(_ => Task.FromResult(player));
+			new AnySharpObject(player).Grant(wizard ? ["wizard"] : null, queuePower ? ["Queue"] : null);
 			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
 		});
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -2315,6 +2322,7 @@ public class QueueAdmissionTests
 			Object = new SharpObject
 			{
 				Key = 50, CreationTime = 1, Name = "Owner", Type = "PLAYER", Locks = null!, Owner = null!,
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
 			},
@@ -2499,6 +2507,7 @@ public class QueueAdmissionTests
 			Object = new SharpObject
 			{
 				Key = number, CreationTime = 1, Name = $"Obj{number}", Type = "PLAYER", Locks = null!, Owner = null!,
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
 			},

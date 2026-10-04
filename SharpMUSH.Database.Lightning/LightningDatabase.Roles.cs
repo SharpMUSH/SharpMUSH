@@ -8,11 +8,13 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="Library.Services.Interfaces.IRoleRegistryService"/>: portal roles (Discord-style RBAC)
-/// and account-role assignments. Roles are keyed by
-/// <see cref="SharpRole.Slug"/> in <see cref="Tables.Role"/>; an assignment is a duplicate entry in
-/// <see cref="Tables.AccountRole"/> keyed by account id with the role slug as the duplicate value —
-/// idempotent for free, since LMDB's dupsort tables collapse an exact (key, value) pair written twice.
+/// <see cref="Library.Services.Interfaces.IRoleRegistryService"/>: roles (Discord-style RBAC), their
+/// assignments and overrides. Roles are keyed by <see cref="SharpRole.Slug"/> in <see cref="Tables.Role"/>;
+/// an account assignment is a duplicate entry in <see cref="Tables.AccountRole"/> keyed by account id
+/// with the role slug as the duplicate value — idempotent for free, since LMDB's dupsort tables collapse
+/// an exact (key, value) pair written twice. An object assignment is the <see cref="Tables.ObjRole"/>
+/// edge pair keyed by dbref, so the object-delete cascade removes it; an object's overrides are one
+/// <see cref="Tables.ObjPermission"/> record, deleted with the object.
 /// </summary>
 public partial class LightningDatabase
 {
@@ -131,6 +133,68 @@ public partial class LightningDatabase
 
 	private static Dictionary<string, int> ReadOverrides(ITx tx, string accountKey)
 		=> tx.TryGet(Tables.AccountPermission, Keys.Str(accountKey), out var bytes)
+			? new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(bytes), StringComparer.OrdinalIgnoreCase)
+			: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+	public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return Task.FromResult<IReadOnlyList<string>>(Store.Read(tx => ReadObjectRoles(tx, number)));
+	}
+
+	internal static List<string> ReadObjectRoles(ITx tx, long number)
+		=> tx.Dups(Tables.ObjRole.Forward, Keys.Dbref(number)).Select(v => Keys.ReadStr(v)).ToList();
+
+	public async Task AssignRoleToObjectAsync(int number, string roleSlug)
+		=> await Store.WriteAsync(tx => PutObjectRole(tx, number, roleSlug));
+
+	internal static void PutObjectRole(ITx tx, long number, string roleSlug)
+	{
+		var slug = Keys.Str(roleSlug.ToLowerInvariant());
+		tx.Put(Tables.ObjRole.Forward, Keys.Dbref(number), slug);
+		tx.Put(Tables.ObjRole.Reverse, slug, Keys.Dbref(number));
+	}
+
+	public async Task RemoveRoleFromObjectAsync(int number, string roleSlug)
+		=> await Store.WriteAsync(tx => DeleteObjectRole(tx, number, roleSlug));
+
+	internal static void DeleteObjectRole(ITx tx, long number, string roleSlug)
+	{
+		var slug = Keys.Str(roleSlug.ToLowerInvariant());
+		tx.Delete(Tables.ObjRole.Forward, Keys.Dbref(number), slug);
+		tx.Delete(Tables.ObjRole.Reverse, slug, Keys.Dbref(number));
+	}
+
+	public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string roleSlug, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var slug = Keys.Str(roleSlug.ToLowerInvariant());
+		var numbers = Store.Read(tx => tx.Dups(Tables.ObjRole.Reverse, slug).Select(v => (int)Keys.ReadDbref(v)).ToList());
+		return Task.FromResult<IReadOnlyList<int>>(numbers);
+	}
+
+	public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var overrides = Store.Read(tx => ReadObjectOverrides(tx, number));
+		return Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
+			overrides.ToDictionary(kvp => kvp.Key, kvp => (PermissionState)kvp.Value, StringComparer.OrdinalIgnoreCase));
+	}
+
+	public async Task SetObjectOverrideAsync(int number, string scope, PermissionState state)
+		=> await Store.WriteAsync(tx => WriteObjectOverride(tx, number, scope, state));
+
+	internal static void WriteObjectOverride(ITx tx, long number, string scope, PermissionState state)
+	{
+		var overrides = ReadObjectOverrides(tx, number);
+		if (state == PermissionState.Inherit) overrides.Remove(scope);
+		else overrides[scope] = (int)state;
+		if (overrides.Count == 0) tx.Delete(Tables.ObjPermission, Keys.Dbref(number));
+		else tx.Put(Tables.ObjPermission, Keys.Dbref(number), Codec.Serialize(overrides));
+	}
+
+	internal static Dictionary<string, int> ReadObjectOverrides(ITx tx, long number)
+		=> tx.TryGet(Tables.ObjPermission, Keys.Dbref(number), out var bytes)
 			? new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(bytes), StringComparer.OrdinalIgnoreCase)
 			: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 }

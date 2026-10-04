@@ -4,8 +4,7 @@ namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
 /// Who may manage which roles and accounts, by Discord's role-hierarchy rules: a manager acts only
-/// below their own highest role, and grants only what they hold. RhostMUSH states the same rule for
-/// its ranks ("lower level bits can not modify higher level bits"). The owner is exempt.
+/// below their own highest role, and grants only what they hold. The owner is exempt.
 /// </summary>
 public static class RoleHierarchy
 {
@@ -23,8 +22,16 @@ public static class RoleHierarchy
 		=> PortalPermission.AllScopes
 			.Where(scope => PermissionResolver.StateOf(proposed, scope) == PermissionState.Allow
 				&& PermissionResolver.StateOf(current, scope) != PermissionState.Allow
-				&& !granted.Contains(scope))
+				&& !CanGrant(granted, scope))
 			.ToArray();
+
+	/// <summary>
+	/// Whether a manager holding <paramref name="granted"/> may allow <paramref name="scope"/>: they hold it,
+	/// or it is an in-game scope and they are a wizard (in PennMUSH a wizard grants every power without
+	/// holding any).
+	/// </summary>
+	public static bool CanGrant(IReadOnlySet<string> granted, string scope)
+		=> granted.Contains(scope) || (PortalPermission.IsGameScope(scope) && granted.Contains(PortalPermission.GameWizard));
 
 	/// <summary>The roles in <paramref name="roles"/> that are not <c>everyone</c>, highest priority first.</summary>
 	public static IEnumerable<SharpRole> Ranked(IEnumerable<SharpRole> roles)

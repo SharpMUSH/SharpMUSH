@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -140,6 +141,8 @@ internal static class DefinitionCreationContract
 		await Assert.That(await db.CreatePowerAsync("CAN_SPOOF", ["REPLACED"], "Q", false, [], [], [])).IsNull();
 		await Assert.That(JsonSerializer.Serialize(await db.GetPowerAsync("can_spoof"))).IsEqualTo(JsonSerializer.Serialize(original));
 		await Assert.That((await db.GetPowerAsync("CAN_SPOOF"))!.Id).IsEqualTo(original!.Id);
-		await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();
+		// Can_Spoof is a permission: God's grant is an override that names it, untouched by the refused create.
+		var grants = await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Grants.WithCancellation(CancellationToken.None);
+		await Assert.That(grants.Shows(PortalPermission.GamePower(original.Name))).IsTrue();
 	}
 }
