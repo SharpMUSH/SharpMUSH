@@ -21,7 +21,9 @@ namespace SharpMUSH.Client.Services;
 public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger)
 	: ITerminalService
 {
-	private const int MaxLines = 2000;
+	/// <summary>The most lines the buffer holds; a terminal's own transcript holds as many.</summary>
+	public const int MaxLines = 2000;
+
 	private const string QueryPackagePrefix = "query.";
 
 	private readonly ILogger<TerminalService> _logger = logger;

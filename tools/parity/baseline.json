@@ -301,6 +301,10 @@
    "command": "Quinn quinnpass"
   },
   {
+   "key": "70-search-window/sw.setup#0",
+   "command": "Alice alicepass"
+  },
+  {
    "key": "70-edit/edit.set#0",
    "command": "Alice alicepass"
   }
