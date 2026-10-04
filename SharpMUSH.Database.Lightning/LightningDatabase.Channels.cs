@@ -127,6 +127,33 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpChannel>(ct => GetMemberChannelsCoreAsync((long)obj.Object().Key, ct));
 
+	public ValueTask<Found<SharpChannelStatus>> GetChannelMemberStatusAsync(SharpChannel channel, DBRef member,
+		CancellationToken cancellationToken = default)
+	{
+		var memberKey = ChanMemberKey(channel.Name.ToPlainText().ToUpperInvariant(), member.Number);
+		return ValueTask.FromResult(Store.Read<Found<SharpChannelStatus>>(tx =>
+		{
+			if (!tx.TryGet(Tables.ChanMember, memberKey, out var bytes)
+				|| ReadObject(tx, member.Number) is not { } found
+				|| (member.CreationMilliseconds is { } created && found.Record.CreationTime != created))
+			{
+				return new NotFound();
+			}
+
+			return MapChannelStatus(Codec.Deserialize<ChannelMemberRecord>(bytes));
+		}));
+	}
+
+	public ValueTask<int> GetChannelMemberCountAsync(SharpChannel channel, CancellationToken cancellationToken = default)
+	{
+		var prefix = ChanMemberPrefix(ChanKey(channel.Name.ToPlainText()));
+		// No member is decoded or hydrated, but this is still a cursor walk over the channel's membership rows
+		// (ChanMember is not a duplicate table, so there is no O(1) count), plus a point read of each member's
+		// object row: a membership is counted only when its object is there, as the member listing requires.
+		return ValueTask.FromResult(Store.Read(tx => tx.Range(Tables.ChanMember, prefix)
+			.Count(entry => tx.TryGet(Tables.Obj, entry.Key.AsSpan(entry.Key.Length - 8, 8), out _))));
+	}
+
 	private IAsyncEnumerable<SharpChannel> GetMemberChannelsCoreAsync(long dbref, CancellationToken ct)
 		=> Store.DupsMapAsync(Tables.RevChanMember, Keys.Dbref(dbref),
 			(tx, upperNameBytes) => tx.TryGet(Tables.Chan, upperNameBytes, out var chanBytes)

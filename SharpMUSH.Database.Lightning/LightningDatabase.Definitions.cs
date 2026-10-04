@@ -45,13 +45,13 @@ public partial class LightningDatabase
 
 	/// <summary>The flag definitions for a read already inside <paramref name="tx"/>: the copy when there is one,
 	/// otherwise decoded from <paramref name="tx"/> itself (and not published).</summary>
-	internal DefinitionMap<FlagRecord> FlagDefinitions(ITx tx) => _flagDefinitions.Get(tx);
+	internal DefinitionMap<FlagRecord> FlagDefinitions(ITx tx) => _flagDefinitions.Get(Store, tx);
 
 	/// <inheritdoc cref="FlagDefinitions(ITx)"/>
-	internal DefinitionMap<PowerRecord> PowerDefinitions(ITx tx) => _powerDefinitions.Get(tx);
+	internal DefinitionMap<PowerRecord> PowerDefinitions(ITx tx) => _powerDefinitions.Get(Store, tx);
 
 	/// <inheritdoc cref="FlagDefinitions(ITx)"/>
-	internal DefinitionMap<AttributeFlagRecord> AttributeFlagDefinitions(ITx tx) => _attributeFlagDefinitions.Get(tx);
+	internal DefinitionMap<AttributeFlagRecord> AttributeFlagDefinitions(ITx tx) => _attributeFlagDefinitions.Get(Store, tx);
 
 	/// <summary>
 	/// Drops every definition copy. Called after anything that changes the definition tables other than the
@@ -153,26 +153,36 @@ internal sealed class DefinitionMap<TRecord>(
 /// The published copy of one definition table and the generation that guards it. <see cref="Get(LightningStore)"/>
 /// notes the generation before it opens its read and publishes what it read only if no invalidation came in
 /// between; an invalidation always follows the commit it reports, so a read that saw the old rows can never
-/// publish them over the new ones.
+/// publish them over the new ones. Nothing here changes inside a write job: a child job can be aborted and a
+/// batch commit can fail, so the copy moves only once the commit has landed.
+/// <para>
+/// The copy is also stamped with the store's <see cref="LightningStore.Epoch"/>. A directory swap or wipe bumps
+/// that under the gate's write lock, so from the first read after it the old copy no longer counts, without
+/// waiting for <see cref="LightningDatabase.ReloadDefinitions"/> to run.
+/// </para>
 /// </summary>
 internal sealed class DefinitionCache<TRecord>(TableDef table, Func<TRecord, IEnumerable<string>> aliasesOf)
 	where TRecord : class
 {
 	private readonly Lock _sync = new();
-	private DefinitionMap<TRecord>? _map;
+	private (DefinitionMap<TRecord> Map, long Epoch)? _published;
 	private long _generation;
 
+	/// <summary>The copy, or — when there is none — one read in a transaction of its own and published. Never called
+	/// inside a read or write job: the gate does not allow a read to nest.</summary>
 	public DefinitionMap<TRecord> Get(LightningStore store)
 	{
-		if (Volatile.Read(ref _map) is { } map)
+		if (Current(store) is { } map)
 		{
 			return map;
 		}
 
 		long generation;
+		long epoch;
 		lock (_sync)
 		{
 			generation = _generation;
+			epoch = store.Epoch;
 		}
 
 		var built = store.Read(Build);
@@ -180,21 +190,31 @@ internal sealed class DefinitionCache<TRecord>(TableDef table, Func<TRecord, IEn
 		{
 			if (_generation == generation)
 			{
-				_map = built;
+				_published = (built, epoch);
 			}
 		}
 
 		return built;
 	}
 
-	public DefinitionMap<TRecord> Get(ITx tx) => Volatile.Read(ref _map) ?? Build(tx);
+	/// <summary>The copy, or — inside a transaction that already exists — the table decoded from that transaction,
+	/// which is consistent with whatever else it reads, and not published.</summary>
+	public DefinitionMap<TRecord> Get(LightningStore store, ITx tx) => Current(store) ?? Build(tx);
+
+	private DefinitionMap<TRecord>? Current(LightningStore store)
+	{
+		lock (_sync)
+		{
+			return _published is { } published && published.Epoch == store.Epoch ? published.Map : null;
+		}
+	}
 
 	public void Invalidate()
 	{
 		lock (_sync)
 		{
 			_generation++;
-			_map = null;
+			_published = null;
 		}
 	}
 

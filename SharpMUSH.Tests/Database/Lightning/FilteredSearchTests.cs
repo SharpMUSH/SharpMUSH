@@ -119,4 +119,40 @@ public class FilteredSearchTests
 
 		await Assert.That(exhausted).IsEmpty();
 	}
+
+	/// <summary>
+	/// A flag or power predicate seeds from its reverse index; whatever the seed, the matches are the ones the
+	/// whole-table test finds: by name, by alias, by the type-named flag, an unknown flag, and inside dbref bounds.
+	/// </summary>
+	[Test]
+	public async Task FlagAndPowerPredicatesFindWhatTheScanFinds()
+	{
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var flag = (await _db.CreateObjectFlagAsync("SEEDED_FLAG", ["SEEDALIAS"], "s", false, [], [], ["THING"]))!;
+		var power = (await _db.CreatePowerAsync("SEEDED_POWER", ["SEEDPOWALIAS"], "", false, [], [], ["THING"]))!;
+		var marked = new List<int>();
+		for (var i = 0; i < 40; i++)
+		{
+			var thing = (await _db.GetObjectNodeAsync(await _db.CreateThingAsync($"Seeded{i}", room, god, room))).Expect<AnySharpObject>();
+			if (i % 3 != 0) continue;
+			await _db.SetObjectFlagAsync(thing, flag);
+			await _db.SetObjectPowerAsync(thing, power);
+			marked.Add(thing.Object().Key);
+		}
+
+		async Task<List<int>> Find(ObjectSearchFilter filter) => await _db.GetFilteredObjectsAsync(filter).Select(o => o.Key).ToListAsync();
+		var all = await _db.GetAllObjectsAsync().ToListAsync();
+
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "seeded_flag" })).IsEquivalentTo(marked, CollectionOrdering.Matching);
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "SeedAlias" })).IsEquivalentTo(marked, CollectionOrdering.Matching);
+		await Assert.That(await Find(new ObjectSearchFilter { HasPower = "SEEDPOWALIAS" })).IsEquivalentTo(marked, CollectionOrdering.Matching);
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "NO_SUCH_FLAG" })).IsEmpty();
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "thing" }))
+			.IsEquivalentTo(all.Where(o => o.Type == "THING").Select(o => o.Key), CollectionOrdering.Matching);
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "SEEDED_FLAG", MinDbRef = marked[2], MaxDbRef = marked[^2] }))
+			.IsEquivalentTo(marked[2..^1], CollectionOrdering.Matching);
+		await Assert.That(await Find(new ObjectSearchFilter { HasFlag = "SEEDED_FLAG", NamePattern = "Seeded3" }))
+			.IsEquivalentTo(marked.Where(k => all.Single(o => o.Key == k).Name.Contains("Seeded3")), CollectionOrdering.Matching);
+	}
 }

@@ -759,11 +759,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg1, LocateFlags.All,
-			async x =>
-			{
-				var children = x.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
-				return await children.CountAsync();
-			});
+			async x => await Mediator.Send(new GetChildCountQuery(x.Object().DBRef)));
 	}
 
 	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -774,10 +770,11 @@ public partial class Functions
 	public async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// One past the highest key, or #0 for an empty database.
-		var maxKey = await Mediator.CreateStream(new GetAllObjectsQuery())
-			.Select(o => o.Key)
-			.DefaultIfEmpty(-1)
-			.MaxAsync();
+		var maxKey = await Mediator.Send(new GetHighestDbrefQuery()) switch
+		{
+			int highest => highest,
+			NotFound => -1
+		};
 
 		// The next dbref with timestamp 0 (set when created)
 		return new CallState($"#{maxKey + 1}:0");

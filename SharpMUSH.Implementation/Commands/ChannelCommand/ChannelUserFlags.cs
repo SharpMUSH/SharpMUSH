@@ -123,7 +123,7 @@ public static class ChannelUserFlags
 
 		foreach (var channel in channels)
 		{
-			var membership = await ChannelHelper.ChannelMemberStatus(executor, channel);
+			var membership = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 
 			if (membership is null)
 			{

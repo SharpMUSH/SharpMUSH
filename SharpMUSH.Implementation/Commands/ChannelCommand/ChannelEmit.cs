@@ -54,7 +54,7 @@ public static class ChannelEmit
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var membership = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		var membership = await ChannelHelper.ChannelMemberStatus(mediator, executor, channel);
 
 		// extchat.c:1667 — the open-channel rule applies to @cemit exactly as it does to @chat, and the
 		// same bypass skips it. Membership is not required outright: that is what lets a wizard or a

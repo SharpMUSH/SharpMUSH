@@ -101,9 +101,9 @@ public static class ChannelRecall
 	/// channel may read its history, which is what makes recall usable for deciding whether to join. A
 	/// Guest who is not a member may not, whatever the join lock says.
 	/// </remarks>
-	public static async ValueTask<bool> MayRecallAsync(IChannelPermissionService permissionService, AnySharpObject viewer,
-		SharpChannel channel)
-		=> await ChannelHelper.IsMemberOfChannel(viewer, channel)
+	public static async ValueTask<bool> MayRecallAsync(IChannelPermissionService permissionService, IMediator mediator,
+		AnySharpObject viewer, SharpChannel channel)
+		=> await ChannelHelper.IsMemberOfChannel(mediator, viewer, channel)
 			|| (!await viewer.IsGuest() && await permissionService.ChannelCanJoin(viewer, channel));
 
 	/// <summary>Applies the access gate to the resolved channel and takes the window of its buffer.</summary>
@@ -118,7 +118,7 @@ public static class ChannelRecall
 		bool hasStart,
 		bool notify)
 	{
-		if (!await MayRecallAsync(permissionService, executor, channel))
+		if (!await MayRecallAsync(permissionService, mediator, executor, channel))
 		{
 			return await Refuse(notifyService, executor, notify,
 				ErrorMessages.Notifications.ChatMustBeAbleToJoinToRecall, ErrorMessages.Returns.NotAMember);

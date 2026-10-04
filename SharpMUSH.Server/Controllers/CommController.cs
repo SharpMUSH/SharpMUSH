@@ -233,8 +233,8 @@ public class CommController(
 		{
 			if (channel.Id is { } id
 				&& byScope.TryGetValue(ReadMarkerScope.Channel(id), out var marker)
-				&& await ChannelHelper.CanSeeChannel(channelPermissions, player, channel)
-				&& await ChannelRecall.MayRecallAsync(channelPermissions, player, channel))
+				&& await ChannelHelper.CanSeeChannel(channelPermissions, mediator, player, channel)
+				&& await ChannelRecall.MayRecallAsync(channelPermissions, mediator, player, channel))
 			{
 				channels.Add(new ChannelReadMarker(channel.Name.ToPlainText(), marker.LastReadId, marker.LastReadAt));
 			}
@@ -330,7 +330,7 @@ public class CommController(
 			return NotFound();
 		}
 
-		return await ChannelRecall.MayRecallAsync(channelPermissions, viewer, channel)
+		return await ChannelRecall.MayRecallAsync(channelPermissions, mediator, viewer, channel)
 			? channel
 			: StatusCode(StatusCodes.Status403Forbidden, new { error = "You must be able to join a channel to read it." });
 	}

@@ -178,7 +178,7 @@ public partial class Functions
 						return new CallState(ErrorMessages.Returns.PermissionDenied);
 					}
 
-					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
+					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player, channel);
 
 					if (maybeMemberStatus is null)
 					{
@@ -231,10 +231,18 @@ public partial class Functions
 		// Materialised before the loop: the per-channel checks below open their own streams, and
 		var channelArray = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 
+		// Chan_Can_See for the executor, with its membership fallback (ChannelHelper.CanSeeChannel); when the
+		// executor is the object asked about, its membership is the one already read.
+		async ValueTask<bool> ExecutorCanSee(SharpChannel channel, bool playerIsMember)
+			=> await ChannelPermissions.ChannelCanSeeAsync(executor, channel)
+				|| (askingAboutSomeoneElse ? await ChannelHelper.IsMemberOfChannel(Mediator, executor, channel) : playerIsMember);
+
 		var filteredChannels = new List<string>();
 		foreach (var channel in channelArray)
 		{
-			var isMember = await ChannelHelper.IsMemberOfChannel(player, channel);
+			// One membership read per channel: whether the object is on it, and its standing there.
+			var status = await ChannelHelper.ChannelMemberStatus(Mediator, player, channel);
+			var isMember = status is not null;
 
 			var matchesType = type switch
 			{
@@ -252,15 +260,14 @@ public partial class Functions
 			{
 				// Not examinable: the executor may only learn about channels they can see themselves, that
 				// the object is actually on, and on which the object is not hidden from them.
-				var status = await ChannelHelper.ChannelMemberStatus(player, channel);
 				if (status is null
 						|| (!privWho && (status.Status.Hide ?? false))
-						|| !await ChannelHelper.CanSeeChannel(ChannelPermissions, executor, channel))
+						|| !await ExecutorCanSee(channel, isMember))
 				{
 					continue;
 				}
 			}
-			else if (!await ChannelHelper.CanSeeChannel(ChannelPermissions, executor, channel))
+			else if (!await ExecutorCanSee(channel, isMember))
 			{
 				continue;
 			}
@@ -393,7 +400,7 @@ public partial class Functions
 			return error;
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player!, channel!);
 
 		if (maybeMemberStatus is null)
 		{
@@ -424,7 +431,7 @@ public partial class Functions
 			return error;
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player!, channel!);
 
 		if (maybeMemberStatus is null)
 		{
@@ -521,7 +528,7 @@ public partial class Functions
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			var memberCount = await channel.Members.Value.CountAsync();
+			var memberCount = await Mediator.Send(new GetChannelMemberCountQuery(channel));
 
 			return new CallState(memberCount.ToString());
 		});
@@ -542,7 +549,7 @@ public partial class Functions
 			{
 				"name" => new CallState(channel.Name),
 				"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
-				"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
+				"members" => new CallState((await Mediator.Send(new GetChannelMemberCountQuery(channel))).ToString()),
 				"buffer" => new CallState("50"), // Default buffer size
 				_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
 			};

@@ -41,7 +41,7 @@ public static class ChannelTitle
 	{
 		var channelLabel = channel.Name.ToPlainText();
 
-		var memberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		var memberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 		if (memberStatus is null)
 		{
 			var notOn = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelLabel);

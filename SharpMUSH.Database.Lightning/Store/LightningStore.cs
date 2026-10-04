@@ -51,6 +51,14 @@ public sealed partial class LightningStore : IDisposable
 	/// has to keep resolving to a live handle.</summary>
 	private ImmutableDictionary<string, TableDef> _pluginTables = ImmutableDictionary<string, TableDef>.Empty;
 
+	/// <summary>Bumped each time the environment is reopened over a different directory (a swap or a wipe), while
+	/// the gate's write lock is still held: anything kept in memory about the data stamps the epoch it was read
+	/// in, and a reader that starts after the reopen already sees the new number.</summary>
+	private long _epoch;
+
+	/// <summary>See <see cref="_epoch"/>.</summary>
+	internal long Epoch => Interlocked.Read(ref _epoch);
+
 	public string Path => _options.Path;
 	internal ReaderWriterLockSlim Gate => _gate;
 
@@ -391,6 +399,7 @@ public sealed partial class LightningStore : IDisposable
 				finally
 				{
 					Open();
+					Interlocked.Increment(ref _epoch);
 				}
 
 				// Reported only now, with a live environment behind the gate again: the pages that flush

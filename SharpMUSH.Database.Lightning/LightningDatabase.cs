@@ -223,18 +223,13 @@ public partial class LightningDatabase(
 	private static void RecomputeCounter(ITx tx, string counterKey, TableDef table)
 		=> RaiseCounter(tx, counterKey, HighestKey(tx, table));
 
-	/// <summary>The highest <see cref="Keys.Dbref"/> key in <paramref name="table"/>, or -1 when it is empty.</summary>
-	private static long HighestKey(ITx tx, TableDef table)
-	{
-		var highest = -1L;
-		foreach (var (key, _) in tx.Range(table, []))
-		{
-			var id = Keys.ReadDbref(key);
-			if (id > highest) highest = id;
-		}
-
-		return highest;
-	}
+	/// <summary>
+	/// The highest <see cref="Keys.Dbref"/> key in <paramref name="table"/>, or -1 when it is empty: one seek to the
+	/// table's last key, since big-endian ids sort numerically. Every id these tables hold is non-negative (a
+	/// negative one would encode above them all).
+	/// </summary>
+	internal static long HighestKey(ITx tx, TableDef table)
+		=> tx.RangeReverse(table, []).Select(entry => Keys.ReadDbref(entry.Key)).DefaultIfEmpty(-1).First();
 
 	public async ValueTask<int> ReleaseTrailingDbrefsAsync(CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx =>

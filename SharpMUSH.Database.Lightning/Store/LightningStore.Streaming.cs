@@ -67,6 +67,14 @@ public sealed partial class LightningStore
 	/// consumer's awaits: pages start at <see cref="FirstMapPageSize"/> entries and double up to
 	/// <paramref name="pageSize"/>, and each resumes strictly after the last entry the previous one read, so the
 	/// order is the table's key (and duplicate) order exactly as one <see cref="ITx.Range"/> would give it.
+	/// <para>
+	/// The pages are separate snapshots: an entry written past the resume point between two pages is included,
+	/// one deleted before its page is read is not, and two pages can see different versions of the rows they
+	/// join to. A caller that needs one consistent view of several edges reads them inside a single
+	/// <see cref="Read{T}"/>. <paramref name="map"/> runs inside the transaction, so it decodes and maps only:
+	/// it must not await, open another read, or run unbounded work, and what it returns must not point into
+	/// the transaction (the store already hands it copies).
+	/// </para>
 	/// </summary>
 	public IAsyncEnumerable<T> RangeMapAsync<T>(TableDef table, byte[] prefix, Func<ITx, byte[], byte[], T?> map,
 		int pageSize = 256, CancellationToken ct = default) where T : class
