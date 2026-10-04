@@ -9,11 +9,26 @@ namespace SharpMUSH.Tests.BUnit.Authentication;
 
 file sealed class FixedJsonHandler(string json) : HttpMessageHandler
 {
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+	private readonly List<HttpResponseMessage> _responses = [];
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		var response = new HttpResponseMessage(HttpStatusCode.OK)
 		{
 			Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-		});
+		};
+		_responses.Add(response);
+		return Task.FromResult(response);
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			_responses.ForEach(response => response.Dispose());
+		}
+		base.Dispose(disposing);
+	}
 }
 
 /// <summary>
