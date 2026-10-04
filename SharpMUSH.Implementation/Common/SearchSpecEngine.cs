@@ -231,14 +231,15 @@ public static class SearchSpecEngine
 		// skipped, as @find skips it.
 		//
 		// PennMUSH's raw_search (src/wiz.c:2612-2618) keeps evaluating after the page is full: a match
-		// past START+COUNT is counted and skipped with `continue`, never `break`. While an EVAL or a
-		// lock that is not #TRUE is present, every candidate is evaluated here too — that restriction is
-		// softcode, and its side effects and its HadErrors belong to the whole search, not to the page.
-		// Without one, what remains (visibility, $-/^-patterns, @listen) reads and never writes, so once
-		// the page is full nothing a later candidate does can be observed, and the scan stops there.
-		// Either way only the requested window of matches is stored.
+		// past START+COUNT is counted and skipped with `continue`, never `break`. While an EVAL, a
+		// lock that is not #TRUE, or the visibility check is present, every candidate is evaluated here
+		// too — each can run softcode (visibility is Can_Examine, which evaluates Control, Zone and
+		// Examine locks; src/wiz.c:2542, hdrs/mushdb.h:80), and its side effects and its HadErrors
+		// belong to the whole search, not to the page. Without one, what remains ($-/^-patterns,
+		// @listen) reads and never writes, so once the page is full nothing a later candidate does can
+		// be observed, and the scan stops there. Either way only the requested window is stored.
 		var window = new ResultWindow(start, count);
-		var pageEndsScan = compiledEvals.Count == 0 && !hasEvaluatingLock;
+		var pageEndsScan = compiledEvals.Count == 0 && !hasEvaluatingLock && !visOnly;
 		await foreach (var obj in filteredObjects)
 		{
 			if (pageEndsScan && window.IsFull)

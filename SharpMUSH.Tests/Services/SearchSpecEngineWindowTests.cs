@@ -68,10 +68,16 @@ public class SearchSpecEngineWindowTests
 	/// $-command and the ^-listen. With <paramref name="lockEvaluations"/> set, the search also carries a
 	/// LOCK restriction every candidate passes, whose evaluations are counted there. Returns the matched
 	/// keys and the attribute service it counted on.</summary>
-	private static async Task<(int[] Keys, IAttributeService Attributes)> Search(
+	private static Task<(int[] Keys, IAttributeService Attributes)> Search(
 		StrongBox<int>? lockEvaluations, params SearchSpecEngine.SearchPair[] extra)
+		=> Search(lockEvaluations, null, extra);
+
+	/// <summary>As above; with <paramref name="examinations"/> set, the searcher is a mortal, so every
+	/// candidate goes through the visibility check, which passes and is counted there.</summary>
+	private static async Task<(int[] Keys, IAttributeService Attributes)> Search(
+		StrongBox<int>? lockEvaluations, StrongBox<int>? examinations, params SearchSpecEngine.SearchPair[] extra)
 	{
-		var executor = Thing(1, Wizard);
+		var executor = examinations is null ? Thing(1, Wizard) : Thing(2);
 		var things = Enumerable.Range(100, Candidates).Select(key => Thing(key)).ToArray();
 
 		var mediator = Substitute.For<IMediator>();
@@ -94,6 +100,13 @@ public class SearchSpecEngineWindowTests
 			return ValueTask.FromResult(true);
 		});
 
+		var permissions = Substitute.For<IPermissionService>();
+		permissions.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(_ =>
+		{
+			examinations!.Value++;
+			return ValueTask.FromResult(true);
+		});
+
 		SearchSpecEngine.SearchPair[] lockPair = lockEvaluations is null ? [] : [new("LOCK", "FLAG^WIZARD|!FLAG^WIZARD")];
 
 		var result = await SearchSpecEngine.ExecuteResultAsync(
@@ -102,7 +115,7 @@ public class SearchSpecEngineWindowTests
 			Substitute.For<ILocateService>(),
 			attributes,
 			locks,
-			Substitute.For<IPermissionService>(),
+			permissions,
 			executor,
 			ownerFilter: null,
 			[new SearchSpecEngine.SearchPair("COMMAND", "hello"), new SearchSpecEngine.SearchPair("LISTEN", "hi"), .. lockPair, .. extra],
@@ -140,6 +153,22 @@ public class SearchSpecEngineWindowTests
 		await Assert.That(keys).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(lockEvaluations.Value).IsEqualTo(Candidates);
 		await attributes.Received(Candidates).GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>());
+	}
+
+	/// <summary>A mortal's search checks each candidate with Can_Examine, which can evaluate Control,
+	/// Zone and Examine locks, so it too goes through every candidate, as PennMUSH's raw_search does
+	/// (src/wiz.c:2542).</summary>
+	[Test]
+	[Arguments("1", "1", new[] { 101 })]
+	[Arguments("2", "2", new[] { 103, 105 })]
+	public async Task AMortalsVisibilityCheckRunsOnEveryCandidate(string start, string count, int[] expected)
+	{
+		var examinations = new StrongBox<int>();
+		var (keys, _) = await Search(null, examinations,
+			new SearchSpecEngine.SearchPair("START", start), new SearchSpecEngine.SearchPair("COUNT", count));
+
+		await Assert.That(keys).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(examinations.Value).IsEqualTo(Candidates);
 	}
 
 	/// <summary>With only read-only restrictions, the same page comes back, and no candidate after the
