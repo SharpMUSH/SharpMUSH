@@ -393,7 +393,7 @@ public partial class Functions
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 						parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
 						async found =>
-							await ManipulateSharpObjectService.SetOrUnsetPowers(executor, found,
+							await FlagAndPowerService.SetOrUnsetPowers(executor, found,
 								power!.Message!.ToPlainText(), true));
 				}
 		}
@@ -629,7 +629,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			async found => await ManipulateSharpObjectService.SetName(executor, found, newName.Message!, true));
+			async found => await ObjectNameService.SetName(executor, found, newName.Message!, true));
 	}
 
 	[SharpFunction(Name = "moniker", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

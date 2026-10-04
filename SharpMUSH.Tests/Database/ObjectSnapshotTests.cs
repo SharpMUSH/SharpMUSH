@@ -49,9 +49,9 @@ public class ObjectSnapshotTests
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], styled, player));
 		var node = await Node(target);
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#TRUE", player) { Flags = Library.Services.LockService.LockFlags.Visual });
-		await Get<IManipulateSharpObjectService>().SetOrUnsetFlag(player, node, "DARK", false);
+		await Get<IFlagAndPowerService>().SetOrUnsetFlag(player, node, "DARK", false);
 		var saved = await service.CaptureAsync(actor, target, "before edit");
-		await Get<IManipulateSharpObjectService>().SetOrUnsetFlag(player, node, "!DARK", false);
+		await Get<IFlagAndPowerService>().SetOrUnsetFlag(player, node, "!DARK", false);
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player));
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("changed"), player));
 		var selection = new SnapshotSelection([selectedName], Locks: true, Flags: true);
@@ -122,7 +122,7 @@ public class ObjectSnapshotTests
 				? ValueTask.FromException<Result<Success>>(new IOException("Injected failure"))
 				: realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3)));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), failing, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), failing, Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["OTHER", "DESC"]);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
@@ -152,7 +152,7 @@ public class ObjectSnapshotTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["DESC"]);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -193,11 +193,11 @@ public class ObjectSnapshotTests
 		var saved = await real.CaptureAsync(actor, target, "lock before");
 		await Get<IMediator>().Send(new UnsetLockCommand(obj, "Basic", player));
 		await Get<IMediator>().Send(new SetLockCommand(obj, "user:Unrelated", "#TRUE", player));
-		var failing = Substitute.For<IManipulateSharpObjectService>();
+		var failing = Substitute.For<IObjectNameService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
 			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), failing, Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection([], Locks: true, Name: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
@@ -226,7 +226,7 @@ public class ObjectSnapshotTests
 		permissions.CanViewAttribute(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<SharpAttribute[]>())
 			.Returns(call => !call.ArgAt<SharpAttribute[]>(2).Any(a => a.Flags.Any(f => f.Name.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase))));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), permissions, Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), permissions, Get<IAttributeService>(), Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(0);
 	}
 
@@ -238,7 +238,7 @@ public class ObjectSnapshotTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.SnapshotRestore, Arg.Any<CancellationToken>()).Returns(true);
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(1);
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.CaptureAsync(actor, target, "denied"));
 	}
@@ -315,7 +315,7 @@ public class ObjectSnapshotTests
 				return Get<IExpandedDataStore>().SetExpandedObjectData(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<object>(2), call.ArgAt<CancellationToken>(3));
 			});
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), expanded,
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["DESC", "OTHER"]);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token, cancellation.Token);
@@ -368,7 +368,7 @@ public class ObjectSnapshotTests
 		}
 		attributes.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>()).Returns(RevokeAfterWrite);
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			capabilities, Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			capabilities, Get<IPermissionService>(), attributes, Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["GUARDED"]);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
@@ -404,7 +404,7 @@ public class ObjectSnapshotTests
 		}
 		attributes.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>()).Returns(ProtectAfterWrite);
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["DESC"], Locks: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		await Assert.That((await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token)).Completed).IsTrue();
@@ -424,7 +424,7 @@ public class ObjectSnapshotTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(0);
 		var own = await service.CaptureAsync(actor, target, "new account");
 		var selection = new SnapshotSelection(["DESC"]);
@@ -496,11 +496,11 @@ public class ObjectSnapshotTests
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "before");
 		await Get<IMediator>().Send(new UnsetLockCommand(obj, "Basic", player));
-		var failing = Substitute.For<IManipulateSharpObjectService>();
+		var failing = Substitute.For<IObjectNameService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
 			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), failing, Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection([], Locks: true, Name: true);
 		var firstPreview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var first = await service.RestoreAsync(actor, target, saved.Id, selection, firstPreview.Token);
@@ -536,11 +536,11 @@ public class ObjectSnapshotTests
 		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.Teleport), "tport");
 		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.Teleport), "#FALSE", player));
 
-		var failing = Substitute.For<IManipulateSharpObjectService>();
+		var failing = Substitute.For<IObjectNameService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
 			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), failing, Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection([], Locks: true, Name: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var failed = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
@@ -595,11 +595,11 @@ public class ObjectSnapshotTests
 		var saved = await real.CaptureAsync(actor, target, "nested before");
 		await Get<IMediator>().Send(new ClearAttributeCommand(target, ["A", "B"]));
 		await Get<IMediator>().Send(new ClearAttributeCommand(target, ["A"]));
-		var failing = Substitute.For<IManipulateSharpObjectService>();
+		var failing = Substitute.For<IObjectNameService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
 			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected after nested write")));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), failing, Get<ILockService>(), Get<IMediator>());
 		var selection = new SnapshotSelection(["A`B"], Name: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var failed = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
@@ -631,7 +631,7 @@ public class ObjectSnapshotTests
 		attributes.GetAttributeFlagAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => { flagReads++; return Get<IAttributeStore>().GetAttributeFlagAsync(call.ArgAt<string>(0), call.ArgAt<CancellationToken>(1)); });
 		var service = new ObjectSnapshotService(objects, attributes, Get<IExpandedDataStore>(),
-			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(3);
 		await Assert.That(reads).IsEqualTo(1);
 		await Assert.That(ownerReads).IsEqualTo(2); // Fresh actor authorization plus one historical owner lookup.

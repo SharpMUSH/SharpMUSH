@@ -117,7 +117,9 @@ internal static class EngineRegistration
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
 		services.AddSingleton<IRelationshipCycleChecker, RelationshipCycleChecker>();
-		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
+		services.AddSingleton<IObjectNameService, ObjectNameService>();
+		services.AddSingleton<IFlagAndPowerService, FlagAndPowerService>();
+		services.AddSingleton<IObjectRelationshipService, ObjectRelationshipService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();

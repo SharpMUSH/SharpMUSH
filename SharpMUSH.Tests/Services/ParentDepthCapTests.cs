@@ -32,7 +32,7 @@ public class ParentDepthCapTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IManipulateSharpObjectService ManipulateService => WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
+	private IObjectRelationshipService RelationshipService => WebAppFactoryArg.Services.GetRequiredService<IObjectRelationshipService>();
 
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
@@ -82,7 +82,7 @@ public class ParentDepthCapTests
 		var prospectiveParent = await BuildAncestorChainAsync("AtLimit", 9);
 		var child = await CreateAsync("AtLimitChild");
 
-		var result = await ManipulateService.SetParent(child, child, prospectiveParent, false);
+		var result = await RelationshipService.SetParent(child, child, prospectiveParent, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -104,7 +104,7 @@ public class ParentDepthCapTests
 		var prospectiveParent = await BuildAncestorChainAsync("OverLimit", 10);
 		var child = await CreateAsync("OverLimitChild");
 
-		var result = await ManipulateService.SetParent(child, child, prospectiveParent, false);
+		var result = await RelationshipService.SetParent(child, child, prospectiveParent, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;

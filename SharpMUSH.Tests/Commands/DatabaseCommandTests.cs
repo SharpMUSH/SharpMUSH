@@ -810,7 +810,7 @@ public class DatabaseCommandTests
 		// means a God-owned requester and LINK_OK on #1 — there is no substitute target, since the
 		// guard tests Key == 1. The flag goes back in the finally. Every LINK_OK-on-#1 consumer in
 		// the suite (@notify and @drain, GeneralCommands.cs:1825 and :2714; @parent,
-		// ManipulateSharpObjectService.cs:545) is reached only by a non-controller, and the tests
+		// ObjectRelationshipService.SetParent) is reached only by a non-controller, and the tests
 		// that drive them run as God, who controls #1 and short-circuits before the flag is read.
 		var requester = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlGodRequester");
 		var marker = "godtrigger-" + Guid.NewGuid().ToString("N");

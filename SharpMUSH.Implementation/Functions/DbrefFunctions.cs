@@ -854,11 +854,11 @@ public partial class Functions
 
 			if (newParent is null)
 			{
-				await ManipulateSharpObjectService.UnsetParent(executor, target, true);
+				await ObjectRelationshipService.UnsetParent(executor, target, true);
 			}
 			else
 			{
-				await ManipulateSharpObjectService.SetParent(executor, target, newParent, true);
+				await ObjectRelationshipService.SetParent(executor, target, newParent, true);
 			}
 		}
 	}
@@ -1023,7 +1023,7 @@ public partial class Functions
 					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
 					if (!target.IsPlayer)
 					{
-						await PrivilegeHelpers.StripPrivilegeAsync(ManipulateSharpObjectService, executor, target);
+						await PrivilegeHelpers.StripPrivilegeAsync(FlagAndPowerService, executor, target);
 					}
 
 					await Mediator.Send(new SetObjectZoneCommand(target, zone));

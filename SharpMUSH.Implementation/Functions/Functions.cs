@@ -29,7 +29,9 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private IPasswordService PasswordService { get; }
 	private IConnectionService ConnectionService { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
-	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private IObjectNameService ObjectNameService { get; }
+	private IFlagAndPowerService FlagAndPowerService { get; }
+	private IObjectRelationshipService ObjectRelationshipService { get; }
 	private ICommunicationService CommunicationService { get; }
 	private IValidateService ValidateService { get; }
 	private ISortService SortService { get; }
@@ -65,7 +67,9 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IOptionsWrapper<ColorsOptions> colorOptions,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectNameService objectNameService,
+		IFlagAndPowerService flagAndPowerService,
+		IObjectRelationshipService objectRelationshipService,
 		IExpandedObjectDataService objectDataService,
 		ISortService sortService,
 		IValidateService validateService,
@@ -93,7 +97,9 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ColorConfiguration = colorOptions;
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
+		ObjectNameService = objectNameService;
+		FlagAndPowerService = flagAndPowerService;
+		ObjectRelationshipService = objectRelationshipService;
 		ObjectDataService = objectDataService;
 		SortService = sortService;
 		ValidateService = validateService;

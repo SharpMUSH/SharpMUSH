@@ -51,7 +51,7 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
+						var result = await ObjectRelationshipService.SetOwner(executor, obj, newOwnerPlayer, true);
 
 						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
 						// @chown leaves the object as it was.
@@ -81,7 +81,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
 	{
-		await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
+		await PrivilegeHelpers.ResetForNewOwnerAsync(FlagAndPowerService, executor, obj);
 		await HaltQueuesAsync(obj, newOwner);
 	}
 
@@ -121,7 +121,7 @@ public partial class Commands
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
-			DidItService, ManipulateSharpObjectService, Configuration, ConnectionService, executor, target, zone, preserve,
+			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target, zone, preserve,
 			noisy);
 
 	/// <summary>

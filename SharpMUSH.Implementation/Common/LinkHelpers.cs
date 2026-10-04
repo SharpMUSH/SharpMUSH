@@ -44,7 +44,7 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IConnectionService connectionService,
 		AnySharpObject executor,
 		string targetName,
@@ -66,7 +66,7 @@ public static class LinkHelpers
 		return await LocatedAsync(parser, locateService, executor, targetName) switch
 		{
 			AnySharpObject target => await LinkedAsync(parser, mediator, notifyService, locateService,
-				permissionService, lockService, attributeService, manipulateSharpObjectService, connectionService,
+				permissionService, lockService, attributeService, flagAndPowerService, connectionService,
 				executor, target, destinationName, preserve),
 			Error<string> unmatched => unmatched
 		};
@@ -83,7 +83,7 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
@@ -92,7 +92,7 @@ public static class LinkHelpers
 		=> target switch
 		{
 			SharpExit exit => await LinkedExitAsync(parser, mediator, notifyService, locateService, permissionService,
-				lockService, attributeService, manipulateSharpObjectService, connectionService, executor, target, exit,
+				lockService, attributeService, flagAndPowerService, connectionService, executor, target, exit,
 				destinationName, preserve),
 			SharpThing or SharpPlayer => await HomedAsync(parser, mediator, notifyService, locateService,
 				permissionService, executor, target, destinationName),
@@ -219,7 +219,7 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
@@ -241,7 +241,7 @@ public static class LinkHelpers
 		if (keyword is not null)
 		{
 			if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
-					manipulateSharpObjectService, executor, target, exit, preserve) is Error<string> refusedKeyword)
+					flagAndPowerService, executor, target, exit, preserve) is Error<string> refusedKeyword)
 			{
 				return refusedKeyword;
 			}
@@ -258,7 +258,7 @@ public static class LinkHelpers
 		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
 			AnySharpObject destination => await LinkedExitToAsync(mediator, notifyService, permissionService,
-				lockService, attributeService, manipulateSharpObjectService, connectionService, executor, target, exit,
+				lockService, attributeService, flagAndPowerService, connectionService, executor, target, exit,
 				destination, preserve),
 			Error<string> unmatched => unmatched
 		};
@@ -271,7 +271,7 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IConnectionService connectionService,
 		AnySharpObject executor,
 		AnySharpObject target,
@@ -295,7 +295,7 @@ public static class LinkHelpers
 		}
 
 		if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
-				manipulateSharpObjectService, executor, target, exit, preserve) is Error<string> refused)
+				flagAndPowerService, executor, target, exit, preserve) is Error<string> refused)
 		{
 			return refused;
 		}
@@ -330,7 +330,7 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		SharpExit exit,
@@ -388,7 +388,7 @@ public static class LinkHelpers
 
 		// chown_object's non-preserve half (src/set.c:332-340) sets HALT, so the exit's code stops
 		// running for the owner who just lost it.
-		await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, "HALT", true);
+		await flagAndPowerService.SetOrUnsetFlag(executor, target, "HALT", true);
 		return new Success();
 	}
 

@@ -799,7 +799,7 @@ public static class BuildingHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IDidItService didItService,
 		IEventService eventService,
 		ILogger? logger,
@@ -861,7 +861,7 @@ public static class BuildingHelpers
 		{
 			// Outside the gate: ClonedAsync fires OBJECT`CREATE and the plugin hook, and queues ACLONE.
 			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
-				manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
+				flagAndPowerService, didItService, eventService, logger, executor, target, owner, preserve,
 				cloneDbRef),
 			// A guest refusal, an exhausted quota and a dbref the provider would not give up are
 			// three different answers; the caller is handed the one it was actually given.
@@ -875,7 +875,7 @@ public static class BuildingHelpers
 		IMediator mediator,
 		INotifyService notifyService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		IDidItService didItService,
 		IEventService eventService,
 		ILogger? logger,
@@ -902,8 +902,8 @@ public static class BuildingHelpers
 			}
 		}
 
-		await CopyFlagsAsync(manipulateSharpObjectService, executor, target, clonedObj, preserve);
-		await CopyPrivilegesAsync(mediator, manipulateSharpObjectService, notifyService, executor, target, clonedObj,
+		await CopyFlagsAsync(flagAndPowerService, executor, target, clonedObj, preserve);
+		await CopyPrivilegesAsync(mediator, flagAndPowerService, notifyService, executor, target, clonedObj,
 			preserve);
 
 		// create.c:636 and :788 — `Zone(clone) = Zone(thing)`, an unconditional assignment, so an
@@ -1163,7 +1163,7 @@ public static class BuildingHelpers
 	/// for the same reason.
 	/// </remarks>
 	private static async ValueTask CopyFlagsAsync(
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnySharpObject clonedObj,
@@ -1178,12 +1178,12 @@ public static class BuildingHelpers
 		var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
 		foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
 		{
-			await manipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
+			await flagAndPowerService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
 		}
 
 		foreach (var flagName in copyable)
 		{
-			await manipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
+			await flagAndPowerService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
 		}
 	}
 
@@ -1196,7 +1196,7 @@ public static class BuildingHelpers
 	/// </summary>
 	private static async ValueTask CopyPrivilegesAsync(
 		IMediator mediator,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		AnySharpObject target,
@@ -1210,7 +1210,7 @@ public static class BuildingHelpers
 
 		await foreach (var power in target.Object().Powers.Value)
 		{
-			await manipulateSharpObjectService.SetPower(executor, clonedObj, power.Name, false);
+			await flagAndPowerService.SetPower(executor, clonedObj, power.Name, false);
 		}
 
 		if (target.Object().Warnings != WarningType.None)
