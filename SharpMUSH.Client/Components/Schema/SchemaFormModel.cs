@@ -146,12 +146,9 @@ public sealed class SchemaFormModel
 	public bool ValidateRequired(Func<SchemaElement, string> requiredMessage, string summary)
 	{
 		ClearErrors();
-		foreach (var field in Fields())
+		foreach (var field in Fields().Where(f => f.Validation?.Required == true && string.IsNullOrWhiteSpace(GetString(f.Key!))))
 		{
-			if (field.Validation?.Required == true && string.IsNullOrWhiteSpace(GetString(field.Key!)))
-			{
-				_errors[field.Key!] = requiredMessage(field);
-			}
+			_errors[field.Key!] = requiredMessage(field);
 		}
 
 		if (_errors.Count == 0)
