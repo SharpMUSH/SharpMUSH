@@ -25,8 +25,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
 	private IPermissionService PermissionService { get; }
-	/// <summary>The channel rules of <see cref="PermissionService"/>, which is also the channel permission service.</summary>
-	private IChannelPermissionService ChannelPermissions => PermissionService;
+	private IChannelPermissionService ChannelPermissions { get; }
 	private ICommandDiscoveryService CommandDiscoveryService { get; }
 	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
 	private IPasswordService PasswordService { get; }
@@ -106,6 +105,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		ICommandDiscoveryService commandDiscoveryService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IPasswordService passwordService,
@@ -150,6 +150,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		AttributeService = attributeService;
 		NotifyService = notifyService;
 		PermissionService = permissionService;
+		ChannelPermissions = channelPermissions;
 		CommandDiscoveryService = commandDiscoveryService;
 		Configuration = configuration;
 		PasswordService = passwordService;

@@ -3,7 +3,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
-public interface IPermissionService : IChannelPermissionService
+public interface IPermissionService
 {
 	/// <summary>
 	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). <c>can_interact</c>

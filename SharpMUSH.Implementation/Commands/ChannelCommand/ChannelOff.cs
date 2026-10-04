@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// </summary>
 public static class ChannelOff
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
@@ -47,29 +47,28 @@ public static class ChannelOff
 		// extchat.c:1387 vs :1209 — leaving oneself resolves the name against the channels one is ON, so
 		// `@channel/off pub` cannot be made ambiguous by a Public_Announcements channel one never joined.
 		var maybeChannel = arg1 is null
-			? await SelfLeaveChannel(PermissionService, Mediator, NotifyService, executor, channelName)
-			: await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			? await SelfLeaveChannel(ChannelPermissions, Mediator, NotifyService, executor, channelName)
+			: await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 				NotifyService, executor, channelName, true);
 
 		return maybeChannel switch
 		{
-			SharpChannel channel => await LeaveAsync(PermissionService, Mediator, NotifyService, executor, target, channel),
+			SharpChannel channel => await LeaveAsync(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, target, channel),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	/// <summary>Takes <paramref name="target"/> off the channel, if the executor may and it is on it.</summary>
-	private static async ValueTask<CallState> LeaveAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> LeaveAsync(IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
 	{
 		var channelLabel = channel.Name.ToPlainText();
-		IChannelPermissionService channelPermissions = PermissionService;
 
 		// extchat.c:1289 — "You must control either the victim or the channel". Without this, any mortal
 		// could remove any other player from any channel.
 		if (target.Id() != executor.Id()
 				&& !await PermissionService.Controls(executor, target)
-				&& !await channelPermissions.ChannelCanModifyAsync(executor, channel))
+				&& !await ChannelPermissions.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatInvalidTarget, executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -108,7 +107,7 @@ public static class ChannelOff
 	/// the channels the player is on, and when that finds nothing, say "you are not on that channel" if the
 	/// name resolves to a visible channel they never joined.
 	/// </summary>
-	private static async ValueTask<ChannelOrError> SelfLeaveChannel(IPermissionService permissionService,
+	private static async ValueTask<ChannelOrError> SelfLeaveChannel(IChannelPermissionService permissionService,
 		IMediator mediator, INotifyService notifyService, AnySharpObject executor, MString channelName)
 	{
 		var match = await ChannelHelper.MatchChannel(permissionService, mediator, executor, channelName,

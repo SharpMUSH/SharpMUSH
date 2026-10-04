@@ -51,7 +51,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize]
 public class CommController(
 	IMediator mediator,
-	IPermissionService permissionService,
+	IChannelPermissionService channelPermissions,
 	INotifyService notifyService,
 	IVisibleWorldProjection projection,
 	CommTextComposer textComposer,
@@ -233,8 +233,8 @@ public class CommController(
 		{
 			if (channel.Id is { } id
 				&& byScope.TryGetValue(ReadMarkerScope.Channel(id), out var marker)
-				&& await ChannelHelper.CanSeeChannel(permissionService, player, channel)
-				&& await ChannelRecall.MayRecallAsync(permissionService, player, channel))
+				&& await ChannelHelper.CanSeeChannel(channelPermissions, player, channel)
+				&& await ChannelRecall.MayRecallAsync(channelPermissions, player, channel))
 			{
 				channels.Add(new ChannelReadMarker(channel.Name.ToPlainText(), marker.LastReadId, marker.LastReadAt));
 			}
@@ -324,13 +324,13 @@ public class CommController(
 	/// </summary>
 	private async Task<ValueOrResponse<SharpChannel>> ReadableChannelAsync(AnySharpObject viewer, string name)
 	{
-		if (await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator, notifyService, viewer,
+		if (await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator, notifyService, viewer,
 				MarkupText.Plain(name)) is not SharpChannel channel)
 		{
 			return NotFound();
 		}
 
-		return await ChannelRecall.MayRecallAsync(permissionService, viewer, channel)
+		return await ChannelRecall.MayRecallAsync(channelPermissions, viewer, channel)
 			? channel
 			: StatusCode(StatusCodes.Status403Forbidden, new { error = "You must be able to join a channel to read it." });
 	}
