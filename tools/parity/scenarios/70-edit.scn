@@ -1,0 +1,32 @@
+# @edit reports: do_edit / edit_helper (pennmush src/set.c:791-1006) and do_edit_regexp /
+# regedit_helper (src/set.c:1020-1255).
+
+::case edit.set  each edited attribute is shown with its new value; one the search missed is Unchanged
+::login alice Alice alicepass
+::as alice
+@create EditMe
+&ALPHA EditMe=foo bar foo
+&BETA EditMe=nothing here
+@edit EditMe/*=foo,baz
+@edit EditMe/ALPHA=baz,baz
+@edit EditMe/ALPHA=^,<
+@edit EditMe/ALPHA=$,>
+
+::case edit.check  /check shows the Set line and changes nothing
+@edit/check EditMe/ALPHA=bar,qux
+think get(EditMe/ALPHA)
+
+::case edit.quiet  /quiet drops the per-attribute lines and ends with a count
+@edit/quiet EditMe/*=bar,qux
+@edit/quiet/check EditMe/*=qux,bar
+
+::case edit.regexp  @edit/regexp reports like @edit
+@edit/regexp EditMe/ALPHA=b(a)z,[ucstr($1)]
+@edit/regexp/all EditMe/*=z,Z
+@edit/regexp EditMe/BETA=nomatch,x
+
+::case edit.refusals  no matching attribute, nothing to search for, no attribute named
+@edit EditMe/NOSUCHATTR=foo,bar
+@edit EditMe/ALPHA=,bar
+@edit EditMe=foo,bar
+@edit EditMe/ALPHA

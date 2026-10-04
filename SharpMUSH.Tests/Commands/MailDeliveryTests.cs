@@ -163,6 +163,91 @@ public class MailDeliveryTests
 		await Assert.That(await Mailbox(second)).Count().IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// <c>do_mail_fwd</c> reads its left side with <c>parse_msglist</c> (<c>extmail.c:1235</c>), the grammar
+	/// every other switch takes, and forwards each matching message to each recipient; the count is of
+	/// messages times recipients. The forward used to take one plain number only.
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingTakesAMessageList()
+	{
+		var sender = await Player("MdFwdRange");
+		var target = await Player("MdFwdRangeTo");
+		await Run(sender, "@mail me=First/One.");
+		await Run(sender, "@mail me=Second/Two.");
+		await Run(sender, "@mail me=Third/Three.");
+
+		var range = await Heard(sender, () => Run(sender, $"@mail/fwd 2-3={target.Name}"));
+		var inFolder = await Heard(sender, () => Run(sender, $"@mail/forward 0:1=#{target.DbRef.Number}"));
+
+		await Assert.That(range).IsEquivalentTo(["MAIL: 2 messages forwarded."]);
+		await Assert.That(inFolder).IsEquivalentTo(["MAIL: 1 messages forwarded."]);
+		await Assert.That((await Mailbox(target)).Select(mail => mail.Subject.ToPlainText()))
+			.IsEquivalentTo(["Fwd: Second", "Fwd: Third", "Fwd: First"]);
+	}
+
+	/// <summary>
+	/// <c>extmail.c:1261</c> — the recipient list is matched afresh for each message, so a name that matches
+	/// nobody is reported once per message.
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingAListToAnUnknownNameReportsItForEachMessage()
+	{
+		var sender = await Player("MdFwdRangeNobody");
+		await Run(sender, "@mail me=First/One.");
+		await Run(sender, "@mail me=Second/Two.");
+
+		var heard = await Heard(sender, () => Run(sender, "@mail/fwd 1-2=MdFwdRangeNoSuchPlayer"));
+
+		await Assert.That(heard).IsEquivalentTo([
+			"No such unique player: MdFwdRangeNoSuchPlayer.",
+			"No such unique player: MdFwdRangeNoSuchPlayer.",
+			"MAIL: 0 messages forwarded."
+		]);
+	}
+
+	/// <summary>
+	/// <c>extmail.c:1265</c> — a number in the recipient list forwards to whoever sent that message in the
+	/// current folder (<c>mail_fetch</c>), and one that names no message is refused.
+	/// </summary>
+	[Test]
+	public async ValueTask ANumberInTheRecipientListForwardsToThatMessagesSender()
+	{
+		var sender = await Player("MdFwdReply");
+		var other = await Player("MdFwdReplyTo");
+		await Run(sender, "@mail me=Pass on/Body.");
+		await Run(other, $"@mail #{sender.DbRef.Number}=From other/Body.");
+
+		var heard = await Heard(sender, () => Run(sender, "@mail/fwd 1=2"));
+		var missing = await Heard(sender, () => Run(sender, "@mail/fwd 1=9"));
+
+		await Assert.That(heard).IsEquivalentTo(["MAIL: 1 messages forwarded."]);
+		await Assert.That((await Mailbox(other)).Select(mail => mail.Subject.ToPlainText()))
+			.IsEquivalentTo(["Fwd: Pass on"]);
+		await Assert.That(missing).IsEquivalentTo(
+			["MAIL: You can't reply to nonexistant mail.", "MAIL: 0 messages forwarded."]);
+	}
+
+	/// <summary>
+	/// <c>do_mail_fwd</c>'s refusals, in its order (<c>extmail.c:1235-1250</c>): a bad message list, no
+	/// recipient, then an empty mailbox.
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingRefusalsUsePennMUSHsWording()
+	{
+		var sender = await Player("MdFwdRefuse");
+		var target = await Player("MdFwdRefuseTo");
+
+		var empty = await Heard(sender, () => Run(sender, $"@mail/fwd 1={target.Name}"));
+		await Run(sender, "@mail me=Kept/Body.");
+		var badList = await Heard(sender, () => Run(sender, $"@mail/fwd bogus={target.Name}"));
+		var noOne = await Heard(sender, () => Run(sender, "@mail/fwd 1"));
+
+		await Assert.That(empty).IsEquivalentTo(["MAIL: You have no messages to forward."]);
+		await Assert.That(badList).IsEquivalentTo(["MAIL: Invalid message specification"]);
+		await Assert.That(noOne).IsEquivalentTo(["MAIL: To whom should I forward?"]);
+	}
+
 	/// <summary><c>extmail.c:1621</c> — the prefix is added only if the subject does not already carry it.</summary>
 	[Test]
 	public async ValueTask ForwardingAForwardDoesNotStackThePrefix()

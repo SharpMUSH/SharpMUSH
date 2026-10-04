@@ -1775,26 +1775,26 @@
   </data>
 
   <!-- @edit command -->
-  <data name="EditInvalidArguments" xml:space="preserve">
-    <value>Invalid arguments to @edit.</value>
-  </data>
   <data name="EditInvalidFormat" xml:space="preserve">
-    <value>Invalid format. Use: object/attribute=search,replace</value>
+    <value>I need to know what you want to edit.</value>
   </data>
   <data name="EditMustSpecifySearchAndReplace" xml:space="preserve">
-    <value>You must specify search and replace strings.</value>
+    <value>Nothing to do.</value>
   </data>
   <data name="EditNoMatchingAttributesFound" xml:space="preserve">
-    <value>No matching attributes found.</value>
+    <value>No matching attributes.</value>
   </data>
   <data name="EditAttributeSetFormat" xml:space="preserve">
-    <value>{0} - Set.</value>
+    <value>{0} - Set: {1}</value>
   </data>
-  <data name="EditWouldChangeToFormat" xml:space="preserve">
-    <value>{0} - Would change to: {1}</value>
+  <data name="EditAttributeUnchangedFormat" xml:space="preserve">
+    <value>{0} - Unchanged.</value>
   </data>
-  <data name="EditSummaryFormat" xml:space="preserve">
-    <value>{0} {1} attribute{2}. {3} unchanged.</value>
+  <data name="EditQuietSummaryFormat" xml:space="preserve">
+    <value>{0} attributes edited, {1} skipped.</value>
+  </data>
+  <data name="EditInvalidRegexpFormat" xml:space="preserve">
+    <value>Invalid regexp: {0}</value>
   </data>
 
   <!-- @function command -->
