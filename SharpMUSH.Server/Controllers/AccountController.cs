@@ -50,6 +50,15 @@ public class AccountController(
 
 	private async Task<(string? AccountId, IActionResult? Failure)> GetAccountIdFromBearerAsync(bool allowMustChangePassword = false)
 	{
+		// The AccountSession handler already validated the session and the account on this request.
+		if (AccountSessionAuthenticationHandler.TryGetAccount(User, out var authenticated, out var mustChange))
+		{
+			return !allowMustChangePassword && mustChange
+				? (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."))
+				: (authenticated, null);
+		}
+
+		// Another scheme (DebugAuth in Development) authenticated the request, or none did: validate the bearer.
 		var header = Request.Headers.Authorization.FirstOrDefault();
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
 			return (null, Unauthorized("Invalid or expired account session."));
@@ -80,7 +89,11 @@ public class AccountController(
 		var characters = await accountService.GetCharactersAsync(accountId!);
 		// Resolved through the same rule the authentication handler applies, so the roster's
 		// isActing flag can never disagree with the identity a write actually runs as.
-		var acting = ActingCharacterResolver.Resolve(await SessionAsync(), characters);
+		var acting = AccountSessionAuthenticationHandler.TryGetAccount(User, out _, out _)
+			? AccountSessionAuthenticationHandler.ActingCharacter(User) is { } claimed
+				? characters.FirstOrDefault(c => c.Object.DBRef == claimed)
+				: null
+			: ActingCharacterResolver.Resolve(await SessionAsync(), characters);
 		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
 			actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime);
 		return Ok(summaries);
