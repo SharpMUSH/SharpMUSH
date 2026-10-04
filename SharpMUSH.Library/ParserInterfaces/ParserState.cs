@@ -502,6 +502,15 @@ public partial record ParserState(
 		MoveDepth = new InvocationCounter()
 	};
 
+	// Construction. Every state is made one of three ways, and these are the only places that spell
+	// out the record's positional fields:
+	//  - fresh: RootFor, ForTypedLine and ForTrackedEvaluation start an evaluation with new registers
+	//    and new invocation counters (PennMUSH's PE_INFO_DEFAULT);
+	//  - forked: ForFunction opens a function frame that shares the caller's registers and counters;
+	//  - cloned: SnapshotForQueuedAction copies what a queued action keeps and owns (PE_INFO_CLONE).
+	// A state copied with `with` shares every mutable field it does not replace, so new work that
+	// starts an independent evaluation picks one of these rather than copying the caller.
+
 	/// <summary>
 	/// A fresh root state for code that runs as <paramref name="actor"/> with no ambient parser:
 	/// the boot @STARTUP pass, package lifecycle attributes, HTTP handler dispatch, and the
@@ -514,7 +523,32 @@ public partial record ParserState(
 	/// needing extras (seeded q-registers, %0-%9, an HTTP response context) apply them with a
 	/// <c>with</c> expression rather than growing this signature.
 	/// </remarks>
-	public static ParserState RootFor(DBRef actor) => new(
+	public static ParserState RootFor(DBRef actor)
+		=> Fresh(actor, actor, actor, handle: null, ParserStateFlags.None, session: null,
+			budget: null, restrictions: null, commandText: null, OutputCeiling.CurrentLimit);
+
+	/// <summary>
+	/// The fresh state a line typed by <paramref name="player"/> starts from: the player is executor,
+	/// enactor and caller, the line is <see cref="ParserStateFlags.DirectInput"/>, and it begins its
+	/// own <c>%c</c>/<c>%u</c>. <paramref name="handle"/> is the connection it was typed at, if any.
+	/// </summary>
+	public static ParserState ForTypedLine(DBRef? player, long? handle, string? session, int outputLimit)
+		=> Fresh(player, player, player, handle, ParserStateFlags.DirectInput, session,
+			budget: null, restrictions: null, new CommandText(), outputLimit);
+
+	/// <summary>
+	/// A fresh state carrying invocation and recursion tracking for an evaluation entered without it.
+	/// It keeps <paramref name="caller"/>'s actors, execution budget, restrictions and <c>%c</c>/<c>%u</c>,
+	/// and nothing else: registers and counters start empty. With no caller it has no actors.
+	/// </summary>
+	public static ParserState ForTrackedEvaluation(ParserState? caller)
+		=> Fresh(caller?.Executor, caller?.Enactor, caller?.Caller, handle: null, ParserStateFlags.None,
+			session: null, caller?.ExecutionBudget, caller?.Restrictions, caller?.CommandText,
+			OutputCeiling.CurrentLimit);
+
+	private static ParserState Fresh(DBRef? executor, DBRef? enactor, DBRef? caller, long? handle,
+		ParserStateFlags flags, string? session, ExecutionBudget? budget, EvaluationRestrictions? restrictions,
+		CommandText? commandText, int outputLimit) => new(
 		Registers: new([[]]),
 		IterationRegisters: [],
 		RegexRegisters: [],
@@ -528,18 +562,65 @@ public partial record ParserState(
 		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 		Switches: [],
 		Arguments: new Dictionary<string, CallState>(),
-		Executor: actor,
-		Enactor: actor,
-		Caller: actor,
-		Handle: null,
+		Executor: executor,
+		Enactor: enactor,
+		Caller: caller,
+		Handle: handle,
 		ParseMode: ParseMode.Default,
 		HttpResponse: null,
 		CallDepth: new InvocationCounter(),
 		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		TotalInvocations: new InvocationCounter(),
-		LimitExceeded: new LimitExceededFlag())
+		LimitExceeded: new LimitExceededFlag(),
+		Flags: flags,
+		ConnectionSessionId: session)
+		{
+			MoveDepth = new InvocationCounter(),
+			ExecutionBudget = budget,
+			Restrictions = restrictions,
+			CommandText = commandText,
+			OutputLimit = outputLimit
+		};
+
+	/// <summary>
+	/// The frame a built-in or <c>@function</c> call runs in, forked from this state. It shares this
+	/// state's registers, iteration, regexp and switch contexts, environment and invocation counters
+	/// by reference — a function runs inside its caller's evaluation — and binds
+	/// <paramref name="arguments"/> as <c>%0</c>-<c>%9</c>. It starts with no command, switches,
+	/// command history, caller arguments or break propagation, and leaves the execution budget and
+	/// restrictions to the ambient scopes already entered for the evaluation.
+	/// </summary>
+	/// <param name="function">The function's name as called.</param>
+	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
+	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments) => new(
+		Registers: Registers,
+		IterationRegisters: IterationRegisters,
+		RegexRegisters: RegexRegisters,
+		SwitchStack: SwitchStack,
+		ExecutionStack: ExecutionStack,
+		CurrentEvaluation: CurrentEvaluation,
+		EnvironmentRegisters: EnvironmentRegisters,
+		ParserFunctionDepth: ParserFunctionDepth + 1,
+		Function: function,
+		Command: null,
+		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+		Switches: [],
+		Arguments: arguments,
+		Executor: Executor,
+		Enactor: Enactor,
+		Caller: Caller,
+		Handle: Handle,
+		ParseMode: ParseMode,
+		HttpResponse: HttpResponse,
+		Flags: Flags,
+		CallDepth: CallDepth,
+		FunctionRecursionDepths: FunctionRecursionDepths,
+		TotalInvocations: TotalInvocations,
+		LimitExceeded: LimitExceeded)
 	{
-		MoveDepth = new InvocationCounter()
+		MoveDepth = MoveDepth,
+		CommandText = CommandText,
+		OutputLimit = OutputLimit
 	};
 
 	/// <summary>
