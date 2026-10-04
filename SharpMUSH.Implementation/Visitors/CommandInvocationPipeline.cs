@@ -165,12 +165,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				if (ignoreHook is CommandHook ignoreCode)
 				{
 					var ignoreResult = await EvaluateHook(ignoreCode);
-					if (ignoreResult is CallState ignoreValue)
+					if (ignoreResult is CallState ignoreValue && ignoreValue.Message.Falsy(newParser))
 					{
-						if (ignoreValue.Message.Falsy(newParser))
-						{
-							return PreserveHookErrors(CallState.Empty);
-						}
+						return PreserveHookErrors(CallState.Empty);
 					}
 				}
 
@@ -187,15 +184,13 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
 				var pluginHooks = services.PluginHooks;
 				var pluginCommandText = commandWithSwitches.ToPlainText();
-				if (pluginHooks is { HasCommandInterceptors: true })
+				// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
+				// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
+				if (pluginHooks is { HasCommandInterceptors: true }
+					&& !await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
 				{
-					// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
-					// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
-					if (!await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
-					{
-						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-						return PreserveHookErrors(CallState.Empty);
-					}
+					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
+					return PreserveHookErrors(CallState.Empty);
 				}
 
 				// 3. Check for /override hook with $-command matching
@@ -284,25 +279,23 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 				// 4. Check the behaviour restrictions and CommandLock before executing
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
-				if (executor is AnySharpObject lockedExecutor)
+				if (executor is AnySharpObject lockedExecutor
+					&& (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
+						|| (!string.IsNullOrEmpty(commandLockStr) && !await services.LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor))))
 				{
-					if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
-						|| (!string.IsNullOrEmpty(commandLockStr) && !await services.LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor)))
+					// command_check_with sends the command's restrict_message in place of "Permission
+					// denied." when it has one (command.c:2337-2341).
+					var restrictMessage = libraryCommandDefinition.Attribute.RestrictMessage;
+					if (string.IsNullOrEmpty(restrictMessage))
 					{
-						// command_check_with sends the command's restrict_message in place of "Permission
-						// denied." when it has one (command.c:2337-2341).
-						var restrictMessage = libraryCommandDefinition.Attribute.RestrictMessage;
-						if (string.IsNullOrEmpty(restrictMessage))
-						{
-							await services.NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
-						}
-						else
-						{
-							await services.NotifyService.Notify(lockedExecutor, restrictMessage, lockedExecutor);
-						}
-
-						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
+						await services.NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
 					}
+					else
+					{
+						await services.NotifyService.Notify(lockedExecutor, restrictMessage, lockedExecutor);
+					}
+
+					return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 				}
 
 				// 5. Execute the built-in command
