@@ -1137,7 +1137,9 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<bool?> FlagLetterCheck(AnySharpObject obj, string flagStr, bool orMode)
 	{
-		var allFlags = await Mediator.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
+		// Both read on the first letter that needs them: a list of type letters and 'c' reads neither.
+		List<SharpObjectFlag>? allFlags = null;
+		ObjectFlagSet? objectFlags = null;
 
 		var ret = !orMode; // AND starts true, OR starts false
 		int i = 0;
@@ -1198,6 +1200,7 @@ public partial class Functions
 			// ABODE on a room and ANSI on a player, x CLOUDY on an exit and TERSE on a thing), so Penn's
 			// letter_to_flagptr takes the flag whose type covers the object's.
 			var type = obj.Object().Type;
+			allFlags ??= await Mediator.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
 			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString()
 				&& (f.TypeRestrictions.Length == 0 || f.TypeRestrictions.Contains(type, StringComparer.OrdinalIgnoreCase)));
 			if (flagDef == null)
@@ -1216,7 +1219,8 @@ public partial class Functions
 				continue;
 			}
 
-			bool hasIt = await obj.HasFlag(flagDef.Name);
+			objectFlags ??= await obj.ReadFlagsAsync();
+			bool hasIt = objectFlags.Has(flagDef.Name);
 			bool effective = negate ? !hasIt : hasIt;
 			if (orMode)
 			{
@@ -1243,6 +1247,7 @@ public partial class Functions
 			return null;
 
 		var ret = !orMode;
+		ObjectFlagSet? objectFlags = null;
 		foreach (var token in tokens)
 		{
 			bool negate = token.StartsWith('!');
@@ -1260,7 +1265,7 @@ public partial class Functions
 					"THING" => obj.IsThing,
 					"EXIT" => obj.IsExit,
 					"CONNECTED" => await ConnectionService.IsOnline(obj),
-					_ => await obj.HasFlag(name)
+					_ => (objectFlags ??= await obj.ReadFlagsAsync()).Has(name)
 				};
 
 			bool effective = negate ? !hasIt : hasIt;

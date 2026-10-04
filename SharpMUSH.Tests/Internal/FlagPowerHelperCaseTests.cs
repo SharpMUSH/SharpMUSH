@@ -23,10 +23,10 @@ namespace SharpMUSH.Tests.Internal;
 /// </summary>
 public class FlagPowerHelperCaseTests
 {
-	private static SharpObject ObjectWith(SharpPower[] powers, SharpObjectFlag[] flags) =>
+	private static SharpObject ObjectWith(SharpPower[] powers, SharpObjectFlag[] flags, int key = 999) =>
 		new()
 		{
-			Key = 999,
+			Key = key,
 			CreationTime = 0L,
 			Name = "CaseSubject",
 			Type = "Thing",
@@ -140,5 +140,67 @@ public class FlagPowerHelperCaseTests
 		var obj = ObjectWith([], [Flag("HALT", symbol: "h"), Flag("COLOR", ["COLOUR"], "C")]);
 
 		await Assert.That(await obj.HasFlagOrLetter(asked)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <see cref="ObjectFlagSet"/> answers every question the per-read helpers answer, the same way: the
+	/// set is read once and asked many times, so it must not drift from the helpers it replaces.
+	/// </summary>
+	[Test]
+	[Arguments("HALT")]
+	[Arguments("halt")]
+	[Arguments("h")]
+	[Arguments("H")]
+	[Arguments("COLOUR")]
+	[Arguments("colour")]
+	[Arguments("COLOR")]
+	[Arguments("C")]
+	[Arguments("c")]
+	[Arguments("HAVEN")]
+	[Arguments("LISTENER")]
+	[Arguments("watcher")]
+	[Arguments("")]
+	public async Task ObjectFlagSet_AgreesWithHasFlagAndHasFlagOrLetter(string asked)
+	{
+		var obj = ObjectWith([], [Flag("HALT", symbol: "h"), Flag("COLOR", ["COLOUR"], "C"),
+			Flag("MONITOR", ["LISTENER", "WATCHER"], "M")]);
+		var set = await obj.ReadFlagsAsync(CancellationToken.None);
+
+		await Assert.That(set.Has(asked)).IsEqualTo(await obj.HasFlag(asked));
+		await Assert.That(set.HasOrLetter(asked)).IsEqualTo(await obj.HasFlagOrLetter(asked));
+	}
+
+	/// <summary>
+	/// <c>IsWizard</c>, <c>IsRoyalty</c> and <c>IsMistrust</c> match the flag's name only, not its
+	/// aliases, while <c>Trust</c> goes through <c>HasFlag</c> and so answers to its alias too.
+	/// </summary>
+	[Test]
+	[Arguments(new[] { "WIZARD" }, new string[0], 999)]
+	[Arguments(new[] { "wizard" }, new string[0], 999)]
+	[Arguments(new[] { "ROYALTY" }, new string[0], 999)]
+	[Arguments(new[] { "MISTRUST" }, new string[0], 999)]
+	[Arguments(new[] { "OTHER" }, new[] { "WIZARD", "ROYALTY", "MISTRUST" }, 999)]
+	[Arguments(new[] { "TRUST" }, new[] { "INHERIT" }, 999)]
+	[Arguments(new[] { "OTHER" }, new[] { "TRUST" }, 999)]
+	[Arguments(new string[0], new string[0], 1)]
+	[Arguments(new string[0], new string[0], 999)]
+	public async Task ObjectFlagSet_PrivilegePredicatesAgreeWithTheHelpers(string[] names, string[] aliases, int key)
+	{
+		var flags = names.Select((name, i) => Flag(name, aliases, ((char)('a' + i)).ToString())).ToArray();
+		var raw = ObjectWith([], flags, key);
+		var obj = new AnySharpObject(new SharpThing
+		{
+			Object = raw,
+			Location = new(async _ => { await ValueTask.CompletedTask; return null!; }),
+			Home = new(async _ => { await ValueTask.CompletedTask; return null!; })
+		});
+		var set = await obj.ReadFlagsAsync(CancellationToken.None);
+
+		await Assert.That(set.IsGod).IsEqualTo(obj.IsGod());
+		await Assert.That(set.IsWizard).IsEqualTo(await obj.IsWizard(CancellationToken.None));
+		await Assert.That(set.IsRoyalty).IsEqualTo(await obj.IsRoyalty(CancellationToken.None));
+		await Assert.That(set.IsPriv).IsEqualTo(await obj.IsPriv(CancellationToken.None));
+		await Assert.That(set.IsMistrust).IsEqualTo(await obj.IsMistrust(CancellationToken.None));
+		await Assert.That(set.IsTrust).IsEqualTo(await obj.HasFlag("Trust", CancellationToken.None));
 	}
 }

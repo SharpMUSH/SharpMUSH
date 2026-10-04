@@ -114,17 +114,21 @@ public class ListenerRoutingService(
 		var matchingText = MString.Concat(context.Prefix, messageText);
 
 		var options = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Attribute;
+		ObjectFlagSet? flags = null;
 		// Penn's NA_PROPAGATE speech path bypasses PLAYER_LISTEN; deliberate private output does not.
 		if (context.Relay != NotificationRelay.NoRelay && !listener.IsExit
 			&& (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
 		{
 			await ProcessListenAttributeAsync(listener, matchingText, messageText, actualSender, context, type,
 				!listener.IsPlayer || options?.PlayerAHear != false);
-			await ProcessListenPatternsAsync(listener, matchingText, actualSender);
+			// Read after the LISTEN pass, which can evaluate the listener's INPREFIX inline; the patterns
+			// and the puppet relay below ask MONITOR, HALT, LISTEN_PARENT, PUPPET and VERBOSE of this one read.
+			flags = await listener.ReadFlagsAsync();
+			await ProcessListenPatternsAsync(listener, flags, matchingText, actualSender);
 		}
 
 		if (context.Relay != NotificationRelay.NoRelay || context.PuppetOk || IsPrivate(type))
-			await ProcessPuppetRelayAsync(listener, matchingText, actualSender, type);
+			await ProcessPuppetRelayAsync(listener, flags ?? await listener.ReadFlagsAsync(), matchingText, actualSender, type);
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(
@@ -224,11 +228,11 @@ public class ListenerRoutingService(
 
 	private async ValueTask ProcessListenPatternsAsync(
 		AnySharpObject listener,
+		ObjectFlagSet flags,
 		MString message,
 		AnySharpObject speaker)
 	{
-		var hasMonitor = await listener.HasFlag("MONITOR");
-		if (!hasMonitor || await listener.HasFlag("HALT"))
+		if (!flags.Has("MONITOR") || flags.Has("HALT"))
 			return;
 
 		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
@@ -238,7 +242,7 @@ public class ListenerRoutingService(
 			return;
 
 		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker,
-			checkParents: await listener.HasFlag("LISTEN_PARENT"));
+			checkParents: flags.Has("LISTEN_PARENT"));
 
 		foreach (var match in matches)
 		{
@@ -255,12 +259,12 @@ public class ListenerRoutingService(
 
 	private async ValueTask ProcessPuppetRelayAsync(
 		AnySharpObject puppet,
+		ObjectFlagSet flags,
 		SharpMessage message,
 		AnySharpObject speaker,
 		NotificationType type)
 	{
-		var hasPuppet = await puppet.HasFlag("PUPPET");
-		if (!hasPuppet)
+		if (!flags.Has("PUPPET"))
 			return;
 
 		var owner = await puppet.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
@@ -277,8 +281,7 @@ public class ListenerRoutingService(
 		if (bindings.Length == 0) return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
-		var hasVerbose = await puppet.HasFlag("VERBOSE");
-		if (!hasVerbose && !IsPrivate(type))
+		if (!flags.Has("VERBOSE") && !IsPrivate(type))
 		{
 			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);
 			var ownerLocation = await owner.Location.WithCancellation(ExecutionBudget.CurrentToken);

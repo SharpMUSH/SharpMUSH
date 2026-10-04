@@ -264,8 +264,6 @@ public class LookService(
 		{
 			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
 
-			var canSeeAll = await looker.IsSee_All();
-
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
 
@@ -285,10 +283,11 @@ public class LookService(
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
 				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
-				var flagView = await FlagView.ForAsync(looker, connectionService);
+				// The flag view is needed only for the Name(#dbrefFlags) form.
+				var flagView = await looker.IsSee_All() ? await FlagView.ForAsync(looker, connectionService) : null;
 				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
 				{
-					if (canSeeAll)
+					if (flagView is not null)
 					{
 						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
 					}
