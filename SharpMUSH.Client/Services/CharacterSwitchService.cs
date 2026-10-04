@@ -18,7 +18,7 @@ public class CharacterSwitchService(
 	{
 		// The OTT is for terminals, which this service deliberately does not touch — only whether the
 		// switch took matters here.
-		if (await accountAuth.SwitchCharacterAsync(character) is null) return false;
+		if (await accountAuth.SwitchCharacterAsync(character) is not string) return false;
 
 		// The terminals stay connected as the previous character; none of them may leave a resume point
 		// behind for a later reload, which connects as the character the tab acts as now.

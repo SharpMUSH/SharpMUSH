@@ -121,7 +121,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 
 		var ott = await service.SwitchCharacterAsync(character);
 
-		await Assert.That(ott).IsEqualTo("one-time-token");
+		await Assert.That(ott.Expect<string>()).IsEqualTo("one-time-token");
 		await Assert.That(handler.LastRequest).IsNotNull();
 		await Assert.That(handler.LastRequest!.Method).IsEqualTo(HttpMethod.Post);
 		await Assert.That(handler.LastRequest.RequestUri!.AbsolutePath).IsEqualTo("/api/auth/switch-character");
@@ -153,7 +153,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		// which throws and fails the test loudly rather than silently passing for the wrong reason.
 		var ott = await service.SwitchCharacterAsync(character);
 
-		await Assert.That(ott).IsNull();
+		await Assert.That(ott.Expect<ApiFailure>().Kind).IsEqualTo(ApiFailureKind.Unauthenticated);
 	}
 
 	/// <summary>
@@ -199,7 +199,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 
 		// Reported as failed, and the in-memory token agrees — a tab that cannot persist the new
 		// credential must not start acting on it, or a reload would silently revert the identity.
-		await Assert.That(ott).IsNull();
+		ott.Expect<ApiFailure>();
 		await Assert.That(service.AccountSessionToken).IsEqualTo("session-token-1");
 	}
 
@@ -227,12 +227,11 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		var authChanges = 0;
 		service.AuthStateChanged += () => authChanges++;
 
-		var (success, error, _) = await service.LoginAsync("alice", "correct horse");
+		var result = await service.LoginAsync("alice", "correct horse");
 
 		// The same rule as the switch: a session this tab cannot persist is refused, not half-adopted,
 		// so the tab never runs as an account a reload would not bring back.
-		await Assert.That(success).IsFalse();
-		await Assert.That(error).IsNotNull();
+		await Assert.That(result.Expect<ApiFailure>().Message).IsNotEmpty();
 		await Assert.That(service.IsLoggedIn).IsFalse();
 		await Assert.That(service.Username).IsNull();
 		await Assert.That(authChanges).IsEqualTo(0);

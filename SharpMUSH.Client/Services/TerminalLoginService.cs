@@ -20,8 +20,7 @@ public class TerminalLoginService(
 		// tab starts life holding a COPY of its opener's token — bound to the OPENER's character. The
 		// switch mints a token bound to this character and the tab adopts it, so the portal half of the
 		// new tab is this character too, not just the terminal socket.
-		var ott = await accountAuth.SwitchCharacterAsync(character);
-		if (ott is null) return false;
+		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
 		// The hub authenticates with the session token; it holds the pre-switch one until it
 		// reconnects, so without this the portal half would keep acting as the previous character

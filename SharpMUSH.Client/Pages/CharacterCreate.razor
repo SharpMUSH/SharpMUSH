@@ -67,18 +67,18 @@
         _error = null;
         _busy = true;
 
-        var (success, error, character) = await AccountAuth.CreateCharacterAsync(_name, _password);
+        var result = await AccountAuth.CreateCharacterAsync(_name, _password);
 
         _busy = false;
-        if (!success)
+        if (result is not AccountAuthService.CharacterSummary character)
         {
-            _error = error;
+            _error = result is ApiFailure failure ? failure.Message : null;
             return;
         }
 
         // A first character becomes the active one (a guest, or a fresh account) — start playing it
         // everywhere. Creating an additional character just adds it to the roster.
-        if (character is not null && AccountAuth.Characters.Count == 1)
+        if (AccountAuth.Characters.Count == 1)
         {
             await Upgrade.PlayAsAsync(character);
             Nav.NavigateTo("/play");

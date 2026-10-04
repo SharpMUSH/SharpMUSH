@@ -371,8 +371,7 @@
     /// <summary>Connects this terminal (the override on /play, else the command terminal) as the given character.</summary>
     private async Task<bool> ConnectAsCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        var ott = await AccountAuth.GetOttForCharacterAsync(character);
-        if (ott is null) return false;
+        if (await AccountAuth.GetOttForCharacterAsync(character) is not string ott) return false;
 
         AccountAuth.SetActiveCharacter(character);
         SetPlayerName(character.Name);

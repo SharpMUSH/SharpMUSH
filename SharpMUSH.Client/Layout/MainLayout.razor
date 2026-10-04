@@ -382,7 +382,7 @@
 
     /// <param name="setupStatus">A status request already in flight (the first call, from
     /// initialisation, starts it before session restore); later navigations ask afresh.</param>
-    private async Task EnsureAccountRoutingAsync(Task<ServerResult<bool>>? setupStatus = null)
+    private async Task EnsureAccountRoutingAsync(Task<ApiResult<bool>>? setupStatus = null)
     {
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
 
