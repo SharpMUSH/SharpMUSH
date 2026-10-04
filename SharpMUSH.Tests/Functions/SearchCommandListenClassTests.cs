@@ -80,6 +80,38 @@ public class SearchCommandListenClassTests
 		await Assert.That(found).DoesNotContain(control.Number);
 	}
 
+	/// <summary>
+	/// A pattern the searcher may not read never makes its object a match: COMMAND and LISTEN test
+	/// only the attributes the searcher can see, so an examinable object whose $-command and ^-listen
+	/// are <c>mortal_dark</c> drops out for a mortal, while its readable twin is found.
+	/// </summary>
+	[Test]
+	public async Task CommandAndListen_NeverMatchAPatternTheSearcherCannotRead()
+	{
+		var token = UniqueToken("dark");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, $"{token}_Mortal");
+
+		var readable = await CreateThingAsync($"{token}_Readable");
+		var hidden = await CreateThingAsync($"{token}_Hidden");
+		foreach (var thing in new[] { readable, hidden })
+		{
+			await CommandAsync($"@set {thing}=VISUAL");
+			await CommandAsync($"&CMD {thing}=$+{token}*:think matched");
+			await CommandAsync($"&HEAR {thing}=^*{token}*:think heard");
+		}
+
+		await CommandAsync($"@set {hidden}/CMD=mortal_dark");
+		await CommandAsync($"@set {hidden}/HEAR=mortal_dark");
+
+		var mortalParser = WebAppFactoryArg.FunctionParserFor(mortal);
+		var found = ReturnedDbRefs((await mortalParser.FunctionParse(
+			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi)")))!.Message!.ToPlainText());
+
+		await Assert.That(found).Contains(readable.Number);
+		await Assert.That(found).DoesNotContain(hidden.Number);
+	}
+
 	/// <summary>Letters and hex digits only, so it is a literal inside a glob.</summary>
 	private static string UniqueToken(string prefix) => prefix + Guid.NewGuid().ToString("N")[..10];
 

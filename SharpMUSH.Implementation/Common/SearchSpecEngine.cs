@@ -148,6 +148,7 @@ public static class SearchSpecEngine
 		// This avoids re-compiling the same lock string or expression for every object in the result set
 		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, ValueTask<bool>>>();
 		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		var hasEvaluatingLock = false;
 
 		foreach (var (key, value) in appLevelCriteria)
 		{
@@ -162,6 +163,7 @@ public static class SearchSpecEngine
 					else
 					{
 						compiledLocks.Add(booleanExpressionParser.Compile(value));
+						hasEvaluatingLock = true;
 					}
 					break;
 
@@ -233,12 +235,22 @@ public static class SearchSpecEngine
 		// a row recycled since the scan. A row destroyed or recycled in between no longer resolves and is
 		// skipped, as @find skips it.
 		//
-		// Every candidate is still evaluated, whatever START/COUNT ask for: an EVAL restriction is
+		// PennMUSH's raw_search (src/wiz.c:2612-2618) keeps evaluating after the page is full: a match
+		// past START+COUNT is counted and skipped with `continue`, never `break`. While an EVAL or a
+		// lock that is not #TRUE is present, every candidate is evaluated here too — that restriction is
 		// softcode, and its side effects and its HadErrors belong to the whole search, not to the page.
-		// What the page does bound is what is kept — only the requested window of matches is stored.
+		// Without one, what remains (visibility, $-/^-patterns, @listen) reads and never writes, so once
+		// the page is full nothing a later candidate does can be observed, and the scan stops there.
+		// Either way only the requested window of matches is stored.
 		var window = new ResultWindow(start, count);
+		var pageEndsScan = compiledEvals.Count == 0 && !hasEvaluatingLock;
 		await foreach (var obj in filteredObjects)
 		{
+			if (pageEndsScan && window.IsFull)
+			{
+				break;
+			}
+
 			if (await mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject typedObj)
 			{
 				continue;
@@ -348,13 +360,19 @@ public static class SearchSpecEngine
 	/// dropped — the same page <c>Skip(start).Take(count)</c> over the full list gave, without the full
 	/// list. A START below one skips nothing and a COUNT below one keeps nothing, as Skip and Take do.
 	/// </summary>
-	private sealed class ResultWindow(int? start, int? count)
+	internal sealed class ResultWindow(int? start, int? count)
 	{
+		/// <summary>The most a window reserves up front; a larger page grows as its matches arrive.</summary>
+		private const int InitialCapacityCeiling = 64;
+
 		private readonly int _skip = Math.Max(0, start ?? 0);
 		private readonly int _take = Math.Max(0, count ?? int.MaxValue);
 		private int _seen;
 
-		public List<SharpObject> Results { get; } = [];
+		public List<SharpObject> Results { get; } = new(Math.Min(Math.Max(0, count ?? int.MaxValue), InitialCapacityCeiling));
+
+		/// <summary>Whether the page holds every match it asked for, so no later match can be kept.</summary>
+		public bool IsFull => Results.Count >= _take;
 
 		public void Offer(SharpObject match)
 		{
