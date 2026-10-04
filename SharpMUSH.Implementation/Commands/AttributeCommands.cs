@@ -387,6 +387,21 @@ public partial class Commands
 		var search = searchArg.Message.ToPlainText();
 		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
 
+		// src/set.c do_edit_regexp: the pattern is compiled before any attribute is read, so a bad one is
+		// reported once instead of leaving every attribute "Unchanged".
+		if (switches.Contains("REGEXP"))
+		{
+			try
+			{
+				SoftcodeRegex.Create(search, switches.Contains("NOCASE") ? RegexOptions.IgnoreCase : RegexOptions.None);
+			}
+			catch (ArgumentException ex)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidRegexpFormat), executor, ex.Message);
+				return new CallState(ErrorMessages.Returns.InvalidRegexp);
+			}
+		}
+
 		return await AttributeService.GetAttributePatternAsync(
 			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard) switch
 		{

@@ -1790,6 +1790,9 @@
   <data name="EditQuietSummaryFormat" xml:space="preserve">
     <value>{0} attributes edited, {1} skipped.</value>
   </data>
+  <data name="EditInvalidRegexpFormat" xml:space="preserve">
+    <value>Invalid regexp: {0}</value>
+  </data>
 
   <!-- @function command -->
   <data name="FunctionLibraryUnavailable" xml:space="preserve">

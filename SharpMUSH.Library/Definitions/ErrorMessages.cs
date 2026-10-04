@@ -1200,6 +1200,8 @@ public static partial class ErrorMessages
 		public const string EditAttributeUnchangedFormat = "{0} - Unchanged.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EditQuietSummaryFormat = "{0} attributes edited, {1} skipped.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string EditInvalidRegexpFormat = "Invalid regexp: {0}";
 
 		public const string GrepInvalidArguments = "Invalid arguments to @grep.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
