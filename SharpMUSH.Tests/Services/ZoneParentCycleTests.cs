@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -41,6 +42,20 @@ public class ZoneParentCycleTests
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
+	}
+
+	[Test]
+	public async ValueTask UnsetParent_WithoutNotify_RefusesSilently()
+	{
+		var outsiderRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "UnsetParentOutsider");
+		var outsider = (await Mediator.Send(new GetObjectNodeQuery(outsiderRef))).Expect<AnySharpObject>();
+		var targetResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "UnsetParentTarget");
+		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(targetResult.Message!.ToPlainText()!)))).Expect<AnySharpObject>();
+
+		var result = await RelationshipService.UnsetParent(outsider, target, false);
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(WebAppFactoryArg.Notifications.For(outsiderRef)).IsEmpty();
 	}
 
 	[Test]
