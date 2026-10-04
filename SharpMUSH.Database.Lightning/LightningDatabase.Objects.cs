@@ -1141,6 +1141,9 @@ public partial class LightningDatabase
 
 	private SharpObject MapToSharpObject(long dbref, ObjectRecord record)
 	{
+		// Every hydration path (Hydrate, HydratePlayer, HydrateExit, the base-object reads) builds its
+		// SharpObject here, so this is the one place a full hydration is counted.
+		ObjectStats.Hydrated(dbref);
 		var type = record.Type;
 
 		return new SharpObject
