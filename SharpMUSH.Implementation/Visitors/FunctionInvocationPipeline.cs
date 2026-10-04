@@ -103,6 +103,22 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 			List<CallState> refinedArguments;
 
+			// @function/restrict restrictions. For user-defined functions the restriction string
+			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
+			// for built-ins it lives in the registry overlay keyed by name.
+			var functionRestriction = attribute.Restrict is { Length: > 0 }
+				? string.Join(' ', attribute.Restrict)
+				: null;
+			var builtinRestriction = services.UserFunctions?.GetBuiltinRestriction(name);
+
+			// nobody is FN_DISABLED, which answers e_disabled before any permission check, so the
+			// permission gate below does not turn it into e_perm (src/parse.c).
+			if (Disables(functionRestriction) || Disables(builtinRestriction))
+			{
+				success = false;
+				return new CallState(ErrorMessages.Returns.FunctionDisabled, contextDepth);
+			}
+
 			isolated |= visitor.BeginsRestrictedEvaluation(context);
 			AnySharpObject? executor = null;
 			string? permissionError;
@@ -126,23 +142,13 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(permissionError, contextDepth);
 			}
 
-			// @function/restrict restrictions. For user-defined functions the restriction string
-			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
-			// for built-ins it lives in the registry overlay keyed by name. Either failing means
-			// the caller lacks permission and gets the standard error instead of the result.
-			var functionRestriction = attribute.Restrict is { Length: > 0 }
-				? string.Join(' ', attribute.Restrict)
-				: null;
-			var builtinRestriction = services.UserFunctions?.GetBuiltinRestriction(name);
-
+			// Either restriction failing means the caller lacks permission and gets the standard error
+			// instead of the result.
 			if ((functionRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(functionRestriction)))
 					|| (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction))))
 			{
 				success = false;
-				// nobody is FN_DISABLED, which answers e_disabled rather than e_perm (src/parse.c).
-				return new CallState(Disables(functionRestriction) || Disables(builtinRestriction)
-					? ErrorMessages.Returns.FunctionDisabled
-					: ErrorMessages.Returns.PermissionDenied, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
