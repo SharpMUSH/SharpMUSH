@@ -2,7 +2,6 @@
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Definitions;
@@ -13,10 +12,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Reality;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
@@ -31,19 +27,18 @@ namespace SharpMUSH.Implementation.Visitors;
 /// If additional pieces of the parse-tree are added, the Generated project must be re-generated 
 /// and new Visitors may need to be added.
 /// 
-/// <para><b>Performance Optimizations:</b></para>
+/// <para>The visitor walks the tree and keeps the state of one walk — the source text, debug nesting,
+/// brace depth, function-recognition suppression. What a node <em>does</em> lives in the pipelines on
+/// <see cref="EvaluationServices"/>, resolved once per parser:</para>
 /// <list type="bullet">
-/// <item><description>Services are injected via constructor and cached (not resolved per-visit)</description></item>
-/// <item><description>Helper methods reduce code duplication and improve performance:
-///   <list type="bullet">
-///     <item><description><c>GetContextText()</c> - Centralized context text extraction</description></item>
-///     <item><description><c>CreateDeferredEvaluation()</c> - Efficient lazy evaluation for NoParse functions</description></item>
-///     <item><description><c>AggregateResult()</c> - Optimized result aggregation with aggressive inlining</description></item>
-///   </list>
-/// </description></item>
-/// <item><description>ANTLR4 ParserRuleContext objects are reused when possible to reduce allocations</description></item>
-/// <item><description>String operations use MString/Span-based methods to avoid allocations</description></item>
+/// <item><description><see cref="FunctionInvocationPipeline"/> — a call, from resolution to telemetry</description></item>
+/// <item><description><see cref="CommandDispatcher"/> — what a command is</description></item>
+/// <item><description><see cref="CommandInvocationPipeline"/> — running it, hooks and all</description></item>
+/// <item><description><see cref="CommandArgumentSplitter"/> — its arguments</description></item>
+/// <item><description><see cref="EvaluationDiagnostics"/> — DEBUG and VERBOSE output</description></item>
 /// </list>
+/// <para><b>Performance:</b> no service is located per visit; argument and result merging run as plain
+/// loops over spans; literal text is sliced from the markup-carrying source.</para>
 /// </summary>
 public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {

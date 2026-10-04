@@ -2,7 +2,6 @@
 using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Misc;
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Parsing;
@@ -30,7 +29,7 @@ namespace SharpMUSH.Implementation;
 /// <list type="bullet">
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string; one trie is shared per command library</description></item>
-/// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
+/// <item><description><see cref="SoftcodeParsePipeline"/> is the one lexer/parser setup, shared with the tooling half (<see cref="SoftcodeSyntaxAnalyzer"/>)</description></item>
 /// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
@@ -322,7 +321,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// errorListener.HasErrors can be true even though `result` is non-null. Tag it on the
 		// returned CallState (mirroring ArgumentContexts riding along the same way) so a caller
 		// that walks the retained tree directly instead of re-parsing — see
-		// SharpMUSHParserVisitor.EvaluateArgumentSubtree — knows this tree is only a recovered
+		// CommandArgumentSplitter.EvaluateArgumentSubtree — knows this tree is only a recovered
 		// best-effort parse and cannot be trusted as a substitute for a strict re-parse.
 		if (errorListener.HasErrors && result is not null)
 		{
@@ -340,14 +339,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// predates any tracking counters). Extracted from <see cref="FunctionParse(MString)"/> /
 	/// <see cref="FunctionParse(MString, bool)"/> so other callers that want to evaluate a
 	/// function-position subtree without re-lexing/re-parsing (see
-	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c>) can reuse the exact same
+	/// <c>CommandArgumentSplitter.EvaluateArgumentSubtree</c>) can reuse the exact same
 	/// "needsTracking" decision.
 	/// </summary>
 	/// <remarks>
 	/// Executor/Enactor/Caller are always carried over from <see cref="CurrentState"/>. The no-debug
 	/// <see cref="FunctionParse(MString)"/> overload used to drop them, so a top-level parse entered
 	/// with actors but without tracking counters evaluated every function against a null executor —
-	/// <c>CallFunction</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
+	/// <c>FunctionInvocationPipeline</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
 	/// single call, was caught, logged with a full stack trace, and returned an empty result. The
 	/// nightly benchmark run that flushed this out logged two million of those stack traces.
 	/// </remarks>

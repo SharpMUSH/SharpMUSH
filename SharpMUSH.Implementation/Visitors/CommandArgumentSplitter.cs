@@ -275,7 +275,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// call site (all three SplitAsync callers pass it through unchanged).</param>
 	/// <param name="argumentSourceText">
 	/// The exact text the NoParse pass parsed to produce <paramref name="retainedContext"/>
-	/// (ArgumentSplit's local <c>remainder</c>/<c>argsSubtext</c>) — the retained context's token
+	/// (SplitAsync's local <c>remainder</c>/<c>argsSubtext</c>) — the retained context's token
 	/// offsets are relative to this text, NOT the command's full source line, so a sub-visitor
 	/// evaluating it must be constructed with this exact text as its own `source`.
 	/// </param>

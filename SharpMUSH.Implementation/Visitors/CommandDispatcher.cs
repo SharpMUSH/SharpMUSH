@@ -66,9 +66,9 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			// Per-command, markup-preserving slice of this command out of the (possibly whole-list) src.
 			// In a ';' command-list, src is the entire list (e.g. "alpha;beta"); each command is addressed
 			// by its evaluationString span. Built-in commands already re-slice src this exact way in
-			// ArgumentSplit; $command matching must use the same slice (commandText) rather than the whole
+			// CommandArgumentSplitter.SplitAsync; $command matching must use the same slice (commandText) rather than the whole
 			// src, otherwise a $command in a list is matched against the entire list and its ^...$ pattern
-			// never matches. This is the same arithmetic as ArgumentSplit's realSubtext.
+			// never matches. This is the same arithmetic as SplitAsync's realSubtext.
 			var commandText = src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
 			parser.CurrentState.CommandText?.Begin(commandText);
 
