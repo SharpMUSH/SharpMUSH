@@ -23,11 +23,15 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize, bool ownerQueues = false)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst } });
+		options.CurrentValue.Returns(config with
+		{
+			Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst },
+			Command = config.Command with { OwnerQueues = ownerQueues }
+		});
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
@@ -2357,6 +2361,95 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// Every object answers as a player owned by #5, so two executors share one owner.
+	/// </summary>
+	private static IMediator SharedOwnerMediator()
+	{
+		var mediator = Substitute.For<IMediator>();
+		SharpPlayer Player(int number) => new()
+		{
+			Object = new SharpObject
+			{
+				Key = number, CreationTime = 1, Name = $"Obj{number}", Type = "PLAYER", Locks = null!, Owner = null!,
+				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
+			},
+			Location = null!, Home = null!, PasswordHash = "", Quota = 0
+		};
+		var owner = Player(5);
+		owner.Object.Owner = new(_ => Task.FromResult(owner));
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var number = call.Arg<GetObjectNodeQuery>().DBRef.Number;
+			if (number == 5) return ValueTask.FromResult<AnyOptionalSharpObject>(owner);
+			var player = Player(number);
+			player.Object.Owner = new(_ => Task.FromResult(owner));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		return mediator;
+	}
+
+	/// <summary>
+	/// <c>player_queue_limit</c> counts each object's own entries: <c>pay_queue</c> charges
+	/// <c>queue_limit(QUEUE_PER_OWNER ? Owner(player) : player)</c> (<c>src/cque.c:303</c>), and
+	/// <c>owner_queues</c> ships off. Two objects of one owner each get the whole limit.
+	/// </summary>
+	[Test]
+	public async Task PlayerQueueLimitCountsEachObjectOnItsOwn()
+	{
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator());
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think eleven"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Accepted)
+			.IsTrue().Because("#11 has a count of its own, though #10 has the same owner and has used its one");
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten again"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("#10's own count is full");
+	}
+
+	/// <summary>With <c>owner_queues</c> on, objects share their owner's count (<c>src/cque.c:303</c>).</summary>
+	[Test]
+	public async Task OwnerQueuesPoolsAnOwnersObjectsIntoOneCount()
+	{
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator(), ownerQueues: true);
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think eleven"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("#11 is charged to #5, whose count #10 has filled");
+	}
+
+	/// <summary>
+	/// The owner of a runaway hears <c>pay_queue</c>'s notice and then <c>do_halt</c>'s, each naming the
+	/// object by its plain dbref (<c>src/cque.c:304,2176-2178</c>), and nothing else: the refused entry
+	/// gets no admission notice of its own.
+	/// </summary>
+	[Test]
+	public async Task ARunawaysOwnerHearsTheRunawayAndHaltedNoticesOnly()
+	{
+		var (mediator, _) = RunawayMediator();
+		var notifications = Substitute.For<INotifyService>();
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(new[]
+		{
+			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
+		}.ToAsyncEnumerable());
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, notifications: notifications, connections: connections);
+		var state = ParserState.RootFor(new DBRef(10));
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		var notices = notifications.ReceivedCalls()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized))
+			.Select(call => call.GetArguments())
+			.Select(args => $"{args[1]}:{string.Join(",", (object[])args[2]!)}")
+			.ToArray();
+		await Assert.That(notices).IsEquivalentTo(["RunawayObjectFormat:Semaphore,#10", "HaltedNoticeFormat:Semaphore,#10"]);
+	}
+
+	/// <summary>
 	/// <c>pay_queue</c> ends with <c>set_flag_internal(player, "HALT")</c> (<c>src/cque.c:312</c>) —
 	/// no type test, so a runaway player is halted exactly as a runaway object is. The flag does not
 	/// silence them: the queue exempts players (<c>insert_que</c>, <c>src/cque.c:530</c>) and
@@ -2412,23 +2505,23 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
-	/// The rejection notice is best-effort — it walks the owner's connections, and that can throw when
-	/// the transport is down. Telling nobody about a runaway is survivable; leaving one running is not,
-	/// so the halt is scheduled before the notice rather than after it.
+	/// The owner's runaway notices are best-effort — a transport that is down can make them throw.
+	/// Telling nobody about a runaway is survivable; leaving one running is not, so the wipe and the
+	/// HALT come before the notices, and the refusal itself sends none.
 	/// </summary>
 	[Test]
-	public async Task TheRunawayHaltIsScheduledEvenWhenTheRejectionNoticeFails()
+	public async Task TheRunawayIsHaltedEvenWhenItsNoticeFails()
 	{
 		var (mediator, halted) = RunawayMediator();
-		var connections = Substitute.For<IConnectionService>();
-		connections.Get(Arg.Any<DBRef>()).Returns(_ => throw new InvalidOperationException("transport down"));
-		await using var queue = Create(global: 4, owner: 1, mediator: mediator, connections: connections,
-			notifications: Substitute.For<INotifyService>());
+		var notifications = Substitute.For<INotifyService>();
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>())
+			.Returns(_ => throw new InvalidOperationException("transport down"));
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, notifications: notifications);
 		var state = ParserState.RootFor(new DBRef(10));
 
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
-		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-			await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1)));
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
 
 		await halted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 	}

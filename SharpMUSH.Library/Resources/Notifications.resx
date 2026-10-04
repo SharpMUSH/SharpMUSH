@@ -1431,6 +1431,9 @@
   <data name="RunawayObjectFormat" xml:space="preserve">
     <value>Runaway object: {0}({1}). Commands halted.</value>
   </data>
+  <data name="HaltedNoticeFormat" xml:space="preserve">
+    <value>Halted: {0}({1})</value>
+  </data>
   <data name="HaltedObjectCommandRefusedFormat" xml:space="preserve">
     <value>Attempt to execute command by halted object #{0}</value>
   </data>

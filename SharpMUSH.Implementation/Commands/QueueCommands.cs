@@ -179,54 +179,6 @@ public partial class Commands
 		return new Success();
 	}
 
-	/// <summary>
-	/// Helper method to execute attribute content with recursion tracking.
-	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
-	/// </summary>
-	private async ValueTask<CallState> ExecuteAttributeWithTracking(
-		IMUSHCodeParser parser,
-		string attributeLongName,
-		Func<Task<CallState>> executeFunc)
-	{
-		var callDepth = parser.CurrentState.CallDepth;
-		var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
-		var limitExceeded = parser.CurrentState.LimitExceeded;
-
-		if (callDepth == null || recursionDepths == null || limitExceeded == null)
-		{
-			return await executeFunc();
-		}
-
-		callDepth.Increment();
-		if (!recursionDepths.TryGetValue(attributeLongName, out var depth))
-		{
-			depth = 0;
-		}
-		recursionDepths[attributeLongName] = ++depth;
-
-		if (depth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
-		{
-			limitExceeded.IsExceeded = true;
-			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
-			callDepth.Decrement();
-			recursionDepths[attributeLongName] = depth - 1;
-			return new CallState(ErrorMessages.Returns.Recursion);
-		}
-
-		try
-		{
-			return await executeFunc();
-		}
-		finally
-		{
-			callDepth.Decrement();
-			if (recursionDepths.TryGetValue(attributeLongName, out var currentDepth) && currentDepth > 0)
-			{
-				recursionDepths[attributeLongName] = currentDepth - 1;
-			}
-		}
-	}
-
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -1242,7 +1194,6 @@ public partial class Commands
 
 		var attribute = attributeChain.Last();
 		var attributeText = attribute.Value.ToPlainText();
-		var attributeLongName = attribute.LongName!.ToUpper();
 
 		// With /match, the first argument (index 1) is the test string. Refused before the notice below, so a
 		// refusal is never also reported as a trigger.
@@ -1331,22 +1282,21 @@ public partial class Commands
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via AdmitCommandListRequest if needed for future enhancements.
 
-		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
+		// Runs in place, so it is bounded by the in-place nesting depth (ParserState.MaxInplaceDepth),
+		// not by function_recursion_limit, which PennMUSH applies to functions alone.
+		var stateWithRegisters = parser.CurrentState with
 		{
-			var stateWithRegisters = parser.CurrentState with
-			{
-				Executor = targetObject.Object().DBRef,
-				Enactor = executionEnactor,
-				Caller = parser.CurrentState.Executor,
-				Registers = registerStack,
-				EnvironmentRegisters = envRegisters
-			};
+			Executor = targetObject.Object().DBRef,
+			Enactor = executionEnactor,
+			Caller = parser.CurrentState.Executor,
+			Registers = registerStack,
+			EnvironmentRegisters = envRegisters
+		};
 
-			var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
-				async p => await p.CommandListParseVisitor(attribute.Value)()));
+		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
+			async p => await p.CommandListParseVisitor(attribute.Value)()));
 
-			return CallState.Empty with { HadErrors = result?.HadErrors == true };
-		});
+		return CallState.Empty with { HadErrors = result?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",

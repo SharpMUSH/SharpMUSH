@@ -1153,6 +1153,9 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
+		/// <summary>PennMUSH <c>do_halt</c> (<c>src/cque.c:2176-2178</c>): the owner of an object whose queue is wiped by hardcode, unless QUIET.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string HaltedNoticeFormat = "Halted: {0}({1})";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectDoesNotWantToHearFromYouFormat = "{0} does not want to hear from you.";
