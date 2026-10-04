@@ -68,9 +68,9 @@ public class RoleManagementServiceTests
 
 	private static async Task<RoleRefusal> ExpectRefusal(RoleRefusal? refusal, RoleRefusalKind kind)
 	{
-		await Assert.That(refusal).IsNotNull();
-		await Assert.That(refusal!.Value.Kind).IsEqualTo(kind).Because(refusal.Value.Message);
-		return refusal.Value;
+		var found = refusal ?? throw new InvalidOperationException("Expected a refusal, but the change was accepted.");
+		await Assert.That(found.Kind).IsEqualTo(kind).Because(found.Message);
+		return found;
 	}
 
 	private static async Task ExpectAccepted(RoleRefusal? refusal)

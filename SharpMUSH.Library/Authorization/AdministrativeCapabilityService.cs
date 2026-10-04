@@ -80,8 +80,8 @@ public sealed class AdministrativeCapabilityService(
 
 		var all = (await registry.GetRolesAsync(ct)).ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
 		var held = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		foreach (var slug in BuiltInRoles.TierSlugs(tier).Prepend(BuiltInRoles.EveryoneSlug))
-			if (all.TryGetValue(slug, out var builtIn)) held[slug] = builtIn;
+		foreach (var builtIn in BuiltInRoles.TierSlugs(tier).Prepend(BuiltInRoles.EveryoneSlug).Where(all.ContainsKey).Select(slug => all[slug]))
+			held[builtIn.Slug] = builtIn;
 		foreach (var assigned in await registry.GetRolesForAccountAsync(account.Id, ct))
 			held[assigned.Slug] = assigned;
 
