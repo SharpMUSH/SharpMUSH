@@ -459,23 +459,17 @@ public partial class LightningDatabase
 	}
 
 	public ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken cancellationToken = default)
-		=> new(Store.Read(tx => tx.TryGet(Tables.AttrFlag, Keys.Upper(flagName), out var bytes)
-			? MapAttributeFlag(Codec.Deserialize<AttributeFlagRecord>(bytes))
-			: null));
+		=> new(AttributeFlagDefinitions().ByName(flagName) is { } record ? MapAttributeFlag(record) : null);
 
 	public IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpAttributeFlag>(GetAttributeFlagsCoreAsync);
 
 	private async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		var flags = Store.Read(tx => tx.Range(Tables.AttrFlag, [])
-			.Select(entry => MapAttributeFlag(Codec.Deserialize<AttributeFlagRecord>(entry.Value)))
-			.ToList());
-
-		foreach (var flag in flags)
+		foreach (var record in AttributeFlagDefinitions().Ordered)
 		{
 			ct.ThrowIfCancellationRequested();
-			yield return flag;
+			yield return MapAttributeFlag(record);
 		}
 	}
 
@@ -674,9 +668,12 @@ public partial class LightningDatabase
 	/// <see cref="Tables.AttrFlag"/> (dropping a name whose definition is gone) and the test then looks for
 	/// a resolved flag named <c>no_inherit</c>.
 	/// </summary>
-	private static bool IsNoInheritMeta(ITx tx, AttrMetaRecord meta)
-		=> meta.Flags.Any(name => tx.TryGet(Tables.AttrFlag, Keys.Upper(name), out var bytes)
-			&& Codec.Deserialize<AttributeFlagRecord>(bytes).Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+	private bool IsNoInheritMeta(ITx tx, AttrMetaRecord meta)
+	{
+		var definitions = AttributeFlagDefinitions(tx);
+		return meta.Flags.Any(name => definitions.ByName(name) is { } record
+			&& record.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+	}
 
 	/// <summary>
 	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
@@ -783,11 +780,16 @@ public partial class LightningDatabase
 
 	/// <summary>Resolves stored flag names through <see cref="Tables.AttrFlag"/>; a name whose definition
 	/// has since been deleted is dropped rather than surfaced as null, matching <c>ReadObjectFlags</c>.</summary>
-	private static SharpAttributeFlag[] ReadAttributeFlags(ITx tx, string[] names)
-		=> [.. names
-			.Select(name => tx.TryGet(Tables.AttrFlag, Keys.Upper(name), out var bytes) ? Codec.Deserialize<AttributeFlagRecord>(bytes) : null)
-			.Where(record => record is not null)
-			.Select(record => MapAttributeFlag(record!))];
+	private SharpAttributeFlag[] ReadAttributeFlags(ITx tx, string[] names)
+	{
+		if (names.Length == 0)
+		{
+			return [];
+		}
+
+		var definitions = AttributeFlagDefinitions(tx);
+		return [.. names.Select(definitions.ByName).OfType<AttributeFlagRecord>().Select(MapAttributeFlag)];
+	}
 
 	private SharpPlayer? LoadAttributeOwner(long? owner)
 	{

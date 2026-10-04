@@ -63,6 +63,8 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 		await base.DisposeAsync();
 		var previousPath = _live.Store.Path + ".previous";
 		_live.Store.SwapDirectory(StagingPath, previousPath);
+		// The definitions the live instance holds in memory were read from the world just moved aside.
+		_live.ReloadDefinitions();
 
 		// The live instance now fronts a world whose ids it never allocated — rebuild its allocators or
 		// the next @create would overwrite an imported object.

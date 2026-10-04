@@ -156,6 +156,7 @@ public partial class LightningDatabase(
 	{
 		_logger.LogWarning("WIPING DATABASE at {Path} - this is destructive and irreversible!", Store.Path);
 		Store.WipeDirectory();
+		InvalidateDefinitions();
 		await Migrate(cancellationToken);
 	}
 

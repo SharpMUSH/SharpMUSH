@@ -655,7 +655,7 @@ public partial class LightningDatabase
 			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower);
 
 	/// <summary>The remaining predicates — owner, zone, parent, flag, power — each of which reads an edge table.</summary>
-	private static bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	private bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
 	{
 		if (filter.Owner.HasValue && GetSingleEdge(tx, Tables.Owner.Forward, dbref) != filter.Owner.Value.Number)
 		{

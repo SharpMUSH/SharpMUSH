@@ -33,6 +33,7 @@ public partial class LightningDatabase
 		try
 		{
 			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
+			InvalidateDefinitions();
 
 			var initialSeedApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialSeedMigrationId), out _));
 			if (!initialSeedApplied)
@@ -76,8 +77,13 @@ public partial class LightningDatabase
 		}
 		finally
 		{
+			// A plugin step may have written definition rows of its own; whatever the copies held was read
+			// before the seed or before that step.
+			InvalidateDefinitions();
 			MigrateLock.Release();
 		}
+
+		ReloadDefinitions();
 	}
 
 	/// <summary>Repairs both derived source indexes from stored exits and their authoritative Location edge.</summary>
