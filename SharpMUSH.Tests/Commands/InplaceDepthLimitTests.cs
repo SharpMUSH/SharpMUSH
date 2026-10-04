@@ -77,20 +77,14 @@ public class InplaceDepthLimitTests
 		await Run($"&CNT {obj}=0");
 		await Run($"&INC {obj}=&CNT {obj}=[inc(get({obj}/CNT))];@include {obj}/INC");
 
-		// @wait 0 queues the list as a new entry, whose own list is depth 0 like a typed line.
-		await Run($"@wait 0=@include {obj}/INC");
+		// @wait 0 queues the list as a new entry, whose own list is depth 0 like a typed line. DONE is
+		// set by the same entry once every in-place level has returned.
+		await Run($"@wait 0={{@include {obj}/INC;&DONE {obj}=1}}");
 
-		// Wait for the count to start and then to hold still for a second: the entry has finished.
-		var count = "0";
-		var stableSince = DateTime.UtcNow;
-		for (var deadline = DateTime.UtcNow.AddSeconds(60); DateTime.UtcNow < deadline;)
-		{
+		for (var deadline = DateTime.UtcNow.AddSeconds(60); DateTime.UtcNow < deadline && await Get(obj, "DONE") != "1";)
 			await Task.Delay(100);
-			var current = await Get(obj, "CNT");
-			if (current != count) { count = current; stableSince = DateTime.UtcNow; }
-			else if (count != "0" && DateTime.UtcNow - stableSince > TimeSpan.FromSeconds(1)) break;
-		}
 
+		var count = await Get(obj, "CNT");
 		await Assert.That(count).IsEqualTo("50");
 	}
 }

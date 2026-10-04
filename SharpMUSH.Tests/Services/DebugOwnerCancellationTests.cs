@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -43,8 +42,7 @@ public class DebugOwnerCancellationTests
 		ValueTask pending;
 		if (substitution)
 		{
-			var method = typeof(MUSHCodeParser).GetMethod("EmitSubstitutionOnlyDebugTraceAsync", BindingFlags.Static | BindingFlags.NonPublic)!;
-			pending = (ValueTask)method.Invoke(null, [mediator, notify, state, "%#", MarkupText.Plain("#15"), false])!;
+			pending = EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(mediator, notify, state, "%#", MarkupText.Plain("#15"), false);
 		}
 		else
 		{

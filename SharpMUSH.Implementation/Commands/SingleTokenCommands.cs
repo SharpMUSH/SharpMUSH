@@ -49,7 +49,7 @@ public partial class Commands
 	}
 
 	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
-	// The LHS (object/attribute name slot) is evaluated normally by ArgumentSplit so that
+	// The LHS (object/attribute name slot) is evaluated normally by CommandArgumentSplitter so that
 	// register substitutions like %q0 in "& attr %q0=[value]" resolve before the locate step.
 	// This matches PennMUSH's CS_NOPARSE semantics for &, which apply only to the stored value.
 	// RSBrace: braces in the RHS are preserved during ANTLR parsing so that

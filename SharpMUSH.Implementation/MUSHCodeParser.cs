@@ -2,9 +2,9 @@
 using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Misc;
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library;
@@ -18,8 +18,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Runtime.InteropServices;
-using LspRange = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.Implementation;
 
@@ -31,7 +29,7 @@ namespace SharpMUSH.Implementation;
 /// <list type="bullet">
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string; one trie is shared per command library</description></item>
-/// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
+/// <item><description><see cref="SoftcodeParsePipeline"/> is the one lexer/parser setup, shared with the tooling half (<see cref="SoftcodeSyntaxAnalyzer"/>)</description></item>
 /// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
@@ -43,18 +41,17 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	IOptionsWrapper<SharpMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
-	private readonly IMediator _mediator = ServiceProvider.GetRequiredService<IMediator>();
-	private readonly INotifyService _notifyService = ServiceProvider.GetRequiredService<INotifyService>();
-	private readonly IConnectionService _connectionService = ServiceProvider.GetRequiredService<IConnectionService>();
-	private readonly ILocateService _locateService = ServiceProvider.GetRequiredService<ILocateService>();
-	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
-	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
-	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
-	private readonly ILockService _lockService = ServiceProvider.GetRequiredService<ILockService>();
+	/// <summary>
+	/// The services evaluation uses, resolved once here and shared by every state this parser pushes
+	/// and every visitor it builds; see <see cref="EvaluationServices"/>.
+	/// </summary>
+	private readonly EvaluationServices _services = EvaluationServices.From(ServiceProvider);
 
-	// Lexer vocabulary is static and immutable — cached once to avoid allocating a new lexer on every fallback classification
-	private static readonly IVocabulary LexerVocabulary =
-		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
+	/// <summary>
+	/// <see cref="_services"/>, locating its optional services in this parser's current provider when a
+	/// copy of the parser was given another one.
+	/// </summary>
+	private EvaluationServices Services => _services.For(ServiceProvider);
 
 	/// <summary>
 	/// The command trie for prefix lookups. Shared by every parser derived from the same command
@@ -101,111 +98,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		IServiceProvider serviceProvider,
 		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
 		=> State = [state];
-
-	/// <summary>
-	/// Deepest nesting of <c>[]</c>, <c>{}</c>, and function-call <c>()</c> the parser will
-	/// attempt. The generated parser is recursive descent, so each level becomes a native stack
-	/// frame with no depth check of its own; a deeply enough nested input overflows the stack and
-	/// takes the whole process down with an uncatchable <see cref="StackOverflowException"/> —
-	/// during parsing, before any evaluation-time limit (CallLimit, FunctionInvocationLimit) can
-	/// act. Direct player input is not length-capped (the telnet line buffer is megabytes), so a
-	/// single line of brackets is a remote denial of service against every connected player.
-	/// <para>
-	/// Refusing to parse past this depth is the structural analogue of PennMUSH's call_limit,
-	/// which likewise stops descending into <c>{</c>/<c>[</c>/<c>(</c> to protect the C stack
-	/// (src/parse.c). Fixed rather than configurable so an operator cannot raise it back into the
-	/// crash range. Wide margin: the observed overflow is above ~11000 levels, real softcode nests
-	/// a few dozen deep, and PennMUSH ships call_limit at 100.
-	/// </para>
-	/// </summary>
-	private const int MaxParseNestingDepth = 1000;
-
-	/// <summary>
-	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, and a
-	/// function-call <c>name(</c> — deeper than <paramref name="limit"/>. These are exactly the
-	/// three constructs whose parser rules recurse (<c>bracketPattern</c>, <c>bracePattern</c>,
-	/// <c>function</c>); a bare <c>(</c> is plain text and does not open a rule, so it is tracked
-	/// only to match its closing <c>)</c> and never counts toward the depth. Escaped delimiters
-	/// never reach here as openers — the lexer emits <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so
-	/// they add no depth, matching what the parser would have done.
-	/// </summary>
-	internal static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, out IToken? offendingToken)
-	{
-		offendingToken = null;
-		// Most lines open nothing at all, so the matching stack exists only once one does.
-		Stack<char>? open = null;
-		var depth = 0;
-
-		foreach (var token in CollectionsMarshal.AsSpan(tokenStream.tokens))
-		{
-			switch (token.Type)
-			{
-				case SharpMUSHLexer.OBRACK:
-					(open ??= new Stack<char>()).Push('[');
-					if (++depth > limit) { offendingToken = token; return true; }
-					break;
-				case SharpMUSHLexer.OBRACE:
-					(open ??= new Stack<char>()).Push('{');
-					if (++depth > limit) { offendingToken = token; return true; }
-					break;
-				case SharpMUSHLexer.FUNCHAR:
-					(open ??= new Stack<char>()).Push('(');
-					if (++depth > limit) { offendingToken = token; return true; }
-					break;
-				case SharpMUSHLexer.OPAREN:
-					(open ??= new Stack<char>()).Push('o');
-					break;
-				case SharpMUSHLexer.CBRACK:
-					if (open is not null && open.TryPeek(out var b) && b == '[') { open.Pop(); depth--; }
-					break;
-				case SharpMUSHLexer.CBRACE:
-					if (open is not null && open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
-					break;
-				case SharpMUSHLexer.CPAREN:
-					if (open is not null && open.TryPeek(out var p) && p is '(' or 'o')
-					{
-						if (p == '(') depth--;
-						open.Pop();
-					}
-					break;
-			}
-		}
-
-		return false;
-	}
-
-	/// <summary>
-	/// Builds the lexer for one parse. Recognizers are constructed with ANTLR's
-	/// <c>ConsoleErrorListener</c> attached; the parser's is swapped for a collecting listener at
-	/// each call site, but the lexer's was left in place, so anything it disliked printed to the
-	/// server's stdout instead of reaching the player. Nothing consumes lexer diagnostics — the
-	/// grammar's catch-all rules make token recognition total — so the listener is simply removed.
-	/// </summary>
-	private static SharpMUSHLexer CreateLexer(StringSpanInputStream inputStream)
-	{
-		var lexer = new SharpMUSHLexer(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
-		lexer.RemoveErrorListeners();
-
-		return lexer;
-	}
-
-	/// <summary>
-	/// The single ANTLR prediction mode to use where two-stage parsing is not applied — the
-	/// tooling paths (validation, semantic tokens). TwoStage resolves to LL here so those paths
-	/// always produce the authoritative result; the two-stage speedup is applied only on the hot
-	/// evaluation path via <see cref="ParseTwoStage{TContext}"/>.
-	/// </summary>
-	private PredictionMode GetPredictionMode()
-	{
-		return Configuration.CurrentValue.Debug.ParserPredictionMode switch
-		{
-			ParserPredictionMode.SLL => PredictionMode.SLL,
-			_ => PredictionMode.LL
-		};
-	}
 
 	private static bool ContainsRestrictedEntryPoint(BufferedTokenSpanStream tokens,
 		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
@@ -280,14 +172,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
 			tokens.Seek(0);
-			var parser = new SharpMUSHParser(tokens)
-			{
-				Interpreter = { PredictionMode = mode },
-				Trace = debug,
-				ErrorHandler = strategy,
-				parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
-			};
-			parser.RemoveErrorListeners();
+			var parser = SoftcodeParsePipeline.CreateParser(tokens, Configuration.CurrentValue.Compatibility.ParenGroups,
+				mode, trace: debug);
+			parser.ErrorHandler = strategy;
 			var errors = new ParserErrorListener(inputText);
 			parser.AddErrorListener(errors);
 			if (debug)
@@ -329,7 +216,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return (entryPoint(llParser), llErrors);
 		}
 
-		var (singleParser, singleErrors) = Build(GetPredictionMode(), AuthoritativeStrategy());
+		var (singleParser, singleErrors) = Build(SoftcodeSyntaxAnalyzer.SinglePassPredictionMode(Configuration.CurrentValue), AuthoritativeStrategy());
 		return (entryPoint(singleParser), singleErrors);
 	}
 
@@ -382,17 +269,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		var plainText = text.ToPlainText();
-		StringSpanInputStream inputStream = new(plainText, methodName);
-		var sharpLexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
-		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plainText, methodName);
 
 		// Refuse pathologically nested input before the recursive-descent parser overflows the
-		// stack (see MaxParseNestingDepth). Reported as the call-limit error, matching PennMUSH's
-		// call_limit, which is the same guard against the same crash.
-		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
+		// stack (see SoftcodeParsePipeline.MaxParseNestingDepth). Reported as the call-limit error,
+		// matching PennMUSH's call_limit, which is the same guard against the same crash.
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
 		{
 			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
 		}
@@ -423,17 +305,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, true);
 		}
 
-		SharpMUSHParserVisitor visitor = new(Logger, parser,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService,
-			_lockService,
-			text);
+		SharpMUSHParserVisitor visitor = new(Logger, parser, Configuration, Services, text);
 
 		CallState? result;
 		try { result = await visitor.Visit(context); }
@@ -449,7 +321,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// errorListener.HasErrors can be true even though `result` is non-null. Tag it on the
 		// returned CallState (mirroring ArgumentContexts riding along the same way) so a caller
 		// that walks the retained tree directly instead of re-parsing — see
-		// SharpMUSHParserVisitor.EvaluateArgumentSubtree — knows this tree is only a recovered
+		// CommandArgumentSplitter.EvaluateArgumentSubtree — knows this tree is only a recovered
 		// best-effort parse and cannot be trusted as a substitute for a strict re-parse.
 		if (errorListener.HasErrors && result is not null)
 		{
@@ -467,119 +339,31 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// predates any tracking counters). Extracted from <see cref="FunctionParse(MString)"/> /
 	/// <see cref="FunctionParse(MString, bool)"/> so other callers that want to evaluate a
 	/// function-position subtree without re-lexing/re-parsing (see
-	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c>) can reuse the exact same
+	/// <c>CommandArgumentSplitter.EvaluateArgumentSubtree</c>) can reuse the exact same
 	/// "needsTracking" decision.
 	/// </summary>
 	/// <remarks>
 	/// Executor/Enactor/Caller are always carried over from <see cref="CurrentState"/>. The no-debug
 	/// <see cref="FunctionParse(MString)"/> overload used to drop them, so a top-level parse entered
 	/// with actors but without tracking counters evaluated every function against a null executor —
-	/// <c>CallFunction</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
+	/// <c>FunctionInvocationPipeline</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
 	/// single call, was caught, logged with a full stack trace, and returned an empty result. The
 	/// nightly benchmark run that flushed this out logged two million of those stack traces.
 	/// </remarks>
-	internal IMUSHCodeParser ResolveTrackingParser()
+	internal IMUSHCodeParser ResolveTrackingParser() => ResolveTrackingParser(this);
+
+	/// <inheritdoc cref="ResolveTrackingParser()"/>
+	internal static IMUSHCodeParser ResolveTrackingParser(IMUSHCodeParser parser)
 	{
-		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		var needsTracking = parser.State.IsEmpty || parser.CurrentState.TotalInvocations == null;
 		if (!needsTracking)
 		{
-			return this;
+			return parser;
 		}
 
 		// CurrentState => State.Peek() throws on an empty stack, so only read the actors when there
 		// IS a frame to read them from.
-		var preserveCallerActors = !State.IsEmpty;
-
-		return Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ExecutionStack: [],
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: preserveCallerActors ? CurrentState.Executor : null,
-			Enactor: preserveCallerActors ? CurrentState.Enactor : null,
-			Caller: preserveCallerActors ? CurrentState.Caller : null,
-			Handle: null,
-			ParseMode: ParseMode.Default,
-			HttpResponse: null,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag())
-		{
-			MoveDepth = new InvocationCounter(),
-			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
-			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null,
-			CommandText = preserveCallerActors ? CurrentState.CommandText : null
-		});
-	}
-
-	/// <summary>
-	/// PennMUSH substitution-only debug: when a function-position argument contains only
-	/// substitutions (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated".
-	/// Only fires when the parse neither emitted function traces nor contains a restricted wrapper
-	/// (<paramref name="suppressSubstitutionDebug"/>), and raw and evaluated text differ.
-	/// <para>
-	/// Extracted from <see cref="FunctionParse(MString, bool)"/> so
-	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c> can reuse the identical trace logic
-	/// when it evaluates a retained argument subtree directly instead of going through
-	/// <see cref="FunctionParse(MString, bool)"/>'s own lex+parse pass.
-	/// </para>
-	/// </summary>
-	/// <param name="callerState">
-	/// The state to check DEBUG/NODEBUG flags and resolve the executor against — always the
-	/// state of the parser that WOULD have called <see cref="FunctionParse(MString, bool)"/>
-	/// (i.e. <see cref="CurrentState"/> at the call site), not any fresh tracking state pushed by
-	/// <see cref="ResolveTrackingParser"/> for the evaluation itself.
-	/// </param>
-	internal static async ValueTask EmitSubstitutionOnlyDebugTraceAsync(
-		IMediator mediator,
-		INotifyService notifyService,
-		ParserState callerState,
-		string rawText,
-		MString? resultMessage,
-		bool suppressSubstitutionDebug)
-	{
-		if (EvaluationRestrictions.Current is not null || callerState.Restrictions is not null
-			|| suppressSubstitutionDebug || resultMessage is null)
-		{
-			return;
-		}
-
-		var evaluatedText = resultMessage.ToPlainText();
-		if (rawText == evaluatedText)
-		{
-			return;
-		}
-
-		if (await callerState.ExecutorObject(mediator) is not AnySharpObject executorObj)
-		{
-			return;
-		}
-
-		var stateFlags = callerState.Flags;
-		bool shouldDebug;
-		if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
-			shouldDebug = false;
-		else if (stateFlags.HasFlag(ParserStateFlags.Debug))
-			shouldDebug = true;
-		else
-			shouldDebug = await executorObj.HasFlag("DEBUG");
-
-		if (shouldDebug)
-		{
-			var dbrefNumber = executorObj.Object().DBRef.Number;
-			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"), executorObj);
-		}
+		return parser.Push(ParserState.ForTrackedEvaluation(parser.State.IsEmpty ? null : parser.CurrentState));
 	}
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
@@ -618,7 +402,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 			budget.ThrowIfExceeded();
 
-			await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+			await EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(_services.Mediator, _services.NotifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
 				rawText, result?.Message, suppressSubstitutionDebug);
 			budget.ThrowIfExceeded();
 			return result;
@@ -675,14 +459,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 
 		var plaintext = text.ToPlainText();
-		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
-		var sharpLexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
-		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor));
 
-		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
 		{
 			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true });
 		}
@@ -714,15 +493,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			InplaceDepth = depth
 		});
 
-		SharpMUSHParserVisitor visitor = new(Logger, parserForList,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, _lockService, text);
+		SharpMUSHParserVisitor visitor = new(Logger, parserForList, Configuration, Services, text);
 
 		return async () =>
 		{
@@ -734,7 +505,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>
 	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
 		=> await FunctionLimits.OutputLimitForAsync(
-			player is { } dbref && await _mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
+			player is { } dbref && await _services.Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
 			Configuration.CurrentValue.Limit.GuestOutputLimit);
 
 	/// <summary>
@@ -756,7 +527,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// else's command, which must not run with the player read above.
 		var current = connectionService.Get(handle);
 		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
-		var newParser = Push(TypedLineState(player, handle, expectedSession, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 
@@ -772,44 +543,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public async ValueTask<CallState> CommandParse(DBRef player, MString text)
 	{
 		var outputLimit = await OutputLimitForAsync(player);
-		var newParser = Push(TypedLineState(player, handle: null, session: null, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit));
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 		return result ?? CallState.Empty;
 	}
-
-	/// <summary>The fresh state a typed line starts from: the player is executor, enactor and caller.</summary>
-	private static ParserState TypedLineState(DBRef? player, long? handle, string? session, int outputLimit)
-		=> new(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ExecutionStack: [],
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: player,
-			Enactor: player,
-			Caller: player,
-			Handle: handle,
-			ParseMode: ParseMode.Default,
-			HttpResponse: null,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag(),
-			Flags: ParserStateFlags.DirectInput,
-			ConnectionSessionId: session)
-		{
-			MoveDepth = new InvocationCounter(),
-			CommandText = new CommandText(),
-			OutputLimit = outputLimit
-		};
 
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
@@ -857,547 +594,25 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
-	/// <summary>
-	/// Tokenizes the input text and returns token information for syntax highlighting.
-	/// </summary>
-	public IReadOnlyList<TokenInfo> Tokenize(MString text)
-	{
-		var plaintext = text.ToPlainText();
-		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
-		var sharpLexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
+	/// <summary>The tooling half, over this parser's current function library and options.</summary>
+	private SoftcodeSyntaxAnalyzer Syntax => new(FunctionLibrary, Configuration);
 
-		var tokenArray = bufferedTokenSpanStream.tokens;
-		if (tokenArray.Count <= 1)
-		{
-			return [];
-		}
+	/// <inheritdoc cref="SoftcodeSyntaxAnalyzer.Tokenize"/>
+	public IReadOnlyList<TokenInfo> Tokenize(MString text) => Syntax.Tokenize(text);
 
-		var tokens = new List<TokenInfo>(tokenArray.Count - 1);
-		for (var i = 0; i < tokenArray.Count - 1; i++)
-		{
-			var token = tokenArray[i];
-			var tokenInfo = new TokenInfo
-			{
-				Type = LexerVocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
-				StartIndex = token.StartIndex,
-				EndIndex = token.StopIndex,
-				Text = token.Text ?? string.Empty,
-				Line = token.Line,
-				Column = token.Column,
-				Channel = token.Channel
-			};
-
-			tokens.Add(tokenInfo);
-		}
-
-		return tokens;
-	}
-
-	/// <summary>
-	/// Parses the input text and returns any errors encountered.
-	/// Uses the configured prediction mode (SLL or LL) for parsing.
-	/// </summary>
+	/// <inheritdoc cref="SoftcodeSyntaxAnalyzer.ValidateAndGetErrors"/>
 	public IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function)
-	{
-		var plaintext = text.ToPlainText();
-		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
-		var sharpLexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
-		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+		=> Syntax.ValidateAndGetErrors(text, parseType);
 
-		// Report over-deep nesting as a diagnostic rather than parsing it and overflowing the
-		// stack — this path feeds the LSP/MCP analyzer, which must survive hostile documents.
-		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out var offending))
-		{
-			return
-			[
-				new ParseError
-				{
-					Line = offending?.Line ?? 1,
-					Column = offending?.Column ?? 0,
-					OffendingToken = offending?.Text,
-					Message = $"Expression nests brackets, braces or function calls more than {MaxParseNestingDepth} levels deep.",
-					InputText = plaintext,
-				}
-			];
-		}
-
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = false
-		};
-
-		var errorListener = new ParserErrorListener(plaintext);
-
-		sharpParser.RemoveErrorListeners();
-		sharpParser.AddErrorListener(errorListener);
-
-		try
-		{
-			switch (parseType)
-			{
-				case ParseType.Function:
-					_ = sharpParser.startPlainString();
-					break;
-				case ParseType.Command:
-					_ = sharpParser.startSingleCommandString();
-					break;
-				case ParseType.CommandList:
-					_ = sharpParser.startCommandString();
-					break;
-				case ParseType.CommandSingleArg:
-					_ = sharpParser.startPlainSingleCommandArg();
-					break;
-				case ParseType.CommandCommaArgs:
-					_ = sharpParser.startPlainCommaCommandArgs();
-					break;
-				case ParseType.CommandEqSplitArgs:
-					_ = sharpParser.startEqSplitCommandArgs();
-					break;
-				case ParseType.CommandEqSplit:
-					_ = sharpParser.startEqSplitCommand();
-					break;
-				default:
-					_ = sharpParser.startPlainString();
-					break;
-			}
-		}
-		catch (RecognitionException)
-		{
-		}
-
-		return errorListener.Errors;
-	}
-
-	/// <summary>
-	/// Parses the input text and returns diagnostics (LSP-compatible errors/warnings).
-	/// </summary>
+	/// <inheritdoc cref="SoftcodeSyntaxAnalyzer.GetDiagnostics"/>
 	public IReadOnlyList<Diagnostic> GetDiagnostics(MString text, ParseType parseType = ParseType.Function)
-	{
-		var errors = ValidateAndGetErrors(text, parseType);
-		if (errors.Count == 0)
-		{
-			return [];
-		}
+		=> Syntax.GetDiagnostics(text, parseType);
 
-		var diagnostics = new List<Diagnostic>(errors.Count);
-		for (var i = 0; i < errors.Count; i++)
-		{
-			diagnostics.Add(errors[i].ToDiagnostic());
-		}
-
-		return diagnostics;
-	}
-
-	/// <summary>
-	/// Performs semantic analysis on the input text and returns semantic tokens.
-	/// </summary>
+	/// <inheritdoc cref="SoftcodeSyntaxAnalyzer.GetSemanticTokens"/>
 	public IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function)
-	{
-		var plaintext = text.ToPlainText();
-		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
-		var sharpLexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
-		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+		=> Syntax.GetSemanticTokens(text, parseType);
 
-		// Too deep to parse safely: fall back to the flat lexer-token classification, the same
-		// degraded result the catch below produces for a syntax error.
-		// NOTE: this re-lexes via Tokenize, which is the one lexing site here that does NOT apply the
-		// orphaned-closer rewrite above — so an orphaned ']' or '}' is classified as a closer on this
-		// path and as literal text on the normal one. Inconsistent, but left alone deliberately:
-		// changing Tokenize affects every caller and needs its own task.
-		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
-		{
-			return ConvertSyntacticToSemanticTokens(Tokenize(text));
-		}
-
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = false
-		};
-
-		sharpParser.RemoveErrorListeners();
-
-		try
-		{
-			ParserRuleContext context;
-			switch (parseType)
-			{
-				case ParseType.Function:
-					context = sharpParser.startPlainString();
-					break;
-				case ParseType.Command:
-					context = sharpParser.startSingleCommandString();
-					break;
-				case ParseType.CommandList:
-					context = sharpParser.startCommandString();
-					break;
-				case ParseType.CommandSingleArg:
-					context = sharpParser.startPlainSingleCommandArg();
-					break;
-				case ParseType.CommandCommaArgs:
-					context = sharpParser.startPlainCommaCommandArgs();
-					break;
-				case ParseType.CommandEqSplitArgs:
-					context = sharpParser.startEqSplitCommandArgs();
-					break;
-				case ParseType.CommandEqSplit:
-					context = sharpParser.startEqSplitCommand();
-					break;
-				default:
-					context = sharpParser.startPlainString();
-					break;
-			}
-
-			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream, plaintext);
-		}
-		catch (RecognitionException)
-		{
-			// Same Tokenize inconsistency as the nesting-limit fallback above.
-			return ConvertSyntacticToSemanticTokens(Tokenize(text));
-		}
-	}
-
-	/// <summary>
-	/// Performs semantic analysis and returns tokens in LSP delta-encoded format.
-	/// </summary>
+	/// <inheritdoc cref="SoftcodeSyntaxAnalyzer.GetSemanticTokensData"/>
 	public SemanticTokensData GetSemanticTokensData(MString text, ParseType parseType = ParseType.Function)
-	{
-		var tokens = GetSemanticTokens(text, parseType);
-		return SemanticTokensData.FromTokens(tokens);
-	}
-
-	/// <summary>
-	/// Analyzes the parse tree to extract semantic tokens.
-	/// </summary>
-	private IReadOnlyList<SemanticToken> AnalyzeSemanticTokens(
-		ParserRuleContext context,
-		BufferedTokenSpanStream tokenStream,
-		string sourceText)
-	{
-		var tokenArray = tokenStream.tokens;
-		var tokenCount = Math.Max(tokenArray.Count - 1, 0);
-
-		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
-		// This is the canonical correct approach — it handles all tokens that appear in multiple
-		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
-		// special-case pre-walks.
-		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount);
-		CollectTerminalClassifications(context, classifications, sourceText);
-
-		var semanticTokens = new List<SemanticToken>(tokenCount);
-
-		// Iterate the stream's token list directly rather than through a LINQ filter. EOF is
-		// always its last element, so iterate all-but-last.
-		if (tokenArray.Count > 0)
-		{
-			for (var i = 0; i < tokenArray.Count - 1; i++)
-			{
-				var token = tokenArray[i];
-				if (!classifications.TryGetValue(token.TokenIndex, out var info))
-					info = (SemanticTokenType.Text, SemanticTokenModifier.None);
-
-				var text = token.Text;
-				semanticTokens.Add(new SemanticToken
-				{
-					Range = new LspRange
-					{
-						Start = new Position(token.Line - 1, token.Column),
-						End = new Position(token.Line - 1, token.Column + text.Length)
-					},
-					TokenType = info.Type,
-					Modifiers = info.Mod,
-					Text = text
-				});
-			}
-		}
-
-		return semanticTokens;
-	}
-
-	/// <summary>
-	/// Walks the parse tree and records the semantic classification for every terminal node.
-	/// Each terminal is classified by its immediate parent rule context, not by token type alone.
-	/// This is the single authoritative classification pass — no pre-walks or per-symbol workarounds.
-	/// </summary>
-	private void CollectTerminalClassifications(
-		Antlr4.Runtime.Tree.IParseTree tree,
-		Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)> map,
-		string sourceText)
-	{
-		if (tree is Antlr4.Runtime.Tree.ITerminalNode terminal)
-		{
-			var token = terminal.Symbol;
-			if (token.Type == TokenConstants.EOF) return;
-
-			var type = ClassifyTerminalInContext(token, terminal.Parent, sourceText);
-			var mod = GetTokenModifiers(token, type);
-			map[token.TokenIndex] = (type, mod);
-			return;
-		}
-
-		for (var i = 0; i < tree.ChildCount; i++)
-			CollectTerminalClassifications(tree.GetChild(i), map, sourceText);
-	}
-
-	/// <summary>
-	/// Derives the semantic type for a terminal token from its immediate parse-tree parent.
-	/// Covers every grammatical role a token may play — structural text, operator, substitution, etc.
-	/// Falls back to <see cref="ClassifyByTokenType"/> only for tokens whose meaning is
-	/// context-independent (e.g., <c>OBRACK</c>, <c>ESCAPE</c>, <c>OANSI</c>).
-	/// </summary>
-	private SemanticTokenType ClassifyTerminalInContext(IToken token, Antlr4.Runtime.Tree.IParseTree parentCtx, string sourceText)
-	{
-		return parentCtx switch
-		{
-			// CCARET (>), EQUALS (=), COMMAWS (,), SEMICOLON (;), CPAREN ()) appear here when
-			// they are NOT serving as argument separators, delimiters or register-close markers.
-			// OTHER inside beginGenericText still needs content-based classification
-			// (e.g. #1234 is ObjectReference, "42" is Number).
-			SharpMUSHParser.BeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
-				=> SemanticTokenType.Text,
-			SharpMUSHParser.BeginGenericTextContext
-				=> ClassifyOther(token.Text, sourceText),
-
-			// A FUNCHAR appearing in genericText (not inside a function call) is plain text.
-			SharpMUSHParser.GenericTextContext
-				=> SemanticTokenType.Text,
-
-			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
-			SharpMUSHParser.FunctionContext when token.Type == SharpMUSHParser.FUNCHAR
-				=> ClassifyFunction(token.Text),
-			SharpMUSHParser.FunctionContext
-				=> SemanticTokenType.Operator,
-
-			SharpMUSHParser.BracketPatternContext
-				=> SemanticTokenType.BracketSubstitution,
-
-			SharpMUSHParser.BracePatternContext
-				=> SemanticTokenType.BraceGroup,
-
-			SharpMUSHParser.AnsiContext
-				=> SemanticTokenType.AnsiCode,
-
-			SharpMUSHParser.EscapedTextContext
-				=> SemanticTokenType.EscapeSequence,
-
-			// %q<register> — opening token (q<) and closing > are both Register
-			SharpMUSHParser.ComplexSubstitutionSymbolContext
-				=> SemanticTokenType.Register,
-
-			// $0-$9 and $<name> read regexp captures; $< and its > are Register too.
-			SharpMUSHParser.RegexpCaptureContext
-				=> SemanticTokenType.Register,
-
-			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
-			SharpMUSHParser.SubstitutionSymbolContext
-				=> SemanticTokenType.Substitution,
-
-			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
-			SharpMUSHParser.ExplicitEvaluationStringContext
-			or SharpMUSHParser.BraceExplicitEvaluationStringContext
-				=> SemanticTokenType.Substitution,
-
-			SharpMUSHParser.StartEqSplitCommandContext
-			or SharpMUSHParser.StartEqSplitCommandArgsContext
-				=> SemanticTokenType.Operator,
-
-			SharpMUSHParser.CommaCommandArgsContext
-				=> SemanticTokenType.Operator,
-
-			SharpMUSHParser.CommandListContext
-				=> SemanticTokenType.Operator,
-
-			_ => ClassifyByTokenType(token, sourceText)
-		};
-	}
-
-	/// <summary>
-	/// Classifies tokens whose semantic meaning does not depend on parse-tree context.
-	/// Called only as a fallback from <see cref="ClassifyTerminalInContext"/>.
-	/// </summary>
-	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
-	{
-		return LexerVocabulary.GetSymbolicName(token.Type) switch
-		{
-			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" => SemanticTokenType.Register,
-			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
-			"SUB_PRONOUN" or "OBJ_PRONOUN" or "POS_PRONOUN" or "ABS_POS_PRONOUN" => SemanticTokenType.Substitution,
-			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.Substitution,
-			"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
-			"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
-			"ESCAPE" => SemanticTokenType.EscapeSequence,
-			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
-			"PERCENT" => SemanticTokenType.Substitution,
-			"FUNCHAR" => ClassifyFunction(token.Text),
-			"OTHER" => ClassifyOther(token.Text, sourceText),
-			_ => SemanticTokenType.Text
-		};
-	}
-
-	/// <summary>
-	/// Classifies a function name token.
-	/// </summary>
-	private SemanticTokenType ClassifyFunction(string functionText)
-	{
-		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
-
-		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo)
-			|| FunctionLibrary.TryGetValue(functionName.ToLowerInvariant(), out functionInfo))
-		{
-			return functionInfo.IsSystem
-				? SemanticTokenType.Function
-				: SemanticTokenType.UserFunction;
-		}
-
-		return SemanticTokenType.Function;
-	}
-
-	/// <summary>
-	/// Classifies an OTHER token to determine if it's a number, object reference, etc.
-	/// </summary>
-	private static SemanticTokenType ClassifyOther(string text, string sourceText)
-	{
-		if (int.TryParse(text, out _) || double.TryParse(text, out _))
-		{
-			return SemanticTokenType.Number;
-		}
-
-		if (text.StartsWith('#') && text.Length > 1)
-		{
-			return SemanticTokenType.ObjectReference;
-		}
-
-		return SemanticTokenType.Text;
-	}
-
-	/// <summary>
-	/// Gets modifiers for a token based on its type.
-	/// </summary>
-	private SemanticTokenModifier GetTokenModifiers(IToken token, SemanticTokenType semanticType)
-	{
-		var modifiers = SemanticTokenModifier.None;
-
-		if (semanticType == SemanticTokenType.Function ||
-				semanticType == SemanticTokenType.Substitution ||
-				semanticType == SemanticTokenType.Register)
-		{
-			modifiers |= SemanticTokenModifier.DefaultLibrary;
-		}
-
-		return modifiers;
-	}
-
-	/// <summary>
-	/// Converts syntactic tokens to semantic tokens as a fallback.
-	/// </summary>
-	private static IReadOnlyList<SemanticToken> ConvertSyntacticToSemanticTokens(IReadOnlyList<TokenInfo> tokens)
-	{
-		return tokens.Select(t => new SemanticToken
-		{
-			Range = new LspRange
-			{
-				Start = new Position(t.Line - 1, t.Column),
-				End = new Position(t.Line - 1, t.Column + t.Length)
-			},
-			TokenType = t.Type switch
-			{
-				"FUNCHAR" => SemanticTokenType.Function,
-				"PERCENT" => SemanticTokenType.Substitution,
-				"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
-				"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
-				"ESCAPE" => SemanticTokenType.EscapeSequence,
-				"COMMAWS" or "EQUALS" or "SEMICOLON" => SemanticTokenType.Operator,
-				_ => SemanticTokenType.Text
-			},
-			Modifiers = SemanticTokenModifier.None,
-			Text = t.Text
-		}).ToList();
-	}
-
-	/// <summary>
-	/// Scans the token stream for escaped bracket openers (\[) and converts
-	/// their matching orphaned CBRACK closers to OTHER tokens, preventing
-	/// parser errors on unmatched brackets.
-	/// 
-	/// When the lexer encounters \[, it produces ESCAPE + ANY (not OBRACK),
-	/// so inBracketDepth never increments. The matching ] still becomes CBRACK
-	/// with no open bracketPattern to close, causing a syntax error.
-	/// This method fixes that by converting orphaned CBRACKs to OTHER.
-	/// 
-	/// The algorithm tracks real bracket depth to avoid converting CBRACKs
-	/// that close real bracket patterns. An escaped bracket inside a real
-	/// bracket (e.g., [reglattr(%!/\[0-9\]+)]) is correctly ignored.
-	/// </summary>
-	internal static void RewriteOrphanedBracketClosers(BufferedTokenSpanStream tokenStream)
-	{
-		var tokens = tokenStream.tokens;
-		var depth = 0;
-
-		for (var i = 0; i < tokens.Count; i++)
-		{
-			var token = tokens[i];
-
-			if (token.Type == SharpMUSHLexer.OBRACK)
-			{
-				depth++;
-			}
-			else if (token.Type == SharpMUSHLexer.CBRACK)
-			{
-				if (depth > 0)
-				{
-					depth--;
-				}
-				else if (token is IWritableToken writable)
-				{
-					// Orphaned CBRACK at depth 0 — treat as literal ']'
-					writable.Type = SharpMUSHLexer.OTHER;
-				}
-			}
-		}
-	}
-
-	internal static void RewriteOrphanedBraceClosers(BufferedTokenSpanStream tokenStream)
-	{
-		var tokens = tokenStream.tokens;
-		var depth = 0;
-
-		for (var i = 0; i < tokens.Count; i++)
-		{
-			var token = tokens[i];
-
-			if (token.Type == SharpMUSHLexer.OBRACE)
-			{
-				depth++;
-			}
-			else if (token.Type == SharpMUSHLexer.CBRACE)
-			{
-				if (depth > 0)
-				{
-					depth--;
-				}
-				else if (token is IWritableToken writable)
-				{
-					// Orphaned CBRACE at depth 0 — treat as literal '}'
-					writable.Type = SharpMUSHLexer.OTHER;
-				}
-			}
-		}
-	}
+		=> Syntax.GetSemanticTokensData(text, parseType);
 }
