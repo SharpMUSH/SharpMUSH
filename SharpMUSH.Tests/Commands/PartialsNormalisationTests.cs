@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
@@ -9,7 +10,8 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// The behaviour the Commands/Functions partials sweep (#964, #965) moved onto shared code: the one
 /// q-register scope, the one privilege reset on a change of owner or zone, @wizmotd and @rejectmotd
-/// running @motd's body, and @verb reporting a failed match once.
+/// running @motd's body, @verb reporting a failed match once, and the one too-few-arguments guard
+/// that still words each command's own usage.
 /// </summary>
 public class PartialsNormalisationTests
 {
@@ -260,5 +262,46 @@ public class PartialsNormalisationTests
 		await Assert.That(messages.Count(message => message == "I can't see that here.")).IsEqualTo(1);
 		await Assert.That(messages.Any(message => message.StartsWith("#-1"))).IsFalse();
 		await Assert.That(messages).DoesNotContain("VerbNoVictim_What");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_dolist</c> tells the executor (<c>src/game.c:2025</c>), not the enactor, that the
+	/// list has no command. SharpMUSH told the enactor, so a forced object's mistake went to the forcer.
+	/// </summary>
+	[Test]
+	public async ValueTask DolistWithoutACommandTellsTheExecutor()
+	{
+		var player = await PlayerAsync("DolistForcer");
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("DolistForced")})");
+		await AsGod($"@chown/preserve {thing}={player.DbRef}");
+		var thingRef = DBRef.Parse(await Eval($"objid({thing})"));
+		var recorder = WebAppFactoryArg.Notifications;
+		var thingBefore = recorder.CountFor(thingRef);
+		var playerBefore = recorder.CountFor(player.DbRef);
+
+		await RunAs(player, $"@force {thing}=@dolist a b");
+
+		await recorder.WaitForAsync(thingRef, "What do you want to do with the list?", startIndex: thingBefore);
+		await Assert.That(recorder.For(player.DbRef).Skip(playerBefore))
+			.DoesNotContain("What do you want to do with the list?");
+	}
+
+	/// <summary>
+	/// A guard that belongs to one switch keeps that switch's own usage line rather than the generic
+	/// arity message the declared-MinArgs guard gives.
+	/// </summary>
+	[Test]
+	[Arguments("@suggest/add DemoCategory", "Usage: @suggest/add <category>=<word>")]
+	[Arguments("@quota/set me", "Usage: @quota/set <player>=<amount>")]
+	[Arguments("@attribute/access GUARDATTR", "You must specify attribute flags.")]
+	public async ValueTask SwitchGuardsKeepTheirOwnUsage(string command, string usage)
+	{
+		var wizard = await PlayerAsync("GuardUsage");
+		await AsGod($"@set {wizard.DbRef}=WIZARD");
+		var before = WebAppFactoryArg.Notifications.CountFor(wizard.DbRef);
+
+		await RunAs(wizard, command);
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(wizard.DbRef).Skip(before).ToList()).Contains(usage);
 	}
 }

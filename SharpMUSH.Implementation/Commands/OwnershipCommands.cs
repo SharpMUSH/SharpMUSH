@@ -144,10 +144,10 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var preserve = switches.Contains("PRESERVE");
 
-		if (args.Count < 1)
+		if (await RejectIfTooFewArguments(parser, 1, executor,
+				nameof(ErrorMessages.Notifications.ChownAllUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return usage;
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();

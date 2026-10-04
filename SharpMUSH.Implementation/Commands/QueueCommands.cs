@@ -490,10 +490,10 @@ public partial class Commands
 		{
 			// With CB.RSArgs, each comma-separated value becomes a separate argument
 			// So @notify/setq obj=0,val1,1,val2 becomes: args[0]=obj, args[1]=0, args[2]=val1, args[3]=1, args[4]=val2
-			if (args.Count < 3)
+			if (await RejectIfTooFewArguments(parser, 3, executor,
+					nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments), ErrorMessages.Returns.MissingQregAssignments) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments), executor);
-				return new CallState(ErrorMessages.Returns.MissingQregAssignments);
+				return usage;
 			}
 
 			var qregArgCount = args.Count - 1;
