@@ -115,6 +115,55 @@ public class PartialsNormalisationTests
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>do_chown</c> ends every successful transfer with <c>Owner changed.</c> to the enactor
+	/// (<c>src/set.c:238</c>), and <c>chown_object</c>'s <c>do_halt</c> (<c>src/set.c:340</c>) has already
+	/// told the new owner <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c>. SharpMUSH's @chown said nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask ChownReportsOwnerChangedAndHaltsForTheNewOwner()
+	{
+		var wizard = await PlayerAsync("ChownWizard");
+		var newOwner = await PlayerAsync("ChownReceiver");
+		await AsGod($"@set {wizard.DbRef}=WIZARD");
+		var name = TestIsolationHelpers.GenerateUniqueName("ChownReported");
+		var thing = await Eval($"create({name})");
+		await AsGod($"@chown/preserve {thing}={wizard.DbRef}");
+		var recorder = WebAppFactoryArg.Notifications;
+		var wizardBefore = recorder.CountFor(wizard.DbRef);
+		var ownerBefore = recorder.CountFor(newOwner.DbRef);
+
+		await RunAs(wizard, $"@chown {thing}={newOwner.DbRef}");
+
+		await Assert.That(recorder.For(wizard.DbRef).Skip(wizardBefore).ToList()).Contains("Owner changed.");
+		await Assert.That(recorder.For(newOwner.DbRef).Skip(ownerBefore).Where(message => message.Contains(name)))
+			.IsEquivalentTo([$"Halted: {name}({thing})"]);
+		await Assert.That(await Eval($"owner({thing})")).IsEqualTo($"#{newOwner.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>/preserve</c> skips <c>chown_object</c>'s halt (<c>src/set.c:332</c>), so only <c>Owner changed.</c> is said.
+	/// </summary>
+	[Test]
+	public async ValueTask ChownPreserveReportsOwnerChangedWithoutHalting()
+	{
+		var wizard = await PlayerAsync("ChownPreserveWizard");
+		var newOwner = await PlayerAsync("ChownPreserveReceiver");
+		await AsGod($"@set {wizard.DbRef}=WIZARD");
+		var name = TestIsolationHelpers.GenerateUniqueName("ChownPreserved");
+		var thing = await Eval($"create({name})");
+		await AsGod($"@chown/preserve {thing}={wizard.DbRef}");
+		var recorder = WebAppFactoryArg.Notifications;
+		var wizardBefore = recorder.CountFor(wizard.DbRef);
+		var ownerBefore = recorder.CountFor(newOwner.DbRef);
+
+		await RunAs(wizard, $"@chown/preserve {thing}={newOwner.DbRef}");
+
+		await Assert.That(recorder.For(wizard.DbRef).Skip(wizardBefore).ToList()).Contains("Owner changed.");
+		await Assert.That(recorder.For(newOwner.DbRef).Skip(ownerBefore).Where(message => message.Contains(name))).IsEmpty();
+		await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("0");
+	}
+
+	/// <summary>
 	/// A refused @chown changes nothing: <c>do_chown</c> runs <c>chown_object</c> only after the transfer
 	/// is allowed (src/set.c:237), so the object keeps its flags and powers.
 	/// </summary>
@@ -129,8 +178,10 @@ public class PartialsNormalisationTests
 		await AsGod($"@set {thing}=TRUST");
 		await AsGod($"@power {thing}=No_Quota");
 
+		var before = WebAppFactoryArg.Notifications.CountFor(holder.DbRef);
 		await RunAs(holder, $"@chown {thing}={stranger.DbRef}");
 
+		await Assert.That(WebAppFactoryArg.Notifications.For(holder.DbRef).Skip(before)).DoesNotContain("Owner changed.");
 		await Assert.That(await Eval($"owner({thing})")).IsEqualTo($"#{holder.DbRef.Number}");
 		await Assert.That(await Eval($"hasflag({thing},TRUST)")).IsEqualTo("1");
 		await Assert.That(await Eval($"haspower({thing},No_Quota)")).IsEqualTo("1");

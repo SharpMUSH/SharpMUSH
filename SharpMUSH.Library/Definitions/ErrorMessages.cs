@@ -764,6 +764,8 @@ public static partial class ErrorMessages
 		/// zone is cleared, which is why there is no separate "Zone cleared." here.
 		/// </summary>
 		public const string ZoneChanged = "Zone changed.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:238</c>): to the enactor, after every successful <c>@chown</c>; QUIET does not suppress it.</summary>
+		public const string OwnerChanged = "Owner changed.";
 		public const string CantMakeCircularZones = "You can't make circular zones!";
 		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
 		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
@@ -978,14 +980,12 @@ public static partial class ErrorMessages
 
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";
-		public const string AllObjectsHalted = "All objects halted.";
 		public const string Notified = "Notified.";
 		public const string YouDoNotHavePermissionToSpoofEmits = "You do not have permission to spoof emits.";
 		public const string NoSuchCommandAtLogin = "No such command available at login.";
 		public const string InvalidRoomSpecified = "Invalid room specified.";
 		public const string YouMustProvideMatchString = "You must provide a string to match when using /match.";
 		public const string YouMustSpecifyObjectToDecompile = "You must specify an object to decompile.";
-		public const string AllObjectsRestarted = "All objects restarted.";
 		public const string YouMustSpecifyObjectToRestart = "You must specify an object to restart.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AmbiguousChannelNameFormat = "Ambiguous channel name '{0}'. Please be more specific.";
@@ -1041,8 +1041,6 @@ public static partial class ErrorMessages
 		public const string AhelpTopicsMatchingFormat = "Admin help topics matching '{0}':";
 		public const string AhelpTryPattern = "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.";
 
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AllObjectsHaltedWithCountFormat = "All objects halted. {0} objects processed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCreateFlagFormat = "Failed to create flag '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1231,12 +1229,6 @@ public static partial class ErrorMessages
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
 		public const string PasswordInvalid = "Invalid password.";
-
-		public const string RestartMustSpecifyObject = "You must specify an object to restart.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string RestartedPlayerAndObjectsFormat = "Restarted {0} and all their objects.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string RestartedObjectFormat = "Restarted {0}.";
 
 		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
 		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section
