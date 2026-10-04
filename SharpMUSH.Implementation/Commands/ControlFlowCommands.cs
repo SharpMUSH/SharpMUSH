@@ -218,12 +218,13 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
-		if (parser.CurrentState.Arguments.Count < 2)
+		if (await RejectIfTooFewArguments(parser, 2, executor,
+				nameof(ErrorMessages.Notifications.DoListWhatToDoWithList), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(enactor, nameof(ErrorMessages.Notifications.DoListWhatToDoWithList), enactor);
-			return new None();
+			return usage;
 		}
 
 		var hasDelimit = switches.Contains("DELIMIT");

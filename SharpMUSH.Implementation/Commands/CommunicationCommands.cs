@@ -185,10 +185,10 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (args.Count < 2)
+		if (await RejectIfTooFewArguments(parser, 2, executor,
+				nameof(ErrorMessages.Notifications.VerbUsage), ErrorMessages.Returns.CantSeeThat) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.VerbUsage), executor);
-			return new CallState(ErrorMessages.Returns.CantSeeThat);
+			return usage;
 		}
 
 		// ElementAtOrDefault past the end yields a default KeyValuePair whose Value is a null CallState,

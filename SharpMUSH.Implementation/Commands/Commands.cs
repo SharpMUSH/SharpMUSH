@@ -235,4 +235,28 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		await NotifyService.Notify(executor, message, executor);
 		return new CallState(message);
 	}
+
+	/// <summary>
+	/// Rejects an invocation carrying fewer than <paramref name="minimum"/> arguments with the command's
+	/// own usage message rather than the generic arity one. This is the shape for a guard that belongs to
+	/// one switch (<c>@suggest/add</c>, <c>@quota/set</c>) or that PennMUSH words specifically
+	/// (<c>@dolist</c>'s "What do you want to do with the list?").
+	/// </summary>
+	/// <param name="parser">The parser whose current arguments are counted.</param>
+	/// <param name="minimum">The fewest arguments the command (or switch) accepts.</param>
+	/// <param name="notified">Who is told; the executor, as PennMUSH's <c>notify(executor, ...)</c>.</param>
+	/// <param name="usageKey">The localized notification key, as <c>nameof(ErrorMessages.Notifications.X)</c>.</param>
+	/// <param name="errorReturn">The value the command returns when rejected.</param>
+	/// <returns>The rejection to return, or <c>null</c> when the arity is satisfied.</returns>
+	private async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser, int minimum,
+		AnySharpObject notified, string usageKey, string errorReturn)
+	{
+		if (parser.CurrentState.Arguments.Count >= minimum)
+		{
+			return null;
+		}
+
+		await NotifyService.NotifyLocalized(notified, usageKey, notified);
+		return new CallState(errorReturn);
+	}
 }
