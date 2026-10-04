@@ -32,7 +32,8 @@ public sealed class LightningStorageCapacityService(LightningDatabase database, 
 			UsedPages = usage.UsedPages,
 			WorldDiskFreeBytes = DiskSpace.FreeBytes(worldPath),
 			Backup = DescribeBackups(worldPath, usage),
-			Leftovers = Leftovers(worldPath)
+			Leftovers = Leftovers(worldPath),
+			StaleReadersCleared = database.Store.StaleReadersCleared
 		};
 	}
 

@@ -53,7 +53,7 @@ public partial class LightningDatabase(
 	private readonly IReadOnlyList<IMigrationSource> _migrationSources = migrationSources ?? [];
 	private readonly IReadOnlyList<PluginFlag> _pluginFlags = pluginFlags ?? [];
 
-	internal LightningStore Store { get; } = new(options);
+	internal LightningStore Store { get; } = new(options, logger);
 
 	/// <summary>
 	/// Closes the store this instance owns — the LMDB environment, its lock file and the writer thread.

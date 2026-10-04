@@ -394,6 +394,12 @@ Two rules follow from this:
   still see. A backup holds one read transaction for as long as the copy takes. Every write in that
   time lands on new pages, so the file grows by roughly the volume of writes made during the copy.
   That space becomes free pages once the copy ends. It is reused, not returned to the disk.
+- **A dead reader pins pages until it is cleared.** A process that dies while holding a read
+  transaction leaves its slot in `lock.mdb` occupied, and that slot pins pages the same way. The server
+  frees such slots (`mdb_reader_check`) when it opens the world and every five minutes after that, and
+  logs a warning when it frees any. `@storage` and `sharpmush_storage_stale_readers_cleared_total`
+  count them. A slot only outlives its process when another process was attached at the time, such
+  as an `mdb_stat` run against the live world.
 
 ### What a backup run needs
 

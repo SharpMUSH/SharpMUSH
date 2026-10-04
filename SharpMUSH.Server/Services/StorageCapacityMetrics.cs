@@ -15,6 +15,8 @@ namespace SharpMUSH.Server.Services;
 ///   <c>backup_disk_free</c>, <c>leftover_worlds</c>.</item>
 ///   <item><c>sharpmush_storage_backup_fits</c> — 1 when the next backup run would pass its free-space
 ///   check.</item>
+///   <item><c>sharpmush_storage_stale_readers_cleared_total</c> — reader slots freed since startup because
+///   the process holding them died mid-read.</item>
 /// </list>
 /// A figure the platform cannot read is left out rather than reported as zero. A hosted service only so
 /// the host constructs it at startup; nothing is measured until the first scrape.
@@ -45,6 +47,8 @@ public sealed class StorageCapacityMetrics : IHostedService, IDisposable
 			description: "World storage capacity: map limit, file length, allocated disk, live data, backup budget");
 		_meter.CreateObservableGauge("sharpmush.storage.backup.fits", ObserveFits,
 			description: "1 when the next backup run would find enough free disk, 0 when it would refuse to start");
+		_meter.CreateObservableCounter("sharpmush.storage.stale_readers.cleared", () => Current().StaleReadersCleared,
+			description: "LMDB reader slots freed since startup because the process holding them died mid-read");
 	}
 
 	private IEnumerable<Measurement<long>> ObserveBytes()

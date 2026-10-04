@@ -1,6 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Database.Lightning;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Tests.Database.Lightning;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -46,6 +49,18 @@ public class StorageCommandTests : ServerTestBase
 		await Assert.That(heard.Any(m => m.Contains("Live data") && m.Contains("before the map is full"))).IsTrue();
 		await Assert.That(heard.Any(m => m.Contains("never shrinks the file"))).IsTrue();
 		await Assert.That(heard.Any(m => m.Contains("At its peak"))).IsTrue();
+	}
+
+	[Test]
+	public async Task TheReportCountsReaderSlotsADeadProcessLeftBehind()
+	{
+		var store = ((LightningDatabase)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>()).Store;
+		await DeadReader.LeaveAsync(store.Path);
+		await Assert.That(store.CheckStaleReaders()).IsEqualTo(1);
+
+		var heard = await HeardAfterAsync("@storage");
+
+		await Assert.That(heard.Any(m => m.Contains("reader slot(s) freed since startup"))).IsTrue();
 	}
 
 	[Test]

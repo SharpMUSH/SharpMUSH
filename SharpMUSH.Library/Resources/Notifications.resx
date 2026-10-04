@@ -2551,6 +2551,9 @@
   <data name="StorageDiskFreeFormat" xml:space="preserve">
     <value>Disk free beside the world: {0}.</value>
   </data>
+  <data name="StorageStaleReadersFormat" xml:space="preserve">
+    <value>{0} reader slot(s) freed since startup: a process holding the world open died while reading it, and its slot kept writers from reusing pages until it was freed. Another tool attached to the live world is the usual cause (deploy/README.md).</value>
+  </data>
   <data name="StorageCompactionNote" xml:space="preserve">
     <value>Deleting records frees pages inside the file for reuse; it never shrinks the file. To shrink it, replace it with a compacted copy (deploy/README.md).</value>
   </data>

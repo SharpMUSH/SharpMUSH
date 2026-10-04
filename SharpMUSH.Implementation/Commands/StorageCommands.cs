@@ -57,6 +57,11 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageDiskFreeFormat), executor,
 			DescribeKnownBytes(report.WorldDiskFreeBytes));
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageCompactionNote), executor);
+		if (report.StaleReadersCleared > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageStaleReadersFormat),
+				executor, report.StaleReadersCleared);
+		}
 
 		var backup = report.Backup;
 		if (string.IsNullOrEmpty(backup.Root))

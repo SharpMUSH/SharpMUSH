@@ -45,6 +45,10 @@ public sealed record StorageCapacityReport
 	/// <summary>Earlier worlds and half-finished copies still on disk beside the live one.</summary>
 	public required IReadOnlyList<LeftoverWorld> Leftovers { get; init; }
 
+	/// <summary>Reader slots freed since startup because the process holding them died mid-read. Each one
+	/// pinned pages writers could not reuse until it was freed.</summary>
+	public long StaleReadersCleared { get; init; }
+
 	/// <summary>Pages inside the file that hold nothing live: freed by deletes and updates, reused by
 	/// later writes, never returned to the filesystem.</summary>
 	public long FreePages => Math.Max(0, FilePages - UsedPages);
