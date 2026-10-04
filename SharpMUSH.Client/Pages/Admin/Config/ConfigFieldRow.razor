@@ -1,0 +1,194 @@
+@using SharpMUSH.Client.Models.Configuration
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One property of a config section (README §6.4): its name, key and help on the left, the kit control
+   for its type on the right. Every edit goes to the section's ConfigDraft, then tells the page, which
+   owns the unsaved bar. *@
+<div class="cfg-row @(Stacked ? "cfg-row--stacked" : "cfg-row--inline")">
+    <div class="cfg-row-text">
+        <div class="cfg-row-name">
+            <span>@DisplayName</span>
+            <code class="cfg-row-key">@Property.Path</code>
+            @if (IsChanged)
+            {
+                <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", Property.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
+            }
+        </div>
+        @if (HelpId is not null)
+        {
+            <div class="cfg-row-help" id="@HelpId">@Property.Description</div>
+        }
+        @if (ErrorId is not null)
+        {
+            <div class="cfg-row-error" id="@ErrorId">@ErrorText</div>
+        }
+    </div>
+    <div class="cfg-row-control @(Stacked ? "cfg-row-control--full" : "")">
+        @if (Property.Component == "switch")
+        {
+            var on = Draft.Bool(Property);
+            <button type="button" role="switch" aria-checked="@(on ? "true" : "false")" aria-label="@DisplayName" aria-describedby="@DescribedBy"
+                    class="cfg-switch @(on ? "cfg-switch--on" : "")"
+                    disabled="@Property.ReadOnly"
+                    @onclick="@(() => Edit(() => Draft.Set(Property, !on)))">
+                <span class="cfg-switch-knob"></span>
+            </button>
+        }
+        else if (Property.Component == "select" && Property.Options is { Count: > 0 })
+        {
+            var current = Draft.String(Property);
+            <div class="cfg-pills" role="group" aria-label="@DisplayName" aria-describedby="@DescribedBy">
+                @foreach (var opt in Property.Options)
+                {
+                    var option = opt;
+                    var selected = current == option.Key;
+                    <button type="button" class="cfg-pill @(selected ? "cfg-pill--on" : "")" aria-pressed="@(selected ? "true" : "false")"
+                            @onclick="@(() => Edit(() => Draft.Set(Property, option.Key)))">
+                        @option.Value
+                    </button>
+                }
+            </div>
+        }
+        else if (Property.Component == "numeric")
+        {
+            var min = ConfigValues.IntBound(Property.Min);
+            var max = ConfigValues.IntBound(Property.Max);
+            var range = ConfigNaming.RangeText(min, max);
+            @if (range is not null)
+            {
+                <span class="cfg-range">@range</span>
+            }
+            <input class="cfg-num" type="number" inputmode="numeric" aria-label="@DisplayName" aria-describedby="@DescribedBy"
+                   value="@Draft.NumericString(Property)"
+                   min="@(min?.ToString())"
+                   max="@(max?.ToString())"
+                   readonly="@Property.ReadOnly"
+                   @onchange="@(e => Edit(() => Draft.SetNumeric(Property, e.Value?.ToString())))" />
+        }
+        else if (Property.Component == "stringlist")
+        {
+            var items = Draft.StringList(Property);
+            <div class="cfg-chips">
+                @if (items.Count == 0)
+                {
+                    <span class="cfg-empty">@Loc["NoItems"]</span>
+                }
+                @for (var i = 0; i < items.Count; i++)
+                {
+                    var index = i;
+                    <span class="cfg-chip @(IsChanged ? "cfg-chip--changed" : "")">
+                        @items[index]
+                        <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {items[index]}")"
+                                @onclick="@(() => Edit(() => Draft.RemoveListItemAt(Property, index)))">×</button>
+                    </span>
+                }
+            </div>
+            <input class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
+                   value="@Draft.ListDraft(Property)"
+                   @oninput="@(e => Draft.SetListDraft(Property, e.Value?.ToString() ?? string.Empty))"
+                   @onkeydown="@(e => OnEnter(e, () => Draft.CommitListDraft(Property)))" />
+        }
+        else if (Property.Component == "dictionary")
+        {
+            var entries = Draft.DictEntries(Property);
+            <div class="cfg-dict">
+                @if (entries.Count == 0)
+                {
+                    <span class="cfg-empty">@Loc["NoEntries"]</span>
+                }
+                @for (var e = 0; e < entries.Count; e++)
+                {
+                    var entryIndex = e;
+                    var entry = entries[entryIndex];
+                    <div class="cfg-dict-entry" @key="@($"{Property.Path}-entry-{entryIndex}")">
+                        <div class="cfg-dict-head">
+                            <input class="cfg-text" placeholder="@Loc["Key"]" aria-label="@Loc["Key"]"
+                                   value="@entry.Key"
+                                   @onchange="@(ev => Edit(() => Draft.SetDictKey(Property, entryIndex, ev.Value?.ToString() ?? string.Empty)))" />
+                            <button type="button" class="cfg-icon-btn cfg-icon-btn--danger"
+                                    aria-label="@Loc["RemoveEntry"]" title="@Loc["RemoveEntry"]"
+                                    @onclick="@(() => Edit(() => Draft.RemoveDictEntry(Property, entryIndex)))">
+                                <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
+                            </button>
+                        </div>
+                        <div class="cfg-chips">
+                            @if (entry.Values.Count == 0)
+                            {
+                                <span class="cfg-empty">@Loc["NoItems"]</span>
+                            }
+                            @for (var v = 0; v < entry.Values.Count; v++)
+                            {
+                                var valueIndex = v;
+                                <span class="cfg-chip">
+                                    @entry.Values[valueIndex]
+                                    <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {entry.Values[valueIndex]}")"
+                                            @onclick="@(() => Edit(() => Draft.RemoveDictValueAt(Property, entryIndex, valueIndex)))">×</button>
+                                </span>
+                            }
+                        </div>
+                        <input class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
+                               value="@entry.ValueDraft"
+                               @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"
+                               @onkeydown="@(ev => OnEnter(ev, () => Draft.CommitDictValueDraft(Property, entryIndex)))" />
+                    </div>
+                }
+                <button type="button" class="cfg-add" @onclick="@(() => Edit(() => Draft.AddDictEntry(Property)))">
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["AddEntry"]
+                </button>
+            </div>
+        }
+        else
+        {
+            var single = ConfigNaming.IsSingleChar(Property);
+            <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@DisplayName" aria-describedby="@DescribedBy"
+                   maxlength="@(single ? 1 : null)"
+                   value="@Draft.String(Property)"
+                   readonly="@Property.ReadOnly"
+                   @onchange="@(e => Edit(() => Draft.Set(Property, e.Value?.ToString())))" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PropertyMetadata Property { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ConfigDraft Draft { get; set; } = default!;
+
+    /// <summary>Raised after an edit lands in <see cref="Draft"/>, so the page can redraw its unsaved bar.</summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string DisplayName => ConfigNaming.DisplayName(Property);
+
+    private bool IsChanged => Draft.IsChanged(Property.Path);
+
+    private bool Stacked => Property.Component is "stringlist" or "dictionary";
+
+    private string? HelpId =>
+        string.IsNullOrEmpty(Property.Description) ? null : "cfg-help-" + ConfigNaming.Slug(Property.Path);
+
+    private string? ErrorText => Draft.TryGetError(Property.Path, out var error) ? error : null;
+
+    private string? ErrorId => ErrorText is null ? null : "cfg-error-" + ConfigNaming.Slug(Property.Path);
+
+    /// <summary>The help and the refusal, by id, for the control's <c>aria-describedby</c>; null when it has neither.</summary>
+    private string? DescribedBy
+    {
+        get
+        {
+            var ids = string.Join(' ', new[] { HelpId, ErrorId }.Where(id => id is not null));
+            return ids.Length == 0 ? null : ids;
+        }
+    }
+
+    private Task Edit(Action edit)
+    {
+        edit();
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task OnEnter(KeyboardEventArgs args, Action commit) =>
+        args.Key == "Enter" ? Edit(commit) : Task.CompletedTask;
+}
