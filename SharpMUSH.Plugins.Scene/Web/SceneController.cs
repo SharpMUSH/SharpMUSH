@@ -176,7 +176,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		return Ok(shared.Values
 			.OrderByDescending(p => p.Scenes)
 			.ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-			.Take(Math.Max(0, count))
+			.Take(Math.Clamp(count, 0, MaxListCount))
 			.Select(p => new ScenePartnerDto(p.Dbref, p.Name, p.Scenes)));
 	}
 
@@ -184,40 +184,43 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	private Task<List<Contracts.Scene>> VisibleScenesOfAsync(DBRef member, int count) =>
 		VisibleScenesAsync("mine", member.ToString(), count);
 
+	/// <summary>The most scenes one list request returns, whatever <c>count</c> asks for.</summary>
+	public const int MaxListCount = 200;
+
 	/// <summary>
 	/// The first <paramref name="count"/> scenes of <paramref name="filter"/> that the caller may see. The
-	/// service's own <c>count</c> cuts the list before visibility is known, so the window is widened until
-	/// it holds <paramref name="count"/> visible scenes or the service has no more to give — newer scenes
-	/// the caller cannot open never push the older ones it can out of the answer.
+	/// service's own <c>count</c> cuts the list before visibility is known, so when the first window holds
+	/// fewer visible scenes than wanted, and the service had more to give, the whole list is read once more —
+	/// newer scenes the caller cannot open never push the older ones it can out of the answer. Two reads at
+	/// most: the store reads every index entry on each call whatever the count, so widening step by step
+	/// repeated that read once per doubling.
 	/// </summary>
 	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count)
 	{
-		var wanted = Math.Max(0, count);
+		var wanted = Math.Clamp(count, 0, MaxListCount);
 		var seen = new Dictionary<string, bool>(StringComparer.Ordinal);
 		var ask = Math.Max(1, wanted);
-		while (true)
+		var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
+		var visible = await TakeVisibleAsync(scenes);
+		if (visible.Count >= wanted || scenes.Count < ask) return visible;
+
+		return await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+
+		async Task<List<Contracts.Scene>> TakeVisibleAsync(IReadOnlyList<Contracts.Scene> listed)
 		{
-			var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
-			var visible = new List<Contracts.Scene>(Math.Min(scenes.Count, wanted));
-			foreach (var scene in scenes)
+			var taken = new List<Contracts.Scene>(Math.Min(listed.Count, wanted));
+			foreach (var scene in listed)
 			{
+				if (taken.Count >= wanted) break;
 				if (!seen.TryGetValue(scene.Id, out var canSee))
 				{
 					seen[scene.Id] = canSee = await CanSeeAsync(scene);
 				}
 
-				if (canSee && visible.Count < wanted)
-				{
-					visible.Add(scene);
-				}
+				if (canSee) taken.Add(scene);
 			}
 
-			if (visible.Count >= wanted || scenes.Count < ask || ask >= int.MaxValue / 2)
-			{
-				return visible;
-			}
-
-			ask *= 2;
+			return taken;
 		}
 	}
 

@@ -126,6 +126,28 @@ public class SceneControllerParticipantTests
 		await Assert.That(scenes).IsEquivalentTo(new[] { "1" }).Because("the newest visible scene, not the newest scene");
 	}
 
+	/// <summary>
+	/// However many hidden scenes sort first, the list is read at most twice — the window asked for, then the
+	/// whole list — rather than once per doubling, and the count is clamped.
+	/// </summary>
+	[Test]
+	public async Task List_ReadsAtMostTwice_AndClampsTheCount()
+	{
+		var world = new Dictionary<Scene, string[]> { [SceneOf("old", isPublic: true, lastActivity: 1)] = [Tomas] };
+		for (var i = 0; i < 40; i++) world[SceneOf($"hidden{i}", isPublic: false, lastActivity: 100 + i)] = [Wren];
+		var service = new MemberSceneService(world);
+
+		var result = await ControllerFor(service, caller: null).ListScenes(count: 1);
+
+		var scenes = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id).ToList();
+		await Assert.That(scenes).IsEquivalentTo(new[] { "old" });
+		await Assert.That(service.Lists.Count).IsEqualTo(2);
+
+		for (var i = 0; i < SceneController.MaxListCount + 10; i++) world[SceneOf($"open{i}", isPublic: true, lastActivity: 1000 + i)] = [Tomas];
+		var many = await ControllerFor(service, caller: null).ListScenes(count: 100_000);
+		await Assert.That(((IEnumerable<SceneController.SceneDto>)((OkObjectResult)many).Value!).Count()).IsEqualTo(SceneController.MaxListCount);
+	}
+
 	[Test]
 	public async Task Partners_CountOverTheLast50VisibleScenes_NotTheLast50Scenes()
 	{
