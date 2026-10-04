@@ -122,12 +122,21 @@ public partial class Functions
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// fun_beep (src/funstr.c:1415-1427): a count is_integer refuses is e_int, and one outside 1..5
+		// is e_range, rather than either quietly becoming a single bell. beep() is no argument at all
+		// (src/parse.c:2974-2978).
 		var count = 1;
-		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg)
-			&& int.TryParse(arg.Message!.ToPlainText(), out var parsed)
-			&& parsed is >= 1 and <= 5)
+		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg) && arg.Message!.ToPlainText() is { Length: > 0 } text)
 		{
-			count = parsed;
+			if (!ArgHelpers.TryInteger(parser, text, out count))
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+			}
+
+			if (count is < 1 or > 5)
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
+			}
 		}
 
 		return ValueTask.FromResult(new CallState(MString.Concat(Enumerable.Repeat(MString.Bell(), count))));

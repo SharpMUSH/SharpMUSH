@@ -816,12 +816,12 @@ public class InputSessionServiceTests
 		var websocket = new WebSocketInputConsumer(NullLogger<WebSocketInputConsumer>.Instance, queue, h.Connections, h.Sessions);
 		await telnet.HandleAsync(new TelnetInputMessage(1, payload, "transport"));
 		await websocket.HandleAsync(new WebSocketInputMessage(1, payload, "transport"));
-		await queue.Received(2).WriteUserCommand(1, Arg.Is<MarkupText>(value => value.Text == payload),
+		await queue.Received(2).AdmitUserCommand(1, Arg.Is<MarkupText>(value => value.Text == payload),
 			Arg.Is<ParserState>(state => state.ConnectionSessionId == "transport"));
 		queue.ClearReceivedCalls();
 		await telnet.HandleAsync(new TelnetInputMessage(1, payload, "old"));
 		await websocket.HandleAsync(new WebSocketInputMessage(1, payload, "old"));
-		await queue.DidNotReceive().WriteUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
+		await queue.DidNotReceive().AdmitUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
 	}
 
 	private static Scheduler Queue(Harness h, IInputSessionService? sessions = null, uint global = 10, IQueueDiagnosticsRecorder? diagnostics = null, uint owner = 100)
@@ -846,7 +846,7 @@ public class InputSessionServiceTests
 		await using var queue = Queue(h, global: 2);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
@@ -877,7 +877,7 @@ public class InputSessionServiceTests
 				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
 				return CallState.Empty;
 			});
-		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
@@ -910,7 +910,7 @@ public class InputSessionServiceTests
 				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
 				return CallState.Empty;
 			});
-		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
@@ -941,7 +941,7 @@ public class InputSessionServiceTests
 		await using var queue = Queue(h);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.EnqueueWork(async () =>
+		await queue.AdmitWork(async () =>
 		{
 			entered.SetResult();
 			await release.Task;
@@ -982,7 +982,7 @@ public class InputSessionServiceTests
 		await using var queue = Queue(h);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.EnqueueWork(async () =>
+		await queue.AdmitWork(async () =>
 		{
 			entered.SetResult();
 			await release.Task;
@@ -999,7 +999,7 @@ public class InputSessionServiceTests
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			await queue.WriteUserCommand(1, MarkupText.Plain("@destroy me"),
+			await queue.AdmitUserCommand(1, MarkupText.Plain("@destroy me"),
 				ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
 		}
 		finally { release.TrySetResult(); }
@@ -1007,7 +1007,7 @@ public class InputSessionServiceTests
 		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
 		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
 		// Tombstones fence previously queued replies, without consuming future ordinary input.
-		await queue.WriteUserCommand(1, MarkupText.Plain("think ordinary"),
+		await queue.AdmitUserCommand(1, MarkupText.Plain("think ordinary"),
 			ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
 		await Drained(queue);
 		await h.Parser.Received(1).CommandParse(1, h.Connections,
@@ -1023,7 +1023,7 @@ public class InputSessionServiceTests
 		await using var queue = Queue(h);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.EnqueueWork(async () =>
+		await queue.AdmitWork(async () =>
 		{
 			entered.SetResult(); await release.Task;
 			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
@@ -1039,8 +1039,8 @@ public class InputSessionServiceTests
 		try
 		{
 			var state = ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" };
-			await queue.WriteUserCommand(1, MarkupText.Plain("first"), state);
-			await queue.WriteUserCommand(1, MarkupText.Plain(second), state);
+			await queue.AdmitUserCommand(1, MarkupText.Plain("first"), state);
+			await queue.AdmitUserCommand(1, MarkupText.Plain(second), state);
 		}
 		finally { release.TrySetResult(); }
 		await Drained(queue);
@@ -1055,7 +1055,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness(); await h.Connect();
 		await using var queue = Queue(h);
-		await queue.WriteUserCommand(1, MarkupText.Plain(" \t "), ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
+		await queue.AdmitUserCommand(1, MarkupText.Plain(" \t "), ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
 		await Drained(queue);
 		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
 	}
@@ -1065,7 +1065,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness(); await h.Start();
 		await using var queue = Queue(h);
-		await queue.WriteUserCommand(1, MarkupText.Plain("stale"), ParserState.Empty with { Handle = 1 });
+		await queue.AdmitUserCommand(1, MarkupText.Plain("stale"), ParserState.Empty with { Handle = 1 });
 		await Drained(queue);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
 		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
@@ -1083,7 +1083,7 @@ public class InputSessionServiceTests
 			return ValueTask.FromResult<CallState?>(CallState.Empty);
 		});
 		await using var queue = Queue(h);
-		await queue.WriteUserCommand(1, MarkupText.Plain("literal"), ParserState.Empty with { ConnectionSessionId = "transport" });
+		await queue.AdmitUserCommand(1, MarkupText.Plain("literal"), ParserState.Empty with { ConnectionSessionId = "transport" });
 		await Drained(queue);
 		await Assert.That(budgetPresent).IsTrue();
 		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo("literal");
@@ -1173,7 +1173,7 @@ public class InputSessionServiceTests
 		var disposed = false;
 		try
 		{
-			await queue.EnqueueWork(async () =>
+			await queue.AdmitWork(async () =>
 			{
 				entered.SetResult();
 				await release.Task.WaitAsync(ExecutionBudget.CurrentToken);

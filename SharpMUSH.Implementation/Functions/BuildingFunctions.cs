@@ -218,7 +218,7 @@ public partial class Functions
 		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy(parser);
 
 		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
-			LockService, AttributeService, ManipulateSharpObjectService, ConnectionService, executor, objectName,
+			LockService, AttributeService, FlagAndPowerService, ConnectionService, executor, objectName,
 			destName, preserve) switch
 		{
 			Success => new CallState("1"),
@@ -242,7 +242,7 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
 			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService,
-				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				PermissionService, LockService, AttributeService, FlagAndPowerService, DidItService,
 				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
 				BuildingHelpers.Argument(args, "2")) switch

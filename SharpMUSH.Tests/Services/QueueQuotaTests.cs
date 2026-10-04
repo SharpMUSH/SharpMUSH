@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -46,7 +47,7 @@ public class QueueQuotaTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+	private QueueScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	/// <summary>
@@ -209,7 +210,7 @@ public class QueueQuotaTests
 				ConnectionSessionId = null
 			};
 
-			await Scheduler.WriteUserCommand(player.Handle, MarkupText.Plain($"&TYPED {thing}=ran"), typed);
+			await Scheduler.AdmitUserCommand(player.Handle, MarkupText.Plain($"&TYPED {thing}=ran"), typed);
 		}
 		finally
 		{
@@ -255,7 +256,7 @@ public class QueueQuotaTests
 		{
 			// The timed form is the one SemaphoreTask releases; @notify releases through
 			// TaskScheduler.Notify, which threads the executor itself.
-			await Scheduler.WriteCommandList(
+			await Scheduler.AdmitCommandList(
 				MarkupText.Plain($"&WOKE {thing}=yes"),
 				waiting,
 				new DbRefAttribute(thing, ["SEM"]),

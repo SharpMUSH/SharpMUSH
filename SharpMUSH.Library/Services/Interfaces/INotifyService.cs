@@ -65,36 +65,18 @@ public interface INotifyService
 		string notifyMessage,
 		bool shouldNotify);
 
-	/// <summary>
-	/// Sends a locale-aware notification to all connections for a DBRef.
-	/// The message is looked up from the resource file by <paramref name="key"/>,
-	/// formatted with <paramref name="args"/>, and translated per each connection's locale.
-	/// </summary>
-	ValueTask NotifyLocalized(DBRef who, string key, params object[] args);
-
-	/// <summary>
-	/// Sends a locale-aware notification to all connections for an object.
-	/// </summary>
-	ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args);
-
-	/// <summary>
-	/// Sends a locale-aware notification to a single connection handle.
-	/// </summary>
-	ValueTask NotifyLocalized(long handle, string key, params object[] args);
-
 	/// <summary>Publishes a localized status only to the captured transport incarnation.</summary>
 	ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
 		=> throw new NotSupportedException("This notifier does not support incarnation-bound status output.");
 
 	/// <summary>
 	/// Sends a locale-aware notification to all connections for a DBRef, recording the sender.
+	/// The message is looked up from the resource file by <paramref name="key"/>,
+	/// formatted with <paramref name="args"/>, and translated per each connection's locale.
+	/// The shorter forms (no sender, or an object instead of a DBRef) are in
+	/// <see cref="NotifyServiceLocalizedExtensions"/>.
 	/// </summary>
 	ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args);
-
-	/// <summary>
-	/// Sends a locale-aware notification to all connections for an object, recording the sender.
-	/// </summary>
-	ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args);
 
 	/// <summary>
 	/// Sends a locale-aware notification to a single connection handle, recording the sender.
@@ -106,11 +88,6 @@ public interface INotifyService
 	/// This preserves HTML/MXP markup while still translating the surrounding text per connection locale.
 	/// </summary>
 	ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args);
-
-	/// <summary>
-	/// Sends a locale-aware markup notification to all connections for an object.
-	/// </summary>
-	ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args);
 
 	/// <summary>
 	/// Sends a locale-aware markup notification to a single connection handle.

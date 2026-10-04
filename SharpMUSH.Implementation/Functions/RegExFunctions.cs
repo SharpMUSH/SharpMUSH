@@ -230,7 +230,8 @@ public partial class Functions
 		// named one yields an empty group for a name the pattern does not define. That is the empty
 		// string PennMUSH also produces for an out-of-range subpattern.
 		var numbers = SoftcodeRegex.PcreGroupNumbers(regex);
-		var group = int.TryParse(captureIndexOrName, out var captureIndex)
+		// A strict integer is a subpattern number, anything else a name (src/funlist.c:2931-2934).
+		var group = ArgHelpers.TryStrictInteger(captureIndexOrName, out int captureIndex)
 			? match.Groups[captureIndex >= 0 && captureIndex < numbers.Length ? numbers[captureIndex] : -1]
 			: match.Groups[captureIndexOrName];
 

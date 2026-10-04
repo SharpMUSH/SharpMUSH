@@ -47,7 +47,8 @@ public partial class TaskScheduler(
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
 	INotifyService? notifyService = null,
 	IInputSessionService? inputSessions = null,
-	IQueueDiagnosticsRecorder? diagnostics = null) : ITaskScheduler, IAsyncDisposable
+	IQueueDiagnosticsRecorder? diagnostics = null)
+	: ITaskScheduler, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);

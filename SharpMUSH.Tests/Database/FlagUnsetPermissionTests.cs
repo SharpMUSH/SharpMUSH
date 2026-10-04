@@ -25,8 +25,8 @@ public class FlagUnsetPermissionTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private IManipulateSharpObjectService ManipulateService
-		=> WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
+	private IFlagAndPowerService FlagAndPowerService
+		=> WebAppFactoryArg.Services.GetRequiredService<IFlagAndPowerService>();
 
 	/// <summary>
 	/// Seeded unset permission and metadata arrays. ODARK controls visibility, not assignment privilege.
@@ -85,7 +85,7 @@ public class FlagUnsetPermissionTests
 		await Mediator.Send(new SetObjectFlagCommand(player, suspect!));
 
 		var reread = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
-		var result = await ManipulateService.SetOrUnsetFlag(reread, reread, "!SUSPECT", false);
+		var result = await FlagAndPowerService.SetOrUnsetFlag(reread, reread, "!SUSPECT", false);
 
 		await Assert.That(result.Message!.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);

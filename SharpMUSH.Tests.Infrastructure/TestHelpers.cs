@@ -311,30 +311,12 @@ public static class TestHelpers
 				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
-		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<DBRef>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
-
+		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale. The
+		// shorthand forms are extension methods that arrive here, so these two hooks see every call.
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
-				call.ArgAt<AnySharpObject?>(2)));
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
 				call.ArgAt<AnySharpObject?>(2)));
 
@@ -345,13 +327,6 @@ public static class TestHelpers
 			.When(x => x.NotifyLocalizedMarkup(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0),
-				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
-				call.ArgAt<AnySharpObject?>(2)));
-
-		notifier
-			.When(x => x.NotifyLocalizedMarkup(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
 				call.ArgAt<AnySharpObject?>(2)));
 
@@ -375,12 +350,6 @@ public static class TestHelpers
 					DeliverToHandle(handle, text);
 				}
 			});
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => DeliverToHandle(
-				call.ArgAt<long>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))

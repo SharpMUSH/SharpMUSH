@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Services.RecurringJobs;
 /// callbacks reload that token and authority, so restart and edited/deleted definitions cannot replay work.</summary>
 public sealed class RecurringJobService(
 	IExpandedDataStore store, IObjectStore objects, IAdministrativeCapabilityService capabilities,
-	IPermissionService permissions, IAttributeService attributes, QueueScheduler queue, IMUSHCodeParser parser,
+	IPermissionService permissions, IAttributeService attributes, QueueScheduler queue, ITaskQueueReader queueReader, IMUSHCodeParser parser,
 	TimeProvider? clock = null) : IRecurringJobService
 {
 	public const string StorageKey = "sharpmush.recurring-jobs.v1";
@@ -123,7 +123,7 @@ public sealed class RecurringJobService(
 			{
 				// A canceled ready callback still owns its reservation until the consumer drains it.
 				// Consult that ledger rather than a persisted token, which can outlive an external halt.
-				if (queue.HasPendingWork("recurring:" + original.Id, "recurring"))
+				if (queueReader.HasPendingWork("recurring:" + original.Id, "recurring"))
 				{
 					jobs = Replace(jobs, original with
 					{

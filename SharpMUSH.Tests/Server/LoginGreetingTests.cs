@@ -120,13 +120,13 @@ public class LoginGreetingTests
 		var call = GreetingCallTo(handle);
 		return call is null
 			? null
-			: Localization.Format((string)call.GetArguments()[1]!, null, (object[])call.GetArguments()[2]!);
+			: Localization.Format((string)call.GetArguments()[1]!, null, (object[])call.GetArguments()[3]!);
 	}
 
 	private ICall? GreetingCallTo(long handle) =>
 		NotifyService.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized))
-			.Where(call => call.GetArguments() is [long h, string, object[], ..] && h == handle)
+			.Where(call => call.GetArguments() is [long h, string, _, object[]] && h == handle)
 			.LastOrDefault(call => (string)call.GetArguments()[1]! is
 				nameof(ErrorMessages.Notifications.WelcomeBackFormat)
 				or nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat));

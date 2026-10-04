@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -22,7 +23,7 @@ public class QueueControlCommandTests
 	public async Task ExistingPidRetimingAdjustsAFrozenSemaphoreWithoutResumingIt()
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
-		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
+		var queue = Factory.Services.GetRequiredService<QueueScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueRetime");
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>().Object().DBRef;
@@ -48,7 +49,7 @@ public class QueueControlCommandTests
 	public async Task PidUntilUsesUnixSecondsForBothDeferredQueueKinds(bool semaphore)
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
-		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
+		var queue = Factory.Services.GetRequiredService<QueueScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueUntil");
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>().Object().DBRef;
@@ -80,7 +81,7 @@ public class QueueControlCommandTests
 	public async Task GameCommandsPauseListAndResumeWithoutExposingCommandText()
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
-		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
+		var queue = Factory.Services.GetRequiredService<QueueScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueuePause");
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>().Object().DBRef;

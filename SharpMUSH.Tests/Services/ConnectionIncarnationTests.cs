@@ -100,7 +100,7 @@ public class ConnectionIncarnationTests
 	}
 
 	[Test]
-	public async Task CurrentInputUsesThePublishedSchedulerEntryPoint()
+	public async Task CurrentInputIsAdmittedUnderItsIncarnation()
 	{
 		var service = new ConnectionService(Substitute.For<IPublisher>());
 		await Register(service, "current", 200);
@@ -110,9 +110,8 @@ public class ConnectionIncarnationTests
 		await new WebSocketInputConsumer(NullLogger<WebSocketInputConsumer>.Instance, scheduler, service)
 			.HandleAsync(new WebSocketInputMessage(Handle, "look", "current"));
 
-		await scheduler.Received(2).WriteUserCommand(Handle, Arg.Any<MarkupText>(),
+		await scheduler.Received(2).AdmitUserCommand(Handle, Arg.Any<MarkupText>(),
 			Arg.Is<ParserState>(state => state.ConnectionSessionId == "current"));
-		await scheduler.DidNotReceive().AdmitUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
 	}
 
 	[Test]
@@ -177,7 +176,7 @@ public class ConnectionIncarnationTests
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			await scheduler.WriteUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
+			await scheduler.AdmitUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
 				ParserState.Empty with { Handle = Handle, ConnectionSessionId = "old" });
 			await Register(service, "replacement", 200);
 			await scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");

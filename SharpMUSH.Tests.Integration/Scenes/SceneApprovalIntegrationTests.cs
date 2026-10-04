@@ -124,11 +124,11 @@ public class SceneApprovalIntegrationTests
 	private async Task GrantGuestPowerAsync(string playerDbref)
 	{
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var manipulate = WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
+		var powers = WebAppFactoryArg.Services.GetRequiredService<IFlagAndPowerService>();
 		DBRef.TryParse(playerDbref, out var parsed);
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		var target = (await mediator.Send(new GetObjectNodeQuery(parsed!.Value))).Expect<AnySharpObject>();
-		await manipulate.SetPower(god, target, "Guest", false);
+		await powers.SetPower(god, target, "Guest", false);
 	}
 
 	private async Task<IReadOnlyList<string>> MembersAsync(string sceneId) =>

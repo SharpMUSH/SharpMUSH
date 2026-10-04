@@ -96,7 +96,7 @@ public partial class Commands
 			async found =>
 			{
 				var oldName = found.Object().Name;
-				var result = await ManipulateSharpObjectService.SetName(executor, found, name, true);
+				var result = await ObjectNameService.SetName(executor, found, name, true);
 
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
@@ -150,7 +150,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+		return await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
 			NotifyService, executor, args["0"].Message!, args["1"].Message!);
 	}
 
@@ -644,7 +644,7 @@ public partial class Commands
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
-			LockService, AttributeService, ManipulateSharpObjectService, ConnectionService, executor, exitName, destName,
+			LockService, AttributeService, FlagAndPowerService, ConnectionService, executor, exitName, destName,
 			preserve) switch
 		{
 			Success => CallState.Empty,
@@ -865,7 +865,7 @@ public partial class Commands
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
 			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService,
-				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				PermissionService, LockService, AttributeService, FlagAndPowerService, DidItService,
 				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
 				BuildingHelpers.Argument(args, "2")) switch
@@ -938,14 +938,14 @@ public partial class Commands
 					case { Count: 2 } when args["1"].Message!.ToPlainText()
 						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
 
-						return await ManipulateSharpObjectService.UnsetParent(executor, target, true);
+						return await ObjectRelationshipService.UnsetParent(executor, target, true);
 					default:
 
 						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 							parser, executor, executor,
 							args["1"].Message!.ToPlainText(), LocateFlags.All,
 							async newParent
-								=> await ManipulateSharpObjectService.SetParent(executor, target, newParent, true));
+								=> await ObjectRelationshipService.SetParent(executor, target, newParent, true));
 				}
 			}
 		);

@@ -35,7 +35,7 @@ public partial class Functions
 		var positions = positionsArg.AsSpan();
 		foreach (var range in positions.Split(' '))
 		{
-			if (TryListPosition(positions[range], list.Length, out var index))
+			if (TryListPosition(parser, positions[range], list.Length, out var index))
 			{
 				picked.Add(list[index]);
 			}
@@ -45,13 +45,15 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>find_list_position</c> without <c>insert</c>: a 1-based position, or a negative one
-	/// counting back from the end, as a 0-based index into a list of <paramref name="total"/> items.
+	/// PennMUSH's <c>find_list_position</c> without <c>insert</c> (<c>src/funlist.c:197</c>): a 1-based
+	/// position, or a negative one counting back from the end, as a 0-based index into a list of
+	/// <paramref name="total"/> items. The position is read by <c>is_integer</c> (<c>:202</c>), so
+	/// TINY_MATH and NULL_EQ_ZERO apply to it.
 	/// </summary>
-	private static bool TryListPosition(ReadOnlySpan<char> text, int total, out int index)
+	private static bool TryListPosition(IMUSHCodeParser parser, ReadOnlySpan<char> text, int total, out int index)
 	{
 		index = -1;
-		if (!int.TryParse(text, out var position)) return false;
+		if (!ArgHelpers.TryInteger(parser, text.ToString(), out var position)) return false;
 		if (position < 0) position = total + 1 + position;
 		if (position < 1 || position > total) return false;
 		index = position - 1;
@@ -59,13 +61,13 @@ public partial class Functions
 	}
 
 	/// <summary>The 0-based indexes named by a space-separated list of positions, see <see cref="TryListPosition"/>.</summary>
-	private static HashSet<int> ListPositions(string positionsArg, int total)
+	private static HashSet<int> ListPositions(IMUSHCodeParser parser, string positionsArg, int total)
 	{
 		var indexes = new HashSet<int>();
 		var positions = positionsArg.AsSpan();
 		foreach (var range in positions.Split(' '))
 		{
-			if (TryListPosition(positions[range], total, out var index))
+			if (TryListPosition(parser, positions[range], total, out var index))
 			{
 				indexes.Add(index);
 			}
@@ -543,7 +545,7 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var deleted = ListPositions(positionsArg, list.Length);
+		var deleted = ListPositions(parser, positionsArg, list.Length);
 
 		return ValueTask.FromResult<CallState>(
 			MarkupText.Join(outputSep, list.Where((_, i) => !deleted.Contains(i))));
@@ -820,14 +822,22 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var countArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MushText.One).ToPlainText();
+		var countArg = args.TryGetValue("1", out var countValue) ? countValue.Message?.ToPlainText() ?? "" : "1";
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var typeArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("R")).ToPlainText().ToUpper();
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		if (!int.TryParse(countArg, out var count))
+		// fun_randword: a count that is given must be a strict integer, but an empty one is not checked
+		// and reads as 0 (src/funlist.c:1160-1164); a count below 1 then answers nothing (:1165-1167).
+		if (countArg.Length > 0 && !ArgHelpers.TryStrictInteger(countArg, out int _))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+		}
+
+		var count = ArgHelpers.ParseInteger(countArg);
+		if (count < 1)
+		{
+			return ValueTask.FromResult(CallState.Empty);
 		}
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
@@ -904,7 +914,7 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		foreach (var index in ListPositions(positionsArg, list.Length))
+		foreach (var index in ListPositions(parser, positionsArg, list.Length))
 		{
 			list[index] = newItem ?? MarkupText.Empty;
 		}
@@ -986,7 +996,8 @@ public partial class Functions
 					{ "0", new CallState(a) },
 					{ "1", new CallState(b) }
 				}));
-			return int.TryParse(result.ToPlainText(), out var cmp) ? (cmp > 0 ? 1 : cmp < 0 ? -1 : 0) : 0;
+			// u_comp reads the result with parse_integer (src/sort.c:146).
+			return Math.Sign(ArgHelpers.ParseInteger(result.ToPlainText()));
 		}
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -1014,7 +1025,8 @@ public partial class Functions
 			["0"] = new CallState(a),
 			["1"] = new CallState(b)
 		})).ToPlainText();
-		return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
+		// u_comp reads the result with parse_integer (src/sort.c:146).
+		return Math.Sign(ArgHelpers.ParseInteger(result));
 	}
 
 	/// <summary>
@@ -1080,7 +1092,8 @@ public partial class Functions
 		var indexes = Enumerable.Range(0, list.Length);
 		var sortedIndexes = sortType.ToPlainText().ToLower() switch
 		{
-			"n" => indexes.OrderBy(i => int.TryParse(keys[i], out var n) ? n : 0),
+			// gen_num: a numeric key is parse_integer of its text (src/sort.c:346-349).
+			"n" => indexes.OrderBy(i => ArgHelpers.ParseInteger(keys[i])),
 			"f" => indexes.OrderBy(i => double.TryParse(keys[i], out var f) ? f : 0.0),
 			"i" => indexes.OrderBy(i => keys[i], StringComparer.OrdinalIgnoreCase),
 			_ => indexes.OrderBy(i => keys[i])
@@ -1359,7 +1372,8 @@ public partial class Functions
 		static bool SameItem(string sortType, string current, string previous) => sortType switch
 		{
 			"f" => double.TryParse(current, out var c) && double.TryParse(previous, out var p) && Math.Abs(c - p) < 0.0000001,
-			"n" => int.TryParse(current, out var c) && int.TryParse(previous, out var p) && c == p,
+			// Numeric items compare as gen_num reads them, by parse_integer (src/sort.c:346-349).
+			"n" => ArgHelpers.ParseInteger(current) == ArgHelpers.ParseInteger(previous),
 			_ => current == previous
 		};
 
@@ -1430,9 +1444,11 @@ public partial class Functions
 		var newItemArg = args["2"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, " ");
 
-		if (!int.TryParse(positionArg, out var position))
+		// fun_insert (src/funlist.c:1819) asks find_list_position, which answers -1 for a position
+		// is_integer refuses (:202); the list then comes back as it was (:1820) rather than an error.
+		if (!ArgHelpers.TryInteger(parser, positionArg, out var position))
 		{
-			return new CallState(ErrorMessages.Returns.Integer);
+			return new CallState(listArg);
 		}
 
 		var listItems = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty).ToList();

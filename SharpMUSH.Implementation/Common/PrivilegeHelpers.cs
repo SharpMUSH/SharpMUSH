@@ -15,7 +15,7 @@ public static class PrivilegeHelpers
 	/// power bitmask: the common core of PennMUSH's <c>chown_object</c> (<c>src/set.c:333-339</c>) and
 	/// <c>do_chzone</c> (<c>src/set.c:477-481</c>).
 	/// </summary>
-	public static async ValueTask StripPrivilegeAsync(IManipulateSharpObjectService manipulateSharpObjectService,
+	public static async ValueTask StripPrivilegeAsync(IFlagAndPowerService flagAndPowerService,
 		AnySharpObject executor, AnySharpObject target)
 	{
 		string[] privileged = ["WIZARD", "ROYALTY", "TRUST"];
@@ -24,21 +24,21 @@ public static class PrivilegeHelpers
 		{
 			if (await target.HasFlag(flag))
 			{
-				await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, $"!{flag}", false);
+				await flagAndPowerService.SetOrUnsetFlag(executor, target, $"!{flag}", false);
 			}
 		}
 
-		await manipulateSharpObjectService.ClearAllPowers(executor, target, false);
+		await flagAndPowerService.ClearAllPowers(executor, target, false);
 	}
 
 	/// <summary>
 	/// <c>chown_object</c>'s reset for a new owner (<c>src/set.c:333-339</c>): the privilege strip, and the
 	/// object is left <c>HALT</c>ed.
 	/// </summary>
-	public static async ValueTask ResetForNewOwnerAsync(IManipulateSharpObjectService manipulateSharpObjectService,
+	public static async ValueTask ResetForNewOwnerAsync(IFlagAndPowerService flagAndPowerService,
 		AnySharpObject executor, AnySharpObject target)
 	{
-		await StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
-		await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, "HALT", false);
+		await StripPrivilegeAsync(flagAndPowerService, executor, target);
+		await flagAndPowerService.SetOrUnsetFlag(executor, target, "HALT", false);
 	}
 }

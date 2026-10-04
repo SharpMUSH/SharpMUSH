@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -41,7 +42,7 @@ namespace SharpMUSH.Tests.Commands;
 /// </summary>
 public class QueuedHaltTests : ServerTestBase
 {
-	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+	private QueueScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 
 	/// <summary>A fresh thing, as the canonical dbref the scheduler stores.</summary>
 	private async Task<DBRef> CreateThing(string prefix)

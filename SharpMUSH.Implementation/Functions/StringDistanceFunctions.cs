@@ -209,7 +209,14 @@ public partial class Functions
 
 		if (args.ContainsKey("3"))
 		{
-			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
+			// fun_suggest reads its limit with is_integer and refuses anything else with e_int
+			// (src/help.c:1843-1847).
+			if (!ArgHelpers.TryInteger(parser, args["3"].Message!.ToPlainText(), out limit))
+			{
+				return new CallState(ErrorMessages.Returns.Integer);
+			}
+
+			if (limit < 1)
 			{
 				return new CallState(ErrorMessages.Returns.Integers);
 			}

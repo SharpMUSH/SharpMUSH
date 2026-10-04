@@ -12,6 +12,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.Interfaces;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -443,7 +444,7 @@ public class RestrictedExpressionTests
 	[NotInParallel]
 	public async Task RestrictedCommandListsCannotScheduleDeferredWork()
 	{
-		var queue = Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.ITaskScheduler>();
+		var queue = Factory.Services.GetRequiredService<QueueScheduler>();
 		var before = queue.GetQueueUsage().Total;
 		using var scope = new EvaluationRestrictions([]).Enter();
 		var result = await Factory.FunctionParser.CommandListParse(MarkupText.Plain("@wait 3600=think denied"));

@@ -34,7 +34,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
-	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private IObjectNameService ObjectNameService { get; }
+	private IFlagAndPowerService FlagAndPowerService { get; }
+	private IObjectRelationshipService ObjectRelationshipService { get; }
 	private IHttpClientFactory HttpClientFactory { get; }
 
 	private ICommunicationService CommunicationService { get; }
@@ -114,7 +116,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IAccountService accountService,
 		IAccountSessionStore accountSessionStore,
 		IExpandedObjectDataService objectDataService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectNameService objectNameService,
+		IFlagAndPowerService flagAndPowerService,
+		IObjectRelationshipService objectRelationshipService,
 		IHttpClientFactory httpClientFactory,
 		ICommunicationService communicationService,
 		IValidateService validateService,
@@ -160,7 +164,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
+		ObjectNameService = objectNameService;
+		FlagAndPowerService = flagAndPowerService;
+		ObjectRelationshipService = objectRelationshipService;
 		CommunicationService = communicationService;
 		ValidateService = validateService;
 		SqlService = sqlService;

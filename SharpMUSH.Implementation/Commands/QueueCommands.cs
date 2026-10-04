@@ -65,8 +65,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 		var service = parser.ServiceProvider.GetRequiredService<IQueueControlService>();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		IEnumerable<QueueEntrySnapshot> entries = pause || resume ? scheduler.GetQueueEntries() : await service.ListAsync(actor, ct);
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
+		IEnumerable<QueueEntrySnapshot> entries = pause || resume ? queueReader.GetQueueEntries() : await service.ListAsync(actor, ct);
 		if (owner || source)
 		{
 			// Bulk selection uses only inspectable records; each mutation independently rechecks control.
@@ -388,8 +388,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		if (!TryGetQueueEntry(scheduler, pid, out var entry)) return await QueueInspectionUnsupported(executor);
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
+		if (!TryGetQueueEntry(queueReader, pid, out var entry)) return await QueueInspectionUnsupported(executor);
 		if (entry is null)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPid), executor);
@@ -474,7 +474,7 @@ public partial class Commands
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
-		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().EnterSemaphoreMutationAsync();
 		var attributeContents = await AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
 
@@ -525,11 +525,11 @@ public partial class Commands
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
 		if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var semaphores = parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>();
 		return await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false) switch
 		{
-			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, scheduler, dbRefAttribute, notifyType,
+			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, semaphores, dbRefAttribute, notifyType,
 				notifyCount, qRegisters, counted),
 			Error<string> accountingError => await ReportSemaphoreCommandError(executor, accountingError.Value),
 		};
@@ -539,10 +539,10 @@ public partial class Commands
 	/// The half of <c>@notify</c> that releases the waiting tasks, once the semaphore's count has been accounted for.
 	/// </summary>
 	private async ValueTask<Option<CallState>> NotifySemaphoreAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		ITaskScheduler scheduler, DbRefAttribute dbRefAttribute, string notifyType, int notifyCount,
+		ISemaphoreQueue semaphores, DbRefAttribute dbRefAttribute, string notifyType, int notifyCount,
 		Dictionary<string, MString>? qRegisters, SemaphoreAccounting counted)
 	{
-		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
+		var changed = await semaphores.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			counted.Persist, counted.Reconcile, qRegisters);
 		if (notifyType == "SETQ" && changed == 0)
@@ -756,7 +756,7 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
-		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskScheduler>(), pid, out var maybeFoundPid))
+		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskQueueReader>(), pid, out var maybeFoundPid))
 			return await QueueInspectionUnsupported(executor);
 
 		if (maybeFoundPid is null || maybeFoundPid.RemainingDelay is null || maybeFoundPid.ReleasePending)
@@ -869,7 +869,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidCombination);
 		}
 
-		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().EnterSemaphoreMutationAsync();
 		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
@@ -884,7 +884,7 @@ public partial class Commands
 
 		async ValueTask<CallState?> DrainCounted(DbRefAttribute target, SemaphoreAccounting counted)
 		{
-			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
+			await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, counted.Persist, counted.Reconcile);
 			return null;
 		}
@@ -988,10 +988,10 @@ public partial class Commands
 		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	private static bool TryGetQueueEntry(ITaskScheduler scheduler, long pid,
+	private static bool TryGetQueueEntry(ITaskQueueReader queue, long pid,
 		out SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot? entry)
 	{
-		try { entry = scheduler.GetQueueEntry(pid); return true; }
+		try { entry = queue.GetQueueEntry(pid); return true; }
 		catch (NotSupportedException) { entry = null; return false; }
 	}
 
@@ -1009,7 +1009,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
 
 		if (switches.Contains("DEBUG"))
 		{
@@ -1026,7 +1026,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			if (!TryGetQueueEntry(scheduler, pid, out var queued)) return await QueueInspectionUnsupported(executor);
+			if (!TryGetQueueEntry(queueReader, pid, out var queued)) return await QueueInspectionUnsupported(executor);
 			if (queued is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
@@ -1100,7 +1100,7 @@ public partial class Commands
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
 			// Usage is an optional extension; legacy schedulers still provide the queue listing.
 			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
-			try { usage = scheduler.GetQueueUsage(); }
+			try { usage = queueReader.GetQueueUsage(); }
 			catch (NotSupportedException) { usage = null; }
 			if (usage is not null)
 			{
@@ -1192,7 +1192,7 @@ public partial class Commands
 			}
 		}
 		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot>? entries;
-		try { entries = scheduler.GetQueueEntries(); }
+		try { entries = queueReader.GetQueueEntries(); }
 		catch (NotSupportedException) { entries = null; }
 		if (entries is not null)
 		{

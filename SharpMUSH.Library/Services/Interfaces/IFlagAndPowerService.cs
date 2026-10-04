@@ -4,12 +4,12 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
-public interface IManipulateSharpObjectService
+/// <summary>
+/// Sets and clears an object's flags and powers, under PennMUSH's <c>can_set_flag</c> and
+/// <c>set_power</c> rules.
+/// </summary>
+public interface IFlagAndPowerService
 {
-	ValueTask<CallState> SetName(AnySharpObject executor, AnySharpObject obj, MString name, bool notify);
-
-	ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword, bool notify);
-
 	ValueTask<CallState> SetOrUnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify);
 
 	/// <summary>Resolves a power by its name or one of its aliases, or null when no such power exists.</summary>
@@ -27,14 +27,4 @@ public interface IManipulateSharpObjectService
 	ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias, bool notify);
 
 	ValueTask<CallState> ClearAllPowers(AnySharpObject executor, AnySharpObject obj, bool notify);
-
-	ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify);
-
-	ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent, bool notify);
-
-	ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify);
-
-	ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone, bool notify);
-
-	ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify);
 }

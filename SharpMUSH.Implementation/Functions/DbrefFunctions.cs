@@ -189,6 +189,12 @@ public partial class Functions
 		}
 	}
 
+	/// <summary>An <c>entrances()</c> bound: a strict integer or a dbref (<c>src/wiz.c:1809-1812</c>).</summary>
+	private static int? EntranceBound(string text)
+		=> ArgHelpers.TryStrictInteger(text, out int number) ? number
+			: HelperFunctions.ParseDbRef(text) is DBRef dbref ? dbref.Number
+			: null;
+
 	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -213,22 +219,29 @@ public partial class Functions
 			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
 		}
 
+		// fun_entrances takes each bound as a strict integer or a dbref and refuses anything else with
+		// e_ints (src/wiz.c:1808-1827); a bound that names no object (negative here) falls back to the
+		// whole database (:1828-1833).
 		var beginFilter = 0;
 		if (args.TryGetValue("2", out var beginArg))
 		{
-			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			if (EntranceBound(beginArg.Message!.ToPlainText()) is not { } begin)
 			{
-				beginFilter = begin;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			beginFilter = begin < 0 ? 0 : begin;
 		}
 
 		var endFilter = int.MaxValue;
 		if (args.TryGetValue("3", out var endArg))
 		{
-			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			if (EntranceBound(endArg.Message!.ToPlainText()) is not { } end)
 			{
-				endFilter = end;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			endFilter = end < 0 ? int.MaxValue : end;
 		}
 
 		var entrances = Mediator.CreateStream(new GetEntrancesQuery(target.Object().DBRef))
@@ -871,11 +884,11 @@ public partial class Functions
 
 			if (newParent is null)
 			{
-				await ManipulateSharpObjectService.UnsetParent(executor, target, true);
+				await ObjectRelationshipService.UnsetParent(executor, target, true);
 			}
 			else
 			{
-				await ManipulateSharpObjectService.SetParent(executor, target, newParent, true);
+				await ObjectRelationshipService.SetParent(executor, target, newParent, true);
 			}
 		}
 	}
@@ -899,13 +912,9 @@ public partial class Functions
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
-		{
-			return new CallState(ErrorMessages.Returns.InvalidLevel);
-		}
-
-		// fun_rloc (src/fundb.c:1569) climbs at most 20 levels.
-		levels = Math.Min(levels, 20);
+		// fun_rloc (src/fundb.c:1563-1572) reads the depth with parse_integer, which never fails, and
+		// clamps it to 0..20: a depth that is not a number, or is negative, climbs no levels at all.
+		var levels = Math.Clamp(ArgHelpers.ParseInteger(levelsArg), 0, 20);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -1040,7 +1049,7 @@ public partial class Functions
 					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
 					if (!target.IsPlayer)
 					{
-						await PrivilegeHelpers.StripPrivilegeAsync(ManipulateSharpObjectService, executor, target);
+						await PrivilegeHelpers.StripPrivilegeAsync(FlagAndPowerService, executor, target);
 					}
 
 					await Mediator.Send(new SetObjectZoneCommand(target, zone));

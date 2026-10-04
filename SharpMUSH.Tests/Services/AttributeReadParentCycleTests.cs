@@ -25,7 +25,7 @@ namespace SharpMUSH.Tests.Services;
 /// <remarks>
 /// The cycle is built by sending <see cref="SetObjectParentCommand"/> directly in both directions -
 /// the same way <c>ZoneParentCycleTests.cs</c> bypasses <c>SafeToAddParentAsync</c> to set up its
-/// fixtures - since going through <c>ManipulateSharpObjectService.SetParent</c> would (correctly)
+/// fixtures - since going through <c>ObjectRelationshipService.SetParent</c> would (correctly)
 /// refuse to ever create the cycle in the first place. Each test bounds the read itself, not the
 /// fixture before it, so a regression here fails the test outright instead of hanging the whole
 /// suite, and a slow runner building the fixture does not.
@@ -57,7 +57,7 @@ public class AttributeReadParentCycleTests
 		var b = await CreateAsync($"{label}B");
 
 		// Bypasses SafeToAddParentAsync on both edges - this is the only way to get a genuine cycle
-		// into the database, since the guarded path (ManipulateSharpObjectService.SetParent)
+		// into the database, since the guarded path (ObjectRelationshipService.SetParent)
 		// refuses the second edge.
 		await Mediator.Send(new SetObjectParentCommand(a, b));
 		await Mediator.Send(new SetObjectParentCommand(b, a));

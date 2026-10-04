@@ -26,6 +26,53 @@ public static partial class ArgHelpers
 		=> NumericEvaluation.For(parser).TryInt32(text, out value);
 
 	/// <summary>
+	/// PennMUSH's <c>parse_integer</c> (<c>hdrs/parse.h:54</c>, <c>parse_int</c> at <c>src/parse.c:674</c>):
+	/// <c>strtol</c> with no format check, so the leading digits are the value, text with none is 0, and
+	/// a value past an <c>int</c> is clamped to it. For the arguments PennMUSH reads without asking
+	/// <c>is_integer</c> first, which therefore never fail.
+	/// </summary>
+	public static int ParseInteger(string? text)
+	{
+		if (new NumericEvaluation(TinyMath: true, NullEqualsZero: true).TryInt64(text, out long value))
+		{
+			return (int)Math.Clamp(value, int.MinValue, int.MaxValue);
+		}
+
+		// More digits than a long holds: strtol saturates in the direction of the sign.
+		return text.AsSpan().TrimStart(" \t\r\n\v\f").StartsWith("-") ? int.MinValue : int.MaxValue;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>int_check</c> (<c>src/function.c:280-298</c>) for an optional integer argument:
+	/// absent is <paramref name="defaultValue"/>, empty is 0 under NULL_EQ_ZERO and
+	/// <paramref name="defaultValue"/> otherwise, and anything else must be a strict integer.
+	/// </summary>
+	/// <param name="text">The argument, or <see langword="null"/> when it was not given.</param>
+	public static bool TryIntCheck(IMUSHCodeParser parser, string? text, int defaultValue, out int value)
+	{
+		if (text is null)
+		{
+			value = defaultValue;
+			return true;
+		}
+
+		if (text.Length == 0)
+		{
+			value = NumericEvaluation.For(parser).NullEqualsZero ? 0 : defaultValue;
+			return true;
+		}
+
+		return TryStrictInteger(text, out value);
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>is_number</c> then <c>parse_number</c> (<c>src/parse.c</c>): a real argument under
+	/// the live TINY_MATH and NULL_EQ_ZERO options.
+	/// </summary>
+	public static bool TryNumber(IMUSHCodeParser parser, string? text, out double value)
+		=> NumericEvaluation.For(parser).TryDouble(text, out value);
+
+	/// <summary>
 	/// PennMUSH's <c>is_uinteger</c> (<c>src/parse.c:429</c>): <see cref="TryInteger"/>, but the first
 	/// character after the whitespace must be a digit or <c>+</c>. A negative value is refused under
 	/// TINY_MATH too, where PennMUSH would wrap it to a huge unsigned one.
@@ -63,6 +110,21 @@ public static partial class ArgHelpers
 		}
 
 		return NumericEvaluation.Strict.TryInt32(text, out value);
+	}
+
+	/// <summary>
+	/// <see cref="TryStrictUnsignedInteger"/> over PennMUSH's whole <c>unsigned int</c> range, for a
+	/// value such as a queue PID that can pass <see cref="int.MaxValue"/>.
+	/// </summary>
+	public static bool TryStrictUnsignedLong(string? text, out long value)
+	{
+		if (!StartsUnsigned(text))
+		{
+			value = 0;
+			return false;
+		}
+
+		return NumericEvaluation.Strict.TryInt64(text, out value) && value <= uint.MaxValue;
 	}
 
 	/// <summary><c>isdigit(*str) || *str == '+'</c> after the leading whitespace.</summary>

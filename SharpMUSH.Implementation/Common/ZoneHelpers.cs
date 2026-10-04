@@ -46,7 +46,8 @@ public static class ZoneHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IDidItService didItService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectRelationshipService objectRelationshipService,
+		IFlagAndPowerService flagAndPowerService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IConnectionService connections,
 		AnySharpObject executor,
@@ -74,7 +75,7 @@ public static class ZoneHelpers
 		{
 			// Clearing a zone skips the destination gate, the cycle walk and the strip, all of which
 			// set.c guards on `zone != NOTHING` (:412, :421, :472).
-			return Written(await manipulateSharpObjectService.UnsetZone(executor, target, noisy));
+			return Written(await objectRelationshipService.UnsetZone(executor, target, noisy));
 		}
 
 		if (await ZoneRefusedAsync(parser, notifyService, permissionService, lockService, didItService, executor,
@@ -112,7 +113,7 @@ public static class ZoneHelpers
 		//
 		// PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(), which ask nobody's
 		// permission, so its one controls() check above is the whole authorization. These go through
-		// ManipulateSharpObjectService, which checks Controls itself — and Controls reads the object's
+		// IObjectRelationshipService, which checks Controls itself — and Controls reads the object's
 		// *current* zone (PermissionService.Controls, Zone Master Object branch). Once the zone has
 		// moved, an executor who held the object only through the zone it is leaving no longer controls
 		// it, the strip is refused, and @CHZONE reports "Zone changed." over an object that kept every
@@ -120,7 +121,7 @@ public static class ZoneHelpers
 		// method the one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 		if (!preserve && !target.IsPlayer)
 		{
-			await PrivilegeHelpers.StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
+			await PrivilegeHelpers.StripPrivilegeAsync(flagAndPowerService, executor, target);
 		}
 		else if (noisy)
 		{
@@ -128,7 +129,7 @@ public static class ZoneHelpers
 			await WarnAboutKeptPrivilegeAsync(notifyService, executor, target);
 		}
 
-		return Written(await manipulateSharpObjectService.SetZone(executor, target, destination, noisy));
+		return Written(await objectRelationshipService.SetZone(executor, target, destination, noisy));
 	}
 
 	/// <summary>
@@ -298,7 +299,7 @@ public static class ZoneHelpers
 	/// PennMUSH refuses the self-zone to mortals only (<c>:422</c>) — its walk stops on
 	/// <c>tmp == Zone(tmp)</c>, so a privileged player may build that fixed point. SharpMUSH refuses it
 	/// to everyone: <see cref="IObjectStore.IsReachableViaParentOrZoneAsync"/> and
-	/// <see cref="IManipulateSharpObjectService.SetZone"/> both treat a self-loop as unsafe, and
+	/// <see cref="IObjectRelationshipService.SetZone"/> both treat a self-loop as unsafe, and
 	/// <c>ZoneParentCycleTests.SelfZone_ShouldFail</c> fixes that as the rule. Exempting a wizard here
 	/// would not let the write through — <c>SetZone</c> refuses it again — it would only strip the
 	/// object's flags and powers and install a zone lock on the way to the refusal. A deliberate
@@ -323,7 +324,7 @@ public static class ZoneHelpers
 		};
 
 	/// <summary>
-	/// The outcome of the store write, which <see cref="IManipulateSharpObjectService"/> reports as
+	/// The outcome of the store write, which <see cref="IObjectRelationshipService"/> reports as
 	/// <c>"1"</c> or as the <c>#-1 …</c> return of a check this method already made.
 	/// </summary>
 	private static Result<Success> Written(CallState written)

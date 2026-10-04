@@ -1810,7 +1810,7 @@ public partial class Commands : ICommandRestrictionApplier
 				return CallState.Empty;
 			}
 
-			var namedPower = await ManipulateSharpObjectService.FindPower(objectArg);
+			var namedPower = await FlagAndPowerService.FindPower(objectArg);
 			if (namedPower is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor);
@@ -1843,7 +1843,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return CallState.Empty;
 		}
 
-		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, target, powerArg, true);
+		await FlagAndPowerService.SetOrUnsetPowers(executor, target, powerArg, true);
 		return CallState.Empty;
 	}
 

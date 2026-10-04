@@ -7,6 +7,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Immutable;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Buffers;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
 

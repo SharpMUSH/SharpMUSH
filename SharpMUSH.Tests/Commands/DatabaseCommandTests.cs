@@ -13,6 +13,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -124,7 +125,7 @@ public class DatabaseCommandTests
 			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCapacity");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think callback"));
-		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var pids = new List<long>();
 		try
@@ -243,7 +244,7 @@ public class DatabaseCommandTests
 		var marker = "mapsql-completed-" + Guid.NewGuid().ToString("N");
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think row-" + marker));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
-		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -292,7 +293,7 @@ public class DatabaseCommandTests
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "ordered-map-" + Guid.NewGuid().ToString("N");
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPORDER me=think row-" + marker));
-		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -342,7 +343,7 @@ public class DatabaseCommandTests
 			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCompletionError");
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPERROR me=think unreachable"));
-		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 		var before = scheduler.GetQueueUsage().Total;
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPERROR=SELECT missing_column FROM test_mapsql_data_cmd"));
 		await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(before);
@@ -810,7 +811,7 @@ public class DatabaseCommandTests
 		// means a God-owned requester and LINK_OK on #1 — there is no substitute target, since the
 		// guard tests Key == 1. The flag goes back in the finally. Every LINK_OK-on-#1 consumer in
 		// the suite (@notify and @drain, GeneralCommands.cs:1825 and :2714; @parent,
-		// ManipulateSharpObjectService.cs:545) is reached only by a non-controller, and the tests
+		// ObjectRelationshipService.SetParent) is reached only by a non-controller, and the tests
 		// that drive them run as God, who controls #1 and short-circuits before the flag is read.
 		var requester = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlGodRequester");
 		var marker = "godtrigger-" + Guid.NewGuid().ToString("N");

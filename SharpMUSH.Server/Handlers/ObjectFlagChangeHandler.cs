@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
@@ -45,14 +46,10 @@ public class ObjectFlagChangeHandler(
 		}
 
 		var player = notification.Target.Object();
-		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var truecolorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "TRUECOLOR", StringComparison.OrdinalIgnoreCase), cancellationToken);
+		var ansiEnabled = await player.HasFlag("ANSI", cancellationToken);
+		var colorEnabled = await player.HasFlag("COLOR", cancellationToken);
+		var xterm256Enabled = await player.HasFlag("XTERM256", cancellationToken);
+		var truecolorEnabled = await player.HasFlag("TRUECOLOR", cancellationToken);
 
 		foreach (var connection in connections)
 		{

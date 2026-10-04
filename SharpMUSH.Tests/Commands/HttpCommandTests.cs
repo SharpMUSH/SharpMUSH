@@ -88,7 +88,7 @@ public class HttpCommandTests
 		parser.CurrentState.Returns(state);
 		var notifications = Substitute.For<INotifyService>();
 		var notices = 0;
-		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>())
+		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
 		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<SharpMessage>(),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce)
@@ -127,7 +127,7 @@ public class HttpCommandTests
 			// A quota refusal is reported by the runaway notice to the owner instead (pay_queue, src/cque.c:304).
 			var runaway = reason == QueueRejectionReason.OwnerLimit;
 			await notifications.Received(reason == QueueRejectionReason.InvalidTarget || runaway ? 0 : 1)
-				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
+				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>());
 			if (runaway)
 			{
 				for (var deadline = DateTime.UtcNow.AddSeconds(10); !RunawayNoticed() && DateTime.UtcNow < deadline;)
