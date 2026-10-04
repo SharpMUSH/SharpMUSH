@@ -50,7 +50,7 @@ public partial class Functions
 		}
 
 		// A blank list has no elements: every() is vacuously true, some() finds nothing.
-		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText())))
+		if (IsBlankList(list))
 		{
 			if (registerName is not null && !parser.CurrentState.AddRegister(registerName.ToUpper(), MarkupText.Empty))
 			{
@@ -74,11 +74,8 @@ public partial class Functions
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => await EveryOrSomeVerdictAsync(parser, isEvery, registerName, delim, list, errors,
-				item => AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-				}), function)),
+				item => CallAttributeWithArgumentsAsync(parser, function,
+					new Dictionary<string, CallState> { ["0"] = new CallState(item) })),
 			CallState refusal => errors.Complete(refusal),
 		};
 	}
