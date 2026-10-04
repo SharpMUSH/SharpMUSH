@@ -1457,15 +1457,9 @@ public partial class Functions
 		return errors.Complete(new CallState(count.ToString()));
 	}
 
-	/// <summary>PennMUSH's <c>insert()</c>, an alias of <c>linsert()</c>.</summary>
-	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
-		ParameterNames = ["list", "position", "new-item", "delim"])]
-	public ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ListInsert(parser, _2);
-	}
-
+	/// <summary><c>linsert()</c>, and PennMUSH's <c>insert()</c>, an alias of it.</summary>
 	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
 	public async ValueTask<CallState> ListInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
