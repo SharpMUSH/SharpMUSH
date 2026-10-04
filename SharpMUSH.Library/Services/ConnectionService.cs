@@ -47,7 +47,7 @@ public class ConnectionService(
 			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
 
 			remainingConnections = get.Ref is { } playerRef
-				? _sessionState.Values.Count(x => x.Ref == playerRef)
+				? _sessionState.Count(x => x.Value.Ref == playerRef)
 				: null;
 		}
 
@@ -72,13 +72,18 @@ public class ConnectionService(
 	public IConnectionService.ConnectionData? Get(long handle) =>
 		_sessionState.GetValueOrDefault(handle);
 
+	// Both enumerate the dictionary itself. Its Values property takes every bucket lock and copies the
+	// whole table on each call; the enumerator does neither. It is not a point-in-time snapshot, which
+	// nothing here relied on: each caller re-checks a connection it acts on.
 	public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
-		_sessionState.Values
+		_sessionState
+			.Select(x => x.Value)
 			.Where(x => x.Ref == reference)
 			.ToAsyncEnumerable();
 
 	public IAsyncEnumerable<IConnectionService.ConnectionData> GetAll() =>
-		_sessionState.Values
+		_sessionState
+			.Select(x => x.Value)
 			.ToAsyncEnumerable();
 
 	public async ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef)

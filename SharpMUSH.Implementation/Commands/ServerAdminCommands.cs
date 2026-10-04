@@ -886,8 +886,15 @@ public partial class Commands
 			return;
 		}
 
-		await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		// Seeded from the owner index rather than a world scan, in the same ascending dbref order. Read
+		// before any @STARTUP runs, since one may change ownership; each object's owner is asked again
+		// when its turn comes, as the scan asked it then.
+		var owned = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = victimRef }))
+			.Select(obj => obj.DBRef)
+			.ToArrayAsync();
+		foreach (var dbref in owned)
 		{
+			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject obj) continue;
 			var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 			if (owner.Object.DBRef.Number == victimRef.Number)
 			{

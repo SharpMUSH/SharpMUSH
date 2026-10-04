@@ -71,7 +71,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			var now = DateTimeOffset.UtcNow;
-			return _pendingEntries.Values.OrderBy(e => e.Pid).Select(e => Snapshot(e, now)).ToArray();
+			return LockedPendingEntries.OrderBy(e => e.Pid).Select(e => Snapshot(e, now)).ToArray();
 		}
 	}
 	public QueueEntrySnapshot? GetQueueEntry(long pid)

@@ -104,6 +104,7 @@ public partial class SpeechTransformationTests
 			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(string.Join("|", Output(pipeline.Bus))).IsEqualTo($"[{actor.Name}:] hello");
 		var capture = Substitute.For<IHttpOutputCapture>();
+		capture.Captures(recipient.DbRef.Number).Returns(true);
 		capture.TryCapture(recipient.DbRef.Number, "raw").Returns(true);
 		var captured = await NotificationPipeline(recipient.DbRef, routing, capture);
 		await captured.Notify.Notify(recipient.DbRef, "raw", await Node(actor.DbRef), INotifyService.NotificationType.PrivateEmit);

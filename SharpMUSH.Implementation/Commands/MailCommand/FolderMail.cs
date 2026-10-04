@@ -211,19 +211,24 @@ public static class FolderMail
 	private static async ValueTask<MString> GetMailFolderInfo(IMediator mediator, INotifyService notifyService,
 		AnySharpObject executor, SharpPlayer player, ExpandedMailData folderInfo)
 	{
+		// One read of the whole mailbox, tallied by folder, rather than one read per folder number.
+		var tallies = new Dictionary<string, (int Total, int Unread, int Cleared)>(StringComparer.Ordinal);
+		await foreach (var held in mediator.CreateStream(new GetAllMailListQuery(player)))
+		{
+			var (total, unread, cleared) = tallies.GetValueOrDefault(held.Folder);
+			tallies[held.Folder] = (total + 1, unread + (!held.Cleared && !held.Read ? 1 : 0), cleared + (held.Cleared ? 1 : 0));
+		}
+
 		for (var number = ExpandedMailData.MaxFolder; number >= 0; number--)
 		{
 			var folder = MailFolders.Folder(folderInfo, number);
-			var mail = await mediator.CreateStream(new GetMailListQuery(player, folder.Name)).ToArrayAsync();
-			if (mail.Length == 0)
+			if (!tallies.TryGetValue(folder.Name, out var tally))
 			{
 				continue;
 			}
 
-			var unread = mail.Count(x => !x.Cleared && !x.Read);
-			var cleared = mail.Count(x => x.Cleared);
 			await notifyService.Notify(executor,
-				$"MAIL: {mail.Length} messages in folder {number} [{folder.DisplayName}] ({unread} unread, {cleared} cleared).");
+				$"MAIL: {tally.Total} messages in folder {number} [{folder.DisplayName}] ({tally.Unread} unread, {tally.Cleared} cleared).");
 		}
 
 		var current = folderInfo.NumberOf(folderInfo.ActiveFolder ?? ExpandedMailData.Inbox) is int active ? active : 0;

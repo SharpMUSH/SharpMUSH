@@ -438,6 +438,23 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
+				// Without the VAL forms only existence and permission matter, so the value is never read.
+				if (!requireValue)
+				{
+					return await AttributeService.LazilyGetAttributeAsync(
+							executor,
+							found,
+							attribute,
+							mode: IAttributeService.AttributeMode.Read,
+							parent: checkParents) switch
+					{
+						Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => new CallState(ErrorMessages.Returns.PermissionDenied),
+						Error<string> error => new CallState(error.Value),
+						LazySharpAttribute[] => new CallState("1"),
+						_ => new CallState("0")
+					};
+				}
+
 				var maybeAttr = await AttributeService.GetAttributeAsync(
 					executor,
 					found,
@@ -550,12 +567,25 @@ public partial class Functions
 	/// <c>#-1 REGEXP TIMEOUT</c>, as <c>regrep</c> does.
 	/// </para>
 	/// </summary>
-	private async ValueTask<CallState> AttributePatternAsync(
+	private ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
 		string calledAs,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<string[], CallState> project)
+		=> AttributePatternAsync(parser, calledAs, checkParents, mode,
+			async names => project(await names.ToArrayAsync(ExecutionBudget.CurrentToken)));
+
+	/// <summary>
+	/// As above, with the names handed over as the stream they are read from, for a caller that needs
+	/// only a window of them or their count. The stream is enumerated inside the regexp error handling.
+	/// </summary>
+	private async ValueTask<CallState> AttributePatternAsync(
+		IMUSHCodeParser parser,
+		string calledAs,
+		bool checkParents,
+		IAttributeService.AttributePatternMode mode,
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(
@@ -583,11 +613,11 @@ public partial class Functions
 	}
 
 	private static async ValueTask<CallState> ProjectNamesAsync(IAsyncEnumerable<LazySharpAttribute> matched,
-		Func<string[], CallState> project)
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		try
 		{
-			return project(await matched.Select(x => x.LongName).ToArrayAsync(ExecutionBudget.CurrentToken));
+			return await project(matched.Select(x => x.LongName));
 		}
 		catch (System.Text.RegularExpressions.RegexParseException)
 		{
@@ -618,9 +648,10 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.ArgRange);
 		}
 
+		// The window is taken from the stream: names past it are never read.
 		return AttributePatternAsync(parser, calledAs, checkParents, mode,
-			matched => string.Join(AttributeListSeparator(parser, 3),
-				matched.Skip(start - 1).Take(count)));
+			async names => new CallState(string.Join(AttributeListSeparator(parser, 3),
+				await names.Skip(start - 1).Take(count).ToArrayAsync(ExecutionBudget.CurrentToken))));
 	}
 
 	/// <summary>
@@ -685,12 +716,12 @@ public partial class Functions
 	[SharpFunction(Name = "nattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "obj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)

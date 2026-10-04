@@ -513,8 +513,7 @@ public partial class Functions
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			var count = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-				.CountAsync();
+			var count = await Mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 
 			return new CallState(count.ToString());
 		});

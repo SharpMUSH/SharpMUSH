@@ -422,7 +422,7 @@ public partial class Commands
 				.FirstOrDefaultAsync(async (guest, ct) =>
 				{
 					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-					return await ConnectionService.Get(guestDbRef).CountAsync(ct) == 0;
+					return !await ConnectionService.Get(guestDbRef).AnyAsync(ct);
 				});
 
 			if (selectedGuest == null)

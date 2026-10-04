@@ -181,19 +181,35 @@ public partial class Commands
 		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
 		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
 
-		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
+		// The old owner's objects of the chosen types, from the owner index in ascending dbref order rather
+		// than a world scan. Read before anything is chowned, since each chown rewrites that index; each
+		// object's owner is asked again when its turn comes, as the scan asked it then.
+		var types = new List<string>(3);
+		if (chownThings) types.Add("THING");
+		if (chownRooms) types.Add("ROOM");
+		if (chownExits) types.Add("EXIT");
+		var candidates = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter
+		{
+			Owner = oldOwner.Object.DBRef,
+			Types = [.. types]
+		}))
+			.Select(found => found.DBRef)
+			.ToArrayAsync();
 		var count = 0;
 
-		await foreach (var obj in objects)
+		foreach (var candidate in candidates)
 		{
+			if (await Mediator.Send(new GetObjectNodeQuery(candidate)) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
 			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != oldOwner.Object.DBRef.Number)
 			{
 				continue;
 			}
-
-			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 
 			var shouldChown = (chownThings && obj.IsThing) ||
 												(chownRooms && obj.IsRoom) ||
@@ -294,8 +310,19 @@ public partial class Commands
 	{
 		var count = 0;
 
-		await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		// From the owner index in ascending dbref order rather than a world scan, read before any zone
+		// changes (do_chzone can reset flags and run softcode); each owner is asked again in turn.
+		var candidates = await Mediator.CreateStream(new GetFilteredObjectsQuery(
+				new ObjectSearchFilter { Owner = owner.Object().DBRef }))
+			.Select(found => found.DBRef)
+			.ToArrayAsync();
+		foreach (var candidate in candidates)
 		{
+			if (await Mediator.Send(new GetObjectNodeQuery(candidate)) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
 			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 			if (objOwner.Object.DBRef.Number != owner.Object().DBRef.Number)
 			{

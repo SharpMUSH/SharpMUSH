@@ -27,6 +27,12 @@ public interface ICommandOutputCapture
 	/// captured character; delivery to that character's connections is unaffected either way.
 	/// </summary>
 	void Offer(int dbref, string text);
+
+	/// <summary>
+	/// Whether the active capture frame copies output addressed to <paramref name="dbref"/>, so a caller
+	/// can skip building the text it would offer when nothing would take it.
+	/// </summary>
+	bool Captures(int dbref);
 }
 
 /// <summary>The lines a captured command produced for its character, bounded in total length.</summary>

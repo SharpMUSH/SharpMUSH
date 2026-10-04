@@ -194,4 +194,45 @@ public class MailFolderSwitchTests
 		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [unnamed].", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Returned Subject", StringComparison.Ordinal));
 	}
+
+	/// <summary>
+	/// The folder report (<c>do_mail_change_folder</c> with no folder, <c>extmail.c:313-321</c>) tallies
+	/// every folder that holds mail, highest number first, each with its own unread and cleared counts,
+	/// and skips the empty ones.
+	/// </summary>
+	[Test]
+	public async Task FolderReportTalliesEachFolderHighestNumberFirst()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailTally");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		async Task Run(string command) => await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		await Run($"@mail #{player.DbRef.Number}=First/One.");
+		await Run($"@mail #{player.DbRef.Number}=Second/Two.");
+		await Run($"@mail #{player.DbRef.Number}=Third/Three.");
+		await Run($"@mail #{player.DbRef.Number}=Fourth/Four.");
+		// ALPHA (1) takes First; BETA (2) takes Third and Fourth; Second stays in the inbox, cleared.
+		await Run("@mail/file 1=ALPHA");
+		await Run("@mail/file 2=BETA");
+		await Run("@mail/file 2=BETA");
+		await Run("@mail/clear 1");
+		await Run("@mail/folder BETA");
+		await Run("@mail/read 1");
+		await Run("@mail/folder 0");
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run("@mail/folder");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)
+			.Where(m => m.StartsWith("MAIL:", StringComparison.Ordinal)).ToList();
+
+		await Assert.That(told).IsEquivalentTo(new[]
+		{
+			"MAIL: 2 messages in folder 2 [BETA] (1 unread, 0 cleared).",
+			"MAIL: 1 messages in folder 1 [ALPHA] (1 unread, 0 cleared).",
+			"MAIL: 1 messages in folder 0 [INBOX] (0 unread, 1 cleared).",
+			"MAIL: Current folder is 0 [INBOX]."
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

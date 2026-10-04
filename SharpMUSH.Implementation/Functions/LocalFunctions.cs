@@ -43,8 +43,16 @@ public partial class Functions
 		var argumentCount = parser.CurrentState.Arguments.Count - 1;
 		if (argumentCount < entry.MinArgs) return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name, entry.MinArgs, argumentCount));
 		if (argumentCount > entry.MaxArgs) return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name, entry.MaxArgs, argumentCount));
-		var readable = await AttributeService.GetAttributeAsync(caller, target, entry.Attribute, IAttributeService.AttributeMode.Read, false);
-		if (readable is not SharpAttribute[]) return readable.AsCallState;
+		// The caller must be able to read it; the value itself is read once, by the evaluation below, which
+		// repeats this same read before its execute check.
+		switch (await AttributeService.LazilyGetAttributeAsync(caller, target, entry.Attribute, IAttributeService.AttributeMode.Read, false))
+		{
+			case None:
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			case Error<string> error:
+				return new CallState(error.Value);
+		}
+
 		var arguments = Enumerable.Range(0, argumentCount).ToDictionary(i => i.ToString(), i => parser.CurrentState.Arguments[(i + 1).ToString()]);
 		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, caller, target,
 			entry.Attribute, arguments, evalParent: false);

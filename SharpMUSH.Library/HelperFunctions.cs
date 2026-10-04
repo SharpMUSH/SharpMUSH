@@ -86,6 +86,10 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj)
 		=> await IsPriv(obj) || await obj.HasPower("See_All");
 
+	/// <summary><see cref="IsSee_All(AnySharpObject)"/> with the object's flags already read.</summary>
+	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj, ObjectFlagSet flags)
+		=> flags.IsPriv || await obj.HasPower("See_All");
+
 	public static async ValueTask<bool> IsGuest(this AnySharpObject obj)
 		=> await obj.HasPower("Guest");
 
@@ -347,6 +351,22 @@ public static partial class HelperFunctions
 									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
+	/// Reads the object's flags once, for a caller that asks several flag questions about it. See
+	/// <see cref="ObjectFlagSet"/>: each of its questions answers as the per-read helper here does.
+	/// </summary>
+	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
+		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken));
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
+		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this AnySharpObject obj, CancellationToken cancellationToken)
+		=> obj.Object().ReadFlagsAsync(cancellationToken);
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this AnySharpObject obj)
+		=> obj.Object().ReadFlagsAsync(ExecutionBudget.CurrentToken);
+
+	/// <summary>
 	/// <see cref="HasFlag(SharpObject,string)"/> plus the letter fallback of Penn's <c>flag_hash_lookup</c>
 	/// (<c>src/flags.c:162-189</c>): a single character that names no flag is looked up as a flag
 	/// letter, compared exactly (<c>letter_to_flagptr</c>: <c>f-&gt;letter == c</c>), so <c>h</c> is HALT
@@ -428,11 +448,22 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer || await obj.Inheritable(await obj.ReadFlagsAsync(cancellationToken), cancellationToken);
+	}
+
+	/// <summary>
+	/// <see cref="Inheritable(AnySharpObject, CancellationToken)"/> with the object's own flags already
+	/// read; only the owner's TRUST flag is read here, and only when the object's own flags do not decide.
+	/// </summary>
+	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, ObjectFlagSet flags,
+		CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return obj.IsPlayer
-			|| await obj.HasFlag("Trust", cancellationToken)
+			|| flags.IsTrust
+			|| flags.IsWizard
 			|| await (await obj.Object().Owner.WithCancellation(cancellationToken))
-				.Object.HasFlag("Trust", cancellationToken)
-			|| await obj.IsWizard(cancellationToken);
+				.Object.HasFlag("Trust", cancellationToken);
 	}
 
 	public static ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what)

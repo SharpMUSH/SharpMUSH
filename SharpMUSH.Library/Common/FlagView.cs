@@ -26,9 +26,11 @@ public sealed class FlagView
 	/// <param name="connections">Where CONNECTED is read from; without it CONNECTED is never shown.</param>
 	public static async ValueTask<FlagView> ForAsync(AnySharpObject viewer, IConnectionService? connections)
 	{
-		var owner = await viewer.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-		return new FlagView(viewer.IsGod(), await viewer.IsSee_All(),
-			await viewer.IsMistrust(ExecutionBudget.CurrentToken), owner.Object.DBRef, connections);
+		var token = ExecutionBudget.CurrentToken;
+		var owner = await viewer.Object().Owner.WithCancellation(token);
+		var flags = await viewer.ReadFlagsAsync(token);
+		return new FlagView(viewer.IsGod(), await viewer.IsSee_All(flags), flags.IsMistrust, owner.Object.DBRef,
+			connections);
 	}
 
 	/// <summary>

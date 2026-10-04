@@ -248,7 +248,7 @@ public class PermissionService(
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
 	{
 		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
-		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		if (await viewer.IsSee_All())
 		{
 			return true;
 		}
@@ -259,7 +259,7 @@ public class PermissionService(
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target)
 	{
 		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.DBRef)) return false;
-		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		if (await viewer.IsSee_All())
 		{
 			return true;
 		}
@@ -337,7 +337,7 @@ public class PermissionService(
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
 	{
 		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
-		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		if (await viewer.IsSee_All())
 		{
 			return true;
 		}
@@ -399,18 +399,21 @@ public class PermissionService(
 		if (target.IsGod())
 			return false;
 
-		if (await who.IsWizard(token))
+		// Each object's flags are read once and asked every question below.
+		var whoFlags = await who.ReadFlagsAsync(token);
+		if (whoFlags.IsWizard)
 			return true;
 
-		if (await target.IsWizard(token) || (await target.IsPriv(token) && !await who.IsPriv(token)))
+		var targetFlags = await target.ReadFlagsAsync(token);
+		if (targetFlags.IsWizard || (targetFlags.IsPriv && !whoFlags.IsPriv))
 			return false;
 
-		if (await who.IsMistrust(token))
+		if (whoFlags.IsMistrust)
 			return false;
 
-		var targetInheritable = await target.Inheritable(token);
+		var targetInheritable = await target.Inheritable(targetFlags, token);
 
-		if (await who.Owns(target, token) && (!targetInheritable || await who.Inheritable(token)))
+		if (await who.Owns(target, token) && (!targetInheritable || await who.Inheritable(whoFlags, token)))
 			return true;
 
 		if (targetInheritable || target.IsPlayer)
@@ -534,11 +537,17 @@ public class PermissionService(
 		=> obj.IsHearer(connectionService, attributeService.Value);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
-		=> !await evaluationTarget.IsPriv()
-			 || evaluator.IsGod()
-			 || ((await evaluator.IsWizard()
-						|| (await evaluator.IsRoyalty() && !await evaluationTarget.IsWizard()))
-					 && !evaluationTarget.IsGod());
+	{
+		var targetFlags = await evaluationTarget.ReadFlagsAsync();
+		if (!targetFlags.IsPriv || evaluator.IsGod())
+		{
+			return true;
+		}
+
+		var evaluatorFlags = await evaluator.ReadFlagsAsync();
+		return (evaluatorFlags.IsWizard || (evaluatorFlags.IsRoyalty && !targetFlags.IsWizard))
+					 && !evaluationTarget.IsGod();
+	}
 
 	public static async ValueTask<bool> CanEvalAttr(
 		AnySharpObject evaluator,
@@ -588,12 +597,26 @@ public class PermissionService(
 	/// <summary>PennMUSH <c>Chan_Can</c> — hdrs/extchat.h:198. The DISABLED bit lives here, so it gates
 	/// join, speak, see, hide and modify from one place.</summary>
 	public async ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType)
-		=> !channelType.HasPriv("Disabled")
-			 && (!channelType.HasPriv("Wizard")
-					 || await target.IsWizard())
-			 && (!channelType.HasPriv("Admin")
-					 || await target.HasPower("CHAT_PRIVS")
-					 || await target.IsPriv());
+	{
+		if (channelType.HasPriv("Disabled"))
+		{
+			return false;
+		}
+
+		var wizardOnly = channelType.HasPriv("Wizard");
+		var adminOnly = channelType.HasPriv("Admin");
+		if (!wizardOnly && !adminOnly)
+		{
+			return true;
+		}
+
+		// Read once for both halves, and only when a half needs it.
+		var flags = await target.ReadFlagsAsync();
+		return (!wizardOnly || flags.IsWizard)
+					 && (!adminOnly
+							 || await target.HasPower("CHAT_PRIVS")
+							 || flags.IsPriv);
+	}
 
 	/// <summary>
 	/// PennMUSH <c>Chan_Can_Priv(p, t) = Wizard(p) || Chan_Can(p, t)</c> — hdrs/extchat.h:203, "who can
@@ -642,8 +665,7 @@ public class PermissionService(
 		);
 
 	public async ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel)
-		=> await target.IsPriv()
-			 || await target.IsSee_All()
+		=> await target.IsSee_All()
 			 || (
 				 await ChannelCanAccess(target, channel)
 				 && await lockService.Evaluate(channel.SeeLock, channel, target)

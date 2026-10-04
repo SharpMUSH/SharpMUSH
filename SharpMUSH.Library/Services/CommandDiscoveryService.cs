@@ -42,8 +42,10 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		// capture indices below stay aligned with the string the regex actually matched against.
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
+		// Each pattern runs once: the Match that admits it is the one its arguments are captured from.
 		var matchedCommandPatternAttributes = await commandPatternAttributes
-			.Where(x => SoftcodeRegex.IsMatch(x.Regex, plainCommandString))
+			.Select(x => (x.Obj, x.Attr, x.Regex, x.IsRegex, Match: SoftcodeRegex.Match(x.Regex, plainCommandString)))
+			.Where(x => x.Match is { Success: true })
 			.ToArrayAsync();
 
 		if (matchedCommandPatternAttributes.Length == 0)
@@ -54,7 +56,7 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		var res = matchedCommandPatternAttributes.Select(match =>
 			(match.Obj,
 			 match.Attr,
-			 Arguments: PatternArguments.Capture(match.Regex, match.IsRegex, trimmedCommandString)));
+			 Arguments: PatternArguments.Capture(match.Regex, match.Match!, match.IsRegex, trimmedCommandString)));
 
 		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
 			.FromOption(res);
