@@ -31,9 +31,9 @@ public class RecurringJobTests
 		public override DateTimeOffset GetUtcNow() => Now;
 	}
 	private sealed record Context(RecurringJobService Service, CapabilityActor Actor, DBRef Target, Clock Clock, QueueScheduler Queue,
-		List<Func<ValueTask<CallState?>>> Callbacks, IAdministrativeCapabilityService Capabilities);
-	private RecurringJobService Service(Clock clock, QueueScheduler queue, IAdministrativeCapabilityService capabilities) => new(
-		Get<IExpandedDataStore>(), Get<IObjectStore>(), capabilities, Get<IPermissionService>(), Get<IAttributeService>(), queue, Factory.CommandParser, clock);
+		List<Func<ValueTask<CallState?>>> Callbacks, IAdministrativeCapabilityService Capabilities, ITaskQueueReader QueueReader);
+	private RecurringJobService Service(Clock clock, QueueScheduler queue, ITaskQueueReader reader, IAdministrativeCapabilityService capabilities) => new(
+		Get<IExpandedDataStore>(), Get<IObjectStore>(), capabilities, Get<IPermissionService>(), Get<IAttributeService>(), queue, reader, Factory.CommandParser, clock);
 	private async Task<Context> Setup()
 	{
 		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]));
@@ -45,8 +45,9 @@ public class RecurringJobTests
 		var clock = new Clock();
 		var callbacks = new List<Func<ValueTask<CallState?>>>();
 		var queue = Substitute.For<QueueScheduler>();
+		var reader = Substitute.For<ITaskQueueReader>();
 		var pending = new HashSet<(string Trigger, string Group)>();
-		queue.HasPendingWork(Arg.Any<string>(), Arg.Any<string>()).Returns(call => pending.Contains((call.ArgAt<string>(0), call.ArgAt<string>(1))));
+		reader.HasPendingWork(Arg.Any<string>(), Arg.Any<string>()).Returns(call => pending.Contains((call.ArgAt<string>(0), call.ArgAt<string>(1))));
 		queue.AdmitWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>(), notifyOnRejection: Arg.Any<bool>())
 			.Returns(call =>
 			{
@@ -58,9 +59,9 @@ public class RecurringJobTests
 			});
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-		var service = Service(clock, queue, capabilities);
+		var service = Service(clock, queue, reader, capabilities);
 		await service.InitializeAsync();
-		return new(service, actor!, target, clock, queue, callbacks, capabilities);
+		return new(service, actor!, target, clock, queue, callbacks, capabilities, reader);
 	}
 	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 
@@ -162,7 +163,7 @@ public class RecurringJobTests
 				return await Get<IAttributeService>().GetAttributeAsync(call.ArgAt<AnySharpObject>(0), call.ArgAt<AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<IAttributeService.AttributeMode>(3), call.ArgAt<bool>(4));
 			});
 		var service = new RecurringJobService(Get<IExpandedDataStore>(), Get<IObjectStore>(), context.Capabilities,
-			Get<IPermissionService>(), attributes, context.Queue, Factory.CommandParser, context.Clock);
+			Get<IPermissionService>(), attributes, context.Queue, context.QueueReader, Factory.CommandParser, context.Clock);
 		await service.InitializeAsync();
 		var controller = new SharpMUSH.Server.Controllers.RecurringJobsController(service)
 		{
@@ -261,8 +262,8 @@ public class RecurringJobTests
 	public async Task RealQueueKeepsOneFiringAndRecoversAfterExternalHalt()
 	{
 		var context = await Setup();
-		var queue = Get<QueueScheduler>();
-		var service = Service(context.Clock, queue, context.Capabilities);
+		var queue = Get<SharpMUSH.Library.Services.TaskScheduler>();
+		var service = Service(context.Clock, queue, queue, context.Capabilities);
 		await service.InitializeAsync();
 		var job = await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -357,7 +358,7 @@ public class RecurringJobTests
 		await context.Service.RunDueAsync();
 		await context.Service.RunDueAsync();
 		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
-		var restarted = Service(context.Clock, context.Queue, context.Capabilities);
+		var restarted = Service(context.Clock, context.Queue, context.QueueReader, context.Capabilities);
 		await restarted.InitializeAsync();
 		await restarted.InitializeAsync();
 		await context.Callbacks[0]();
@@ -482,7 +483,7 @@ public class RecurringJobTests
 		var observed = new TaskCompletionSource<ExecutionBudget?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { observed.TrySetResult(ExecutionBudget.Current); return ValueTask.FromResult<CallState?>(CallState.Empty); });
 		var service = new RecurringJobService(Get<IExpandedDataStore>(), Get<IObjectStore>(), context.Capabilities,
-			Get<IPermissionService>(), Get<IAttributeService>(), Get<QueueScheduler>(), parser, context.Clock);
+			Get<IPermissionService>(), Get<IAttributeService>(), Get<QueueScheduler>(), Get<ITaskQueueReader>(), parser, context.Clock);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
@@ -520,7 +521,7 @@ public class RecurringJobTests
 		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
 		var capabilities = new AdministrativeCapabilityService(accounts, Get<IRoleRegistryService>(), Get<IRoleDerivationService>(), Get<IPermissionResolver>());
-		var service = Service(context.Clock, context.Queue, capabilities);
+		var service = Service(context.Clock, context.Queue, context.QueueReader, capabilities);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
@@ -571,7 +572,7 @@ public class RecurringJobTests
 		registry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => backing.GetRolesForAccountAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
 		var capabilities = new AdministrativeCapabilityService(accounts, registry, Get<IRoleDerivationService>(), Get<IPermissionResolver>());
-		var service = Service(context.Clock, context.Queue, capabilities);
+		var service = Service(context.Clock, context.Queue, context.QueueReader, capabilities);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
@@ -641,7 +642,7 @@ public class RecurringJobTests
 		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => Authorize(call.ArgAt<CancellationToken>(2)));
 		var service = new RecurringJobService(store, objects, context.Capabilities, Get<IPermissionService>(),
-			Get<IAttributeService>(), context.Queue, Factory.CommandParser, context.Clock);
+			Get<IAttributeService>(), context.Queue, context.QueueReader, Factory.CommandParser, context.Clock);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
@@ -731,7 +732,7 @@ public class RecurringJobTests
 		store.SetExpandedServerData(RecurringJobService.StorageKey, Arg.Any<object>(), Arg.Any<CancellationToken>())
 			.Returns(call => Save(call.ArgAt<RecurringJobDocument>(1), call.ArgAt<CancellationToken>(2)));
 		var service = new RecurringJobService(store, Get<IObjectStore>(), context.Capabilities, Get<IPermissionService>(),
-			Get<IAttributeService>(), context.Queue, Factory.CommandParser, context.Clock);
+			Get<IAttributeService>(), context.Queue, context.QueueReader, Factory.CommandParser, context.Clock);
 		await service.InitializeAsync();
 		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);

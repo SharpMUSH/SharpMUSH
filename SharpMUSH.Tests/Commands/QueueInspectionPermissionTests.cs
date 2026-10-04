@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -42,7 +43,7 @@ public class QueueInspectionPermissionTests
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
+		var queue = Factory.Services.GetRequiredService<QueueScheduler>();
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, connections, "QueueReader");
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "PrivateQueue");
 		var reference = target;

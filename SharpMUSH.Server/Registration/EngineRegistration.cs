@@ -120,7 +120,12 @@ internal static class EngineRegistration
 		services.AddSingleton<IObjectNameService, ObjectNameService>();
 		services.AddSingleton<IFlagAndPowerService, FlagAndPowerService>();
 		services.AddSingleton<IObjectRelationshipService, ObjectRelationshipService>();
-		services.AddSingleton<ITaskScheduler, TaskScheduler>();
+		// One scheduler, seen through the four questions callers ask of it.
+		services.AddSingleton<TaskScheduler>();
+		services.AddSingleton<ITaskScheduler>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ISemaphoreQueue>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ITaskQueueControl>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ITaskQueueReader>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();

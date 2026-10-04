@@ -43,7 +43,7 @@ public class QueueControlPermissionCancellationTests
 			yield break;
 		}
 		player.Object().Powers = new(() => Powers());
-		var service = new QueueControlService(Substitute.For<ITaskScheduler>(), Substitute.For<IAdministrativeCapabilityService>(), mediator, permissions);
+		var service = new QueueControlService(Substitute.For<ITaskQueueReader>(), Substitute.For<ITaskQueueControl>(), Substitute.For<IAdministrativeCapabilityService>(), mediator, permissions);
 		using var request = new CancellationTokenSource();
 		using var parent = new CancellationTokenSource();
 		using var budget = ambient ? new ExecutionBudget(TimeSpan.FromSeconds(30), parent.Token) : null;
@@ -68,11 +68,12 @@ public class QueueControlPermissionCancellationTests
 	public async Task SchedulerTransitionReceivesRequestCancellation(bool resume)
 	{
 		var actor = new CapabilityActor("account", new DBRef(40, 1), new DBRef(40, 1));
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var queue = Substitute.For<ITaskQueueReader>();
+		var control = Substitute.For<ITaskQueueControl>();
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGameActorAsync(actor.Executor!.Value, Arg.Any<CancellationToken>()).Returns(actor);
 		capabilities.GetGrantedScopesAsync(actor, Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.QueueControl });
-		scheduler.GetQueueEntry(12).Returns(new SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot(12, new DBRef(50, 1), new DBRef(50, 1), "delay", SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Pending, TimeSpan.FromSeconds(30), ""));
+		queue.GetQueueEntry(12).Returns(new SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot(12, new DBRef(50, 1), new DBRef(50, 1), "delay", SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Pending, TimeSpan.FromSeconds(30), ""));
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var cleanup = new CancellationTokenSource();
 		async ValueTask<SharpMUSH.Library.Models.SchedulerModels.QueueControlResult> Transition()
@@ -83,9 +84,9 @@ public class QueueControlPermissionCancellationTests
 			await Task.Delay(Timeout.Infinite, linked.Token);
 			return SharpMUSH.Library.Models.SchedulerModels.QueueControlResult.Applied;
 		}
-		scheduler.PausePending(12, "").Returns(_ => Transition());
-		scheduler.ResumePending(12).Returns(_ => Transition());
-		var service = new QueueControlService(scheduler, capabilities, Substitute.For<IMediator>(), Substitute.For<IPermissionService>());
+		control.PausePending(12, "").Returns(_ => Transition());
+		control.ResumePending(12).Returns(_ => Transition());
+		var service = new QueueControlService(queue, control, capabilities, Substitute.For<IMediator>(), Substitute.For<IPermissionService>());
 		using var request = new CancellationTokenSource();
 		var invocation = service.ChangeAsync(actor, 12, resume, ct: request.Token);
 		try

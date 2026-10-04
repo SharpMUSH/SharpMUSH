@@ -58,7 +58,7 @@ public class QueueEnumerationOrderingTests
 				var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 				capabilities.GetGameActorAsync(actor.Executor!.Value, Arg.Any<CancellationToken>()).Returns(actor);
 				capabilities.GetGrantedScopesAsync(actor, Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.QueueInspect });
-				var control = new QueueControlService(queue, capabilities, Substitute.For<IMediator>(), Substitute.For<IPermissionService>());
+				var control = new QueueControlService(queue, queue, capabilities, Substitute.For<IMediator>(), Substitute.For<IPermissionService>());
 				actual = await control.ListAsync(actor, 101);
 			}
 			else actual = queue.EnumerateQueueEntries();

@@ -596,7 +596,7 @@ public class MyrddinBBSIntegrationTests
 	/// <summary>Includes running parents and their delayed children, without waiting for bbpocket's daily timer.</summary>
 	private async Task WaitForBbsQueueAsync()
 	{
-		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskQueueReader>();
 		var board = await BbsBoardAsync();
 		var pocket = await BbsPocketAsync();
 		await Assert.That(() => !scheduler.GetQueueEntries().Any(entry =>
@@ -613,7 +613,7 @@ public class MyrddinBBSIntegrationTests
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
 	public async Task BBS_CollectorWaitsForAdmittedDelayedOutput(bool pocketGate)
 	{
-		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var scheduler = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var collecting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -121,8 +121,15 @@ public class PennMUSHImportBenchmarks
 		services.RemoveAll<IMessageBus>();
 		services.AddSingleton(Substitute.For<IMessageBus>());
 		services.RemoveAll<IConnectionStateStore>();
+		services.RemoveAll<SharpMUSH.Library.Services.TaskScheduler>();
 		services.RemoveAll<ITaskScheduler>();
 		services.AddSingleton(Substitute.For<ITaskScheduler>());
+		services.RemoveAll<ISemaphoreQueue>();
+		services.AddSingleton(Substitute.For<ISemaphoreQueue>());
+		services.RemoveAll<ITaskQueueControl>();
+		services.AddSingleton(Substitute.For<ITaskQueueControl>());
+		services.RemoveAll<ITaskQueueReader>();
+		services.AddSingleton(Substitute.For<ITaskQueueReader>());
 		services.RemoveAll<ISchedulerFactory>();
 		// A delayed diagnostic task that faults once a short-lived container is disposed.
 		services.PostConfigureAll<FusionCacheOptions>(cache => cache.EnableBestPracticesAdvisor = false);

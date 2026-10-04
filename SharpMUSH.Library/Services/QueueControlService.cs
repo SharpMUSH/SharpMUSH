@@ -23,7 +23,7 @@ public interface IQueueControlService
 }
 
 /// <summary>Shared game and portal gates. No executable text or register values leave this API.</summary>
-public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativeCapabilityService capabilities,
+public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueControl control, IAdministrativeCapabilityService capabilities,
 	IMediator mediator, IPermissionService permissions) : IQueueControlService
 {
 	/// <summary>Existing Penn game permissions for PID operations, independent of account role grants.</summary>
@@ -31,7 +31,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 	{
 		using var requestScope = ExecutionBudget.EnterLinked(ct);
 		ct = ExecutionBudget.CurrentToken;
-		var entry = scheduler.GetQueueEntry(pid);
+		var entry = queue.GetQueueEntry(pid);
 		if (entry is null) return false;
 		if (mutate ? await actor.IsWizard() || await actor.HasPower("HALT")
 			: await actor.IsPriv() || await actor.HasPower("SEE_QUEUE")) return true;
@@ -49,7 +49,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		var scope = await GetInspectionScopeAsync(actor, ct);
 		if (scope is null) return [];
 		var visible = new List<QueueEntrySnapshot>(limit);
-		foreach (var entry in scheduler.EnumerateQueueEntries())
+		foreach (var entry in queue.EnumerateQueueEntries())
 		{
 			ct.ThrowIfCancellationRequested();
 			if (!await CanInspectAsync(scope, entry.Owner, entry.Source, ct)) continue;
@@ -64,7 +64,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		var scope = await GetInspectionScopeAsync(actor, ct);
 		if (scope is null) return [];
 		var visible = new List<QueueEntrySnapshot>();
-		foreach (var entry in scheduler.GetQueueEntries())
+		foreach (var entry in queue.GetQueueEntries())
 		{
 			ct.ThrowIfCancellationRequested();
 			if (!await CanInspectAsync(scope, entry.Owner, entry.Source, ct)) continue;
@@ -93,7 +93,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		ct = ExecutionBudget.CurrentToken;
 		ct.ThrowIfCancellationRequested();
 		if (!await ValidActor(actor, ct)) return QueueControlResult.NotFound;
-		var entry = scheduler.GetQueueEntry(pid);
+		var entry = queue.GetQueueEntry(pid);
 		if (entry is null) return QueueControlResult.NotFound;
 		var own = entry.Owner == actor.ActiveCharacter;
 		// An explicit child deny wins even when the parent scope remains granted.
@@ -101,7 +101,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		if (!scopes.Contains(own ? PortalPermission.QueueControlOwn : PortalPermission.QueueControl)) return QueueControlResult.NotFound;
 		if (own && !await ControlsCurrentSource(actor, entry.Owner, entry.Source, ct)) return QueueControlResult.NotFound;
 		ct.ThrowIfCancellationRequested();
-		return resume ? await scheduler.ResumePending(pid) : await scheduler.PausePending(pid, reason);
+		return resume ? await control.ResumePending(pid) : await control.PausePending(pid, reason);
 	}
 
 	private async Task<bool> ValidActor(CapabilityActor actor, CancellationToken ct)

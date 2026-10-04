@@ -42,21 +42,21 @@ public class ScheduleTimeoutHandler(ITaskScheduler scheduler) : IRequestHandler<
 		return Unit.Value;
 	}
 }
-public class ScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<NotifySemaphoreRequest>
+public class ScheduleNotifyHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifySemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(NotifySemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
+		await semaphores.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
 		return Unit.Value;
 	}
 }
-public class ScheduleNotifyAllHandler(ITaskScheduler scheduler) : IRequestHandler<NotifyAllSemaphoreRequest>
+public class ScheduleNotifyAllHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifyAllSemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(NotifyAllSemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.NotifyAllCounted(request.DbRefAttribute);
+		await semaphores.NotifyAllCounted(request.DbRefAttribute);
 		return Unit.Value;
 	}
 }

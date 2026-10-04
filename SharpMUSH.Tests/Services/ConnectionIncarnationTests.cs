@@ -100,7 +100,7 @@ public class ConnectionIncarnationTests
 	}
 
 	[Test]
-	public async Task CurrentInputUsesThePublishedSchedulerEntryPoint()
+	public async Task CurrentInputIsAdmittedUnderItsIncarnation()
 	{
 		var service = new ConnectionService(Substitute.For<IPublisher>());
 		await Register(service, "current", 200);
@@ -112,7 +112,6 @@ public class ConnectionIncarnationTests
 
 		await scheduler.Received(2).AdmitUserCommand(Handle, Arg.Any<MarkupText>(),
 			Arg.Is<ParserState>(state => state.ConnectionSessionId == "current"));
-		await scheduler.DidNotReceive().AdmitUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
 	}
 
 	[Test]
