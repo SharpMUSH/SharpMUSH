@@ -42,14 +42,17 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	IOptionsWrapper<SharpMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
-	private readonly IMediator _mediator = ServiceProvider.GetRequiredService<IMediator>();
-	private readonly INotifyService _notifyService = ServiceProvider.GetRequiredService<INotifyService>();
-	private readonly IConnectionService _connectionService = ServiceProvider.GetRequiredService<IConnectionService>();
-	private readonly ILocateService _locateService = ServiceProvider.GetRequiredService<ILocateService>();
-	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
-	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
-	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
-	private readonly ILockService _lockService = ServiceProvider.GetRequiredService<ILockService>();
+	/// <summary>
+	/// The services evaluation uses, resolved once here and shared by every state this parser pushes
+	/// and every visitor it builds; see <see cref="EvaluationServices"/>.
+	/// </summary>
+	private readonly EvaluationServices _services = EvaluationServices.From(ServiceProvider);
+
+	/// <summary>
+	/// <see cref="_services"/>, locating its optional services in this parser's current provider when a
+	/// copy of the parser was given another one.
+	/// </summary>
+	private EvaluationServices Services => _services.For(ServiceProvider);
 
 	/// <summary>
 	/// The command trie for prefix lookups. Shared by every parser derived from the same command
@@ -303,17 +306,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, true);
 		}
 
-		SharpMUSHParserVisitor visitor = new(Logger, parser,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService,
-			_lockService,
-			text);
+		SharpMUSHParserVisitor visitor = new(Logger, parser, Configuration, Services, text);
 
 		CallState? result;
 		try { result = await visitor.Visit(context); }
@@ -358,108 +351,20 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// single call, was caught, logged with a full stack trace, and returned an empty result. The
 	/// nightly benchmark run that flushed this out logged two million of those stack traces.
 	/// </remarks>
-	internal IMUSHCodeParser ResolveTrackingParser()
+	internal IMUSHCodeParser ResolveTrackingParser() => ResolveTrackingParser(this);
+
+	/// <inheritdoc cref="ResolveTrackingParser()"/>
+	internal static IMUSHCodeParser ResolveTrackingParser(IMUSHCodeParser parser)
 	{
-		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		var needsTracking = parser.State.IsEmpty || parser.CurrentState.TotalInvocations == null;
 		if (!needsTracking)
 		{
-			return this;
+			return parser;
 		}
 
 		// CurrentState => State.Peek() throws on an empty stack, so only read the actors when there
 		// IS a frame to read them from.
-		var preserveCallerActors = !State.IsEmpty;
-
-		return Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ExecutionStack: [],
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: preserveCallerActors ? CurrentState.Executor : null,
-			Enactor: preserveCallerActors ? CurrentState.Enactor : null,
-			Caller: preserveCallerActors ? CurrentState.Caller : null,
-			Handle: null,
-			ParseMode: ParseMode.Default,
-			HttpResponse: null,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag())
-		{
-			MoveDepth = new InvocationCounter(),
-			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
-			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null,
-			CommandText = preserveCallerActors ? CurrentState.CommandText : null
-		});
-	}
-
-	/// <summary>
-	/// PennMUSH substitution-only debug: when a function-position argument contains only
-	/// substitutions (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated".
-	/// Only fires when the parse neither emitted function traces nor contains a restricted wrapper
-	/// (<paramref name="suppressSubstitutionDebug"/>), and raw and evaluated text differ.
-	/// <para>
-	/// Extracted from <see cref="FunctionParse(MString, bool)"/> so
-	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c> can reuse the identical trace logic
-	/// when it evaluates a retained argument subtree directly instead of going through
-	/// <see cref="FunctionParse(MString, bool)"/>'s own lex+parse pass.
-	/// </para>
-	/// </summary>
-	/// <param name="callerState">
-	/// The state to check DEBUG/NODEBUG flags and resolve the executor against — always the
-	/// state of the parser that WOULD have called <see cref="FunctionParse(MString, bool)"/>
-	/// (i.e. <see cref="CurrentState"/> at the call site), not any fresh tracking state pushed by
-	/// <see cref="ResolveTrackingParser"/> for the evaluation itself.
-	/// </param>
-	internal static async ValueTask EmitSubstitutionOnlyDebugTraceAsync(
-		IMediator mediator,
-		INotifyService notifyService,
-		ParserState callerState,
-		string rawText,
-		MString? resultMessage,
-		bool suppressSubstitutionDebug)
-	{
-		if (EvaluationRestrictions.Current is not null || callerState.Restrictions is not null
-			|| suppressSubstitutionDebug || resultMessage is null)
-		{
-			return;
-		}
-
-		var evaluatedText = resultMessage.ToPlainText();
-		if (rawText == evaluatedText)
-		{
-			return;
-		}
-
-		if (await callerState.ExecutorObject(mediator) is not AnySharpObject executorObj)
-		{
-			return;
-		}
-
-		var stateFlags = callerState.Flags;
-		bool shouldDebug;
-		if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
-			shouldDebug = false;
-		else if (stateFlags.HasFlag(ParserStateFlags.Debug))
-			shouldDebug = true;
-		else
-			shouldDebug = await executorObj.HasFlag("DEBUG");
-
-		if (shouldDebug)
-		{
-			var dbrefNumber = executorObj.Object().DBRef.Number;
-			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"), executorObj);
-		}
+		return parser.Push(ParserState.ForTrackedEvaluation(parser.State.IsEmpty ? null : parser.CurrentState));
 	}
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
@@ -498,7 +403,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 			budget.ThrowIfExceeded();
 
-			await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+			await EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(_services.Mediator, _services.NotifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
 				rawText, result?.Message, suppressSubstitutionDebug);
 			budget.ThrowIfExceeded();
 			return result;
@@ -561,15 +466,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CommandText = CurrentState.CommandText ?? new CommandText()
 		});
 
-		SharpMUSHParserVisitor visitor = new(Logger, parserForList,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, _lockService, text);
+		SharpMUSHParserVisitor visitor = new(Logger, parserForList, Configuration, Services, text);
 
 		return async () =>
 		{
@@ -581,7 +478,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>
 	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
 		=> await FunctionLimits.OutputLimitForAsync(
-			player is { } dbref && await _mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
+			player is { } dbref && await _services.Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
 			Configuration.CurrentValue.Limit.GuestOutputLimit);
 
 	/// <summary>
@@ -603,7 +500,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// else's command, which must not run with the player read above.
 		var current = connectionService.Get(handle);
 		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
-		var newParser = Push(TypedLineState(player, handle, expectedSession, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 
@@ -619,44 +516,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public async ValueTask<CallState> CommandParse(DBRef player, MString text)
 	{
 		var outputLimit = await OutputLimitForAsync(player);
-		var newParser = Push(TypedLineState(player, handle: null, session: null, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit));
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 		return result ?? CallState.Empty;
 	}
-
-	/// <summary>The fresh state a typed line starts from: the player is executor, enactor and caller.</summary>
-	private static ParserState TypedLineState(DBRef? player, long? handle, string? session, int outputLimit)
-		=> new(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ExecutionStack: [],
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: player,
-			Enactor: player,
-			Caller: player,
-			Handle: handle,
-			ParseMode: ParseMode.Default,
-			HttpResponse: null,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag(),
-			Flags: ParserStateFlags.DirectInput,
-			ConnectionSessionId: session)
-		{
-			MoveDepth = new InvocationCounter(),
-			CommandText = new CommandText(),
-			OutputLimit = outputLimit
-		};
 
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
