@@ -54,6 +54,14 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 			});
 		}
 
+		if (request.Method == HttpMethod.Post && path == "api/auth/mush-token")
+		{
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new { token = "command-ott", expiresIn = 60 })
+			});
+		}
+
 		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
 		{
 			// failSwitch simulates an expired account session: the server rejects the OTT mint, which
@@ -109,7 +117,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 	}
 
 	private sealed record TerminalRig(ITerminalService First, ITerminalService Second);
-	private sealed record PlayTerminalRig(IPlayTerminalService First);
+	private sealed record PlayTerminalRig(IPlayTerminalService First, IPlayTerminalService Second);
 
 	/// <summary>Real TerminalServiceHost (concrete type AND interface aliased to the same instance,
 	/// mirroring <c>TerminalServiceCollectionExtensions.AddTerminalServices</c>), backed by a
@@ -134,7 +142,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		var host = new PlayTerminalServiceHost(() => queue.Dequeue());
 		Services.AddSingleton(host);
 		Services.AddSingleton<IPlayTerminalService>(host);
-		return new PlayTerminalRig(first);
+		return new PlayTerminalRig(first, second);
 	}
 
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync(bool failSwitch = false)
@@ -184,10 +192,12 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		=> Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 
 	[Test]
-	public async Task Switching_from_the_panel_does_not_touch_the_terminals()
+	public async Task Switching_from_the_panel_moves_the_connected_terminals()
 	{
 		var terminal = RegisterTerminal();
 		var playTerminal = RegisterPlayTerminal();
+		terminal.First.IsConnected.Returns(true);
+		playTerminal.First.IsConnected.Returns(true);
 		var auth = await CreateLoggedInAuthAsync();
 
 		var cut = RenderNavMenu();
@@ -199,9 +209,14 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 				throw new InvalidOperationException("switch not applied yet");
 		});
 
-		// The account-panel switch is portal-only: a terminal's character is fixed at connect.
-		await terminal.First.DidNotReceive().DisposeAsync();
-		await playTerminal.First.DidNotReceive().DisposeAsync();
+		// The terminal and the Play page follow the switch: both connections quit the previous
+		// character and connect again as Beta.
+		cut.WaitForAssertion(() => playTerminal.Second.Received(1)
+			.ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
+		cut.WaitForAssertion(() => terminal.Second.Received(1)
+			.ConnectWithOttAsync(Arg.Any<string>(), "command-ott", Arg.Any<TerminalIdentity?>()));
+		await terminal.First.Received(1).SendAsync("QUIT");
+		await playTerminal.First.Received(1).SendAsync("QUIT");
 	}
 
 	[Test]

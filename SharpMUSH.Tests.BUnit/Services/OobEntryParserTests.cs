@@ -315,6 +315,21 @@ public class OobEntryParserTests
 		await Assert.That(info.Scene).IsNull();
 	}
 
+	/// <summary>The viewer's place in the scene (room-contents 2.2): their role, or null, and whether they are focused on it.</summary>
+	[Test]
+	public async Task V2_room_info_scene_carries_the_viewers_role_and_focus()
+	{
+		var member = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","title":"T","cast":3,"role":"owner","focus":true}}""")!;
+		var watcher = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","title":"T","cast":3,"role":null,"focus":false}}""")!;
+
+		await Assert.That(member.Scene).IsEqualTo(new RoomScene("42", "T", 3, "owner", true));
+		await Assert.That(member.Scene!.Outside).IsFalse();
+		await Assert.That(watcher.Scene).IsEqualTo(new RoomScene("42", "T", 3, null, false));
+		await Assert.That(watcher.Scene!.Outside).IsTrue();
+	}
+
 	[Test]
 	public async Task V2_softcode_room_info_with_a_scene()
 	{

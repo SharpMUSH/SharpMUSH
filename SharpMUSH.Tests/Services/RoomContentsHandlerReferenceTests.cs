@@ -701,9 +701,14 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd("&FN`T`SCENEWHERE #9=42");
 			await Cmd("&FN`T`SCENE #9=switch(%1,id,42,public,1,title,Salt Market at Dusk)");
 			await Cmd("&FN`T`SCENEMEMBERS #9=#1 #2 #3");
+			// The mortal is a participant focused on the scene; the wizard is neither.
+			await Cmd($"&FN`T`SCENEMEMBER #9=if(strmatch(num(%1),num({f.Mortal})),participant,#-1 NOT FOUND)");
+			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 NOT FOUND)");
 			await Cmd("@function scenewhere=#9,FN`T`SCENEWHERE");
 			await Cmd("@function scene=#9,FN`T`SCENE");
 			await Cmd("@function scenemembers=#9,FN`T`SCENEMEMBERS");
+			await Cmd("@function scenemember=#9,FN`T`SCENEMEMBER");
+			await Cmd("@function scenefocus=#9,FN`T`SCENEFOCUS");
 
 			foreach (var viewer in new[] { f.Wizard, f.Mortal })
 			{
@@ -713,15 +718,31 @@ public class RoomContentsHandlerReferenceTests
 				await Assert.That(scene.GetProperty("title").GetString()).IsEqualTo("Salt Market at Dusk");
 				await Assert.That(scene.GetProperty("cast").GetInt32()).IsEqualTo(3);
 			}
+
+			// The viewer's own place in the scene: what the Play page needs to know whether a pose made
+			// in the room is recorded there.
+			using (var member = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal))
+			{
+				var scene = member.RootElement.GetProperty("scene");
+				await Assert.That(scene.GetProperty("role").GetString()).IsEqualTo("participant");
+				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsTrue();
+			}
+
+			using (var watcher = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			{
+				var scene = watcher.RootElement.GetProperty("scene");
+				await Assert.That(scene.GetProperty("role").ValueKind).IsEqualTo(JsonValueKind.Null);
+				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsFalse();
+			}
 		}
 		finally
 		{
-			foreach (var fn in new[] { "scenewhere", "scene", "scenemembers" })
+			foreach (var fn in new[] { "scenewhere", "scene", "scenemembers", "scenemember", "scenefocus" })
 			{
 				await Cmd($"@function/delete {fn}");
 			}
 
-			foreach (var attr in new[] { "FN`T`NOTFOUND", "FN`T`SCENEWHERE", "FN`T`SCENE", "FN`T`SCENEMEMBERS" })
+			foreach (var attr in new[] { "FN`T`NOTFOUND", "FN`T`SCENEWHERE", "FN`T`SCENE", "FN`T`SCENEMEMBERS", "FN`T`SCENEMEMBER", "FN`T`SCENEFOCUS" })
 			{
 				await Cmd($"&{attr} #9=");
 			}
@@ -839,6 +860,14 @@ public class RoomContentsHandlerReferenceTests
 				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
 			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000")
 				.Because("a resume is sent to the resuming player alone, all three packages");
+
+			// A scene change (the Scene plugin's cause) re-sends room.info alone, to every viewer, the
+			// causer included when they are in the room: only the scene block changed, and it is per viewer.
+			await Cmd("&LAST_PAYLOAD #9=unset");
+			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
+				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "scene");
+			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("0 0")
+				.Because("a scene change sends room.info, and nothing else, to every viewer in the room");
 
 			// A resuming player who is not a viewer in the room is sent nothing, and nobody else is either.
 			await Cmd("&LAST_PAYLOAD #9=unset");
