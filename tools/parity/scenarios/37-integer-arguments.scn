@@ -1,0 +1,22 @@
+# Integer arguments read the way PennMUSH reads them: is_integer / is_uinteger / is_strict_integer /
+# is_strict_uinteger (pennmush src/parse.c:373-566). Leading whitespace is skipped, anything after the
+# digits refuses the argument, and the strict tests ignore TINY_MATH and NULL_EQ_ZERO (#971).
+::case int.login
+::login wiz Wiz wizpass
+think ok
+
+::case int.spaced  the parser trims the spaces around an argument before the integer test sees it
+think [extract(a b c,2 ,1)]|[extract(a b c,2,1 )]|[index(a|b|c,|,2 ,1)]|[wordpos(a b c,3 )]
+think [left(abcde,2 )]|[right(abcde,2 )]|[mid(abcde,1 ,2)]|[delete(abcde,1 ,2)]|[repeat(ab,2 )]
+think [strinsert(abc,1 ,X)]|[strreplace(abc,1 ,1,X)]|[ljust(a,3 )]|[rjust(a,3 )]|[center(a,3 )]|
+think [table(a b c,5 ,20)]
+
+::case int.suffix  text after the digits refuses the argument
+think [extract(a b c,2x,1)]|[left(abcde,2x)]|[right(abcde,2x)]|[repeat(ab,2x)]|[ljust(a,3x)]|[mid(abcde,1,2x)]
+
+::case int.sign  a sign is part of the number; is_uinteger refuses a minus
+think [left(abcde,+2)]|[left(abcde,-1)]|[right(abcde,-1)]|[ljust(a,-1)]|[rjust(a,+3)]|[center(a,-3)]
+think [space(-1)]|[space(+2)]|[chr(+65)]|[chr(-1)]
+
+::case int.strict  inum and itext, space and chr take a strict integer
+think [iter(a b,[inum(0 )])]|[iter(a b,[itext(0x)])]|[space(2 )]|[chr(65 )]

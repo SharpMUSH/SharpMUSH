@@ -307,7 +307,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
 		}
 
-		if (!int.TryParse(levelArg, out var level))
+		if (!ArgHelpers.TryStrictInteger(levelArg, out int level))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -348,7 +348,7 @@ public partial class Functions
 				{
 					depth = stack.Count - 1;
 				}
-				else if (!int.TryParse(depthStr, out depth) || depth < 0)
+				else if (!ArgHelpers.TryStrictInteger(depthStr, out depth) || depth < 0)
 				{
 					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 				}
@@ -383,7 +383,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "1").ToPlainText();
-		if (!long.TryParse(text, out var levels))
+		if (!ArgHelpers.TryStrictInteger(text, out long levels))
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		if (levels < 0 || levels > parser.CurrentState.IterationRegisters.Count)
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
@@ -416,7 +416,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
 		}
 
-		if (!int.TryParse(levelArg, out var level))
+		if (!ArgHelpers.TryStrictInteger(levelArg, out int level))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
