@@ -43,6 +43,7 @@ public class NumericCompatibilityTests
 	[Arguments(true, false, "map(#apply/abs,-2foo)", "2")]
 	// Integer arguments (PennMUSH is_integer / is_uinteger / is_strict_*, src/parse.c:373-566); the
 	// expected values are a reference PennMUSH's answers under the same two options.
+	[Arguments(false, false, "[extract(a b c,2 ,1)]|[left(abcde, 2 )]|[ljust(a,3 )]|", "b|ab|a  |")]
 	[Arguments(false, false, "extract(a b c,2x,1)", "#-1 ARGUMENTS MUST BE INTEGERS")]
 	[Arguments(false, false, "left(abcde,2x)", "#-1 ARGUMENT MUST BE INTEGER")]
 	[Arguments(false, false, "right(abcde,2x)", "#-1 ARGUMENT MUST BE INTEGER")]
