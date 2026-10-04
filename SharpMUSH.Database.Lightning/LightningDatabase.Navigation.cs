@@ -120,49 +120,6 @@ public partial class LightningDatabase
 			? Hydrate(found.Dbref, found.Record).AsContent
 			: null;
 
-	public IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpObject>(ct => GetNearbyObjectsFromDbRefCoreAsync(obj, ct));
-
-	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsFromDbRefCoreAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct)
-	{
-		if (await GetObjectNodeAsync(obj, ct) is not AnySharpObject self)
-		{
-			yield break;
-		}
-
-		await foreach (var item in GetNearbyObjectsCoreAsync(self, ct))
-		{
-			yield return item;
-		}
-	}
-
-	public IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(AnySharpObject obj, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpObject>(ct => GetNearbyObjectsCoreAsync(obj, ct));
-
-	/// <summary>Self, then the contents of self, then the contents of self's location (self excluded from the
-	/// second pass).</summary>
-	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsCoreAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var location = await obj.Where();
-
-		yield return obj;
-
-		await foreach (var item in GetContentsAsync(obj.Object().DBRef, ct))
-		{
-			yield return item.WithRoomOption();
-		}
-
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
-		{
-			if (item.Object().DBRef == obj.Object().DBRef)
-			{
-				continue;
-			}
-
-			yield return item.WithRoomOption();
-		}
-	}
-
 	public ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default)
 	{
 		var result = Store.Read<AnyOptionalSharpContainer>(tx =>
