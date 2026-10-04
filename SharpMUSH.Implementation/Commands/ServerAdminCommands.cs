@@ -785,12 +785,11 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
+			// do_allrestart is do_allhalt, announcement and all, and then the restart.
 			await HaltWorldAsync(executor);
 
-			// Then run @STARTUP on every object — the same pass used at boot, so global
-			// @function registrations etc. re-establish identically. Errors are swallowed.
-			await StartupAttributeRunner.RunAllAsync(parser, Mediator, AttributeService, executor);
-
+			// Penn queues each STARTUP and tells each player in the same pass, so every player hears
+			// of the restart before any STARTUP has run. These run in place, so the notices go first.
 			var executorName = executor.Object().Name;
 			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
 			{
@@ -800,6 +799,10 @@ public partial class Commands
 						executor, executorName);
 				}
 			}
+
+			// Then run @STARTUP on every object — the same pass used at boot, so global
+			// @function registrations etc. re-establish identically. Errors are swallowed.
+			await StartupAttributeRunner.RunAllAsync(parser, Mediator, AttributeService, executor);
 
 			return CallState.Empty;
 		}
