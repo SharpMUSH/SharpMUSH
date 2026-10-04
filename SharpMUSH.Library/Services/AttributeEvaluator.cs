@@ -278,7 +278,7 @@ internal sealed class AttributeEvaluator(
 			// Check if enough arguments are being passed to the function based on the number after #apply.
 			// This is where we really need a proper attribute library access layer, similar to commands.
 
-			// CallFunction must be Exposed by IMUSHCodeParser.
+			// Function invocation must be exposed by IMUSHCodeParser.
 			// Further work is needed before this can be implemented properly.
 		}
 

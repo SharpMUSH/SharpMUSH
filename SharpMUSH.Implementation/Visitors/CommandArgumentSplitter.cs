@@ -66,7 +66,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
 
 		// PennMUSH's command_parse skips leading spaces (`while (*p == ' ') p++`) before it reads the
-		// command name, so `  say hi` says "hi". EvaluateCommands already TrimStart()s to find the
+		// command name, so `  say hi` says "hi". CommandDispatcher.DispatchAsync already TrimStart()s to find the
 		// command name; without the same trim here the first space would read as the name/argument
 		// boundary and the command name itself would land in the argument.
 		var leadingSpaces = SkipSpaces(realSubtext, 0);

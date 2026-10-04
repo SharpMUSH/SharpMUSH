@@ -76,6 +76,14 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 
 		var fullText = src.Substring(evalString.Start.StartIndex, evalString.Stop.StopIndex - evalString.Start.StartIndex + 1);
 
+		// The command was matched on the line's trimmed text; an indented line must be split the same way
+		// or its first space is the indent and the command token lands in the object name.
+		var commandStart = CommandArgumentSplitter.SkipSpaces(fullText, 0);
+		if (commandStart > 0)
+		{
+			fullText = fullText.Substring(commandStart, fullText.Length - commandStart);
+		}
+
 		// The command format is: @attrname object=value
 		var spaceIndex = fullText.IndexOf(" ");
 

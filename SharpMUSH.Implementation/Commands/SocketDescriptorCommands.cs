@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation.Commands;
 ///
 /// <para>
 /// Every command here therefore carries <see cref="CommandBehavior.SOCKET"/>, which
-/// <c>SharpMUSHParserVisitor.EvaluateCommands</c> dispatches by exact name for any handle, logged in
+/// <c>CommandDispatcher.DispatchAsync</c> dispatches by exact name for any handle, logged in
 /// or not, and which keeps them out of the in-game abbreviation trie.
 /// </para>
 /// </summary>
@@ -200,7 +200,7 @@ public partial class Commands
 	/// <c>IDLE</c> — PennMUSH's anti-timeout no-op (src/bsd.c). Two details are load-bearing: any text
 	/// after the command word is echoed straight back (one separating space consumed), and the
 	/// command deliberately does <b>not</b> refresh the idle timer or bump the command count, because
-	/// <c>do_command</c> handles IDLE above the lines that do. <c>EvaluateCommands</c> already carves
+	/// <c>do_command</c> handles IDLE above the lines that do. <c>CommandDispatcher.DispatchAsync</c> already carves
 	/// IDLE out of both counters, so this only has to perform the echo.
 	/// </summary>
 	[SharpCommand(Name = "IDLE", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,

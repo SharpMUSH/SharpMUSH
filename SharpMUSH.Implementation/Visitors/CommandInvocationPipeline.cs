@@ -567,9 +567,15 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		CommandContext context, MString src)
 	{
 		var full = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+		var aliasStart = CommandArgumentSplitter.SkipSpaces(full, 0);
+		if (aliasStart > 0)
+		{
+			full = full.Substring(aliasStart, full.Length - aliasStart);
+		}
 
-		// The evaluation string still carries the `+<channel>` token itself; only what follows the first
-		// space is the message. Without this, `+Public Hi` was chatted as the literal "+Public Hi".
+		// The evaluation string still carries any indent and the `+<channel>` token itself; only what
+		// follows the first space after the token is the message. Without this, `+Public Hi` was chatted
+		// as the literal "+Public Hi".
 		var firstSpace = full.IndexOf(" ");
 		var rest = firstSpace == -1
 			? MarkupText.Empty

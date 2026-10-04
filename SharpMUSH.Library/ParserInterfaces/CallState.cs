@@ -81,7 +81,7 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// Populated only by the command argument-split visitor methods (<c>VisitCommaCommandArgs</c>,
 	/// <c>VisitStartEqSplitCommandArgs</c>, <c>VisitStartEqSplitCommand</c>,
 	/// <c>VisitStartPlainSingleCommandArg</c> in <c>SharpMUSHParserVisitor</c>), so that
-	/// <c>ArgumentSplit</c> can re-visit the already-lexed/parsed subtree directly instead of
+	/// <c>CommandArgumentSplitter.SplitAsync</c> can re-visit the already-lexed/parsed subtree directly instead of
 	/// re-parsing each argument's raw text a third time (avoiding a redundant lex+parse pass).
 	/// </para>
 	/// </summary>
@@ -98,7 +98,7 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// always run lenient, so their errors are silently swallowed at that layer by design — the
 	/// original design relied on each argument's raw text getting an independent, STRICT re-parse
 	/// via <c>FunctionParse</c> afterwards to actually surface a malformed argument as
-	/// <c>#-1 PARSER FAILURE</c>. <c>ArgumentSplit</c>/<c>EvaluateArgumentSubtree</c> uses this flag
+	/// <c>#-1 PARSER FAILURE</c>. <c>CommandArgumentSplitter.EvaluateArgumentSubtree</c> uses this flag
 	/// to fall back to that strict re-parse instead of trusting the retained (possibly
 	/// error-recovered) subtree, whenever the split pass that produced <see cref="ArgumentContexts"/>
 	/// had errors anywhere in it.

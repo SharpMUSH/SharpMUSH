@@ -408,14 +408,14 @@ public static class SoftcodeLayout
 	/// Classifies a <em>resolved</em> function from its declaration, so that every caller building a
 	/// <c>classifyFunction</c> delegate applies one rule rather than three divergent copies of it.
 	/// <para>
-	/// The two source-copying branches of <c>SharpMUSHParserVisitor.CallFunction</c> are:
-	/// <c>Literal</c> (<c>:795-803</c>), whose single argument is <c>LiteralArgumentText</c> — the raw
+	/// The two source-copying branches of <c>FunctionInvocationPipeline.InvokeAsync</c> are:
+	/// <c>Literal</c>, whose single argument is <c>LiteralArgumentText</c> — the raw
 	/// span from just past the <c>(</c> to the <c>)</c>, so every delimiter's absorbed whitespace is
-	/// inside it — and <c>NoParse</c> with <c>MaxArgs == 1</c> (<c>:818-826</c>), which returns
+	/// inside it — and <c>NoParse</c> with <c>MaxArgs == 1</c>, which returns
 	/// <c>MarkupText.Substring</c> over the whole function context.
 	/// </para>
 	/// <para>
-	/// <c>NoParse</c> with more than one argument is <b>not</b> in that set (<c>:827-839</c>): each
+	/// <c>NoParse</c> with more than one argument is <b>not</b> in that set: each
 	/// argument's deferred text is <c>GetContextText(x)</c>, sliced from that argument's own
 	/// <c>Start.StartIndex</c>, which begins after the preceding <c>COMMAWS</c> and so excludes the
 	/// whitespace it absorbed. <c>switch</c> (<c>MaxArgs = int.MaxValue</c>) and <c>iter</c>
@@ -430,7 +430,7 @@ public static class SoftcodeLayout
 
 	/// <summary>
 	/// The classifier to pass to <see cref="Compute"/>. Resolves names exactly as
-	/// <c>SharpMUSHParserVisitor.CallFunction</c> does and in the same order — the parser's
+	/// <c>FunctionInvocationPipeline.InvokeAsync</c> does and in the same order — the parser's
 	/// <c>FunctionLibrary</c> first, then the <c>@function</c> registry — and classifies a hit with
 	/// <see cref="Classify"/>.
 	/// <para>
@@ -439,7 +439,7 @@ public static class SoftcodeLayout
 	/// here, then there, else Unresolved" is exactly the divergence a shared classifier prevents.
 	/// </para>
 	/// <para>
-	/// The <c>FunctionLibrary</c> lookup is deliberately a plain one, matching <c>CallFunction</c>:
+	/// The <c>FunctionLibrary</c> lookup is deliberately a plain one, matching <c>FunctionInvocationPipeline</c>:
 	/// <c>FunctionLibraryService</c> is constructed <c>OrdinalIgnoreCase</c>, so case is handled by the
 	/// dictionary rather than by folding here. <c>DiscoverBuiltInFunction</c> reads the very same
 	/// dictionary, so there is no lazily-registered built-in this misses. A user-defined entry is

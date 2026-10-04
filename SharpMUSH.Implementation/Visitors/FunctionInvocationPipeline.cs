@@ -154,6 +154,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// The only arity check a parsed call gets: InvokeValidatedAsync below does not repeat it.
 			if (FunctionDispatcher.ValidateArgumentCount(attribute, name, args.Length) is { } arityError)
 			{
+				success = false;
 				return new CallState(arityError, contextDepth);
 			}
 
