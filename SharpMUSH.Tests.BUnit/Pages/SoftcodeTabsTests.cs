@@ -163,6 +163,22 @@ public class SoftcodeTabsTests
 	}
 
 	[Test]
+	public async Task MarkSaved_KeepsTextTypedWhileTheSaveWasInFlight()
+	{
+		var obj = Obj(8, ("A", "a"));
+		var tabs = new SoftcodeTabs();
+		var tab = tabs.Open(obj, Attr(obj, "A"));
+		tabs.Capture("edited");
+		tabs.Capture("edited further");
+
+		tab.MarkSaved("edited");
+
+		await Assert.That(tab.WorkingContent).IsEqualTo("edited further");
+		await Assert.That(tab.SavedContent).IsEqualTo("edited");
+		await Assert.That(tab.IsDirty).IsTrue();
+	}
+
+	[Test]
 	public async Task Refresh_FollowsTheReadOnCleanTabs_AndKeepsUnsavedEdits()
 	{
 		var obj = Obj(8, ("CLEAN", "old"), ("DIRTY", "old"), ("GONE", "kept"));

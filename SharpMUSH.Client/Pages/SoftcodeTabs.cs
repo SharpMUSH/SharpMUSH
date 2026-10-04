@@ -32,12 +32,11 @@ public sealed class SoftcodeTab(MushObject obj, MushAttribute attr)
 	/// </remarks>
 	public bool IsDirty => !string.Equals(WorkingContent, SavedContent, StringComparison.Ordinal);
 
-	/// <summary>The buffer, <paramref name="value"/>, is now what the database holds, so the tab is clean.</summary>
-	public void MarkSaved(string value)
-	{
-		WorkingContent = value;
-		SavedContent = value;
-	}
+	/// <summary>
+	/// <paramref name="value"/> is now what the database holds. The buffer is left alone: anything typed
+	/// while the save was in flight is newer than <paramref name="value"/> and stays unsaved.
+	/// </summary>
+	public void MarkSaved(string value) => SavedContent = value;
 
 	public bool Is(int dbref, string attributeName) =>
 		Obj.Dbref == dbref && string.Equals(Attr.Name, attributeName, StringComparison.OrdinalIgnoreCase);
