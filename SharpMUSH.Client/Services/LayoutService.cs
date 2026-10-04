@@ -45,51 +45,35 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		// A save or reset that landed while this read was in flight is newer than what it fetched.
 		_cache.TryAdd(scope, resolved) ? resolved : _cache[scope];
 
-	public async Task<bool> SaveLayoutAsync(string scope, LayoutConfiguration layout)
+	public async Task<ApiResult<Success>> SaveLayoutAsync(string scope, LayoutConfiguration layout)
 	{
 		ArgumentNullException.ThrowIfNull(layout);
 
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PutAsJsonAsync($"api/layouts/{Uri.EscapeDataString(scope)}", layout, JsonOptions);
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Saving layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
-				return false;
-			}
-
-			_cache[scope] = layout;
-			OnLayoutChanged?.Invoke(scope);
-			return true;
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Could not reach the server saving layout for scope {Scope}.", LogSanitizer.Sanitize(scope));
-			return false;
-		}
+		var result = await httpClientFactory.CreateClient("api")
+			.PutApiAsync($"api/layouts/{Uri.EscapeDataString(scope)}", layout, JsonOptions);
+		Settle(result, scope, layout, "Saving");
+		return result;
 	}
 
-	public async Task<bool> ResetLayoutAsync(string scope)
+	public async Task<ApiResult<Success>> ResetLayoutAsync(string scope)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Resetting layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
-				return false;
-			}
+		var result = await httpClientFactory.CreateClient("api").DeleteApiAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
+		Settle(result, scope, GetDefaultLayout(scope), "Resetting");
+		return result;
+	}
 
-			_cache[scope] = GetDefaultLayout(scope);
-			OnLayoutChanged?.Invoke(scope);
-			return true;
-		}
-		catch (HttpRequestException ex)
+	/// <summary>Keeps <paramref name="layout"/> and tells subscribers once the server took it; logs why it did not.</summary>
+	private void Settle(ApiResult<Success> result, string scope, LayoutConfiguration layout, string action)
+	{
+		switch (result)
 		{
-			logger.LogWarning(ex, "Could not reach the server resetting layout for scope {Scope}.", LogSanitizer.Sanitize(scope));
-			return false;
+			case Success:
+				_cache[scope] = layout;
+				OnLayoutChanged?.Invoke(scope);
+				break;
+			case ApiFailure failure:
+				logger.LogWarning("{Action} layout for scope {Scope} failed: {Reason}", action, LogSanitizer.Sanitize(scope), failure.Message);
+				break;
 		}
 	}
 

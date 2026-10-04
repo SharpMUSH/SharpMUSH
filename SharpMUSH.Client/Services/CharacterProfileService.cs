@@ -26,7 +26,8 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 		{
 			string objid => await FetchAsync(objid),
 			NotFound => new ApiFailure(ApiFailureKind.NotFound, $"No character is named {name}."),
-			Error => new ApiFailure(ApiFailureKind.Unexpected, "The character directory could not be read."),
+			// Not the directory's own failure: a 404 on its route is not "no such character".
+			ApiFailure => new ApiFailure(ApiFailureKind.Unexpected, "The character directory could not be read."),
 		};
 	}
 
