@@ -191,8 +191,9 @@ public class PuppetRelayOutputTests
 	}
 
 	[Test]
+	// One flag read answers PUPPET and VERBOSE (and the listen-pattern flags) for the relay, so
+	// "puppet-flag" covers the read VERBOSE was once given separately.
 	[Arguments("puppet-flag")]
-	[Arguments("verbose-flag")]
 	[Arguments("owner")]
 	[Arguments("owner-location")]
 	[Arguments("puppet-location")]
@@ -222,7 +223,7 @@ public class PuppetRelayOutputTests
 		async IAsyncEnumerable<SharpObjectFlag> Flags([EnumeratorCancellation] CancellationToken token = default)
 		{
 			var scan = Interlocked.Increment(ref flagScans);
-			if ((stage == "puppet-flag" && scan == 2) || (stage == "verbose-flag" && scan == 3)) await Block(token);
+			if (stage == "puppet-flag" && scan == 2) await Block(token);
 			yield return new SharpObjectFlag { Name = "PUPPET", Symbol = "p", System = false, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] };
 		}
 		var (service, bus) = BuildRelay(configure: (owner, puppet) =>
