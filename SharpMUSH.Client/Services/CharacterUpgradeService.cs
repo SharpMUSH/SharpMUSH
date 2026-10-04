@@ -30,9 +30,9 @@ public class CharacterUpgradeService(
 	public async Task<bool> PlayAsAsync(AccountAuthService.CharacterSummary character)
 	{
 		// A terminal consumes its OTT on connect, so each needs its own.
-		var commandOtt = await accountAuth.GetOttForCharacterAsync(character);
-		var playOtt = await accountAuth.GetOttForCharacterAsync(character);
-		if (commandOtt is null || playOtt is null) return false;
+		if (await accountAuth.GetOttForCharacterAsync(character) is not string commandOtt
+			|| await accountAuth.GetOttForCharacterAsync(character) is not string playOtt)
+			return false;
 
 		accountAuth.SetActiveCharacter(character);
 

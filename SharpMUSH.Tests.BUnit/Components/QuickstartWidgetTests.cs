@@ -82,9 +82,8 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		// instead of re-reading the tab's (loose-JSInterop, non-persisting) sessionStorage and wiping
 		// the in-memory session that LoginAsync just set.
 		await auth.InitAsync();
-		var (success, error, _) = await auth.LoginAsync("newbie", "password");
-		if (!success)
-			throw new InvalidOperationException($"Test setup login failed: {error}");
+		if (await auth.LoginAsync("newbie", "password") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"Test setup login failed: {loginFailure.Message}");
 		return auth;
 	}
 

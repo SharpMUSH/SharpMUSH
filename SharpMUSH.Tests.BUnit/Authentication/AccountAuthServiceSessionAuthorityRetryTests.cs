@@ -125,7 +125,7 @@ public class AccountAuthServiceSessionAuthorityRetryTests : TrackingBunitContext
 
 		await service.InitAsync();
 		var ott = await service.SwitchCharacterAsync(new CharacterSummary(2, 2L, "Beta", ""));
-		await Assert.That(ott).IsEqualTo("switch-ott");
+		await Assert.That(ott.Expect<string>()).IsEqualTo("switch-ott");
 
 		handler.Recover();
 		await roleArrives.WaitAsync(TimeSpan.FromSeconds(5));

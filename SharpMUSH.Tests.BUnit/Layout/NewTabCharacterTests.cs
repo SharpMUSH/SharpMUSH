@@ -168,9 +168,8 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 			NullLogger<ApplicationRegistryClient>.Instance));
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
-		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
-		if (!success)
-			throw new InvalidOperationException($"Test setup login failed: {error}");
+		if (await auth.LoginAsync("headwiz", "password") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"Test setup login failed: {loginFailure.Message}");
 
 		Services.AddSingleton(auth);
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());

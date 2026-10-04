@@ -363,6 +363,14 @@
         _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
     }
 
+    /// <summary>The two refusals the claim page words itself; anything else is the server's own sentence.</summary>
+    private string ClaimRefusal(string message) => message switch
+    {
+        _ when message.Contains("already been completed", StringComparison.OrdinalIgnoreCase) => Loc["AuthSetupAlreadyCompleted"],
+        _ when message.Contains("already taken", StringComparison.OrdinalIgnoreCase) => Loc["AuthUsernameTaken"],
+        _ => message,
+    };
+
     private async Task SubmitAsync()
     {
         _error = null;
@@ -373,24 +381,17 @@
 
         _busy = true;
 
-        var (success, error, autoLoggedIn) = await AccountAuth.CompleteSetupAsync(_username, _password);
+        var result = await AccountAuth.CompleteSetupAsync(_username, _password);
 
-        if (!success)
+        if (result is not AccountAuthService.SetupClaimed claimed)
         {
             _busy = false;
-            _error = error switch
-            {
-                not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
-                    => Loc["AuthSetupAlreadyCompleted"],
-                not null when error.Contains("already taken", StringComparison.OrdinalIgnoreCase)
-                    => Loc["AuthUsernameTaken"],
-                _ => error ?? Loc["AuthSetupFailed"],
-            };
+            _error = result is ApiFailure failure ? ClaimRefusal(failure.Message) : Loc["AuthSetupFailed"];
             return;
         }
 
         _completedUsername = _username;
-        if (!autoLoggedIn)
+        if (!claimed.SignedIn)
         {
             _busy = false;
             _step = Step.SignIn;
