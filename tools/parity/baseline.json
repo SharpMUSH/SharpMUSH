@@ -279,6 +279,14 @@
   {
    "key": "60-command-limits/cl.queue-per-object#1",
    "command": "Alice alicepass"
+  },
+  {
+   "key": "65-halt-chown/hc.chown#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "65-halt-chown/hc.chown#3",
+   "command": "Wiz wizpass"
   }
  ]
 }

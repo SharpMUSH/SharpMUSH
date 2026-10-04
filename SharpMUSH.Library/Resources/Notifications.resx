@@ -936,12 +936,6 @@
   <data name="HuhTypeHelp" xml:space="preserve">
     <value>Huh?  (Type "help" for help.)</value>
   </data>
-  <data name="AllObjectsHalted" xml:space="preserve">
-    <value>All objects halted.</value>
-  </data>
-  <data name="Halted" xml:space="preserve">
-    <value>Halted.</value>
-  </data>
   <data name="Notified" xml:space="preserve">
     <value>Notified.</value>
   </data>
@@ -959,9 +953,6 @@
   </data>
   <data name="YouMustSpecifyObjectToDecompile" xml:space="preserve">
     <value>You must specify an object to decompile.</value>
-  </data>
-  <data name="AllObjectsRestarted" xml:space="preserve">
-    <value>All objects restarted.</value>
   </data>
   <data name="YouMustSpecifyObjectToRestart" xml:space="preserve">
     <value>You must specify an object to restart.</value>
@@ -1116,9 +1107,6 @@
   </data>
 
   <!-- Wizard admin - flag management -->
-  <data name="AllObjectsHaltedWithCountFormat" xml:space="preserve">
-    <value>All objects halted. {0} objects processed.</value>
-  </data>
   <data name="FlagAddRequiresNameAndSymbol" xml:space="preserve">
     <value>@FLAG/ADD requires flag name and symbol.</value>
   </data>
@@ -1409,24 +1397,6 @@
   </data>
   <data name="HaltInvalidPidFormat" xml:space="preserve">
     <value>Invalid process ID format.</value>
-  </data>
-  <data name="HaltTaskHaltedFormat" xml:space="preserve">
-    <value>Task {0} halted.</value>
-  </data>
-  <data name="HaltNoTaskWithPidFormat" xml:space="preserve">
-    <value>No task found with PID {0}.</value>
-  </data>
-  <data name="HaltMustSpecifyTarget" xml:space="preserve">
-    <value>You must specify a target object.</value>
-  </data>
-  <data name="HaltedPlayerAndObjectsFormat" xml:space="preserve">
-    <value>Halted {0} and all their objects.</value>
-  </data>
-  <data name="HaltedObjectWithActionsFormat" xml:space="preserve">
-    <value>Halted {0} with replacement actions.</value>
-  </data>
-  <data name="HaltedObjectFormat" xml:space="preserve">
-    <value>Halted {0}.</value>
   </data>
   <data name="RunawayObjectFormat" xml:space="preserve">
     <value>Runaway object: {0}({1}). Commands halted.</value>
@@ -1991,15 +1961,6 @@
   </data>
 
   <!-- @restart command -->
-  <data name="RestartMustSpecifyObject" xml:space="preserve">
-    <value>You must specify an object to restart.</value>
-  </data>
-  <data name="RestartedPlayerAndObjectsFormat" xml:space="preserve">
-    <value>Restarted {0} and all their objects.</value>
-  </data>
-  <data name="RestartedObjectFormat" xml:space="preserve">
-    <value>Restarted {0}.</value>
-  </data>
 
   <!-- @scan command -->
   <data name="ScanMatchesOnRoomContents" xml:space="preserve">
@@ -2923,5 +2884,62 @@ PLAYERS:</value>
   </data>
   <data name="PlayerNameTooManyAliases" xml:space="preserve">
     <value>Too many aliases.</value>
+  </data>
+  <data name="HaltedOthersObjectFormat" xml:space="preserve">
+    <value>Halted: {0}'s {1}({2})</value>
+  </data>
+  <data name="HaltedObjectByFormat" xml:space="preserve">
+    <value>Halted: {0}({1}), by {2}</value>
+  </data>
+  <data name="AllYourObjectsHalted" xml:space="preserve">
+    <value>All of your objects have been halted.</value>
+  </data>
+  <data name="AllObjectsForPlayerHaltedFormat" xml:space="preserve">
+    <value>All objects for {0} have been halted.</value>
+  </data>
+  <data name="AllYourObjectsHaltedByFormat" xml:space="preserve">
+    <value>All of your objects have been halted by {0}.</value>
+  </data>
+  <data name="HaltCommandNotAllowed" xml:space="preserve">
+    <value>You may not use @halt obj=command on this object.</value>
+  </data>
+  <data name="HaltInvalidPid" xml:space="preserve">
+    <value>That is not a valid pid!</value>
+  </data>
+  <data name="HaltPidHaltedFormat" xml:space="preserve">
+    <value>Queue entry with pid {0} halted.</value>
+  </data>
+  <data name="HaltWorldPowerDenied" xml:space="preserve">
+    <value>You do not have the power to bring the world to a halt.</value>
+  </data>
+  <data name="GloballyHaltedByFormat" xml:space="preserve">
+    <value>Your objects have been globally halted by {0}</value>
+  </data>
+  <data name="RestartWorldPowerDenied" xml:space="preserve">
+    <value>You do not have the power to restart the world.</value>
+  </data>
+  <data name="GloballyRestartedByFormat" xml:space="preserve">
+    <value>Your objects are being globally restarted by {0}</value>
+  </data>
+  <data name="AllObjectsForPlayerRestartingFormat" xml:space="preserve">
+    <value>All objects for {0} are being restarted.</value>
+  </data>
+  <data name="AllYourObjectsRestartingByFormat" xml:space="preserve">
+    <value>All of your objects are being restarted by {0}.</value>
+  </data>
+  <data name="RestartingOthersObjectFormat" xml:space="preserve">
+    <value>Restarting: {0}'s {1}({2})</value>
+  </data>
+  <data name="RestartingObjectByFormat" xml:space="preserve">
+    <value>Restarting: {0}({1}), by {2}</value>
+  </data>
+  <data name="AllYourObjectsRestarting" xml:space="preserve">
+    <value>All of your objects are being restarted.</value>
+  </data>
+  <data name="RestartingObjectFormat" xml:space="preserve">
+    <value>Restarting: {0}({1})</value>
+  </data>
+  <data name="OwnerChanged" xml:space="preserve">
+    <value>Owner changed.</value>
   </data>
 </root>

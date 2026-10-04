@@ -55,16 +55,34 @@ public partial class Commands
 
 						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
 						// @chown leaves the object as it was.
-						if (!preserve && result.Message?.ToPlainText() != ErrorMessages.Returns.PermissionDenied)
+						if (result.Message?.ToPlainText() == ErrorMessages.Returns.PermissionDenied)
 						{
-							await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
+							return result;
 						}
 
+						if (!preserve)
+						{
+							await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
+						}
+
+						// do_chown (src/set.c:238): every successful @chown says so, QUIET or not.
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerChanged), executor);
 						return result;
 					}
 				);
 			}
 		);
+	}
+
+	/// <summary>
+	/// The non-<c>/preserve</c> half of PennMUSH's <c>chown_object</c> (<c>src/set.c:332-340</c>): the
+	/// privilege strip, HALT, and then <c>do_halt</c>, which tells the new owner
+	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> unless they are QUIET and wipes what the object had queued.
+	/// </summary>
+	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
+	{
+		await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
+		await HaltQueuesAsync(obj, newOwner);
 	}
 
 	/// <remarks>
@@ -196,7 +214,7 @@ public partial class Commands
 
 			if (!preserve && !obj.IsPlayer)
 			{
-				await PrivilegeHelpers.ResetForNewOwnerAsync(ManipulateSharpObjectService, executor, obj);
+				await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
 			}
 		}
 

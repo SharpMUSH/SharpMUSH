@@ -1,0 +1,35 @@
+# @halt, @restart and @chown reports: do_halt / do_halt1 / do_haltpid / do_restart_com
+# (pennmush src/cque.c:2160-2449) and do_chown (src/set.c:177-239).
+
+::case hc.chown  a successful @chown says "Owner changed."
+::login alice Alice alicepass
+::as alice
+@create HC1
+@create HC2
+::login wiz Wiz wizpass
+::as wiz
+@chown [locate(*Alice,HC1,i)]=me
+
+::case hc.halt-own  halting your own object reports to you, its owner, and sets HALT
+@halt [locate(*Alice,HC1,i)]
+think [hasflag(locate(*Alice,HC1,i),HALT)]
+
+::case hc.halt-others  halting someone else's object tells both of you
+@halt [locate(*Alice,HC2,i)]
+
+::case hc.halt-player  halting a player halts everything they own
+@halt *Alice
+
+::case hc.halt-self  @halt alone and @halt me
+::as alice
+@halt
+@halt me
+
+::case hc.halt-pid  a pid that is not a number, or no queue entry's
+::as wiz
+@halt/pid abc
+@halt/pid 999999
+
+::case hc.restart  @restart reports before it halts
+@restart [locate(*Alice,HC1,i)]
+@restart *Alice
