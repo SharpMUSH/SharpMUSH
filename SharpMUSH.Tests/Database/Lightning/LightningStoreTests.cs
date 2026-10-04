@@ -302,7 +302,7 @@ internal static class DeadReader
 
 	public static async Task LeaveAsync(string worldPath)
 	{
-		var native = Path.Combine(AppContext.BaseDirectory, "runtimes", "linux-x64", "native", "liblmdb.so");
+		var native = Path.Join(AppContext.BaseDirectory, "runtimes", "linux-x64", "native", "liblmdb.so");
 		Skip.Unless(OperatingSystem.IsLinux() && File.Exists(native), "needs the linux-x64 liblmdb");
 
 		var start = new ProcessStartInfo("python3") { RedirectStandardError = true };

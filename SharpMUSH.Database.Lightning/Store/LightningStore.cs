@@ -149,7 +149,7 @@ public sealed partial class LightningStore : IDisposable
 		{
 			Cleared(_env.CheckStaleReaders());
 		}
-		catch (Exception ex)
+		catch (LightningException ex)
 		{
 			_logger?.LogError(ex, "Checking {Path} for stale LMDB reader slots failed", _options.Path);
 		}
