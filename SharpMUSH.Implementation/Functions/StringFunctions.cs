@@ -645,9 +645,7 @@ public partial class Functions
 	{
 		var value1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var value2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var type = parser.CurrentState.Arguments.TryGetValue("2", out var typeArg)
-			? typeArg.Message!.ToPlainText()?.ToUpperInvariant() ?? "A"
-			: "A";
+		var type = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "A").ToPlainText().ToUpperInvariant();
 
 		int result = type switch
 		{
@@ -1052,9 +1050,7 @@ public partial class Functions
 		var digest = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToUpperInvariant();
 		var key = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var text = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		var encoding = parser.CurrentState.Arguments.TryGetValue("3", out var encodingArg)
-			? encodingArg.Message!.ToPlainText().ToLowerInvariant()
-			: "base16";
+		var encoding = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, "base16").ToPlainText().ToLowerInvariant();
 
 		HMAC? hmac = digest switch
 		{
@@ -1743,77 +1739,36 @@ public partial class Functions
 
 	[SharpFunction(Name = "trim", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "characters", "trim-style"])]
 	public ValueTask<CallState> Trim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var tinyTrim = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
-			.CurrentValue.Compatibility.TinyTrimFun;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var arg1 = parser.CurrentState.Arguments.TryGetValue(
-			tinyTrim
-				? "2"
-				: "1", out var arg1Value)
-			? arg1Value.Message
-			: MarkupText.Space;
-
-		var arg2 = parser.CurrentState.Arguments.TryGetValue(
-			tinyTrim
-				? "1"
-				: "2", out var arg2Value)
-			? arg2Value.Message!.ToPlainText()
-			: "b";
-
-		var trimType = arg2.ToLowerInvariant() switch
-		{
-			"l" => TrimType.TrimStart,
-			"r" => TrimType.TrimEnd,
-			_ => TrimType.TrimBoth,
-		};
-
-		return ValueTask.FromResult<CallState>(
-			arg0.Trim(trimType, (arg1 ?? MarkupText.Empty).ToPlainText()));
-	}
+		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Compatibility.TinyTrimFun
+			? TrimTiny(parser, _2)
+			: TrimPenn(parser, _2);
 
 	[SharpFunction(Name = "trimpenn", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> TrimPenn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var arg1Value)
-			? arg1Value.Message
-			: MarkupText.Space;
-		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var arg2Value)
-			? arg2Value.Message!.ToPlainText()
-			: "b";
-
-		var trimType = arg2.ToLowerInvariant() switch
-		{
-			"l" => TrimType.TrimStart,
-			"r" => TrimType.TrimEnd,
-			_ => TrimType.TrimBoth,
-		};
-
-		return ValueTask.FromResult<CallState>(
-			arg0.Trim(trimType, (arg1 ?? MarkupText.Empty).ToPlainText()));
-	}
+		=> TrimWith(parser, charactersItem: 1, styleItem: 2);
 
 	[SharpFunction(Name = "trimtiny", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> TrimTiny(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var arg1 = parser.CurrentState.Arguments.TryGetValue("2", out var arg1Value)
-			? arg1Value.Message
-			: MarkupText.Space;
-		var arg2 = parser.CurrentState.Arguments.TryGetValue("1", out var arg2Value)
-			? arg2Value.Message!.ToPlainText()
-			: "b";
+		=> TrimWith(parser, charactersItem: 2, styleItem: 1);
 
-		var trimType = arg2.ToLowerInvariant() switch
+	/// <summary>
+	/// The trim family's one body: PennMUSH's trim(&lt;string&gt;, &lt;characters&gt;, &lt;style&gt;) and
+	/// TinyMUSH's trim(&lt;string&gt;, &lt;style&gt;, &lt;characters&gt;) differ only in which argument is which.
+	/// The characters default to a space and the style to "b"; a style other than "l" or "r" trims both ends.
+	/// </summary>
+	private static ValueTask<CallState> TrimWith(IMUSHCodeParser parser, int charactersItem, int styleItem)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var characters = ArgHelpers.NoParseDefaultNoParseArgument(args, charactersItem, MarkupText.Space);
+		var trimType = ArgHelpers.NoParseDefaultNoParseArgument(args, styleItem, "b").ToPlainText().ToLowerInvariant() switch
 		{
 			"l" => TrimType.TrimStart,
 			"r" => TrimType.TrimEnd,
 			_ => TrimType.TrimBoth,
 		};
 
-		return ValueTask.FromResult<CallState>(
-			arg0.Trim(trimType, (arg1 ?? MarkupText.Empty).ToPlainText()));
+		return ValueTask.FromResult<CallState>(args["0"].Message!.Trim(trimType, characters.ToPlainText()));
 	}
 
 	[SharpFunction(Name = "ucstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]

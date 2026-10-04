@@ -174,9 +174,7 @@ public partial class Functions
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message!.ToPlainText().ToLowerInvariant()
 			: null;
-		var delimiter = args.TryGetValue("2", out var delimArg)
-			? delimArg.Message!.ToPlainText()
-			: " ";
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 
 		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 		if (task is null) return new CallState(ErrorMessages.Returns.NoSuchPid);
@@ -759,9 +757,7 @@ public partial class Functions
 
 		var classArg = args["0"].Message!.ToPlainText();
 		var pattern = args["1"].Message!.ToPlainText();
-		var attributePattern = args.TryGetValue("2", out var attrArg)
-			? attrArg.Message!.ToPlainText()
-			: "*";
+		var attributePattern = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "*").ToPlainText();
 
 		AnySharpObject? classObj = null;
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))

@@ -517,6 +517,16 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("accent(e,')", "é")]
+	[Arguments("accent(AEIOUaeiou,``````````)", "ÀÈÌÒÙàèìòù")]
+	[Arguments("accent(AEIOUYaeiouy,'''''''''''')", "ÁÉÍÓÚÝáéíóúý")]
+	[Arguments("accent(ANOano,~~~~~~)", "ÃÑÕãñõ")]
+	[Arguments("accent(AEIOUaeiou,^^^^^^^^^^)", "ÂÊÎÔÛâêîôû")]
+	[Arguments("accent(AEIOUaeiouy,:::::::::::)", "ÄËÏÖÜäëïöüÿ")]
+	[Arguments("accent(Aa,oo)", "Åå")]
+	[Arguments("accent(Cc,\\,\\,)", "Çç")]
+	[Arguments("accent(?!<>sPpDo,uu\"\"B||-&)", "¿¡«»ßÞþÐð")]
+	[Arguments("accent(Zz Yy,`` ^^)", "Zz Yy")]
+	[Arguments("accent(abc,`)", "#-1 ARGUMENT OUT OF RANGE")]
 	public async Task Accent(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

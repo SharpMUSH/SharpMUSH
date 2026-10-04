@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -73,7 +74,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var secs = args.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
-		var timezone = args.TryGetValue("1", out var value1) ? value1.Message!.ToPlainText() : TimeZoneInfo.Utc.Id;
+		var timezone = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, TimeZoneInfo.Utc.Id).ToPlainText();
 
 		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
 		{
@@ -563,9 +564,7 @@ public partial class Functions
 		}
 
 		var secsStr = args["0"].Message!.ToPlainText();
-		var padFlag = args.TryGetValue("1", out var padArg)
-			? padArg.Message!.ToPlainText()
-			: "0";
+		var padFlag = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "0").ToPlainText();
 
 		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
