@@ -38,6 +38,9 @@ public interface IPackageRegistryService
 	/// <summary>Lists the objects a package created, ordered by ref.</summary>
 	Task<IReadOnlyList<PackageObjectRecord>> GetPackageObjectsAsync(string packageId);
 
+	/// <summary>How many objects a package created, counted without reading the records.</summary>
+	Task<int> CountPackageObjectsAsync(string packageId);
+
 	/// <summary>Removes one created-object record (e.g. after the object is destroyed by an upgrade delete).</summary>
 	Task RemovePackageObjectAsync(string packageId, string @ref);
 
@@ -46,6 +49,9 @@ public interface IPackageRegistryService
 
 	/// <summary>Lists every attribute a package manages, across all objects.</summary>
 	Task<IReadOnlyList<ManagedAttributeRecord>> GetManagedAttributesAsync(string packageId);
+
+	/// <summary>How many attributes a package manages, counted without reading their baselines.</summary>
+	Task<int> CountManagedAttributesAsync(string packageId);
 
 	/// <summary>Lists every package-managed attribute on one object (cross-package attrs included).</summary>
 	Task<IReadOnlyList<ManagedAttributeRecord>> GetManagedAttributesForObjectAsync(string objid);
@@ -73,6 +79,12 @@ public interface IPackageRegistryService
 
 	/// <summary>Lists what depends on a package (uninstall blocking, decision 20.6).</summary>
 	Task<IReadOnlyList<PackageDependencyRecord>> GetPackageDependentsAsync(string packageId);
+
+	/// <summary>
+	/// Every dependency edge of every package in one read, ordered by package then dependency, so a caller
+	/// that needs both directions for many packages groups them once instead of scanning per package.
+	/// </summary>
+	Task<IReadOnlyList<PackageDependencyRecord>> GetAllPackageDependenciesAsync();
 
 	/// <summary>Creates or replaces a configured remote (keyed by name).</summary>
 	Task UpsertPackageRemoteAsync(PackageRemoteRecord remote);
