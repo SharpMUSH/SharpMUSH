@@ -87,7 +87,7 @@ internal sealed class EvaluationDiagnostics(EvaluationServices services)
 	/// The state to check DEBUG/NODEBUG flags and resolve the executor against — always the
 	/// state of the parser that WOULD have called <see cref="MUSHCodeParser.FunctionParse(MString, bool)"/>
 	/// (i.e. its current state at the call site), not any fresh tracking state pushed by
-	/// <see cref="MUSHCodeParser.ResolveTrackingParser(IMUSHCodeParser)"/> for the evaluation itself.
+	/// <see cref="IMUSHCodeParser.ForTrackedEvaluation"/> for the evaluation itself.
 	/// </param>
 	public static async ValueTask EmitSubstitutionOnlyDebugTraceAsync(
 		IMediator mediator,
