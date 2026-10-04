@@ -55,12 +55,16 @@ public sealed class FakeCommHistory : ICommHistory
 			PageLogging && PageLog.TryGetValue(key, out var logged) ? logged.ToArray() : []));
 	}
 
-	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel)
+	/// <summary>The line limit each channel recall asked for.</summary>
+	public List<int> RecallLines { get; } = [];
+
+	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines)
 	{
 		Recalled.Add(channel);
+		RecallLines.Add(lines);
 		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(
-			Recall.TryGetValue(channel, out var lines)
-				? lines.ToArray()
+			Recall.TryGetValue(channel, out var buffer)
+				? buffer.Skip(Math.Max(0, buffer.Count - lines)).ToArray()
 				: new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
 	}
 

@@ -168,7 +168,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		var generation = _generation;
-		var pulled = await _server.RecallAsync(key);
+		// As many as a channel keeps: the rest of the buffer would be dropped on arrival.
+		var pulled = await _server.RecallAsync(key, HistoryLimit);
 		if (generation != _generation || pulled is not IReadOnlyList<ChannelRecallLine> lines) return;
 
 		_pulled.Add(key);
