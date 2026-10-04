@@ -415,20 +415,6 @@ public class NotifyService(
 		return httpOutputCapture?.TryCapture(who.Number, neutral) == true;
 	}
 
-	public ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
-		=> NotifyLocalized(who, key, sender: null, args: args);
-
-	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, args);
-
-	public async ValueTask NotifyLocalized(long handle, string key, params object[] args)
-	{
-		var conn = connections.Get(handle);
-		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
-		var message = localizationService.Format(key, locale, args);
-		await Notify(handle, message, sender: null);
-	}
-
 	public async ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
 	{
 		var connection = connections.Get(handle);
@@ -455,9 +441,6 @@ public class NotifyService(
 			if (message.Length > 0) await PublishMarkup(conn.Handle, Prepare(message));
 		}
 	}
-
-	public ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, sender, args);
 
 	public async ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args)
 	{
@@ -490,9 +473,6 @@ public class NotifyService(
 			if (message.Length > 0) await PublishMarkup(conn.Handle, Prepare(message));
 		}
 	}
-
-	public ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args)
-		=> NotifyLocalizedMarkup(who.Object().DBRef, key, sender, args);
 
 	public async ValueTask NotifyLocalizedMarkup(long handle, string key, AnySharpObject? sender, params MString[] args)
 	{

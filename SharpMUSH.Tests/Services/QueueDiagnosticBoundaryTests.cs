@@ -48,7 +48,7 @@ public class QueueDiagnosticBoundaryTests
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var notify = Substitute.For<INotifyService>();
 		// A line typed before login has no enactor object, so its connection hears "CPU usage exceeded.".
-		notify.NotifyLocalized(Arg.Any<long>(), "CpuUsageExceeded", Arg.Any<object[]>())
+		notify.NotifyLocalized(Arg.Any<long>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(async ValueTask (_) =>
 			{
 				entered.TrySetResult(DateTimeOffset.UtcNow);

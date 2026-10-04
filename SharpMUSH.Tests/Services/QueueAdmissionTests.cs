@@ -401,10 +401,10 @@ public class QueueAdmissionTests
 	{
 		var notifications = Substitute.For<INotifyService>();
 		var reported = new TaskCompletionSource<(DBRef Who, bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
-		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(call =>
 			{
-				reported.TrySetResult((call.Arg<AnySharpObject>().Object().DBRef,
+				reported.TrySetResult((call.ArgAt<DBRef>(0),
 					ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
 				return ValueTask.CompletedTask;
 			});
@@ -462,7 +462,7 @@ public class QueueAdmissionTests
 		var notifications = Substitute.For<INotifyService>();
 		var finished = Signal();
 		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications);
-		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(_ => { finished.TrySetResult(); return ValueTask.CompletedTask; });
 
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("spin"),
@@ -473,7 +473,7 @@ public class QueueAdmissionTests
 		var told = notifications.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized)
 				&& call.GetArguments()[1] as string == "CpuUsageExceeded")
-			.Select(call => ((AnySharpObject)call.GetArguments()[0]!).Object().DBRef.Number)
+			.Select(call => ((DBRef)call.GetArguments()[0]!).Number)
 			.ToList();
 		await Assert.That(told).IsEquivalentTo(quiet ? Array.Empty<int>() : [12]);
 	}
@@ -523,8 +523,8 @@ public class QueueAdmissionTests
 				return Task.FromResult(call.Arg<ITrigger>().StartTimeUtc);
 			});
 		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications, scheduler: quartz);
-		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
-			.Returns(call => { told.TrySetResult(call.Arg<AnySharpObject>().Object().DBRef.Number); return ValueTask.CompletedTask; });
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
+			.Returns(call => { told.TrySetResult(call.ArgAt<DBRef>(0).Number); return ValueTask.CompletedTask; });
 		var state = ParserState.RootFor(new DBRef(10)) with { Enactor = new DBRef(12) };
 
 		if (path == "delayed")
@@ -618,7 +618,7 @@ public class QueueAdmissionTests
 		}.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
 		var entered = Signal(); var release = Signal();
-		notifications.NotifyLocalized(Arg.Any<long>(), "QueueRejected", Arg.Any<object[]>()).Returns(_ =>
+		notifications.NotifyLocalized(Arg.Any<long>(), "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()).Returns(_ =>
 		{
 			entered.TrySetResult();
 			return new ValueTask(release.Task);
@@ -2594,7 +2594,7 @@ public class QueueAdmissionTests
 		var notices = notifications.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized))
 			.Select(call => call.GetArguments())
-			.Select(args => $"{args[1]}:{string.Join(",", (object[])args[2]!)}")
+			.Select(args => $"{args[1]}:{string.Join(",", (object[])args[3]!)}")
 			.ToArray();
 		await Assert.That(notices).IsEquivalentTo(["RunawayObjectFormat:Semaphore,#10", "HaltedNoticeFormat:Semaphore,#10"]);
 	}
@@ -2664,7 +2664,7 @@ public class QueueAdmissionTests
 	{
 		var (mediator, halted) = RunawayMediator();
 		var notifications = Substitute.For<INotifyService>();
-		notifications.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>())
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(_ => throw new InvalidOperationException("transport down"));
 		await using var queue = Create(global: 4, owner: 1, mediator: mediator, notifications: notifications);
 		var state = ParserState.RootFor(new DBRef(10));
