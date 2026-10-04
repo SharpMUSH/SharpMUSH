@@ -1195,16 +1195,18 @@ public static partial class ErrorMessages
 		/// <summary><c>examine_atrs</c>'s answer to a named pattern that matched nothing (<c>src/look.c:384</c>).</summary>
 		public const string ExamineNoMatchingAttributes = "No matching attributes.";
 
-		public const string EditInvalidArguments = "Invalid arguments to @edit.";
-		public const string EditInvalidFormat = "Invalid format. Use: object/attribute=search,replace";
-		public const string EditMustSpecifySearchAndReplace = "You must specify search and replace strings.";
-		public const string EditNoMatchingAttributesFound = "No matching attributes found.";
+		/// <summary><c>do_edit</c>'s answers (<c>src/set.c:963</c>) and <c>edit_helper</c>'s per-attribute lines (<c>src/set.c:917</c>).</summary>
+		public const string EditInvalidFormat = "I need to know what you want to edit.";
+		public const string EditMustSpecifySearchAndReplace = "Nothing to do.";
+		public const string EditNoMatchingAttributesFound = "No matching attributes.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditAttributeSetFormat = "{0} - Set.";
+		public const string EditAttributeSetFormat = "{0} - Set: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditWouldChangeToFormat = "{0} - Would change to: {1}";
+		public const string EditAttributeUnchangedFormat = "{0} - Unchanged.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditSummaryFormat = "{0} {1} attribute{2}. {3} unchanged.";
+		public const string EditQuietSummaryFormat = "{0} attributes edited, {1} skipped.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string EditInvalidRegexpFormat = "Invalid regexp: {0}";
 
 		public const string GrepInvalidArguments = "Invalid arguments to @grep.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1299,6 +1301,9 @@ public static partial class ErrorMessages
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
+		// PennMUSH fill_search_spec (src/wiz.c:2388-2399): START and COUNT are 1-based and at least one.
+		public const string SearchInvalidStart = "Invalid start index";
+		public const string SearchInvalidCount = "Invalid count index";
 		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
 		public const string SearchRoomsHeader = "\nROOMS:";
 		public const string SearchExitsHeader = "\nEXITS:";

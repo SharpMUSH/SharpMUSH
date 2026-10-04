@@ -773,8 +773,9 @@ public partial class LightningDatabase
 
 	private byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
 	{
-		ReadStats.ValueRead();
-		return tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+		var value = tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+		ReadStats.ValueRead(value?.Length ?? 0);
+		return value;
 	}
 
 	private static MString DeserializeValue(byte[]? value)

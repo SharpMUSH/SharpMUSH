@@ -22,7 +22,7 @@
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
            and the measured NAWS is floored to match (see OnTerminalResize). *@
         <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
-            @foreach (var line in _displayLines)
+            @foreach (var line in _transcript.Lines)
             {
                 <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
             }
@@ -188,7 +188,8 @@
         ? AccountAuth.ActiveCharacter?.Name
         : Terminal.ConnectedPlayerName;
 
-    private readonly List<TerminalLine> _displayLines = [];
+    // Initialized with the service's lines in OnInitializedAsync; this terminal's view of them.
+    private TerminalTranscript _transcript = new([]);
     private bool _autoScroll = true;
 
     private DotNetObjectReference<GlobalTerminal>? _selfRef;
@@ -212,23 +213,14 @@
         }
     }
 
-    private string ComputeDefaultServerUri()
-    {
-        var baseUri = new Uri(Navigation.BaseUri);
-        if (baseUri.IsLoopback)
-            return "ws://localhost:4202/ws";
-        var scheme = baseUri.Scheme == Uri.UriSchemeHttps ? "wss" : "ws";
-        return $"{scheme}://{baseUri.Authority}/ws";
-    }
-
     protected override async Task OnInitializedAsync()
     {
         _serverUri = string.IsNullOrWhiteSpace(DefaultServerUri)
-            ? ComputeDefaultServerUri()
+            ? TerminalEndpoint.Resolve(Navigation.BaseUri)
             : DefaultServerUri;
         _connected = Terminal.IsConnected;
 
-        _displayLines.AddRange(Terminal.Lines);
+        _transcript = new TerminalTranscript(Terminal.Lines);
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
@@ -352,7 +344,7 @@
     }
 
     private Task SendNawsAsync(int cols, int rows) =>
-        Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
+        Terminal.SendControlAsync(TerminalInput.NawsFrame(cols, rows));
 
     /// <summary>
     /// Records the connected player's name on the underlying terminal service. <c>_playerName</c>
@@ -404,13 +396,8 @@
         if (string.IsNullOrWhiteSpace(_input) || !_connected) return;
 
         // Track player name when a manual 'connect <name> ...' is typed
-        var trimmed = _input.Trim();
-        if (trimmed.StartsWith("connect ", StringComparison.OrdinalIgnoreCase))
-        {
-            var parts = trimmed.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 2 && !string.Equals(parts[1], "token", StringComparison.OrdinalIgnoreCase))
-                SetPlayerName(parts[1]);
-        }
+        if (TerminalInput.TypedConnectName(_input) is string typedName)
+            SetPlayerName(typedName);
 
         await Terminal.SendAsync(_input);
         await History.AddAsync(_input);
@@ -432,7 +419,7 @@
     /// moves Clear into its settings menu) can trigger it via an @@ref.</summary>
     public void ClearOutput()
     {
-        _displayLines.Clear();
+        _transcript.Clear();
         StateHasChanged();
     }
 
@@ -479,8 +466,7 @@
 
     private void OnLineReceived(TerminalLine line)
     {
-        _displayLines.Add(line);
-        if (_displayLines.Count > 2000) _displayLines.RemoveAt(0);
+        _transcript.Add(line);
         InvokeAsync(StateHasChanged);
     }
 
@@ -502,7 +488,7 @@
 
     private void AddLocalLine(string text, TerminalLineSource source)
     {
-        _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
+        _transcript.Add(new TerminalLine(DateTime.Now, text, source));
         StateHasChanged();
     }
 

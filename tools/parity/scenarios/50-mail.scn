@@ -83,3 +83,16 @@ think maillist(all)
 think maillist()
 @mail/folder 99
 @mail/file 1=99
+
+::case mail.fwd-msglist  @mail/fwd takes a message list and forwards each message it matches
+::as alice
+@mail/folder 0
+@mail Alice=Range one/First of a range.
+@mail Alice=Range two/Second of a range.
+@mail/fwd 1-2=Bob
+@mail/fwd 0:1=Bob
+@mail/forward 1=Bob
+@mail/fwd 1-2=Nobody
+@mail/fwd 1=99
+@mail/fwd bogus=Bob
+@mail/fwd 1

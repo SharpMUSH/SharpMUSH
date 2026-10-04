@@ -157,33 +157,7 @@ public class HttpCommandTests
 	{
 		var context = new HttpResponseContext();
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var httpParser = Parser.Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			ExecutionStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: executor,
-			Enactor: executor,
-			Caller: executor,
-			Handle: null,
-			ParseMode: ParseMode.Default,
-			HttpResponse: context,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag())
-		{
-			MoveDepth = new InvocationCounter()
-		});
+		var httpParser = Parser.Push(ParserState.RootFor(executor) with { HttpResponse = context });
 
 		await httpParser.CommandListParse(MarkupText.Plain(commandList));
 		return context;

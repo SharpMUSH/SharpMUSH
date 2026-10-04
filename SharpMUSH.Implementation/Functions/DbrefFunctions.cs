@@ -100,9 +100,14 @@ public partial class Functions
 			? null
 			: (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, owner, [new SearchSpecEngine.SearchPair("PARENT", arg0)], useRegex: false);
+		// A PARENT-only spec has no START or COUNT, so nothing can reject it.
+		if (await SearchSpecEngine.ExecuteResultAsync(
+					parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+					executor, owner, [new SearchSpecEngine.SearchPair("PARENT", arg0)], useRegex: false)
+				is not SearchSpecEngine.SearchResult search)
+		{
+			return new CallState(ErrorMessages.Returns.Nothing);
+		}
 
 		if (search.Matches.Count == 0)
 		{
@@ -583,10 +588,10 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		SearchSpecEngine.SearchResult search;
+		Result<SearchSpecEngine.SearchResult> outcome;
 		try
 		{
-			search = await SearchSpecEngine.ExecuteResultAsync(
+			outcome = await SearchSpecEngine.ExecuteResultAsync(
 				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 				executor, classObj?.Object().DBRef, pairs, useRegex);
 		}
@@ -601,10 +606,22 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.RegexpTimeout);
 		}
 
-		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
-		var finalResults = search.Matches.Select(obj => $"#{obj.Key}");
+		return outcome switch
+		{
+			SearchSpecEngine.SearchResult search => Matched(search),
+			Error<string> rejected => await Rejected(rejected.Value)
+		};
 
-		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
+		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
+		static CallState Matched(SearchSpecEngine.SearchResult search)
+			=> new(string.Join(" ", search.Matches.Select(obj => $"#{obj.Key}"))) { HadErrors = search.HadErrors };
+
+		// fun_lsearch: fill_search_spec has told the searcher why, and the function returns #-1.
+		async ValueTask<CallState> Rejected(string notification)
+		{
+			await NotifyService.NotifyLocalized(executor, notification, executor);
+			return new CallState(ErrorMessages.Returns.Nothing);
+		}
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]

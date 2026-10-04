@@ -259,18 +259,18 @@
             }
         </div>
 
-        @if (_openTabs.Count > 0)
+        @if (_tabs.Count > 0)
         {
             <div class="sc-tabstrip">
-                @for (int i = 0; i < _openTabs.Count; i++)
+                @for (int i = 0; i < _tabs.Count; i++)
                 {
                     var idx = i;
-                    var tab = _openTabs[i];
+                    var tab = _tabs.Tabs[i];
                     // '#8/DESCRIBE' is how softcode itself addresses an attribute — get(), u(), @force.
                     // The '&' sigil belongs to the '&DESCRIBE #8=…' set syntax, so '#8&DESCRIBE' is
                     // neither form and reads as a typo.
                     var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
-                    <div class="sc-tab @(idx == _activeTabIndex ? "sc-tab--on" : "")">
+                    <div class="sc-tab @(idx == _tabs.ActiveIndex ? "sc-tab--on" : "")">
                         <button type="button" class="sc-tab-label" title="@reference"
                                 @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/</span>@tab.Attr.Name</button>
                         @if (tab.IsDirty)
@@ -356,27 +356,9 @@
 <HelpDrawer @ref="_helpDrawer" />
 
 @code {
-    private sealed class AttrTab(MushObject obj, MushAttribute attr)
-    {
-        public MushObject Obj { get; } = obj;
-        public MushAttribute Attr { get; } = attr;
-        // Verbatim: the stored value IS what the author typed. This used to translate every
-        // stored %r into a newline, which was the mirror of the save-side rewrite and made the
-        // two indistinguishable — an intentional %r looked like formatting and a real newline
-        // came back as %r on the next save.
-        public string WorkingContent { get; set; } = attr.Value;
-
-        /// <summary>What the database holds. Dirty is derived from this, never tracked by hand.</summary>
-        public string SavedContent { get; set; } = attr.Value;
-
-        public bool IsDirty { get; set; }
-    }
-
-    private readonly List<AttrTab> _openTabs = [];
-    private int _activeTabIndex = -1;
-    private AttrTab? ActiveTab => _activeTabIndex >= 0 && _activeTabIndex < _openTabs.Count
-        ? _openTabs[_activeTabIndex]
-        : null;
+    // The open tabs and their unsaved state; this page only moves text between them and Monaco.
+    private readonly SoftcodeTabs _tabs = new();
+    private SoftcodeTab? ActiveTab => _tabs.Active;
 
     private StandaloneCodeEditor? _monacoEditor;
 
@@ -535,30 +517,21 @@
     }
 
     /// <summary>
-    /// Dirty means "the buffer differs from what the database holds" — compared, not tracked.
+    /// Keeps the active tab's buffer in step with Monaco; whether it is unsaved follows from that
+    /// (see <see cref="SoftcodeTab.IsDirty"/>), however and whenever Monaco raises this event.
     /// </summary>
-    /// <remarks>
-    /// Monaco raises OnDidChangeModelContent for SetValue as well as for typing, so loading an
-    /// attribute, switching tabs or refreshing used to mark the tab unsaved with no user input,
-    /// which in turn made RefreshAttributesAsync skip those tabs forever (it only refreshes clean
-    /// ones). A "this write was mine" flag fixes that but is fragile in both directions: it stays
-    /// armed if SetValue throws, and again if Monaco raises no event because the text was already
-    /// identical — and an armed flag swallows the user's next real edit while the tab reads clean,
-    /// so the next refresh silently overwrites their work. Comparing sidesteps the whole question:
-    /// it needs no assumption about when the event fires, and it also clears the flag when an edit
-    /// is undone back to the stored text.
-    /// </remarks>
     private async Task OnEditorChanged(ModelContentChangedEvent e)
     {
         if (_monacoEditor is null || ActiveTab is null) return;
 
-        var current = await _monacoEditor.GetValue();
-        ActiveTab.WorkingContent = current;
+        _tabs.Capture(await _monacoEditor.GetValue());
+    }
 
-        var dirty = !string.Equals(current, ActiveTab.SavedContent, StringComparison.Ordinal);
-        if (dirty == ActiveTab.IsDirty) return;
-
-        ActiveTab.IsDirty = dirty;
+    /// <summary>Keeps what the editor holds as the active tab's buffer before the active tab changes.</summary>
+    private async Task CaptureEditorAsync()
+    {
+        if (_monacoEditor is not null && ActiveTab is not null)
+            _tabs.Capture(await _monacoEditor.GetValue());
     }
 
     private async Task OnAttributeSelected(MushAttribute? attr)
@@ -566,22 +539,10 @@
         if (attr is null || _selectedObject is null) return;
         _saveMessage = null;
 
-        if (_monacoEditor is not null && ActiveTab is not null)
-            ActiveTab.WorkingContent = await _monacoEditor.GetValue();
+        await CaptureEditorAsync();
 
-        var existing = _openTabs.FindIndex(t => t.Obj.Dbref == _selectedObject.Dbref
-            && string.Equals(t.Attr.Name, attr.Name, StringComparison.OrdinalIgnoreCase));
-        if (existing >= 0)
-        {
-            _activeTabIndex = existing;
-        }
-        else
-        {
-            _openTabs.Add(new AttrTab(_selectedObject, attr));
-            _activeTabIndex = _openTabs.Count - 1;
-        }
-
-        await SetEditorValueAsync(ActiveTab!.WorkingContent);
+        var tab = _tabs.Open(_selectedObject, attr);
+        await SetEditorValueAsync(tab.WorkingContent);
 
         // Mobile drill-down: picking an attribute advances to the editor.
         _mobilePane = MobilePane.Editor;
@@ -591,10 +552,9 @@
 
     private async Task SwitchTabAsync(int idx)
     {
-        if (idx == _activeTabIndex) return;
-        if (_monacoEditor is not null && ActiveTab is not null)
-            ActiveTab.WorkingContent = await _monacoEditor.GetValue();
-        _activeTabIndex = idx;
+        if (idx == _tabs.ActiveIndex) return;
+        await CaptureEditorAsync();
+        _tabs.Switch(idx);
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
         StateHasChanged();
@@ -602,21 +562,12 @@
 
     private async Task CloseTabAsync(int idx)
     {
-        if (idx == _activeTabIndex && _monacoEditor is not null && ActiveTab is not null)
-            ActiveTab.WorkingContent = await _monacoEditor.GetValue();
-        _openTabs.RemoveAt(idx);
-        if (_openTabs.Count == 0)
-        {
-            _activeTabIndex = -1;
-            if (_monacoEditor is not null)
-                await SetEditorValueAsync(string.Empty);
-        }
-        else
-        {
-            _activeTabIndex = Math.Clamp(_activeTabIndex, 0, _openTabs.Count - 1);
-            if (_monacoEditor is not null)
-                await SetEditorValueAsync(ActiveTab!.WorkingContent);
-        }
+        // The editor is reloaded from the tab left active, so its unsaved text is captured first
+        // even when the tab being closed is another one.
+        await CaptureEditorAsync();
+        var active = _tabs.Close(idx);
+        if (_monacoEditor is not null)
+            await SetEditorValueAsync(active?.WorkingContent ?? string.Empty);
         StateHasChanged();
     }
 
@@ -694,25 +645,7 @@
         await OnObjectSelected(dbref, advanceMobilePane: false);
 
         if (_selectedObject is not null && _selectedObject.Dbref == dbref)
-        {
-            foreach (var tab in _openTabs.Where(t => t.Obj.Dbref == dbref))
-            {
-                var refreshed = _selectedObject.Attributes.FirstOrDefault(a =>
-                    string.Equals(a.Name, tab.Attr.Name, StringComparison.OrdinalIgnoreCase));
-                if (refreshed is null) continue;
-
-                // The freshly-read value is authoritative for what the database holds, whether or
-                // not the tab has unsaved edits sitting on top of it.
-                tab.SavedContent = refreshed.Value;
-                if (!tab.IsDirty)
-                    tab.WorkingContent = refreshed.Value;
-
-                // Derived, never carried over: a tab whose buffer now matches what was just read is
-                // clean by definition, even if it was dirty a moment ago (someone else saving the
-                // same text, or our own save round-tripping).
-                tab.IsDirty = !string.Equals(tab.WorkingContent, tab.SavedContent, StringComparison.Ordinal);
-            }
-        }
+            _tabs.Refresh(_selectedObject);
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
 
@@ -736,7 +669,7 @@
         // attribute's text over another's.
         if (!ReferenceEquals(ActiveTab, tab)) return;
 
-        tab.WorkingContent = value;
+        _tabs.Capture(value);
 
         // Sent verbatim — newlines included. The API carries the value in a JSON body, so there is
         // nothing to escape and nothing for the server to decode.
@@ -750,8 +683,7 @@
         }
 
         // The buffer is now what the database holds, so that tab is clean by definition.
-        tab.SavedContent = value;
-        tab.IsDirty = false;
+        tab.MarkSaved(value);
 
         // Only claim success once the re-read confirms it. If the reload failed it has already put
         // its own error on screen, and overwriting that with "saved" would leave the user looking
@@ -781,7 +713,7 @@
             return;
         }
 
-        var tabIdx = _openTabs.IndexOf(tab);
+        var tabIdx = _tabs.IndexOf(tab);
         if (tabIdx >= 0) await CloseTabAsync(tabIdx);
 
         // After the refresh, not before: RefreshAttributesAsync goes through OnObjectSelected,

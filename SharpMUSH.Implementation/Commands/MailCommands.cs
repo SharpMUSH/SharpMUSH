@@ -83,10 +83,10 @@ public partial class Commands
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await RetractMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService,
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
-			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
-											 (arg1?.Length ?? 0) != 0
+			// cmds.c:1041 — FWD and FORWARD are the same switch, and take a message list (extmail.c:1235).
+			[.., "FWD"] or [.., "FORWARD"] when executor.IsPlayer
 				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService, MailDeliveryServices,
-					number, arg1!.ToPlainText()),
+					arg0, arg1?.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,

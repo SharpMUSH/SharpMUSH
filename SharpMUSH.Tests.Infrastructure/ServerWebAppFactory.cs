@@ -137,32 +137,11 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 			commands ?? integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			integrationServer.Services,
-			state: new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: command,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: executor,
-				Enactor: executor,
-				Caller: executor,
-				Handle: handle,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag(),
-				Flags: ParserStateFlags.DirectInput
-			)
+			state: ParserState.RootFor(executor) with
 			{
-				MoveDepth = new InvocationCounter()
+				Command = command,
+				Handle = handle,
+				Flags = ParserStateFlags.DirectInput
 			});
 	}
 

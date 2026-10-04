@@ -458,6 +458,29 @@ public class AttributeCommandTests
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>do_edit_regexp</c> (<c>src/set.c</c>) compiles the pattern before reading any
+	/// attribute, so a malformed one is reported rather than every attribute coming back "Unchanged".
+	/// </summary>
+	[Test]
+	public async ValueTask Test_Edit_Regex_InvalidPatternIsReported()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegexInvalid");
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_INVALID"], MarkupText.Plain("abc"), owner);
+		var pattern = "*" + TestIsolationHelpers.GenerateUniqueName("Bad");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_INVALID={pattern},x"));
+
+		var heard = WebAppFactoryArg.Notifications.For(executor).Where(line => line.Contains(pattern)).ToList();
+		await Assert.That(heard).Count().IsEqualTo(1);
+		await Assert.That(heard[0]).StartsWith("Invalid regexp: ");
+		await Assert.That(WebAppFactoryArg.Notifications.For(executor)).DoesNotContain("EDIT_REGEX_INVALID - Unchanged.");
+		var attrList = await Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_INVALID"])!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("abc");
+	}
+
 	[Test]
 	public async ValueTask Test_Edit_RegexAll_EvaluatesInReverseAndSplicesAtOriginalPositions()
 	{

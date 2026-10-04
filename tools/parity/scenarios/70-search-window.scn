@@ -1,0 +1,30 @@
+# @search / lsearch() START and COUNT: fill_search_spec (pennmush src/wiz.c:2388-2399) and the window
+# in raw_search (src/wiz.c:2612-2618). START is 1-based; a START or COUNT below 1 is refused.
+
+::case sw.setup  three things to page through
+::login alice Alice alicepass
+::as alice
+@create SWin1
+@create SWin2
+@create SWin3
+
+::case sw.lsearch-start  START is the 1-based position of the first result kept
+think [iter(lsearch(me,type,thing,name,SWin,start,1,count,1),name(##))]
+think [iter(lsearch(me,type,thing,name,SWin,start,2,count,1),name(##))]
+think [iter(lsearch(me,type,thing,name,SWin,start,2),name(##))]
+think [nlsearch(me,type,thing,name,SWin,start,3)]
+
+::case sw.lsearch-invalid  START or COUNT below 1, or not a number, is refused with #-1
+think [lsearch(me,type,thing,name,SWin,start,0)]
+think [lsearch(me,type,thing,name,SWin,start,-1,count,1)]
+think [lsearch(me,type,thing,name,SWin,count,0)]
+think [lsearch(me,type,thing,name,SWin,count,none)]
+think [nlsearch(me,type,thing,name,SWin,start,0)]
+
+::case sw.search-start  @search pages the same way
+@search me name=SWin,start=2,count=1
+@search me name=SWin,start=3
+
+::case sw.search-invalid  @search with START or COUNT below 1 says why and searches nothing
+@search me name=SWin,start=0
+@search me name=SWin,count=0

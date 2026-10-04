@@ -140,7 +140,7 @@ public class QuietConfirmationTests
 
 		await Assert.That(Says(said, $"{thing}/{attribute} - Set.")).IsEqualTo(!quietThing)
 			.Because("do_set_atr asks AreQuiet(player, thing)");
-		await Assert.That(said.Any(message => message.Equals($"{attribute} - Set.", StringComparison.OrdinalIgnoreCase)))
+		await Assert.That(said.Any(message => message.Equals($"{attribute} - Set: beta", StringComparison.OrdinalIgnoreCase)))
 			.IsEqualTo(!quietThing).Because("do_edit's Set line asks AreQuiet(player, thing)");
 		await Assert.That(said.Contains("Parent changed.")).IsEqualTo(!quietThing)
 			.Because("do_parent asks AreQuiet(player, thing)");

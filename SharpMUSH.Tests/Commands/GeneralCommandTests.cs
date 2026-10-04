@@ -453,6 +453,34 @@ public class GeneralCommandTests
 		await Assert.That(messages[^1]).IsEqualTo("Totals: Rooms...0  Exits...1  Things...0  Players...0");
 	}
 
+	/// <summary>
+	/// do_search's START is 1-based (init_search_spec, src/wiz.c:2270): START=2 COUNT=1 is the second
+	/// match. A START or COUNT below 1 is refused before anything is searched, with fill_search_spec's
+	/// own text (src/wiz.c:2388-2399) and no report.
+	/// </summary>
+	[Test]
+	public async ValueTask Search_StartIsOneBasedAndBelowOneIsRefused()
+	{
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchStart");
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchStartTok");
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}A"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}B"));
+
+		async Task<List<string>> SearchAs(string spec) => await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(
+			mortal.Handle, ConnectionService, MarkupText.Plain($"@search name={token},{spec}")).AsTask());
+
+		var second = await SearchAs("start=2,count=1");
+		await Assert.That(second.Any(m => m.StartsWith($"{token}B(#"))).IsTrue();
+		await Assert.That(second.Any(m => m.StartsWith($"{token}A(#"))).IsFalse();
+
+		var first = await SearchAs("start=1,count=1");
+		await Assert.That(first.Any(m => m.StartsWith($"{token}A(#"))).IsTrue();
+		await Assert.That(first.Any(m => m.StartsWith($"{token}B(#"))).IsFalse();
+
+		await Assert.That(await SearchAs("start=0")).IsEquivalentTo(new[] { "Invalid start index" });
+		await Assert.That(await SearchAs("count=0")).IsEquivalentTo(new[] { "Invalid count index" });
+	}
+
 	// Regression coverage for "@search all type=PLAYER" being parsed as a NAME search for the
 	// literal text "player" instead of a TYPE filter — @SEARCH's CB.EqSplit|CB.RSArgs behavior only
 	// splits the raw command text on the first top-level '=', so "all type" (the player field plus
