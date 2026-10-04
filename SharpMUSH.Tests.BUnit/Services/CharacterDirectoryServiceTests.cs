@@ -80,7 +80,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ListAsync();
 
-		await Assert.That(result.Value).IsTypeOf<Error>();
+		await Assert.That(result.Expect<ApiFailure>().Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[TUnit.Core.Test]
@@ -90,7 +90,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ListOnlineAsync();
 
-		await Assert.That(result.Value).IsTypeOf<Error>();
+		await Assert.That(result.Expect<ApiFailure>().Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[TUnit.Core.Test]
@@ -101,7 +101,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 		var result = await service.ResolveObjidAsync("Solitaire");
 
 		// The failed arm, not "no such character": a read that failed says nothing about the name.
-		await Assert.That(result.Value).IsTypeOf<Error>();
+		await Assert.That(result.Expect<ApiFailure>().Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[TUnit.Core.Test]

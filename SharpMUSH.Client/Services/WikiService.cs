@@ -290,169 +290,71 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>Removes one locale's translation. The page and every other locale are untouched.</summary>
-	public async ValueTask<MessageResult<None>> DeleteTranslationAsync(
-		string slug, string locale, string? ns = null, string? category = null)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.DeleteAsync(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}");
-
-			return response.IsSuccessStatusCode
-				? new None()
-				: await response.Content.ReadAsStringAsync();
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "DeleteTranslationAsync failed for slug={Slug} locale={Locale}", slug, locale);
-			return ex.Message;
-		}
-	}
+	public async ValueTask<ApiResult<Success>> DeleteTranslationAsync(
+		string slug, string locale, string? ns = null, string? category = null) =>
+		Logged(await Http.DeleteApiAsync(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}"),
+			"DeleteTranslationAsync", slug);
 
 	/// <summary>
 	/// Creates a new wiki page on the server.
-	/// Returns the created <see cref="WikiArticle"/> or a string error message.
+	/// Returns the created <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiArticle>> CreatePageAsync(
+	public async ValueTask<ApiResult<WikiArticle>> CreatePageAsync(
 		string title,
 		string markdown,
 		string? ns = null,
-		string? category = null)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
-				return dto is null
-					? "Server returned an empty response."
-					: ToArticle(dto);
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Create failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "CreatePageAsync failed for title={Title}", title);
-			return ex.Message;
-		}
-	}
+		string? category = null) =>
+		Logged(Article(await Http.PostApiAsync<CreatePageRequest, WikiPageDto>(
+				"api/wiki", new CreatePageRequest(title, markdown, ns, category), EmptyResponse)),
+			"CreatePageAsync", title);
 
 	/// <summary>
 	/// Saves updated markdown for an existing page, identified by its URL slug.
-	/// that cannot safely survive URL-encoding through ASP.NET Core routing.
-	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
+	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiArticle>> UpdatePageAsync(
+	public async ValueTask<ApiResult<WikiArticle>> UpdatePageAsync(
 		string slug,
 		string markdown,
 		string? editSummary = null,
 		string? ns = null,
-		string? category = null)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PutAsJsonAsync(
+		string? category = null) =>
+		Logged(Article(await Http.PutApiAsync<UpdatePageRequest, WikiPageDto>(
 				$"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}",
-				new UpdatePageRequest(markdown, editSummary));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
-				return dto is null
-					? "Server returned an empty response."
-					: ToArticle(dto);
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Update failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "UpdatePageAsync failed for slug={Slug}", slug);
-			return ex.Message;
-		}
-	}
+				new UpdatePageRequest(markdown, editSummary), EmptyResponse)),
+			"UpdatePageAsync", slug);
 
 	/// <summary>
 	/// Sets the category, tags and published flag on a page identified by slug.
-	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
+	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiArticle>> SetMetadataAsync(
+	public async ValueTask<ApiResult<WikiArticle>> SetMetadataAsync(
 		string slug,
 		string? category,
 		IEnumerable<string> tags,
 		bool published,
 		string? ns = null,
-		string? currentCategory = null)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			// The page is identified by its CURRENT category; `category` is the (possibly new) value to set.
-			using var response = await http.PutAsJsonAsync(
+		string? currentCategory = null) =>
+		// The page is identified by its CURRENT category; `category` is the (possibly new) value to set.
+		Logged(Article(await Http.PutApiAsync<SetMetadataRequest, WikiPageDto>(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/metadata{KeyQuery(ns, currentCategory ?? category)}",
-				new SetMetadataRequest(category, tags.ToArray(), published));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
-				return dto is null
-					? "Server returned an empty response."
-					: ToArticle(dto);
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Metadata update failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "SetMetadataAsync failed for slug={Slug}", slug);
-			return ex.Message;
-		}
-	}
+				new SetMetadataRequest(category, tags.ToArray(), published), EmptyResponse)),
+			"SetMetadataAsync", slug);
 
 	/// <summary>
 	/// Restores the page body from an earlier revision. The restore is a normal
 	/// edit (new revision), so rollbacks are themselves recorded in history.
-	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
+	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiArticle>> RollbackAsync(
+	public async ValueTask<ApiResult<WikiArticle>> RollbackAsync(
 		string slug,
 		int revisionNumber,
 		string? ns = null,
-		string? category = null)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync(
+		string? category = null) =>
+		Logged(Article(await Http.PostApiAsync<RollbackRequest, WikiPageDto>(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{KeyQuery(ns, category)}",
-				new RollbackRequest(revisionNumber));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
-				return dto is null
-					? "Server returned an empty response."
-					: ToArticle(dto);
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Rollback failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "RollbackAsync failed for slug={Slug} rev={Rev}", LogSanitizer.Sanitize(slug), revisionNumber);
-			return ex.Message;
-		}
-	}
+				new RollbackRequest(revisionNumber), EmptyResponse)),
+			"RollbackAsync", slug);
 
 	/// <summary>
 	/// Batch page-existence check used for redlink rendering. Refs use URL-path
@@ -484,90 +386,48 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 
 	/// <summary>
 	/// Sets or clears the protection flag on multiple pages at once (Wizard only).
-	/// Returns the per-slug outcome, or a string error message on transport failure.
+	/// Returns the per-slug outcome, or the <see cref="ApiFailure"/> that stopped the request.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiBatchResult>> BatchProtectAsync(
-		IEnumerable<string> refs, bool isProtected)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync(
-				"api/wiki/batch/protect",
-				new BatchProtectRequest(refs.ToArray(), isProtected));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
-				return result is null
-					? "Server returned an empty response."
-					: result;
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Batch protect failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "BatchProtectAsync failed");
-			return ex.Message;
-		}
-	}
+	public async ValueTask<ApiResult<WikiBatchResult>> BatchProtectAsync(
+		IEnumerable<string> refs, bool isProtected) =>
+		Logged(await Http.PostApiAsync<BatchProtectRequest, WikiBatchResult>(
+				"api/wiki/batch/protect", new BatchProtectRequest(refs.ToArray(), isProtected), EmptyResponse),
+			"BatchProtectAsync", string.Empty);
 
 	/// <summary>
 	/// Deletes multiple pages at once (Wizard only).
-	/// Returns the per-slug outcome, or a string error message on transport failure.
+	/// Returns the per-slug outcome, or the <see cref="ApiFailure"/> that stopped the request.
 	/// </summary>
-	public async ValueTask<MessageResult<WikiBatchResult>> BatchDeleteAsync(
-		IEnumerable<string> refs)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync(
-				"api/wiki/batch/delete",
-				new BatchDeleteRequest(refs.ToArray()));
-
-			if (response.IsSuccessStatusCode)
-			{
-				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
-				return result is null
-					? "Server returned an empty response."
-					: result;
-			}
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Batch delete failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "BatchDeleteAsync failed");
-			return ex.Message;
-		}
-	}
+	public async ValueTask<ApiResult<WikiBatchResult>> BatchDeleteAsync(
+		IEnumerable<string> refs) =>
+		Logged(await Http.PostApiAsync<BatchDeleteRequest, WikiBatchResult>(
+				"api/wiki/batch/delete", new BatchDeleteRequest(refs.ToArray()), EmptyResponse),
+			"BatchDeleteAsync", string.Empty);
 
 	/// <summary>
 	/// Deletes a single page identified by slug (Wizard only).
-	/// Returns None on success or a string error message.
+	/// Returns <see cref="Success"/>, or the <see cref="ApiFailure"/> that stopped it.
 	/// </summary>
-	public async ValueTask<MessageResult<None>> DeletePageAsync(string slug, string? ns = null, string? category = null)
+	public async ValueTask<ApiResult<Success>> DeletePageAsync(string slug, string? ns = null, string? category = null) =>
+		Logged(await Http.DeleteApiAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}"),
+			"DeletePageAsync", slug);
+
+	private const string EmptyResponse = "Server returned an empty response.";
+
+	private HttpClient Http => httpClientFactory.CreateClient("api");
+
+	private static ApiResult<WikiArticle> Article(ApiResult<WikiPageDto> result) => result switch
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
+		WikiPageDto dto => ToArticle(dto),
+		ApiFailure failure => failure,
+	};
 
-			if (response.IsSuccessStatusCode)
-				return new None();
-
-			var body = await response.Content.ReadAsStringAsync();
-			return $"Delete failed ({(int)response.StatusCode}): {body}";
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "DeletePageAsync failed for slug={Slug}", slug);
-			return ex.Message;
-		}
+	/// <summary>Logs a failed write, naming the call and what it was about, and hands the result on.</summary>
+	private ApiResult<T> Logged<T>(ApiResult<T> result, string call, string subject)
+	{
+		if (result is ApiFailure failure)
+			logger.LogError("{Call} failed for {Subject}: {Reason}", call, LogSanitizer.Sanitize(subject), failure.Message);
+		return result;
 	}
 
 	private static WikiArticle ToArticle(WikiPageDto dto) =>

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Client.Services;
@@ -16,11 +17,11 @@ public interface ILayoutService
 	/// <summary>Loads the stored layout for a scope; returns the scope default when nothing is stored or on error.</summary>
 	Task<LayoutConfiguration> GetLayoutAsync(string scope);
 
-	/// <summary>Persists a layout for a scope (requires layout.admin). Returns true on success.</summary>
-	Task<bool> SaveLayoutAsync(string scope, LayoutConfiguration layout);
+	/// <summary>Persists a layout for a scope (requires layout.admin): <see cref="Success"/>, or the <see cref="ApiFailure"/> that stopped it.</summary>
+	Task<ApiResult<Success>> SaveLayoutAsync(string scope, LayoutConfiguration layout);
 
 	/// <summary>Resets a scope to its code default by removing the stored layout (requires layout.admin).</summary>
-	Task<bool> ResetLayoutAsync(string scope);
+	Task<ApiResult<Success>> ResetLayoutAsync(string scope);
 
 	/// <summary>Returns the built-in default layout for a scope.</summary>
 	LayoutConfiguration GetDefaultLayout(string scope);

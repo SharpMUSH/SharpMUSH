@@ -10,48 +10,28 @@ namespace SharpMUSH.Client.Services;
 /// fetches a Portal Schema Document and its data from the in-game http_handler, and POSTs action
 /// payloads back. The portal is a pure renderer — softcode owns the schema, the data, the validation,
 /// and the side effects. All routes are relative to the named "api" HttpClient (the <c>/http/...</c>
-/// handler prefix). Network/parse failures degrade to <c>null</c> rather than crashing the page.
+/// handler prefix). Network/parse failures come back as an <see cref="ApiFailure"/> rather than crashing the page.
 /// </summary>
 public class SchemaAppService(IHttpClientFactory httpClientFactory, ILogger<SchemaAppService> logger)
 {
-	/// <summary>Loads a Portal Schema Document, or <c>null</c> when the route is missing or invalid.</summary>
-	public async Task<PortalSchemaDocument?> GetSchemaAsync(string schemaUrl)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<PortalSchemaDocument>(schemaUrl, SchemaJson.Options);
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to load schema from {Url} (status {Status}).", schemaUrl, ex.StatusCode);
-			return null;
-		}
-		catch (Exception ex) when (ex is JsonException or NotSupportedException)
-		{
-			logger.LogWarning(ex, "Schema response from {Url} was not valid JSON.", schemaUrl);
-			return null;
-		}
-	}
+	/// <summary>Loads a Portal Schema Document, or the <see cref="ApiFailure"/> when the route is missing or invalid.</summary>
+	public Task<ApiResult<PortalSchemaDocument>> GetSchemaAsync(string schemaUrl) =>
+		LoggedAsync(httpClientFactory.CreateClient("api")
+			.GetApiAsync<PortalSchemaDocument>(schemaUrl, "The schema route returned no document.", SchemaJson.Options),
+			"schema", schemaUrl);
 
-	/// <summary>Loads a data payload (view display / form prefill), or <c>null</c> when unavailable.</summary>
-	public async Task<SchemaData?> GetDataAsync(string dataUrl)
+	/// <summary>Loads a data payload (view display / form prefill), or the <see cref="ApiFailure"/> when unavailable.</summary>
+	public Task<ApiResult<SchemaData>> GetDataAsync(string dataUrl) =>
+		LoggedAsync(httpClientFactory.CreateClient("api")
+			.GetApiAsync<SchemaData>(dataUrl, "The data route returned no payload.", SchemaJson.Options),
+			"data", dataUrl);
+
+	private async Task<ApiResult<T>> LoggedAsync<T>(Task<ApiResult<T>> read, string what, string url)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<SchemaData>(dataUrl, SchemaJson.Options);
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to load data from {Url} (status {Status}).", dataUrl, ex.StatusCode);
-			return null;
-		}
-		catch (Exception ex) when (ex is JsonException or NotSupportedException)
-		{
-			logger.LogWarning(ex, "Data response from {Url} was not valid JSON.", dataUrl);
-			return null;
-		}
+		var result = await read;
+		if (result is ApiFailure failure)
+			logger.LogWarning("Failed to load {What} from {Url}: {Reason}", what, url, failure.Message);
+		return result;
 	}
 
 	/// <summary>
