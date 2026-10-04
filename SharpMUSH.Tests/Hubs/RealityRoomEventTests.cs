@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Reality;
@@ -17,7 +18,8 @@ public class RealityRoomEventTests
 	private readonly IVisibleWorldProjection _projection = Substitute.For<IVisibleWorldProjection>();
 	private readonly IRealityPolicy _reality = Substitute.For<IRealityPolicy>();
 	private readonly DBRef _room = new(10, 1);
-	private readonly DBRef _source = new(20, 1);
+	private readonly AnySharpObject _sender = new SharpMUSH.Tests.Services.TestObjectFactory().CreatePlayer(20, "Actor");
+	private DBRef _source => _sender.Object().DBRef;
 	private readonly RoomEventDispatcher _dispatcher;
 	private readonly ILogger<RoomEventDispatcher> _logger = Substitute.For<ILogger<RoomEventDispatcher>>();
 
@@ -27,6 +29,8 @@ public class RealityRoomEventTests
 		_hub.Clients.Group(Arg.Any<string>()).Returns(Substitute.For<IGameHubClient>());
 		_hub.Clients.Client(Arg.Any<string>()).Returns(_ => Substitute.For<IGameHubClient>());
 		_dispatcher = new(_hub, _registry, _projection, _reality, _logger);
+		_projection.ResolveEventSourceAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromResult<AnyOptionalSharpObject>(call.Arg<DBRef>() == _source ? _sender : new None()));
 	}
 
 	private CapabilityActor Subscribe(string connection, int character)
@@ -45,7 +49,7 @@ public class RealityRoomEventTests
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(enabled);
 		var allowed = Subscribe("allowed", 30);
 		Subscribe("hidden", 31);
-		_projection.CanReceiveRoomEventAsync(allowed, _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
+		_projection.CanReceiveRoomEventAsync(allowed, _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
 		var client = Substitute.For<IGameHubClient>();
 		_hub.Clients.Client("allowed").Returns(client);
 		var message = new RoomEventMessage(_room.ToString(), RoomEventType.Say, "Actor", "Private words", _source.ToString());
@@ -53,6 +57,29 @@ public class RealityRoomEventTests
 		await client.Received(1).ReceiveRoomEvent(message);
 		_hub.Clients.DidNotReceive().Client("hidden");
 		_hub.Clients.DidNotReceive().Group(Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task TheSourceIsResolvedOncePerEventAndAGoneSourceReachesNobody()
+	{
+		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
+		Subscribe("first", 30);
+		Subscribe("second", 31);
+		Subscribe("third", 32);
+		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
+		var client = Substitute.For<IGameHubClient>();
+		_hub.Clients.Client(Arg.Any<string>()).Returns(client);
+
+		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Words", _source.ToString()));
+
+		await _projection.Received(1).ResolveEventSourceAsync(_source, Arg.Any<CancellationToken>());
+		await client.Received(3).ReceiveRoomEvent(Arg.Any<RoomEventMessage>());
+
+		client.ClearReceivedCalls();
+		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Ghost", "Words", new DBRef(21, 5).ToString()));
+		await client.DidNotReceive().ReceiveRoomEvent(Arg.Any<RoomEventMessage>());
+		await _projection.DidNotReceive().CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(),
+			Arg.Is<AnySharpObject>(o => o != _sender), Arg.Any<RoomEventType>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -92,7 +119,7 @@ public class RealityRoomEventTests
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
 		Subscribe("first", 30);
 		Subscribe("second", 31);
-		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
+		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
 		var client = Substitute.For<IGameHubClient>();
 		_hub.Clients.Client(Arg.Any<string>()).Returns(client);
 		var attempts = 0;
@@ -107,7 +134,7 @@ public class RealityRoomEventTests
 	{
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
 		var actor = Subscribe("rejoined", 30);
-		_projection.CanReceiveRoomEventAsync(actor, _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>())
+		_projection.CanReceiveRoomEventAsync(actor, _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>())
 			.Returns(_ => { _registry.JoinRoom("rejoined", actor, _room); return ValueTask.FromResult(true); });
 		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Secret", _source.ToString()));
 		_hub.Clients.DidNotReceive().Client("rejoined");
@@ -118,7 +145,7 @@ public class RealityRoomEventTests
 	{
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
 		var actor = Subscribe("left", 30);
-		_projection.CanReceiveRoomEventAsync(actor, _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>())
+		_projection.CanReceiveRoomEventAsync(actor, _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>())
 			.Returns(_ => { _registry.LeaveRoom("left", _room); return ValueTask.FromResult(true); });
 		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Secret", _source.ToString()));
 		_hub.Clients.DidNotReceive().Client("left");
@@ -138,7 +165,7 @@ public class RealityRoomEventTests
 			else second.TrySetResult();
 			return true;
 		}
-		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>())
+		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _sender, RoomEventType.Say, Arg.Any<CancellationToken>())
 			.Returns(_ => Authorize());
 		var delivery = _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Words", _source.ToString()));
 		try { await second.Task.WaitAsync(TimeSpan.FromSeconds(5)); }

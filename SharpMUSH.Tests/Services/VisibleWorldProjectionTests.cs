@@ -71,11 +71,14 @@ public class VisibleWorldProjectionTests
 		var source = _objects.CreatePlayer(12, "Speaker", _room).Expect<SharpPlayer>();
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
 		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsTrue();
-		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, new DBRef(99, 0), source.Object.DBRef, RoomEventType.Say)).IsFalse();
-		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new DBRef(12, 1), RoomEventType.Say)).IsFalse();
+		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new AnySharpObject(source), RoomEventType.Say)).IsTrue();
+		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, new DBRef(99, 0), new AnySharpObject(source), RoomEventType.Say)).IsFalse();
+		await Assert.That(await _projection.ResolveEventSourceAsync(source.Object.DBRef) is AnySharpObject resolved
+			&& resolved.Object().DBRef == source.Object.DBRef).IsTrue();
+		await Assert.That(await _projection.ResolveEventSourceAsync(new DBRef(12, 1)) is None).IsTrue();
+		await Assert.That(await _projection.ResolveEventSourceAsync(new DBRef(12)) is None).IsTrue();
 		_reality.CanPerceiveAsync(_player.Object.DBRef, source.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
-		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsFalse();
+		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new AnySharpObject(source), RoomEventType.Say)).IsFalse();
 	}
 
 	[Test]
@@ -91,7 +94,7 @@ public class VisibleWorldProjectionTests
 		var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>())
 			.Returns(_ => { entered.TrySetResult(ExecutionBudget.CurrentToken); return new ValueTask<bool>(release.Task); });
-		var pending = _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, type, cancellation.Token).AsTask();
+		var pending = _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new AnySharpObject(source), type, cancellation.Token).AsTask();
 		try
 		{
 			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -112,7 +115,7 @@ public class VisibleWorldProjectionTests
 		_reality.CanPerceiveAsync(_player.Object.DBRef, _room.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
 		await Assert.That(await _projection.CanObserveRoomAsync(_actor, _room.Object.DBRef)).IsFalse();
 		await Assert.That(await _projection.CanSubscribeRoomAsync(_actor, _room.Object.DBRef)).IsTrue();
-		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsTrue();
+		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new AnySharpObject(source), RoomEventType.Say)).IsTrue();
 		await Assert.That(await _projection.GetStateAsync(_actor)).IsNull();
 	}
 
