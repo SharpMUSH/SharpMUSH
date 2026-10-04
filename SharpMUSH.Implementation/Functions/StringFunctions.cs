@@ -654,7 +654,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 		}
 
-		if (type == "F" && !(NumericEvaluation.Strict.TryDecimal(value1, out _) && NumericEvaluation.Strict.TryDecimal(value2, out _)))
+		if (type == "F" && !(NumericEvaluation.Strict.TryDouble(value1, out _) && NumericEvaluation.Strict.TryDouble(value2, out _)))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
@@ -663,7 +663,7 @@ public partial class Functions
 		{
 			"I" => string.Compare(value1, value2, StringComparison.OrdinalIgnoreCase),
 			"N" when ArgHelpers.TryStrictInteger(value1, out int int1) && ArgHelpers.TryStrictInteger(value2, out int int2) => int1.CompareTo(int2),
-			"F" when NumericEvaluation.Strict.TryDecimal(value1, out var dec1) && NumericEvaluation.Strict.TryDecimal(value2, out var dec2) => dec1.CompareTo(dec2),
+			"F" when NumericEvaluation.Strict.TryDouble(value1, out var real1) && NumericEvaluation.Strict.TryDouble(value2, out var real2) => real1.CompareTo(real2),
 			"D" => CompareDbRefs(value1, value2),
 			_ => string.Compare(value1, value2, StringComparison.Ordinal)
 		};

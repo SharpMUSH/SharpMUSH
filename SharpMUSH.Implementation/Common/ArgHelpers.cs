@@ -112,6 +112,21 @@ public static partial class ArgHelpers
 		return NumericEvaluation.Strict.TryInt32(text, out value);
 	}
 
+	/// <summary>
+	/// <see cref="TryStrictUnsignedInteger"/> over PennMUSH's whole <c>unsigned int</c> range, for a
+	/// value such as a queue PID that can pass <see cref="int.MaxValue"/>.
+	/// </summary>
+	public static bool TryStrictUnsignedLong(string? text, out long value)
+	{
+		if (!StartsUnsigned(text))
+		{
+			value = 0;
+			return false;
+		}
+
+		return NumericEvaluation.Strict.TryInt64(text, out value) && value <= uint.MaxValue;
+	}
+
 	/// <summary><c>isdigit(*str) || *str == '+'</c> after the leading whitespace.</summary>
 	private static bool StartsUnsigned(string? text)
 		=> text.AsSpan().TrimStart(" \t\r\n\v\f") is [] or [('+' or (>= '0' and <= '9')), ..];

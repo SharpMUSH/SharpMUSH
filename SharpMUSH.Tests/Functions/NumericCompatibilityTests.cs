@@ -99,6 +99,8 @@ public class NumericCompatibilityTests
 	[Arguments(false, false, "entrances(here,a,0,1x)", "#-1 ARGUMENTS MUST BE INTEGERS")]
 	// pidinfo: a strict unsigned integer, else e_uint (src/cque.c:1747-1749).
 	[Arguments(false, false, "pidinfo(-1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	// A PID past int.MaxValue is still a PID to look up (unsigned int range).
+	[Arguments(false, false, "pidinfo(3000000000)", "#-1 NO SUCH PID")]
 	// benchmark: is_number, truncated, at least 1, else e_uint (src/funmisc.c:1492-1501).
 	[Arguments(false, false, "benchmark(1,0)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	[Arguments(false, false, "benchmark(1,0.5)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
@@ -123,6 +125,8 @@ public class NumericCompatibilityTests
 	// comp: N and F take strict numbers only (src/funstr.c:475-490).
 	[Arguments(false, false, "comp(1,x,N)", "#-1 ARGUMENTS MUST BE INTEGERS")]
 	[Arguments(false, false, "comp(1,x,F)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	// F compares as strtod doubles, beyond decimal's range.
+	[Arguments(false, false, "comp(1e100,2e100,F)", "-1")]
 	[Arguments(false, false, "comp(2,10,N)", "-1")]
 	// wrap: empty text first, then int_check widths, then at least 2 (src/funstr.c:1644-1669).
 	[Arguments(false, false, "wrap(,x)", "")]

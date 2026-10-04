@@ -168,7 +168,7 @@ public partial class Functions
 		var pidStr = args["0"].Message!.ToPlainText();
 
 		// fun_pidinfo refuses anything but a strict unsigned integer with e_uint (src/cque.c:1747-1749).
-		if (!ArgHelpers.TryStrictUnsignedInteger(pidStr, out int pid))
+		if (!ArgHelpers.TryStrictUnsignedLong(pidStr, out var pid))
 		{
 			return new CallState(ErrorMessages.Returns.UInteger);
 		}
