@@ -727,26 +727,20 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		// counters must come back down either way, or every later call reads as literal text.
 		try
 		{
-			CallState? result;
 			var vc = await VisitChildren(context);
 
-			if (_braceDepthCounter <= 1
-					&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
-			{
-				// Normal evaluation: strip the outermost braces.
-				// PennMUSH equivalent: PE_STRIP_BRACES strips all brace levels during evaluation.
-				result = vc ?? new CallState(GetContextText(context), context.Depth());
-			}
-			else
-			{
-				// Either nested braces (depth > 1) or PreserveBraces flag set:
-				// preserve braces in the output.
-				// PreserveBraces is set for:
-				// - RSBrace commands (@wait, @force, @halt): handler strips them at execution
-				//   time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
-				// - NoParse commands (&): braces are preserved literally in the stored value
-				//   (PennMUSH QUEUE_NOLIST/noeval — value never enters process_expression).
-				result = vc is not null
+			// Normal evaluation strips the outermost braces (PennMUSH PE_STRIP_BRACES strips all brace
+			// levels during evaluation). Nested braces (depth > 1), or the PreserveBraces flag, keep them.
+			// PreserveBraces is set for:
+			// - RSBrace commands (@wait, @force, @halt): handler strips them at execution
+			//   time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
+			// - NoParse commands (&): braces are preserved literally in the stored value
+			//   (PennMUSH QUEUE_NOLIST/noeval — value never enters process_expression).
+			var stripsBraces = _braceDepthCounter <= 1
+				&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces);
+			var result = stripsBraces
+				? vc ?? new CallState(GetContextText(context), context.Depth())
+				: vc is not null
 					? vc with
 					{
 						Message = MarkupText.Concat([
@@ -756,7 +750,6 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 						])
 					}
 					: new CallState(GetContextText(context), context.Depth());
-			}
 
 			return result;
 		}
