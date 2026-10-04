@@ -1,4 +1,5 @@
 using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -139,6 +140,13 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 
 			if (clearResult is not Error<string> clearError)
 			{
+				// do_set_atr's QUIET gate (src/attrib.c:2446).
+				if (await AttributeWriteReport.IsSuppressedAsync(services.AttributeService, clearExecutor, clearTargetObject,
+							matchedEntry.Name))
+				{
+					return CallState.Empty;
+				}
+
 				await services.NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared),
 					clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
 			}
@@ -184,6 +192,13 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 
 		if (setResult is not Error<string> error)
 		{
+			// do_set_atr's QUIET gate (src/attrib.c:2446).
+			if (await AttributeWriteReport.IsSuppressedAsync(services.AttributeService, executor, targetObject,
+						matchedEntry.Name))
+			{
+				return CallState.Empty;
+			}
+
 			await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 				targetObject.Object().Name, matchedEntry.Name);
 		}

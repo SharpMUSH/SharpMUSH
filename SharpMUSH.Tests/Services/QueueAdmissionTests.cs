@@ -391,32 +391,91 @@ public class QueueAdmissionTests
 
 	}
 
+	/// <summary>
+	/// PennMUSH reports an entry that runs out of <c>queue_entry_cpu_time</c> to its ENACTOR, as
+	/// "CPU usage exceeded." (<c>src/parse.c:2083-2084</c>), and the notice has its own bounded budget
+	/// here so it is not cancelled with the work it reports on.
+	/// </summary>
 	[Test]
 	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
 	{
-		var connections = Substitute.For<IConnectionService>();
-		connections.Get(Arg.Any<DBRef>()).Returns(new[]
-		{
-			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
-				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
-		}.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
-		var reported = new TaskCompletionSource<(bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
-		notifications.Notify(12L, Arg.Any<SharpMessage>(), null, INotifyService.NotificationType.Announce)
-			.Returns(_ =>
+		var reported = new TaskCompletionSource<(DBRef Who, bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
+		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
+			.Returns(call =>
 			{
-				reported.TrySetResult((ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
+				reported.TrySetResult((call.Arg<AnySharpObject>().Object().DBRef,
+					ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
 				return ValueTask.CompletedTask;
 			});
-		await using var queue = Create(milliseconds: 10, connections: connections, notifications: notifications);
-		await queue.AdmitWork(async () =>
+		await using var queue = Create(milliseconds: 10, notifications: notifications);
+		await Assert.That((await queue.AdmitWork(async () =>
 		{
 			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
 			return CallState.Empty;
-		}, "expired", "test", new DBRef(10, 1));
+		}, "expired", "test", new DBRef(10, 1))).Accepted).IsTrue();
 		var result = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result.Who.Number).IsEqualTo(10);
 		await Assert.That(result.Cancelled).IsFalse();
 		await Assert.That(result.Remaining > TimeSpan.Zero && result.Remaining <= TimeSpan.FromSeconds(1)).IsTrue();
+		await notifications.DidNotReceive().Notify(Arg.Any<long>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	/// <summary>
+	/// The notice goes to the queue entry's enactor rather than to its executor's owner, and an enactor
+	/// that is QUIET does not hear it: <c>if (GoodObject(enactor) &amp;&amp; !Quiet(enactor))</c>
+	/// (<c>src/parse.c:2083</c>).
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ExecutionLimitNoticeGoesToTheEnactorUnlessQuiet(bool quiet)
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var dbRef = call.Arg<GetObjectNodeQuery>().DBRef;
+			var flags = quiet && dbRef.Number == 12
+				? new[] { new SharpObjectFlag { Name = "QUIET", Symbol = "Q", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }
+				: [];
+			var player = new SharpPlayer
+			{
+				Object = new SharpObject
+				{
+					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => flags.ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+				},
+				Location = null!, Home = null!, PasswordHash = "", Quota = 0
+			};
+			player.Object.Owner = new(_ => Task.FromResult(player));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		static async ValueTask<CallState?> Spin()
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return null;
+		}
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => Spin());
+		var notifications = Substitute.For<INotifyService>();
+		var finished = Signal();
+		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications);
+		notifications.NotifyLocalized(Arg.Any<AnySharpObject>(), "CpuUsageExceeded", Arg.Any<object[]>())
+			.Returns(_ => { finished.TrySetResult(); return ValueTask.CompletedTask; });
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("spin"),
+			ParserState.RootFor(new DBRef(10)) with { Enactor = new DBRef(12) })).Accepted).IsTrue();
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(5));
+		if (!quiet) await finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+		var told = notifications.ReceivedCalls()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized)
+				&& call.GetArguments()[1] as string == "CpuUsageExceeded")
+			.Select(call => ((AnySharpObject)call.GetArguments()[0]!).Object().DBRef.Number)
+			.ToList();
+		await Assert.That(told).IsEquivalentTo(quiet ? Array.Empty<int>() : [12]);
 	}
 
 	[Test]

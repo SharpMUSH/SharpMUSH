@@ -18,7 +18,9 @@ starts, so waiting on a delay or semaphore does not spend execution time.
 Nested evaluation shares one monotonic deadline. Time spent waiting on HTTP or
 SQL consumes the same budget. A separately queued job starts a fresh deadline.
 Expiry returns `#-1 EXECUTION TIME LIMIT EXCEEDED`; it does not reset at an
-attribute call or nested command list. Function invocation, recursion, output
+attribute call or nested command list. When a queued or typed command runs out
+of time, its enactor is told `CPU usage exceeded.` once, as in PennMUSH, unless
+the enactor is QUIET. Function invocation, recursion, output
 size and regex ceilings remain independent limits.
 
 Cancellation from halt or shutdown is distinct from deadline expiry.

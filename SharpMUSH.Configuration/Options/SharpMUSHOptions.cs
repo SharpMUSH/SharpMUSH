@@ -181,11 +181,19 @@ public record SharpMUSHOptions
 			SaferUserFunctions: true
 		),
 		Limit = new LimitOptions(
+			// Not PennMUSH's 100 (game/mushcnf.dst). Penn's call_limit counts every recursive
+			// process_expression call — each bracket, argument and attribute body (src/parse.c:2128) —
+			// while this counts function and attribute frames only, about a third as many for the same
+			// code. At 100 it would trip before function_recursion_limit, so plain self-recursion
+			// (&X me=[u(me/X)]) would say CALL LIMIT EXCEEDED where Penn says FUNCTION RECURSION LIMIT
+			// EXCEEDED.
 			CallLimit: 1000,
 			ChunkMigrate: 150,
 			ConnectFailLimit: 10,
-			FunctionInvocationLimit: 100000,
-			FunctionRecursionLimit: 100,
+			// PennMUSH's shipped game/mushcnf.dst: function_invocation_limit 25000,
+			// function_recursion_limit 50, max_named_qregs 50.
+			FunctionInvocationLimit: 25000,
+			FunctionRecursionLimit: 50,
 			GuestPaycheck: 0,
 			IdleTimeout: 0,
 			KeepaliveTimeout: 300,
@@ -199,7 +207,7 @@ public record SharpMUSHOptions
 			MaxGuestPennies: 1000000000,
 			MaxGuests: -1,
 			MaxLogins: 120,
-			MaxNamedQRegisters: 100,
+			MaxNamedQRegisters: 50,
 			MaxParents: 10,
 			MaxPennies: 1000000000,
 			Paycheck: 50,
@@ -207,6 +215,8 @@ public record SharpMUSHOptions
 			PlayerNameLen: 15,
 			PlayerQueueLimit: 100,
 			QueueChunk: 3,
+			// Not Penn's 1500: this is an elapsed-time budget that also spends on database and HTTP
+			// waits, not CPU time (help execution budget).
 			QueueEntryCpuTime: LimitOptions.DefaultQueueEntryCpuTime,
 			QueueLoss: 63,
 			StartingMoney: 150,

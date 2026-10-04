@@ -388,7 +388,9 @@ function_invocation_limit 25000
 # speaking, you won't ever see more than 8192 recursions, so that's
 # probably an upper limit, but most sane code shouldn't need more
 # than a couple hundred. Setting it to '0' means unlimited.
-call_limit 50000000
+# SharpMUSH counts function and attribute frames rather than every parser
+# recursion, so its default is 1000 rather than PennMUSH's 100.
+call_limit 1000
 
 # The maximum elapsed time in milliseconds, including asynchronous I/O, that
 # a single queue entry may use before aborting. Setting this to a low number will

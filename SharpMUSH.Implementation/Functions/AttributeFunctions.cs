@@ -49,15 +49,9 @@ public partial class Functions
 		bool succeeded, bool wasSet)
 	{
 		// A player's alias list was reported by the write itself (PlayerAliases).
-		if (!succeeded || PlayerAliases.Applies(thing, attribute) || await thing.Object().AreQuietAsync(executor))
-		{
-			return;
-		}
-
 		// Read back the attribute that was just written, as Penn does, so its own quiet flag counts.
-		var written = await AttributeService.GetAttributeAsync(executor, thing, attribute,
-			mode: IAttributeService.AttributeMode.Read, parent: false);
-		if (written is SharpAttribute[] chain && chain.Last().IsQuiet())
+		if (!succeeded || PlayerAliases.Applies(thing, attribute)
+				|| await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, thing, attribute))
 		{
 			return;
 		}

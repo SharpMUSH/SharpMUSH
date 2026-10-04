@@ -118,11 +118,8 @@ public static class SetHelpers
 
 			// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
 			// written attribute's own AF_Quiet suppresses the line as well.
-			var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
-				IAttributeService.AttributeMode.Read, false);
-			var attributeIsQuiet = written is SharpAttribute[] writtenAttribute && writtenAttribute.Last().IsQuiet();
-
-			if (!areQuiet && !attributeIsQuiet)
+			if (!areQuiet && !await AttributeWriteReport.IsSuppressedAsync(attributeService, executor, found,
+						attribute.ToPlainText()))
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 					found.Object().Name, attribute.ToPlainText());

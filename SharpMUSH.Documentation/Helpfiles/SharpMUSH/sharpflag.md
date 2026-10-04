@@ -452,7 +452,9 @@ If a PUPPET is also set LISTEN, it will respond to what it hears according to it
 
 **Flag: QUIET (all types)**
 
-A QUIET object doesn't show the usual messages when someone enters or leaves it, or when it is created or destroyed.
+This flag suppresses several acknowledgement messages from commands, such as 'Set', 'Triggered', 'Teleported', etc.
+
+A QUIET player hears none of them. A player who is not QUIET still hears none about a QUIET object they own: its `&` and `@set` attribute writes, `@edit`, `@parent`, `@link` home, `@lock`, `@power` and flag changes. `@notify` and `@drain` say nothing when the object running them, or its owner, is QUIET, and `@channel/title` says nothing to a QUIET player. Setting or clearing QUIET itself is always reported.
 
 # SAFE
 

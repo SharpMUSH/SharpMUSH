@@ -69,6 +69,17 @@ behaved differently.
   had been copied into three places and none of the three carried them.
 - `render()` once evaluated its second argument as the object named by its first, which is what
   `objeval()` does, rather than rendering a string.
+- A QUIET player, or a player writing to a QUIET object they own, was once still told
+  `<object>/<attr> - Set.` by `&`, `@desc` and the other attribute commands, and `Parent changed.`,
+  `Home set.`, `@edit`'s `- Set.` and `@power`'s `granted.`; `@notify` and `@drain` now say nothing
+  for a QUIET executor, and `@drain` says `Drained.` otherwise. See `help QUIET`.
+- A queue entry that runs out of `queue_entry_cpu_time` once sent
+  `#-1 EXECUTION TIME LIMIT EXCEEDED` to every connection of its owner; its enactor now hears
+  `CPU usage exceeded.`, unless QUIET.
+- `@chownall` once said `Changed ownership of N object(s) from A to B.`; it now says
+  `Ownership changed for N objects.`
+- A new game once started with `function_recursion_limit 100`, `function_invocation_limit 100000`
+  and `max_named_qregs 100`; it now starts with PennMUSH's 50, 25000 and 50.
 
 ## Known limitations
 
