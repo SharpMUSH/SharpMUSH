@@ -120,7 +120,7 @@ public partial class Commands
 	/// <summary>Binds this command instance's services to <see cref="ZoneHelpers.ChangeZoneAsync"/>.</summary>
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
-		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
+		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
 			DidItService, ManipulateSharpObjectService, Configuration, ConnectionService, executor, target, zone, preserve,
 			noisy);
 

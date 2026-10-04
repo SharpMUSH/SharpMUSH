@@ -14,12 +14,10 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private IMediator Mediator { get; }
 	/// <summary>
-	/// The object store, and only that: the cycle guards in <see cref="HelperFunctions"/> are the
-	/// sole reason a function reaches a store at all, and they take an <see cref="IObjectStore"/>.
-	/// Holding the whole <see cref="ISharpDatabase"/> composite here would hand every function a
-	/// write surface that bypasses the Mediator (engine data trunk §1, §2).
+	/// The parent/zone cycle guard — the one thing a function needed a store for. It is the guard, not
+	/// the store, so no function holds a write surface that bypasses the Mediator (engine data trunk §1, §2).
 	/// </summary>
-	private IObjectStore Database { get; }
+	private IRelationshipCycleChecker RelationshipCycles { get; }
 	private ILocateService LocateService { get; }
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
@@ -57,7 +55,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ILogger<Functions> logger,
 		IMediator mediator,
 		IMessageBus messageBus,
-		IObjectStore database,
+		IRelationshipCycleChecker relationshipCycles,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,
@@ -84,7 +82,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		Logger = logger;
 		Mediator = mediator;
 		MessageBus = messageBus;
-		Database = database;
+		RelationshipCycles = relationshipCycles;
 		LocateService = locateService;
 		AttributeService = attributeService;
 		NotifyService = notifyService;

@@ -687,9 +687,7 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		var safeToAdd = await cycleChecker.SafeToAddZoneAsync(obj, newZone);
-
-		if (!safeToAdd)
+		if (await cycleChecker.SafeToAddZoneAsync(obj, newZone) is not RelationshipSafety.Safe)
 		{
 			if (notify)
 			{

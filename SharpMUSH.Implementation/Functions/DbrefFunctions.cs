@@ -1020,7 +1020,7 @@ public partial class Functions
 						return ErrorMessages.Returns.PermissionDenied;
 					}
 
-					if (!await HelperFunctions.SafeToAddZone(Mediator, Database, target, zone))
+					if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
 					{
 						return ErrorMessages.Returns.ZoneLoop;
 					}

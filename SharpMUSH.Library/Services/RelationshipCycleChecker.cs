@@ -10,16 +10,16 @@ public sealed class RelationshipCycleChecker(IObjectStore objects) : IRelationsh
 		CancellationToken cancellationToken = default)
 		=> SafeToAddAsync(objects, start, newParent, cancellationToken);
 
-	public async ValueTask<bool> SafeToAddZoneAsync(AnySharpObject start, AnySharpObject newZone,
+	public ValueTask<RelationshipSafety> SafeToAddZoneAsync(AnySharpObject start, AnySharpObject newZone,
 		CancellationToken cancellationToken = default)
-		=> await SafeToAddAsync(objects, start, newZone, cancellationToken) == RelationshipSafety.Safe;
+		=> SafeToAddAsync(objects, start, newZone, cancellationToken);
 
 	/// <summary>
 	/// The rule itself: the same object is a self-reference; otherwise adding the edge closes a cycle
 	/// exactly when <paramref name="start"/> is already reachable from <paramref name="newRelated"/>
 	/// over parent and zone edges (<c>start -&gt; newRelated -&gt; ... -&gt; start</c>).
 	/// </summary>
-	internal static async ValueTask<RelationshipSafety> SafeToAddAsync(IObjectStore objects, AnySharpObject start,
+	private static async ValueTask<RelationshipSafety> SafeToAddAsync(IObjectStore objects, AnySharpObject start,
 		AnySharpObject newRelated, CancellationToken cancellationToken)
 	{
 		if (start.Object().DBRef.Number == newRelated.Object().DBRef.Number)

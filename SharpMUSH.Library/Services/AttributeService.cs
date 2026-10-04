@@ -674,7 +674,7 @@ public class AttributeService(
 
 			var parentObj = parent.Object();
 
-			// A pre-existing cycle isn't this method's concern (SafeToAddParent's reachability
+			// A pre-existing cycle isn't this method's concern (SafeToAddParentAsync's reachability
 			// check owns that); stop rather than spin so this can't itself hang on legacy/bad data.
 			if (!seen.Add(parentObj.DBRef.Number)) return false;
 
