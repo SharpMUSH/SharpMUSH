@@ -93,9 +93,9 @@ public class AccountControllersSessionClaimsTests
 		await sessions.Received(1).ValidateAsync("token");
 	}
 
-	private static AdminAccountsController Admin(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user)
+	private static AdminAccountsController Admin(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user,
+		FusionCache cache)
 	{
-		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 		var claims = new AccountClaimsService(accounts, Substitute.For<IRoleDerivationService>(), Substitute.For<IRoleRegistryService>(),
 			Substitute.For<IPermissionResolver>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 		return new AdminAccountsController(accounts, sessions, claims, NullLogger<AdminAccountsController>.Instance)
@@ -112,7 +112,8 @@ public class AccountControllersSessionClaimsTests
 		var sessions = Substitute.For<IAccountSessionStore>();
 		accounts.GetAllAccountsAsync(Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpAccount>>([]));
 
-		var result = await Admin(accounts, sessions, Principal(AccountSessionAuthenticationHandler.SchemeName, role)).List();
+		using var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
+		var result = await Admin(accounts, sessions, Principal(AccountSessionAuthenticationHandler.SchemeName, role), cache).List();
 
 		await Assert.That(result is OkObjectResult).IsEqualTo(admitted);
 		await sessions.DidNotReceive().ValidateAsync(Arg.Any<string>());
