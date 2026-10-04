@@ -56,7 +56,7 @@ public partial class LightningDatabase
 	private static IEnumerable<long> MailSentToIds(ITx tx, long sender, long recipient)
 		=> tx.Range(Tables.MailSentTo, Keys.Concat(Keys.Dbref(sender), Keys.Dbref(recipient))).Select(e => TrailingMailId(e.Key));
 
-	/// <summary>Each id's row, skipping an id whose row is missing, as <see cref="RangeMailBox"/> does.</summary>
+	/// <summary>Each id's row, skipping an id whose row is missing, as <see cref="ReadIndexedMail"/> does.</summary>
 	private static IEnumerable<(long MailId, MailRecord Record)> MailRows(ITx tx, IEnumerable<long> ids)
 	{
 		foreach (var mailId in ids)
@@ -78,7 +78,7 @@ public partial class LightningDatabase
 		foreach (var mailId in ids.Skip(position))
 		{
 			return tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)
-				? MapRecordToMail(tx, mailId, Codec.Deserialize<MailRecord>(bytes))
+				? MapRecordToMail(mailId, Codec.Deserialize<MailRecord>(bytes))
 				: null;
 		}
 
@@ -121,50 +121,13 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// Every entry of a recipient's <see cref="Tables.MailBox"/> range, in mail-id order (which is
-	/// insertion order — the id comes from a monotonic counter), each resolved to its
-	/// <see cref="Tables.Mail"/> row. A box entry whose row is somehow missing is skipped rather than
-	/// throwing, so a half-applied delete never turns a listing into an exception.
+	/// The Library model for one mail row. The sender is resolved only when someone asks for
+	/// <see cref="SharpMail.From"/>, in a read of its own: a listing of a mailbox mostly wants the rows, and
+	/// a sender that has been destroyed since resolves to <see cref="None"/> either way.
 	/// </summary>
-	private static IEnumerable<(long MailId, MailRecord Record)> RangeMailBox(ITx tx, long recipient)
+	private SharpMail MapRecordToMail(long mailId, MailRecord record)
 	{
-		foreach (var (key, _) in tx.Range(Tables.MailBox, Keys.Dbref(recipient)))
-		{
-			var mailId = Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
-			if (tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes))
-			{
-				yield return (mailId, Codec.Deserialize<MailRecord>(bytes));
-			}
-		}
-	}
-
-	/// <summary>As <see cref="RangeMailBox"/> but over <see cref="Tables.MailSent"/>, filtered to a recipient when given.</summary>
-	private static IEnumerable<(long MailId, MailRecord Record)> RangeMailSent(ITx tx, long sender, long? recipient)
-	{
-		foreach (var (key, _) in tx.Range(Tables.MailSent, Keys.Dbref(sender)))
-		{
-			var mailId = Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
-			if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes))
-			{
-				continue;
-			}
-
-			var record = Codec.Deserialize<MailRecord>(bytes);
-			if (recipient is { } r && record.Recipient != r)
-			{
-				continue;
-			}
-
-			yield return (mailId, record);
-		}
-	}
-
-	private SharpMail MapRecordToMail(ITx tx, long mailId, MailRecord record)
-	{
-		var from = ReadObject(tx, record.Sender) is { } found
-			? Hydrate(found.Dbref, found.Record).WithNoneOption()
-			: (AnyOptionalSharpObject)new None();
-
+		var sender = record.Sender;
 		return new SharpMail
 		{
 			Id = MailId(mailId),
@@ -178,33 +141,34 @@ public partial class LightningDatabase
 			Folder = record.Folder,
 			Content = MarkupTextSerializer.Deserialize(record.Content),
 			Subject = MarkupTextSerializer.Deserialize(record.Subject),
-			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from))
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender)))
 		};
 	}
 
-	private List<SharpMail> GetIncomingMailsCore(ITx tx, long recipient, string? folder)
-		=> (folder is null ? RangeMailBox(tx, recipient) : MailRows(tx, MailFolderIds(tx, recipient, folder)))
-			.Select(m => MapRecordToMail(tx, m.MailId, m.Record))
-			.ToList();
+	private AnyOptionalSharpObject LoadMailSender(long sender) => Store.Read(tx => ReadObject(tx, sender) is { } found
+		? Hydrate(found.Dbref, found.Record).WithNoneOption()
+		: (AnyOptionalSharpObject)new None());
 
-	private List<SharpMail> GetSentMailsCore(ITx tx, long sender, long? recipient)
-		=> (recipient is { } r ? MailRows(tx, MailSentToIds(tx, sender, r)) : RangeMailSent(tx, sender, null))
-			.Select(m => MapRecordToMail(tx, m.MailId, m.Record))
-			.ToList();
+	/// <summary>The mail an index entry names (its key ends with the mail id), or null when the row is missing —
+	/// a half-applied delete never turns a listing into an exception.</summary>
+	private SharpMail? ReadIndexedMail(ITx tx, byte[] indexKey)
+	{
+		var mailId = TrailingMailId(indexKey);
+		return tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)
+			? MapRecordToMail(mailId, Codec.Deserialize<MailRecord>(bytes))
+			: null;
+	}
+
 
 	public IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync((long)id.Object.Key, folder, ct));
 
-	private async IAsyncEnumerable<SharpMail> GetIncomingMailsCoreAsync(long recipient, string? folder,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		var mails = Store.Read(tx => GetIncomingMailsCore(tx, recipient, folder));
-		foreach (var mail in mails)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return mail;
-		}
-	}
+	/// <summary>A whole mailbox in mail-id order (<see cref="Tables.MailBox"/>), or one folder of it
+	/// (<see cref="Tables.MailFolder"/>), paged.</summary>
+	private IAsyncEnumerable<SharpMail> GetIncomingMailsCoreAsync(long recipient, string? folder, CancellationToken ct)
+		=> folder is null
+			? Store.RangeMapAsync(Tables.MailBox, Keys.Dbref(recipient), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct)
+			: Store.RangeMapAsync(Tables.MailFolder, MailFolderPrefix(recipient, folder), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct);
 
 	public IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync((long)id.Object.Key, null, ct));
@@ -218,16 +182,12 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpMail>(ct => GetSentMailsCoreAsync(sender.Key, (long)recipient.Object.Key, ct));
 
-	private async IAsyncEnumerable<SharpMail> GetSentMailsCoreAsync(long sender, long? recipient,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		var mails = Store.Read(tx => GetSentMailsCore(tx, sender, recipient));
-		foreach (var mail in mails)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return mail;
-		}
-	}
+	/// <summary>Everything one sender sent (<see cref="Tables.MailSent"/>), or everything it sent one recipient
+	/// (<see cref="Tables.MailSentTo"/>), in mail-id order, paged.</summary>
+	private IAsyncEnumerable<SharpMail> GetSentMailsCoreAsync(long sender, long? recipient, CancellationToken ct)
+		=> recipient is { } r
+			? Store.RangeMapAsync(Tables.MailSentTo, Keys.Concat(Keys.Dbref(sender), Keys.Dbref(r)), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct)
+			: Store.RangeMapAsync(Tables.MailSent, Keys.Dbref(sender), (tx, key, _) => ReadIndexedMail(tx, key), ct: ct);
 
 	public IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject sender, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpMail>(ct => GetSentMailsCoreAsync(sender.Key, null, ct));
@@ -416,7 +376,7 @@ public partial class LightningDatabase
 		{
 			var mailId = Keys.ReadDbref(key);
 			var record = Codec.Deserialize<MailRecord>(value);
-			yield return Store.Read(tx => MapRecordToMail(tx, mailId, record));
+			yield return MapRecordToMail(mailId, record);
 		}
 	}
 }

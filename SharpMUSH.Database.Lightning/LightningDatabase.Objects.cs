@@ -1171,21 +1171,8 @@ public partial class LightningDatabase
 			: Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	});
 
-	private async IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var children = Store.Read(tx => tx.Dups(Tables.Parent.Reverse, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(child => ReadObject(tx, child))
-			.Where(found => found is not null)
-			.Select(found => MapToSharpObject(found!.Value.Dbref, found.Value.Record))
-			.ToList());
-
-		foreach (var child in children)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return child;
-		}
-	}
+	private IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);
 
 	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(()
 		=> new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetFlagsCoreAsync(dbref, type, ct)));

@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
@@ -134,5 +135,67 @@ public class StreamingTests
 		await Assert.That(outOfOrder).IsEqualTo(0);
 		await Assert.That(previous).IsEqualTo(rows - 1L);
 		await Assert.That(allocated / count).IsLessThan(200);
+	}
+
+	/// <summary>
+	/// <c>DupsMapAsync</c> reads one key's duplicates a page at a time: every value, in value order, none of the
+	/// neighbouring keys', the entries mapped to null left out, and the map run inside each page's transaction.
+	/// </summary>
+	[Test]
+	public async Task DupsMapAsyncPagesOneKeysDuplicatesInOrder()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			for (var i = 0L; i < 700; i++) tx.Put(Tables.Location.Reverse, Keys.Dbref(5), Keys.Dbref(i * 3));
+			tx.Put(Tables.Location.Reverse, Keys.Dbref(4), Keys.Dbref(1));
+			tx.Put(Tables.Location.Reverse, Keys.Dbref(6), Keys.Dbref(2));
+		});
+		var expected = store.Read(tx => tx.Dups(Tables.Location.Reverse, Keys.Dbref(5)).Select(v => Keys.ReadDbref(v)).ToList());
+
+		var seen = await store.DupsMapAsync(Tables.Location.Reverse, Keys.Dbref(5),
+			(tx, value) => tx.TryGet(Tables.Location.Reverse, Keys.Dbref(4), out _) && Keys.ReadDbref(value) % 2 == 0
+				? (object)Keys.ReadDbref(value)
+				: null,
+			pageSize: 64).Select(v => (long)v).ToListAsync();
+
+		await Assert.That(seen).IsEquivalentTo(expected.Where(v => v % 2 == 0), CollectionOrdering.Matching);
+		await Assert.That(await store.DupsMapAsync(Tables.Location.Reverse, Keys.Dbref(7), (_, v) => (object)v).CountAsync()).IsEqualTo(0);
+	}
+
+	/// <summary>A consumer that stops early pays for the first, small page only.</summary>
+	[Test]
+	public async Task DupsMapAsyncMapsOnlyTheFirstPageForAnEarlyExit()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			for (var i = 0L; i < 500; i++) tx.Put(Tables.Location.Reverse, Keys.Dbref(5), Keys.Dbref(i));
+		});
+		var mapped = 0;
+
+		var first = await store.DupsMapAsync(Tables.Location.Reverse, Keys.Dbref(5),
+			(_, value) => { mapped++; return (object)Keys.ReadDbref(value); }).FirstAsync();
+
+		await Assert.That((long)first).IsEqualTo(0L);
+		await Assert.That(mapped).IsEqualTo(LightningStore.FirstMapPageSize);
+	}
+
+	[Test]
+	public async Task RangeMapAsyncPagesAPrefixInKeyOrder()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			for (var i = 0; i < 600; i++) tx.Put(Tables.AttrMeta, Keys.Attr(1, $"A{i:D4}"), Keys.Str("v"));
+			tx.Put(Tables.AttrMeta, Keys.Attr(2, "A0000"), Keys.Str("v"));
+		});
+		var expected = store.Read(tx => tx.Range(Tables.AttrMeta, Keys.AttrPrefix(1)).Select(e => Keys.ParseAttr(e.Key).LongName).ToList());
+
+		var seen = await store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(1), (_, key, _) => Keys.ParseAttr(key).LongName, pageSize: 100)
+			.ToListAsync();
+
+		await Assert.That(seen).Count().IsEqualTo(600);
+		await Assert.That(seen).IsEquivalentTo(expected, CollectionOrdering.Matching);
 	}
 }

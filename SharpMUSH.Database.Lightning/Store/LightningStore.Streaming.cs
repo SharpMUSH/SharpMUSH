@@ -53,4 +53,93 @@ public sealed partial class LightningStore
 			(lastKey, lastValue) = page[^1];
 		}
 	}
+
+	/// <summary>The first page of <see cref="RangeMapAsync{T}"/> and <see cref="DupsMapAsync{T}"/>: small, so a
+	/// consumer that stops after the first few items (<c>AnyAsync</c>, <c>FirstOrDefaultAsync</c>) pays for a few
+	/// rows rather than a full page. Each page after it doubles, up to the caller's page size.</summary>
+	internal const int FirstMapPageSize = 16;
+
+	/// <summary>
+	/// <see cref="RangeAsync"/> with each entry turned into its item inside the transaction that read it:
+	/// <paramref name="map"/> gets that page's <see cref="ITx"/> and may read whatever else the item needs (the
+	/// row an index entry names, say) from the same snapshot, so a page costs one transaction rather than one
+	/// per row. An entry mapped to <see langword="null"/> is skipped. No transaction is held across the
+	/// consumer's awaits: pages start at <see cref="FirstMapPageSize"/> entries and double up to
+	/// <paramref name="pageSize"/>, and each resumes strictly after the last entry the previous one read, so the
+	/// order is the table's key (and duplicate) order exactly as one <see cref="ITx.Range"/> would give it.
+	/// </summary>
+	public IAsyncEnumerable<T> RangeMapAsync<T>(TableDef table, byte[] prefix, Func<ITx, byte[], byte[], T?> map,
+		int pageSize = 256, CancellationToken ct = default) where T : class
+		=> PagedMapAsync(table, prefix, exactKey: false, map, pageSize, ct);
+
+	/// <summary>
+	/// The duplicate values stored under exactly <paramref name="key"/>, in value order, each mapped inside the
+	/// page's transaction — <see cref="ITx.Dups"/> paged the way <see cref="RangeMapAsync{T}"/> pages a range.
+	/// </summary>
+	public IAsyncEnumerable<T> DupsMapAsync<T>(TableDef table, byte[] key, Func<ITx, byte[], T?> map,
+		int pageSize = 256, CancellationToken ct = default) where T : class
+		=> PagedMapAsync(table, key, exactKey: true, (tx, _, value) => map(tx, value), pageSize, ct);
+
+	private async IAsyncEnumerable<T> PagedMapAsync<T>(TableDef table, byte[] prefix, bool exactKey,
+		Func<ITx, byte[], byte[], T?> map, int pageSize, [EnumeratorCancellation] CancellationToken ct) where T : class
+	{
+		if (pageSize < 1)
+		{
+			throw new ArgumentOutOfRangeException(nameof(pageSize), pageSize, "A page holds at least one entry.");
+		}
+
+		byte[]? lastKey = null;
+		byte[]? lastValue = null;
+		var dup = table.Duplicates;
+		var take = Math.Min(FirstMapPageSize, pageSize);
+		while (true)
+		{
+			ct.ThrowIfCancellationRequested();
+			var limit = take;
+			var (items, read, ended, pageKey, pageValue) = Read(tx =>
+			{
+				var mapped = new List<T>();
+				byte[]? k = null;
+				byte[]? v = null;
+				var count = 0;
+				var entries = lastKey is null ? tx.Range(table, prefix) : tx.RangeFrom(table, prefix, lastKey, dup ? lastValue : null);
+				foreach (var (key, value) in entries)
+				{
+					// Range matches by prefix; a duplicate read wants this key's values and no longer key's.
+					if (exactKey && !key.AsSpan().SequenceEqual(prefix))
+					{
+						return (mapped, count, true, k, v);
+					}
+
+					count++;
+					(k, v) = (key, value);
+					if (map(tx, key, value) is { } item)
+					{
+						mapped.Add(item);
+					}
+
+					if (count == limit)
+					{
+						return (mapped, count, false, k, v);
+					}
+				}
+
+				return (mapped, count, true, k, v);
+			});
+
+			foreach (var item in items)
+			{
+				ct.ThrowIfCancellationRequested();
+				yield return item;
+			}
+
+			if (ended || read < limit || pageKey is null)
+			{
+				yield break;
+			}
+
+			(lastKey, lastValue) = (pageKey, pageValue);
+			take = Math.Min(take * 2, pageSize);
+		}
+	}
 }

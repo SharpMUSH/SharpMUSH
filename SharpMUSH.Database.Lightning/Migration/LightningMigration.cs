@@ -135,7 +135,7 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>Counts every recipient's box entries per folder into <see cref="Tables.MailCount"/>, once,
-	/// for worlds whose mail predates the table. Counts the same entries <see cref="RangeMailBox"/> yields:
+	/// for worlds whose mail predates the table. Counts the same entries <see cref="GetAllIncomingMailsAsync"/> yields:
 	/// a box entry whose mail row is missing is not held mail.</summary>
 	internal void RebuildMailFolderCounts(ITx tx, CancellationToken cancellationToken)
 	{
