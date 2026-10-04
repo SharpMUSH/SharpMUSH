@@ -11,6 +11,12 @@ public interface IMailStore
 {
 	IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// <see cref="GetIncomingMailsAsync"/> without the bodies: the same messages in the same order, each
+	/// with its sender's name rather than the hydrated sender.
+	/// </summary>
+	IAsyncEnumerable<MailSummary> GetIncomingMailSummariesAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
+
 	IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default);
@@ -21,6 +27,7 @@ public interface IMailStore
 
 	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default);
 
+	/// <summary>The non-empty folder names a mailbox holds mail in, in the order each folder first received mail.</summary>
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 
 	/// <summary>

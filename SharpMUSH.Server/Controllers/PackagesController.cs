@@ -166,14 +166,18 @@ public class PackagesController(
 	public async Task<ActionResult<IReadOnlyList<InstalledPackageDto>>> GetInstalled()
 	{
 		var installed = await registry.GetInstalledPackagesAsync();
+		// One read of every edge, grouped once, rather than a whole-table scan per package.
+		var dependents = (await registry.GetAllPackageDependenciesAsync())
+			.OrderBy(d => d.PackageId, StringComparer.Ordinal)
+			.ToLookup(d => d.DependsOnId, d => d.PackageId);
 		var result = new List<InstalledPackageDto>();
 		foreach (var package in installed)
 		{
 			result.Add(new InstalledPackageDto(
 				package,
-				(await registry.GetManagedAttributesAsync(package.Id)).Count,
-				(await registry.GetPackageObjectsAsync(package.Id)).Count,
-				(await registry.GetPackageDependentsAsync(package.Id)).Select(d => d.PackageId).ToList()));
+				await registry.CountManagedAttributesAsync(package.Id),
+				await registry.CountPackageObjectsAsync(package.Id),
+				dependents[package.Id].ToList()));
 		}
 
 		return Ok(result);

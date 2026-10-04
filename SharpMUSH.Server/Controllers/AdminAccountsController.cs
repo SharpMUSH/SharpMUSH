@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -40,6 +41,18 @@ public class AdminAccountsController(
 
 	private async Task<(string? AdminAccountId, IActionResult? Failure)> RequireWizardAsync()
 	{
+		// The AccountSession handler already validated the session and the account, and computed the
+		// role claim the same way, on this request.
+		if (AccountSessionAuthenticationHandler.TryGetAccount(User, out var authenticated, out var mustChange))
+		{
+			if (mustChange)
+				return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
+			return Enum.TryParse<PortalRole>(User.FindFirstValue(ClaimTypes.Role), out var claimed) && claimed >= PortalRole.Wizard
+				? (authenticated, null)
+				: (null, StatusCode(StatusCodes.Status403Forbidden, "Wizard role required."));
+		}
+
+		// Another scheme (DebugAuth in Development) authenticated the request, or none did: validate the bearer.
 		var header = Request.Headers.Authorization.FirstOrDefault();
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
 			return (null, Unauthorized("Invalid or expired account session."));

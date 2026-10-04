@@ -1,6 +1,10 @@
+using SharpMUSH.Plugins.Scene.Storage;
+using SharpMUSH.Plugins.Scene.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Plugins.Scene.Web;
+using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
 
 namespace SharpMUSH.Tests.ScenePlugin;
 
@@ -19,7 +23,7 @@ namespace SharpMUSH.Tests.ScenePlugin;
 public class SceneControllerVisibilityTests
 {
 	/// <summary>Builds the controller with <paramref name="claimValue"/> as the acting character (null = anonymous).</summary>
-	private static SceneController ControllerFor(FixedSceneService service, string? claimValue) =>
+	private static SceneController ControllerFor(ISceneService service, string? claimValue) =>
 		new(service)
 		{
 			ControllerContext = new ControllerContext
@@ -115,5 +119,50 @@ public class SceneControllerVisibilityTests
 
 		var listed = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id);
 		await Assert.That(listed).IsEquivalentTo(new[] { "mine", "public" });
+	}
+
+	/// <summary>
+	/// The whole log is streamed: the action hands back an async sequence that reads page after page, each
+	/// resumed from the previous page's cursor, and a hidden scene is refused before anything is read.
+	/// </summary>
+	[Test]
+	public async Task GetPoses_StreamsTheLogPageByPage()
+	{
+		var poses = Enumerable.Range(1, SceneController.PoseStreamPageSize * 2 + 5)
+			.Select(i => new ScenePose($"{i}", "scene-1", "#1", "God", "", null, "", "pose", [], new Dictionary<string, string>(),
+				i, false, $"pose {i}", $"pose {i}", 1, null, null, null))
+			.ToList();
+		var service = new PagedSceneService(poses, SceneFixture.SceneOwnedBy("#1", isPublic: true));
+
+		var result = await ControllerFor(service, claimValue: null).GetPoses("scene-1");
+
+		var stream = (IAsyncEnumerable<SceneController.ScenePoseDto>)((OkObjectResult)result).Value!;
+		await Assert.That(service.Cursors).IsEmpty().Because("nothing is read until the response is written");
+		var sent = await stream.ToListAsync();
+		await Assert.That(sent.Select(p => p.Id)).IsEquivalentTo(poses.Select(p => p.Id), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(service.Cursors).IsEquivalentTo(new long?[] { null, SceneController.PoseStreamPageSize, SceneController.PoseStreamPageSize * 2 },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		var hidden = new PagedSceneService(poses, SceneFixture.SceneOwnedBy("#7", isPublic: false));
+		await Assert.That(await ControllerFor(hidden, claimValue: null).GetPoses("scene-1")).IsTypeOf<NotFoundResult>();
+		await Assert.That(hidden.Cursors).IsEmpty();
+	}
+
+	private sealed class PagedSceneService(IReadOnlyList<ScenePose> poses, params Scene[] scenes) : SceneServiceStub
+	{
+		public List<long?> Cursors { get; } = [];
+		private readonly FixedSceneService _scenes = new(scenes);
+
+		public override Task<Found<Scene>> GetSceneAsync(string sceneId) => _scenes.GetSceneAsync(sceneId);
+
+		public override Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref) => _scenes.GetMemberAsync(sceneId, playerDbref);
+
+		public override Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take)
+		{
+			Cursors.Add(after);
+			var start = (int)(after ?? 0);
+			var page = poses.Skip(start).Take(take).ToList();
+			return Task.FromResult<Found<ScenePosePage>>(new ScenePosePage(page, start + take < poses.Count ? start + take : null));
+		}
 	}
 }

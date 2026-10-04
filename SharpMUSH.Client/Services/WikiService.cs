@@ -55,7 +55,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(url);
+			var dtos = await http.GetFromJsonAsync<List<WikiPageSummaryDto>>(url);
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -72,10 +72,10 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	public async ValueTask<ApiResult<IReadOnlyList<WikiPageSummary>>> GetRecentChangesResultAsync(int count = 20, string? lang = null)
 	{
 		var result = await httpClientFactory.CreateClient("api")
-			.GetApiAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}", "The server returned no recent changes.");
+			.GetApiAsync<List<WikiPageSummaryDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}", "The server returned no recent changes.");
 		return result switch
 		{
-			List<WikiPageDto> dtos => dtos.Select(ToSummary).ToList(),
+			List<WikiPageSummaryDto> dtos => dtos.Select(ToSummary).ToList(),
 			ApiFailure failure => failure,
 		};
 	}
@@ -89,7 +89,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
+			var dtos = await http.GetFromJsonAsync<List<WikiPageSummaryDto>>(
 				$"api/wiki/ns/{Uri.EscapeDataString(ns)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
@@ -114,7 +114,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			using var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
 			response.EnsureSuccessStatusCode();
 
-			var dtos = await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? [];
+			var dtos = await response.Content.ReadFromJsonAsync<List<WikiPageSummaryDto>>() ?? [];
 			var total = response.Headers.TryGetValues("X-Total-Count", out var values)
 				&& int.TryParse(values.FirstOrDefault(), out var parsed)
 				? parsed
@@ -129,6 +129,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>
+	/// Page counts by state (published, draft, protected), counted by the server without listing a page.
+	/// The server counts drafts only for a caller who may see them.
+	/// </summary>
+	public async ValueTask<ApiResult<WikiPageCountsDto>> GetCountsAsync() =>
+		await httpClientFactory.CreateClient("api")
+			.GetApiAsync<WikiPageCountsDto>("api/wiki/counts", "The server returned no wiki counts.");
+
+	/// <summary>
 	/// Lists pages in a category. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetByCategoryAsync(
@@ -137,7 +145,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
+			var dtos = await http.GetFromJsonAsync<List<WikiPageSummaryDto>>(
 				$"api/wiki/category/{Uri.EscapeDataString(category)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
@@ -176,7 +184,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(
+			var dtos = await http.GetFromJsonAsync<List<WikiPageSummaryDto>>(
 				$"api/wiki/tag/{Uri.EscapeDataString(tag)}?skip={skip}&take={take}{LangQuery(lang, first: false)}");
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
@@ -477,7 +485,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			? string.Empty
 			: $"{(first ? '?' : '&')}lang={Uri.EscapeDataString(lang)}";
 
-	private static WikiPageSummary ToSummary(WikiPageDto dto) =>
+	private static WikiPageSummary ToSummary(WikiPageSummaryDto dto) =>
 		new(dto.Slug, dto.Title, dto.Namespace, dto.UpdatedAt, dto.RevisionNumber)
 		{
 			Category = dto.Category,

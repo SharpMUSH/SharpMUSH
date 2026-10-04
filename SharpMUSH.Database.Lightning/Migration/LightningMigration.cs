@@ -33,6 +33,7 @@ public partial class LightningDatabase
 		try
 		{
 			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
+			InvalidateDefinitions();
 
 			var initialSeedApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialSeedMigrationId), out _));
 			if (!initialSeedApplied)
@@ -76,8 +77,13 @@ public partial class LightningDatabase
 		}
 		finally
 		{
+			// A plugin step may have written definition rows of its own; whatever the copies held was read
+			// before the seed or before that step.
+			InvalidateDefinitions();
 			MigrateLock.Release();
 		}
+
+		ReloadDefinitions();
 	}
 
 	/// <summary>Repairs both derived source indexes from stored exits and their authoritative Location edge.</summary>
@@ -129,7 +135,7 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>Counts every recipient's box entries per folder into <see cref="Tables.MailCount"/>, once,
-	/// for worlds whose mail predates the table. Counts the same entries <see cref="RangeMailBox"/> yields:
+	/// for worlds whose mail predates the table. Counts the same entries <see cref="GetAllIncomingMailsAsync"/> yields:
 	/// a box entry whose mail row is missing is not held mail.</summary>
 	internal void RebuildMailFolderCounts(ITx tx, CancellationToken cancellationToken)
 	{

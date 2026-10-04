@@ -942,12 +942,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
 
-		var entrances = await Mediator.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
-
-		if (filterTypes.Count > 0 && !filterTypes.Contains("exits"))
-		{
-			entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
-		}
+		// GetEntrancesQuery only returns exits, so a type filter without exits needs no read at all.
+		var entrances = filterTypes.Count > 0 && !filterTypes.Contains("exits")
+			? []
+			: await Mediator.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
@@ -1293,7 +1291,6 @@ public partial class Commands
 			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
@@ -1304,6 +1301,8 @@ public partial class Commands
 						}
 						else
 						{
+							// The owner is read only for the line that names it.
+							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}
@@ -1348,7 +1347,6 @@ public partial class Commands
 				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
@@ -1359,6 +1357,8 @@ public partial class Commands
 						}
 						else
 						{
+							// The owner is read only for the line that names it.
+							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}

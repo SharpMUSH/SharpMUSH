@@ -143,9 +143,10 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			}
 
 			// Either restriction failing means the caller lacks permission and gets the standard error
-			// instead of the result.
-			if ((functionRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(functionRestriction)))
-					|| (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction))))
+			// instead of the result. The function's own restriction (attribute.Restrict) was already
+			// answered by the permission check above — CheckPermissionAsync tests it, and the isolated
+			// check refuses any restricted function — so only the built-in overlay is left to ask.
+			if (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction)))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);

@@ -64,19 +64,29 @@ public static class MessageListHelper
 		SharpPlayer mailbox, ExpandedMailData folders, IAsyncEnumerable<SharpMail> mailList)
 	{
 		var messages = await mailList.ToListAsync();
-		var positions = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
 		var result = new List<MailPosition>(messages.Count);
-		foreach (var mail in messages)
+		if (messages.Count == 0)
 		{
-			if (!positions.TryGetValue(mail.Folder, out var inFolder))
+			return result;
+		}
+
+		// Every folder's positions from one read of the whole mailbox, rather than one read per folder the
+		// selection touches. The mailbox lists each folder's mail in the same (id) order its folder does.
+		var positions = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
+		await foreach (var held in mediator.CreateStream(new GetAllMailListQuery(mailbox)))
+		{
+			if (!positions.TryGetValue(held.Folder, out var folderPositions))
 			{
-				inFolder = await mediator.CreateStream(new GetMailListQuery(mailbox, mail.Folder))
-					.Select((m, index) => (Id: m.Id ?? string.Empty, Position: index + 1))
-					.ToDictionaryAsync(x => x.Id, x => x.Position);
-				positions[mail.Folder] = inFolder;
+				positions[held.Folder] = folderPositions = [];
 			}
 
-			if (mail.Id is { } id && inFolder.TryGetValue(id, out var position))
+			folderPositions.TryAdd(held.Id ?? string.Empty, folderPositions.Count + 1);
+		}
+
+		foreach (var mail in messages)
+		{
+			if (mail.Id is { } id && positions.TryGetValue(mail.Folder, out var inFolder)
+					&& inFolder.TryGetValue(id, out var position))
 			{
 				var folder = folders.NumberOf(mail.Folder) is int number ? number.ToString() : mail.Folder;
 				result.Add(new MailPosition(mail, folder, position));

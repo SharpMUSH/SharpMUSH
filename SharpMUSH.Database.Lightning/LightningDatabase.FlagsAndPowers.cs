@@ -24,21 +24,17 @@ public partial class LightningDatabase
 	#region Flags and Powers
 
 	public ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
-		=> new(Store.Read(tx => FindFlagRecord(tx, name) is { } record ? MapFlag(record) : null));
+		=> new(FindFlagRecord(FlagDefinitions(), name) is { } record ? MapFlag(record) : null);
 
 	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpObjectFlag>(GetAllFlagsCoreAsync);
 
 	private async IAsyncEnumerable<SharpObjectFlag> GetAllFlagsCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		var flags = Store.Read(tx => tx.Range(Tables.Flag, [])
-			.Select(entry => MapFlag(Codec.Deserialize<FlagRecord>(entry.Value)))
-			.ToList());
-
-		foreach (var flag in flags)
+		foreach (var record in FlagDefinitions().Ordered)
 		{
 			ct.ThrowIfCancellationRequested();
-			yield return flag;
+			yield return MapFlag(record);
 		}
 	}
 
@@ -58,7 +54,7 @@ public partial class LightningDatabase
 			Disabled = false
 		};
 
-		var created = await Store.WriteAsync(tx =>
+		var created = await WriteDefinitionAsync(_flagDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (tx.TryGet(Tables.Flag, key, out _)) return false;
@@ -69,7 +65,7 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_flagDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Flag, key, out var bytes)) return false;
@@ -112,7 +108,7 @@ public partial class LightningDatabase
 	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_flagDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Flag, key, out var bytes)) return false;
@@ -131,7 +127,7 @@ public partial class LightningDatabase
 		}, cancellationToken);
 
 	public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_flagDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Flag, key, out var bytes)) return false;
@@ -143,23 +139,17 @@ public partial class LightningDatabase
 		}, cancellationToken);
 
 	public ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default)
-		=> new(Store.Read(tx => tx.TryGet(Tables.Power, Keys.Upper(name), out var bytes)
-			? MapPower(Codec.Deserialize<PowerRecord>(bytes))
-			: null));
+		=> new(PowerDefinitions().ByName(name) is { } record ? MapPower(record) : null);
 
 	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpPower>(GetAllPowersCoreAsync);
 
 	private async IAsyncEnumerable<SharpPower> GetAllPowersCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		var powers = Store.Read(tx => tx.Range(Tables.Power, [])
-			.Select(entry => MapPower(Codec.Deserialize<PowerRecord>(entry.Value)))
-			.ToList());
-
-		foreach (var power in powers)
+		foreach (var record in PowerDefinitions().Ordered)
 		{
 			ct.ThrowIfCancellationRequested();
-			yield return power;
+			yield return MapPower(record);
 		}
 	}
 
@@ -179,7 +169,7 @@ public partial class LightningDatabase
 			Disabled = false
 		};
 
-		var created = await Store.WriteAsync(tx =>
+		var created = await WriteDefinitionAsync(_powerDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (tx.TryGet(Tables.Power, key, out _)) return false;
@@ -190,7 +180,7 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_powerDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Power, key, out var bytes)) return false;
@@ -233,7 +223,7 @@ public partial class LightningDatabase
 	public async ValueTask<bool> UpdatePowerAsync(string name, string[] aliases, string symbol,
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_powerDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Power, key, out var bytes)) return false;
@@ -253,7 +243,7 @@ public partial class LightningDatabase
 		}, cancellationToken);
 
 	public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteDefinitionAsync(_powerDefinitions, tx =>
 		{
 			var key = Keys.Upper(name);
 			if (!tx.TryGet(Tables.Power, key, out var bytes)) return false;
@@ -268,38 +258,33 @@ public partial class LightningDatabase
 	/// — a stale <see cref="Tables.ObjFlag"/> edge whose definition was deleted is silently dropped rather than
 	/// surfaced as null. Does not synthesize the type-named flag <c>FlagsOf</c> appends; callers that need that
 	/// (Hydrate) add it themselves.</summary>
-	internal static IEnumerable<SharpObjectFlag> ReadObjectFlags(ITx tx, long dbref)
-		=> tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadStr(v))
-			.Select(name => tx.TryGet(Tables.Flag, Keys.Upper(name), out var bytes) ? Codec.Deserialize<FlagRecord>(bytes) : null)
-			.Where(flag => flag is not null)
-			.Select(flag => MapFlag(flag!));
+	internal IEnumerable<SharpObjectFlag> ReadObjectFlags(ITx tx, long dbref)
+		=> ReadObjectFlagRecords(tx, dbref).Select(MapFlag);
+
+	/// <summary><see cref="ReadObjectFlags"/> without mapping each definition to a Library model.</summary>
+	internal IEnumerable<FlagRecord> ReadObjectFlagRecords(ITx tx, long dbref)
+	{
+		var definitions = FlagDefinitions(tx);
+		return tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref))
+			.Select(v => definitions.ByStoredName(Keys.ReadStr(v).ToUpperInvariant()))
+			.OfType<FlagRecord>();
+	}
 
 	/// <summary>Every power assigned to <paramref name="dbref"/>, resolved through <see cref="Tables.Power"/>, same
 	/// stale-edge handling as <see cref="ReadObjectFlags"/>.</summary>
-	internal static IEnumerable<SharpPower> ReadObjectPowers(ITx tx, long dbref)
-		=> tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadStr(v))
-			.Select(name => tx.TryGet(Tables.Power, Keys.Upper(name), out var bytes) ? Codec.Deserialize<PowerRecord>(bytes) : null)
-			.Where(power => power is not null)
-			.Select(power => MapPower(power!));
-
-	/// <summary>Exact case-insensitive name match first (the common case, one point lookup); falls back to a scan of
-	/// the whole table (~60 rows) for a case-insensitive alias match.</summary>
-	private static FlagRecord? FindFlagRecord(ITx tx, string name)
+	internal IEnumerable<SharpPower> ReadObjectPowers(ITx tx, long dbref)
 	{
-		// LMDB rejects empty keys; an empty flag name cannot match a definition.
-		if (string.IsNullOrEmpty(name)) return null;
-
-		if (tx.TryGet(Tables.Flag, Keys.Upper(name), out var bytes))
-		{
-			return Codec.Deserialize<FlagRecord>(bytes);
-		}
-
-		return tx.Range(Tables.Flag, [])
-			.Select(entry => Codec.Deserialize<FlagRecord>(entry.Value))
-			.FirstOrDefault(record => record.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)));
+		var definitions = PowerDefinitions(tx);
+		return tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(dbref))
+			.Select(v => definitions.ByStoredName(Keys.ReadStr(v).ToUpperInvariant()))
+			.OfType<PowerRecord>()
+			.Select(MapPower);
 	}
+
+	/// <summary>Exact case-insensitive name match first (the common case); falls back to a case-insensitive alias
+	/// match, the first definition in key order listing it.</summary>
+	private static FlagRecord? FindFlagRecord(DefinitionMap<FlagRecord> definitions, string name)
+		=> string.IsNullOrEmpty(name) ? null : definitions.ByName(name) ?? definitions.ByAlias(name);
 
 	private static bool HasMembershipEdge(TableDef forward, ITx tx, long dbref, string name)
 	{

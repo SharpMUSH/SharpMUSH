@@ -105,22 +105,28 @@ public partial class LightningDatabase
 	/// a pattern that is slow on every name stops when the evaluation's time is up rather than after
 	/// a fresh timeout per row.
 	/// </para>
+	/// <para>
+	/// The match runs when the consumer reaches the row, never ahead of it, so the budget and the
+	/// per-match timeout are judged at the moment the row is asked for. That is also why the eager form
+	/// reads a value only after its name has matched, in a point read of its own: reading values with the
+	/// page would copy the body of every candidate under the prefix, and a broad prefix with few matches
+	/// would pay for all of them. Flags resolve through the in-memory definitions.
+	/// </para>
 	/// </summary>
 	private async IAsyncEnumerable<SharpAttribute> ScanAttributesCoreAsync(DBRef dbref, string literalPrefix, Regex filter,
 		[EnumeratorCancellation] CancellationToken ct)
 	{
 		var n = (long)dbref.Number;
-		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
+		await foreach (var (key, meta) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
-			ReadStats.MetaRowRead();
-			var longName = Keys.ParseAttr(key).LongName;
-			if (!NameMatches(filter, longName, ct))
+			if (MatchingRow(key, filter, ct) is not { } longName)
 			{
 				continue;
 			}
 
-			var meta = Codec.Deserialize<AttrMetaRecord>(value);
-			yield return Store.Read(tx => HydrateAttribute(tx, n, longName, meta, ReadAttributeValue(tx, n, longName)));
+			var value = Store.Read(tx => tx.TryGet(Tables.AttrVal, key, out var body) ? body : null);
+			ReadStats.ValueRead(value?.Length ?? 0);
+			yield return HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(meta), value);
 		}
 	}
 
@@ -131,16 +137,22 @@ public partial class LightningDatabase
 		var n = (long)dbref.Number;
 		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
-			ReadStats.MetaRowRead();
-			var longName = Keys.ParseAttr(key).LongName;
-			if (!NameMatches(filter, longName, ct))
+			if (MatchingRow(key, filter, ct) is not { } longName)
 			{
 				continue;
 			}
 
-			var meta = Codec.Deserialize<AttrMetaRecord>(value);
-			yield return Store.Read(tx => HydrateLazyAttribute(tx, n, longName, meta));
+			yield return HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(value));
 		}
+	}
+
+	/// <summary>One <c>attr.meta</c> row of a pattern scan: counted, then its long name when
+	/// <paramref name="filter"/> admits it (see <see cref="NameMatches"/>), otherwise null.</summary>
+	private string? MatchingRow(byte[] key, Regex filter, CancellationToken ct)
+	{
+		ReadStats.MetaRowRead();
+		var longName = Keys.ParseAttr(key).LongName;
+		return NameMatches(filter, longName, ct) ? longName : null;
 	}
 
 	/// <summary>
@@ -196,7 +208,7 @@ public partial class LightningDatabase
 		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
 	{
 		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent) is { } hit
-			? BuildInheritanceHit(tx, hit, HydrateLazyAttribute,
+			? BuildInheritanceHit(tx, hit, (readTx, owner, longName, meta) => HydrateLazyAttribute(readTx, owner, longName, meta),
 				static a => a.Flags,
 				static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags))
 			: null);
@@ -459,23 +471,17 @@ public partial class LightningDatabase
 	}
 
 	public ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken cancellationToken = default)
-		=> new(Store.Read(tx => tx.TryGet(Tables.AttrFlag, Keys.Upper(flagName), out var bytes)
-			? MapAttributeFlag(Codec.Deserialize<AttributeFlagRecord>(bytes))
-			: null));
+		=> new(AttributeFlagDefinitions().ByName(flagName) is { } record ? MapAttributeFlag(record) : null);
 
 	public IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpAttributeFlag>(GetAttributeFlagsCoreAsync);
 
 	private async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		var flags = Store.Read(tx => tx.Range(Tables.AttrFlag, [])
-			.Select(entry => MapAttributeFlag(Codec.Deserialize<AttributeFlagRecord>(entry.Value)))
-			.ToList());
-
-		foreach (var flag in flags)
+		foreach (var record in AttributeFlagDefinitions().Ordered)
 		{
 			ct.ThrowIfCancellationRequested();
-			yield return flag;
+			yield return MapAttributeFlag(record);
 		}
 	}
 
@@ -674,9 +680,12 @@ public partial class LightningDatabase
 	/// <see cref="Tables.AttrFlag"/> (dropping a name whose definition is gone) and the test then looks for
 	/// a resolved flag named <c>no_inherit</c>.
 	/// </summary>
-	private static bool IsNoInheritMeta(ITx tx, AttrMetaRecord meta)
-		=> meta.Flags.Any(name => tx.TryGet(Tables.AttrFlag, Keys.Upper(name), out var bytes)
-			&& Codec.Deserialize<AttributeFlagRecord>(bytes).Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+	private bool IsNoInheritMeta(ITx tx, AttrMetaRecord meta)
+	{
+		var definitions = AttributeFlagDefinitions(tx);
+		return meta.Flags.Any(name => definitions.ByName(name) is { } record
+			&& record.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
+	}
 
 	/// <summary>
 	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
@@ -737,11 +746,16 @@ public partial class LightningDatabase
 	/// because the row is already open.
 	/// </summary>
 	internal SharpAttribute HydrateAttribute(ITx tx, long dbref, string longName, AttrMetaRecord meta, byte[]? value)
+		=> HydrateAttribute(AttributeFlagDefinitions(tx), dbref, longName, meta, value);
+
+	/// <inheritdoc cref="HydrateAttribute(ITx, long, string, AttrMetaRecord, byte[])"/>
+	private SharpAttribute HydrateAttribute(DefinitionMap<AttributeFlagRecord> flagDefinitions, long dbref, string longName,
+		AttrMetaRecord meta, byte[]? value)
 		=> new(
 			AttributeIdOf(dbref, longName),
 			AttributeKeyOf(dbref, longName),
 			LeafNameOf(longName),
-			ReadAttributeFlags(tx, meta.Flags),
+			ReadAttributeFlags(flagDefinitions, meta.Flags),
 			null,
 			longName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(_ => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(
@@ -754,11 +768,16 @@ public partial class LightningDatabase
 
 	/// <inheritdoc cref="HydrateAttribute"/>
 	internal LazySharpAttribute HydrateLazyAttribute(ITx tx, long dbref, string longName, AttrMetaRecord meta)
+		=> HydrateLazyAttribute(AttributeFlagDefinitions(tx), dbref, longName, meta);
+
+	/// <inheritdoc cref="HydrateAttribute(ITx, long, string, AttrMetaRecord, byte[])"/>
+	private LazySharpAttribute HydrateLazyAttribute(DefinitionMap<AttributeFlagRecord> flagDefinitions, long dbref, string longName,
+		AttrMetaRecord meta)
 		=> new(
 			AttributeIdOf(dbref, longName),
 			AttributeKeyOf(dbref, longName),
 			LeafNameOf(longName),
-			ReadAttributeFlags(tx, meta.Flags),
+			ReadAttributeFlags(flagDefinitions, meta.Flags),
 			null,
 			longName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(_ => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(
@@ -783,11 +802,8 @@ public partial class LightningDatabase
 
 	/// <summary>Resolves stored flag names through <see cref="Tables.AttrFlag"/>; a name whose definition
 	/// has since been deleted is dropped rather than surfaced as null, matching <c>ReadObjectFlags</c>.</summary>
-	private static SharpAttributeFlag[] ReadAttributeFlags(ITx tx, string[] names)
-		=> [.. names
-			.Select(name => tx.TryGet(Tables.AttrFlag, Keys.Upper(name), out var bytes) ? Codec.Deserialize<AttributeFlagRecord>(bytes) : null)
-			.Where(record => record is not null)
-			.Select(record => MapAttributeFlag(record!))];
+	private static SharpAttributeFlag[] ReadAttributeFlags(DefinitionMap<AttributeFlagRecord> definitions, string[] names)
+		=> names.Length == 0 ? [] : [.. names.Select(definitions.ByName).OfType<AttributeFlagRecord>().Select(MapAttributeFlag)];
 
 	private SharpPlayer? LoadAttributeOwner(long? owner)
 	{
@@ -918,25 +934,19 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>Every attribute of an object, in preorder — which is simply key order.</summary>
-	internal async IAsyncEnumerable<SharpAttribute> AllAttributesCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), ct: ct))
+	/// <remarks>Hydrated inside each page's own transaction, as <see cref="ScanAttributesCoreAsync"/> is.</remarks>
+	internal IAsyncEnumerable<SharpAttribute> AllAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> Store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
 		{
 			var longName = Keys.ParseAttr(key).LongName;
-			var meta = Codec.Deserialize<AttrMetaRecord>(value);
-			yield return Store.Read(tx => HydrateAttribute(tx, dbref, longName, meta, ReadAttributeValue(tx, dbref, longName)));
-		}
-	}
+			return HydrateAttribute(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(value), ReadAttributeValue(tx, dbref, longName));
+		}, ct: ct);
 
 	/// <inheritdoc cref="AllAttributesCoreAsync"/>
-	internal async IAsyncEnumerable<LazySharpAttribute> AllLazyAttributesCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), ct: ct))
-		{
-			var longName = Keys.ParseAttr(key).LongName;
-			yield return Store.Read(tx => HydrateLazyAttribute(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(value)));
-		}
-	}
+	internal IAsyncEnumerable<LazySharpAttribute> AllLazyAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> Store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref),
+			(tx, key, value) => HydrateLazyAttribute(tx, dbref, Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value)),
+			ct: ct);
 
 	private static bool HasChildren(ITx tx, long dbref, string longName)
 		=> tx.Range(Tables.AttrMeta, Keys.Attr(dbref, longName + "`")).Any();

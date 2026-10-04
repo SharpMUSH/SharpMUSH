@@ -53,6 +53,56 @@ public class MailReadIndexTests : LightningDatabaseFixture
 			? Keys.ReadDbref(v)
 			: 0);
 
+	/// <summary>
+	/// The summary listing reports what the full listing does, message for message, and never decodes a
+	/// body: a row whose body is not even a string still lists, while the full read of it throws.
+	/// </summary>
+	[Test]
+	public async Task SummariesMatchTheFullListingWithoutDecodingBodies()
+	{
+		var sender = await NewPlayer("SumSender");
+		var other = await NewPlayer("SumOther");
+		var to = await NewPlayer("SumRecipient");
+		var ids = new List<string>
+		{
+			await Send(sender, to, "first"),
+			await Send(other, to, "elsewhere", "WORK"),
+			await Send(other, to, "second"),
+			await Send(sender, to, "third")
+		};
+		await Db.UpdateMailAsync(ids[2], MailUpdate.ReadEdit(true));
+		await Db.DeleteMailAsync(ids[0]);
+
+		var full = await Db.GetIncomingMailsAsync(to, "INBOX").ToListAsync();
+		var summaries = await Db.GetIncomingMailSummariesAsync(to, "INBOX").ToListAsync();
+
+		await Assert.That(summaries.Select(m => m.Id)).IsEquivalentTo(full.Select(m => m.Id!), CollectionOrdering.Matching);
+		for (var i = 0; i < full.Count; i++)
+		{
+			var name = (await full[i].From.WithCancellation(CancellationToken.None)).Object()?.Name;
+			await Assert.That(summaries[i]).IsEqualTo(new MailSummary(full[i].Id!, full[i].DateSent, full[i].Read, full[i].Urgent,
+				full[i].Folder, summaries[i].Subject, name));
+			await Assert.That(summaries[i].Subject.ToPlainText()).IsEqualTo(full[i].Subject.ToPlainText());
+		}
+
+		await Assert.That(summaries.Select(m => m.SenderName ?? "")).IsEquivalentTo(["SumOther", "SumSender"], CollectionOrdering.Matching);
+		await Assert.That(summaries[0].Read).IsTrue();
+
+		var key = Keys.Dbref(long.Parse(ids[3].Split('/')[1]));
+		await Db.Store.WriteAsync(tx =>
+		{
+			tx.TryGet(Tables.Mail, key, out var bytes);
+			var row = System.Text.Json.Nodes.JsonNode.Parse(bytes)!.AsObject();
+			var content = row.First(p => p.Key.Equals("Content", StringComparison.OrdinalIgnoreCase)).Key;
+			row[content] = new System.Text.Json.Nodes.JsonObject { ["not"] = "a body" };
+			tx.Put(Tables.Mail, key, System.Text.Encoding.UTF8.GetBytes(row.ToJsonString()));
+		});
+
+		await Assert.That(async () => await Db.GetIncomingMailsAsync(to, "INBOX").ToListAsync()).Throws<Exception>();
+		await Assert.That((await Db.GetIncomingMailSummariesAsync(to, "INBOX").ToListAsync()).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["second", "third"], CollectionOrdering.Matching);
+	}
+
 	[Test]
 	public async Task OrdinalsFollowMovesAndDeletes()
 	{

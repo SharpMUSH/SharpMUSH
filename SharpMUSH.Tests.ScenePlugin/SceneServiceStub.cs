@@ -22,6 +22,7 @@ internal abstract class SceneServiceStub : ISceneService
 	public virtual Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref, string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePose>> GetPoseAsync(string poseId) => throw new NotSupportedException();
 	public virtual Task<Found<IReadOnlyList<ScenePose>>> GetPosesAsync(string sceneId, string? authorDbref = null, int? count = null) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content) => throw new NotSupportedException();
 	public virtual Task<FoundResult<ScenePose>> UndoPoseAsync(string poseId) => throw new NotSupportedException();

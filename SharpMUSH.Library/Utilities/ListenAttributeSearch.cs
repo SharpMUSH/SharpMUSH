@@ -61,7 +61,7 @@ public sealed class ListenAttributeSearch
 			if (await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken) is not AnySharpObject current
 				|| !_visited.Add(current.Object().DBRef)) break;
 			var attributes = await mediator.Send(new GetListenAttributeSnapshotQuery(current.Object().DBRef), cancellationToken);
-			result.AddRange(Compile(Visible(attributes, inherited || depth != 0, cancellationToken), cancellationToken));
+			CompileInto(result, Visible(attributes, inherited || depth != 0, cancellationToken), cancellationToken);
 			if (depth == maxParents) break;
 			if (await current.Object().Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) break;
 			reference = parent.Object().DBRef;
@@ -74,6 +74,13 @@ public sealed class ListenAttributeSearch
 	public static ListenAttributeCache[] Compile(IEnumerable<SharpAttribute> attributes, CancellationToken cancellationToken = default)
 	{
 		var result = new List<ListenAttributeCache>();
+		CompileInto(result, attributes, cancellationToken);
+		return [.. result];
+	}
+
+	private static void CompileInto(List<ListenAttributeCache> result, IEnumerable<SharpAttribute> attributes,
+		CancellationToken cancellationToken)
+	{
 		foreach (var attribute in attributes)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -93,6 +100,5 @@ public sealed class ListenAttributeSearch
 			}
 			catch (ArgumentException) { /* An invalid definition still shadows farther definitions. */ }
 		}
-		return [.. result];
 	}
 }

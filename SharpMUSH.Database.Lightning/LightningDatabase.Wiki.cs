@@ -130,6 +130,7 @@ public partial class LightningDatabase : IWikiStore
 		// MapWikiPage turns an empty category into none, and no listing matches none.
 		if (!string.IsNullOrEmpty(r.Category)) Apply(Tables.WikiByCategory, WikiLabelKey(r.Category, pageKey, r));
 		foreach (var tag in WikiIndexTags(r)) Apply(Tables.WikiByTag, WikiLabelKey(tag, pageKey, r));
+		if (r.IsProtected) Apply(Tables.WikiProtected, WikiPageKey(pageKey));
 
 		void Apply(TableDef table, byte[] key)
 		{
@@ -330,6 +331,20 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult(Store.Read(tx => WikiNamespaceEntries(tx, ns)
 			.Count(entry => includeDrafts || entry.Value[0] == 1)));
 
+	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+		=> Task.FromResult(Store.Read(tx =>
+		{
+			int published = 0, drafts = 0;
+			foreach (var (_, value) in tx.Range(Tables.WikiByNamespace, []))
+			{
+				if (value[0] == 1) published++;
+				else if (includeDrafts) drafts++;
+			}
+
+			var isProtected = tx.Range(Tables.WikiProtected, []).Count(entry => includeDrafts || entry.Value[0] == 1);
+			return new WikiPageCounts(published, drafts, isProtected);
+		}));
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
 			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
@@ -427,8 +442,7 @@ public partial class LightningDatabase : IWikiStore
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
-			tx.Put(Tables.WikiPage, WikiPageKey(found.Key),
-				Codec.Serialize(found.Record with { IsProtected = isProtected }));
+			PutWikiPage(tx, found.Key, found.Record, found.Record with { IsProtected = isProtected });
 			return new None();
 		});
 

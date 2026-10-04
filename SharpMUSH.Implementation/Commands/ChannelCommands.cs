@@ -83,7 +83,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 
 		// extchat.c:1553 — the same rule @cemit answers to, from the same helper.
 		if (ChannelHelper.OpenChannelRefusal(channel, maybeMemberStatus) is { } refusalToSpeak)
@@ -159,7 +159,7 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> AddComAsync(AnySharpObject executor, string alias, SharpChannel channel)
 	{
-		var isMember = await ChannelHelper.IsMemberOfChannel(executor, channel);
+		var isMember = await ChannelHelper.IsMemberOfChannel(Mediator, executor, channel);
 		if (!isMember)
 		{
 			// addcom joins the channel, so it answers to the same join gate as @channel/on.
@@ -279,7 +279,6 @@ public partial class Commands
 			ChannelPermissions,
 			Mediator,
 			NotifyService,
-			ConnectionService,
 			MarkupText.Empty,
 			MarkupText.Empty,
 			switches);
@@ -426,7 +425,7 @@ public partial class Commands
 			// /list, /recall and /decompile combine with other switches (`@channel/list/on/quiet`), so they
 			// match on membership rather than on a positional list pattern that only fires when they are last.
 			_ when switches.Contains("LIST") => await ChannelCommand.ChannelList.Handle(parser, LocateService,
-				ChannelPermissions, Mediator, NotifyService, ConnectionService, emptyIfMissing0, emptyIfMissing1,
+				ChannelPermissions, Mediator, NotifyService, emptyIfMissing0, emptyIfMissing1,
 				switches),
 			// CB.RSArgs comma-splits the right-hand side, so `@channel/recall <chan>=<lines>,<start>` arrives
 			// as two arguments — PennMUSH reads the same pair out of its lineinfo array (src/extchat.c:4008).

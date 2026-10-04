@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -35,24 +34,13 @@ internal static class ObjectStatsHelpers
 	}
 
 	/// <summary>
-	/// One pass over the database — or over one owner's objects, when
-	/// <paramref name="owner"/> is given rather than PennMUSH's <c>ANY_OWNER</c>.
+	/// The whole database — or one owner's objects, when <paramref name="owner"/> is given rather than
+	/// PennMUSH's <c>ANY_OWNER</c> — counted by the store from its type and owner indexes.
 	/// </summary>
 	public static async ValueTask<ObjectCounts> CountAsync(IMediator mediator, DBRef? owner)
 	{
-		var countByType = new Dictionary<string, int>();
-		var query = new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = owner });
-		await foreach (var obj in mediator.CreateStream(query))
-		{
-			CollectionsMarshal.GetValueRefOrAddDefault(countByType, obj.Type, out _)++;
-		}
-
-		var rooms = countByType.GetValueOrDefault("ROOM");
-		var exits = countByType.GetValueOrDefault("EXIT");
-		var things = countByType.GetValueOrDefault("THING");
-		var players = countByType.GetValueOrDefault("PLAYER");
-
-		return new ObjectCounts(rooms + exits + things + players, rooms, exits, things, players);
+		var counts = await mediator.Send(new GetObjectTypeCountsQuery(owner));
+		return new ObjectCounts(counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players);
 	}
 
 	/// <summary>

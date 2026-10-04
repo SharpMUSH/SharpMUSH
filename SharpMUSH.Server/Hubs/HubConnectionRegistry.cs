@@ -43,8 +43,18 @@ public sealed class HubConnectionRegistry
 			if (_connections.TryUpdate(connectionId, entry with { Subscription = null }, entry)) return;
 	}
 
-	public IReadOnlyList<RoomSubscription> Subscribers(DBRef room) => _connections.Values
-		.Where(entry => entry.Subscription?.Room == room).Select(entry => entry.Subscription!).ToArray();
+	/// <summary>
+	/// The connections subscribed to <paramref name="room"/>. Enumerates the dictionary itself rather than
+	/// <c>Values</c>, which takes every bucket lock and copies every connection on each room event; the
+	/// enumeration is not a point-in-time snapshot, which <see cref="IsCurrent"/> re-checks per delivery anyway.
+	/// </summary>
+	public IReadOnlyList<RoomSubscription> Subscribers(DBRef room)
+	{
+		var subscribers = new List<RoomSubscription>();
+		foreach (var (_, entry) in _connections)
+			if (entry.Subscription is { } subscription && subscription.Room == room) subscribers.Add(subscription);
+		return subscribers;
+	}
 
 	public bool IsCurrent(RoomSubscription subscription) => _connections.TryGetValue(subscription.ConnectionId, out var entry)
 		&& entry.Subscription == subscription;

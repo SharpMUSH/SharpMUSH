@@ -50,6 +50,64 @@ public class MailControllerTests
 		return controller;
 	}
 
+	private static MailController CreateReadController(IMediator mediator)
+	{
+		var reader = new TestObjectFactory().CreatePlayer(Actor.Number, "Reader").Expect<SharpPlayer>();
+		var projection = Substitute.For<IVisibleWorldProjection>();
+		projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(reader);
+		return new MailController(mediator, Substitute.For<IEngineCommandInvoker>(), projection, NullLogger<MailController>.Instance)
+		{
+			ControllerContext = new ControllerContext
+			{
+				HttpContext = new DefaultHttpContext
+				{
+					User = new ClaimsPrincipal(new ClaimsIdentity(
+						[new Claim(ClaimTypes.NameIdentifier, "account"), new Claim(GameHub.CharacterDbrefClaim, Actor.ToString())], "Test"))
+				}
+			}
+		};
+	}
+
+	/// <summary>
+	/// The folder list comes from the folder index, not from decoding the mailbox: INBOX is always
+	/// offered, names are de-duplicated without regard to case, and the list is sorted the same way.
+	/// </summary>
+	[Test]
+	public async Task FoldersComeFromTheFolderIndexWithInboxAndCaseInsensitiveSort()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailFoldersQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<string[]>(["work", "Archive", "inbox"]));
+
+		var result = await CreateReadController(mediator).Folders(CancellationToken.None);
+
+		await Assert.That(result.Value!).IsEquivalentTo(["Archive", "INBOX", "work"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		mediator.DidNotReceive().CreateStream(Arg.Any<SharpMUSH.Library.Queries.Database.GetAllMailListQuery>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task ListNumbersSummariesAndNamesAGoneSenderUnknown()
+	{
+		var mediator = Substitute.For<IMediator>();
+		var sent = DateTimeOffset.UnixEpoch;
+		mediator.CreateStream(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailSummaryListQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new[]
+			{
+				new MailSummary("Mail/1", sent, true, false, "INBOX", MarkupString.MarkupText.Plain("hello"), "Wren"),
+				new MailSummary("Mail/4", sent, false, true, "INBOX", MarkupString.MarkupText.Plain("gone"), null)
+			}.ToAsyncEnumerable());
+
+		var result = await CreateReadController(mediator).List(null!, CancellationToken.None);
+
+		await Assert.That(result.Value!).IsEquivalentTo(new[]
+		{
+			new MailController.MailSummaryDto(1, "Wren", "hello", sent, true, false, "INBOX"),
+			new MailController.MailSummaryDto(2, "(unknown)", "gone", sent, false, true, "INBOX")
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		mediator.Received(1).CreateStream(
+			Arg.Is<SharpMUSH.Library.Queries.Database.GetMailSummaryListQuery>(q => q.Folder == "INBOX"), Arg.Any<CancellationToken>());
+	}
+
 	private static IEngineCommandInvoker InvokerReturning(string? message)
 	{
 		var invoker = Substitute.For<IEngineCommandInvoker>();

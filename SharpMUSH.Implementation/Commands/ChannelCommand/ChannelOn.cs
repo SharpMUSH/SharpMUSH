@@ -76,7 +76,7 @@ public static class ChannelOn
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (await ChannelHelper.IsMemberOfChannel(target, channel))
+		if (await ChannelHelper.IsMemberOfChannel(Mediator, target, channel))
 		{
 			var alreadyOn = string.Format(ErrorMessages.Notifications.ChatTargetAlreadyOnChannel,
 				target.Object().Name, channelLabel);

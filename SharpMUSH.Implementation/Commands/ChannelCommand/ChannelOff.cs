@@ -74,7 +74,7 @@ public static class ChannelOff
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (!await ChannelHelper.IsMemberOfChannel(target, channel))
+		if (!await ChannelHelper.IsMemberOfChannel(Mediator, target, channel))
 		{
 			var notOn = string.Format(ErrorMessages.Notifications.ChatTargetNotOnChannel,
 				target.Object().Name, channelLabel);

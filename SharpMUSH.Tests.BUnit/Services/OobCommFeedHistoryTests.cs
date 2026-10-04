@@ -55,6 +55,8 @@ public class OobCommFeedHistoryTests
 		await Assert.That(feed.Messages("Public").Select(m => m.Text)).IsEquivalentTo(new[] { "one" });
 		await Assert.That(feed.Messages("Public").Single().Id).IsEqualTo(5);
 		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(0).Because("a line already held is not news");
+		await Assert.That(history.RecallLines.Distinct()).IsEquivalentTo(new[] { OobCommFeed.HistoryLimit })
+			.Because("the feed keeps that many lines, so it asks the server for no more");
 	}
 
 	/// <summary>A resumed connection replays what it missed; a line the feed already has is not counted twice.</summary>

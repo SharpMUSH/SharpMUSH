@@ -159,7 +159,15 @@
 
     protected override Task OnParametersSetAsync() => LoadAsync();
 
-    public void Dispose() => _reload.Dispose();
+    public void Dispose()
+    {
+        _reload.Dispose();
+        _stream?.Cancel();
+        _stream?.Dispose();
+    }
+
+    /// <summary>Cancels the previous load's pose stream when the scene is read again or the page goes away.</summary>
+    private CancellationTokenSource? _stream;
 
     private async Task LoadAsync()
     {
@@ -189,13 +197,43 @@
                 return;
         }
 
-        var poses = await SceneService.GetPosesAsync(Id);
-        if (!_reload.IsCurrent(ticket)) return;
-        (_poses, _posesError) = poses switch
+        // The header and details render now; the log fills in batch by batch as the server streams it.
+        _loading = false;
+        _stream?.Cancel();
+        _stream?.Dispose();
+        var stream = _stream = new CancellationTokenSource();
+        var poses = new List<ScenePoseView>();
+        _poses = poses;
+        ApiResult<SharpMUSH.Library.DiscriminatedUnions.Success> streamed;
+        try
         {
-            IReadOnlyList<ScenePoseView> read => (read, (string?)null),
-            ApiFailure failure => ([], failure.Message),
-        };
+            streamed = await SceneService.StreamPosesAsync(Id, batch =>
+            {
+                if (!_reload.IsCurrent(ticket)) return Task.CompletedTask;
+                poses.AddRange(batch);
+                RefreshChips();
+                StateHasChanged();
+                return Task.CompletedTask;
+            }, stream.Token);
+        }
+        catch (OperationCanceledException) when (stream.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!_reload.IsCurrent(ticket)) return;
+        if (streamed is ApiFailure streamFailure)
+        {
+            _poses = [];
+            _posesError = streamFailure.Message;
+        }
+
+        // Once more over the whole log, so the chips are right however the batches fell.
+        RefreshChips();
+    }
+
+    private void RefreshChips()
+    {
         _allTags = _poses
             .SelectMany(p => p.Tags)
             .Where(t => !string.IsNullOrWhiteSpace(t))
@@ -207,7 +245,6 @@
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        _loading = false;
     }
 
     private void SetTag(string tag) => _activeTag = tag == AllTags ? null : tag;

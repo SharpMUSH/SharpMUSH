@@ -381,6 +381,57 @@ public partial class LightningDatabase
 	public ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult((int)Store.Count(Tables.Obj));
 
+	public ValueTask<int> GetChildCountAsync(DBRef parent, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(CountEdges(Tables.Parent.Reverse, Keys.Dbref(parent.Number), $"Child count for {parent}"));
+
+	public async ValueTask<ObjectTypeCounts> GetObjectTypeCountsAsync(DBRef? owner, CancellationToken cancellationToken = default)
+	{
+		if (owner is not { } ownerRef)
+		{
+			// The type index holds one entry per object under its type, so each figure is one duplicate count.
+			return Store.Read(tx =>
+			{
+				int Count(string type) => CountEdges(tx, Tables.ObjType, ObjTypeKey(type), $"{type} count");
+				return new ObjectTypeCounts(Count(DatabaseConstants.TypeRoom), Count(DatabaseConstants.TypeExit),
+					Count(DatabaseConstants.TypeThing), Count(DatabaseConstants.TypePlayer));
+			});
+		}
+
+		// One owner's objects come from the owner index, each checked against its forward edge as the owner
+		// search filter does, and paged like it.
+		var ownerNumber = (long)ownerRef.Number;
+		int rooms = 0, exits = 0, things = 0, players = 0;
+		await foreach (var (_, record) in IndexedObjectsAsync(Tables.Owner.Reverse, Keys.Dbref(ownerNumber), null, null,
+			(tx, dbref, _) => GetSingleEdge(tx, Tables.Owner.Forward, dbref) == ownerNumber, cancellationToken))
+		{
+			switch (record.Type)
+			{
+				case DatabaseConstants.TypeRoom: rooms++; break;
+				case DatabaseConstants.TypeExit: exits++; break;
+				case DatabaseConstants.TypeThing: things++; break;
+				case DatabaseConstants.TypePlayer: players++; break;
+			}
+		}
+
+		return new ObjectTypeCounts(rooms, exits, things, players);
+	}
+
+	public ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read(tx => HighestKey(tx, Tables.Obj)) switch
+		{
+			< 0 => (Found<int>)new NotFound(),
+			var highest => (Found<int>)(int)highest
+		});
+
+	private int CountEdges(TableDef table, byte[] key, string what) => Store.Read(tx => CountEdges(tx, table, key, what));
+
+	/// <summary>A duplicate count, or the failure LMDB reported, thrown: a count that could not be taken is not zero.</summary>
+	private static int CountEdges(ITx tx, TableDef table, byte[] key, string what) => tx.CountDups(table, key) switch
+	{
+		long count => (int)count,
+		Error<string> error => throw new InvalidOperationException($"{what} failed: {error.Value}")
+	};
+
 	#endregion
 
 	#region Object Retrieval
@@ -520,13 +571,15 @@ public partial class LightningDatabase
 
 	/// <summary>The reverse index with the fewest entries among those the filter's predicates can seed from;
 	/// null when none of them applies.</summary>
-	private static (TableDef Table, byte[] Key)? ChooseFilterSeed(ITx tx, ObjectSearchFilter filter)
+	private (TableDef Table, byte[] Key)? ChooseFilterSeed(ITx tx, ObjectSearchFilter filter)
 	{
 		var seeds = new List<(TableDef Table, byte[] Key)>();
 		if (filter.Owner is { } owner) seeds.Add((Tables.Owner.Reverse, Keys.Dbref(owner.Number)));
 		if (filter.Zone is { } zone) seeds.Add((Tables.Zone.Reverse, Keys.Dbref(zone.Number)));
 		if (filter.Parent is { } parent) seeds.Add((Tables.Parent.Reverse, Keys.Dbref(parent.Number)));
 		if (filter.Types is [var type]) seeds.Add((Tables.ObjType, ObjTypeKey(type)));
+		if (FlagIndexSeed(tx, filter.HasFlag) is { } flagKey) seeds.Add((Tables.ObjFlag.Reverse, flagKey));
+		if (PowerIndexSeed(tx, filter.HasPower) is { } powerKey) seeds.Add((Tables.ObjPower.Reverse, powerKey));
 		if (seeds.Count == 0) return null;
 
 		return seeds.MinBy(seed => tx.CountDups(seed.Table, seed.Key) switch
@@ -536,33 +589,109 @@ public partial class LightningDatabase
 		});
 	}
 
-	/// <summary>The unseeded path: <see cref="Tables.Obj"/> from <c>MinDbRef</c> to <c>MaxDbRef</c>.</summary>
+	/// <summary>
+	/// The <see cref="Tables.ObjFlag"/> reverse key a <c>HasFlag</c> predicate can seed from: the one definition
+	/// whose name or alias it is, or — when no definition answers to it — the name itself, under which no current
+	/// flag is filed. Null (no seed) when the predicate is absent, when it names an object type (the type-named
+	/// flag every object carries is not an edge), or when several definitions answer to it.
+	/// </summary>
+	private byte[]? FlagIndexSeed(ITx tx, string? hasFlag)
+	{
+		if (string.IsNullOrEmpty(hasFlag) || IsObjectTypeName(hasFlag))
+		{
+			return null;
+		}
+
+		var answering = FlagDefinitions(tx).Ordered
+			.Where(flag => string.Equals(flag.Name, hasFlag, StringComparison.OrdinalIgnoreCase)
+				|| flag.Aliases.Any(alias => string.Equals(alias, hasFlag, StringComparison.OrdinalIgnoreCase)))
+			.Take(2)
+			.ToList();
+		return answering switch
+		{
+			[] => Keys.Upper(hasFlag),
+			[var only] => Keys.Upper(only.Name),
+			_ => null
+		};
+	}
+
+	private static bool IsObjectTypeName(string name)
+		=> name.Equals(DatabaseConstants.TypePlayer, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeRoom, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeThing, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeExit, StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>As <see cref="FlagIndexSeed"/>, for <c>HasPower</c> over <see cref="Tables.ObjPower"/>.</summary>
+	private byte[]? PowerIndexSeed(ITx tx, string? hasPower)
+	{
+		if (string.IsNullOrEmpty(hasPower))
+		{
+			return null;
+		}
+
+		var answering = PowerDefinitions(tx).Ordered
+			.Where(power => string.Equals(power.Name, hasPower, StringComparison.OrdinalIgnoreCase)
+				|| power.AllAliases.Any(alias => string.Equals(alias, hasPower, StringComparison.OrdinalIgnoreCase)))
+			.Take(2)
+			.ToList();
+		return answering switch
+		{
+			[] => Keys.Upper(hasPower),
+			[var only] => Keys.Upper(only.Name),
+			_ => null
+		};
+	}
+
+	/// <summary>
+	/// The unseeded path: <see cref="Tables.Obj"/> from <c>MinDbRef</c> to <c>MaxDbRef</c>, a page of rows per read
+	/// transaction. Each row is decoded, and its type and edge predicates tested, inside the page's transaction;
+	/// the name predicate — softcode text, possibly a regex — is tested when the consumer reaches the row, so it
+	/// answers to the evaluation's budget at that moment and never runs inside a transaction. Pages are separate
+	/// snapshots, as in <see cref="IndexedObjectsAsync"/>.
+	/// </summary>
 	private async IAsyncEnumerable<(long Dbref, ObjectRecord Record)> ScannedObjectsAsync(ObjectSearchFilter filter,
 		[EnumeratorCancellation] CancellationToken ct)
 	{
-		var entries = filter.MinDbRef.HasValue
-			? Store.RangeFromKeyAsync(Tables.Obj, Keys.Dbref(filter.MinDbRef.Value), ct: ct)
-			: Store.RangeAsync(Tables.Obj, [], ct: ct);
-
-		// The row itself answers the type and name predicates; only the edge and flag/power ones need a
-		// transaction, so a search on name alone opens none per row.
+		const int pageSize = 256;
 		var needsEdges = NeedsEdgePredicates(filter);
-
-		await foreach (var (key, value) in entries.WithCancellation(ct))
+		byte[]? after = null;
+		while (true)
 		{
-			var dbref = Keys.ReadDbref(key);
-			if (filter.MaxDbRef.HasValue && dbref > filter.MaxDbRef.Value)
+			ct.ThrowIfCancellationRequested();
+			var resume = after;
+			var (page, last, read, pastMax) = Store.Read(tx =>
 			{
-				yield break;
+				var found = new List<(long, ObjectRecord)>();
+				byte[]? lastKey = null;
+				var count = 0;
+				var entries = resume is not null
+					? tx.RangeFrom(Tables.Obj, [], resume, null)
+					: filter.MinDbRef is { } min
+						? tx.RangeFromKey(Tables.Obj, Keys.Dbref(min))
+						: tx.Range(Tables.Obj, []);
+				foreach (var (key, value) in entries.Take(pageSize))
+				{
+					count++;
+					lastKey = key;
+					var dbref = Keys.ReadDbref(key);
+					if (filter.MaxDbRef.HasValue && dbref > filter.MaxDbRef.Value) return (found, lastKey, count, true);
+					var record = Codec.Deserialize<ObjectRecord>(value);
+					if (MatchesType(record, filter) && (!needsEdges || MatchesEdges(tx, dbref, record, filter))) found.Add((dbref, record));
+				}
+
+				return (found, lastKey, count, false);
+			});
+
+			foreach (var (dbref, record) in page)
+			{
+				if (MatchesName(record, filter))
+				{
+					yield return (dbref, record);
+				}
 			}
 
-			var record = Codec.Deserialize<ObjectRecord>(value);
-			if (!MatchesRecord(record, filter) || (needsEdges && !Store.Read(tx => MatchesEdges(tx, dbref, record, filter))))
-			{
-				continue;
-			}
-
-			yield return (dbref, record);
+			if (pastMax || read < pageSize || last is null) yield break;
+			after = last;
 		}
 	}
 
@@ -619,12 +748,15 @@ public partial class LightningDatabase
 	/// comment on <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
 	/// </summary>
 	private static bool MatchesRecord(ObjectRecord record, ObjectSearchFilter filter)
-	{
-		if (filter.Types is { Length: > 0 } types && !types.Contains(record.Type))
-		{
-			return false;
-		}
+		=> MatchesType(record, filter) && MatchesName(record, filter);
 
+	/// <summary>The type predicate of <see cref="MatchesRecord"/>.</summary>
+	private static bool MatchesType(ObjectRecord record, ObjectSearchFilter filter)
+		=> filter.Types is not { Length: > 0 } types || types.Contains(record.Type);
+
+	/// <summary>The name predicate of <see cref="MatchesRecord"/>.</summary>
+	private static bool MatchesName(ObjectRecord record, ObjectSearchFilter filter)
+	{
 		if (string.IsNullOrEmpty(filter.NamePattern))
 		{
 			return true;
@@ -655,7 +787,7 @@ public partial class LightningDatabase
 			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower);
 
 	/// <summary>The remaining predicates — owner, zone, parent, flag, power — each of which reads an edge table.</summary>
-	private static bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	private bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
 	{
 		if (filter.Owner.HasValue && GetSingleEdge(tx, Tables.Owner.Forward, dbref) != filter.Owner.Value.Number)
 		{
@@ -1171,21 +1303,8 @@ public partial class LightningDatabase
 			: Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	});
 
-	private async IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var children = Store.Read(tx => tx.Dups(Tables.Parent.Reverse, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(child => ReadObject(tx, child))
-			.Where(found => found is not null)
-			.Select(found => MapToSharpObject(found!.Value.Dbref, found.Value.Record))
-			.ToList());
-
-		foreach (var child in children)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return child;
-		}
-	}
+	private IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);
 
 	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(()
 		=> new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetFlagsCoreAsync(dbref, type, ct)));
@@ -1222,7 +1341,14 @@ public partial class LightningDatabase
 	/// names were canonical loads with one entry per lock under the spelling the gates read. See
 	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
 	/// </summary>
+	/// <remarks>Most objects carry no lock; they share one empty map (with the canonical comparer) rather than
+	/// each building its own.</remarks>
 	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
+		=> locks.Count == 0 ? NoLocks : FoldLocks(locks);
+
+	private static readonly IImmutableDictionary<string, SharpLockData> NoLocks = FoldLocks([]);
+
+	private static IImmutableDictionary<string, SharpLockData> FoldLocks(Dictionary<string, LockRecord> locks)
 		=> LockNames.FoldToImmutable(locks,
 			record => new SharpLockData(record.LockString,
 				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default,

@@ -98,85 +98,27 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpExit>(ct => GetEntrancesCoreAsync(destination.Number, ct));
 
-	private async IAsyncEnumerable<SharpExit> GetEntrancesCoreAsync(long destinationKey, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var exits = Store.Read(tx => tx.Dups(Tables.Home.Reverse, Keys.Dbref(destinationKey))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(key => ReadObject(tx, key))
-			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypeExit)
-			.Select(found => HydrateExit(found!.Value.Dbref, found.Value.Record))
-			.ToList());
-
-		foreach (var exit in exits)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return exit;
-		}
-	}
+	private IAsyncEnumerable<SharpExit> GetEntrancesCoreAsync(long destinationKey, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Home.Reverse, Keys.Dbref(destinationKey),
+			(tx, value) => ReadObject(tx, Keys.ReadDbref(value)) is { } found && found.Record.Type == DatabaseConstants.TypeExit
+				? HydrateExit(found.Dbref, found.Record)
+				: null,
+			ct: ct);
 
 	public IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<AnySharpContent>(ct => GetHomedAtCoreAsync(home.Number, ct));
 
-	private async IAsyncEnumerable<AnySharpContent> GetHomedAtCoreAsync(long homeKey, [EnumeratorCancellation] CancellationToken ct)
-	{
-		// Home.Reverse carries every object whose home edge points here, including rooms (a room reuses
-		// the edge for its drop-to). A drop-to is not a home, so rooms are dropped.
-		var contents = Store.Read(tx => tx.Dups(Tables.Home.Reverse, Keys.Dbref(homeKey))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(key => ReadObject(tx, key))
-			.Where(found => found is not null && found.Value.Record.Type != DatabaseConstants.TypeRoom)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsContent)
-			.ToList());
+	/// <remarks>Home.Reverse carries every object whose home edge points here, including rooms (a room reuses
+	/// the edge for its drop-to). A drop-to is not a home, so rooms are dropped.</remarks>
+	private IAsyncEnumerable<AnySharpContent> GetHomedAtCoreAsync(long homeKey, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Home.Reverse, Keys.Dbref(homeKey), ReadContent, ct: ct);
 
-		foreach (var content in contents)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return content;
-		}
-	}
-
-	public IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpObject>(ct => GetNearbyObjectsFromDbRefCoreAsync(obj, ct));
-
-	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsFromDbRefCoreAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct)
-	{
-		if (await GetObjectNodeAsync(obj, ct) is not AnySharpObject self)
-		{
-			yield break;
-		}
-
-		await foreach (var item in GetNearbyObjectsCoreAsync(self, ct))
-		{
-			yield return item;
-		}
-	}
-
-	public IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(AnySharpObject obj, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<AnySharpObject>(ct => GetNearbyObjectsCoreAsync(obj, ct));
-
-	/// <summary>Self, then the contents of self, then the contents of self's location (self excluded from the
-	/// second pass).</summary>
-	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsCoreAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var location = await obj.Where();
-
-		yield return obj;
-
-		await foreach (var item in GetContentsAsync(obj.Object().DBRef, ct))
-		{
-			yield return item.WithRoomOption();
-		}
-
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
-		{
-			if (item.Object().DBRef == obj.Object().DBRef)
-			{
-				continue;
-			}
-
-			yield return item.WithRoomOption();
-		}
-	}
+	/// <summary>The content an edge value names, or null when its object is gone or is a room — the mapping the
+	/// contents and homed-at reads share.</summary>
+	private AnySharpContent? ReadContent(ITx tx, byte[] value)
+		=> ReadObject(tx, Keys.ReadDbref(value)) is { } found && found.Record.Type != DatabaseConstants.TypeRoom
+			? Hydrate(found.Dbref, found.Record).AsContent
+			: null;
 
 	public ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default)
 	{
@@ -261,21 +203,10 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<AnySharpContent>(ct => GetContentsCoreAsync(node.Object().Key, ct));
 
-	private async IAsyncEnumerable<AnySharpContent> GetContentsCoreAsync(long containerKey, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var contents = Store.Read(tx => tx.Dups(Tables.Location.Reverse, Keys.Dbref(containerKey))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(key => ReadObject(tx, key))
-			.Where(found => found is not null && found.Value.Record.Type != DatabaseConstants.TypeRoom)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsContent)
-			.ToList());
-
-		foreach (var content in contents)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return content;
-		}
-	}
+	/// <summary>The objects whose location edge points at <paramref name="containerKey"/>, in dbref order, paged
+	/// (see <see cref="LightningStore.DupsMapAsync{T}"/>).</summary>
+	private IAsyncEnumerable<AnySharpContent> GetContentsCoreAsync(long containerKey, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Location.Reverse, Keys.Dbref(containerKey), ReadContent, ct: ct);
 
 	public IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpExit>(ct => GetExitsCoreAsync(obj.Number, ct));
@@ -283,26 +214,17 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpExit>(ct => GetExitsCoreAsync(node.Object().Key, ct));
 
-	private async IAsyncEnumerable<SharpExit> GetExitsCoreAsync(long containerKey, [EnumeratorCancellation] CancellationToken ct)
-	{
-		// Tables.Exit.Forward is room -> exit directly (set alongside Location when the exit was
-		// created), so this is a single point lookup rather than a type-filtered scan of every reverse
-		// content entry the way GetContentsCoreAsync above has to be.
-		var exits = Store.Read(tx => tx.Dups(Tables.Exit.Forward, Keys.Dbref(containerKey))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(key => ReadObject(tx, key))
-			.Where(found => found is not null)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record) is SharpExit exit
-				? exit
-				: throw new InvalidOperationException($"#{found.Value.Dbref} is listed as an exit of #{containerKey} but is not one"))
-			.ToList());
-
-		foreach (var exit in exits)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return exit;
-		}
-	}
+	/// <remarks>Tables.Exit.Forward is room -> exit directly (set alongside Location when the exit was
+	/// created), so this is a single key's duplicates rather than a type-filtered scan of every reverse
+	/// content entry the way <see cref="GetContentsCoreAsync"/> has to be.</remarks>
+	private IAsyncEnumerable<SharpExit> GetExitsCoreAsync(long containerKey, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Exit.Forward, Keys.Dbref(containerKey),
+			(tx, value) => ReadObject(tx, Keys.ReadDbref(value)) is not { } found
+				? null
+				: Hydrate(found.Dbref, found.Record) is SharpExit exit
+					? exit
+					: throw new InvalidOperationException($"#{found.Dbref} is listed as an exit of #{containerKey} but is not one"),
+			ct: ct);
 
 	public ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default)
 		=> WriteContentLocationAsync(enactorObj, destination, cancellationToken);
@@ -348,19 +270,10 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpObject>(ct => GetObjectsByZoneCoreAsync(zone.Object().Key, ct));
 
-	private async IAsyncEnumerable<SharpObject> GetObjectsByZoneCoreAsync(long zoneKey, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var objects = Store.Read(tx => tx.Dups(Tables.Zone.Reverse, Keys.Dbref(zoneKey))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(key => ReadObject(tx, key))
-			.Where(found => found is not null)
-			.Select(found => MapToSharpObject(found!.Value.Dbref, found.Value.Record))
-			.ToList());
+	private IAsyncEnumerable<SharpObject> GetObjectsByZoneCoreAsync(long zoneKey, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Zone.Reverse, Keys.Dbref(zoneKey), ReadSharpObject, ct: ct);
 
-		foreach (var obj in objects)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return obj;
-		}
-	}
+	/// <summary>The base object an edge value names, or null when it is gone.</summary>
+	private SharpObject? ReadSharpObject(ITx tx, byte[] value)
+		=> ReadObject(tx, Keys.ReadDbref(value)) is { } found ? MapToSharpObject(found.Dbref, found.Record) : null;
 }

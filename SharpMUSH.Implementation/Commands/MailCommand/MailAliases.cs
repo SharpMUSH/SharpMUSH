@@ -95,8 +95,8 @@ public static class MailAliases
 		var bare = name[1..];
 		await foreach (var alias in AllAsync(services))
 		{
-			if ((who is null || await MayUseAsync(alias, who))
-					&& alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase))
+			if (alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase)
+					&& (who is null || await MayUseAsync(alias, who)))
 			{
 				return alias;
 			}

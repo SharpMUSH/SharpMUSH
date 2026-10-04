@@ -183,6 +183,35 @@ public class AttributeReadCostTests
 		await Assert.That(eager.All(x => x.Value.ToPlainText() == "v")).IsTrue();
 	}
 
+	/// <summary>
+	/// Pattern scans and whole-tree reads hydrate each page inside the transaction that read it: a set wider than
+	/// any page still comes back whole and in key order, eager and lazy alike, and a scan abandoned after its
+	/// first match has looked at the first, small page only.
+	/// </summary>
+	[Test]
+	public async Task PatternScansArePagedInKeyOrderAndStopWhenAbandoned()
+	{
+		var target = await Thing("Tree");
+		var count = 300 + 7;
+		await SetMany(target, Enumerable.Range(0, count).Select(i => new[] { $"SCAN{i:D4}" }));
+		var expected = Enumerable.Range(0, count).Select(i => $"SCAN{i:D4}").ToArray();
+
+		var eager = await _db.GetAttributesAsync(target, "SCAN*").ToArrayAsync();
+		var lazy = await _db.GetLazyAttributesByRegexAsync(target, "^SCAN").Select(x => x.LongName).ToArrayAsync();
+		var all = await (await Node(target)).Object().AllAttributes.Value.Select(x => x.LongName).ToArrayAsync();
+
+		await Assert.That(eager.Select(x => x.LongName)).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(eager.All(x => x.Value.ToPlainText() == "v")).IsTrue();
+		await Assert.That(lazy).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(all).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await AllNames(target)).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		var before = MetaRows;
+		var first = await _db.GetLazyAttributesAsync(target, "SCAN*").FirstAsync();
+		await Assert.That(first.LongName).IsEqualTo("SCAN0000");
+		await Assert.That(MetaRows - before).IsLessThanOrEqualTo(LightningStore.FirstMapPageSize);
+	}
+
 	[Test]
 	public async Task LazyChildrenReadNoValuesAndStopWhenAbandoned()
 	{

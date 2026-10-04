@@ -24,6 +24,9 @@ public class CommandOutputCapture : ICommandOutputCapture
 		if (character == dbref) transcript.Append(text);
 	}
 
+	public bool Captures(int dbref)
+		=> Frames.Value is { IsEmpty: false } frames && frames.Peek().Character == dbref;
+
 	private sealed class CaptureScope(ImmutableStack<(int, CommandTranscript)> prior) : IDisposable
 	{
 		public void Dispose() => Frames.Value = prior;

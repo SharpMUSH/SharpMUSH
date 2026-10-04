@@ -178,4 +178,39 @@ public class FollowCommandTests
 		await Assert.That(after.Exists).IsFalse()
 			.Because("a mortal must be able to stop following - atr_clr(follower, \"FOLLOWING\", GOD)");
 	}
+
+	/// <summary>
+	/// <c>followers()</c> is PennMUSH's <c>fun_followers</c>: the leader's own <c>FOLLOWERS</c> list, in
+	/// the order its followers began following, not a scan of every object's <c>FOLLOWING</c> (which
+	/// would answer in dbref order). The follower created second follows first here, so the two orders
+	/// differ.
+	/// </summary>
+	[Test]
+	public async ValueTask Followers_IsTheLeadersFollowersListInFollowOrder()
+	{
+		var later = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowersSecond");
+		var earlier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowersFirst");
+		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowersLeader");
+
+		foreach (var follower in new[] { earlier, later })
+		{
+			var report = await FollowAndReport(follower, leader.DbRef);
+			await Assert.That(report.Any(m => m.Contains("now following")))
+				.IsTrue()
+				.Because($"FOLLOW must resolve the leader and report success; it said: {string.Join(" | ", report)}");
+		}
+
+		var followers = (await WebAppFactoryArg.FunctionParser.FunctionParse(
+			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message!.ToPlainText();
+		await Assert.That(followers).IsEqualTo($"{earlier.DbRef} {later.DbRef}");
+
+		await Parser.CommandParse(earlier.Handle, ConnectionService, MarkupText.Plain("unfollow"));
+		followers = (await WebAppFactoryArg.FunctionParser.FunctionParse(
+			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message!.ToPlainText();
+		await Assert.That(followers).IsEqualTo(later.DbRef.ToString())
+			.Because("del_follower takes the follower off the leader's list");
+	}
 }
