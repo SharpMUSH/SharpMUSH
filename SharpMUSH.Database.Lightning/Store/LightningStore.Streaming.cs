@@ -78,7 +78,13 @@ public sealed partial class LightningStore
 	/// </summary>
 	public IAsyncEnumerable<T> RangeMapAsync<T>(TableDef table, byte[] prefix, Func<ITx, byte[], byte[], T?> map,
 		int pageSize = 256, CancellationToken ct = default) where T : class
-		=> PagedMapAsync(table, prefix, exactKey: false, map, pageSize, ct);
+		=> PagedMapAsync<T>(table, prefix, exactKey: false, (tx, key, value, sink) =>
+		{
+			if (map(tx, key, value) is { } item)
+			{
+				sink.Add(item);
+			}
+		}, pageSize, ct);
 
 	/// <summary>
 	/// The duplicate values stored under exactly <paramref name="key"/>, in value order, each mapped inside the
@@ -86,10 +92,33 @@ public sealed partial class LightningStore
 	/// </summary>
 	public IAsyncEnumerable<T> DupsMapAsync<T>(TableDef table, byte[] key, Func<ITx, byte[], T?> map,
 		int pageSize = 256, CancellationToken ct = default) where T : class
-		=> PagedMapAsync(table, key, exactKey: true, (tx, _, value) => map(tx, value), pageSize, ct);
+		=> PagedMapAsync<T>(table, key, exactKey: true, (tx, _, value, sink) =>
+		{
+			if (map(tx, value) is { } item)
+			{
+				sink.Add(item);
+			}
+		}, pageSize, ct);
+
+	/// <summary>
+	/// <see cref="DupsMapAsync{T}"/> for a value-type item, such as the <c>DBRef</c> a ref projection yields:
+	/// an entry mapped to <see langword="null"/> is skipped, and the paging is the same.
+	/// </summary>
+	public IAsyncEnumerable<T> DupsMapValuesAsync<T>(TableDef table, byte[] key, Func<ITx, byte[], T?> map,
+		int pageSize = 256, CancellationToken ct = default) where T : struct
+		=> PagedMapAsync<T>(table, key, exactKey: true, (tx, _, value, sink) =>
+		{
+			if (map(tx, value) is { } item)
+			{
+				sink.Add(item);
+			}
+		}, pageSize, ct);
+
+	/// <summary>Maps one entry, adding what it yields (nothing, for an entry the caller skips) to the page.</summary>
+	private delegate void PageMapper<T>(ITx tx, byte[] key, byte[] value, List<T> sink);
 
 	private async IAsyncEnumerable<T> PagedMapAsync<T>(TableDef table, byte[] prefix, bool exactKey,
-		Func<ITx, byte[], byte[], T?> map, int pageSize, [EnumeratorCancellation] CancellationToken ct) where T : class
+		PageMapper<T> map, int pageSize, [EnumeratorCancellation] CancellationToken ct)
 	{
 		if (pageSize < 1)
 		{
@@ -121,10 +150,7 @@ public sealed partial class LightningStore
 
 					count++;
 					(k, v) = (key, value);
-					if (map(tx, key, value) is { } item)
-					{
-						mapped.Add(item);
-					}
+					map(tx, key, value, mapped);
 
 					if (count == limit)
 					{

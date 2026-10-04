@@ -403,7 +403,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	/// <summary>
 	/// PennMUSH <c>member(thing, Contents(container))</c>, asked of the one object rather than by reading
 	/// the container's whole inventory. A container's contents are exactly the objects whose location
-	/// edge names it, rooms excepted (a room's location edge is its drop-to): <c>GetContentsAsync</c>
+	/// edge names it, rooms excepted (a room's location edge is its drop-to): <c>GetContentRefsAsync</c>
 	/// reads <c>Location.Reverse</c> and drops rooms. So the key is carried exactly when it exists, is the
 	/// object the reference names (an objid's stamp must agree, as <see cref="DBRef.Matches"/> asks), is
 	/// not a room, and its location is the container — an exit's location being its source room, which is

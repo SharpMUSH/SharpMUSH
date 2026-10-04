@@ -165,6 +165,7 @@ public static partial class ErrorMessages
 		public const string StoragePagesFormat = "Live data {0}; reusable free space inside the file {1}; the file can grow {2} more before the map is full.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StorageDiskFreeFormat = "Disk free beside the world: {0}.";
+		public const string StorageStaleReadersFormat = "{0} reader slot(s) freed since startup: a process holding the world open died while reading it, and its slot kept writers from reusing pages until it was freed. Another tool attached to the live world is the usual cause (deploy/README.md).";
 		public const string StorageCompactionNote = "Deleting records frees pages inside the file for reuse; it never shrinks the file. To shrink it, replace it with a compacted copy (deploy/README.md).";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StorageBackupFormat = "Backups in {0}: {1} on disk ({2}), keeping {3}. The next copy is about {4}; a run needs {5} free and {6} is. At its peak, before pruning, the directory holds {7}.";

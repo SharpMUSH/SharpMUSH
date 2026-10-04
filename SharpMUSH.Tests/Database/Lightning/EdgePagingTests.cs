@@ -46,7 +46,7 @@ public class EdgePagingTests : LightningDatabaseFixture
 		var room = await NewRoom("BigRoom");
 		var things = await NewThings(room, SetSize);
 
-		var contents = await Db.GetContentsAsync(room).Select(c => (long)c.Object().Key).ToListAsync();
+		var contents = await Db.GetContentRefsAsync(room.Object().DBRef).Select(c => (long)c.Number).ToListAsync();
 
 		await Assert.That(contents).Count().IsEqualTo(SetSize);
 		await Assert.That(contents).IsEquivalentTo(things.Select(t => (long)t.Number));
@@ -103,7 +103,7 @@ public class EdgePagingTests : LightningDatabaseFixture
 		}
 
 		var children = await (await Node(parent.Object().DBRef)).Object().Children.Value!.Select(c => (long)c.Key).ToListAsync();
-		var zoned = await Db.GetObjectsByZoneAsync(parent).Select(c => (long)c.Key).ToListAsync();
+		var zoned = await Db.GetZoneMemberRefsAsync(parent.Object().DBRef).Select(c => (long)c.Number).ToListAsync();
 
 		await Assert.That(children).Count().IsEqualTo(SetSize);
 		await Assert.That(children).IsEquivalentTo(IndexOrder(Tables.Parent.Reverse, parent.Object().Key), CollectionOrdering.Matching);

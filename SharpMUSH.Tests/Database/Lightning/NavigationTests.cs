@@ -125,8 +125,8 @@ public partial class NavigationTests
 		var thingRef = await _db.CreateThingAsync("Gadget", room, god, room);
 		var exitRef = await _db.CreateExitAsync("Out", ["O"], room, god);
 
-		var contentKeys = (await _db.GetContentsAsync(room).ToListAsync())
-			.Select(c => c.Object().DBRef.Number).ToList();
+		var contentKeys = (await _db.GetContentRefsAsync(room.Object().DBRef).ToListAsync())
+			.Select(c => c.Number).ToList();
 		await Assert.That(contentKeys).Contains(thingRef.Number);
 		await Assert.That(contentKeys).Contains(exitRef.Number);
 
@@ -183,6 +183,51 @@ public partial class NavigationTests
 	}
 
 	[Test]
+	public async Task RelationRefsNameTheFullObjectIdOrNothing()
+	{
+		var god = await God();
+		var room = await MasterRoom();
+		var parentRef = await _db.CreateThingAsync("Parent", room, god, room);
+		var childRef = await _db.CreateThingAsync("Child", room, god, room);
+		var child = await Node(childRef);
+		var parent = await Node(parentRef);
+		var notFound = new Found<DBRef>(new NotFound());
+
+		await Assert.That(await _db.GetRelationRefAsync(ObjectRelationKind.Parent, childRef)).IsEqualTo(notFound);
+
+		await _db.SetObjectParent(child, parent);
+		await _db.SetObjectZone(child, parent);
+
+		await Assert.That((await _db.GetRelationRefAsync(ObjectRelationKind.Parent, childRef)).Expect<DBRef>()).IsEqualTo(parent.Object().DBRef);
+		await Assert.That((await _db.GetRelationRefAsync(ObjectRelationKind.Zone, childRef)).Expect<DBRef>()).IsEqualTo(parent.Object().DBRef);
+		await Assert.That((await _db.GetRelationRefAsync(ObjectRelationKind.Owner, childRef)).Expect<DBRef>()).IsEqualTo(god.Object.DBRef);
+		await Assert.That((await _db.GetRelationRefAsync(ObjectRelationKind.Home, childRef)).Expect<DBRef>()).IsEqualTo(room.Object().DBRef);
+
+		// A full object id whose creation time no longer matches names a recycled number: nothing.
+		var stale = new DBRef(childRef.Number, child.Object().CreationTime - 1);
+		await Assert.That(await _db.GetRelationRefAsync(ObjectRelationKind.Parent, stale)).IsEqualTo(notFound);
+		await Assert.That(await _db.GetLocationRefAsync(stale)).IsEqualTo(notFound);
+	}
+
+	[Test]
+	public async Task ContentAndPlayerRefsLeaveOutWhatTheyDoNotName()
+	{
+		var god = await God();
+		var room = await MasterRoom();
+		var thingRef = await _db.CreateThingAsync("NotAPlayer", room, god, room);
+		// A room whose location edge names the master room (an imported world can carry one) is not content.
+		var dropRoomRef = await _db.CreateRoomAsync("LocatedInMaster", god);
+		await _db.Store.WriteAsync(tx => LightningDatabase.SetSingleEdge(tx, Tables.Location, dropRoomRef.Number, room.Object().DBRef.Number));
+
+		var contents = await _db.GetContentRefsAsync(room.Object().DBRef).ToListAsync();
+		await Assert.That(contents).Contains((await Node(thingRef)).Object().DBRef);
+		await Assert.That(contents.Select(c => c.Number)).DoesNotContain(dropRoomRef.Number);
+
+		await Assert.That(await _db.GetPlayerRefsByNameOrAliasAsync(god.Object.Name).ToListAsync()).IsEquivalentTo(new[] { god.Object.DBRef });
+		await Assert.That(await _db.GetPlayerRefsByNameOrAliasAsync("NotAPlayer").ToListAsync()).IsEmpty();
+	}
+
+	[Test]
 	public async Task LocationDepthNegativeOneWalksToTheTop()
 	{
 		var god = await God();
@@ -197,11 +242,14 @@ public partial class NavigationTests
 		await _db.SetContentLocation(coin, boxNode.AsContainer);
 		await _db.SetContentLocation(boxNode.AsContent, room);
 
-		var top = (await _db.GetLocationAsync(coinRef, -1)).Expect<AnySharpContainer>();
-		await Assert.That(top.Object().DBRef.Number).IsEqualTo(room.Object().DBRef.Number);
+		var top = (await _db.GetLocationRefAsync(coinRef, -1)).Expect<DBRef>();
+		await Assert.That(top).IsEqualTo(room.Object().DBRef);
 
-		var oneHop = (await _db.GetLocationAsync(coinRef, 1)).Expect<AnySharpContainer>();
-		await Assert.That(oneHop.Object().DBRef.Number).IsEqualTo(boxRef.Number);
+		var oneHop = (await _db.GetLocationRefAsync(coinRef, 1)).Expect<DBRef>();
+		await Assert.That(oneHop.Number).IsEqualTo(boxRef.Number);
+
+		await Assert.That(await _db.GetLocationRefAsync(coinRef, 0)).IsEqualTo(new Found<DBRef>(new NotFound()))
+			.Because("depth 0 takes no hop, so it names nothing rather than the object itself");
 	}
 
 	[Test]
@@ -239,12 +287,12 @@ public partial class NavigationTests
 
 		await _db.MoveObjectAsync(thing, destination);
 
-		var sourceContents = (await _db.GetContentsAsync(room).ToListAsync())
-			.Select(c => c.Object().DBRef.Number).ToList();
+		var sourceContents = (await _db.GetContentRefsAsync(room.Object().DBRef).ToListAsync())
+			.Select(c => c.Number).ToList();
 		await Assert.That(sourceContents).DoesNotContain(thingRef.Number);
 
-		var destinationContents = (await _db.GetContentsAsync(destination).ToListAsync())
-			.Select(c => c.Object().DBRef.Number).ToList();
+		var destinationContents = (await _db.GetContentRefsAsync(destination.Object().DBRef).ToListAsync())
+			.Select(c => c.Number).ToList();
 		await Assert.That(destinationContents).Contains(thingRef.Number);
 	}
 }

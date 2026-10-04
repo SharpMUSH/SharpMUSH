@@ -8,6 +8,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.Unspecified,
 	DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = false)]
 [JsonSerializable(typeof(ObjectRecord))]
+[JsonSerializable(typeof(ObjectHeaderRecord))]
 [JsonSerializable(typeof(LockRecord))]
 [JsonSerializable(typeof(AttrMetaRecord))]
 [JsonSerializable(typeof(FlagRecord))]

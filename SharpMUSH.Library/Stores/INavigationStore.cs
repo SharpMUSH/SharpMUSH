@@ -9,27 +9,25 @@ namespace SharpMUSH.Library;
 public interface INavigationStore
 {
 	/// <summary>
-	/// Get the parent of an object.
+	/// The object <paramref name="subject"/>'s single <paramref name="relation"/> edge points at, as its full
+	/// object id (number and creation milliseconds), or <see cref="NotFound"/> when the edge is absent or the
+	/// object it names is gone. Reads the target's header only, not the whole object: the caller resolves the
+	/// ref through the object node cache, so the object is built once (#1554). When <paramref name="subject"/>
+	/// carries creation milliseconds that no longer match the stored object, the answer is
+	/// <see cref="NotFound"/>.
 	/// </summary>
-	/// <param name="id">Child ID</param>
-	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>The representing parent</returns>
-	ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default);
+	ValueTask<Found<DBRef>> GetRelationRefAsync(ObjectRelationKind relation, DBRef subject,
+		CancellationToken cancellationToken = default);
 
-	/// <summary>The owner of the object with provider id <paramref name="id"/>. The uncached read behind <c>GetOwnerOfQuery</c>.</summary>
-	ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken cancellationToken = default);
-
-	/// <summary>The zone of the object with provider id <paramref name="id"/>, if any. The uncached read behind <c>GetZoneOfQuery</c>.</summary>
-	ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken cancellationToken = default);
-
-	/// <summary>The home of the typed player or thing <paramref name="typedId"/>. The uncached read behind <c>GetHomeOfQuery</c>.</summary>
-	ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken cancellationToken = default);
-
-	/// <summary>The drop-to of the room <paramref name="roomTypedId"/>, if any. The uncached read behind <c>GetDropToOfQuery</c>.</summary>
-	ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomTypedId, CancellationToken cancellationToken = default);
-
-	/// <summary>The destination of the exit <paramref name="exitTypedId"/>, if linked. The uncached read behind <c>GetExitDestinationOfQuery</c>.</summary>
-	ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string exitTypedId, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// The container <paramref name="subject"/> sits in, <paramref name="depth"/> location hops out (<c>-1</c>
+	/// walking until there is no further edge, capped at 999; <c>0</c> taking no hop and answering
+	/// <see cref="NotFound"/>), as its full object id. A chain that runs out of edges early answers with the
+	/// last container it reached. <see cref="NotFound"/> when <paramref name="subject"/> is gone (or its
+	/// creation milliseconds no longer match), has no location, or the container is gone. One read
+	/// transaction, header decodes only.
+	/// </summary>
+	ValueTask<Found<DBRef>> GetLocationRefAsync(DBRef subject, int depth = 1, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get the parent of an object.
@@ -65,14 +63,12 @@ public interface INavigationStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	IAsyncEnumerable<AnySharpContent> GetHomedAtAsync(DBRef home, CancellationToken cancellationToken = default);
 
-	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default);
-
-	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default);
-
-	IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default);
-
-	IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node,
-		CancellationToken cancellationToken = default);
+	/// <summary>
+	/// The full object ids of what sits in <paramref name="container"/>, rooms excepted (a room's location edge
+	/// is its drop-to), in dbref order. Paged: no read transaction is held between pages, and each entry costs
+	/// a header decode, not a hydration; the caller resolves each ref through the object node cache.
+	/// </summary>
+	IAsyncEnumerable<DBRef> GetContentRefsAsync(DBRef container, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
@@ -81,19 +77,8 @@ public interface INavigationStore
 	ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Gets the location of an object, at X depth, with 0 returning the same object, and -1 going until it can't go deeper.
+	/// The full object ids of every object whose zone is <paramref name="zone"/>, in dbref order, paged and
+	/// read from the headers only, like <see cref="GetContentRefsAsync"/>.
 	/// </summary>
-	/// <param name="id">Location ID</param>
-	/// <param name="depth">Depth</param>
-	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>The deepest findable object based on depth</returns>
-	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
-
-	/// <summary>
-	/// Get all objects that belong to a specific zone.
-	/// </summary>
-	/// <param name="zone">The zone object</param>
-	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>An async enumerable of all objects in the zone</returns>
-	IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<DBRef> GetZoneMemberRefsAsync(DBRef zone, CancellationToken cancellationToken = default);
 }

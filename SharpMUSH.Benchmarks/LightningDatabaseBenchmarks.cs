@@ -7,16 +7,6 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("Database Read", "Lightning")]
 public class LightningReadBenchmarks : LightningBaseBenchmark
 {
-	private AnySharpContainer? _masterRoom;
-
-	public override async ValueTask Setup()
-	{
-		await base.Setup().ConfigureAwait(false);
-		_masterRoom = await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is AnySharpObject { IsContainer: true } masterRoom
-			? masterRoom.AsContainer
-			: throw new InvalidOperationException("The master room (#2) is not seeded.");
-	}
-
 	[Benchmark(Description = "GetObjectNodeAsync(#1) — God player")]
 	public async ValueTask<AnyOptionalSharpObject> GetGodPlayerNode() =>
 		await _database!.GetObjectNodeAsync(new DBRef(1));
@@ -25,16 +15,16 @@ public class LightningReadBenchmarks : LightningBaseBenchmark
 	public async ValueTask<AnyOptionalSharpObject> GetMasterRoomNode() =>
 		await _database!.GetObjectNodeAsync(new DBRef(2));
 
-	[Benchmark(Description = "GetContentsAsync(Master Room)")]
+	[Benchmark(Description = "GetContentRefsAsync(Master Room)")]
 	public async Task GetRoomContents()
 	{
-		await foreach (var _ in _database!.GetContentsAsync(_masterRoom!))
+		await foreach (var _ in _database!.GetContentRefsAsync(new DBRef(2)))
 		{ }
 	}
 
-	[Benchmark(Description = "GetLocationAsync(#1) — 1-hop traversal")]
-	public async ValueTask<AnyOptionalSharpContainer> GetLocation() =>
-		await _database!.GetLocationAsync(new DBRef(1));
+	[Benchmark(Description = "GetLocationRefAsync(#1) — 1-hop traversal")]
+	public async ValueTask<Found<DBRef>> GetLocation() =>
+		await _database!.GetLocationRefAsync(new DBRef(1));
 
 	[Benchmark(Description = "GetAttributeAsync(#1, AADESC)")]
 	public async Task GetAttribute()

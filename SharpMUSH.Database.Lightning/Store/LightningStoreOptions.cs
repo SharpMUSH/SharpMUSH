@@ -27,6 +27,11 @@ public sealed record LightningStoreOptions
 	/// most a power failure can lose in that mode. Ignored by the other modes.</summary>
 	public TimeSpan FlushInterval { get; init; } = TimeSpan.FromSeconds(1);
 
+	/// <summary>How often the store frees reader slots left by a process that died mid-read (see
+	/// <see cref="LightningStore.CheckStaleReaders"/>). It also checks once on open. Zero turns the
+	/// periodic check off.</summary>
+	public TimeSpan ReaderCheckInterval { get; init; } = TimeSpan.FromMinutes(5);
+
 	/// <summary>
 	/// The most jobs the writer thread folds into one transaction. Jobs that queue up while a commit is
 	/// in flight are taken together and committed once — one sync for all of them — so this bounds how
