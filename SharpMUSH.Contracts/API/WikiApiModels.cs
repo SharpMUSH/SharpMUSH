@@ -56,6 +56,45 @@ public record WikiPageDto(
 	public string? Image { get; init; }
 }
 
+/// <summary>
+/// One row of a wiki listing (recent changes, a namespace, a category, a tag, the paged index): the page
+/// without its body. A listing renders link rows and metadata columns, so the Markdown, HTML and plain
+/// text stay on the server; the banner image, the one thing a row takes from the body, is found there.
+/// </summary>
+/// <param name="Locale">The locale the row's title came from.</param>
+/// <param name="IsFallback">True when the title is a fallback rather than the requested language.</param>
+/// <param name="Image">The first image in the page, or null.</param>
+/// <param name="LastEditedBy">The name of the player who last edited the page; null when the editor is gone.</param>
+public record WikiPageSummaryDto(
+	string Id,
+	string Slug,
+	string Title,
+	string Namespace,
+	DateTimeOffset UpdatedAt,
+	bool IsProtected,
+	int RevisionNumber,
+	string? Category,
+	IReadOnlyList<string>? Tags,
+	bool Published,
+	string? Locale,
+	bool IsFallback,
+	string? Image,
+	string? LastEditedBy)
+{
+	/// <inheritdoc cref="WikiPageDto.Tags"/>
+	public IReadOnlyList<string> Tags { get; init; } = Tags ?? [];
+
+	/// <summary>The served locale; a payload without one binds as empty, as on <see cref="WikiPageDto"/>.</summary>
+	public string Locale { get; init; } = Locale ?? string.Empty;
+}
+
+/// <summary>
+/// <c>GET /api/wiki/counts</c>: pages by state, counted from the store's indexes. A caller who may not see
+/// drafts is told only about published pages, so <see cref="Drafts"/> is zero and <see cref="Total"/>
+/// equals <see cref="Published"/> for them.
+/// </summary>
+public record WikiPageCountsDto(int Total, int Published, int Drafts, int Protected);
+
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
 public record WikiTranslationSummaryDto(
 	string Locale,

@@ -53,6 +53,13 @@ public sealed class InMemoryWikiStore : IWikiStore
 	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
 		=> Task.FromResult(InNamespace(ns).Count(p => includeDrafts || p.Published));
 
+	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+	{
+		var counted = _pagesById.Values.Where(p => includeDrafts || p.Published).ToList();
+		return Task.FromResult(new WikiPageCounts(
+			counted.Count(p => p.Published), counted.Count(p => !p.Published), counted.Count(p => p.IsProtected)));
+	}
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))

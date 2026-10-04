@@ -63,6 +63,13 @@ public interface IWikiService
 	Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts);
 
 	/// <summary>
+	/// Every page counted by state (published, draft, protected) without reading a page. As with
+	/// <see cref="CountPagesAsync"/>, <paramref name="includeDrafts"/> has no default: false counts drafts as
+	/// zero and leaves them out of the protected count.
+	/// </summary>
+	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
+
+	/// <summary>
 	/// Lists pages with the given category (case-insensitive), ordered by title.
 	/// </summary>
 	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>

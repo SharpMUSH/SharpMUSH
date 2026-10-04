@@ -186,7 +186,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.GetRecentChanges(count: 20, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Count)
 			.IsEqualTo(2)
 			.Because("a localized listing must not return N rows per page");
@@ -205,7 +205,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.ListAllPages(skip: 0, take: 50, ns: null, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Count).IsEqualTo(2);
 		await Assert.That(wiki.Browse.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("2");
 	}
@@ -219,7 +219,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.ListNamespacePages("help", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title)
 			.IsEqualTo("Help Intro")
 			.Because("an unpublished translation must not surface its title in a public listing");
@@ -234,7 +234,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.ListCategoryPages("lore", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
 	}
 
@@ -248,7 +248,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.ListTagPages("dragons", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
 	}
 
@@ -264,7 +264,7 @@ public class WikiControllerLocaleTests
 
 		var result = await wiki.Browse.ListNamespacePages("main", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageSummaryDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Select(d => d.Slug)).IsEquivalentTo(new[] { "public" });
 	}
 }

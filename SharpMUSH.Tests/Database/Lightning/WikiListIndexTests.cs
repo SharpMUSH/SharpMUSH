@@ -221,6 +221,59 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		await AssertListingsMatchReference();
 	}
 
+	/// <summary>The counts by state as defined over decoded page rows.</summary>
+	private async Task<WikiPageCounts> ReferenceCounts(bool includeDrafts)
+	{
+		var counted = (await AllPages()).Where(p => includeDrafts || p.Published).ToList();
+		return new WikiPageCounts(counted.Count(p => p.Published), counted.Count(p => !p.Published), counted.Count(p => p.IsProtected));
+	}
+
+	/// <summary>
+	/// The counts by state follow protection, publication and deletion, and are read from the indexes alone:
+	/// once they are taken as the reference, every page row is made unreadable and the counts still answer.
+	/// </summary>
+	[Test]
+	public async Task CountsByStateFollowWritesWithoutReadingPageRows()
+	{
+		var ids = await Seed();
+		await Wiki.SetPageProtectionAsync(ids[0], true);
+		await Wiki.SetPageProtectionAsync(ids[2], true);
+		await Wiki.SetPageProtectionAsync(ids[3], true);
+		await Wiki.SetPageProtectionAsync(ids[3], false);
+		await Wiki.SetPageProtectionAsync(ids[5], true);
+		await Wiki.SetPageMetadataAsync(ids[5], "lore", [], published: true);
+		await Wiki.DeletePageAsync(ids[0]);
+
+		var all = await ReferenceCounts(includeDrafts: true);
+		var published = await ReferenceCounts(includeDrafts: false);
+		await Assert.That(all).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 2, Protected: 2));
+		await Assert.That(published).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 0, Protected: 1));
+
+		await Db.Store.WriteAsync(tx =>
+		{
+			foreach (var key in tx.Range(Tables.WikiPage, []).Select(e => e.Key).ToList()) tx.Put(Tables.WikiPage, key, "not json"u8);
+		});
+
+		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: true)).IsEqualTo(all);
+		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: false)).IsEqualTo(published);
+	}
+
+	/// <summary>A world written before the protected-page index gets it built from its page rows.</summary>
+	[Test]
+	public async Task MigrationBuildsTheProtectedIndex()
+	{
+		var ids = await Seed();
+		await Wiki.SetPageProtectionAsync(ids[1], true);
+		await Wiki.SetPageProtectionAsync(ids[2], true);
+		await ForgetIndexAsync(LightningDatabase.WikiProtectedIndexMigrationId, Tables.WikiProtected);
+		await Assert.That((await Wiki.CountPagesByStateAsync(includeDrafts: true)).Protected).IsEqualTo(0);
+
+		await Db.Migrate();
+
+		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: true)).IsEqualTo(await ReferenceCounts(includeDrafts: true));
+		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: false)).IsEqualTo(await ReferenceCounts(includeDrafts: false));
+	}
+
 	[Test]
 	public async Task RevisionPagesAreNewestFirstByOffsetAndByCursor()
 	{
