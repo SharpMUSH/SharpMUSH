@@ -107,27 +107,26 @@ public partial class LightningDatabase
 	/// </para>
 	/// <para>
 	/// The match runs when the consumer reaches the row, never ahead of it, so the budget and the
-	/// per-match timeout are judged at the moment the row is asked for. No row opens a transaction of its
-	/// own: flags resolve through the in-memory definitions, and the eager form reads each row's value in
-	/// the page's transaction together with its metadata (<see cref="LightningStore.RangeMapAsync{T}"/>),
-	/// keeping only the values of the rows that match.
+	/// per-match timeout are judged at the moment the row is asked for. That is also why the eager form
+	/// reads a value only after its name has matched, in a point read of its own: reading values with the
+	/// page would copy the body of every candidate under the prefix, and a broad prefix with few matches
+	/// would pay for all of them. Flags resolve through the in-memory definitions.
 	/// </para>
 	/// </summary>
 	private async IAsyncEnumerable<SharpAttribute> ScanAttributesCoreAsync(DBRef dbref, string literalPrefix, Regex filter,
 		[EnumeratorCancellation] CancellationToken ct)
 	{
 		var n = (long)dbref.Number;
-		var rows = Store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix),
-			(tx, key, meta) => new ScanRow(key, meta, tx.TryGet(Tables.AttrVal, key, out var body) ? body : null), ct: ct);
-		await foreach (var row in rows)
+		await foreach (var (key, meta) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
-			if (MatchingRow(row.Key, filter, ct) is not { } longName)
+			if (MatchingRow(key, filter, ct) is not { } longName)
 			{
 				continue;
 			}
 
-			ReadStats.ValueRead(row.Value?.Length ?? 0);
-			yield return HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(row.Meta), row.Value);
+			var value = Store.Read(tx => tx.TryGet(Tables.AttrVal, key, out var body) ? body : null);
+			ReadStats.ValueRead(value?.Length ?? 0);
+			yield return HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(meta), value);
 		}
 	}
 
@@ -146,10 +145,6 @@ public partial class LightningDatabase
 			yield return HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(value));
 		}
 	}
-
-	/// <summary>One row of an eager pattern scan as its page read it: the key, the metadata row and the value
-	/// (the two share a key), still encoded.</summary>
-	private sealed record ScanRow(byte[] Key, byte[] Meta, byte[]? Value);
 
 	/// <summary>One <c>attr.meta</c> row of a pattern scan: counted, then its long name when
 	/// <paramref name="filter"/> admits it (see <see cref="NameMatches"/>), otherwise null.</summary>

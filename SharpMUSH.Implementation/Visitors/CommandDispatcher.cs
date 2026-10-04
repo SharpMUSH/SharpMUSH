@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -441,7 +442,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		switch (scope)
 		{
 			case CommandScope.Nearby:
-				return Found(services.Mediator.CreateStream(new GetNearbyObjectsQuery(executor.Object().DBRef)));
+				return Found(NearbyObjects.ForAsync(services.Mediator, executor));
 
 			case CommandScope.LocationZone when executor.IsContent:
 				{

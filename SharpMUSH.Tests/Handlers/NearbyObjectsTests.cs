@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -14,7 +15,7 @@ namespace SharpMUSH.Tests.Handlers;
 /// The <c>$</c>-command Nearby scope: the object, its contents, then its location's contents without the object
 /// itself — composed from the cached node and contents queries, in that order.
 /// </summary>
-public class NearbyObjectsQueryTests
+public class NearbyObjectsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -38,15 +39,9 @@ public class NearbyObjectsQueryTests
 		var selfContainer = (await Node(self)).AsContainer;
 		var carried = await Thing("NearCarried", selfContainer);
 
-		var byRef = await Mediator.CreateStream(new GetNearbyObjectsQuery(self)).Select(o => o.Object().DBRef.Number).ToListAsync();
-		var byObject = await Mediator.CreateStream(new GetNearbyObjectsQuery(await Node(self))).Select(o => o.Object().DBRef.Number).ToListAsync();
+		var nearby = await NearbyObjects.ForAsync(Mediator, await Node(self)).Select(o => o.Object().DBRef.Number).ToListAsync();
 
 		int[] expected = [self.Number, carried.Number, before.Number, after.Number];
-		await Assert.That(byRef).IsEquivalentTo(expected, CollectionOrdering.Matching);
-		await Assert.That(byObject).IsEquivalentTo(expected, CollectionOrdering.Matching);
+		await Assert.That(nearby).IsEquivalentTo(expected, CollectionOrdering.Matching);
 	}
-
-	[Test]
-	public async Task NearbyOfAMissingObjectIsEmpty()
-		=> await Assert.That(await Mediator.CreateStream(new GetNearbyObjectsQuery(new DBRef(int.MaxValue - 7))).CountAsync()).IsEqualTo(0);
 }
