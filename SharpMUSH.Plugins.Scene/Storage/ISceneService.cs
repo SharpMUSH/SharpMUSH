@@ -83,6 +83,14 @@ public interface ISceneService
 		string? authorDbref = null, int? count = null);
 
 	/// <summary>
+	/// At most <paramref name="take"/> of a scene's poses in <c>pose_next</c> order, starting after
+	/// <paramref name="after"/> (a previous page's <see cref="ScenePosePage.Next"/>; null for the first page),
+	/// read in one storage transaction. Pages are separate reads, not one snapshot: a pose edited between two
+	/// pages shows the version current when its page was read. <c>NotFound</c> if the scene is missing.
+	/// </summary>
+	Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take);
+
+	/// <summary>
 	/// Sets one pose metadata key (<c>showas</c>, <c>authorname</c>, <c>author</c>,
 	/// <c>origin</c>, <c>originname</c>, <c>source</c>, <c>tags</c>, or custom →
 	/// <see cref="ScenePose.Meta"/>). Not for content — use <see cref="EditPoseAsync"/>.

@@ -471,6 +471,28 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				.ToList();
 		}));
 
+	public Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take)
+		=> Task.FromResult(_accessor.Read<Found<ScenePosePage>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is null)
+			{
+				return new NotFound();
+			}
+
+			var limit = Math.Max(1, take);
+			var prefix = ScenePosePrefix(id);
+			var start = after is { } cursor ? PoseKey(id, (uint)Math.Clamp(cursor, 0, uint.MaxValue)) : null;
+			// One entry past the page tells whether another follows without decoding it.
+			var entries = (start is null ? tx.Range(_poses, prefix) : tx.RangeFromKey(_poses, start))
+				.TakeWhile(entry => Keys.StartsWith(entry.Key, prefix))
+				.SkipWhile(entry => start is not null && entry.Key.AsSpan().SequenceEqual(start))
+				.Take(limit + 1)
+				.ToList();
+			var page = entries.Take(limit).Select(entry => ProjectPose(tx, Decode<ScenePoseRecord>(entry.Value))).ToList();
+			return new ScenePosePage(page, entries.Count > limit ? SeqOf(entries[limit - 1].Key) : null);
+		}));
+
 	public Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
 		=> _accessor.WriteAsync<Found<ScenePose>>(tx =>
 		{
@@ -651,9 +673,11 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return edits;
 		}));
 
+	// Tags and cast are copied verbatim from the pose record by ProjectPose, so they are read off the
+	// decoded records: no current-edit read and no live dbref resolution per pose.
 	public Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
-			=> LivePoses(tx, BareId(sceneId)) is not { } poses
+			=> LivePoseRecords(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
 				: poses
 					.SelectMany(p => p.Tags)
@@ -663,7 +687,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 	public Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
-			=> LivePoses(tx, BareId(sceneId)) is not { } poses
+			=> LivePoseRecords(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
 				: poses
 					.Select(p => string.IsNullOrEmpty(p.ShowAsName) ? p.AuthorName : p.ShowAsName)
@@ -1052,13 +1076,13 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			.Select(e => (e.Key, e.Value, Decode<ScenePoseRecord>(e.Value)))
 			.ToList();
 
-	/// <summary>A scene's non-deleted poses, projected; null when the scene itself is missing.</summary>
-	private List<ScenePose>? LivePoses(ITx tx, string sceneId) =>
+	/// <summary>A scene's non-deleted pose records, unprojected; null when the scene itself is missing.</summary>
+	private List<ScenePoseRecord>? LivePoseRecords(ITx tx, string sceneId) =>
 		ReadScene(tx, sceneId) is null
 			? null
 			: ScenePoses(tx, sceneId)
 				.Where(e => !e.Pose.IsDeleted)
-				.Select(e => ProjectPose(tx, e.Pose))
+				.Select(e => e.Pose)
 				.ToList();
 
 	private List<SceneMemberRecord> SceneMembers(ITx tx, string sceneId) =>

@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
@@ -185,6 +187,53 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 			List<ScenePoseDto> dtos => (IReadOnlyList<ScenePoseView>)[.. dtos.Select(ToPose)],
 			ApiFailure failure => failure
 		};
+	}
+
+	/// <summary>How many streamed poses <see cref="StreamPosesAsync"/> hands over at a time.</summary>
+	public const int PoseStreamBatch = 50;
+
+	/// <summary>
+	/// The scene's whole log in chain order, read as the server streams it: <paramref name="onBatch"/> gets
+	/// each <see cref="PoseStreamBatch"/> poses as they arrive (and the remainder at the end), so a long log
+	/// renders while it loads. Returns <see cref="Success"/> once the log ended, or the failure that stopped it
+	/// — after which the batches already delivered are all there is.
+	/// </summary>
+	/// <remarks>
+	/// Read with <c>GetFromJsonAsAsyncEnumerable</c>, which asks for the response as soon as its headers
+	/// arrive. In the browser that streams only with WebAssembly response streaming on, which .NET 10 made the
+	/// default for every request; nothing in this app turns it off.
+	/// </remarks>
+	public async Task<ApiResult<Success>> StreamPosesAsync(string id, Func<IReadOnlyList<ScenePoseView>, Task> onBatch,
+		CancellationToken cancellationToken = default)
+	{
+		var batch = new List<ScenePoseView>(PoseStreamBatch);
+		try
+		{
+			await foreach (var dto in Client.GetFromJsonAsAsyncEnumerable<ScenePoseDto>(
+					$"api/scenes/{Uri.EscapeDataString(id)}/poses", cancellationToken))
+			{
+				if (dto is null) continue;
+				batch.Add(ToPose(dto));
+				if (batch.Count < PoseStreamBatch) continue;
+				await onBatch(batch);
+				batch = new List<ScenePoseView>(PoseStreamBatch);
+			}
+
+			if (batch.Count > 0) await onBatch(batch);
+			return new Success();
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
+		}
+		catch (HttpRequestException ex) when (ex.StatusCode is { } status)
+		{
+			return ApiFailure.FromStatus(status, ex.Message);
+		}
+		catch (Exception ex)
+		{
+			return ApiFailure.Transport(ex);
+		}
 	}
 
 	private static SceneSummary ToSummary(SceneDto d) => new(

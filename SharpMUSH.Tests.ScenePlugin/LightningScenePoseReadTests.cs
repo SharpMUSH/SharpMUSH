@@ -62,6 +62,101 @@ public class LightningScenePoseReadTests
 	private async Task<IReadOnlyList<ScenePose>> Poses(string sceneId, string? author = null, int? count = null)
 		=> Expect<IReadOnlyList<ScenePose>>(await _scenes.GetPosesAsync(sceneId, author, count));
 
+	private async Task<List<ScenePose>> AllPages(string sceneId, int take, List<long?>? cursors = null)
+	{
+		var all = new List<ScenePose>();
+		long? after = null;
+		do
+		{
+			cursors?.Add(after);
+			var page = Expect<ScenePosePage>(await _scenes.GetPosePageAsync(sceneId, after, take));
+			await Assert.That(page.Poses.Count).IsLessThanOrEqualTo(Math.Max(1, take));
+			all.AddRange(page.Poses);
+			after = page.Next;
+		} while (after is not null);
+
+		return all;
+	}
+
+	/// <summary>
+	/// Pages, joined, are the full list — order, deleted poses and current versions alike — whatever the page
+	/// size, and a page reports a next cursor only when a pose follows it.
+	/// </summary>
+	[Test]
+	public async Task PagesJoinToTheFullList()
+	{
+		var other = await NewPlayer("PageOther");
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		var ids = new List<string>();
+		for (var i = 0; i < 23; i++)
+		{
+			ids.Add(await Pose(scene, i % 4 == 0 ? other : "#1", $"pose {i}"));
+		}
+
+		await _scenes.DeletePoseAsync(ids[5]);
+		Expect<ScenePose>(await _scenes.MovePoseAsync(ids[2], ids[17]));
+		Expect<ScenePose>(await _scenes.EditPoseAsync(ids[9], "#1", "edited 9"));
+		var full = await Poses(scene);
+
+		foreach (var take in new[] { 0, 1, 5, 7, 22, 23, 100 })
+		{
+			var cursors = new List<long?>();
+			var paged = await AllPages(scene, take, cursors);
+			await Assert.That(paged).IsEquivalentTo(full, CollectionOrdering.Matching).Because($"page size {take}");
+			await Assert.That(cursors.Count).IsEqualTo((full.Count + Math.Max(1, take) - 1) / Math.Max(1, take));
+		}
+
+		await Assert.That(await _scenes.GetPosePageAsync("9999", null, 10) is { Value: NotFound }).IsTrue();
+	}
+
+	/// <summary>Pages are separate reads: a pose added after one page was read is in a later page.</summary>
+	[Test]
+	public async Task APoseAddedBetweenPagesIsReached()
+	{
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		for (var i = 0; i < 4; i++) await Pose(scene, "#1", $"pose {i}");
+
+		var first = Expect<ScenePosePage>(await _scenes.GetPosePageAsync(scene, null, 2));
+		var late = await Pose(scene, "#1", "late");
+		var rest = new List<ScenePose>();
+		for (var after = first.Next; after is not null;)
+		{
+			var page = Expect<ScenePosePage>(await _scenes.GetPosePageAsync(scene, after, 2));
+			rest.AddRange(page.Poses);
+			after = page.Next;
+		}
+
+		await Assert.That(rest.Select(p => p.Content)).IsEquivalentTo(["pose 2", "pose 3", "late"], CollectionOrdering.Matching);
+		await Assert.That(rest[^1].Id).IsEqualTo(late);
+	}
+
+	/// <summary>Tags and cast, read off the pose records, are what the projected live poses give.</summary>
+	[Test]
+	public async Task TagsAndCastMatchTheLivePoses()
+	{
+		var other = await NewPlayer("CastOther");
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		var first = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "pose", ["combat", "Combat", " "], "a")).Id;
+		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Masked", "#0", "pose", ["intrigue"], "b"));
+		var gone = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Ghost", "#0", "pose", ["deleted-only"], "c")).Id;
+		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "pose", ["combat"], "d"));
+		await _scenes.DeletePoseAsync(gone);
+		Expect<ScenePose>(await _scenes.SetPoseMetaAsync(first, "tags", "renamed combat"));
+
+		var live = (await Poses(scene)).Where(p => !p.IsDeleted).ToList();
+		var tags = Expect<IReadOnlyList<string>>(await _scenes.GetTagsAsync(scene));
+		var cast = Expect<IReadOnlyList<string>>(await _scenes.GetCastAsync(scene));
+
+		await Assert.That(tags).IsEquivalentTo(live.SelectMany(p => p.Tags).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.Ordinal),
+			CollectionOrdering.Matching);
+		await Assert.That(tags).DoesNotContain("deleted-only");
+		await Assert.That(cast).IsEquivalentTo(live.Select(p => string.IsNullOrEmpty(p.ShowAsName) ? p.AuthorName : p.ShowAsName)
+			.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal), CollectionOrdering.Matching);
+		await Assert.That(cast).Contains("Masked");
+		await Assert.That(cast).DoesNotContain("Ghost");
+		await Assert.That(await _scenes.GetTagsAsync("9999") is { Value: NotFound }).IsTrue();
+	}
+
 	[Test]
 	public async Task TailIsTheSuffixOfTheFullList()
 	{

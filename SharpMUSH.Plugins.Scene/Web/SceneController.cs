@@ -22,7 +22,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
-///   GET /api/scenes/{id}/poses[?count=]   — ordered, non-deleted pose DTOs
+///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
 ///   GET /api/scenes/{id}/members          — member DTOs
 ///   GET /api/scenes/{id}/cast             — distinct display personas (strings)
 ///   GET /api/scenes/{id}/tags             — distinct pose tags (strings)
@@ -233,19 +233,51 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		return await CanSeeAsync(scene) ? Ok(ToDto(scene)) : NotFound();
 	}
 
+	/// <summary>Poses read per storage transaction while streaming a scene's whole log.</summary>
+	public const int PoseStreamPageSize = 100;
+
 	/// <summary>
 	/// GET /api/scenes/{id}/poses?count=
-	/// Returns the scene's poses in chain order (optionally only the last <c>count</c>),
-	/// or 404 when the scene is missing or not visible.
+	/// Returns the scene's poses in chain order, or 404 when the scene is missing or not visible. With
+	/// <c>count</c>, only the last <c>count</c>, read at once. Without it the whole log is streamed as the
+	/// JSON array is written: <see cref="PoseStreamPageSize"/> poses per storage read, each read closed
+	/// before its poses are sent, so a slow client never holds a read transaction open.
 	/// </summary>
+	/// <remarks>
+	/// The stream is not one snapshot. A pose edited, moved or deleted while the log is being sent shows as
+	/// it was when its page was read, and a pose added at the end before the last page is included.
+	/// </remarks>
 	[HttpGet("{id}/poses")]
 	public async Task<IActionResult> GetPoses(string id, [FromQuery] int? count = null)
 	{
 		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
 
-		return await sceneService.GetPosesAsync(id, count: count) is IReadOnlyList<ScenePose> poses
-			? Ok(poses.Select(ToDto))
-			: NotFound();
+		if (count is not null)
+		{
+			return await sceneService.GetPosesAsync(id, count: count) is IReadOnlyList<ScenePose> poses
+				? Ok(poses.Select(ToDto))
+				: NotFound();
+		}
+
+		return Ok(StreamPosesAsync(id, HttpContext.RequestAborted));
+	}
+
+	/// <summary>The scene's poses page by page; ends early if the scene disappears mid-stream.</summary>
+	private async IAsyncEnumerable<ScenePoseDto> StreamPosesAsync(string id,
+		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+	{
+		long? after = null;
+		do
+		{
+			ct.ThrowIfCancellationRequested();
+			if (await sceneService.GetPosePageAsync(id, after, PoseStreamPageSize) is not ScenePosePage page) yield break;
+			foreach (var pose in page.Poses)
+			{
+				yield return ToDto(pose);
+			}
+
+			after = page.Next;
+		} while (after is not null);
 	}
 
 	/// <summary>
