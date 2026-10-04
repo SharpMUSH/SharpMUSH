@@ -159,7 +159,7 @@ public class RolesController(
 		if (Actor() is not { } actor) return Forbid();
 		if (!Enum.TryParse<PermissionState>(dto.State, true, out var state) || !Enum.IsDefined(state))
 			return BadRequest(new { error = $"Invalid permission state: {dto.State}" });
-		return await management.SetOverrideAsync(actor, accountId, dto.Scope, state, HttpContext.RequestAborted) switch
+		return await management.SetOverridesAsync(actor, accountId, [dto.Scope], state, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)

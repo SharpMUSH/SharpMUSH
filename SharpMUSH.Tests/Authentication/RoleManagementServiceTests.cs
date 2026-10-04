@@ -102,7 +102,7 @@ public class RoleManagementServiceTests
 	{
 		var world = Build();
 		await Refused(world.Service.AssignAsync(new("mod"), "wiz", "helper"), RoleRefusalKind.Forbidden);
-		await Refused(world.Service.SetOverrideAsync(new("mod"), "wiz", PortalPermission.WikiEdit, PermissionState.Deny), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.SetOverridesAsync(new("mod"), "wiz", [PortalPermission.WikiEdit], PermissionState.Deny), RoleRefusalKind.Forbidden);
 		await Refused(world.Service.AssignAsync(new("wiz"), "owner", "helper"), RoleRefusalKind.Forbidden);
 	}
 
@@ -134,8 +134,8 @@ public class RoleManagementServiceTests
 		var refusal = await Refused(world.Service.SaveRoleAsync(new("wiz"), Draft("ops", 20, PortalPermission.ServerAdmin)), RoleRefusalKind.Forbidden);
 		await Assert.That(refusal.Message).Contains(PortalPermission.ServerAdmin);
 		await Refused(world.Service.SaveRoleAsync(new("wiz"), Draft("ops", 20, PortalPermission.Administrator)), RoleRefusalKind.Forbidden);
-		await Refused(world.Service.SetOverrideAsync(new("mod"), "pl", PortalPermission.ConfigAdmin, PermissionState.Allow), RoleRefusalKind.Forbidden);
-		await Accepted(world.Service.SetOverrideAsync(new("mod"), "pl", PortalPermission.ConfigAdmin, PermissionState.Deny));
+		await Refused(world.Service.SetOverridesAsync(new("mod"), "pl", [PortalPermission.ConfigAdmin], PermissionState.Allow), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SetOverridesAsync(new("mod"), "pl", [PortalPermission.ConfigAdmin], PermissionState.Deny));
 	}
 
 	[Test]
@@ -169,15 +169,38 @@ public class RoleManagementServiceTests
 		var world = Build();
 		await Accepted(world.Service.SaveRoleAsync(new("owner"), Draft("council", 35, PortalPermission.ServerAdmin)));
 		await Accepted(world.Service.AssignAsync(new("owner"), "wiz", "council"));
-		await Accepted(world.Service.SetOverrideAsync(new("owner"), "wiz", PortalPermission.WikiEdit, PermissionState.Deny));
+		await Accepted(world.Service.SetOverridesAsync(new("owner"), "wiz", [PortalPermission.WikiEdit], PermissionState.Deny));
+	}
+
+	[Test]
+	public async Task OverridesAreAllOrNone()
+	{
+		var world = Build();
+		await Refused(world.Service.SetOverridesAsync(new("wiz"), "pl", [PortalPermission.WikiDelete, PortalPermission.ServerAdmin], PermissionState.Allow),
+			RoleRefusalKind.Forbidden);
+		await Refused(world.Service.SetOverridesAsync(new("wiz"), "pl", [PortalPermission.WikiDelete, PortalPermission.Administrator], PermissionState.Allow),
+			RoleRefusalKind.Invalid);
+		await Assert.That(await world.Registry.GetAccountOverridesAsync("pl")).IsEmpty();
+		await Accepted(world.Service.SetOverridesAsync(new("wiz"), "pl", [PortalPermission.WikiDelete, PortalPermission.MediaAdmin], PermissionState.Allow));
+		await Assert.That((await world.Registry.GetAccountOverridesAsync("pl")).Count).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task AnAssignedSystemRoleCanBeTakenAway()
+	{
+		var world = Build();
+		await world.Registry.AssignRoleToAccountAsync("pl", "royalty");
+		await Refused(world.Service.UnassignAsync(new("owner"), "pl2", "royalty"), RoleRefusalKind.Invalid);
+		await Accepted(world.Service.UnassignAsync(new("owner"), "pl", "royalty"));
+		await Assert.That(world.Registry.AssignedTo("pl")).DoesNotContain("royalty");
 	}
 
 	[Test]
 	public async Task AdministratorIsNeverAnOverride()
 	{
 		var world = Build();
-		await Refused(world.Service.SetOverrideAsync(new("owner"), "pl", PortalPermission.Administrator, PermissionState.Allow), RoleRefusalKind.Invalid);
-		await Refused(world.Service.SetOverrideAsync(new("owner"), "pl", "no.such", PermissionState.Allow), RoleRefusalKind.Invalid);
+		await Refused(world.Service.SetOverridesAsync(new("owner"), "pl", [PortalPermission.Administrator], PermissionState.Allow), RoleRefusalKind.Invalid);
+		await Refused(world.Service.SetOverridesAsync(new("owner"), "pl", ["no.such"], PermissionState.Allow), RoleRefusalKind.Invalid);
 	}
 
 	[Test]

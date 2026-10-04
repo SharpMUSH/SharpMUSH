@@ -182,12 +182,8 @@ public partial class Commands
 		IRoleManagementService management, string name, string[] scopes, PermissionState state)
 	{
 		if (await AccountFor(parser, executor, name) is not { } target) return $"No player named '{name}' with an account.";
-		foreach (var scope in scopes)
-		{
-			if (await management.SetOverrideAsync(actor, target.Account.Id!, scope, state, ExecutionBudget.CurrentToken) is RoleRefusal refusal)
-				return refusal.Message;
-		}
-
+		if (await management.SetOverridesAsync(actor, target.Account.Id!, scopes, state, ExecutionBudget.CurrentToken) is RoleRefusal refusal)
+			return refusal.Message;
 		return $"{target.Player.Object.Name} (account {target.Account.Username}): {StateWord(state)} {string.Join(", ", scopes)}.";
 	}
 

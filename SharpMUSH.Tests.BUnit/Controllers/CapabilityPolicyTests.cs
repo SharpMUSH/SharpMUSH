@@ -73,7 +73,7 @@ public class CapabilityPolicyTests
 		var management = Substitute.For<IRoleManagementService>();
 		var result = await Controller(management).SetOverride("b", new RolesController.OverrideDto(PortalPermission.WikiEdit, "Maybe"));
 		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
-		await management.DidNotReceiveWithAnyArgs().SetOverrideAsync(default!, default!, default!, default);
+		await management.DidNotReceiveWithAnyArgs().SetOverridesAsync(default!, default!, default!, default);
 	}
 
 	private static RolesController Controller(IRoleManagementService management) => new(

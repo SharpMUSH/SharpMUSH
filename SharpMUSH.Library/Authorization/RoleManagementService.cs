@@ -63,8 +63,11 @@ public interface IRoleManagementService
 	/// <summary>Takes a role away from an account.</summary>
 	Task<RoleOutcome<Success>> UnassignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default);
 
-	/// <summary>Sets a per-account override; <see cref="PermissionState.Inherit"/> clears it.</summary>
-	Task<RoleOutcome<Success>> SetOverrideAsync(CapabilityActor actor, string accountId, string scope, PermissionState state, CancellationToken ct = default);
+	/// <summary>
+	/// Sets per-account overrides, all or none: every scope is checked before any is written.
+	/// <see cref="PermissionState.Inherit"/> clears them.
+	/// </summary>
+	Task<RoleOutcome<Success>> SetOverridesAsync(CapabilityActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -120,23 +123,37 @@ public sealed partial class RoleManagementService(
 	public Task<RoleOutcome<Success>> UnassignAsync(CapabilityActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: false, ct);
 
-	public Task<RoleOutcome<Success>> SetOverrideAsync(CapabilityActor actor, string accountId, string scope, PermissionState state, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> SetOverridesAsync(CapabilityActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
-			if (PortalPermission.Canonical(scope) is not { } canonical)
-				return Refuse<Success>(RoleRefusalKind.Invalid, $"Unknown permission '{scope}'.");
-			if (canonical == PortalPermission.Administrator)
-				return Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set on an account.");
+			if (scopes.Count == 0)
+				return Refuse<Success>(RoleRefusalKind.Invalid, "Name at least one permission.");
 			if (!Enum.IsDefined(state))
 				return Refuse<Success>(RoleRefusalKind.Invalid, "Unknown permission state.");
+			var canonical = new List<string>();
+			foreach (var scope in scopes)
+			{
+				if (PortalPermission.Canonical(scope) is not { } known)
+					return Refuse<Success>(RoleRefusalKind.Invalid, $"Unknown permission '{scope}'.");
+				if (known == PortalPermission.Administrator)
+					return Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set on an account.");
+				canonical.Add(known);
+			}
+
 			var me = await capabilities.GetContextAsync(actor, ct);
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (await TargetAsync(actor, me, accountId, ct) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
-			if (state == PermissionState.Allow && !resolver.Resolve(me).Contains(canonical))
-				return Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant {canonical}, which you do not hold.");
+			if (state == PermissionState.Allow)
+			{
+				var held = resolver.Resolve(me);
+				var unheld = canonical.Where(scope => !held.Contains(scope)).ToArray();
+				if (unheld.Length > 0)
+					return Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.");
+			}
 
-			await registry.SetAccountOverrideAsync(target, canonical, state);
+			foreach (var scope in canonical.Distinct())
+				await registry.SetAccountOverrideAsync(target, scope, state);
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
@@ -146,20 +163,27 @@ public sealed partial class RoleManagementService(
 		{
 			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
 				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
-			if (role.IsSystem)
-				return Refuse<Success>(RoleRefusalKind.Invalid,
-					$"{role.Name} is a system role; it follows a character's flags and cannot be {(assign ? "assigned" : "removed")} by hand.");
+			if (role.IsSystem && assign)
+				return SystemRole(role, "assigned");
 			var me = await capabilities.GetContextAsync(actor, ct);
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
 			if (await TargetAsync(actor, me, accountId, ct) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
+			// A system role can still be taken off an account that holds it by assignment (an older
+			// world could assign one), so that grant stays revocable; the tier itself is not removable.
+			if (role.IsSystem && !(await registry.GetRolesForAccountAsync(target, ct))
+					.Any(held => string.Equals(held.Slug, role.Slug, StringComparison.OrdinalIgnoreCase)))
+				return SystemRole(role, "removed");
 
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
 			else await registry.RemoveRoleFromAccountAsync(target, role.Slug);
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
+
+	private static RoleOutcome<Success> SystemRole(SharpRole role, string verb)
+		=> Refuse<Success>(RoleRefusalKind.Invalid, $"{role.Name} is a system role; it follows a character's flags and cannot be {verb} by hand.");
 
 	private async Task<RoleOutcome<SharpRole>> SaveCoreAsync(CapabilityActor actor, RoleDraft draft, CancellationToken ct)
 	{
