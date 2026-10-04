@@ -402,8 +402,8 @@ public class MoveService(
 			// a room is its own location.
 			if (!oldContainer.Object().DBRef.Equals(where.Object().DBRef)
 					&& oldContainer is SharpRoom oldRoom
-					&& await IsDropper(mover)
-					&& await oldContainer.WithExitOption().HasFlag("STICKY"))
+					&& await oldContainer.WithExitOption().HasFlag("STICKY")
+					&& await IsDropper(mover))
 			{
 				if (await oldRoom.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo)
 				{
@@ -471,8 +471,8 @@ public class MoveService(
 
 			// move.c:311: an item goes home only when the mover does not control it, it is STICKY, and
 			// the mover is not already its home. Everything else travels along.
-			if (await permissionService.Controls(mover, carriedObject)
-					|| !await carriedObject.HasFlag("STICKY"))
+			if (!await carriedObject.HasFlag("STICKY")
+					|| await permissionService.Controls(mover, carriedObject))
 			{
 				continue;
 			}
@@ -530,9 +530,11 @@ public class MoveService(
 		{
 			var thing = content.WithRoomOption();
 
-			// move.c:186: a Dropper stays, and so does anything the room's drop-to lock refuses.
-			if (await IsDropper(thing)
-					|| !await permissionService.PassesLock(thing, room.WithExitOption(), LockType.DropTo))
+			// move.c:186: a Dropper stays, and so does anything the room's drop-to lock refuses. Penn's
+			// send_contents asks Dropper again, but only after maybe_dropto found no Dropper in the same
+			// single-threaded pass, so that test is always false there; the first pass above already
+			// answered it for every item, and it is not asked twice.
+			if (!await permissionService.PassesLock(thing, room.WithExitOption(), LockType.DropTo))
 			{
 				continue;
 			}

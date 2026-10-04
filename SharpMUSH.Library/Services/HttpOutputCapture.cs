@@ -62,6 +62,9 @@ public class HttpOutputCapture : IHttpOutputCapture
 		return true;
 	}
 
+	public bool Captures(int dbref)
+		=> Frames.Value is { IsEmpty: false } frames && frames.Peek().Dbref == dbref;
+
 	private sealed class CaptureScope(ImmutableStack<(int, HttpResponseContext)> prior) : IDisposable
 	{
 		public void Dispose() => Frames.Value = prior;

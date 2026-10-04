@@ -136,12 +136,12 @@ public partial class TaskScheduler(
 	public QueueUsage GetQueueUsage()
 	{
 		lock (_admissionLock) return new(_pendingEntries.Count,
-		 _pendingEntries.Values.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
+		 LockedPendingEntries.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
 		 new Dictionary<QueueRejectionReason, long>(_rejections));
 	}
 	public bool HasPendingWork(string triggerName, string group)
 	{
-		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == SchedulerKeys.TriggerName(triggerName, entry.Pid) && entry.Group == group);
+		lock (_admissionLock) return LockedPendingEntries.Any(entry => entry.Group == group && entry.TriggerName == SchedulerKeys.TriggerName(triggerName, entry.Pid));
 	}
 	private QueueAdmissionResult Reject(QueueRejectionReason reason)
 	{
@@ -241,10 +241,10 @@ public partial class TaskScheduler(
 	{
 		lock (_admissionLock)
 		{
-			var charged = _pendingEntries.Values.Where(e => e.ChargesOwner).ToList();
+			var charged = LockedPendingEntries.Where(e => e.ChargesOwner).ToList();
 			var objects = charged.GroupBy(e => e.ChargedObject).ToDictionary(g => g.Key, g => g.Count());
 			var owners = charged.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count());
-			var typed = _pendingEntries.Values.Where(e => e.PendingInput is not null)
+			var typed = LockedPendingEntries.Where(e => e.PendingInput is not null)
 				.GroupBy(e => new IncarnationKey(e.PendingInput!)).ToDictionary(g => g.Key, g => g.Count());
 			return (DescribeTallies(_chargedPerObject, _chargedPerOwner, _typedPerIncarnation),
 				DescribeTallies(objects, owners, typed));
@@ -743,6 +743,13 @@ public partial class TaskScheduler(
 		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0, InplaceDepth = 0 }).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
+
+	/// <summary>
+	/// The pending entries, enumerated in place. Only for a caller holding <see cref="_admissionLock"/>,
+	/// under which every write to <see cref="_pendingEntries"/> happens, so this sees what
+	/// <c>Values</c> would without the copy <c>Values</c> takes of the whole table.
+	/// </summary>
+	private IEnumerable<QueueEntry> LockedPendingEntries => _pendingEntries.Select(pair => pair.Value);
 	private readonly CancellationTokenSource _shutdownCts = new();
 	private Task? _consumerTask;
 
@@ -1170,7 +1177,7 @@ public partial class TaskScheduler(
 		QueueEntry[] waiting;
 		var group = SchedulerKeys.Semaphore(dbAttribute);
 		lock (_admissionLock)
-			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+			waiting = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
@@ -1191,7 +1198,7 @@ public partial class TaskScheduler(
 		QueueEntry? entry;
 		var group = SchedulerKeys.Semaphore(dbAttribute);
 		lock (_admissionLock)
-			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+			entry = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).MinBy(e => e.Pid);
 		if (entry?.Deferred is not { } deferred) return false;
 		if (!deferred.State.Registers.TryPeek(out var registers))
@@ -1214,7 +1221,7 @@ public partial class TaskScheduler(
 			var group = SchedulerKeys.Semaphore(dbAttribute);
 			lock (_admissionLock)
 			{
-				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+				removed = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
 			}
 			foreach (var entry in removed) await RemoveDeferredTrigger(entry);
@@ -1244,7 +1251,7 @@ public partial class TaskScheduler(
 	private async ValueTask HaltWhere(DBRef dbRef, Func<QueueEntry, bool> include)
 	{
 		long[] pids;
-		lock (_admissionLock) pids = _pendingEntries.Values
+		lock (_admissionLock) pids = LockedPendingEntries
 			.Where(entry => include(entry)
 				&& (entry.Executor?.Matches(dbRef) == true
 					|| (SchedulerKeys.IsSemaphore(entry.Group) && entry.SemaphoreTarget?.Matches(dbRef) == true)))
@@ -1370,6 +1377,7 @@ public partial class TaskScheduler(
 			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
+		// Not under the lock and enumerated across yields, so this keeps the copy Values makes.
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
 		{
 			token.ThrowIfCancellationRequested();
@@ -1390,22 +1398,38 @@ public partial class TaskScheduler(
 		=> SemaphoreSnapshots(e => e.SemaphoreTarget?.Matches(obj) == true).ToAsyncEnumerable();
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
-		=> SemaphoreSnapshots(e => e.Pid == pid).ToAsyncEnumerable();
+	{
+		lock (_admissionLock)
+		{
+			return (_pendingEntries.TryGetValue(pid, out var entry) && IsWaitingSemaphore(entry)
+				? [SemaphoreSnapshot(entry, DateTimeOffset.UtcNow)]
+				: Array.Empty<SemaphoreTaskData>()).ToAsyncEnumerable();
+		}
+	}
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
-		=> SemaphoreSnapshots(e => e.Group == SchedulerKeys.Semaphore(objAttribute)).ToAsyncEnumerable();
+	{
+		var group = SchedulerKeys.Semaphore(objAttribute);
+		return SemaphoreSnapshots(e => e.Group == group).ToAsyncEnumerable();
+	}
 
 	private SemaphoreTaskData[] SemaphoreSnapshots(Func<QueueEntry, bool> predicate)
 	{
 		lock (_admissionLock)
 		{
 			var now = DateTimeOffset.UtcNow;
-			return _pendingEntries.Values.Where(e => e.Deferred?.Semaphore is not null && !_ready.Contains(e.Pid) && predicate(e))
-				.OrderBy(e => e.Pid).Select(e => new SemaphoreTaskData(e.Pid, e.Deferred!.Command,
-					e.Executor ?? new DBRef(-1), new DbRefAttribute(e.SemaphoreTarget!.Value, e.Deferred.Semaphore!.Value.Attribute),
-					e.Deferred.Paused ? e.Deferred.Remaining : Nonnegative(e.Deferred.Due - now))).ToArray();
+			return LockedPendingEntries.Where(e => IsWaitingSemaphore(e) && predicate(e))
+				.OrderBy(e => e.Pid).Select(e => SemaphoreSnapshot(e, now)).ToArray();
 		}
 	}
+
+	// Caller holds _admissionLock.
+	private bool IsWaitingSemaphore(QueueEntry e) => e.Deferred?.Semaphore is not null && !_ready.Contains(e.Pid);
+
+	private static SemaphoreTaskData SemaphoreSnapshot(QueueEntry e, DateTimeOffset now)
+		=> new(e.Pid, e.Deferred!.Command,
+			e.Executor ?? new DBRef(-1), new DbRefAttribute(e.SemaphoreTarget!.Value, e.Deferred.Semaphore!.Value.Attribute),
+			e.Deferred.Paused ? e.Deferred.Remaining : Nonnegative(e.Deferred.Due - now));
 
 	public IAsyncEnumerable<long> GetDelayTasks(DBRef obj)
 		=> ReadDelayTasks(obj, ExecutionBudget.CurrentToken);
@@ -1443,7 +1467,7 @@ public partial class TaskScheduler(
 	{
 		long[] pids;
 		lock (_admissionLock)
-			pids = _pendingEntries.Values
+			pids = LockedPendingEntries
 				.Where(entry => entry.Executor?.Matches(obj) == true
 					&& entry.Group != DirectInputGroup
 					&& _ready.Contains(entry.Pid))
@@ -1481,7 +1505,7 @@ public partial class TaskScheduler(
 	public async ValueTask DisposeAsync()
 	{
 		QueueEntry[] entries;
-		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = _pendingEntries.Values.ToArray(); }
+		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = LockedPendingEntries.ToArray(); }
 		foreach (var entry in entries) CancelEntry(entry);
 		await _shutdownCts.CancelAsync();
 		if (_consumerTask is not null)

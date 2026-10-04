@@ -32,11 +32,13 @@ public class ListenPatternMatcher(
 		var search = new ListenAttributeSearch();
 		var token = ExecutionBudget.CurrentToken;
 		var maxParents = checkParents ? configuration.CurrentValue.Limit.MaxParents : 0;
+		// Every pattern is matched against the same plain text; it is rendered once, not per attribute.
+		var plainMessage = message.ToPlainText();
 		CollectMatches(await search.ReadPhaseAsync(mediator, listener.Object().DBRef, maxParents, false, token),
-			listener, message, speaker, matches);
+			listener, message, plainMessage, speaker, matches);
 		if (checkParents && await listener.Ancestor(configuration) is { } ancestor)
 			CollectMatches(await search.ReadPhaseAsync(mediator, ancestor, maxParents, true, token),
-				listener, message, speaker, matches);
+				listener, message, plainMessage, speaker, matches);
 
 		return [.. matches];
 	}
@@ -49,6 +51,7 @@ public class ListenPatternMatcher(
 		IEnumerable<ListenAttributeCache> listenAttributes,
 		AnySharpObject listener,
 		MString message,
+		string plainMessage,
 		AnySharpObject speaker,
 		List<ListenMatch> matches)
 	{
@@ -68,7 +71,7 @@ public class ListenPatternMatcher(
 				continue;
 
 			// A pattern that cannot finish is not a match, and must not stop the patterns after it.
-			var regexMatch = SoftcodeRegex.Match(listenAttr.CompiledRegex, message.ToPlainText());
+			var regexMatch = SoftcodeRegex.Match(listenAttr.CompiledRegex, plainMessage);
 			if (regexMatch is not { Success: true })
 				continue;
 

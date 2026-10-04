@@ -215,8 +215,10 @@ public class NotifyService(
 			return false;
 		}
 
+		// The text is built only when a capture frame is for this recipient; Offer and TryCapture do
+		// nothing for anyone else.
 		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0)
-			&& (httpOutputCapture is not null || commandOutputCapture is not null))
+			&& (httpOutputCapture?.Captures(who.Number) == true || commandOutputCapture?.Captures(who.Number) == true))
 		{
 			var text = context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
 			{
@@ -285,14 +287,20 @@ public class NotifyService(
 		var delivered = context is null ? body : MString.Concat(context.Prefix, body);
 		// Empty relays can reach nested listeners without producing framing or an empty transport message.
 		if (!prompt && delivered.Length == 0) return;
+		// Listener routing has already run above. With no connection to deliver to, the NOSPOOF/PARANOID
+		// header would be built for nobody, so the recipient's connections are looked up first.
+		await using var bound = connections.Get(who).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
+		if (!await bound.MoveNextAsync()) return;
 		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
+		do
 		{
+			var conn = bound.Current;
 			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			if (prompt) await PublishMarkupPrompt(conn.Handle, outgoing);
 			else await PublishMarkup(conn.Handle, outgoing);
 		}
+		while (await bound.MoveNextAsync());
 	}
 
 	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -355,12 +363,12 @@ public class NotifyService(
 			return;
 		}
 
+		if (!await CanReceive(who, sender)) return;
 		var excludeHandles = await except.ToAsyncEnumerable()
 			.SelectMany(dbRef => connections.Get(dbRef))
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
-		if (!await CanReceive(who, sender)) return;
 		var outgoing = await PrepareRecipient(Prepare(what), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
