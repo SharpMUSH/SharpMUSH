@@ -52,7 +52,8 @@ three packages.
 
 **`scene`** comes from the Scene plugin, not from movement: the room's scene
 started, paused, finished, moved in or out, was retitled or made public or
-private, or its cast or a viewer's focus on it changed (`@scene/set` of
+private, or its cast changed, or a viewer in the room focused on it, left it,
+or took up or dropped a focus on another scene (`@scene/set` of
 `status`, `title`, `public` or `room`, `@scene/member`, `@scene/unmember`,
 `@scene/focus`, and their side-effect functions). Only the scene block changed,
 and it differs per viewer, so every connected viewer in the room gets a fresh
@@ -232,7 +233,7 @@ carries a comment per attribute; this is the map.
 | ``FN`IMAGE`` (`%0` object) | the thumbnail: ``FN`IMAGEREF`` of `IMAGE` |
 | ``FN`BANNER`` (`%0` room) | the banner: ``FN`IMAGEREF`` of ``IMAGE`BANNER``, falling back to `IMAGE` |
 | ``FN`DESC`` (`%0` room) | the room's `DESCRIBE`, evaluated as the room |
-| ``FN`SCENE`` (`%0` room, `%1` viewer) | `{"id","title","cast","role","focus"}` for a scene the viewer may see, or `null` |
+| ``FN`SCENE`` (`%0` room, `%1` viewer) | `{"id","title","cast","role","focus","elsewhere"}` for a scene the viewer may see, or `null` |
 | ``FN`EXITHINT`` (`%0` exit) | the exit's `@fail`, as stored — plain text, never evaluated |
 | ``FN`EXITSTATE`` (`%0` exit, `%1` viewer, `%2` loc(exit)) | `closed` when unlinked (`#-1`), `locked` when the Basic lock fails for the viewer, else `open` (VARIABLE `#-2` and HOME `#-3` stay open) |
 | ``FN`DEST`` (`%0` destination) | `{"name","area","image","desc","here"}` |
@@ -449,7 +450,7 @@ plugin — a public scene:
 {"v":2,"dbref":"#47","objid":"#47:1790741471143","name":"RcRoom468adfc9",
  "desc":{"format":"text","text":"Tarred pilings.\nStacked crates, God looks on."},
  "image":{"url":"/assets/rooms/468adfc9.jpg","alt":"The quay at dusk","focal":[0.5,0.6]},
- "scene":{"id":"42","title":"Salt Market at Dusk","cast":3,"role":"participant","focus":true}}
+ "scene":{"id":"42","title":"Salt Market at Dusk","cast":3,"role":"participant","focus":true,"elsewhere":false}}
 ```
 
 - `desc.format` is `text`: the description is the evaluated `DESCRIBE`, with
@@ -457,10 +458,11 @@ plugin — a public scene:
   enactor's name. Nothing produces markdown here.
 - `area` appears once the room has a zone or a parent; `image` once it has a
   visual ``IMAGE`BANNER`` or `IMAGE` — the banner is the wide art, and `url`
-  is the banner when both are set; `scene` (`{"id","title","cast","role","focus"}`, `id` a string) once a scene the
+  is the banner when both are set; `scene` (`{"id","title","cast","role","focus","elsewhere"}`, `id` a string) once a scene the
   viewer may see runs in the room. `role` is the viewer's role in it (`participant`,
   `owner`, …) or `null`; `focus` is whether the viewer is focused on it, which is
-  what decides whether a pose they make in the room is recorded there. Otherwise the key is absent.
+  what decides whether a pose they make in the room is recorded there; `elsewhere` is whether they
+  are focused on another scene, where their poses go instead. Otherwise the key is absent.
 - There are no `width`/`height` on an image: every portal surface is a
   fixed-size box the picture is cropped into.
 
