@@ -85,6 +85,55 @@ public sealed class AuditingRoleManagementService(
 		return outcome;
 	}
 
+	public async Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string category,
+		string description, CancellationToken ct = default)
+	{
+		var outcome = await inner.DefinePermissionAsync(actor, scope, category, description, ct);
+		if (outcome is CustomPermission permission)
+			await RecordAsync(actor, AuditActions.PermissionDefine, AuditTargets.Of(AuditTargetKinds.Permission, permission.Scope),
+				$"category {permission.Category}", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<Success>> RemovePermissionAsync(RoleActor actor, string scope, CancellationToken ct = default)
+	{
+		var outcome = await inner.RemovePermissionAsync(actor, scope, ct);
+		if (outcome is Success) await RecordAsync(actor, AuditActions.PermissionRemove, AuditTargets.Of(AuditTargetKinds.Permission, scope), null, ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> CreateCategoryAsync(RoleActor actor, CategoryKind kind, string name, string description,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.CreateCategoryAsync(actor, kind, name, description, ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), "created", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> DescribeCategoryAsync(RoleActor actor, CategoryKind kind, string name, string description,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.DescribeCategoryAsync(actor, kind, name, description, ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), "described", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> RenameCategoryAsync(RoleActor actor, CategoryKind kind, string name, string newName,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.RenameCategoryAsync(actor, kind, name, newName, ct);
+		if (outcome is RoleCategory category)
+			await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), $"renamed from {name}", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<Success>> DeleteCategoryAsync(RoleActor actor, CategoryKind kind, string name, CancellationToken ct = default)
+	{
+		var outcome = await inner.DeleteCategoryAsync(actor, kind, name, ct);
+		if (outcome is Success) await RecordAsync(actor, AuditActions.CategoryDelete, CategoryTarget(kind, name), null, ct);
+		return outcome;
+	}
+
 	private ValueTask RecordAsync(RoleActor actor, string action, AuditTarget target, string? details, CancellationToken ct)
 		=> actor switch
 		{
@@ -96,6 +145,10 @@ public sealed class AuditingRoleManagementService(
 		=> await accounts.GetByIdAsync(accountId, ct) is { } account
 			? AuditTargets.Of(account)
 			: AuditTargets.Of(AuditTargetKinds.Account, accountId);
+
+	/// <summary>A category, named with its list, since a role category and a permission category may share a name.</summary>
+	private static AuditTarget CategoryTarget(CategoryKind kind, string name)
+		=> AuditTargets.Of(AuditTargetKinds.Category, $"{kind.ToString().ToLowerInvariant()}:{name}");
 
 	private static AuditTarget RoleTarget(SharpRole role) => new(AuditTargetKinds.Role, role.Slug, role.Name);
 
