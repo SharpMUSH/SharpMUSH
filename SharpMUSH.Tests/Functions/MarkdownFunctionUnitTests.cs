@@ -482,10 +482,12 @@ public class MarkdownFunctionUnitTests
 		var plainText = result!.ToPlainText();
 		var lines = plainText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-		await Assert.That(lines.Length).IsEqualTo(3);
+		// The headers do not fit their columns, so the header row wraps onto a second line.
+		await Assert.That(lines.Length).IsEqualTo(4);
 
 		foreach (var line in lines)
 		{
+			await Assert.That(line.Length).IsEqualTo(60);
 			await Assert.That(line.StartsWith("|")).IsTrue();
 			await Assert.That(line.EndsWith("|")).IsTrue();
 		}

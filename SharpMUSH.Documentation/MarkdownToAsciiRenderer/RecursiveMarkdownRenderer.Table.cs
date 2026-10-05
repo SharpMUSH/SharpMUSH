@@ -60,7 +60,7 @@ public partial class RecursiveMarkdownRenderer
 					r.Cells,
 					MarkupText.Plain(" "),
 					MarkupText.Plain("  "),
-					MarkupText.Plain("")
+					MarkupText.Plain("\n")
 				))
 				.ToList();
 
@@ -102,7 +102,8 @@ public partial class RecursiveMarkdownRenderer
 				cells,
 				MarkupText.Plain(" "),
 				MarkupText.Wrap(borderStyle, " | "),
-				MarkupText.Plain("")
+				// A cell too wide for its column wraps onto more lines; each of them carries the borders.
+				MarkupText.Concat([MarkupText.Wrap(borderStyle, " |"), MarkupText.Plain("\n"), MarkupText.Wrap(borderStyle, "| ")])
 			);
 
 			var rowWithBorders = MarkupText.Concat([

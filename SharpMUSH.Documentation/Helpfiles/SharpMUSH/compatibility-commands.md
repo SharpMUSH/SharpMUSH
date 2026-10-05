@@ -187,9 +187,9 @@ HTTP Handler|Event Handler
 **PennMUSH** reports the move of an object sent through a drop-to as caused by `SYSEVENT`
 (`move.c:187`).<br>
 **SharpMUSH** has no `SYSEVENT` object and passes on the enactor whose action caused the move. This
-shows only in the enactor of the `OBJECT`MOVE` event. (#1006 item 9)<br>
+shows only in the enactor of the ``OBJECT`MOVE`` event. (#1006 item 9)<br>
 **Why.** There is no `SYSEVENT` dbref to name.<br>
-**Workaround.** Do not rely on an `OBJECT`MOVE` handler's enactor to tell a drop-to move from any
+**Workaround.** Do not rely on an ``OBJECT`MOVE`` handler's enactor to tell a drop-to move from any
 other.<br>
 **Example.** The parity case `choice.dropto` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 

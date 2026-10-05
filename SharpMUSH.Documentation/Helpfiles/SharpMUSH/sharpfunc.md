@@ -2478,7 +2478,7 @@ You say, "One|PLAYER"
 
   The resulting list will be separated by `<output separator>`, or a space if no separator is given.
 
-  reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the "`" branch separator has no special meaning in the pattern.
+  reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the `` ` `` branch separator has no special meaning in the pattern.
 
   lattrp() and reglattrp() also include attributes inherited from parents.
 

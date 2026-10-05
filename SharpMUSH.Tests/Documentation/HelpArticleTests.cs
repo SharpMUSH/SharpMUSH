@@ -145,4 +145,37 @@ public class HelpArticleTests
 			.Concat(HelpArticleParser.Parse("# sample2\nContinuation.", "help")).ToList();
 		await Assert.That(() => HelpCorpusValidator.Validate(parsed)).Throws<InvalidDataException>();
 	}
+
+	[Test]
+	public async Task WebKeepsColumnsTheTerminalLinesUp()
+	{
+		const string markdown = "ACTION LISTS     ANCESTORS<br>\nCHAT             CLIENTS";
+		var html = HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic);
+		await Assert.That(html).IsEqualTo("<p class=\"help-aligned\">ACTION LISTS     ANCESTORS<br>CHAT             CLIENTS</p>\n");
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText())
+			.IsEqualTo("ACTION LISTS     ANCESTORS\nCHAT             CLIENTS");
+	}
+
+	[Test]
+	[Arguments("One line\nwraps here.", "<p>One line wraps here.</p>\n")]
+	[Arguments("Hard break  \nnext line.", "<p>Hard break<br />next line.</p>\n")]
+	[Arguments("Two spaces.  Then prose.", "<p>Two spaces.  Then prose.</p>\n")]
+	public async Task WebLineBreaksAreWhatTheTerminalPrints(string markdown, string expected)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task TerminalTableCellsThatWrapKeepTheirBorders()
+	{
+		const string markdown = "| Failure to... | Lock |\n| --- | --- |\n| run an `$-command` on an object that is quite a long way from here | Command |";
+		var lines = RecursiveMarkdownHelper.RenderMarkdown(markdown, maxWidth: 40).ToPlainText().Split('\n');
+		await Assert.That(lines.Length).IsGreaterThan(3);
+		foreach (var line in lines)
+		{
+			await Assert.That(line.Length).IsEqualTo(40);
+			await Assert.That(line[0]).IsEqualTo('|');
+			await Assert.That(line[^1]).IsEqualTo('|');
+		}
+	}
 }

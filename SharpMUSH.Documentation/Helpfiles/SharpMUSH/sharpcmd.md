@@ -1258,7 +1258,7 @@ Q-registers (set via setq() and similar functions) are inherited from the @confo
 
 Attempts to retrieve URL with a HTTP GET request, and upon doing so, queues the action list in `<obj>/<attr>`. The body of the reply from the remote web server is passed as %0, with the HTTP status in %q`<status>` and the Content-Type header in %q`<content-type>`. Any commas in the URL need to be escaped.
 
-The POST switch makes it do a HTTP POST request instead of the default GET, (And PUT and DELETE do the obvious). With these, the 'content-type' q-register controls the type of data; it defaults to 'application/x-www-form-urlencoded'.` If it contains the string "charset=utf-8", `<data>` will be converted to UTF-8, otherwise it is assumed to be Latin-1.
+The POST switch makes it do a HTTP POST request instead of the default GET, (And PUT and DELETE do the obvious). With these, the 'content-type' q-register controls the type of data; it defaults to 'application/x-www-form-urlencoded'. If it contains the string "charset=utf-8", `<data>` will be converted to UTF-8, otherwise it is assumed to be Latin-1.
 
 If the q-register 'userpass' is set when running @http, it should hold a string of the form user:password and will be used if needed for HTTP authentication.
 
@@ -1353,7 +1353,7 @@ The following permissions can be used to specify whether `<looker>` can see the 
 The following permissions control other behavior related to the flag:
 
 log Log when the flag is set or cleared. Only meaningful in `<setperms>`.<br>
-event Trigger the OBJECT`FLAG event when this flag is set or cleared. Only meaningful in `<setperms>`. See [EVENTS] for more information.
+event Trigger the ``OBJECT`FLAG`` event when this flag is set or cleared. Only meaningful in `<setperms>`. See [EVENTS] for more information.
 # @grep
 `@grep[/<switches>] <object>[/<attrs>]=<pattern>`
 
