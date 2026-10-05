@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# pose} other {# poses}}</value>
     <comment>MT — "pose"/"poses" is also the Dutch RP term; identical to English on purpose.</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Hoger wint bij conflict</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioriteit</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>De ahelp-onderwerpen. Alleen voor Tovenaars en God, in het portaal net als in het spel.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>De expliciete regel met de hoogste prioriteit beslist; weigering wint bij gelijke prioriteit. Overerving geldt alleen zonder expliciete regel. Zonder toestemming wordt toegang geweigerd. Gedelegeerde beheerders mogen alleen eigen rechten met lagere prioriteit beheren en hun eigen rollen of beperkingen niet wijzigen.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Huidige toegang: {0}; prioriteit {1}; rollen {2}; beslissing {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>De configuratie kon niet worden geïmporteerd: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Het scènesysteem is niet ingeschakeld in dit spel.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Positie in de hiërarchie. Je kunt alleen rollen onder je hoogste rol beheren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Elke rol die je hebt en die een recht toestaat, verleent het, ongeacht de prioriteit; een Weigeren blokkeert alleen wat geen enkele rol toestaat. Een accountuitzondering gaat boven elke rol, en een rol die Beheerder toestaat, verleent alles. Prioriteit bepaalt alleen wie wie beheert: je kunt alleen rollen en accounts onder je hoogste rol wijzigen en alleen toestaan wat je zelf hebt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Uitzonderingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Geen uitzonderingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Uitzondering verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Recht</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Een uitzondering op dit account gaat boven al zijn rollen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Uitzondering voor {0} opgeslagen.</value>
+    <comment>MT</comment>
   </data>
 </root>

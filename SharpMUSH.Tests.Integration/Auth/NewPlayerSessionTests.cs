@@ -195,7 +195,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		// that used to survive the character creation below.
 		var before = await AuthenticateAsync(account.AccountSessionToken);
 		await Assert.That(before.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		await Assert.That(ScopesOf(before)).IsEmpty();
+		await Assert.That(ScopesOf(before)).IsEquivalentTo([PortalPermission.WikiRead]);
 
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Gwen"));
 
@@ -204,7 +204,12 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		await Assert.That(after.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Player));
 		await Assert.That(ScopesOf(after)).IsEquivalentTo(new[]
 		{
+			PortalPermission.JobsManageOwn,
 			PortalPermission.MediaUpload,
+			PortalPermission.QueueControlOwn,
+			PortalPermission.QueueInspectOwn,
+			PortalPermission.SnapshotCapture,
+			PortalPermission.SnapshotRestore,
 			PortalPermission.SoftcodeUse,
 			PortalPermission.WikiCreate,
 			PortalPermission.WikiEdit,
@@ -214,7 +219,8 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 
 	/// <summary>
 	/// The unlink direction, which is the security-relevant one: dropping the last character drops
-	/// the account back to Guest, and the Player scopes must not outlive it.
+	/// the account back to Guest, and the Player scopes must not outlive it; only what
+	/// <c>everyone</c> allows is left.
 	/// </summary>
 	[Test]
 	public async Task UnlinkingTheLastCharacter_DropsScopes_OnTheVeryNextRequest()
@@ -233,7 +239,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		var afterUnlink = await AuthenticateAsync(account.AccountSessionToken);
 
 		await Assert.That(afterUnlink.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		await Assert.That(ScopesOf(afterUnlink)).IsEmpty();
+		await Assert.That(ScopesOf(afterUnlink)).IsEquivalentTo([PortalPermission.WikiRead]);
 	}
 
 	/// <summary>

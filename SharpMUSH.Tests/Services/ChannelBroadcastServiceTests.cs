@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Collections.Immutable;
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -202,6 +203,7 @@ public class ChannelBroadcastServiceTests
 		Type = type,
 		Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 		Owner = new(async _ => { await Task.CompletedTask; return null!; }),
+		Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 		Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 		Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 		LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),

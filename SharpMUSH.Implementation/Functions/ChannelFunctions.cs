@@ -226,7 +226,7 @@ public partial class Functions
 		// channel in the game by name.
 		var askingAboutSomeoneElse = player.Id() != executor.Id();
 		var canExamineTarget = !askingAboutSomeoneElse || await PermissionService.CanExamine(executor, player);
-		var privWho = await executor.IsPriv() || await executor.HasPower("Who");
+		var privWho = await executor.IsPriv() || await executor.HasPower("See_All");
 
 		// Materialised before the loop: the per-channel checks below open their own streams, and
 		var channelArray = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();

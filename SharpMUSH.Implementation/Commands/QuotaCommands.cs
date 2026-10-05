@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -30,7 +31,7 @@ public partial class Commands
 
 		if (switches.Contains("SET"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.PlayersModerate))
 			{
 				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -68,7 +69,7 @@ public partial class Commands
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.PlayersModerate))
 			{
 				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -201,7 +202,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
+		CommandLock = "FLAG^WIZARD|POWER^QUOTAS", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
 	public async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -251,7 +252,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.PlayersModerate))
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,

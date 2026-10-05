@@ -1,0 +1,119 @@
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
+
+namespace SharpMUSH.Tests.Authentication;
+
+/// <summary>A role registry held in memory, for tests of the rules above the provider.</summary>
+internal sealed class InMemoryRoleRegistry : IRoleRegistryService
+{
+	private readonly Dictionary<string, SharpRole> _roles = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, HashSet<string>> _assignments = new();
+	private readonly Dictionary<string, Dictionary<string, PermissionState>> _overrides = new();
+	private readonly Dictionary<int, HashSet<string>> _objectRoles = new();
+	private readonly Dictionary<int, Dictionary<string, PermissionState>> _objectOverrides = new();
+
+	/// <summary>A registry seeded like a new world: system and starter roles.</summary>
+	public static InMemoryRoleRegistry Seeded()
+	{
+		var registry = new InMemoryRoleRegistry();
+		foreach (var role in BuiltInRoles.All.Concat(BuiltInRoles.Starters))
+			registry.Add(role);
+		return registry;
+	}
+
+	public InMemoryRoleRegistry Add(SharpRole role)
+	{
+		_roles[role.Slug] = new SharpRole
+		{
+			Slug = role.Slug, Name = role.Name, Color = role.Color, Priority = role.Priority, IsSystem = role.IsSystem,
+			Permissions = new Dictionary<string, PermissionState>(role.Permissions)
+		};
+		return this;
+	}
+
+	public IReadOnlyCollection<string> AssignedTo(string accountId)
+		=> _assignments.TryGetValue(accountId, out var set) ? set : [];
+
+	public Task UpsertRoleAsync(SharpRole role)
+	{
+		_roles[role.Slug] = role;
+		return Task.CompletedTask;
+	}
+
+	public Task<Found<SharpRole>> GetRoleAsync(string slug)
+		=> Task.FromResult<Found<SharpRole>>(_roles.TryGetValue(slug, out var role) ? role : new NotFound());
+
+	public Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<SharpRole>>(_roles.Values.OrderByDescending(r => r.Priority).ThenBy(r => r.Slug).ToList());
+
+	public Task RemoveRoleAsync(string slug)
+	{
+		_roles.Remove(slug);
+		return Task.CompletedTask;
+	}
+
+	public Task AssignRoleToAccountAsync(string accountId, string roleSlug)
+	{
+		if (!_assignments.TryGetValue(accountId, out var set)) _assignments[accountId] = set = [];
+		set.Add(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveRoleFromAccountAsync(string accountId, string roleSlug)
+	{
+		if (_assignments.TryGetValue(accountId, out var set)) set.Remove(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<SharpRole>>(AssignedTo(accountId)
+			.Select(slug => _roles.GetValueOrDefault(slug)).OfType<SharpRole>().ToList());
+
+	public Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string roleSlug)
+		=> Task.FromResult<IReadOnlyList<string>>(_assignments.Where(a => a.Value.Contains(roleSlug)).Select(a => a.Key).ToList());
+
+	public Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
+			_overrides.TryGetValue(accountId, out var overrides) ? new Dictionary<string, PermissionState>(overrides) : new Dictionary<string, PermissionState>());
+
+	public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state)
+	{
+		if (!_overrides.TryGetValue(accountId, out var overrides)) _overrides[accountId] = overrides = new(StringComparer.OrdinalIgnoreCase);
+		if (state == PermissionState.Inherit) overrides.Remove(scope);
+		else overrides[scope] = state;
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<string>>(_objectRoles.TryGetValue(number, out var set) ? set.Order().ToList() : []);
+
+	public Task AssignRoleToObjectAsync(int number, string roleSlug)
+	{
+		if (!_objectRoles.TryGetValue(number, out var set)) _objectRoles[number] = set = new(StringComparer.OrdinalIgnoreCase);
+		set.Add(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveRoleFromObjectAsync(int number, string roleSlug)
+	{
+		if (_objectRoles.TryGetValue(number, out var set)) set.Remove(roleSlug);
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string roleSlug, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<int>>(_objectRoles.Where(o => o.Value.Contains(roleSlug)).Select(o => o.Key).Order().ToList());
+
+	public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
+			_objectOverrides.TryGetValue(number, out var overrides) ? new Dictionary<string, PermissionState>(overrides) : new Dictionary<string, PermissionState>());
+
+	public Task SetObjectOverrideAsync(int number, string scope, PermissionState state)
+	{
+		if (!_objectOverrides.TryGetValue(number, out var overrides)) _objectOverrides[number] = overrides = new(StringComparer.OrdinalIgnoreCase);
+		if (state == PermissionState.Inherit) overrides.Remove(scope);
+		else overrides[scope] = state;
+		return Task.CompletedTask;
+	}
+}

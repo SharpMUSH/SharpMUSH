@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# pose} other {# poser}}</value>
     <comment>MT — 'pose' kept as the MU* term of art; 'poser' is also Danish for 'bags', so this is worth a native check</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Højest vinder ved konflikt</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritet</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Ahelp-emnerne. Kun for Troldmænd og Gud, i portalen som i spillet.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Den udtrykkelige regel med højest prioritet afgør adgangen; afvisning vinder ved lighed. Arv bruges kun uden en udtrykkelig regel. Uden tilladelse afvises adgang. Delegerede administratorer kan kun administrere egne tilladelser med lavere prioritet og kan ikke ændre egne roller eller begrænsninger.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuel adgang: {0}; prioritet {1}; roller {2}; afgørelse {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Konfigurationen kunne ikke importeres: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Scenesystemet er ikke slået til i dette spil.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Placering i hierarkiet. Du kan kun administrere roller under din højeste rolle.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Enhver rolle du har, der tillader en tilladelse, giver den, uanset prioritet; et Afslå blokerer kun det, ingen rolle tillader. En kontotilsidesættelse slår alle roller, og en rolle, der tillader Administrator, giver alt. Prioritet afgør kun, hvem der administrerer hvem: du kan kun ændre roller og konti under din højeste rolle og kun tillade det, du selv har.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Tilsidesættelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Ingen tilsidesættelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Fjern tilsidesættelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Tilladelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>En tilsidesættelse på denne konto slår alle dens roller.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Tilsidesættelse for {0} gemt.</value>
+    <comment>MT</comment>
   </data>
 </root>

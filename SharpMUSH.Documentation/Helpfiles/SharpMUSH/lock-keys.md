@@ -32,7 +32,7 @@ The types of keys are outlined below. Detailed help for each is available by typ
 - **Indirect** - Use the result of another @lock.
 - **Attribute** - Check an attribute on the object trying to pass the lock.
 - **Evaluation** - Evaluate an attribute on the object the lock is on.
-- **Bit** - Check for a flag, type, power, or channel membership.
+- **Bit** - Check for a flag, type, power, role, permission, or channel membership.
 - **Dbreflist** - Check if the dbref of the object trying to pass the lock is in a list set in an attribute.
 - **Host** - Check for players connecting from a particular host/ip.
 

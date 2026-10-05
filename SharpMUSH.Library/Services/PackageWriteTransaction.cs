@@ -190,7 +190,7 @@ public sealed class PackageWriteTransaction(
 	private async Task WriteFlagAsync(DBRef dbref, SharpObjectFlag flag, bool set, CancellationToken cancellationToken)
 	{
 		if (await CurrentAsync(dbref) is not AnySharpObject current
-			|| await current.Object().Flags.Value.AnyAsync(f => f.Name == flag.Name, cancellationToken) == set)
+			|| (await current.Object().ReadOwnFlagNamesAsync(cancellationToken)).Contains(flag.Name) == set)
 		{
 			return;
 		}
@@ -226,7 +226,7 @@ public sealed class PackageWriteTransaction(
 	private async Task WritePowerAsync(DBRef dbref, SharpPower power, bool set, CancellationToken cancellationToken)
 	{
 		if (await CurrentAsync(dbref) is not AnySharpObject current
-			|| await current.Object().Powers.Value.AnyAsync(p => p.Name == power.Name, cancellationToken) == set)
+			|| (await current.Object().ReadOwnPowerNamesAsync(cancellationToken)).Contains(power.Name) == set)
 		{
 			return;
 		}

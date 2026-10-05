@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# póz} other {# póz}}</value>
     <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Ütközés esetén a magasabb érték nyer</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritás</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Az ahelp témakörök. Csak Varázslóknak és Istennek, a portálon is, mint a játékban.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>A legmagasabb prioritású kifejezett szabály dönt; egyezéskor a tiltás győz. Öröklés csak kifejezett szabály nélkül érvényes. Engedély nélkül a hozzáférés tiltott. A megbízott kezelők csak a saját, alacsonyabb prioritású engedélyeiket kezelhetik, saját szerepeiket és korlátozásaikat nem módosíthatják.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Jelenlegi hozzáférés: {0}; prioritás {1}; szerepek {2}; döntés {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>A konfigurációt nem sikerült importálni: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>A jelenetrendszer nincs bekapcsolva ebben a játékban.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Hely a hierarchiában. Csak a legmagasabb szerepköröd alatti szerepköröket kezelheted.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Bármely szerepköröd, amely engedélyez egy jogosultságot, megadja azt, a prioritástól függetlenül; a Tiltás csak azt blokkolja, amit egyik szerepkör sem engedélyez. A fiókra vonatkozó kivétel minden szerepkört felülír, és az Adminisztrátort engedélyező szerepkör mindent megad. A prioritás csak azt dönti el, ki kit kezel: csak a legmagasabb szerepköröd alatti szerepköröket és fiókokat módosíthatod, és csak azt engedélyezheted, amivel rendelkezel.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Kivételek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Nincsenek kivételek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Kivétel törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Jogosultság</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>A fiók kivétele minden szerepkörét felülírja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>A(z) {0} kivétele mentve.</value>
+    <comment>MT</comment>
   </data>
 </root>

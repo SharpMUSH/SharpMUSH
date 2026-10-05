@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# pose} other {# poses}}</value>
     <comment>MT</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>O maior prevalece em caso de conflito</value>
-    <comment>MT — assumed the higher priority value wins</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioridade</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Os tópicos do ahelp. Apenas para Magos e Deus, no portal como no jogo.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>A regra explícita de maior prioridade decide; a negação vence empates. A herança só se aplica sem regra explícita. Sem permissão, o acesso é negado. Administradores delegados só podem gerenciar permissões que possuem com prioridade menor, sem alterar seus próprios papéis ou restrições.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Acesso atual: {0}; prioridade {1}; papéis {2}; resolução {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Não foi possível importar a configuração: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>O sistema de cenas não está ativado neste jogo.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Posição na hierarquia. Você só pode gerenciar cargos abaixo do seu cargo mais alto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Qualquer cargo seu que permita uma permissão a concede, seja qual for a prioridade; um Negar só bloqueia o que nenhum cargo permite. Uma exceção da conta vence todos os cargos, e um cargo que permite Administrador concede tudo. A prioridade só decide quem gerencia quem: você só pode alterar cargos e contas abaixo do seu cargo mais alto e permitir apenas o que você tem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Exceções</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Nenhuma exceção</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Remover exceção</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Permissão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Uma exceção nesta conta vence todos os cargos dela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Exceção para {0} salva.</value>
+    <comment>MT</comment>
   </data>
 </root>

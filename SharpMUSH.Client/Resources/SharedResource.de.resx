@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# Pose} other {# Posen}}</value>
     <comment>MT</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Höherer Wert gewinnt bei Konflikt</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Priorität</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Die ahelp-Themen. Nur für Zauberer und Gott, im Portal wie im Spiel.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Die ausdrückliche Regel mit höchster Priorität entscheidet; bei Gleichstand gewinnt Verweigern. Vererbung gilt nur ohne ausdrückliche Regel. Ohne Erlaubnis wird der Zugriff verweigert. Delegierte Administratoren dürfen nur eigene Berechtigungen mit niedrigerer Priorität verwalten und ihre eigenen Rollen oder Einschränkungen nicht ändern.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktueller Zugriff: {0}; Priorität {1}; Rollen {2}; Entscheidung {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Die Konfiguration konnte nicht importiert werden: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Das Szenensystem ist in diesem Spiel nicht aktiviert.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Position in der Hierarchie. Du kannst nur Rollen unterhalb deiner höchsten Rolle verwalten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Jede deiner Rollen, die eine Berechtigung erlaubt, gewährt sie, unabhängig von der Priorität; ein Verweigern sperrt nur, was keine Rolle erlaubt. Eine Kontoausnahme schlägt jede Rolle, und eine Rolle, die Administrator erlaubt, gewährt alles. Die Priorität entscheidet nur, wer wen verwaltet: Du kannst nur Rollen und Konten unterhalb deiner höchsten Rolle ändern und nur erlauben, was du selbst hast.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Ausnahmen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Keine Ausnahmen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Ausnahme entfernen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Berechtigung</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Eine Ausnahme für dieses Konto schlägt jede seiner Rollen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Ausnahme für {0} gespeichert.</value>
+    <comment>MT</comment>
   </data>
 </root>

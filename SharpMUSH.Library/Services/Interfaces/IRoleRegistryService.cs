@@ -1,12 +1,15 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// Storage for portal roles (Discord-style RBAC) and account↔role assignments. Implemented by
-/// every database provider; system data, never visible to softcode, travels with backups.
-/// Roles are keyed by <see cref="SharpRole.Slug"/>; assignments link an account id to a role slug.
+/// Storage for roles, their assignments to accounts and to game objects, and permission overrides on
+/// both. Implemented by every database provider; system data that travels with backups. Rules about
+/// who may change what live in <c>IRoleManagementService</c>, not here.
+/// Roles are keyed by <see cref="SharpRole.Slug"/>; assignments link an account id or an object's
+/// dbref number to a role slug. An object's assignments and overrides are removed with the object.
 /// Single-fetch returns <see cref="Found{T}"/>, matching the other registries.
 /// </summary>
 public interface IRoleRegistryService
@@ -37,9 +40,39 @@ public interface IRoleRegistryService
 	/// <summary>Removes a role assignment from an account. Does not error if absent.</summary>
 	Task RemoveRoleFromAccountAsync(string accountId, string roleSlug);
 
-	/// <summary>The roles explicitly assigned to an account (excludes flag-derived built-ins).</summary>
+	/// <summary>The roles explicitly assigned to an account (excludes the implicit ones).</summary>
 	Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>The account ids a role is assigned to.</summary>
 	Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string roleSlug);
+
+	/// <summary>
+	/// An account's overrides (Discord's member overwrite): scope → Allow or Deny. Scopes left on
+	/// Inherit are absent.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken cancellationToken = default);
+
+	/// <summary>Sets one per-account override; <see cref="PermissionState.Inherit"/> removes it.</summary>
+	Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state);
+
+	/// <summary>The role slugs assigned to the object with dbref number <paramref name="number"/>.</summary>
+	Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default);
+
+	/// <summary>Assigns a role (by slug) to an object. Idempotent.</summary>
+	Task AssignRoleToObjectAsync(int number, string roleSlug);
+
+	/// <summary>Removes a role from an object. Does not error if absent.</summary>
+	Task RemoveRoleFromObjectAsync(int number, string roleSlug);
+
+	/// <summary>The dbref numbers of the objects a role is assigned to.</summary>
+	Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string roleSlug, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// The overrides set on an object (PennMUSH's powers are these): scope → Allow or Deny. Scopes left
+	/// on Inherit are absent.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken cancellationToken = default);
+
+	/// <summary>Sets one override on an object; <see cref="PermissionState.Inherit"/> removes it.</summary>
+	Task SetObjectOverrideAsync(int number, string scope, PermissionState state);
 }

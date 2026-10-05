@@ -1,4 +1,5 @@
-﻿using NSubstitute;
+﻿using SharpMUSH.Library.Authorization;
+using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -125,6 +126,7 @@ public class LocateServiceDefaultMemberTests
 				Type = "Room",
 				Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 				Owner = new(_ => Task.FromResult<SharpPlayer>(null!)),
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(AsyncEnumerable.Empty<SharpPower>),
 				Attributes = new(AsyncEnumerable.Empty<SharpAttribute>),
 				LazyAttributes = new(AsyncEnumerable.Empty<LazySharpAttribute>),

@@ -232,8 +232,7 @@ public class ZoneCommandTests
 	private async Task<string[]> PowerNamesOf(DBRef dbref)
 	{
 		var node = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
-		var powers = await node.Object().Powers.Value.ToArrayAsync();
-		return powers.Select(p => p.Name).ToArray();
+		return (await node.Object().ReadPowersAsync(CancellationToken.None)).Select(p => p.Name).ToArray();
 	}
 
 	/// <summary>

@@ -226,7 +226,7 @@ public partial class Commands
 		AnySharpObject targetObject, string attrName, SharpAttribute[] attribute, SharpPlayer newOwnerPlayer)
 	{
 		// Mortals can only chown to themselves; wizards can chown to anyone.
-		var isWizard = await executor.HasPower("WIZARD") || await executor.HasFlag("WIZARD");
+		var isWizard = await executor.IsWizard();
 		var canSet = await PermissionService.CanSet(executor, targetObject);
 
 		if (!canSet)

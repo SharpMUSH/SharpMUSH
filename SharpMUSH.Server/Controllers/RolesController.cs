@@ -1,26 +1,29 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// Portal roles &amp; account-assignment API (Discord-style RBAC). Roles are prioritised bundles of
-/// three-state permission grants; system roles (God/Wizard/…) cannot be deleted or re-slugged, but
-/// their name, color, priority, and permissions may be edited.
+/// Roles, account assignments and per-account overrides (Discord-style; see
+/// <see cref="PermissionResolver"/>). Every change goes through <see cref="IRoleManagementService"/>,
+/// the same rules <c>@role</c> applies in the game.
 ///
-/// Routes (all require the <see cref="PortalPermission.RolesAdmin"/> policy):
-///   GET    /api/roles                                 — list roles (priority-desc)
-///   POST   /api/roles                                  — create or update a role
-///   DELETE /api/roles/{slug}                           — remove a role (non-system only)
-///   GET    /api/roles/account?username={username}      — an account's assigned roles
-///   POST   /api/roles/account/{accountId}/{slug}       — assign a role to an account
-///   DELETE /api/roles/account/{accountId}/{slug}       — remove a role from an account
+/// Routes (all but <c>effective</c> require the <see cref="PortalPermission.RolesAdmin"/> policy):
+///   GET    /api/roles/effective                         — the caller's permissions and why
+///   GET    /api/roles                                   — list roles (priority-desc)
+///   POST   /api/roles                                   — create or update a role
+///   DELETE /api/roles/{slug}                            — remove a role (non-system only)
+///   GET    /api/roles/account?username={username}       — an account's assigned roles and overrides
+///   POST   /api/roles/account/{accountId}/{slug}        — assign a role to an account
+///   DELETE /api/roles/account/{accountId}/{slug}        — remove a role from an account
+///   PUT    /api/roles/account/{accountId}/overrides     — set one per-account override
 /// </summary>
 [ApiController]
 [Route("api/roles")]
@@ -28,12 +31,9 @@ namespace SharpMUSH.Server.Controllers;
 public class RolesController(
 	IRoleRegistryService roles,
 	IAccountService accounts,
-	ILogger<RolesController> logger,
-	IAdministrativeCapabilityService capabilities) : ControllerBase
+	IAdministrativeCapabilityService capabilities,
+	IRoleManagementService management) : ControllerBase
 {
-	// A single engine serializes all public role mutations, including recovery validation.
-	private static readonly SemaphoreSlim MutationGate = new(1, 1);
-
 	public record RoleDto(
 		string Slug,
 		string Name,
@@ -49,7 +49,10 @@ public class RolesController(
 		string Username,
 		string? Email,
 		string Status,
-		string[] RoleSlugs);
+		string[] RoleSlugs,
+		Dictionary<string, string> Overrides);
+
+	public record OverrideDto(string Scope, string State);
 
 	[HttpGet("effective")]
 	public async Task<IActionResult> Effective()
@@ -71,83 +74,34 @@ public class RolesController(
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
 	public async Task<IActionResult> Upsert([FromBody] RoleDto dto)
 	{
-		await MutationGate.WaitAsync(HttpContext.RequestAborted);
-		try
+		if (Actor() is not { } actor) return Forbid();
+		if (dto.Permissions is null) return BadRequest(new { error = "Permissions are required." });
+		var permissions = new Dictionary<string, PermissionState>();
+		foreach (var (scope, value) in dto.Permissions)
 		{
-			var slug = dto.Slug?.Trim() ?? string.Empty;
-			if (string.IsNullOrWhiteSpace(slug))
-			{
-				return BadRequest(new { error = "Slug is required." });
-			}
-
-			if (!IsValidSlug(slug))
-			{
-				return BadRequest(new { error = "Slug must be lowercase and contain only letters, digits, '-', or '_'." });
-			}
-
-			if (dto.Permissions is null) return BadRequest(new { error = "Permissions are required." });
-
-			foreach (var (scope, value) in dto.Permissions)
-			{
-				if (!Enum.TryParse<PermissionState>(value, true, out var state) || !Enum.IsDefined(state))
-					return BadRequest(new { error = $"Invalid permission state: {value}" });
-				if (!PortalPermission.IsKnown(scope))
-				{
-					return BadRequest(new { error = $"Unknown permission scope: {scope}" });
-				}
-			}
-
-			var existing = await roles.GetRoleAsync(slug) is SharpRole found ? found : null;
-
-			var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-			// System roles cannot be re-slugged or un-systemed, but their editable fields still apply.
-			var isSystem = existing?.IsSystem ?? false;
-
-			var role = new SharpRole
-			{
-				Id = existing?.Id,
-				Slug = slug,
-				Name = dto.Name?.Trim() ?? string.Empty,
-				Color = string.IsNullOrWhiteSpace(dto.Color) ? null : dto.Color.Trim(),
-				Priority = dto.Priority,
-				IsSystem = isSystem,
-				Permissions = ToPermissions(dto.Permissions),
-				CreatedAt = existing?.CreatedAt ?? nowMs,
-				UpdatedAt = nowMs
-			};
-
-			if (!await CanChangeAsync(existing ?? role) || !await CanChangeAsync(role)) return Forbid();
-			if (!RoleRecoveryPolicy.PreservesRecovery(role, await roles.GetRolesAsync()))
-				return BadRequest(new { error = "The God recovery grant must remain above every roles.admin denial." });
-			await roles.UpsertRoleAsync(role);
-			logger.LogInformation("Upserted role '{Slug}' (system: {IsSystem}).", System.Text.Json.JsonSerializer.Serialize(role.Slug), role.IsSystem);
-			return Ok(ToDto(role));
-
+			if (!Enum.TryParse<PermissionState>(value, true, out var state) || !Enum.IsDefined(state))
+				return BadRequest(new { error = $"Invalid permission state: {value}" });
+			permissions[scope] = state;
 		}
-		finally { MutationGate.Release(); }
+
+		var draft = new RoleDraft(dto.Slug ?? string.Empty, dto.Name ?? string.Empty, dto.Color, dto.Priority, permissions);
+		return await management.SaveRoleAsync(actor, draft, HttpContext.RequestAborted) switch
+		{
+			SharpRole role => Ok(ToDto(role)),
+			RoleRefusal refusal => Refused(refusal)
+		};
 	}
 
 	[HttpDelete("{slug}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
 	public async Task<IActionResult> Delete(string slug)
 	{
-		await MutationGate.WaitAsync(HttpContext.RequestAborted);
-		try
+		if (Actor() is not { } actor) return Forbid();
+		return await management.DeleteRoleAsync(actor, slug, HttpContext.RequestAborted) switch
 		{
-			var existing = await roles.GetRoleAsync(slug);
-			if (existing is SharpRole { IsSystem: true })
-			{
-				return BadRequest(new { error = "System roles cannot be deleted." });
-			}
-
-			if (existing is SharpRole role && !await CanChangeAsync(role)) return Forbid();
-			await roles.RemoveRoleAsync(slug);
-			logger.LogInformation("Removed role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
-			return Ok(new { deleted = true });
-
-		}
-		finally { MutationGate.Release(); }
+			Success => Ok(new { deleted = true }),
+			RoleRefusal refusal => Refused(refusal)
+		};
 	}
 
 	[HttpGet("account")]
@@ -155,18 +109,20 @@ public class RolesController(
 	public async Task<ActionResult<AccountRolesDto>> GetAccountRoles([FromQuery] string username)
 	{
 		var account = await accounts.GetByUsernameAsync(username);
-		if (account is null)
+		if (account?.Id is null)
 		{
 			return NotFound();
 		}
 
-		var assigned = await roles.GetRolesForAccountAsync(account.Id!);
+		var assigned = await roles.GetRolesForAccountAsync(account.Id);
+		var overrides = await roles.GetAccountOverridesAsync(account.Id);
 		return Ok(new AccountRolesDto(
-			account.Id!,
+			account.Id,
 			account.Username,
 			account.Email,
 			account.Status.ToString(),
-			assigned.Select(r => r.Slug).ToArray()));
+			assigned.Select(r => r.Slug).ToArray(),
+			overrides.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString())));
 	}
 
 	[HttpPost("account/{accountId}/{slug}")]
@@ -174,24 +130,12 @@ public class RolesController(
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
 	public async Task<IActionResult> AssignRole(string accountId, string slug)
 	{
-		await MutationGate.WaitAsync(HttpContext.RequestAborted);
-		try
+		if (Actor() is not { } actor) return Forbid();
+		return await management.AssignAsync(actor, accountId, slug, HttpContext.RequestAborted) switch
 		{
-			if (await roles.GetRoleAsync(slug) is not SharpRole role)
-			{
-				return BadRequest(new { error = $"Unknown role: {slug}" });
-			}
-
-			var account = await accounts.GetByIdAsync(accountId);
-			if (account?.Id is null) return NotFound();
-			accountId = account.Id;
-			if (!await CanChangeAsync(role, accountId)) return Forbid();
-			await roles.AssignRoleToAccountAsync(accountId, slug);
-			logger.LogInformation("Assigned account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
-			return Ok();
-
-		}
-		finally { MutationGate.Release(); }
+			Success => Ok(),
+			RoleRefusal refusal => Refused(refusal)
+		};
 	}
 
 	[HttpDelete("account/{accountId}/{slug}")]
@@ -199,69 +143,39 @@ public class RolesController(
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
 	public async Task<IActionResult> RemoveRole(string accountId, string slug)
 	{
-		await MutationGate.WaitAsync(HttpContext.RequestAborted);
-		try
+		if (Actor() is not { } actor) return Forbid();
+		return await management.UnassignAsync(actor, accountId, slug, HttpContext.RequestAborted) switch
 		{
-			var account = await accounts.GetByIdAsync(accountId);
-			if (account?.Id is null) return NotFound();
-			accountId = account.Id;
-			if (await roles.GetRoleAsync(slug) is not SharpRole role) return NotFound();
-			if (!await CanChangeAsync(role, accountId)) return Forbid();
-			await roles.RemoveRoleFromAccountAsync(accountId, slug);
-			logger.LogInformation("Removed account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
-			return Ok();
-
-		}
-		finally { MutationGate.Release(); }
+			Success => Ok(),
+			RoleRefusal refusal => Refused(refusal)
+		};
 	}
 
-	private async Task<bool> CanChangeAsync(SharpRole role, string? targetAccount = null)
+	[HttpPut("account/{accountId}/overrides")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
+	public async Task<IActionResult> SetOverride(string accountId, [FromBody] OverrideDto dto)
 	{
-		var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
-		if (id is null) return false;
-		var grants = await capabilities.GetGrantedScopesAsync(new(id));
-		if (!grants.Contains(PortalPermission.RolesAdmin)) return false;
-		var characters = await accounts.GetCharactersAsync(id);
-		if (characters.Any(c => c.Object.Key == 1)) return true;
-		var assigned = await roles.GetRolesForAccountAsync(id);
-		// A delegated manager cannot change their own authority, system roles or restrictions.
-		if (role.IsSystem || targetAccount == id || assigned.Any(r => r.Slug == role.Slug) ||
-			role.Permissions.Values.Any(v => v == PermissionState.Deny)) return false;
-		var decisions = await capabilities.ExplainAsync(new(id));
-		var ceiling = decisions.TryGetValue(PortalPermission.RolesAdmin, out var decision)
-			? decision.Priority ?? int.MinValue : int.MinValue;
-		return role.Priority < ceiling && new PermissionResolver().Resolve([role]).All(grants.Contains);
-	}
-
-	private static bool IsValidSlug(string slug)
-		=> slug.All(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_');
-
-	/// <summary>Serializes the role's permission stances to their <see cref="PermissionState"/> names.</summary>
-	private static Dictionary<string, string> ToPermissionStrings(IReadOnlyDictionary<string, PermissionState> permissions)
-		=> permissions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
-
-	/// <summary>
-	/// Parses incoming scope→name pairs to <see cref="PermissionState"/>, defaulting unrecognised
-	/// values to <see cref="PermissionState.Inherit"/> and dropping Inherit entries (the storage default).
-	/// </summary>
-	private static Dictionary<string, PermissionState> ToPermissions(IReadOnlyDictionary<string, string> permissions)
-	{
-		var result = new Dictionary<string, PermissionState>();
-		foreach (var (scope, value) in permissions)
+		if (Actor() is not { } actor) return Forbid();
+		if (!Enum.TryParse<PermissionState>(dto.State, true, out var state) || !Enum.IsDefined(state))
+			return BadRequest(new { error = $"Invalid permission state: {dto.State}" });
+		return await management.SetOverridesAsync(actor, accountId, [dto.Scope], state, HttpContext.RequestAborted) switch
 		{
-			if (!Enum.TryParse<PermissionState>(value, ignoreCase: true, out var state))
-			{
-				state = PermissionState.Inherit;
-			}
-
-			if (state != PermissionState.Inherit)
-			{
-				result[PortalPermission.AllScopes.Single(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase))] = state;
-			}
-		}
-
-		return result;
+			Success => Ok(),
+			RoleRefusal refusal => Refused(refusal)
+		};
 	}
+
+	/// <summary>Portal role authority is account-wide, as in every other HTTP policy gate.</summary>
+	private CapabilityActor? Actor()
+		=> User.FindFirstValue(ClaimTypes.NameIdentifier) is { } id ? new CapabilityActor(id) : null;
+
+	private IActionResult Refused(RoleRefusal refusal) => refusal.Kind switch
+	{
+		RoleRefusalKind.NotFound => NotFound(new { error = refusal.Message }),
+		RoleRefusalKind.Forbidden => StatusCode(StatusCodes.Status403Forbidden, new { error = refusal.Message }),
+		_ => BadRequest(new { error = refusal.Message })
+	};
 
 	private static RoleDto ToDto(SharpRole role) => new(
 		role.Slug,
@@ -269,7 +183,7 @@ public class RolesController(
 		role.Color,
 		role.Priority,
 		role.IsSystem,
-		ToPermissionStrings(role.Permissions),
+		role.Permissions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString()),
 		role.CreatedAt,
 		role.UpdatedAt);
 }

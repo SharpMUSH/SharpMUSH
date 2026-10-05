@@ -186,7 +186,6 @@ internal static class WebHostRegistration
 			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
 			.WithTools<MushTools>();
 
-		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
 
 		return services;
 	}

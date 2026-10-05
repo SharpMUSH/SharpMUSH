@@ -119,30 +119,47 @@ create a character. They cannot enter scenes or send mail.
 (pre-character-selection state). `ConnectionService.Bind` transitions to
 LoggedIn (character-bound state).
 
-### 1.4 Permissions: Hierarchical Roles (Expandable Later)
+### 1.4 Permissions: Roles (Discord-style)
 
-**Decision:** Start with PennMUSH-style hierarchy for familiarity:
+**Decision:** Permissions are atomic scopes (`PortalPermission`) granted by roles.
+Game objects and accounts both hold roles and overrides (`ObjectGrants`). An
+object holds `everyone`, the roles assigned to it, and, for a character linked
+to an active account, the account's roles; a player that is not a guest holds
+`player`, and #1 holds `god`. Nothing is inherited from an object's owner. A
+scope resolves as Discord resolves a channel permission (`PermissionResolver`):
 
-| Level | Role         | Description                                    |
-|-------|--------------|------------------------------------------------|
-| 0     | Guest        | Visitor / unauthenticated browser              |
-| 1     | Player       | Authenticated, can play, pose, mail, wiki edit |
-| 2     | Royalty      | Can moderate, approve characters               |
-| 3     | Wizard       | Full admin, can build, @halt, manage objects   |
-| 4     | God (#1)     | Root access, owns the server                   |
+1. The owner (#1, or the account playing it) holds every scope.
+2. A role allowing `administrator` grants every scope and ignores overrides.
+3. An override on the object decides.
+4. An override on its account decides.
+5. Any held role allowing the scope grants it; allows are pooled and beat denies.
+6. Otherwise a role denying it refuses it.
+7. Otherwise `everyone` decides; anything not allowed is denied.
 
-**Future expansion:** The admin panel will support custom permission scopes
-(e.g. "Wiki Moderator" = Player + wiki.delete). The hierarchical model is the
-STARTING POINT, not the ceiling. Under the hood, implement as RBAC where each
-tier is a role bundling atomic permissions. This allows custom roles later
-without redesigning the system.
+An umbrella scope (`wiki.admin`) covers its children left on Inherit within a
+role. A role's priority is only its place in the hierarchy: a manager needs
+`roles.admin`, and may create, edit, assign or take away only roles below its
+own highest role, on objects and accounts whose highest role is below it,
+never on itself, and may allow only scopes it holds (a `game.wizard` holder may
+allow any `game.` scope). An object may give a role it holds to a thing it owns.
+The implicit roles (`everyone`, `player`, `god`) are never assigned. The owner
+is exempt. Priority never decides control.
 
-**Web portal scope mapping:**
-- Guest: browse wiki, view public profiles, read scene archives
-- Player: all Guest + pose in scenes, send mail, edit wiki, manage own characters
-- Royalty: all Player + approve characters, moderate forums, lock wiki pages
-- Wizard: all Royalty + admin panel access, layout editing, theme editing
-- God: all Wizard + server config, account management, permission assignment
+PennMUSH privilege is roles and scopes (`RoleFlags`, `GamePowers`): the WIZARD
+and ROYALTY flags are the `wizard` and `royalty` roles; each built-in power is
+a `game.<power>` scope, set by `@power` as an object override, with Builder and
+Guest the `builder` and `guest` roles. `Wizard()`, `haspower()`, `hasflag()` and
+the `FLAG^`/`POWER^` lock keys read grants, and `Controls()` reads `control.all`
+on the actor and `protect.wizard`/`protect.admin` on the target. The provider
+writes a role-backed flag or power as a role or override, so the PennMUSH
+importer and every seed land there, and its migration moves stored WIZARD,
+ROYALTY and power edges once. The flag and power definitions stay for
+`@flag/list`, letters and `@power <name>`.
+
+Starter roles (`helper`, `moderator`) are seeded once into a new world. Roles
+are managed in game with `@role` and in the portal's Roles page; `roles()`,
+`hasrole()`, `permission()` and the `ROLE^`/`PERM^` lock keys read them, and
+`examine` shows an object's roles and overrides.
 
 ### 1.5 Login Methods: Password + Discord OAuth (Progressive)
 
@@ -714,16 +731,18 @@ count + toast notification. Unread count fetched on page load.
 
 ## Area 10: Permission & Visibility
 
-### 10.1 Hierarchical Roles
+### 10.1 Roles
 
-**Decision:** Guest < Player < Royalty < Wizard < God. Higher inherits all
-lower permissions. Simple integer comparison. No RBAC framework — just an enum.
+**Decision:** See §1.4. Tier roles stack, custom roles add scopes, overrides
+adjust one account, and priority orders who may manage whom.
 
-### 10.2 Role Derived from Game Flags
+### 10.2 Tier Roles Derived from Game Flags
 
-**Decision:** Portal role mapped from character flags (WIZARD, ROYALTY, #1).
-Set in JWT at login. Changes take effect on token refresh (not instant).
-Account-level role = highest among linked characters.
+**Decision:** Tier roles follow the character's flags and powers (WIZARD,
+ROYALTY, the Builder power, #1), resolved server-side on each request (cached,
+invalidated when roles change). With an active character only that character
+counts; otherwise the highest among linked characters. A character with no
+account holds no roles.
 
 ### 10.3 Layout Editing is Wizard+
 
@@ -733,9 +752,8 @@ allowing admin customization.
 
 ### 10.4 Future Expansion Explicitly Deferred
 
-**Decision:** @powers integration, custom @locks via API, group-based
-permissions, per-widget visibility — all deferred. Hierarchy covers current
-needs. When needed, they extend (not replace) the hierarchy.
+**Decision:** custom @locks via API and per-widget visibility are deferred.
+When needed, they extend the role model rather than replace it.
 
 ---
 

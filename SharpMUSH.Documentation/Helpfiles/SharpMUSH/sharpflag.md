@@ -547,7 +547,7 @@ A VISUAL object's attributes can be examined by anyone in its location who passe
 
 **Flag: WIZARD (players)**
 
-The WIZARD flag marks players with administrative privileges. Only God (#1) can set or clear the WIZARD flag.
+The WIZARD flag marks objects with administrative privileges. It is the `wizard` role: `@set <object>=WIZARD` assigns the role to the object and `@set <object>=!WIZARD` removes it, under the rules of [@role rank], and `hasflag()` reports it for anything that holds the role, itself or through its account. See [roles flags].
 
 Wizards can:
 * See and modify any object
@@ -563,4 +563,5 @@ With great power comes great responsibility!
 **See Also:**
 - [wizhelp]
 - [@admin]
+- [roles]
 

@@ -251,11 +251,7 @@ public partial class PackageAuthoringService(
 			attributes[attribute.LongName] = attribute.Value.ToPlainText();
 		}
 
-		var flags = new List<string>();
-		await foreach (var flag in sharpObject.Flags.Value.WithCancellation(cancellationToken))
-		{
-			flags.Add(flag.Name);
-		}
+		var flags = (await sharpObject.ReadOwnFlagNamesAsync(cancellationToken)).ToList();
 
 		var parentObjid = await sharpObject.Parent.WithCancellation(cancellationToken) is AnySharpObject parent
 			? parent.Object().DBRef.ToString()

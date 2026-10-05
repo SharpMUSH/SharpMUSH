@@ -111,6 +111,7 @@
   "@RESPOND",
   "@RESTART",
   "@RETRY",
+  "@ROLE",
   "@RWALL",
   "@SCAN",
   "@SEARCH",

@@ -70,6 +70,14 @@ public class SharpObject : IObjectShaped<SharpObject>
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObjectFlag>> Flags { get; set; }
 
+	/// <summary>
+	/// The roles and overrides the object holds, its account's when it is a linked character, and the
+	/// scopes they grant. Every privilege check (wizard, royalty, powers, control) reads this; the WIZARD
+	/// and ROYALTY flags and the built-in powers live here, not in <see cref="Flags"/> or <see cref="Powers"/>.
+	/// </summary>
+	[JsonIgnore]
+	public required AsyncRelation<Authorization.ObjectGrants> Grants { get; set; }
+
 	[JsonIgnore]
 	public required AsyncRelation<AnyOptionalSharpObject> Parent { get; set; }
 

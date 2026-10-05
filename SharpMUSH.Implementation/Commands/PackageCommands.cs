@@ -49,7 +49,7 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@PACKAGE", Switches = ["SCAN"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 4,
+		CommandLock = "PERM^packages.admin", MinArgs = 1, MaxArgs = 4,
 		ParameterNames = ["objects", "package", "version", "description"])]
 	public async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

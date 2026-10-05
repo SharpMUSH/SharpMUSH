@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Server.Controllers;
@@ -24,7 +25,7 @@ public static class CharacterSummaryMapper
 		int? actingKey = null, long? actingCreationTime = null) =>
 		await characters.ToAsyncEnumerable()
 			.Select(async (c, innerCt) => new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name,
-				string.Join(" ", await c.Object.Flags.Value.Select(f => f.Name).ToListAsync(innerCt)),
+				string.Join(" ", (await c.Object.ReadFlagsAsync(innerCt)).Flags.Select(f => f.Name)),
 				c.Object.Key == actingKey && c.Object.CreationTime == actingCreationTime))
 			.ToListAsync(ct);
 }

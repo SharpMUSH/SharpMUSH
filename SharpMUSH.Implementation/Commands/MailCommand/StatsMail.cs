@@ -1,4 +1,5 @@
-﻿using Mediator;
+using SharpMUSH.Library.Authorization;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -27,7 +28,7 @@ public static class StatsMail
 
 		if (!string.IsNullOrEmpty(arg0?.ToPlainText()))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.ChatAdmin))
 			{
 				var errorResult = await notifyService.NotifyAndReturn(
 					executor.Object().DBRef,

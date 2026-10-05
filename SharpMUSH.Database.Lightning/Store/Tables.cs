@@ -31,6 +31,8 @@ public static class Tables
 	public static readonly (TableDef Forward, TableDef Reverse) ObjFlag = TableDef.Edge("flag", fixedDuplicates: false);
 	public static readonly (TableDef Forward, TableDef Reverse) ObjPower = TableDef.Edge("power", fixedDuplicates: false);
 	public static readonly (TableDef Forward, TableDef Reverse) AccountChar = TableDef.Edge("acct.char", fixedDuplicates: false);
+	/// <summary>Object → the role slugs assigned to it; the reverse finds a role's holders.</summary>
+	public static readonly (TableDef Forward, TableDef Reverse) ObjRole = TableDef.Edge("obj.role", fixedDuplicates: false);
 
 	public static readonly TableDef RevLocation = Location.Reverse;
 
@@ -50,6 +52,10 @@ public static class Tables
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
 	public static readonly TableDef AccountUser = TableDef.Index("account.user");
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
+	/// <summary>Account key → its per-account permission overrides (scope → state), one record per account.</summary>
+	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
+	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
+	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);

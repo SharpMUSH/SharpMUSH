@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# поза} few {# позы} many {# поз} other {# позы}}</value>
     <comment>MT — verbatim from the locale sheet's pre-written plural values; all four Russian categories present.</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>При конфликте побеждает большее значение</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Приоритет</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Темы ahelp. Только для волшебников и Бога — как в портале, так и в игре.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Решает явное правило с наивысшим приоритетом; при равенстве побеждает запрет. Наследование действует только без явного правила. Без разрешения доступ запрещён. Делегированные администраторы могут управлять только имеющимися у них разрешениями с меньшим приоритетом, не меняя собственные роли и ограничения.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Текущий доступ: {0}; приоритет {1}; роли {2}; решение {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Не удалось импортировать конфигурацию: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Система сцен в этой игре не включена.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Положение в иерархии. Вы можете управлять только ролями ниже своей высшей роли.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Любая ваша роль, разрешающая право, предоставляет его, независимо от приоритета; Запрет блокирует только то, что не разрешает ни одна роль. Исключение для учётной записи сильнее любой роли, а роль, разрешающая Администратора, даёт всё. Приоритет решает только, кто кем управляет: вы можете менять только роли и учётные записи ниже своей высшей роли и разрешать только то, что есть у вас.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Исключения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Нет исключений</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Удалить исключение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Право</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Исключение для этой учётной записи сильнее всех её ролей.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Исключение для {0} сохранено.</value>
+    <comment>MT</comment>
   </data>
 </root>

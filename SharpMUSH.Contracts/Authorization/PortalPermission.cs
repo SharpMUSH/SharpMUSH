@@ -48,6 +48,46 @@ public static class PortalPermission
 	public const string ServerAdmin = "server.admin";
 
 	/// <summary>
+	/// Discord's ADMINISTRATOR: a role that allows it holds every scope, and no per-account Deny
+	/// override applies to it. It cannot be granted or denied as a per-account override.
+	/// </summary>
+	public const string Administrator = "administrator";
+
+	/// <summary>PennMUSH's <c>Wizard()</c>: the WIZARD flag's meaning. The <c>wizard</c> role allows it.</summary>
+	public const string GameWizard = "game.wizard";
+
+	/// <summary>PennMUSH's ROYALTY flag. The <c>royalty</c> role allows it.</summary>
+	public const string GameRoyalty = "game.royalty";
+
+	/// <summary>
+	/// Runs channels and staff messaging: Wizard channels, channel administration, @wizwall and @wall,
+	/// the MOTDs and mail administration. Part of what WIZARD meant; the <c>wizard</c> role allows it.
+	/// </summary>
+	public const string ChatAdmin = "chat.admin";
+
+	/// <summary>
+	/// Operates the running server: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and the
+	/// like. Part of what WIZARD meant; the <c>wizard</c> role allows it. Not <see cref="ServerAdmin"/>,
+	/// which is the owner's.
+	/// </summary>
+	public const string ServerOperate = "server.operate";
+
+	/// <summary>Controls every object except the owner's, whoever owns it (the wizard half of PennMUSH <c>controls()</c>).</summary>
+	public const string ControlAll = "control.all";
+
+	/// <summary>An object holding this is controlled only by holders of <see cref="ControlAll"/>.</summary>
+	public const string ProtectWizard = "protect.wizard";
+
+	/// <summary>An object holding this is not controlled by anyone who lacks it.</summary>
+	public const string ProtectAdmin = "protect.admin";
+
+	/// <summary>The scope backing a PennMUSH power, e.g. <c>game.see_all</c> for See_All.</summary>
+	public static string GamePower(string power) => "game." + power.ToLowerInvariant();
+
+	/// <summary>True for the in-game scopes: <c>game.*</c>, <see cref="ControlAll"/> and the protections.</summary>
+	public static bool IsGameScope(string scope) => GameScopes.Contains(scope);
+
+	/// <summary>
 	/// Display metadata for one scope, used by the role-editor permission matrix. Everything but
 	/// <paramref name="Scope"/> is a <c>SharedResource</c> key rather than text — a static list cannot
 	/// reach the render site's localizer, so the matrix resolves these through <c>Loc[...]</c>.
@@ -61,6 +101,7 @@ public static class PortalPermission
 	private const string GroupContent = "Content";
 	private const string GroupBuild = "EnumPermGroupBuild";
 	private const string GroupManage = "EnumPermGroupManage";
+	private const string GroupGame = "EnumPermGroupGame";
 
 	/// <summary>Every scope, in editor display order, grouped like the nav.</summary>
 	public static readonly IReadOnlyList<Definition> All =
@@ -91,7 +132,19 @@ public static class PortalPermission
 		new(PlayersModerate, "EnumPermPlayersModerate", GroupManage, "EnumPermPlayersModerateDesc"),
 		new(LayoutAdmin, "EnumPermLayoutAdmin", GroupManage, "EnumPermLayoutAdminDesc"),
 		new(ServerAdmin, "EnumPermServerAdmin", GroupManage, "EnumPermServerAdminDesc"),
+		new(Administrator, "EnumPermAdministrator", GroupManage, "EnumPermAdministratorDesc"),
+		new(GameWizard, "EnumPermGameWizard", GroupGame, "EnumPermGameWizardDesc"),
+		new(GameRoyalty, "EnumPermGameRoyalty", GroupGame, "EnumPermGameRoyaltyDesc"),
+		new(ChatAdmin, "EnumPermChatAdmin", GroupGame, "EnumPermChatAdminDesc"),
+		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
+		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
+		new(ProtectWizard, "EnumPermProtectWizard", GroupGame, "EnumPermProtectWizardDesc"),
+		new(ProtectAdmin, "EnumPermProtectAdmin", GroupGame, "EnumPermProtectAdminDesc"),
+		.. GamePowers.All.Select(power => new Definition(power.Scope, power.ResourceKey, GroupGame, power.ResourceKey + "Desc")),
 	];
+
+	private static readonly IReadOnlySet<string> GameScopes = All
+		.Where(d => d.GroupKey == GroupGame).Select(d => d.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Coarse-scope ⇒ implied finer scopes. Applied as a closure when computing the granted set
@@ -108,6 +161,14 @@ public static class PortalPermission
 			[MediaAdmin] = [MediaUpload],
 			[PlayersModerate] = [PlayersView],
 		};
+
+	/// <summary>The umbrella scopes that directly imply <paramref name="scope"/>.</summary>
+	public static IEnumerable<string> ParentScopes(string scope) =>
+		Implications.Where(pair => pair.Value.Contains(scope, StringComparer.OrdinalIgnoreCase)).Select(pair => pair.Key);
+
+	/// <summary>The catalog spelling of <paramref name="scope"/>, or null when it is not a known scope.</summary>
+	public static string? Canonical(string scope) =>
+		AllScopes.FirstOrDefault(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>Scopes directly implied by an umbrella grant.</summary>
 	public static IReadOnlyList<string> ImpliedScopes(string scope) =>

@@ -378,9 +378,9 @@ public class FlagAndPowerCommandTests
 
 	private async ValueTask<string[]> PowerNamesOf(DBRef dbref)
 	{
-		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
-		var powers = await node.Object()!.Powers.Value.ToArrayAsync();
-		return powers.Select(p => p.Name).ToArray();
+		// What powers() shows: the built-in powers are permissions the object holds, not stored edges.
+		var node = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+		return (await node.Object().ReadPowersAsync(CancellationToken.None)).Select(p => p.Name).ToArray();
 	}
 
 	// PennMUSH src/wiz.c do_power: with no switch, @power <object>=<power> grants the power.

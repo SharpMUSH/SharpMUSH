@@ -1050,7 +1050,7 @@ public partial class Functions
 					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
 					if (!target.IsPlayer)
 					{
-						await PrivilegeHelpers.StripPrivilegeAsync(FlagAndPowerService, executor, target);
+						await PrivilegeHelpers.StripPrivilegeAsync(Mediator, FlagAndPowerService, executor, target);
 					}
 
 					await Mediator.Send(new SetObjectZoneCommand(target, zone));

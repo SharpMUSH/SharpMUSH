@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Mediator;
@@ -30,7 +31,6 @@ public class AuthController(
 	IOttStore ottStore,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	IRoleDerivationService roleDerivation,
 	AccountClaimsService accountClaims,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
@@ -143,8 +143,7 @@ public class AuthController(
 
 		if (!options.CurrentValue.Net.Logins)
 		{
-			var flags = await player.Object.Flags.Value.ToListAsync();
-			if (roleDerivation.DeriveRole(player.Object.Key, flags) < PortalRole.Wizard)
+			if (!await new AnySharpObject(player).IsWizard())
 				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 		}
 
@@ -248,7 +247,7 @@ public class AuthController(
 			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
 		// Bind the session to the primary character up front, so there is never a "has characters but
 		// the token names none" state for a request handler to paper over. Switching mints a new token.
@@ -299,7 +298,7 @@ public class AuthController(
 	private async Task<IActionResult> RegisteredAsync(SharpAccount account)
 	{
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
@@ -352,10 +351,10 @@ public class AuthController(
 
 	/// <summary>
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or WIZARD-flagged / higher).
+	/// if ANY linked character is staff (character #1, or a wizard).
 	/// </summary>
 	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
-			roleDerivation.DeriveRole(character.Object.Key, await character.Object.Flags.Value.ToListAsync(ct)) >= PortalRole.Wizard);
+			await new AnySharpObject(character).IsWizard(ct));
 }
 

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -182,13 +183,18 @@ public class ObjectSearchFilterPushdownTests
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("PowerPushdown");
 
+		// A built-in power is a permission, which no index lists (SearchSpecEngine tests it per object);
+		// the provider's predicate covers the powers stored on objects.
+		var power = $"PUSH_{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
+		await Assert.That(await Mediator.Send(new CreatePowerCommand(power, [], string.Empty, false,
+			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["THING"]))).IsNotNull();
 		var match = await CreateThingAsync($"{token}_Match");
 		var control = await CreateThingAsync($"{token}_Control");
-		await RunAsync($"@power {match}=Builder");
+		await RunAsync($"@power {match}={power}");
 
 		await AssertFilteredAsync(
-			await ProbeAsync(new ObjectSearchFilter { HasPower = "Builder" }, match, control),
-			"HasPower = Builder");
+			await ProbeAsync(new ObjectSearchFilter { HasPower = power }, match, control),
+			$"HasPower = {power}");
 	}
 
 	/// <summary>

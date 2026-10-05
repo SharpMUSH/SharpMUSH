@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -42,7 +43,7 @@ public static class ManageWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		if (RequiresWizard(op) && !await executor.IsWizard())
+		if (RequiresWizard(op) && !await executor.Can(PortalPermission.WikiAdmin))
 		{
 			await notifyService.Notify(executor, "WIKI: Permission denied. That operation is wizard-only.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);

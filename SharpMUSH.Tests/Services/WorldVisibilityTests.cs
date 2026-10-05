@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using NSubstitute;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library;
@@ -41,7 +42,7 @@ public class WorldVisibilityTests
 			yield break;
 		}
 		if (stage.StartsWith("room")) room.Object.Flags = new(() => Block<SharpObjectFlag>());
-		else if (stage == "viewer-power") viewer.Object().Powers = new(() => Block<SharpPower>());
+		else if (stage == "viewer-power") viewer.Object().Grants = new(async token => { await Block<bool>(token).ToListAsync(token); return ObjectGrants.None; });
 		else item.Object().Flags = new(() => Block<SharpObjectFlag>());
 		async Task Run()
 		{

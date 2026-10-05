@@ -92,7 +92,7 @@ public class AttributeReadCancellationTests
 		mediator.CreateStream(Arg.Any<GetLazyAttributesQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
 			stage.EndsWith("query") ? BlockStream<LazyAttributeWithSource>() : (stage.StartsWith("second-") ? new[] { new LazyAttributeWithSource(lazyAttr with { Name = "A", Key = "A", LongName = "A" }, target.Object().DBRef), new LazyAttributeWithSource(lazyAttr, source) } : new[] { new LazyAttributeWithSource(lazyAttr, source) }).ToAsyncEnumerable());
 		if (stage == "flags") target.Object().Flags = new(() => BlockStream<SharpObjectFlag>());
-		if (stage == "privileged-query") target.Object().Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", UnsetPermissions = [], SetPermissions = [], System = false, TypeRestrictions = [] } }.ToAsyncEnumerable());
+		if (stage == "privileged-query") target.Grant(roles: ["wizard"]);
 		async ValueTask<bool> Permission()
 		{
 			await Block(CancellationToken.None); // Legacy permission API cannot accept a token.

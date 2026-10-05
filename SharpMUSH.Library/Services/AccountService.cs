@@ -197,6 +197,9 @@ public class AccountService(
 			return new Error<string>("The system account's status cannot be changed.");
 
 		await database.UpdateAccountStatusAsync(accountId, status, ct);
+		// Only an active account's roles reach its characters.
+		if (claimsInvalidator is not null)
+			await claimsInvalidator.InvalidateAsync(accountId, ct);
 
 		if (status is AccountStatus.Active)
 			return new Success();

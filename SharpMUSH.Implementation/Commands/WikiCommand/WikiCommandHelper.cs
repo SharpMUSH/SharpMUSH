@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -129,7 +130,7 @@ public static class WikiCommandHelper
 	/// everything else is editable by any player.
 	/// </summary>
 	public static async ValueTask<bool> CanEdit(AnySharpObject executor, WikiPage page) =>
-		!page.IsProtected || await executor.IsWizard();
+		!page.IsProtected || await executor.Can(PortalPermission.WikiAdmin);
 
 	/// <summary>
 	/// True when this reader may see unpublished (draft) pages and unpublished translations. The in-game

@@ -3134,10 +3134,6 @@
     <value>{count, plural, one {# pose} other {# poses}}</value>
     <comment>MT — ICU categories one+other</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>El valor más alto prevalece en caso de conflicto</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioridad</value>
     <comment>MT</comment>
@@ -4575,7 +4571,6 @@
     <value>Los temas de ahelp. Solo para Magos y Dios, tanto en el portal como en el juego.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Decide la regla explícita de mayor prioridad; la denegación gana los empates. Solo se hereda si no hay una regla explícita. Sin permiso se deniega el acceso. Los administradores delegados solo pueden gestionar permisos que poseen con menor prioridad, sin cambiar sus propios roles ni restricciones.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Acceso actual: {0}; prioridad {1}; roles {2}; resolución {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>No se pudo importar la configuración: {0}</value>
@@ -5252,5 +5247,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>El sistema de escenas no está activado en este juego.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Posición en la jerarquía. Solo puedes gestionar roles por debajo de tu rol más alto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Cualquier rol que tengas que permita un permiso lo concede, sea cual sea su prioridad; un Denegar solo bloquea lo que ningún rol permite. Una excepción de cuenta prevalece sobre todos los roles, y un rol que permite Administrador lo concede todo. La prioridad solo decide quién gestiona a quién: solo puedes cambiar roles y cuentas por debajo de tu rol más alto y permitir solo lo que tienes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Excepciones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Sin excepciones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Quitar excepción</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Permiso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Una excepción en esta cuenta prevalece sobre todos sus roles.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Excepción para {0} guardada.</value>
+    <comment>MT</comment>
   </data>
 </root>

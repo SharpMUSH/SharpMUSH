@@ -20,82 +20,79 @@ public class AccountClaimsCacheTests
 	private static (
 		AccountClaimsService Service,
 		IAccountService AccountSvc,
-		IRoleRegistryService RoleRegistry)
+		IAdministrativeCapabilityService Capabilities)
 		Build()
 	{
 		var accountSvc = Substitute.For<IAccountService>();
-		var roleDerivation = Substitute.For<IRoleDerivationService>();
-		var roleRegistry = Substitute.For<IRoleRegistryService>();
-		var permissionResolver = Substitute.For<IPermissionResolver>();
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 
 		accountSvc.GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
-		roleRegistry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>());
+		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
+		capabilities.GetContextAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(PermissionContext.None);
 
 		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 
-		var svc = new AccountClaimsService(accountSvc, roleDerivation, roleRegistry, permissionResolver, cache,
+		var svc = new AccountClaimsService(capabilities, cache,
 			new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 
-		return (svc, accountSvc, roleRegistry);
+		return (svc, accountSvc, capabilities);
 	}
 
 	[Test]
 	public async ValueTask ComputeAccountRoleAsync_RepeatedCalls_HitUnderlyingServiceOnce()
 	{
-		var (svc, accountSvc, _) = Build();
+		var (svc, _, capabilities) = Build();
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await svc.ComputeAccountRoleAsync("accounts/1");
 
-		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
+		await capabilities.Received(1).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
 	public async ValueTask ComputeAccountRoleAsync_AfterInvalidate_HitsUnderlyingServiceAgain()
 	{
-		var (svc, accountSvc, _) = Build();
+		var (svc, _, capabilities) = Build();
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await capabilities.Received(1).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
 
 		await svc.InvalidateAsync("accounts/1");
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await accountSvc.Received(2).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await capabilities.Received(2).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
 	public async ValueTask InvalidateAsync_ClearsBothRoleAndScopeCacheEntries()
 	{
-		var (svc, accountSvc, roleRegistry) = Build();
+		var (svc, _, capabilities) = Build();
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await svc.ComputeGrantedScopesAsync("accounts/1", PortalRole.Player);
-		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
-		await roleRegistry.Received(1).GetRolesAsync(Arg.Any<CancellationToken>());
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await svc.ComputeGrantedScopesAsync("accounts/1");
+		await capabilities.Received(1).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
+		await capabilities.Received(1).GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>());
 
 		await svc.InvalidateAsync("accounts/1");
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await svc.ComputeGrantedScopesAsync("accounts/1", PortalRole.Player);
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await svc.ComputeGrantedScopesAsync("accounts/1");
 
-		await accountSvc.Received(2).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
-		await roleRegistry.Received(2).GetRolesAsync(Arg.Any<CancellationToken>());
+		await capabilities.Received(2).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
+		await capabilities.Received(2).GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
 	public async ValueTask ComputeAccountRoleAsync_DifferentAccounts_AreCachedIndependently()
 	{
-		var (svc, accountSvc, _) = Build();
+		var (svc, _, capabilities) = Build();
 
-		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await svc.ComputeAccountRoleAsync("accounts/2", PortalRole.Player);
+		await svc.ComputeAccountRoleAsync("accounts/1");
+		await svc.ComputeAccountRoleAsync("accounts/2");
 
-		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
-		await accountSvc.Received(1).GetCharactersAsync("accounts/2", Arg.Any<CancellationToken>());
+		await capabilities.Received(1).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/1"), Arg.Any<CancellationToken>());
+		await capabilities.Received(1).GetContextAsync(Arg.Is<CapabilityActor>(a => a.AccountId == "accounts/2"), Arg.Any<CancellationToken>());
 	}
 }

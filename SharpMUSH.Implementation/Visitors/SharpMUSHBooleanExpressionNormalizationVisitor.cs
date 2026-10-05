@@ -61,6 +61,12 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 		return $"POWER^{value.ToUpperInvariant()}";
 	}
 
+	public override string VisitBitRoleExpr(SharpMUSHBoolExpParser.BitRoleExprContext context)
+		=> $"ROLE^{LockLiteralText.Read(context.literal()).ToLowerInvariant()}";
+
+	public override string VisitBitPermExpr(SharpMUSHBoolExpParser.BitPermExprContext context)
+		=> $"PERM^{LockLiteralText.Read(context.literal()).ToLowerInvariant()}";
+
 	public override string VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
 		var typeValue = context.objectType().GetText();

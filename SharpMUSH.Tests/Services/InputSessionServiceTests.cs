@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
@@ -105,6 +106,7 @@ public class InputSessionServiceTests
 			Object = new SharpObject
 			{
 				Key = number, CreationTime = 1000, Name = "Session test", Type = "PLAYER", Locks = null!, Owner = null!,
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(AsyncEnumerable.Empty<SharpPower>), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 				Flags = new(AsyncEnumerable.Empty<SharpObjectFlag>), Parent = null!, Zone = null!, Children = null!
 			},

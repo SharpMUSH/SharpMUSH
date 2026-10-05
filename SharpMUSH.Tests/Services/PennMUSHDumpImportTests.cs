@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -93,7 +94,7 @@ public class PennMUSHDumpImportTests
 
 		var widgetFlags = await widget.Object().Flags.Value.Select(f => f.Name).ToListAsync();
 		await Assert.That(widgetFlags).Contains("DARK").And.Contains("NO_COMMAND");
-		await Assert.That(await bob.Object().Powers.Value.Select(p => p.Name).ToListAsync()).Contains("See_All");
+		await Assert.That((await bob.Object().ReadPowersAsync(CancellationToken.None)).Select(p => p.Name).ToList()).Contains("See_All");
 		await Assert.That((await widget.Expect<SharpThing>().Home.WithCancellation(CancellationToken.None)).Object().Key)
 			.IsEqualTo(hall.Object().Key);
 		await Assert.That((await hall.Expect<SharpRoom>().Location.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(0);

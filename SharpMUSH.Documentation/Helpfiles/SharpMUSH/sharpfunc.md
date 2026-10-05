@@ -122,7 +122,8 @@
 | [CTIME()]        | [ELOCK()]        | [FINDABLE()]     | [FLAGS()]        |
 | [ALIAS()]    | [FULLNAME()]     | [GETPIDS()]      | [HASATTR()]      |
 | [HASATTR()]     | [HASFLAG()]      | [HASPOWER()]     | [HASTYPE()]      |
-| [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       | [LOCK()]         |
+| [HASROLE()]      | [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       |
+| [LOCK()]         | [PERMISSION()]   | [ROLES()]        |                  |
 | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LLOCKS()]        | [LPIDS()]        |
 | [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MTIME()]        |
 | [MTIME()]        | [MUDNAME()]      | [MUDNAME()]       | [NAME()]         |
@@ -2076,6 +2077,22 @@ think hasflag(me, wizard)
 - [@power]
 - [@power]
 - [HASFLAG()]
+# HASROLE()
+`hasrole(<object>, <role>)`
+
+  Returns 1 if `<object>` holds the role named `<role>`, and 0 if not. `<role>` is the role's short name as @role/list shows it. An object holds `everyone`, the roles assigned to it, and, for a character linked to an account, the account's roles. A player that is not a guest also holds `player`, and #1 holds `god`.
+
+  Example:
+```sharp
+think hasrole(*Ariel, moderator)
+1
+```
+
+
+**See Also:**
+- [ROLES()]
+- [PERMISSION()]
+- [@role]
 # HASTYPE()
 `hastype(<object>, <type list>)`
 
@@ -3806,6 +3823,22 @@ You say, "#1 #7 #56 #-1"
 - [@prompt]
 - [@nspemit]
 - [PROMPT_NEWLINES]
+# PERMISSION()
+`permission(<object>, <permission>)`
+
+  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all.
+
+  Example:
+```sharp
+think permission(me, wiki.delete)
+0
+```
+
+
+**See Also:**
+- [HASROLE()]
+- [roles]
+- [@role]
 # PI()
 `pi()`
 
@@ -4304,6 +4337,22 @@ You say, "-   foo-"
 - [NUM()]
 - [RLOC()]
 - [ROOM()]
+# ROLES()
+`roles(<object>)`
+
+  Returns the short names of the roles `<object>` holds, its own and its account's, highest priority first, with `everyone` last.
+
+  Example:
+```sharp
+think roles(*Ariel)
+moderator player everyone
+```
+
+
+**See Also:**
+- [HASROLE()]
+- [PERMISSION()]
+- [@role]
 # ROOM()
 `room(<object>)`
 
