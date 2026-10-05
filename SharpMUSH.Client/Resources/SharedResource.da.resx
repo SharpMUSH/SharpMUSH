@@ -619,6 +619,14 @@
     <value>Fjern tilknytning af karakter</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Fjern tilknytningen af {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} vil ikke længere være en af kontoens karakterer, og alt det gav kontoen (for eksempel en personalerolle), forsvinder med den. For at tilknytte den igen skal du bruge dens adgangskode i spillet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Brugernavn</value>
     <comment>MT</comment>

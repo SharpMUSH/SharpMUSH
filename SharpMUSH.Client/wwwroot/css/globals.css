@@ -21,3 +21,10 @@
 		--motion-slide: 0s;
 	}
 }
+
+/* FocusOnNavigate (App.razor) moves focus to the page's h1 so a screen reader announces the new page.
+   The heading is not something the visitor tabbed to, so it draws no focus ring; on a page whose h1
+   is already rendered when the route loads (Login, Setup) the ring was a white box around the title. */
+h1:focus {
+	outline: none;
+}

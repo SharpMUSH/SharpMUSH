@@ -619,6 +619,14 @@
     <value>Koble fra karakter</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koble fra {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} blir ikke lenger en av kontoens karakterer, og alt den ga kontoen (for eksempel en stabsrolle), forsvinner med den. For å koble den til igjen trenger du passordet dens i spillet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Brukernavn</value>
     <comment>MT</comment>

@@ -352,6 +352,23 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheHeadersAndTheBannersSettingsMenus_OpenOnTheirOwn()
+	{
+		// The header and the banner's controls row each carry the menu; opening one must not open the other too.
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
+		cut.Find("button.scene-card-sub--action").Click();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll("button.play-settings-btn").Count < 2) throw new InvalidOperationException("one menu so far");
+		}, TimeSpan.FromSeconds(5));
+		cut.FindAll("button.play-settings-btn")[0].Click();
+		cut.WaitForAssertion(() => cut.Find(".play-cfg"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-cfg").Count).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task NothingUnread_NoDot()
 	{
 		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);

@@ -619,6 +619,14 @@
     <value>Отвязать персонажа</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Отвязать {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} больше не будет персонажем этого аккаунта, и всё, что он давал аккаунту (например, роль персонала), уйдёт вместе с ним. Чтобы привязать его снова, нужен его игровой пароль.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Имя пользователя</value>
     <comment>MT</comment>

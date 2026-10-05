@@ -619,6 +619,14 @@
     <value>Desvincular personaje</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>¿Desvincular a {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} dejará de ser uno de los personajes de esta cuenta, y todo lo que le daba a la cuenta (un rol de staff, por ejemplo) se va con él. Para volver a vincularlo hace falta su contraseña del juego.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Nombre de usuario</value>
     <comment>MT</comment>

@@ -4,7 +4,7 @@ namespace SharpMUSH.Client.Services;
 
 /// <summary>
 /// Reads the anonymous <c>api/server-info</c> facts the portal needs before a visitor
-/// authenticates. The response is fetched once and memoized for the app's lifetime.
+/// authenticates. An answer is kept for <see cref="MaxAge"/>; a newer one that differs raises <see cref="Changed"/>.
 /// </summary>
 /// <remarks>
 /// Only an answer is memoized. A failed read is a fact about that moment, not about the game: caching
@@ -23,13 +23,26 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 	private Task<ServerInfoResponse?>? _info;
 
+	/// <summary>
+	/// How long an answer is kept before the next reader asks again. Whether a visitor can play as a guest
+	/// follows the game's guest roster, so a tab kept open for long must not go on offering or hiding Play on
+	/// the answer it had at boot. Settable for tests.
+	/// </summary>
+	public TimeSpan MaxAge { get; set; } = TimeSpan.FromMinutes(1);
+
+	private DateTimeOffset _answeredAt;
+
+	// The last answer readers were given, kept across a failed read: a newer answer is compared with it, so a
+	// change is announced even when the read in between failed and fell back to the defaults.
+	private ServerInfoResponse? _lastAnswer;
+
 	// The build of the first answer this tab had. Refresh() does not forget it: it names the bundle running here.
 	private string? _firstBuildId;
 
 	/// <summary>
-	/// Whether the server accepts guest logins (<c>Net.Guests</c>). On any fetch failure this degrades
-	/// to <c>true</c> — the config default — since the server refuses guest connects authoritatively
-	/// regardless of what the client offers.
+	/// Whether a visitor can play as a guest now (guest logins on and a guest character to hand out). On
+	/// any fetch failure this degrades to <c>true</c> — the config default — since the server refuses guest
+	/// connects authoritatively regardless of what the client offers.
 	/// </summary>
 	public virtual async Task<bool> GuestLoginsEnabledAsync() => (await FetchAsync()).GuestsEnabled;
 
@@ -72,13 +85,27 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public void Refresh()
 	{
 		_info = null;
+		// Announced here: the readers this wakes are given the newer answer, not told about it twice.
+		_lastAnswer = null;
 		Changed?.Invoke();
 	}
 
 	private async Task<ServerInfoResponse> FetchAsync()
 	{
+		if (_info is { IsCompletedSuccessfully: true, Result: not null } && DateTimeOffset.UtcNow - _answeredAt > MaxAge)
+			_info = null;
+
 		var pending = _info ??= FetchCoreAsync();
-		if (await pending is { } info) return info;
+		if (await pending is { } info)
+		{
+			// A newer answer that says something else: readers that asked once (the shell's Play links,
+			// FeatureGate) ask again. Every reader of one fetch gets the same instance, so it is announced once.
+			var previous = _lastAnswer;
+			if (ReferenceEquals(previous, info)) return info;
+			_lastAnswer = info;
+			if (previous is not null && Differs(previous, info)) Changed?.Invoke();
+			return info;
+		}
 
 		// Forget the failure only if nobody has started a newer fetch in the meantime.
 		_ = Interlocked.CompareExchange(ref _info, null, pending);
@@ -93,8 +120,14 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 			ApiFailure => null
 		};
 
+	private static bool Differs(ServerInfoResponse before, ServerInfoResponse now) =>
+		before.GuestsEnabled != now.GuestsEnabled
+		|| before.MudName != now.MudName
+		|| !(before.Features ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(now.Features ?? []);
+
 	private ServerInfoResponse Answered(ServerInfoResponse info)
 	{
+		_answeredAt = DateTimeOffset.UtcNow;
 		_firstBuildId ??= info.BuildId;
 		return info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName };
 	}

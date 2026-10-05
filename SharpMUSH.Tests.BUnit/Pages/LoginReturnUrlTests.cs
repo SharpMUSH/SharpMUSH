@@ -14,12 +14,19 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>Fakes api/auth/account-login with a fixed successful response.</summary>
-file sealed class LoginApiHandler : HttpMessageHandler
+/// <summary>
+/// Fakes api/auth/account-login with a fixed successful response, and api/account/characters with the roster
+/// the account has by the time it is asked (<see cref="RosterNow"/>; unset answers 404).
+/// </summary>
+internal sealed class LoginApiHandler : HttpMessageHandler
 {
+	public object[]? RosterNow { get; set; }
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (request.Method == HttpMethod.Get && path == "api/account/characters" && RosterNow is { } roster)
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(roster) });
 		if (request.Method == HttpMethod.Post && path == "api/auth/account-login")
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -55,9 +62,11 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 {
 	private readonly List<HttpClient> ownedHttpClients = [];
 
+	private readonly LoginApiHandler handler = new();
+
 	private void SeedServices()
 	{
-		var apiClient = Track(new HttpClient(new LoginApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -88,6 +97,55 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 		cut.Find("#login-password").Change("hunter2");
 		cut.Find("button.login-submit").Click();
 		return cut;
+	}
+
+	/// <summary>A visitor who is already signed in is sent on, not shown the sign-in form again.</summary>
+	[TUnit.Core.Test]
+	public async Task AlreadySignedIn_GoesStraightToTheReturnUrl()
+	{
+		SeedServices();
+		var auth = Services.GetRequiredService<AccountAuthService>();
+		// The portal starts restoring the tab's session at startup (Program.cs), before anyone signs in.
+		await auth.InitAsync();
+		await auth.LoginAsync("headwiz", "hunter2");
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/play")}");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		var expected = new Uri(new Uri(nav.BaseUri), "/play").ToString();
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.Uri != expected)
+				throw new InvalidOperationException("not redirected yet");
+		});
+
+		await Assert.That(nav.Uri).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// A signed-in account with no character yet (its only one unlinked, say) is sent to make one, as signing in
+	/// sends it: a bookmarked /login does not skip onboarding.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task AlreadySignedIn_WithNoCharacter_GoesToOnboarding()
+	{
+		SeedServices();
+		var auth = Services.GetRequiredService<AccountAuthService>();
+		await auth.InitAsync();
+		await auth.LoginAsync("headwiz", "hunter2");
+		handler.RosterNow = [];
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/play")}");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		var expected = new Uri(new Uri(nav.BaseUri), "/characters/new").ToString();
+		cut.WaitForAssertion(() =>
+		{
+			if (nav.Uri != expected)
+				throw new InvalidOperationException("not redirected yet");
+		});
+
+		await Assert.That(nav.Uri).IsEqualTo(expected);
 	}
 
 	[TUnit.Core.Test]

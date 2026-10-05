@@ -619,6 +619,14 @@
     <value>Charakter trennen</value>
     <comment>MT — shorter than "Charakterverknüpfung aufheben" for a button label.</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>{0} trennen?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} gehört dann nicht mehr zu den Charakteren dieses Kontos, und alles, was der Charakter dem Konto gab (etwa eine Mitarbeiterrolle), geht mit ihm. Um ihn wieder zu verbinden, brauchst du sein Passwort im Spiel.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Benutzername</value>
     <comment>MT</comment>

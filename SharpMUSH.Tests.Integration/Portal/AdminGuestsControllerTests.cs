@@ -35,14 +35,15 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 {
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
 
-	private AdminGuestsController ControllerAs(DBRef actor) =>
+	private AdminGuestsController ControllerAs(DBRef actor, IGuestAvailability? guestAvailability = null) =>
 		new(
 			Mediator,
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
 			factory.Services.GetRequiredService<IConnectionService>(),
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			FaceValueProjection(),
-			factory.Services.GetRequiredService<IPasswordService>())
+			factory.Services.GetRequiredService<IPasswordService>(),
+			guestAvailability ?? factory.Services.GetRequiredService<IGuestAvailability>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -113,6 +114,25 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		// would leave the panel reporting success while guest login stayed broken.
 		var node = await Mediator.Send(new GetObjectNodeQuery(new DBRef(row.DbrefNumber, row.CreationTime)));
 		await Assert.That(await node.Expect<SharpPlayer>().Object.HasPower("Guest")).IsTrue();
+	}
+
+	/// <summary>
+	/// The portal offers anonymous visitors Play on the cached guest answer; a cached "no guests" from before
+	/// the roster had one would keep hiding it, so creating a guest forgets it. Asserted on the call rather than
+	/// on the answer: the session's world is shared, and another test's guest makes the answer true either way.
+	/// </summary>
+	[Test]
+	public async Task Create_ForgetsTheCachedGuestAnswer()
+	{
+		var wizard = await NewWizardAsync("GuestAdminAvail");
+		var availability = Substitute.For<IGuestAvailability>();
+		var name = $"GuestV{Guid.NewGuid():N}"[..14];
+
+		var created = await ControllerAs(wizard, availability)
+			.Create(new AdminGuestsController.CreateGuestRequest(name), CancellationToken.None);
+
+		await Assert.That(Body<AdminGuestsController.GuestRow>(created).Name).IsEqualTo(name);
+		availability.Received(1).Invalidate();
 	}
 
 	[Test]

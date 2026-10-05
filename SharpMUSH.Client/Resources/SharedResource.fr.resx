@@ -476,6 +476,14 @@
   <data name="AuthUnlinkCharacter" xml:space="preserve">
     <value>Dissocier le personnage</value>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Dissocier {0} ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} ne fera plus partie des personnages de ce compte, et tout ce qu’il apportait au compte (un rôle d’équipe, par exemple) part avec lui. Pour le réassocier, il faut son mot de passe en jeu.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthCreateNewCharacter" xml:space="preserve">
     <value>+ Créer un nouveau personnage</value>
   </data>

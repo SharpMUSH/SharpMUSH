@@ -16,7 +16,7 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 {
 	private record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 	private record AccountLoginResponse(string AccountId, string Username, List<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
-	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
+	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime, string Flags);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
@@ -100,6 +100,20 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 			new AccountLoginRequest(account.Username, "not-the-password"));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
+	/// <summary>
+	/// The portal adds the created character to the account's list from this answer, so it carries the
+	/// flags the roster would: without them the new row showed no flags until the list was refreshed.
+	/// </summary>
+	[Test]
+	public async Task CreateCharacter_AnswersWithTheNewCharactersFlags()
+	{
+		var (http, account) = await RegisterAccountAsync();
+
+		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Flag"), Password);
+
+		await Assert.That(character.Flags.Split(' ')).Contains("PLAYER");
 	}
 
 	[Test]

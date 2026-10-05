@@ -14,7 +14,8 @@ namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// Unit tests for <see cref="ServerInfoController"/>: the anonymous server-info endpoint must
-/// surface <c>Net.Guests</c> so the portal can decide whether to offer a "play as guest" entry,
+/// say whether a visitor can play as a guest (<see cref="IGuestAvailability"/>) so the portal can decide
+/// whether to offer a "play as guest" entry,
 /// <c>Net.MudName</c> so the portal can brand the shell with the real game name, and the optional
 /// applications the game has on so the portal links only to those.
 /// </summary>
@@ -38,11 +39,15 @@ public class ServerInfoControllerTests
 		var environment = Substitute.For<IHostEnvironment>();
 		environment.ContentRootPath.Returns(Path.GetTempPath());
 
-		return new ServerInfoController(wrapper, reader, PortalBuild.For(environment));
+		// GuestAvailabilityTests covers how the answer is reached; here it is only passed through.
+		var guests = Substitute.For<IGuestAvailability>();
+		guests.CanLogInAsync(Arg.Any<CancellationToken>()).Returns(guestsEnabled);
+
+		return new ServerInfoController(wrapper, reader, PortalBuild.For(environment), guests);
 	}
 
 	[Test]
-	public async Task Get_ReportsGuestsEnabled_WhenNetGuestsIsTrue()
+	public async Task Get_ReportsGuestsEnabled_WhenAGuestCanLogIn()
 	{
 		var result = await MakeController(guestsEnabled: true).Get();
 
@@ -51,7 +56,7 @@ public class ServerInfoControllerTests
 	}
 
 	[Test]
-	public async Task Get_ReportsGuestsDisabled_WhenNetGuestsIsFalse()
+	public async Task Get_ReportsGuestsDisabled_WhenNoGuestCanLogIn()
 	{
 		var result = await MakeController(guestsEnabled: false).Get();
 

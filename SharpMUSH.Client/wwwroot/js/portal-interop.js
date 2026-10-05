@@ -3,6 +3,20 @@
     "use strict";
     window.SharpMUSH = window.SharpMUSH || {};
 
+    // Puts a scrolling container (the onboarding shell between wizard steps) back at its top.
+    window.SharpMUSH.scrollToTop = function (selector) {
+        var el = document.querySelector(selector);
+        if (el) el.scrollTop = 0;
+    };
+
+    // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
+    // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
+    // terminal unmounted and kept its element, with its scrollback, alive.
+    var heldTerminal = null;
+    var releaseTerminal = function () { heldTerminal = null; };
+    window.addEventListener('pointerup', releaseTerminal, { passive: true });
+    window.addEventListener('pointercancel', releaseTerminal, { passive: true });
+
     window.SharpMUSH.Terminal = {
         // Follows new output only while the reader is at the bottom, as a telnet client does: scrolled up to
         // reread something, the view stays where it is, the container gets sharp-terminal--reading (which
@@ -12,8 +26,21 @@
             if (!el) return;
             var box = el.closest('.sharp-terminal-container') || el;
             if (!el._sharpmushFollow) {
+                // Only the reader leaves the bottom. A scroll the page causes (lines re-rendered, a
+                // reflow while the first screen arrives) can land above it too, and latching that as
+                // "reading" froze a fresh terminal at its top with the jump button showing.
+                var mark = function () { el._sharpmushUserAt = Date.now(); };
+                el.addEventListener('wheel', mark, { passive: true });
+                el.addEventListener('touchmove', mark, { passive: true });
+                el.addEventListener('keydown', mark, { passive: true });
+                el.addEventListener('pointerdown', function () { heldTerminal = el; mark(); }, { passive: true });
                 el._sharpmushFollow = function () {
                     var reading = el.scrollHeight - el.scrollTop - el.clientHeight > 48;
+                    var byReader = heldTerminal === el || Date.now() - (el._sharpmushUserAt || 0) < 1000;
+                    if (reading && !byReader && !el._sharpmushReading) {
+                        el.scrollTop = el.scrollHeight;
+                        return;
+                    }
                     el._sharpmushReading = reading;
                     box.classList.toggle('sharp-terminal--reading', reading);
                     if (!reading) box.classList.remove('sharp-terminal--new');

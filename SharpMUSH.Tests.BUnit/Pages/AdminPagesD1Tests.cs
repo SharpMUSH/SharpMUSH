@@ -247,7 +247,6 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/players']"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent.Trim()).IsEqualTo("AdmDashboardTitle");
-		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/diagnostics']").Count).IsEqualTo(1)
 			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
 		foreach (var gated in new[] { "/admin/accounts", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
@@ -256,6 +255,30 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		{
 			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{gated}']").Count).IsEqualTo(0).Because(gated);
 		}
+	}
+
+	/// <summary>
+	/// Every card opens a page with something on it. Characters, Moderation and Server were offered to
+	/// administrators and opened "coming soon".
+	/// </summary>
+	[Test]
+	public async Task Dashboard_OffersNoPlaceholderPage()
+	{
+		Auth.SetPolicies("players.view", "players.moderate", "server.admin", "config.admin", "roles.admin",
+			"wiki.admin", "media.admin", "applications.admin", "packages.admin", "layout.admin", "queue.inspect");
+		Auth.SetRoles("God");
+		var cut = RenderPage(typeof(Dashboard));
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/players']"), TimeSpan.FromSeconds(5));
+
+		var placeholders = Directory.EnumerateFiles(ClientSource.RazorRoot, "*.razor", SearchOption.AllDirectories)
+			.Select(File.ReadAllText)
+			.Where(source => source.Contains("<AdminComingSoon"))
+			.SelectMany(source => System.Text.RegularExpressions.Regex.Matches(source, "^@page \"([^\"]+)\"", System.Text.RegularExpressions.RegexOptions.Multiline))
+			.Select(match => match.Groups[1].Value)
+			.ToList();
+		await Assert.That(placeholders).IsNotEmpty().Because("the placeholder pages are found by their markup");
+		foreach (var route in placeholders)
+			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{route}']").Count).IsEqualTo(0).Because(route);
 	}
 
 	[Test]
@@ -335,6 +358,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find(".kit-card"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Markup).Contains("SnapshotsCapture");
+	}
+
+	/// <summary>With no object identity, Load and Capture sent the request anyway and showed "the snapshot
+	/// request failed. Reload and try again"; they stay off until an identity is typed.</summary>
+	[Test]
+	public async Task Snapshots_LoadAndCapture_WaitForAnObjectIdentity()
+	{
+		Auth.SetPolicies("snapshots.capture");
+		var cut = RenderPage(typeof(AdminSnapshots));
+		cut.WaitForAssertion(() => cut.Find(".snapshots-lookup input"), TimeSpan.FromSeconds(5));
+
+		bool Disabled(string label) => cut.FindAll("button").Single(b => b.TextContent.Trim() == label).HasAttribute("disabled");
+		await Assert.That(Disabled("SnapshotsLoad")).IsTrue();
+		await Assert.That(Disabled("SnapshotsCapture")).IsTrue();
+
+		cut.Find(".snapshots-lookup input").Input("#12:1700000000000");
+		await Assert.That(Disabled("SnapshotsLoad")).IsFalse();
+		await Assert.That(Disabled("SnapshotsCapture")).IsFalse();
 	}
 
 	[Test]

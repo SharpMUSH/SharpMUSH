@@ -619,6 +619,14 @@
     <value>Dezasociere personaj</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Dezasociezi {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} nu va mai fi unul dintre personajele acestui cont, iar tot ce îi oferea contului (un rol de staff, de exemplu) dispare odată cu el. Pentru a-l asocia din nou e nevoie de parola lui din joc.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Nume de utilizator</value>
     <comment>MT</comment>

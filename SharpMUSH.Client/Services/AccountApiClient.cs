@@ -37,7 +37,8 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	public sealed record SwitchCharacterResponse(string Ott, int ExpiresIn, string AccountSessionToken);
 
-	public sealed record CreateCharacterResponse(int DbrefNumber, long? CreationTime);
+	/// <param name="Flags">The new character's flags, as the roster carries them.</param>
+	public sealed record CreateCharacterResponse(int DbrefNumber, long? CreationTime, string? Flags = null);
 
 	public sealed record SetupStatusResponse(bool NeedsSetup);
 

@@ -19,16 +19,24 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// characters list on init (<c>api/account/characters</c>). Always returns an empty list —
 /// these tests are about render-crash regressions, not characters-table content.
 /// </summary>
-file sealed class AccountPageApiHandler : HttpMessageHandler
+file sealed class AccountPageApiHandler(object[]? characters = null) : HttpMessageHandler
 {
+	/// <summary>DELETE api/account/characters/{n} requests seen: the unlink itself.</summary>
+	public int Unlinks { get; private set; }
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 		if (request.Method == HttpMethod.Get && path == "api/account/characters")
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(Array.Empty<object>())
+				Content = JsonContent.Create(characters ?? [])
 			});
+		if (request.Method == HttpMethod.Delete && path.StartsWith("api/account/characters/", StringComparison.Ordinal))
+		{
+			Unlinks++;
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+		}
 
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
@@ -62,9 +70,9 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	/// driving state through the real service rather than substituting it (AccountAuthService's
 	/// members aren't virtual, so NSubstitute can't fake it directly).
 	/// </summary>
-	private void SeedAuthState(bool loggedIn, bool mustChangePassword = false)
+	private void SeedAuthState(bool loggedIn, bool mustChangePassword = false, HttpMessageHandler? handler = null)
 	{
-		var apiClient = Track(new HttpClient(new AccountPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(handler ?? new AccountPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -213,6 +221,38 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		var layout = typeof(SharpMUSH.Client.Pages.Account).GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.LayoutAttribute), false)
 			.Cast<Microsoft.AspNetCore.Components.LayoutAttribute>().Single();
 		await Assert.That(layout.LayoutType).IsEqualTo(typeof(SharpMUSH.Client.Layout.SettingsLayout));
+	}
+
+	/// <summary>
+	/// Unlinking takes the character, and any role it gave the account, away at once (unlinking #1 left
+	/// the administrator a Guest), so the button asks first; cancelling sends nothing.
+	/// </summary>
+	[Test]
+	public async Task Unlink_AsksFirst_AndCancelLeavesTheCharacterLinked()
+	{
+		Auth.SetAuthorized("headwiz");
+		var handler = new AccountPageApiHandler([new { dbrefNumber = 7, creationTime = 7L, name = "Ash", flags = "PLAYER" }]);
+		SeedAuthState(loggedIn: true, handler: handler);
+
+		var cut = Render(builder =>
+		{
+			builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<SharpMUSH.Client.Pages.Account>(1);
+			builder.CloseComponent();
+		});
+		cut.WaitForAssertion(() => cut.Find("button[aria-label='AuthUnlinkCharacter']"), TimeSpan.FromSeconds(5));
+
+		cut.Find("button[aria-label='AuthUnlinkCharacter']").Click();
+		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
+		await Assert.That(handler.Unlinks).IsEqualTo(0).Because("nothing is unlinked before the player confirms");
+
+		cut.FindAll(".mud-dialog button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mud-dialog").Count > 0) throw new InvalidOperationException("dialog still open");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(handler.Unlinks).IsEqualTo(0);
 	}
 
 	/// <summary>

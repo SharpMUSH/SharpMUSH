@@ -619,6 +619,14 @@
     <value>Odspoji lik</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Odspojiti {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} više neće biti jedan od likova ovog računa, a sve što je davao računu (primjerice ulogu osoblja) odlazi s njim. Za ponovno povezivanje treba lozinka lika u igri.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Korisničko ime</value>
     <comment>MT</comment>

@@ -619,6 +619,14 @@
     <value>Koppla loss karaktären</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koppla loss {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} är då inte längre en av kontots karaktärer, och allt den gav kontot (till exempel en personalroll) försvinner med den. För att koppla tillbaka den behövs dess lösenord i spelet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Användarnamn</value>
     <comment>MT</comment>

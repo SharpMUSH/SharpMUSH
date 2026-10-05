@@ -15,16 +15,18 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/server-info")]
 public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGameFeatureReader features,
-	PortalBuild build) : ControllerBase
+	PortalBuild build, IGuestAvailability guests) : ControllerBase
 {
+	/// <param name="GuestsEnabled">Whether a visitor can play as a guest now (<see cref="IGuestAvailability"/>):
+	/// guest logins on and a guest character to hand out, not <c>Net.Guests</c> alone.</param>
 	/// <param name="Features">The <c>GameFeatures</c> ids of the optional applications the game has on.</param>
 	/// <param name="BuildId">The portal build this server serves (<see cref="PortalBuild"/>).</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId);
 
-	// Not rate-limited: every portal page load asks for this before it renders, and it reads two
-	// options values and the installed-package registry. A limiter here only ever delayed the portal's boot.
+	// Not rate-limited: every portal page load asks for this before it renders, and it reads options values,
+	// the installed-package registry and the (cached) guest roster. A limiter here only ever delayed the portal's boot.
 	[HttpGet]
-	public async Task<IActionResult> Get()
-		=> Ok(new ServerInfoResponse(options.CurrentValue.Net.Guests, options.CurrentValue.Net.MudName,
+	public async Task<IActionResult> Get(CancellationToken ct = default)
+		=> Ok(new ServerInfoResponse(await guests.CanLogInAsync(ct), options.CurrentValue.Net.MudName,
 			await features.EnabledAsync(), build.Id));
 }

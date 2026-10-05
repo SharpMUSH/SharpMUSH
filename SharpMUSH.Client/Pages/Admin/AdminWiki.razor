@@ -94,7 +94,7 @@
                     @Loc["WikiDelete"]
                 </MudButton>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Secondary"
+                               Color="Color.Secondary" aria-label="@Loc["Refresh"]"
                                OnClick="@ReloadAsync" />
             </MudStack>
         </ToolBarContent>
@@ -164,15 +164,15 @@
                 <CellTemplate>
                     <div style="display:flex;gap:0.125rem;">
                         <MudTooltip Text="@Loc["WikiEdit"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="@Loc["WikiEdit"]"
                                            Href="@($"{WikiHref(context.Item)}/edit")" />
                         </MudTooltip>
                         <MudTooltip Text="@Loc["WikiEditMetadata"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Tune" Size="Size.Small"
+                            <MudIconButton Icon="@Icons.Material.Filled.Tune" Size="Size.Small" aria-label="@Loc["WikiEditMetadata"]"
                                            OnClick="@(() => OpenMetadataDialog(context.Item))" />
                         </MudTooltip>
                         <MudTooltip Text="@Loc["ResHistory"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small"
+                            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["ResHistory"]"
                                            Href="@($"{WikiHref(context.Item)}/history")" />
                         </MudTooltip>
                     </div>

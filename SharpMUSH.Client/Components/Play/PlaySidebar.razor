@@ -17,7 +17,7 @@
         <SidebarHead Title="@Loc["Play"]">
             <Sub>
                 <StatusDot On="@Connected" />
-                <span>@(Connected && !string.IsNullOrWhiteSpace(CharacterName) ? Loc["NavPlayConnectedAs", CharacterName] : Loc["Disconnected"])</span>
+                <span>@(!Connected ? Loc["Disconnected"] : string.IsNullOrWhiteSpace(CharacterName) ? Loc["Connected"] : Loc["NavPlayConnectedAs", CharacterName])</span>
             </Sub>
         </SidebarHead>
     }
