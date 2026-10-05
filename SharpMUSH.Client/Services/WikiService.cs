@@ -455,6 +455,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Slug = dto.Slug,
 			Categories = dto.Categories.ToList(),
 			Published = dto.Published,
+			IsProtected = dto.IsProtected,
 			Locale = dto.Locale,
 			RequestedLocale = dto.RequestedLocale,
 			IsFallback = dto.IsFallback,

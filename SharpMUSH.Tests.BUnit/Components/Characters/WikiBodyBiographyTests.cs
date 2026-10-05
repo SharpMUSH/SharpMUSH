@@ -31,6 +31,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 				"/api/wiki/ns/character/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
 				"/api/wiki/ns/main/rules" => Page("rules", "House Rules", "main"),
 				"/api/wiki/ns/character/Home" => Page("home", "Home", "character"),
+				"/api/wiki/ns/character/Ada%20Locke" => Page("ada_locke", "Ada Locke", "character", isProtected: true),
 				"/api/wiki/exists" => "{}",
 				_ => null,
 			};
@@ -39,11 +40,11 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 				: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
 		}
 
-		private static string Page(string slug, string title, string ns) => $$"""
+		private static string Page(string slug, string title, string ns, bool isProtected = false) => $$"""
 			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","categories":[],
 			 "markdownSource":"Lean and quiet.","renderedHtml":"<p>Lean and quiet.</p>","plainText":"Lean and quiet.",
 			 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"{{DateTimeOffset.UtcNow.AddDays(-3):O}}",
-			 "isProtected":false,"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
+			 "isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
 			 "locale":"en","requestedLocale":"en","availableLocales":["en"]}
 			""";
 	}
@@ -125,10 +126,24 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-edit-textarea").Count).IsEqualTo(0);
 	}
 
-	private IRenderedComponent<CascadingWrapper> RenderProfile()
+	[Test]
+	public async Task AProtectedBiography_OffersEditOnlyToWikiAdmin()
+	{
+		Auth.SetAuthorized("Tomas Reyes");
+		Auth.SetPolicies("wiki.edit");
+		var cut = RenderProfile("Ada Locke");
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
+			.Because("the server refuses a wiki.edit holder's save of a protected page");
+
+		Auth.SetPolicies("wiki.edit", "wiki.admin");
+		var admin = RenderProfile("Ada Locke");
+		await Assert.That(admin.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(1);
+	}
+
+	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")
 	{
 		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
-			.Add(x => x.Context, new ProfilePageContext("Tomas Reyes", false)));
+			.Add(x => x.Context, new ProfilePageContext(character, false)));
 		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
 		return cut;
 	}

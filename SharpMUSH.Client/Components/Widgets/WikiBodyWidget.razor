@@ -171,9 +171,9 @@
             <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />
             <span>@Loc["ResHistory"]</span>
         </a>
-        @if (_mode == WikiView.WikiMode.View)
+        @if (_mode == WikiView.WikiMode.View && _article is not null)
         {
-            <AuthorizeView Policy="wiki.edit">
+            <AuthorizeView Policy="@_article.EditPolicy">
                 <Authorized>
                     <button type="button" class="wiki-body-history wiki-body-edit" @onclick="EditAsync">
                         <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
