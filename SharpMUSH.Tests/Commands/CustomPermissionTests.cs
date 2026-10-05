@@ -99,6 +99,20 @@ public class CustomPermissionTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task CommandRestrictionTakesAPermissionByName()
+	{
+		await Heard(_wizard, $"@role/define {_scope}");
+		await Heard(_wizard, $"@role/allow/object {Ref(_helper)}={_scope}");
+		var command = "CP" + _role.ToUpperInvariant();
+		await Heard(_wizard, $"@command/clone think={command}");
+
+		await Assert.That(await Heard(_wizard, $"@command/restrict {command}={_scope}")).Contains($"PERM^{_scope}");
+
+		await Assert.That(await Heard(_helper, $"{command} closer {_role}")).Contains($"closer {_role}");
+		await Assert.That(await Heard(_mortal, $"{command} closer {_role}")).DoesNotContain($"closer {_role}");
+	}
+
+	[Test]
 	public async Task OnlyARolesAdminDefinesOne()
 	{
 		await Assert.That(await Heard(_mortal, $"@role/define {_scope}")).Contains("roles.admin");
