@@ -39,7 +39,7 @@ public partial class LightningDatabase
 		}), cancellationToken);
 
 		await Store.WriteAsync(tx => RebuildIndex(tx, WikiListIndexMigrationId,
-			[Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory, Tables.WikiByTag], () =>
+			[Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory], () =>
 			{
 				foreach (var (key, record) in AllWikiPages(tx))
 				{

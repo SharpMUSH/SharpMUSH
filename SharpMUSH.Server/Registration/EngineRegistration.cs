@@ -153,6 +153,7 @@ internal static class EngineRegistration
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<SetupService>();
 		services.AddSingleton<GameFeatureService>();
+		services.AddSingleton<StarterWikiService>();
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();

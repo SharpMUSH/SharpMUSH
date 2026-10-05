@@ -2855,10 +2855,6 @@
     <value>qualquer pessoa pode editar</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Geral</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# alteração} other {# alterações}}</value>
     <comment>MT</comment>
@@ -3570,10 +3566,6 @@
     <value>Adicionar atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vazio)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Gatilho de comando</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Fechar {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expandir {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Recolher {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Limpar terminal</value>
@@ -3772,13 +3770,8 @@
     <value>Editor de softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testar — avaliar sem salvar</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — executar o atributo salvo com u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>não salvo</value>
@@ -4124,10 +4117,6 @@
     <value>Navegar por namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Categoria</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} ainda não tem biografia.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Revisão</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Pressione Enter ou + para adicionar uma tag</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Título</value>
     <comment>MT</comment>
@@ -4250,10 +4231,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Atualizada</value>
     <comment>MT — refers to a página (feminine)</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>adicionar tag…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Adicionar uma tradução…</value>
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Nenhuma página ainda.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>{0} claro</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Sem categoria</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Descrever esta categoria</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Adicionar uma categoria</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategoria} other {# subcategorias}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# página nesta categoria} other {# páginas nesta categoria}}</value>
   </data>
 </root>

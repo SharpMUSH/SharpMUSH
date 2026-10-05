@@ -46,5 +46,11 @@ public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfo
 		=> Http.GetApiAsync<List<HandlerClash>>(
 			$"api/setup/wizard/handlers/{Uri.EscapeDataString(kind)}/clashes?dbref={dbref}", "The server returned no answer.");
 
+	/// <summary>
+	/// Writes the starter wiki pages the game does not have yet: Getting Started, Theme, Setting, Policies and the
+	/// categories that file them.
+	/// </summary>
+	public virtual Task<ApiResult<Success>> ApplyStarterWikiAsync() => Http.PostApiAsync("api/setup/wizard/starter-wiki");
+
 	public virtual Task<ApiResult<Success>> FinishAsync() => Http.PostApiAsync("api/setup/wizard/finish");
 }

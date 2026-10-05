@@ -12,6 +12,7 @@ namespace SharpMUSH.Server.Middleware;
 /// - Spaces in path segments → underscores  (301)
 /// - Wrong case on known path prefixes → lowercase prefix  (301)
 /// - Trailing slash on non-root paths → stripped  (301)
+/// - Pre-category-change wiki paths (/wiki/{ns}/{category}/{slug}) → /wiki/{ns}/{slug}  (301)
 /// - Character biographies reached through the wiki → their /character/{slug} alias  (301)
 /// API, hub, and static asset routes are exempted.
 /// </summary>
@@ -71,7 +72,8 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 	/// 2. Percent-decode then replace spaces with underscores in each segment — except below
 	///    <c>/help</c>, whose tail is a help topic rather than a slug and is left verbatim.
 	/// 3. Strip trailing slash (except root "/").
-	/// 4. Rewrite a character biography's wiki route to its /character/{slug} alias.
+	/// 4. Drop the category segment links from before categories left page identity still carry.
+	/// 5. Rewrite a character biography's wiki route to its /character/{slug} alias.
 	/// </summary>
 	public static string BuildCanonical(string path)
 	{
@@ -108,28 +110,45 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 			segments[i] = noSpaces;
 		}
 
+		segments = WithoutCategorySegment(segments) ?? segments;
 		return CharacterAliasFor(segments) ?? string.Join('/', segments);
 	}
 
 	/// <summary>
-	/// The <c>/character/{slug}</c> alias for <c>/wiki/character/general/{slug}</c>, or
-	/// <c>null</c> when the path is not a character biography's wiki view route.
+	/// The <c>/character/{slug}</c> alias for <c>/wiki/character/{slug}</c>, or <c>null</c> when the path
+	/// is not a character biography's wiki view route.
 	/// <para>
-	/// Deliberately narrow. Only the bare view route is aliased: the <c>/history</c>,
-	/// <c>/diff</c> and <c>/edit</c> siblings have no equivalent under <c>/character</c> and
-	/// keep working where they are — which is also what stops the profile page's own history
-	/// link from bouncing. And only the default category is aliased, because
-	/// <c>/character/{slug}</c> carries no category segment to round-trip a different one
-	/// through.
+	/// Deliberately narrow. Only the bare view route is aliased: the <c>/history</c>, <c>/diff</c> and
+	/// <c>/edit</c> siblings have no equivalent under <c>/character</c> and keep working where they are —
+	/// which is also what stops the profile page's own history link from bouncing.
 	/// </para>
 	/// </summary>
 	private static string? CharacterAliasFor(string[] segments) =>
-		// ["", "wiki", ns, category, slug] — exactly five, so /history and friends do not match.
-		segments is ["", "wiki", var ns, var category, var slug]
+		// ["", "wiki", ns, slug] — exactly four, so /history and friends do not match.
+		segments is ["", "wiki", var ns, var slug]
 		&& !string.IsNullOrEmpty(slug)
-		&& WikiRoutes.IsCharacterProfile(ns, category)
-			? WikiRoutes.PathFor(ns, category, slug)
+		&& WikiRoutes.IsCharacterProfile(ns)
+			? WikiRoutes.PathFor(ns, slug)
 			: null;
+
+	/// <summary>
+	/// The page a link from before categories left page identity names: <c>/wiki/{ns}/{category}/{slug}</c>
+	/// (and its <c>/edit</c>, <c>/history</c>, <c>/diff</c>) is now <c>/wiki/{ns}/{slug}</c>. Null for any
+	/// other path, including <c>/wiki/{ns}/{slug}/edit</c> itself.
+	/// </summary>
+	private static string[]? WithoutCategorySegment(string[] segments) =>
+		segments switch
+		{
+			["", "wiki", var ns, _, var slug] when IsNamespace(ns) && !IsPageAction(slug)
+				=> ["", "wiki", ns, slug],
+			["", "wiki", var ns, _, var slug, var action] when IsNamespace(ns) && IsPageAction(action)
+				=> ["", "wiki", ns, slug, action],
+			_ => null,
+		};
+
+	private static bool IsNamespace(string segment) => WikiHelpers.ParseNamespace(segment) is not null;
+
+	private static bool IsPageAction(string segment) => segment is "edit" or "history" or "diff";
 
 	[GeneratedRegex(@"\.[a-zA-Z0-9]+$")]
 	private static partial Regex FileExtensionRegex();

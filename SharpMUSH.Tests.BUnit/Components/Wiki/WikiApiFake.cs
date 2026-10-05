@@ -21,7 +21,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		$$"""
 		{"id":"{{id}}","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","markdownSource":"","renderedHtml":"","plainText":"",
 		 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-0{{id}}T00:00:00+00:00","isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":1,
-		 "category":{{(category is null ? "null" : $"\"{category}\"")}},"tags":[],"published":{{(published ? "true" : "false")}},
+		 "categories":{{(category is null ? "[]" : $"[\"{category}\"]")}},"published":{{(published ? "true" : "false")}},
 		 "image":{{(image is null ? "null" : $"\"{image}\"")}},"lastEditedBy":{{(editor is null ? "null" : $"\"{editor}\"")}}}
 		""";
 
@@ -60,6 +60,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 			"/api/wiki/category/lore" => Paged(request, [AllPages[2]]),
 			"/api/wiki/category/empty" => "[]",
 			"/api/wiki/category/big" => Paged(request, BigCategory),
+			"/api/wiki/category/realms" => Paged(request, [Page("5", "harbour_lore", "Harbour lore", "realms", ns: "category"), AllPages[2]]),
 			_ => null,
 		};
 		return Task.FromResult(body is null

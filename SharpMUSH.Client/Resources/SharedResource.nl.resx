@@ -2855,10 +2855,6 @@
     <value>iedereen kan bewerken</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Algemeen</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# wijziging} other {# wijzigingen}}</value>
     <comment>MT</comment>
@@ -3570,10 +3566,6 @@
     <value>Attribuut toevoegen</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leeg)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Commandotrigger</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} sluiten</value>
     <comment>MT — Dutch puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} uitklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} inklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal wissen</value>
@@ -3772,13 +3770,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evalueren zonder op te slaan</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — het opgeslagen attribuut uitvoeren met u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niet opgeslagen</value>
@@ -4124,10 +4117,6 @@
     <value>Bladeren op namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Categorie</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} heeft nog geen biografie.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Revisie</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Druk op Enter of + om een tag toe te voegen</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4249,10 +4230,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Bijgewerkt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>tag toevoegen…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Nog geen pagina's.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>Fel {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Zonder categorie</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Deze categorie beschrijven</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Categorie toevoegen</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategorie} other {# subcategorieën}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# pagina in deze categorie} other {# pagina's in deze categorie}}</value>
   </data>
 </root>

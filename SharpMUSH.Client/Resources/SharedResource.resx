@@ -1006,12 +1006,6 @@
   <data name="WikiNamespace" xml:space="preserve">
     <value>Namespace</value>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Category</value>
-  </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Published</value>
   </data>
@@ -1058,9 +1052,6 @@
   </data>
   <data name="WikiMetadataSaveFailed" xml:space="preserve">
     <value>Metadata save failed: {0}</value>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Press Enter or the + to add a tag</value>
   </data>
   <data name="WikiNamespaceFilter" xml:space="preserve">
     <value>Namespace filter</value>
@@ -1909,6 +1900,14 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Close {0}</value>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expand {0}</value>
+    <comment>Softcode Editor attribute tree: unfold a branch attribute. {0} is the attribute name, e.g. FOO`BAR.</comment>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Collapse {0}</value>
+    <comment>Softcode Editor attribute tree: fold a branch attribute. {0} is the attribute name.</comment>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Select an object.</value>
   </data>
@@ -1924,11 +1923,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>No attribute selected</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluate without saving</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — run the saved attribute with u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Refresh attributes</value>
@@ -1941,9 +1937,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(no output)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(empty)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Command trigger</value>
@@ -2178,9 +2171,6 @@
   </data>
   <data name="LayCfgWikiBodyNamespace" xml:space="preserve">
     <value>Wiki namespace the page lives in. Only applies alongside a slug.</value>
-  </data>
-  <data name="LayCfgWikiBodyCategory" xml:space="preserve">
-    <value>Category segment of the page's identity.</value>
   </data>
   <data name="LayCfgWikiBodyLocale" xml:space="preserve">
     <value>Locale to render. Unset, each reader gets their own preference.</value>
@@ -2659,9 +2649,6 @@
   <data name="WkInsertImage" xml:space="preserve">
     <value>Insert image</value>
   </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>add tag…</value>
-  </data>
   <data name="WkSummaryPlaceholder" xml:space="preserve">
     <value>Summarize your change (e.g. 'fixed a typo')…</value>
   </data>
@@ -2689,9 +2676,6 @@
   </data>
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Category: {0}</value>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
   </data>
   <data name="WkNoAssets" xml:space="preserve">
     <value>No assets uploaded yet.</value>
@@ -3330,9 +3314,6 @@
   </data>
   <data name="ResOnThisPage" xml:space="preserve">
     <value>On this page</value>
-  </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>General</value>
   </data>
   <data name="ResScenesSubtitle" xml:space="preserve">
     <value>Browse and watch roleplay sessions.</value>
@@ -4729,6 +4710,21 @@
   <data name="AdmSetupContinue" xml:space="preserve">
     <value>Continue setup</value>
   </data>
+  <data name="AdmSetupWikiGroup" xml:space="preserve">
+    <value>In the wiki</value>
+  </data>
+  <data name="AdmSetupStarterWikiTitle" xml:space="preserve">
+    <value>Starter wiki pages</value>
+  </data>
+  <data name="AdmSetupStarterWikiDesc" xml:space="preserve">
+    <value>Adds Getting Started, Theme, Setting and Policies pages with prompts for what to write, and the categories that file them. Home links to all four. Only wiki administrators can edit Theme, Setting and Policies.</value>
+  </data>
+  <data name="AdmSetupStarterWikiApplied" xml:space="preserve">
+    <value>Already added. Pages deleted since then stay deleted.</value>
+  </data>
+  <data name="AdmSetupStarterWikiFailed" xml:space="preserve">
+    <value>The applications were saved, but some starter wiki pages could not be added: {0}</value>
+  </data>
   <data name="AdmSetupAppsFailed" xml:space="preserve">
     <value>Some applications could not be changed: {0}</value>
   </data>
@@ -5235,5 +5231,20 @@
   </data>
   <data name="NavFormatBright" xml:space="preserve">
     <value>Bright {0}</value>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Describe this category</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Add a category</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategory} other {# subcategories}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# page in this category} other {# pages in this category}}</value>
   </data>
 </root>

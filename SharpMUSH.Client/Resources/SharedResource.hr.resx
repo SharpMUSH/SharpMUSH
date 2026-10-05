@@ -2855,10 +2855,6 @@
     <value>svatko može uređivati</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Općenito</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# promjena} few {# promjene} other {# promjena}}</value>
     <comment>MT — verbatim from the locale sheet</comment>
@@ -3570,10 +3566,6 @@
     <value>Dodaj atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(prazno)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Okidač naredbe</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Zatvori {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Sažmi {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Očisti terminal</value>
@@ -3772,13 +3770,8 @@
     <value>Uređivač softcodea</value>
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testiraj</value>
-    <comment>MT — assumed a button that runs a test</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluiraj bez spremanja</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — pokreni spremljeni atribut s u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>
@@ -4124,10 +4117,6 @@
     <value>Pregled po namespace-u</value>
     <comment>MT — namespace kept untranslated; Croatian locative ending attached with a hyphen</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategorija</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} još nema biografiju.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Revizija</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Oznake</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Pritisnite Enter ili + za dodavanje oznake</value>
-    <comment>MT — key name Enter and the + symbol kept as-is</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Naslov</value>
     <comment>MT</comment>
@@ -4250,10 +4231,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Ažurirano</value>
     <comment>MT — assumed a column label for the last-modified date</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>dodaj oznaku…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Dodaj prijevod…</value>
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Još nema stranica.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Oznaka: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>Svijetla {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Bez kategorije</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Opišite ovu kategoriju</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Dodaj kategoriju</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# potkategorija} few {# potkategorije} other {# potkategorija}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# stranica u ovoj kategoriji} few {# stranice u ovoj kategoriji} other {# stranica u ovoj kategoriji}}</value>
   </data>
 </root>

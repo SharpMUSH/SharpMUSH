@@ -2855,10 +2855,6 @@
     <value>alla kan redigera</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Allmänt</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# ändring} other {# ändringar}}</value>
     <comment>MT</comment>
@@ -3570,10 +3566,6 @@
     <value>Lägg till attribut</value>
     <comment>MT — corpus term 'attribut'.</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tomt)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandoutlösare</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Stäng {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fäll ut {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fäll ihop {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Rensa terminalen</value>
@@ -3772,13 +3770,8 @@
     <value>Softcode-redigerare</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testa</value>
-    <comment>MT — imperative, assumed a button.</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testa — evaluera utan att spara</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kör det sparade attributet med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>osparat</value>
@@ -4124,10 +4117,6 @@
     <value>Bläddra efter namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategori</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} har ingen biografi ännu.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Version</value>
     <comment>MT — 'revision' rendered as 'version'; Swedish 'revision' primarily means audit.</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Taggar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Tryck på Enter eller + för att lägga till en tagg</value>
-    <comment>MT — key name Enter kept.</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4249,10 +4230,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Uppdaterad</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>lägg till tagg…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Inga sidor än.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tagg: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>Ljus {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Utan kategori</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Beskriv den här kategorin</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Lägg till en kategori</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# underkategori} other {# underkategorier}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# sida i den här kategorin} other {# sidor i den här kategorin}}</value>
   </data>
 </root>

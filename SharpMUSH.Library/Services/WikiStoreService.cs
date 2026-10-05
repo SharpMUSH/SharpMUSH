@@ -11,8 +11,8 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer) : IWikiService
 {
-	public Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
-		=> store.GetPageBySlugAsync(Namespace(ns), WikiHelpers.NormalizeCategory(category), WikiHelpers.Slugify(slug));
+	public Task<Found<WikiPage>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
+		=> store.GetPageBySlugAsync(Namespace(ns), WikiHelpers.Slugify(slug));
 
 	public Task<Found<WikiPage>> GetByIdAsync(string id) => store.GetPageByIdAsync(id);
 
@@ -32,22 +32,19 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		=> store.CountPagesByStateAsync(includeDrafts);
 
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
-		=> store.GetPagesByCategoryAsync(WikiHelpers.NormalizeCategory(category), skip, take, visibility ?? WikiVisibility.All);
-
-	public Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50, WikiVisibility? visibility = null)
-		=> store.GetPagesByTagAsync(tag.Trim().ToLowerInvariant(), skip, take, visibility ?? WikiVisibility.All);
+		=> store.GetPagesByCategoryAsync(WikiHelpers.CategoryKey(category), skip, take, visibility ?? WikiVisibility.All);
 
 	public async Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null,
-		string? sourceLocale = null)
+		string? sourceLocale = null,
+		IEnumerable<string>? categories = null)
 		=> SourceLocaleToStamp(sourceLocale) switch
 		{
-			string stampedLocale => await store.CreatePageAsync(NewPage(title, Render(markdown), authorDbref, ns, category,
-				stampedLocale)),
+			string stampedLocale => await store.CreatePageAsync(NewPage(title, Render(markdown), authorDbref, ns, stampedLocale,
+				WikiHelpers.NormalizeCategories(categories))),
 			Error<string> error => error,
 		};
 
@@ -60,8 +57,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	private static Result<string> SourceLocaleToStamp(string? sourceLocale)
 		=> string.IsNullOrWhiteSpace(sourceLocale) ? string.Empty : WikiHelpers.NormalizeLocale(sourceLocale);
 
-	private static WikiPage NewPage(string title, WikiBody body, string authorDbref, WikiNamespace ns, string? category,
-		string sourceLocale)
+	private static WikiPage NewPage(string title, WikiBody body, string authorDbref, WikiNamespace ns, string sourceLocale,
+		IReadOnlyList<string> categories)
 	{
 		var now = DateTimeOffset.UtcNow;
 		return new WikiPage(
@@ -79,7 +76,7 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			IsProtected: false,
 			RevisionNumber: 1)
 		{
-			Category = WikiHelpers.NormalizeCategory(category),
+			Categories = categories,
 			SourceLocale = sourceLocale,
 		};
 	}
@@ -92,9 +89,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<Found<None>> SetProtectionAsync(string id, bool isProtected)
 		=> store.SetPageProtectionAsync(id, isProtected);
 
-	public Task<Found<WikiPage>> SetMetadataAsync(string id, string? category, IReadOnlyList<string> tags, bool published)
-		=> store.SetPageMetadataAsync(id, WikiHelpers.NormalizeCategory(category), WikiHelpers.NormalizeTags(tags),
-			published);
+	public Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)
+		=> store.SetPageMetadataAsync(id, WikiHelpers.NormalizeCategories(categories), published);
 
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 		=> store.GetRevisionsAsync(pageId, string.Empty, skip, take);

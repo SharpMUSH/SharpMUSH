@@ -2855,10 +2855,6 @@
     <value>alle kan redigere</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Generelt</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# ændring} other {# ændringer}}</value>
     <comment>MT</comment>
@@ -3570,10 +3566,6 @@
     <value>Tilføj attribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tom)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandoudløser</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Luk {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fold {0} ud</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fold {0} sammen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Ryd terminalen</value>
@@ -3772,13 +3770,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluer uden at gemme</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kør den gemte attribut med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ugemt</value>
@@ -4124,10 +4117,6 @@
     <value>Gennemse efter namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategori</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} har endnu ingen biografi.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Revision</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Tryk på Enter eller + for at tilføje et tag</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4249,10 +4230,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Opdateret</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>tilføj tag…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Ingen sider endnu.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>Lys {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Uden kategori</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Beskriv denne kategori</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Tilføj en kategori</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# underkategori} other {# underkategorier}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# side i denne kategori} other {# sider i denne kategori}}</value>
   </data>
 </root>

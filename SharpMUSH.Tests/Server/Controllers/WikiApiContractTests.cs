@@ -6,7 +6,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// <summary>
 /// The wiki wire contract. These records used to be declared twice — once nested in
 /// <c>WikiController</c> and once privately in the browser's <c>WikiService</c> — and the two copies
-/// had already drifted: the client had <c>Tags</c> nullable and the four locale fields positional
+/// had already drifted: the client had its tag list nullable and the four locale fields positional
 /// where the server had them init-only. Both ends now bind
 /// <see cref="SharpMUSH.Library.API.WikiPageDto"/>, and these tests pin the JSON it produces so a
 /// rename cannot pass a compile on one side and silently stop binding on the other.
@@ -20,8 +20,7 @@ public class WikiApiContractTests
 		Id: "page/1", Slug: "welcome", Title: "Welcome", Namespace: "main",
 		MarkdownSource: "# Hi", RenderedHtml: "<h1>Hi</h1>", PlainText: "Hi",
 		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: false, RevisionNumber: 3,
-		Category: "general", Tags: ["intro", "start"], Published: true)
+		IsProtected: false, RevisionNumber: 3, Categories: ["intro", "start"], Published: true)
 	{
 		Locale = "fr",
 		RequestedLocale = "fr-CA",
@@ -40,9 +39,9 @@ public class WikiApiContractTests
 
 		var round = JsonSerializer.Deserialize<WikiPageDto>(JsonSerializer.Serialize(original, Web), Web)!;
 
-		await Assert.That(round with { Tags = [], AvailableLocales = [] })
-			.IsEqualTo(original with { Tags = [], AvailableLocales = [] });
-		await Assert.That(round.Tags).IsEquivalentTo(original.Tags);
+		await Assert.That(round with { Categories = [], AvailableLocales = [] })
+			.IsEqualTo(original with { Categories = [], AvailableLocales = [] });
+		await Assert.That(round.Categories).IsEquivalentTo(original.Categories);
 		await Assert.That(round.AvailableLocales).IsEquivalentTo(original.AvailableLocales);
 	}
 
@@ -73,7 +72,7 @@ public class WikiApiContractTests
 			{"id":"page/1","slug":"welcome","title":"Welcome","namespace":"main",
 			 "markdownSource":"# Hi","renderedHtml":"<h1>Hi</h1>","plainText":"Hi",
 			 "createdAt":"1970-01-01T00:00:00+00:00","updatedAt":"1970-01-01T00:00:00+00:00",
-			 "isProtected":false,"revisionNumber":1,"category":"general","tags":[],"published":true}
+			 "isProtected":false,"revisionNumber":1,"categories":[],"published":true}
 			""";
 
 		var page = JsonSerializer.Deserialize<WikiPageDto>(json, Web)!;
@@ -85,19 +84,19 @@ public class WikiApiContractTests
 	}
 
 	/// <summary>
-	/// <c>Tags</c> is the one array bound through the constructor, so an absent or explicitly null
+	/// <c>Categories</c> is the one array bound through the constructor, so an absent or explicitly null
 	/// array would otherwise hand the browser a null through a non-nullable property and fault the
 	/// page render. It normalises to empty.
 	/// </summary>
 	[Test]
-	[Arguments("""{"id":"i","slug":"s","title":"t","namespace":"main","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"1970-01-01T00:00:00+00:00","updatedAt":"1970-01-01T00:00:00+00:00","isProtected":false,"revisionNumber":1,"category":null,"published":true}""")]
-	[Arguments("""{"id":"i","slug":"s","title":"t","namespace":"main","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"1970-01-01T00:00:00+00:00","updatedAt":"1970-01-01T00:00:00+00:00","isProtected":false,"revisionNumber":1,"category":null,"tags":null,"published":true}""")]
-	public async Task MissingTagsBindsEmptyNotNull(string json)
+	[Arguments("""{"id":"i","slug":"s","title":"t","namespace":"main","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"1970-01-01T00:00:00+00:00","updatedAt":"1970-01-01T00:00:00+00:00","isProtected":false,"revisionNumber":1,"published":true}""")]
+	[Arguments("""{"id":"i","slug":"s","title":"t","namespace":"main","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"1970-01-01T00:00:00+00:00","updatedAt":"1970-01-01T00:00:00+00:00","isProtected":false,"revisionNumber":1,"categories":null,"published":true}""")]
+	public async Task MissingCategoriesBindsEmptyNotNull(string json)
 	{
 		var page = JsonSerializer.Deserialize<WikiPageDto>(json, Web)!;
 
-		await Assert.That(page.Tags).IsNotNull();
-		await Assert.That(page.Tags).IsEmpty();
+		await Assert.That(page.Categories).IsNotNull();
+		await Assert.That(page.Categories).IsEmpty();
 	}
 
 	[Test]
@@ -119,11 +118,11 @@ public class WikiApiContractTests
 	[Test]
 	public async Task BatchResultRoundTrips()
 	{
-		var result = new WikiBatchResult(["main/general/a"], ["main/general/b"]);
+		var result = new WikiBatchResult(["main/a"], ["main/b"]);
 
 		var round = JsonSerializer.Deserialize<WikiBatchResult>(JsonSerializer.Serialize(result, Web), Web)!;
 
-		await Assert.That(round.Succeeded).IsEquivalentTo(new[] { "main/general/a" });
-		await Assert.That(round.Failed).IsEquivalentTo(new[] { "main/general/b" });
+		await Assert.That(round.Succeeded).IsEquivalentTo(new[] { "main/a" });
+		await Assert.That(round.Failed).IsEquivalentTo(new[] { "main/b" });
 	}
 }

@@ -2855,10 +2855,6 @@
     <value>редактировать может любой</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Общие</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}</value>
     <comment>MT</comment>
@@ -3570,10 +3566,6 @@
     <value>Добавить атрибут</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(пусто)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Триггер команды</value>
     <comment>MT</comment>
@@ -3629,6 +3621,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Закрыть {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Развернуть {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Свернуть {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Очистить терминал</value>
@@ -3772,13 +3770,8 @@
     <value>Редактор softcode</value>
     <comment>MT — softcode kept untranslated per the glossary.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Проверить</value>
-    <comment>MT — assumed an imperative button (run/test the code), not the noun "test".</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Проверить — вычислить без сохранения</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — выполнить сохранённый атрибут через u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>не сохранено</value>
@@ -4124,10 +4117,6 @@
     <value>Просмотр по namespace</value>
     <comment>MT — namespace kept untranslated per glossary.</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Категория</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>У {0} пока нет биографии.</value>
     <comment>MT</comment>
@@ -4223,14 +4212,6 @@
     <value>Версия</value>
     <comment>MT — revision → версия per locale sheet.</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Теги</value>
-    <comment>MT — tag → тег per locale sheet.</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Нажмите Enter или +, чтобы добавить тег</value>
-    <comment>MT — key name Enter kept as-is.</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Заголовок</value>
     <comment>MT</comment>
@@ -4250,10 +4231,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Обновлено</value>
     <comment>MT — assumed a table column header for the last-update timestamp.</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>добавить тег…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Добавить перевод…</value>
@@ -4401,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Страниц пока нет.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Тег: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5503,5 +5476,20 @@
   <data name="NavFormatBright" xml:space="preserve">
     <value>Яркий {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Без категории</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Описать эту категорию</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Добавить категорию</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# подкатегория} few {# подкатегории} many {# подкатегорий} other {# подкатегории}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# страница в этой категории} few {# страницы в этой категории} many {# страниц в этой категории} other {# страницы в этой категории}}</value>
   </data>
 </root>

@@ -5,8 +5,9 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// A wiki page's image is the first image in its body (D1 README §6.2). The server reports it on
-/// the page DTO so a banner can show it, and the client removes that one copy from the rendered
-/// body so it does not appear twice. Both read the rendered HTML the store already keeps: no
+/// the page DTO so listings can show it as a thumbnail. Only a <em>lead</em> image — one that opens
+/// the page, before any text — becomes the page's banner, and the client removes that one copy from
+/// the rendered body so it does not appear twice; an image further down is part of the body. Both read the rendered HTML the store already keeps: no
 /// second Markdown parse per listing, and the image found is the element the client removes
 /// however Markdig escaped its URL (<c>&amp;amp;</c>, percent-encoding). An image quoted in a code
 /// block is text (<c>&amp;lt;img</c>) and never matches.
@@ -22,6 +23,9 @@ public static partial class WikiImages
 	[GeneratedRegex(@"^\s*</p>", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
 	private static partial Regex ClosingParagraphAfter();
 
+	[GeneratedRegex(@"^\s*(<p>\s*)?$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	private static partial Regex NothingBefore();
+
 	/// <summary>The URL of the first <c>&lt;img&gt;</c> in rendered HTML, entity-decoded, or null.</summary>
 	public static string? FirstImageUrl(string? html)
 	{
@@ -30,6 +34,17 @@ public static partial class WikiImages
 		if (!match.Success) return null;
 		var url = WebUtility.HtmlDecode(match.Groups[1].Value);
 		return string.IsNullOrWhiteSpace(url) ? null : url;
+	}
+
+	/// <summary>
+	/// The URL of the page's lead image — its first <c>&lt;img&gt;</c> when nothing but whitespace and the
+	/// opening of its paragraph comes before it — entity-decoded, or null when the page opens with text.
+	/// </summary>
+	public static string? LeadImageUrl(string? html)
+	{
+		if (string.IsNullOrWhiteSpace(html)) return null;
+		var match = ImgTag().Match(html);
+		return match.Success && NothingBefore().IsMatch(html[..match.Index]) ? FirstImageUrl(html) : null;
 	}
 
 	/// <summary>

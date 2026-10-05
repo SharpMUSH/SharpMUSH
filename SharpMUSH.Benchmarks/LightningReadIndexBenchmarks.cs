@@ -135,8 +135,7 @@ public class LightningWikiReadBenchmarks : LightningStoreBenchmark
 		{
 			await wiki.CreatePageAsync(new WikiPage("", $"page_{i}", $"Page {i}", "main", body, body, body, "#1", "#1", at, at.AddSeconds(i), false, 1)
 			{
-				Category = i % 10 == 0 ? "lore" : "general",
-				Tags = ["bench"]
+				Categories = i % 10 == 0 ? ["lore", "bench"] : ["general", "bench"]
 			});
 		}
 

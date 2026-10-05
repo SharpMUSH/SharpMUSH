@@ -15,14 +15,13 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IWikiService
 {
 	/// <summary>
-	/// Retrieves a wiki page by its (namespace, category, slug) identity.
-	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and
+	/// Retrieves a wiki page by its (namespace, slug) identity.
 	/// <paramref name="slug"/> is normalised the same way <see cref="CreateAsync"/> derives it from
 	/// a title (see <c>WikiHelpers.Slugify</c>), so callers may pass a display name such as
 	/// <c>"Mannaz Byron"</c> and reach the page stored as <c>mannaz_byron</c>.
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);
+	Task<Found<WikiPage>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main);
 
 	/// <summary>
 	/// Retrieves a wiki page by its storage ID.
@@ -70,28 +69,24 @@ public interface IWikiService
 	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
 
 	/// <summary>
-	/// Lists pages with the given category (case-insensitive), ordered by title.
+	/// Lists the pages in a category, ordered by title: every page whose category list names it, in any
+	/// namespace. A page in the <c>category</c> namespace is a
+	/// subcategory. <paramref name="category"/> is keyed (<c>WikiHelpers.CategoryKey</c>), so a display
+	/// name reaches the same list.
 	/// </summary>
 	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
 	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
 	/// <summary>
-	/// Lists pages carrying the given tag (case-insensitive), ordered by title.
-	/// </summary>
-	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
-	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50, WikiVisibility? visibility = null);
-
-	/// <summary>
-	/// Creates a new wiki page. The (namespace, category, slug) identity must be unique.
-	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and is part of
-	/// the page's identity, so it is fixed at creation. Renders the Markdown to HTML and extracts
-	/// plain text at creation time.
+	/// Creates a new wiki page. The (namespace, slug) identity must be unique. Renders the Markdown to
+	/// HTML and extracts plain text at creation time. <paramref name="categories"/> are the page's
+	/// categories, keyed by <c>WikiHelpers.NormalizeCategories</c>; they are not read from the text.
 	/// <paramref name="sourceLocale"/> records the locale the body is authored in, canonicalised through
 	/// <c>WikiHelpers.NormalizeLocale</c>. It is materialised once here and immutable thereafter — nothing
 	/// re-derives it on read. Null or blank stores <see cref="string.Empty"/>, meaning "not yet stamped";
 	/// the wiki-translations migration backfills those, and both real create paths supply
 	/// <c>IWikiLocalizationService.DefaultLocale</c>.
-	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already
+	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, slug) already
 	/// exists, or when <paramref name="sourceLocale"/> is non-blank and not a recognised locale tag.
 	/// </summary>
 	Task<Result<WikiPage>> CreateAsync(
@@ -99,12 +94,12 @@ public interface IWikiService
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null,
-		string? sourceLocale = null);
+		string? sourceLocale = null,
+		IEnumerable<string>? categories = null);
 
 	/// <summary>
 	/// Updates an existing page's Markdown content.  Increments the revision counter,
-	/// saves a revision snapshot, and re-renders HTML / plain text.
+	/// saves a revision snapshot, and re-renders HTML / plain text. Categories are unchanged.
 	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
 	Task<Found<WikiPage>> UpdateAsync(
@@ -127,16 +122,12 @@ public interface IWikiService
 	Task<Found<None>> SetProtectionAsync(string id, bool isProtected);
 
 	/// <summary>
-	/// Sets the metadata fields (category, tags, published flag) on a page.
-	/// Does NOT create a revision — metadata changes are not content edits.
-	/// Category and tags are normalised to lower-case; tags are de-duplicated.
+	/// Sets a page's categories and published flag. Does NOT create a revision — metadata changes are not
+	/// content edits. Categories are keyed (<c>WikiHelpers.NormalizeCategories</c>): blanks dropped,
+	/// duplicates merged.
 	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	Task<Found<WikiPage>> SetMetadataAsync(
-		string id,
-		string? category,
-		IReadOnlyList<string> tags,
-		bool published);
+	Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published);
 
 	/// <summary>
 	/// Returns the <em>source-locale</em> revision history for a page, ordered by revision number
