@@ -56,6 +56,8 @@ public sealed class FakeCommHistory : ICommHistory
 		PageRecallAfter.Add(after);
 		var key = string.Join(' ', with.Order(StringComparer.Ordinal));
 		PageRecalled.Add(key);
+		if (FailRecalls-- > 0)
+			return Task.FromResult<ApiResult<PageRecall>>(new ApiFailure(ApiFailureKind.Transport, "connection dropped"));
 		if (!PageLogging || !PageLog.TryGetValue(key, out var logged))
 			return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging, []));
 
@@ -72,11 +74,16 @@ public sealed class FakeCommHistory : ICommHistory
 	public List<long?> RecallAfter { get; } = [];
 
 	/// <summary>Answers as the server does: the last <paramref name="lines"/>, reaching back to the line after <paramref name="after"/>.</summary>
+	/// <summary>How many of the next channel and conversation recalls fail, as a dropped connection or a 5xx would.</summary>
+	public int FailRecalls { get; set; }
+
 	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null)
 	{
 		Recalled.Add(channel);
 		RecallLines.Add(lines);
 		RecallAfter.Add(after);
+		if (FailRecalls-- > 0)
+			return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(new ApiFailure(ApiFailureKind.Transport, "connection dropped"));
 		if (!Recall.TryGetValue(channel, out var buffer))
 			return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
 
