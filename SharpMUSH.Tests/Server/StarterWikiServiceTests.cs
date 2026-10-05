@@ -113,4 +113,18 @@ public class StarterWikiServiceTests
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 		await wiki.DidNotReceive().UpdateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>());
 	}
+
+	/// <summary>Once applied, a repeated request writes nothing, so a deleted starter page stays deleted.</summary>
+	[Test]
+	public async Task Apply_Twice_WritesOnce()
+	{
+		var wiki = Wiki(SeededWikiPages.Home);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+
+		await Task.WhenAll(service.ApplyAsync(), service.ApplyAsync());
+		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
+
+		await wiki.Received(StarterWikiPages.All.Count).CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<WikiNamespace>(), Arg.Any<string?>(), Arg.Any<IEnumerable<string>?>());
+	}
 }

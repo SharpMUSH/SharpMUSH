@@ -32,6 +32,9 @@ public class StarterWikiService(
 	/// <summary>The dbref the starter pages are written as, as for the pages seeded at boot.</summary>
 	private const string Author = "#1";
 
+	/// <summary>One apply at a time, so a second request waits and then finds the set applied.</summary>
+	private readonly SemaphoreSlim _applying = new(1, 1);
+
 	/// <summary>Every page the starter set writes, in the order it writes them.</summary>
 	public static IReadOnlyList<StarterWikiPages.Page> Pages => StarterWikiPages.All;
 
@@ -43,8 +46,22 @@ public class StarterWikiService(
 	/// Writes each starter page the game does not have, and replaces Home while it is still the page seeded at
 	/// boot. A page the game already has is left as it is. Theme, Setting and Policies are protected, so only
 	/// wiki administrators edit them. Records that the set was applied even when some pages failed, naming those.
+	/// Once applied, it writes nothing again, so a starter page an administrator deleted stays deleted.
 	/// </summary>
 	public async Task<Result<Success>> ApplyAsync()
+	{
+		await _applying.WaitAsync();
+		try
+		{
+			return await AppliedAsync() ? new Success() : await WritePagesAsync();
+		}
+		finally
+		{
+			_applying.Release();
+		}
+	}
+
+	private async Task<Result<Success>> WritePagesAsync()
 	{
 		var failures = new List<string>();
 		foreach (var page in StarterWikiPages.All)
