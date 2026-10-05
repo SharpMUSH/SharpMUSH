@@ -1932,11 +1932,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>No attribute selected</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluate without saving</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — run the saved attribute with u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Refresh attributes</value>

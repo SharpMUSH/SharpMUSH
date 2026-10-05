@@ -127,10 +127,11 @@ public class SoftcodeEditorTabsTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task SaveAndDeleteAreIconsThatStillSayWhatTheyDo()
+	public async Task EvalSaveAndDeleteAreIconsThatStillSayWhatTheyDo()
 	{
 		var cut = await RenderWithOneOpenTabAsync();
 
+		await Assert.That(cut.Find(".sc-eval").GetAttribute("aria-label")).IsEqualTo("TermEvalTooltip");
 		await Assert.That(cut.Find(".sc-save").GetAttribute("aria-label")).IsEqualTo("Save");
 		await Assert.That(cut.Find(".sc-delete").GetAttribute("aria-label")).IsEqualTo("Delete");
 		await Assert.That(cut.Find(".sc-save").TextContent.Trim()).IsEmpty();

@@ -3658,13 +3658,8 @@
     <value>Softcode 编辑器</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>测试</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>测试 — 不保存直接求值</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — 用 u() 运行已保存的属性</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>未保存</value>

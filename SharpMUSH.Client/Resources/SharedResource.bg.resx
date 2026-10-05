@@ -3658,13 +3658,8 @@
     <value>Редактор на softcode</value>
     <comment>MT — `softcode` kept untranslated per glossary</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Тест</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Тест — изчисляване без запазване</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — изпълни запазения атрибут с u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>незапазено</value>

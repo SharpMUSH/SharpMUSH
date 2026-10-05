@@ -3658,13 +3658,8 @@
     <value>Uređivač softcodea</value>
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testiraj</value>
-    <comment>MT — assumed a button that runs a test</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluiraj bez spremanja</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — pokreni spremljeni atribut s u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>

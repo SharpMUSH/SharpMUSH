@@ -1055,11 +1055,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>Aucun attribut sélectionné</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Tester</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Tester — évaluer sans enregistrer</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — exécuter l'attribut enregistré avec u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>

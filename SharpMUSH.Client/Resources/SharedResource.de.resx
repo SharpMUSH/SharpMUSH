@@ -3658,13 +3658,8 @@
     <value>Softcode-Editor</value>
     <comment>MT — hyphenated compound on the protected term, per the spec.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — auswerten, ohne zu speichern</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — gespeichertes Attribut mit u() ausführen</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ungespeichert</value>

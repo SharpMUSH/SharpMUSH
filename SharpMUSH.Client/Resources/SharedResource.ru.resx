@@ -3658,13 +3658,8 @@
     <value>Редактор softcode</value>
     <comment>MT — softcode kept untranslated per the glossary.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Проверить</value>
-    <comment>MT — assumed an imperative button (run/test the code), not the noun "test".</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Проверить — вычислить без сохранения</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — выполнить сохранённый атрибут через u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>не сохранено</value>

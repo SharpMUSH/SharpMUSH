@@ -3658,13 +3658,8 @@
     <value>Softcode-szerkesztő</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Teszt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Teszt — kiértékelés mentés nélkül</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — a mentett attribútum futtatása u()-val</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nincs mentve</value>

@@ -3658,13 +3658,8 @@
     <value>Editor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testare</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testare — evaluare fără salvare</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — rulează atributul salvat cu u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nesalvat</value>

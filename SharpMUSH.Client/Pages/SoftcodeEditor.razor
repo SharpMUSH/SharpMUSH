@@ -294,13 +294,10 @@
                 <MudText Style="font-size:0.75rem;color:var(--text-faint);">@Loc["TermNoAttributeSelected"]</MudText>
             }
             <MudSpacer />
-            <MudTooltip Text="@Loc["TermTestTooltip"]">
-                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.PlayArrow"
-                           OnClick="EvalAsync"
-                           Disabled="@(_evalLoading || ActiveTab is null)">
-                    @Loc["TermTest"]
-                </MudButton>
+            <MudTooltip Text="@Loc["TermEvalTooltip"]">
+                <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
+                               OnClick="EvalAsync" Disabled="@(_evalLoading || ActiveTab is null)"
+                               aria-label="@Loc["TermEvalTooltip"]" Class="sc-eval" />
             </MudTooltip>
             @* Icons alone: a floppy and a bin need no label, and the toolbar's width belongs to
                the attribute's name. The tooltip and aria-label still name them. *@

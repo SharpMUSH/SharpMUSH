@@ -3658,13 +3658,8 @@
     <value>Softcode-redigerare</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testa</value>
-    <comment>MT — imperative, assumed a button.</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testa — evaluera utan att spara</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kör det sparade attributet med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>osparat</value>

@@ -3658,13 +3658,8 @@
     <value>Edytor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testuj</value>
-    <comment>MT — assumed a button (verb), not a noun label</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testuj — ewaluacja bez zapisywania</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — uruchom zapisany atrybut przez u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niezapisane</value>

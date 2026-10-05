@@ -3658,13 +3658,8 @@
     <value>Editor de softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Probar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Probar — evaluar sin guardar</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — ejecutar el atributo guardado con u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>sin guardar</value>
