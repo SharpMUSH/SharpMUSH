@@ -15,7 +15,7 @@
          Pinned here only to carry PrivateAssets="all": the analyzers still apply to this project, but
          they no longer flow to anything referencing it — SharpMUSH.Tests, whose TUnit test methods
          intentionally do not carry the "Async" suffix VSTHRD200 demands. -->
-    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.6.40" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="Serilog" Version="4.3.1" />
