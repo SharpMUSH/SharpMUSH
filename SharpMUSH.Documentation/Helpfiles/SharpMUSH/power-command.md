@@ -32,7 +32,7 @@
 
 The third form manipulates powers on objects. `@power <object>=<power>` grants the given power; `@power <object>=!<power>` revokes it. Several powers may be given at once, separated by spaces, and each may independently carry the `!` prefix. Powers cannot be granted to players set UNREGISTERED, and only God may alter God's powers.
 
-The standard powers are permissions (see [roles flags]): granting See_All sets an Allow override on `game.see_all` on the object, and revoking it clears the override. Builder and Guest assign and remove the `builder` and `guest` roles. These follow the rules of [@role rank], so a Wizard may grant any of them to an object whose roles are below its own. A power that the object still holds afterwards, through a role or its account, is reported. A power added with `@power/add` is stored on the object, and only Wizards may grant it.
+The standard powers are permissions (see [roles flags]): granting See_All sets an Allow override on `game.see_all` on the object, and revoking it clears the override. Builder and Guest assign and remove the `builder` and `guest` roles. These follow the rules of [@role rank], so a Wizard may grant any of them to itself or to an object whose roles are below its own. A power that the object still holds afterwards, through a role or its account, is reported. A power added with `@power/add` is stored on the object, and only Wizards may grant it.
 
 God can add, delete, and otherwise manipulate power definitions. See help @power registry syntax for these commands.
 

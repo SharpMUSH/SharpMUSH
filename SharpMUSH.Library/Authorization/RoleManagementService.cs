@@ -214,7 +214,8 @@ public sealed partial class RoleManagementService(
 			{
 				if (Unauthorized(me.Context) is { } refusal) return refusal;
 				if (!RoleHierarchy.Outranks(me.Context, role.Priority)) return NotBelow<Success>(role, me.Context);
-				if (await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
+				var ownPower = GamePowers.ForRole(role.Slug) is not null && IsWizardActingOnItself(actor, me.Context, target);
+				if (!ownPower && await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
 			}
 
 			var number = target.Object().Key;
@@ -232,7 +233,8 @@ public sealed partial class RoleManagementService(
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
-			if (await ObjectTargetRefusalAsync(actor, me, target, ct) is { } targetRefusal) return targetRefusal;
+			var ownPowers = canonical.All(scope => GamePowers.ForScope(scope) is not null) && IsWizardActingOnItself(actor, me, target);
+			if (!ownPowers && await ObjectTargetRefusalAsync(actor, me, target, ct) is { } targetRefusal) return targetRefusal;
 			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
@@ -273,6 +275,14 @@ public sealed partial class RoleManagementService(
 		var owner = await target.Object().Owner.WithCancellation(ct);
 		return owner.Object.DBRef.Number == acting.Number;
 	}
+
+	/// <summary>
+	/// A <see cref="PortalPermission.GameWizard"/> holder changing itself. As in PennMUSH a wizard may
+	/// <c>@power</c> itself, so this lets it set its own power overrides and power roles (Builder, Guest).
+	/// </summary>
+	private bool IsWizardActingOnItself(RoleActor actor, PermissionContext me, AnySharpObject target)
+		=> ActingObject(actor) is { } acting && acting.Number == target.Object().Key
+			&& resolver.Resolve(me).Contains(PortalPermission.GameWizard);
 
 	/// <summary>Why the actor may not change <paramref name="target"/>'s roles or overrides, or null when it may.</summary>
 	private async Task<RoleOutcome<Success>?> ObjectTargetRefusalAsync(RoleActor actor, PermissionContext me, AnySharpObject target, CancellationToken ct)

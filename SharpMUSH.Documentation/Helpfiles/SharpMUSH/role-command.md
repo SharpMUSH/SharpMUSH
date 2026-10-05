@@ -120,7 +120,7 @@ Examples:
 Every change needs the `roles.admin` permission, and follows Discord's role hierarchy:
 
 - You can create, edit, delete, assign or unassign only roles whose priority is below your own highest role.
-- You can change the roles and overrides of an object or account only when its highest role is below yours. You cannot change your own.
+- You can change the roles and overrides of an object or account only when its highest role is below yours. You cannot change your own, except that a holder of `game.wizard` may set or clear power permissions (`game.see_all` and the like) on itself, as a PennMUSH wizard may `@power` itself.
 - You can only allow permissions you hold yourself. A holder of `game.wizard` may also allow any `game.` permission, as a PennMUSH wizard may give any power.
 
 As in PennMUSH, an object may give a role it holds to a thing it owns, or take it away, without `roles.admin`.

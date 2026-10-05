@@ -134,6 +134,23 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task WizardPowersItselfButCannotRaiseItsOwnRoles()
+	{
+		var me = $"#{_wizard.DbRef.Number}";
+		await Assert.That(await As("@power me=No_Pay")).Contains("No_Pay granted");
+		await Assert.That(await AsWizard("haspower(me,No_Pay)")).IsEqualTo("1");
+		await Assert.That(await As("@power me=Builder")).Contains("Builder granted");
+		await Assert.That(await AsWizard("hasrole(me,builder)")).IsEqualTo("1");
+		await Assert.That(await As("@power me=!No_Pay")).Contains("No_Pay removed");
+		await Assert.That(await AsWizard("haspower(me,No_Pay)")).IsEqualTo("0");
+		// The exception is for powers only: a wizard still cannot hand itself a role or a portal permission.
+		await Assert.That(await As("@role/assign me=moderator")).DoesNotContain("assigned");
+		await Assert.That(await AsWizard("hasrole(me,moderator)")).IsEqualTo("0");
+		await As("@role/allow/object me=wiki.read");
+		await Assert.That(await As($"@role/player {me}")).DoesNotContain("allow wiki.read");
+	}
+
+	[Test]
 	public async Task MortalCannotMakeAWizard()
 	{
 		var output = await Heard(_target, $"@set {Target}=WIZARD");
