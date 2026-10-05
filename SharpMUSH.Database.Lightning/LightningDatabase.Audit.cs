@@ -209,16 +209,22 @@ public partial class LightningDatabase : IAuditStore
 				var deleted = 0;
 				var freed = 0L;
 				// An entry's time is its key, so it is still as old as when it was chosen; only its presence can change.
-				foreach (var candidate in batch.Candidates.Where(candidate => ReadAuditMs(candidate.Key) <= cutoff))
+				var due = batch.Candidates.Select(candidate => candidate.Key).Where(key => ReadAuditMs(key) <= cutoff);
+				foreach (var (key, value) in StillStored(tx, due).ToList())
 				{
-					if (!tx.TryGet(Tables.Audit, candidate.Key, out var value)) continue;
-					tx.Delete(Tables.Audit, candidate.Key);
-					freed += candidate.Key.Length + value.Length;
+					tx.Delete(Tables.Audit, key);
+					freed += key.Length + value.Length;
 					deleted++;
 				}
 
 				return (deleted, freed);
 			}, ct);
 		}
+
+		/// <summary>The keys still in the table, with their values; another purge may have taken some.</summary>
+		private static IEnumerable<(byte[] Key, byte[] Value)> StillStored(ITx tx, IEnumerable<byte[]> keys)
+			=> keys
+				.Select(key => tx.TryGet(Tables.Audit, key, out var value) ? (key, value) : ((byte[] Key, byte[] Value)?)null)
+				.OfType<(byte[] Key, byte[] Value)>();
 	}
 }
