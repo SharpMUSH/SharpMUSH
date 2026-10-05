@@ -203,7 +203,8 @@ of a missing `v` and of any malformed member):
   included — by objid where there is one, sorted, prefixed `page `, so every
   page among the same people is one conversation whoever sent it, and it can
   never be a channel name (those cannot hold a space).
-- 200 lines are kept per key, and the 100 most recent conversations.
+- 200 lines are kept per key, or as many as a pull brought back when that
+  is more, and the 100 most recent conversations.
 - A line from someone else arriving for a key that is not `Viewing` is
   unread until `MarkRead`, unless the key's read marker is already past it
   (markers below). A count a `comm.channels` row carries, 0 included,
@@ -214,7 +215,13 @@ of a missing `v` and of any malformed member):
 - Once a `comm.channels` says whose feed it is, the feed reads that
   character's read markers (`GET api/comm/markers`) and each channel's recall
   buffer (`GET api/comm/channels/<channel>/recall`), and the channel view pulls
-  its channel again when it opens. A line with an `id` is kept once, however it
+  its channel again when it opens. A channel with a marker is pulled back to it
+  (`?lines=200&after=<marker id>`: the last 200 lines, or every line after the
+  marker when that reaches further back), so the viewer gets all they missed
+  that the buffer still holds; one without a marker takes the whole buffer
+  (`?lines=0`). A reconnect logs in again without replaying what was sent
+  while the connection was down, so the first `comm.channels` after a drop
+  pulls every channel again and lists the conversations again, the same way. A line with an `id` is kept once, however it
   arrived. A channel or conversation with a marker counts as unread only what
   came after it from someone else, so the count survives a reload and a change
   of device; one without a marker counts lines as they arrive. `MarkRead`, and
@@ -226,16 +233,17 @@ of a missing `v` and of any malformed member):
 - When the game keeps a page log (the `page_log` option, a SharpMUSH
   extension, on by default), the feed also lists the character's page
   conversations from it (`GET api/comm/conversations`, the latest 100), so a reload keeps
-  them, and pulls those whose last page is past the conversation's marker, so
-  their unread counts survive too. Opening a conversation pulls its pages
-  (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
+  them, and pulls those whose last page is past the conversation's marker, back
+  to the marker (`?lines=200&after=<marker id>`), so their unread counts
+  survive too, and those with no marker, as far back as the server gives
+  (`?lines=0`, the latest 500), so pages read on another machine are there.
+  Opening a conversation pulls its pages the same way (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
   with spaces). Each character reads only their own copy; there is no staff
   read. With `page_log` off both answer `"logging": false` and nothing else,
   and the conversation view says the game keeps no page history. The feed
   then drops what it pulled from the log (pages pushed live stay, and a
   conversation known only from the listing goes). Opening a conversation asks
-  again, since the option can be turned on at any time. A conversation pull
-  asks for 200 pages, as many as the feed keeps. Conversations are ordered,
+  again, since the option can be turned on at any time. Conversations are ordered,
   and the least recent dropped past 100, by their latest page's id. A
   conversation with more than 32 other people is not marked. As
   for channels, a failed read of the markers lists and pulls no conversation,
