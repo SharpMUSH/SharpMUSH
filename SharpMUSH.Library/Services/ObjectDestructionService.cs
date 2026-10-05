@@ -110,7 +110,7 @@ public class ObjectDestructionService(
 
 		// PennMUSH free_object() queues OBJECT`DESTROY with everything about the object it can still
 		// name, "since the event will deal with an object that doesn't exist anymore".
-		await eventService.TriggerEventAsync(parser, ObjectDestroyEvent, null, eventArguments);
+		await eventService.TriggerEventAsync(ObjectDestroyEvent, null, eventArguments);
 
 		return true;
 	}

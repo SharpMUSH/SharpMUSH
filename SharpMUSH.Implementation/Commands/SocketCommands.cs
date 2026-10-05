@@ -210,9 +210,7 @@ public partial class Commands
 		{
 			// Trigger SOCKET`LOGINFAIL for invalid player name
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync(
-				parser,
-				"SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 				null, // System event
 				handle.ToString(),
 				ipAddress,
@@ -239,9 +237,7 @@ public partial class Commands
 		{
 			// Trigger SOCKET`LOGINFAIL for player not found
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync(
-				parser,
-				"SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 				null, // System event
 				handle.ToString(),
 				ipAddress,
@@ -261,9 +257,7 @@ public partial class Commands
 		{
 			// Trigger SOCKET`LOGINFAIL for invalid password
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync(
-				parser,
-				"SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 				null, // System event
 				handle.ToString(),
 				ipAddress,
@@ -340,8 +334,7 @@ public partial class Commands
 
 		if (playerDbRef is null)
 		{
-			await EventService.TriggerEventAsync(
-				parser, "SOCKET`LOGINFAIL", null,
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL", null,
 				handle.ToString(), ipAddress, "1",
 				"invalid or expired login token", "#-1", "token");
 			await NotifyService.Notify(handle, "Invalid or expired login token.");
@@ -397,9 +390,7 @@ public partial class Commands
 
 		if (guestPlayers.Count == 0)
 		{
-			await EventService.TriggerEventAsync(
-				parser,
-				"SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 				null,
 				handle.ToString(),
 				ipAddress,
@@ -427,9 +418,7 @@ public partial class Commands
 
 			if (selectedGuest == null)
 			{
-				await EventService.TriggerEventAsync(
-					parser,
-					"SOCKET`LOGINFAIL",
+				await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 					null,
 					handle.ToString(),
 					ipAddress,
@@ -459,9 +448,7 @@ public partial class Commands
 
 			if (totalGuestConnections >= maxGuests)
 			{
-				await EventService.TriggerEventAsync(
-					parser,
-					"SOCKET`LOGINFAIL",
+				await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 					null,
 					handle.ToString(),
 					ipAddress,
@@ -495,9 +482,7 @@ public partial class Commands
 		if (selectedGuest == null)
 		{
 			// This shouldn't happen, but handle it just in case
-			await EventService.TriggerEventAsync(
-				parser,
-				"SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
 				null,
 				handle.ToString(),
 				ipAddress,
@@ -596,39 +581,35 @@ public partial class Commands
 
 	/// <summary>
 	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
-	/// syncs output preferences and shows login messages before extensible connect hooks,
-	/// refreshes the login room's contents, and performs auto-look. Identical across
+	/// syncs output preferences, shows login messages, announces the connection, queues the connect
+	/// events and hooks, and performs auto-look. Identical across
 	/// CONNECT (name/password and OTT token) and the account-mode MAKE/PLAY commands; guest logins
 	/// share the same sequence but additionally show the guest file, hence <paramref name="isGuest"/>.
 	/// </summary>
 	private async ValueTask CompletePlayerLoginAsync(
 		IMUSHCodeParser parser, long handle, SharpPlayer player, DBRef playerRef, bool isGuest = false)
 	{
-		// A bound connection must receive its required initialization before extensible
-		// hooks can exhaust the command budget. Auto-look remains after the hooks.
+		// PennMUSH check_connect (src/bsd.c:4369-4377): announce_connect queues PLAYER`CONNECT and the
+		// ACONNECT hooks, then the look runs in place. The events and hooks below are queue entries of
+		// their own, each with its own time limit, so none of them can run the login out of time; they
+		// run after the look.
 		await SyncPlayerOutputPreferences(handle, player.Object);
 		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
 		var connectionCount = await ConnectionService.Get(playerRef).CountAsync();
-		await EventService.TriggerEventAsync(
-			parser,
-			"PLAYER`CONNECT",
+		await EventService.TriggerEventAsync("PLAYER`CONNECT",
 			playerRef,
 			$"#{player.Object.Key}",
 			connectionCount.ToString(),
 			handle.ToString());
 
 		await ConnectionAnnounceService.AnnounceConnectAsync(
-			parser, new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
+			new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
 
-		// The player's own channel list, which a fresh connection has not been sent yet. It runs before the
-		// room refresh so that the refresh cannot starve it: event handlers share this command's
-		// function-invocation allowance, and a crowded room's refresh can use up what is left of it.
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.PlayerChannels,
+		// The player's own channel list, which a fresh connection has not been sent yet.
+		await EventService.TriggerEventAsync(SharpEvents.PlayerChannels,
 			playerRef,
 			player.Object.DBRef.ToString(),
 			"connect",
@@ -636,9 +617,7 @@ public partial class Commands
 
 		// Refresh everyone in the room the player just appeared in.
 		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
+		await EventService.TriggerEventAsync(SharpEvents.RoomContents,
 			playerRef,
 			connectRoomContainer.Object().DBRef.ToString(),
 			"connect");

@@ -77,21 +77,9 @@ public class GetCommandParityTests
 		await God($"&ARECEIVE {taker.DbRef}=&RECEIVED me=yes");
 	}
 
-	/// <summary>
-	/// Returns once everything queued before it has run. The immediate queue has one consumer and is
-	/// first in, first out, so a triad the GET queued has finished by the time a <c>@wait 0</c> queued
-	/// after it is heard — without waiting for the whole session's queue to go quiet.
-	/// </summary>
-	private async Task QueueBarrier()
-	{
-		var token = TestIsolationHelpers.GenerateUniqueName("GetBarrier");
-		await God($"@wait 0=@pemit me={token}");
-		await WebAppFactoryArg.Notifications.WaitForAsync(WebAppFactoryArg.ExecutorDBRef, token);
-	}
-
 	private async Task AssertNoTriads(DBRef item, TestIsolationHelpers.TestPlayer taker)
 	{
-		await QueueBarrier();
+		await WebAppFactoryArg.QueueBarrierAsync();
 		await Assert.That(await Eval($"[get({item}/TAKEN)]")).IsEmpty()
 			.Because("a refused GET fires no SUCCESS triad");
 		await Assert.That(await Eval($"[get({taker.DbRef}/RECEIVED)]")).IsEmpty()
@@ -404,7 +392,7 @@ public class GetCommandParityTests
 
 		await Assert.That(seen).Contains("You cannot get yourself!");
 		await Assert.That(await LocationOf(taker.DbRef)).IsEqualTo(Bare(room));
-		await QueueBarrier();
+		await WebAppFactoryArg.QueueBarrierAsync();
 		await Assert.That(await Eval($"[get({taker.DbRef}/TAKEN)]")).IsEmpty();
 	}
 

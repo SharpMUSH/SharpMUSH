@@ -1,7 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -10,17 +9,14 @@ namespace SharpMUSH.Implementation.Handlers;
 /// Handles object-related notifications and triggers corresponding PennMUSH-compatible events.
 /// </summary>
 public class ObjectEventHandlers(
-	IEventService eventService,
-	IMUSHCodeParser parser)
+	IEventService eventService)
 	: INotificationHandler<ObjectMovedNotification>,
 		INotificationHandler<ObjectFlagChangedNotification>
 {
 	public async ValueTask Handle(ObjectMovedNotification notification, CancellationToken cancellationToken)
 	{
 		// PennMUSH spec: object`move (objid, newloc, origloc, issilent, cause)
-		await eventService.TriggerEventAsync(
-			parser,
-			"OBJECT`MOVE",
+		await eventService.TriggerEventAsync("OBJECT`MOVE",
 			notification.Enactor,
 			notification.Target.Object().DBRef.ToString(),
 			notification.NewLocation.Object().DBRef.ToString(),
@@ -32,16 +28,12 @@ public class ObjectEventHandlers(
 		// rooms (not just the mover): one fire for the destination, one for the origin.
 		var newLocDbref = notification.NewLocation.Object().DBRef.ToString();
 
-		await eventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
+		await eventService.TriggerEventAsync(SharpEvents.RoomContents,
 			notification.Enactor,
 			newLocDbref,
 			"move-in");
 
-		await eventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
+		await eventService.TriggerEventAsync(SharpEvents.RoomContents,
 			notification.Enactor,
 			notification.OldLocation.ToString(),
 			"move-out");
@@ -50,9 +42,7 @@ public class ObjectEventHandlers(
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
 	{
 		// PennMUSH spec: object`flag (objid of object with flag, flag name, type, setbool, setstr)
-		await eventService.TriggerEventAsync(
-			parser,
-			"OBJECT`FLAG",
+		await eventService.TriggerEventAsync("OBJECT`FLAG",
 			notification.Enactor,
 			notification.Target.Object().DBRef.ToString(),
 			notification.FlagName,

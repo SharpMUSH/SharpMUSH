@@ -91,7 +91,7 @@ public static class SceneRoomRefresh
 		{
 			try
 			{
-				await events.TriggerEventAsync(parser, SharpEvents.RoomContents, null, room!, Cause);
+				await events.TriggerEventAsync(SharpEvents.RoomContents, null, room!, Cause);
 			}
 			catch (Exception ex)
 			{

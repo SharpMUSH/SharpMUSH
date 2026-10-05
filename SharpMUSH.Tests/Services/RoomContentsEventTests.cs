@@ -28,34 +28,36 @@ public class RoomContentsEventTests
 	private Task Cmd(string command) =>
 		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
-	private async Task<string> Eval(string expression) =>
-		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+	/// <summary>Evaluates <paramref name="expression"/> once the events queued so far have run.</summary>
+	private async Task<string> Eval(string expression)
+	{
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+	}
 
 	[Test]
 	public async ValueTask DirectEventServiceTriggerSetsAttribute()
 	{
-		// Set the handler attribute via CommandParse.
-		await Cmd("&ROOM`CONTENTS #9=&FIRED #9=direct");
+		// Recorded under %0, which only this test passes, so no other test's event can write it.
+		var marker = TestIsolationHelpers.GenerateUniqueName("RcDirect");
+		await Cmd("&ROOM`CONTENTS #9=&FIRED_[secure(%0)] #9=direct");
 
 		// Immediately read back to confirm the set worked.
 		var afterSet = await Eval("get(#9/ROOM`CONTENTS)");
-		await Assert.That(afterSet).IsEqualTo("&FIRED #9=direct");
+		await Assert.That(afterSet).IsEqualTo("&FIRED_[secure(%0)] #9=direct");
 
-		// Fire the event directly with the CommandParser (has Handle=1).
-		await EventService.TriggerEventAsync(
-			WebAppFactoryArg.CommandParser,
-			SharpEvents.RoomContents,
+		await EventService.TriggerEventAsync(SharpEvents.RoomContents,
 			new DBRef(1),
-			"#0",       // %0 = some room dbref
+			marker,     // %0 = the room, here a marker
 			"move-in"); // %1 = cause
 
-		// Read back the FIRED attribute on #9.
-		var fired = await Eval("get(#9/FIRED)");
+		// Read back the FIRED attribute on #9, once the queued handler has run.
+		var fired = await Eval($"get(#9/FIRED_{marker})");
 		await Assert.That(fired).IsEqualTo("direct");
 
 		// Cleanup
 		await Cmd("&ROOM`CONTENTS #9=");
-		await Cmd("&FIRED #9=");
+		await Cmd($"&FIRED_{marker} #9=");
 	}
 
 	[Test]
@@ -65,7 +67,8 @@ public class RoomContentsEventTests
 		// two fires (move-in for dest, move-out for origin) don't overwrite each other.
 		// secure(%1) is safe: "move-in" and "move-out" contain only letters and a dash,
 		// which is valid in a MUSH attribute name.
-		await Cmd("&ROOM`CONTENTS #9=&LAST_MOVEIN_[secure(%1)] #9=%0");
+		// Keyed by the room as well, so another test's move cannot overwrite this one's record.
+		await Cmd("&ROOM`CONTENTS #9=&LAST_MOVEIN_[secure(%1)]_[after(first(%0,:),#)] #9=%0");
 
 		// Create a room and a thing with unique names to avoid state pollution.
 		var token = TestIsolationHelpers.GenerateUniqueName("rce");
@@ -86,20 +89,20 @@ public class RoomContentsEventTests
 
 		// Verify the handler attribute was actually set.
 		var handlerAttr = await Eval("get(#9/ROOM`CONTENTS)");
-		await Assert.That(handlerAttr).IsEqualTo("&LAST_MOVEIN_[secure(%1)] #9=%0");
+		await Assert.That(handlerAttr).IsEqualTo("&LAST_MOVEIN_[secure(%1)]_[after(first(%0,:),#)] #9=%0");
 
 		// Move the thing to the room — this should fire ROOM`CONTENTS for the destination
 		// (cause "move-in") and for the old location (cause "move-out").
 		await Cmd($"@tel {thingDbref}={roomDbref}");
 
 		// Handler should have written the destination room dbref into LAST_MOVEIN_move-in.
-		var recorded = await Eval("get(#9/LAST_MOVEIN_move-in)");
+		var roomNumber = roomDbref.Split(':')[0][1..];
+		var recorded = await Eval($"get(#9/LAST_MOVEIN_move-in_{roomNumber})");
 		await Assert.That(recorded).IsEqualTo(roomDbref);
 
 		// Cleanup handler attributes so they do not affect other tests.
 		await Cmd("&ROOM`CONTENTS #9=");
-		await Cmd("&LAST_MOVEIN_move-in #9=");
-		await Cmd("&LAST_MOVEIN_move-out #9=");
+		await Cmd("@wipe #9/LAST_MOVEIN_*");
 	}
 
 	[Test]
@@ -111,7 +114,7 @@ public class RoomContentsEventTests
 		// executor of the @tel command (God, #1), NOT the handler object (#9).
 
 		// Install handler: capture %# (the enactor) into SAW_ENACTOR on #9.
-		await Cmd("&ROOM`CONTENTS #9=&SAW_ENACTOR #9=%#");
+		await Cmd("&ROOM`CONTENTS #9=&SAW_ENACTOR_[after(first(%0,:),#)] #9=%#");
 
 		var token = TestIsolationHelpers.GenerateUniqueName("enc");
 		var roomName = $"EncRoom_{token}";
@@ -131,7 +134,7 @@ public class RoomContentsEventTests
 		// After the fix, %# inside the handler must be #1.
 		await Cmd($"@tel {thingDbref}={roomDbref}");
 
-		var sawEnactor = await Eval("get(#9/SAW_ENACTOR)");
+		var sawEnactor = await Eval($"get(#9/SAW_ENACTOR_{roomDbref.Split(':')[0][1..]})");
 
 		// The triggering enactor is #1 (God), NOT #9 (the handler object).
 		var expectedEnactor = "#1";
@@ -141,7 +144,7 @@ public class RoomContentsEventTests
 
 		// Cleanup.
 		await Cmd("&ROOM`CONTENTS #9=");
-		await Cmd("&SAW_ENACTOR #9=");
+		await Cmd("@wipe #9/SAW_ENACTOR_*");
 	}
 
 	[Test]

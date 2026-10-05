@@ -91,7 +91,8 @@ therefore shows one branch to everyone; limiting `room.info` to the enactor
 covers the common case, but destination previews go to everyone. A game whose
 descriptions branch on the viewer blanks ``FN`DESC``.
 
-**Cost.** With K occupants, M exits and N viewers, one event is O(K+M)
+**Cost.** A room with no connected viewer costs one `lcon()`: the handler finds
+its viewers first and stops there. With K occupants, M exits and N viewers, one event is O(K+M)
 evaluations of descriptions and images (once, in ``FN`PREPARE``) plus
 O(N·(K+M)) cheap per-viewer patches, of which one `elock()` per exit per
 viewer is the largest. ``FN`DESC`` is the expensive helper — a `DESCRIBE`
@@ -254,11 +255,14 @@ carries a comment per attribute; this is the map.
 &FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`INFO #9=json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
-&ROOM`CONTENTS #9=think null(if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(filter(me/FN`VIEWER,lcon(%0)),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,filter(me/FN`VIEWER,lcon(%0))),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])]))
+&ROOM`CONTENTS #9=think null(if(setr(viewers,filter(me/FN`VIEWER,lcon(%0))),if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])])))
 ```
 
 Reading the main handler:
 
+- ``setr(viewers, filter(me/FN`VIEWER, lcon(%0)))`` — first: the room's
+  connected players. With none, nothing is built and nothing is sent, so a
+  move through an empty room costs one ``lcon()``.
 - ``u(me/FN`PREPARE, %0)`` — once: every base row and the room's info into
   registers; `mover` = the enactor's dbref if the enactor is a viewer
   (``FN`VIEWER``) in the room.

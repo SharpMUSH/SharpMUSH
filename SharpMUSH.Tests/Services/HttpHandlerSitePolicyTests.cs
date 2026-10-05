@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -32,10 +33,10 @@ public class HttpHandlerSitePolicyTests
 		public IMUSHCodeParser Parser { get; } = Substitute.For<IMUSHCodeParser>();
 		public HttpHandlerCommandService Service { get; }
 
-		/// <summary>Command lists the parser was actually asked to run, in order.</summary>
+		/// <summary>Command lists the parser was asked to run or the queue to admit, in order.</summary>
 		public List<string> Executed { get; } = [];
 
-		/// <summary>The parser state the completion event ran under, if it ran at all.</summary>
+		/// <summary>The parser state the completion event was queued with, if it was queued at all.</summary>
 		public ParserState? EventState { get; private set; }
 
 		public Fixture(Dictionary<string, string[]> sitelockRules)
@@ -64,14 +65,7 @@ public class HttpHandlerSitePolicyTests
 			{
 				var code = call.Arg<MarkupText>().ToPlainText();
 				Executed.Add(code);
-				if (code == "GET")
-				{
-					current!.HttpResponse!.Body.Append("handler ran");
-				}
-				else
-				{
-					EventState = current;
-				}
+				current!.HttpResponse!.Body.Append("handler ran");
 
 				return ValueTask.FromResult<CallState?>(CallState.Empty);
 			});
@@ -85,8 +79,17 @@ public class HttpHandlerSitePolicyTests
 				SitelockRules = new SitelockRulesOptions(sitelockRules)
 			});
 
+			var queue = Substitute.For<ITaskScheduler>();
+			queue.AdmitCommandList(Arg.Any<MString>(), Arg.Any<ParserState>()).Returns(call =>
+			{
+				Executed.Add(call.Arg<MString>().ToPlainText());
+				EventState = call.Arg<ParserState>();
+				return ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None));
+			});
+
 			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(),
-				new EventService(Mediator, Attributes, options, NullLogger<EventService>.Instance), InlineTaskScheduler.Create(),
+				new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(queue), options, NullLogger<EventService>.Instance),
+				InlineTaskScheduler.Create(),
 				options, NullLogger<HttpHandlerCommandService>.Instance);
 		}
 	}

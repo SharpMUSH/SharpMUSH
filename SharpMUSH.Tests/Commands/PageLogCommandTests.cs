@@ -239,10 +239,10 @@ public class PageLogCommandTests
 	{
 		public int PageEvents;
 
-		public ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
+		public ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
 		{
 			if (eventName == SharpMUSH.Library.Definitions.SharpEvents.PageMessage) Interlocked.Increment(ref PageEvents);
-			return inner.TriggerEventAsync(parser, eventName, enactor, args);
+			return inner.TriggerEventAsync(eventName, enactor, args);
 		}
 	}
 

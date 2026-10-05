@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -23,23 +22,16 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IEventService
 {
 	/// <summary>
-	/// Triggers an event by executing the corresponding attribute on the event handler object.
+	/// Queues the event: the event handler's attribute named <paramref name="eventName"/> becomes a queue
+	/// entry of its own, run by the handler (PennMUSH <c>queue_event</c>). The caller does not wait for it
+	/// to run and does not share its time limit.
 	/// <para>
-	/// If no event handler is configured or the attribute doesn't exist, the method returns
-	/// silently. Ordinary event failures are logged; cancellation of the current execution lifetime propagates.
+	/// If no event handler is configured or the attribute doesn't exist, nothing is queued. Failures are
+	/// logged; cancellation of the current execution lifetime propagates.
 	/// </para>
 	/// </summary>
-	/// <param name="parser">The parser context for executing the event code</param>
 	/// <param name="eventName">The name of the event using PennMUSH format (e.g., "PLAYER`CONNECT", "SOCKET`LOGINFAIL")</param>
 	/// <param name="enactor">The object that caused the event, or null for system events (which use God, #1)</param>
 	/// <param name="args">Arguments to pass to the event handler as %0, %1, %2, etc.</param>
-	/// <returns>A task representing the asynchronous operation</returns>
-	ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args);
-	/// <summary>Triggers an event within the caller cancellation and remaining ambient deadline.</summary>
-	async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, CancellationToken cancellationToken, params string[] args)
-	{
-		using var lifetime = ExecutionBudget.EnterLinked(cancellationToken);
-		await TriggerEventAsync(parser, eventName, enactor, args);
-		ExecutionBudget.Current?.ThrowIfExceeded();
-	}
+	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args);
 }

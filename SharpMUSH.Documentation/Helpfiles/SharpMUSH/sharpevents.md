@@ -12,6 +12,7 @@ If you would rather use a different object, point the config at it with `@config
 
 **How handler code runs:**
 - Event attributes run with the handler object's **own permissions** (it executes as itself, like the HTTP handler and any normal attribute). The seeded Event Handler **#9 is a WIZARD object**, so out of the box it can `@set`, `@power`, `@lock`, and see-all as an admin handler needs. If you point event_handler at your own object, flag it wizard (`@set <obj>=wizard`) to grant it those powers.
+- An event is **queued**, as in PennMUSH: the attribute becomes a queue entry of its own, run by the handler and counted against the handler's queue. The command that caused the event does not wait for it, and the event gets its own "queue_entry_cpu_time" limit rather than sharing the causer's. A connecting player's auto-look, for instance, is shown before PLAYER\`CONNECT runs.
 - The enactor (%#) is the executor that caused the event. For a **system event with no executor** (an automatic dump, a signal, an idle-boot), %# is **#1 (God)**, not #-1. If the causer has been destroyed since, %# is #1 as well. Because %# is a real dbref either way, use an event's own arguments (not %#) to distinguish system- from player-caused triggers.
 
 

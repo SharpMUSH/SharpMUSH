@@ -5,8 +5,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -26,7 +26,6 @@ namespace SharpMUSH.Implementation.Handlers;
 public class ConnectionStateEventHandler(
 	IConnectionService connectionService,
 	IEventService eventService,
-	IMUSHCodeParser parser,
 	INotifyService notifyService,
 	IMediator mediator,
 	IConnectionAnnounceService connectionAnnounceService,
@@ -35,6 +34,10 @@ public class ConnectionStateEventHandler(
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
+		// A socket closing is handled outside the queue's consumer. The events and hooks below run once
+		// the whole change is recorded — LASTLOGOUT above all — as PennMUSH's queue entries do.
+		await using var hold = QueueHold.Enter();
+
 		// The connect screen goes to any connection arriving at the login prompt — a brand new socket,
 		// and equally one returning there via LOGOUT. PennMUSH logout_sock finishes with
 		// welcome_user(d, 0), the same call a fresh connection gets, because the descriptor is meant to
@@ -62,9 +65,7 @@ public class ConnectionStateEventHandler(
 						? ip : "unknown";
 
 					// EventService handles all exception logging, so no try-catch needed here
-					await eventService.TriggerEventAsync(
-						parser,
-						"SOCKET`CONNECT",
+					await eventService.TriggerEventAsync("SOCKET`CONNECT",
 						null, // System event (no enactor)
 						notification.Handle.ToString(),
 						ipAddress);
@@ -112,9 +113,7 @@ public class ConnectionStateEventHandler(
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
 
-				await eventService.TriggerEventAsync(
-					parser,
-					"PLAYER`DISCONNECT",
+				await eventService.TriggerEventAsync("PLAYER`DISCONNECT",
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
 					remainingConnections.ToString(),
@@ -134,7 +133,6 @@ public class ConnectionStateEventHandler(
 						is AnySharpObject and SharpPlayer player)
 				{
 					await connectionAnnounceService.AnnounceDisconnectAsync(
-						parser,
 						player,
 						remainingConnections,
 						connectionData.IsHidden);
@@ -142,9 +140,7 @@ public class ConnectionStateEventHandler(
 					// Refresh the room's remaining occupants after the player disconnects.
 					var roomContainer = await player.Location.WithCancellation(CancellationToken.None);
 					var roomDbref = roomContainer.Object().DBRef.ToString();
-					await eventService.TriggerEventAsync(
-						parser,
-						SharpEvents.RoomContents,
+					await eventService.TriggerEventAsync(SharpEvents.RoomContents,
 						notification.PlayerRef.Value,
 						roomDbref,
 						"disconnect");
@@ -166,9 +162,7 @@ public class ConnectionStateEventHandler(
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
 
 				// EventService handles all exception logging
-				await eventService.TriggerEventAsync(
-					parser,
-					"SOCKET`DISCONNECT",
+				await eventService.TriggerEventAsync("SOCKET`DISCONNECT",
 					null, // System event (no enactor)
 					notification.Handle.ToString(),
 					ipAddress,
