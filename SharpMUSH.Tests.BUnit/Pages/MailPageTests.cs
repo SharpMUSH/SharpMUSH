@@ -176,6 +176,24 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".mail-reading").TextContent).DoesNotContain(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body);
 	}
 
+	/// <summary>
+	/// Each row carries the sender's avatar, the same initials on the same tint as the reading pane's
+	/// header, ahead of the sender and subject.
+	/// </summary>
+	[Test]
+	public async Task EachRow_ShowsTheSendersAvatar()
+	{
+		var cut = RenderAt("/mail");
+		var row = cut.FindAll(".mail-row")[0];
+		var avatar = row.QuerySelector(".mail-row-avatar")!;
+		await Assert.That(avatar.TextContent).IsEqualTo(SharpMUSH.Client.Components.Kit.Initials.From("Tomas Reyes"));
+		await Assert.That(avatar.GetAttribute("aria-hidden")).IsEqualTo("true");
+		await Assert.That(row.FirstElementChild).IsSameReferenceAs(avatar);
+
+		Select(cut, 0);
+		await Assert.That(cut.Find(".mail-reading-avatar").GetAttribute("style")).IsEqualTo(avatar.GetAttribute("style"));
+	}
+
 	[Test]
 	public async Task TheFolderComesFromTheAddress()
 	{
