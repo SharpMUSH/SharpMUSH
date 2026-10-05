@@ -3454,10 +3454,6 @@
     <value>添加属性</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>（空）</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>命令触发器</value>
     <comment>MT</comment>

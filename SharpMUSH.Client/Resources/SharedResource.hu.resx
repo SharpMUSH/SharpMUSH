@@ -3454,10 +3454,6 @@
     <value>Attribútum hozzáadása</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(üres)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Parancskiváltó</value>
     <comment>MT</comment>

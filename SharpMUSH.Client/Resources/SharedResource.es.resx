@@ -3454,10 +3454,6 @@
     <value>Añadir atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vacío)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Disparador de comando</value>
     <comment>MT</comment>

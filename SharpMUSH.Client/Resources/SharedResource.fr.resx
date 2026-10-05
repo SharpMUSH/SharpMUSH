@@ -1073,9 +1073,6 @@
   <data name="TermNoOutput" xml:space="preserve">
     <value>(aucune sortie)</value>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vide)</value>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Déclencheur de commande</value>
   </data>

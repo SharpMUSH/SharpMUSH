@@ -3454,10 +3454,6 @@
     <value>Lägg till attribut</value>
     <comment>MT — corpus term 'attribut'.</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tomt)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandoutlösare</value>
     <comment>MT</comment>

@@ -32,7 +32,7 @@
         <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
                 @onclick="@(() => _mobilePane = MobilePane.Editor)"
                 disabled="@(ActiveTab is null)">
-            @Loc["TermEditor"]@(ActiveTab is not null ? $" · &{ActiveTab.Attr.Name}" : "")
+            @Loc["TermEditor"]@(ActiveTab is not null ? $" · &{SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)}" : "")
         </button>
     </div>
 
@@ -204,7 +204,6 @@
                                             <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
                                         }
                                     </span>
-                                    <span class="sc-attr-desc">@(AttrPreview(a) ?? Loc["TermAttrEmpty"].Value)</span>
                                 </button>
                             }
                             else
@@ -241,13 +240,13 @@
             @if (ActiveTab is not null)
             {
                 <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@Loc[AttrKindLabelKey(ActiveTab.Attr)]">@AttrKindBadge(ActiveTab.Attr)</span>
-                <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-dim);">
-                    @ActiveTab.Obj.Name
-                </MudText>
+                <span class="sc-crumb-obj" title="@ActiveTab.Obj.Name">@ActiveTab.Obj.Name</span>
                 <MudText Style="font-size:0.75rem;color:var(--text-faint);">›</MudText>
                 @* The name reads exactly as typed, backticks included; each branch above the
-                   attribute links to that branch where this object has it. *@
-                <span class="sc-crumbs">
+                   attribute links to that branch where this object has it. Short of room, the
+                   branches give way from the outermost in and the attribute's own name stays. *@
+                <span class="sc-crumbs" title="&amp;@ActiveTab.Attr.Name">
+                    <span class="sc-crumb-trail">
                     <span>&amp;</span>
                     @foreach (var crumb in Breadcrumbs(ActiveTab))
                     {
@@ -263,6 +262,7 @@
                         }
                         <span class="sc-crumb-sep">`</span>
                     }
+                    </span>
                     <span class="sc-crumb-leaf">@SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)</span>
                 </span>
                 <MudText Style="font-size:0.6875rem;font-family:var(--font-mono);color:var(--text-faint);">
@@ -330,7 +330,7 @@
                     var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
                     <div class="sc-tab @(idx == _tabs.ActiveIndex ? "sc-tab--on" : "")">
                         <button type="button" class="sc-tab-label" title="@reference"
-                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@TabBranch(tab)</span>@SoftcodeAttributeTree.Segment(tab.Attr.Name)</button>
+                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@TabBranch(tab)</span><span class="sc-tab-leaf">@SoftcodeAttributeTree.Segment(tab.Attr.Name)</span></button>
                         @if (tab.IsDirty)
                         {
                             @* role="img" + aria-label, not aria-hidden: the dot is the only thing
@@ -572,15 +572,6 @@
 
     private static string KindBadgeStyle(MushAttribute attr)
         => $"background:rgba({AttrKindGlow(attr)},0.14);border:1px solid rgba({AttrKindGlow(attr)},0.3);color:{AttrKindColor(attr)};";
-
-    /// <summary>One-line preview of an attribute's value, or <c>null</c> when it has none — the
-    /// caller renders the localized empty marker, which a static helper cannot reach.</summary>
-    private static string? AttrPreview(MushAttribute attr)
-    {
-        var v = (attr.Value ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ').Trim();
-        if (v.Length == 0) return null;
-        return v.Length > 60 ? v[..60] + "…" : v;
-    }
 
     protected override Task OnInitializedAsync() => LoadEditorAssetsAsync();
 

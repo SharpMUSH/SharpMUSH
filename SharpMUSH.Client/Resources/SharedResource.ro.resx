@@ -3454,10 +3454,6 @@
     <value>Adăugare atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(gol)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Declanșator de comandă</value>
     <comment>MT</comment>

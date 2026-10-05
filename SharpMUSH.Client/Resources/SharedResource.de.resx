@@ -3454,10 +3454,6 @@
     <value>Attribut hinzufügen</value>
     <comment>MT — attribute inflected as Attribut, matching the existing French "Ajouter un attribut".</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leer)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Befehlsauslöser</value>
     <comment>MT</comment>

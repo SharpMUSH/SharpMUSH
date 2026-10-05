@@ -1950,9 +1950,6 @@
   <data name="TermNoOutput" xml:space="preserve">
     <value>(no output)</value>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(empty)</value>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Command trigger</value>
   </data>

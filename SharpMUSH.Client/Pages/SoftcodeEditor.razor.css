@@ -172,12 +172,12 @@
     width: 100%;
     text-align: left;
     display: block;
-    padding: 0.5625rem 0.625rem;
+    padding: 0.3125rem 0.5rem;
     border-radius: var(--radius);
     cursor: pointer;
     border: none;
     background: transparent;
-    margin-bottom: 0.1875rem;
+    margin-bottom: 1px;
     transition: background 0.12s;
 }
 .sc-attr-item:hover {
@@ -191,7 +191,6 @@
     display: flex;
     align-items: center;
     gap: 0.4375rem;
-    margin-bottom: 0.1875rem;
 }
 .sc-kind-badge {
     width: 16px;
@@ -219,24 +218,13 @@
     color: var(--text);
     font-weight: 600;
 }
-.sc-attr-desc {
-    display: block;
-    font-family: var(--font-ui);
-    font-size: 0.6875rem;
-    color: var(--text-faint);
-    line-height: 1.35;
-    padding-left: 1.4375rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
 /* ── Attribute tree: one row per attribute, indented by its depth under FOO`BAR`… ── */
 .sc-tree-row {
     --sc-toggle: 20px;
-    --sc-indent: 0.875rem;
+    --sc-indent: 0.75rem;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.125rem;
     padding-left: calc(var(--sc-depth, 0) * var(--sc-indent));
 }
@@ -251,6 +239,12 @@
 .sc-tree-row .sc-attr-item {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+}
+.sc-tree-row .sc-attr-row1 {
+    flex: 1;
+    min-width: 0;
 }
 .sc-tree-toggle,
 .sc-tree-spacer {
@@ -258,7 +252,6 @@
     place-items: center;
     width: var(--sc-toggle);
     height: var(--sc-toggle);
-    margin-top: 0.5rem;
     flex-shrink: 0;
 }
 .sc-tree-toggle {
@@ -291,11 +284,26 @@
 }
 
 /* ── Toolbar breadcrumb: &FOO`BAR`BAZ, with each branch a link to that attribute ── */
+/* Only the attribute path gives way when the toolbar runs short; the buttons keep their size. */
+.sc-editor-toolbar ::deep > * {
+    flex-shrink: 0;
+}
+.sc-editor-toolbar > .sc-crumbs {
+    flex-shrink: 1;
+}
+.sc-crumb-obj {
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
 .sc-crumbs {
-    display: inline-flex;
+    display: flex;
     align-items: baseline;
     min-width: 0;
-    overflow: hidden;
     white-space: nowrap;
     font-family: var(--font-mono);
     font-size: 0.75rem;
@@ -320,7 +328,16 @@
     color: var(--accent);
     text-decoration: underline;
 }
+/* Overflow past the end of a flex-end box spills off its start and is clipped there, so a
+   long path loses its outermost branches first. */
+.sc-crumb-trail {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+    overflow: hidden;
+}
 .sc-crumb-leaf {
+    flex-shrink: 0;
     font-weight: 600;
 }
 
@@ -351,6 +368,7 @@
     border-top-color: var(--accent);
 }
 .sc-tab-label {
+    display: flex;
     max-width: 15rem;
     padding: 0 0.25rem 0 0.75rem;
     border: none;
@@ -369,6 +387,13 @@
 /* The dbref recedes so the attribute name — the part that differs between tabs — leads. */
 .sc-tab-ref {
     opacity: 0.6;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* A deep branch path gives way before the attribute's own name does. */
+.sc-tab-leaf {
+    flex-shrink: 0;
 }
 .sc-tab-dirty {
     flex-shrink: 0;
@@ -461,9 +486,9 @@
         --sc-toggle: 32px;
         --sc-indent: 1.25rem;
     }
-    .sc-tree-toggle,
-    .sc-tree-spacer {
-        margin-top: 0.125rem;
+    /* One line per attribute is too short a target for a finger. */
+    .sc-tree-row .sc-attr-item {
+        min-height: 2.5rem;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */
     .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }
