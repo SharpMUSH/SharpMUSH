@@ -21,6 +21,7 @@ public class RolesContractTests
 		var dto = new RolesController.RoleDto(
 			Slug: "wizard",
 			Name: "Wizard",
+			Category: "System",
 			Color: "#6cde9a",
 			Priority: 30,
 			IsSystem: true,
@@ -34,6 +35,7 @@ public class RolesContractTests
 		await Assert.That(model).IsNotNull();
 		await Assert.That(model!.Slug).IsEqualTo("wizard");
 		await Assert.That(model.IsSystem).IsTrue();
+		await Assert.That(model.Category).IsEqualTo("System");
 		await Assert.That(model.CreatedAt).IsEqualTo(1_749_859_200_000L);
 		await Assert.That(model.Permissions["wiki.admin"]).IsEqualTo("Allow");
 	}
@@ -44,6 +46,7 @@ public class RolesContractTests
 		var model = new PortalRoleModel(
 			Slug: "moderator",
 			Name: "Moderator",
+			Category: "Staff",
 			Color: "#6cde9a",
 			Priority: 12,
 			IsSystem: false,
@@ -56,6 +59,7 @@ public class RolesContractTests
 
 		await Assert.That(dto).IsNotNull();
 		await Assert.That(dto!.Slug).IsEqualTo("moderator");
+		await Assert.That(dto.Category).IsEqualTo("Staff");
 		await Assert.That(dto.CreatedAt).IsEqualTo(1_749_859_200_000L);
 	}
 }

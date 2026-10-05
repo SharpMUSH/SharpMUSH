@@ -28,7 +28,11 @@ public sealed record RoomDescription(string Format, string Text);
 /// Whether the viewer is focused on the scene, so that a pose they make in the room is recorded in it; null
 /// when the handler did not say. v2.2.
 /// </param>
-public sealed record RoomScene(string Id, string? Title, int? Cast, string? Role = null, bool? Focus = null)
+/// <param name="Elsewhere">
+/// Whether the viewer is focused on another scene, so their poses are recorded there; false when the handler
+/// did not say. room-contents 2.2.2.
+/// </param>
+public sealed record RoomScene(string Id, string? Title, int? Cast, string? Role = null, bool? Focus = null, bool Elsewhere = false)
 {
 	/// <summary>
 	/// A pose made in the room will not be recorded in the scene: the viewer is not focused on it. Unknown

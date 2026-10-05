@@ -3226,6 +3226,122 @@
     <value>Atribuiri</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Permisiunile personalizate sunt cele pe care jocul le definește pentru propriul softcode, de exemplu scene.close. Permiteți una într-un rol ca pe orice altă permisiune; softcode-ul o verifică cu permission(%#,scene.close) sau un lacăt PERM^scene.close. În joc: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Numele permisiunii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Ce permite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Este necesară o categorie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categorii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Rolurile și permisiunile personalizate au fiecare propria listă de categorii, după care această pagină le grupează. Creează o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category și @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Ce conține</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Creează</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Încă nu există categorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Categoria {0} a fost creată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Categoria {0} a fost salvată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Șterge categoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Ștergeți {0}? Se poate șterge doar o categorie fără roluri și permisiuni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Categoria {0} a fost ștearsă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rol} few {# roluri} other {# de roluri}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permisiune} few {# permisiuni} other {# de permisiuni}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Categorii de roluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Categorii de permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Alegeți o categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Creați categorii în fila Categorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>O categorie are nevoie de un nume și o descriere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definește</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Încă nu există permisiuni personalizate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permisiunea {0} a fost definită.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Elimină permisiunea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Eliminați {0}? Fiecare rol și fiecare excepție care o setează o pierde.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permisiunea {0} a fost eliminată.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Roluri</value>
     <comment>MT</comment>
@@ -3454,10 +3570,6 @@
     <value>Adăugare atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(gol)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Declanșator de comandă</value>
     <comment>MT</comment>
@@ -3513,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Închide {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Extinde {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Restrânge {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Golire terminal</value>
@@ -3656,13 +3774,8 @@
     <value>Editor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testare</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testare — evaluare fără salvare</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — rulează atributul salvat cu u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nesalvat</value>
@@ -5048,8 +5161,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>În scenă</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Urmărești această scenă. Alătură-te pentru a poza aici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Nu te-ai alăturat încă acestei scene. Alătură-te pentru a poza aici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5058,6 +5171,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Alătură-te scenei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Jocul nu te-a lăsat să te alături acestei scene.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

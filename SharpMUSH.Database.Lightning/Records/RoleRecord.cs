@@ -9,6 +9,7 @@ public sealed record RoleRecord
 {
 	public string Slug { get; init; } = "";
 	public string Name { get; init; } = "";
+	public string Category { get; init; } = "";
 	public string? Color { get; init; }
 	public int Priority { get; init; }
 	public bool IsSystem { get; init; }

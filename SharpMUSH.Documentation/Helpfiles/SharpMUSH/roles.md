@@ -38,7 +38,7 @@ A role is a named set of permissions. Roles decide what an object may do: in the
 
 Both objects and accounts hold roles. An object holds the roles assigned to it; a character linked to an account also holds the account's. Nothing is inherited from an object's owner.
 
-Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@role/scopes` for the list of permissions.
+Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@permission` for the list of permissions. A game can add permissions of its own, such as `scene.close`, with `@permission/define` (see [@permission define]).
 
 ## How roles combine
 
@@ -46,8 +46,8 @@ For each permission, the first of these that applies decides:
 
 1. Player #1 holds every permission.
 2. If any role held allows `administrator`, every permission is held, and overrides do not apply.
-3. If the object has an override for the permission (`@role/allow/object`, `@power`), the override decides.
-4. If its account has an override for it (`@role/allow/account`), that override decides.
+3. If the object has an override for the permission (`@permission/allow`, `@power`), the override decides.
+4. If its account has an override for it (`@permission/allow/account`), that override decides.
 5. If any role held allows it, it is held. A Deny on one role never cancels an Allow on another, whatever their priorities.
 6. If a role held denies it, it is not held, even when the `everyone` role allows it.
 7. Otherwise, the `everyone` role decides. A permission nobody allows is denied.
@@ -56,7 +56,7 @@ Priority does not decide any of this, and it does not decide control. It only or
 
 Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
-To take a permission away from one object, use an override (`@role/deny/object`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
+To take a permission away from one object, use an override (`@permission/deny`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
 
 ## Roles a new game starts with
 
@@ -105,6 +105,7 @@ A PennMUSH database imported into SharpMUSH keeps every privilege: WIZARD and RO
 
 ::: seealso
 - [@role]
+- [@permission]
 - [ROLES()]
 - [HASROLE()]
 - [PERMISSION()]
