@@ -344,9 +344,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 
 	/// <summary>
 	/// Each category's name in <paramref name="lang"/> (null: the reader's default), keyed by category key:
-	/// the title of the category's page, translated where it is. Pass it to
-	/// <c>WikiHelpers.CategoryLabel</c>; a category
-	/// with no page, or a failed request, shows its key.
+	/// the title of the category's page, translated where it is. Pass it to <c>WikiHelpers.CategoryLabel</c>;
+	/// a category with no page, or an unreachable or malformed answer, shows its key.
 	/// </summary>
 	public ValueTask<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? lang = null)
 	{
@@ -361,7 +360,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			var http = httpClientFactory.CreateClient("api");
 			return await http.GetFromJsonAsync<Dictionary<string, string>>(url) ?? new Dictionary<string, string>();
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or NotSupportedException)
 		{
 			logger.LogError(ex, "GetCategoryNamesAsync failed");
 			return new Dictionary<string, string>();
