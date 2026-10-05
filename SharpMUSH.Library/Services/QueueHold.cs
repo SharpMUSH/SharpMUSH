@@ -60,19 +60,20 @@ public sealed class QueueHold : IAsyncDisposable
 		lock (_held) held = [.. _held];
 		foreach (var reservation in held)
 		{
-			try
+			// A reservation left unpublished is released when disposed, so a failure cannot strand it.
+			using (reservation)
 			{
-				var published = await reservation.PublishAsync();
-				if (!published.Accepted)
-					_logger?.LogWarning("Held queue entry {Pid} was not published: {Reason}", reservation.Admission.Pid, published.Reason);
-			}
-			catch (Exception ex)
-			{
-				_logger?.LogError(ex, "Could not publish held queue entry {Pid}", reservation.Admission.Pid);
-			}
-			finally
-			{
-				reservation.Dispose();
+				try
+				{
+					var published = await reservation.PublishAsync();
+					if (!published.Accepted)
+						_logger?.LogWarning("Held queue entry {Pid} was not published: {Reason}", reservation.Admission.Pid, published.Reason);
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
+				{
+					// One entry that cannot be published does not keep the rest of the hold from running.
+					_logger?.LogError(ex, "Could not publish held queue entry {Pid}", reservation.Admission.Pid);
+				}
 			}
 		}
 	}
