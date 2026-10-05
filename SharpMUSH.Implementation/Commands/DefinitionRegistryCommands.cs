@@ -627,6 +627,8 @@ public partial class Commands : ICommandRestrictionApplier
 			attribute.RestrictMessage = message;
 		}
 
+		await Audit.RecordAsync(executor, AuditActions.RestrictionSet,
+			AuditTargets.Of(AuditTargetKinds.Command, attribute.Name), restriction);
 		return new None();
 	}
 
@@ -1209,6 +1211,8 @@ public partial class Commands : ICommandRestrictionApplier
 				return new CallState(ErrorMessages.Returns.FunctionNotFound);
 			}
 
+			await Audit.RecordAsync(executor, clearing ? AuditActions.RestrictionClear : AuditActions.RestrictionSet,
+				AuditTargets.Of(AuditTargetKinds.Function, functionName.ToUpperInvariant()), restriction);
 			if (clearing)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionClearedFormat), executor, functionName);

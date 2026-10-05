@@ -156,10 +156,6 @@
     <value>Vis karakterer</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Karakteradministration kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Sitekonfiguration</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Adgangskoden for '{0}' er nulstillet til: {1} — del den sikkert; den skal ændres ved næste login.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Spillerdetaljer kommer snart.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">

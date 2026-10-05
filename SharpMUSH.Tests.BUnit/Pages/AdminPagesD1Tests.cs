@@ -60,6 +60,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton<AdminGuestsService>()
 			.AddSingleton<AdminAccountsService>()
+			.AddSingleton<AdminCharactersService>()
+			.AddSingleton<AdminAuditService>()
 			.AddSingleton<WikiAssetService>()
 			.AddSingleton<WikiService>()
 			.AddSingleton<ApplicationRegistryClient>()
@@ -97,6 +99,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	[Arguments(typeof(Players), "AdmPlayersTitle", null)]
 	[Arguments(typeof(AdminAccounts), "AdmAccountsTitle", null)]
 	[Arguments(typeof(AdminCharacters), "Characters", null)]
+	[Arguments(typeof(AuditLog), "AdmAuditTitle", null)]
 	[Arguments(typeof(Moderation), "AdmModerationTitle", null)]
 	[Arguments(typeof(AdminServer), "ServerSettings", null)]
 	[Arguments(typeof(AdminProfiles), "ProfileHandler", null, ".mud-alert")]
@@ -249,7 +252,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent.Trim()).IsEqualTo("AdmDashboardTitle");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/diagnostics']").Count).IsEqualTo(1)
 			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
-		foreach (var gated in new[] { "/admin/accounts", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
+		foreach (var gated in new[] { "/admin/accounts", "/admin/moderation/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
 			"/admin/suggestions", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
 			"/admin/server", "/admin/database/import" })
 		{

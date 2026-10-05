@@ -47,11 +47,12 @@ non-API routes (standard WASM hosting pattern).
 ```
 /admin                      Admin dashboard
 /admin/players              Player/account list
-/admin/players/42           Player detail
+/admin/players/42           Character detail (boot, unlink, audit trail)
 /admin/characters           Character list
 /admin/config               Site configuration
 /admin/layout               Layout/widget editor
-/admin/moderation           Reports, bans, audit log
+/admin/moderation           Bans and moderation actions
+/admin/moderation/audit     Audit log of staff actions, portal and in-game
 /admin/wiki                 Wiki admin (protected pages, bulk ops)
 /admin/server               Server settings (God only)
 ```

@@ -30,6 +30,7 @@
 		"/admin/characters",
 		"/admin/accounts",
 		"/admin/moderation",
+		"/admin/moderation/audit",
 		"/admin/profiles",
 		"/admin/media",
 		"/admin/server",

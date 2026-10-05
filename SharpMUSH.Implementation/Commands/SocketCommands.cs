@@ -1,4 +1,5 @@
 ﻿using DotNext.Collections.Generic;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -607,6 +608,7 @@ public partial class Commands
 
 		await ConnectionAnnounceService.AnnounceConnectAsync(
 			new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
+		await CheckLastAsync(handle, player, isGuest);
 
 		// The player's own channel list, which a fresh connection has not been sent yet.
 		await EventService.TriggerEventAsync(SharpEvents.PlayerChannels,
@@ -624,6 +626,50 @@ public partial class Commands
 
 		await parser.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
 	}
+
+	/// <summary>
+	/// PennMUSH <c>check_last</c> (<c>src/player.c:651-692</c>), run right after announce_connect: tells a
+	/// non-guest (on every connection, as Penn's notify_format does) where and when they last connected, and
+	/// where their last failed connect came from, then
+	/// records this connect in <c>LAST</c>, <c>LASTSITE</c> and <c>LASTIP</c> and clears <c>LASTFAILED</c>.
+	/// The writes are God's, as Penn's <c>atr_add(..., GOD, 0)</c> are: the attributes are wizard-flagged.
+	/// The paycheck Penn gives on the first connect of a day is not ported.
+	/// </summary>
+	private async ValueTask CheckLastAsync(long handle, SharpPlayer player, bool isGuest)
+	{
+		var playerRef = player.Object.DBRef;
+		var last = await PlainAttributeAsync(playerRef, "LAST");
+		if (!isGuest && last is not null)
+		{
+			if (await PlainAttributeAsync(playerRef, "LASTSITE") is { } lastSite)
+			{
+				await NotifyService.NotifyLocalized(playerRef, nameof(ErrorMessages.Notifications.LastConnectFormat), null,
+					lastSite, last);
+			}
+
+			if (await PlainAttributeAsync(playerRef, "LASTFAILED") is { Length: > 2 } lastFailed)
+			{
+				await NotifyService.NotifyLocalized(playerRef, nameof(ErrorMessages.Notifications.LastFailedConnectFormat), null,
+					lastFailed);
+			}
+		}
+
+		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
+		var connection = ConnectionService.Get(handle);
+		var now = DateTimeOffset.UtcNow.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(now), god));
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTSITE"],
+			MarkupText.Plain(connection?.HostName ?? string.Empty), god));
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTIP"],
+			MarkupText.Plain(connection?.InternetProtocolAddress ?? string.Empty), god));
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTFAILED"], MarkupText.Plain(" "), god));
+	}
+
+	/// <summary>An attribute's plain value on the object itself (Penn's <c>atr_get_noparent</c>), or null.</summary>
+	private async ValueTask<string?> PlainAttributeAsync(DBRef dbref, string name)
+		=> await Mediator.CreateStream(new GetAttributeQuery(dbref, [name])).LastOrDefaultAsync() is { } attribute
+			? attribute.Value.ToPlainText()
+			: null;
 
 	/// <summary>
 	/// Shows required post-login messages (MOTD, wizard MOTD, guest file).

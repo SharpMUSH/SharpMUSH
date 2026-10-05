@@ -156,10 +156,6 @@
     <value>Personages bekijken</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Personagebeheer komt binnenkort.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Siteconfiguratie</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Wachtwoord voor '{0}' opnieuw ingesteld op: {1} — deel het veilig; de gebruiker moet het bij de volgende keer inloggen wijzigen.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Spelerdetails komen binnenkort.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">

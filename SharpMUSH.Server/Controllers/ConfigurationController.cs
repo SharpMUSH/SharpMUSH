@@ -9,8 +9,10 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
@@ -23,6 +25,7 @@ public class ConfigurationController(
 	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	MushCnfImportService mushCnf,
+	IAuditLog audit,
 	ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
@@ -95,6 +98,11 @@ public class ConfigurationController(
 			}
 
 			logger.LogInformation("Configuration updated: {Properties}", string.Join(", ", updates.Keys));
+			foreach (var (key, value) in updates)
+			{
+				await audit.RecordPortalAsync(User, AuditActions.ConfigSet, AuditTargets.Of(AuditTargetKinds.Setting, key),
+					value.GetRawText());
+			}
 
 			return Ok(OptionHelper.OptionsToConfigurationResponse(updated));
 		}
@@ -242,6 +250,7 @@ public class ConfigurationController(
 		try
 		{
 			var importedOptions = await mushCnf.ApplyAsync(await mushCnf.ReadAsync(configContent));
+			await audit.RecordPortalAsync(User, AuditActions.ConfigImport, null, "mush.cnf");
 			return Ok(OptionHelper.OptionsToConfigurationResponse(importedOptions));
 		}
 		catch (Exception ex)

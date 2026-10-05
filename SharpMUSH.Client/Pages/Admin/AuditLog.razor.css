@@ -1,0 +1,93 @@
+.adm-audit-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+
+.adm-audit-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+
+.adm-audit-filters ::deep .adm-audit-select {
+	flex: 0 1 14rem;
+}
+
+.adm-audit-filters ::deep .adm-audit-narrow {
+	flex: 0 1 11rem;
+}
+
+.adm-audit-filters ::deep .adm-audit-wide {
+	flex: 1 1 14rem;
+}
+
+.adm-audit-body ::deep .adm-audit-table {
+	background: transparent;
+}
+
+.adm-audit-body ::deep .adm-audit-when {
+	white-space: nowrap;
+}
+
+.adm-audit-body ::deep .adm-audit-mono,
+.adm-audit-mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.adm-audit-body ::deep .adm-audit-details {
+	overflow-wrap: anywhere;
+}
+
+.adm-audit-dim {
+	display: block;
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.adm-audit-link {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.adm-audit-link:hover {
+	text-decoration: underline;
+}
+
+.adm-audit-body ::deep .adm-audit-more {
+	align-self: center;
+}
+
+@container page (max-width: 48rem) {
+	.adm-audit-filters ::deep .adm-audit-select,
+	.adm-audit-filters ::deep .adm-audit-narrow,
+	.adm-audit-filters ::deep .adm-audit-wide {
+		flex: 1 1 100%;
+	}
+
+	.adm-audit-body ::deep .adm-audit-table thead {
+		display: none;
+	}
+
+	.adm-audit-body ::deep .adm-audit-table tr {
+		display: block;
+		border-bottom: 1px solid var(--border);
+		padding-block: 0.5rem;
+	}
+
+	.adm-audit-body ::deep .adm-audit-table td {
+		display: grid;
+		grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+		gap: 0.5rem;
+		border: none;
+	}
+
+	.adm-audit-body ::deep .adm-audit-table td::before {
+		content: attr(data-label);
+		color: var(--text-dim);
+		font-size: 0.8125rem;
+	}
+}

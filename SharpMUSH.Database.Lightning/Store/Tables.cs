@@ -66,6 +66,8 @@ public static class Tables
 	public static readonly TableDef PageConversation = TableDef.Node("page.conv");
 	public static readonly TableDef PageConversationLatest = TableDef.Index("page.conv.latest");
 	public static readonly TableDef PageLogTime = TableDef.Index("page.time");
+	/// <summary>Staff actions: big-endian millis + big-endian sequence → the entry, so the log reads newest first and a date range is one key range.</summary>
+	public static readonly TableDef Audit = TableDef.Node("audit");
 	public static readonly TableDef State = TableDef.Node("state");
 	public static readonly TableDef ExpandedObj = TableDef.Node("x.obj");
 	public static readonly TableDef ExpandedSrv = TableDef.Node("x.srv");
