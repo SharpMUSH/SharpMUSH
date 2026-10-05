@@ -256,8 +256,10 @@
             @if (ActiveTab is not null)
             {
                 <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@Loc[AttrKindLabelKey(ActiveTab.Attr)]">@AttrKindBadge(ActiveTab.Attr)</span>
-                <span class="sc-crumb-obj" title="@ActiveTab.Obj.Name">@ActiveTab.Obj.Name</span>
-                <MudText Style="font-size:0.75rem;color:var(--text-faint);">›</MudText>
+                @* The tab strip below already names the object by dbref and marks unsaved edits, so
+                   this line carries only what it adds: the object's name and links to the branches. *@
+                <span class="sc-crumb-obj" title="@($"{ActiveTab.Obj.Name} (#{ActiveTab.Obj.Dbref})")">@ActiveTab.Obj.Name</span>
+                <span class="sc-crumb-chevron">›</span>
                 @* The name reads exactly as typed, backticks included; each branch above the
                    attribute links to that branch where this object has it. Short of room, the
                    branches give way from the outermost in and the attribute's own name stays. *@
@@ -281,18 +283,10 @@
                     </span>
                     <span class="sc-crumb-leaf">@SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)</span>
                 </span>
-                <MudText Style="font-size:0.6875rem;font-family:var(--font-mono);color:var(--text-faint);">
-                    #@ActiveTab.Obj.Dbref
-                </MudText>
                 @foreach (var flag in ActiveTab.Attr.AttributeFlags.Take(3))
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
                              Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;border-color:var(--border);">@flag</MudChip>
-                }
-                @if (ActiveTab.IsDirty)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">@Loc["TermUnsaved"]</MudChip>
                 }
             }
             else

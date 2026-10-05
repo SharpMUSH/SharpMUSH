@@ -288,7 +288,11 @@
 .sc-editor-toolbar ::deep > * {
     flex-shrink: 0;
 }
-.sc-editor-toolbar > .sc-crumbs {
+.sc-editor-toolbar > .sc-crumb-chevron {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+}
+.sc-crumbs {
     flex-shrink: 1;
 }
 .sc-crumb-obj {
@@ -502,6 +506,11 @@
     /* One line per attribute is too short a target for a finger. */
     .sc-tree-row .sc-attr-item {
         min-height: 2.5rem;
+    }
+    /* The pane switcher above already shows the open attribute's whole name. */
+    .sc-crumbs,
+    .sc-crumb-chevron {
+        display: none;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */
     .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }
