@@ -65,7 +65,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null, relogin: null);
 
 	/// <param name="relogin">Logs a reconnect the server could not resume back in (<see cref="IWebSocketClientService.Relogin"/>).</param>
-	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity, Func<Task>? relogin)
+	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity, Func<Func<string, Task>, Task>? relogin)
 	{
 		_serverUri = serverUri;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
@@ -103,7 +103,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// (ConnectionIncarnation.WaitForRegistrationAsync) before running it, so a line sent the moment
 		// the socket opens is no longer lost — and every sign-in paid the sleep.
 		await ConnectAsync(serverUri, identity,
-			identity is { } character && loginTokens is { } tokens ? () => ReloginAsync(tokens, character) : null);
+			identity is { } character && loginTokens is { } tokens ? send => ReloginAsync(tokens, character, send) : null);
 		// A reload resumed the session this tab held: it is still logged in, and the login line would run
 		// in it as a command.
 		if (wsService.Resumed)
@@ -124,7 +124,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// Logs a reconnect the server could not resume back in as the same character, with a fresh token.
 	/// Nothing is said in the terminal unless that cannot be done, when the reader has to log in themselves.
 	/// </summary>
-	private async Task ReloginAsync(ITerminalLoginTokens tokens, TerminalIdentity identity)
+	private async Task ReloginAsync(ITerminalLoginTokens tokens, TerminalIdentity identity, Func<string, Task> send)
 	{
 		if (await tokens.MintAsync(identity) is not { } ott)
 		{
@@ -135,7 +135,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		}
 
 		_logger.LogInformation("Logging the reconnected terminal in again");
-		await wsService.SendAsync($"connect token {ott}");
+		await send($"connect token {ott}");
 	}
 
 	public async Task ConnectAsGuestAsync(string serverUri)
@@ -143,7 +143,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ClearSendBuffer();
 		// No pause: the server holds early input until the connection registers (ConnectWithOttAsync).
 		// A guest has no resume point, so a reconnect is a new guest.
-		await ConnectAsync(serverUri, identity: null, relogin: () => wsService.SendAsync("connect guest"));
+		await ConnectAsync(serverUri, identity: null, relogin: send => send("connect guest"));
 		AddSystemLine("[Guest] Connecting…");
 		await wsService.SendAsync("connect guest");
 	}

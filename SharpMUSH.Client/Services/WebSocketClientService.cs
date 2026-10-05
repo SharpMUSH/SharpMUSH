@@ -91,7 +91,7 @@ public class WebSocketClientService : IWebSocketClientService
 	public event EventHandler? ResumeRefused;
 
 	/// <inheritdoc/>
-	public Func<Task>? Relogin { get; set; }
+	public Func<Func<string, Task>, Task>? Relogin { get; set; }
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	/// <summary>
@@ -104,6 +104,16 @@ public class WebSocketClientService : IWebSocketClientService
 
 	/// <summary>The socket whose first frame has gone out; a reconnect's new socket is not it until then.</summary>
 	private ClientWebSocket? _greeted;
+
+	/// <summary>
+	/// The socket <see cref="SendAsync"/> writes to: greeted, its resume answered, logged in again when it
+	/// had to be, and the buffer flushed. Until then a send is buffered, so nothing typed during a reconnect
+	/// reaches a login screen ahead of the login or goes out while the flush is writing.
+	/// </summary>
+	private ClientWebSocket? _ready;
+
+	/// <summary>Serializes writes to <see cref="_ready"/>: a send against the flush that opens it.</summary>
+	private readonly SemaphoreSlim _sendLock = new(1, 1);
 
 	/// <inheritdoc/>
 	public bool Resumed { get; private set; }
@@ -248,9 +258,18 @@ public class WebSocketClientService : IWebSocketClientService
 			}
 
 			if (reconnect && answer != ResumeVerdict.Resumed)
-				await ReloginAsync();
+				await ReloginAsync(_webSocket);
 
-			await FlushSendBufferAsync();
+			await _sendLock.WaitAsync(_cancellationTokenSource.Token);
+			try
+			{
+				await FlushSendBufferAsync();
+				_ready = _webSocket;
+			}
+			finally
+			{
+				_sendLock.Release();
+			}
 			return answer;
 		}
 		catch (Exception ex)
@@ -265,39 +284,49 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	public async Task SendAsync(string message)
 	{
-		// One read of the socket: the one checked for its greeting is the one written to, even if a reconnect
-		// replaces it meanwhile.
-		if (_webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _greeted))
+		await _sendLock.WaitAsync();
+		try
 		{
-			try
+			// One read of the socket: the one checked for readiness is the one written to, even if a reconnect
+			// replaces it meanwhile.
+			if (_webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _ready))
 			{
-				var bytes = Encoding.UTF8.GetBytes(message);
-				await socket.SendAsync(
-					new ArraySegment<byte>(bytes),
-					WebSocketMessageType.Text,
-					true,
-					_cancellationTokenSource?.Token ?? CancellationToken.None);
-				return;
+				try
+				{
+					await WriteAsync(socket, message);
+					return;
+				}
+				catch (OperationCanceledException)
+				{
+					throw;
+				}
+				catch (WebSocketException ex)
+				{
+					_logger.LogWarning(ex, "Failed to send message, buffering for retry");
+				}
 			}
-			catch (OperationCanceledException)
-			{
-				throw;
-			}
-			catch (WebSocketException ex)
-			{
-				_logger.LogWarning(ex, "Failed to send message, buffering for retry");
-			}
-		}
 
-		if (_sendBuffer.Count < MaxBufferedMessages)
-		{
-			_sendBuffer.Enqueue(message);
+			if (_sendBuffer.Count < MaxBufferedMessages)
+			{
+				_sendBuffer.Enqueue(message);
+			}
+			else
+			{
+				_logger.LogWarning("Send buffer full ({Max} messages), dropping message", MaxBufferedMessages);
+			}
 		}
-		else
+		finally
 		{
-			_logger.LogWarning("Send buffer full ({Max} messages), dropping message", MaxBufferedMessages);
+			_sendLock.Release();
 		}
 	}
+
+	private Task WriteAsync(ClientWebSocket socket, string message) =>
+		socket.SendAsync(
+			new ArraySegment<byte>(Encoding.UTF8.GetBytes(message)),
+			WebSocketMessageType.Text,
+			true,
+			_cancellationTokenSource?.Token ?? CancellationToken.None);
 
 	/// <summary>
 	/// Disconnect from the server
@@ -344,7 +373,7 @@ public class WebSocketClientService : IWebSocketClientService
 	/// Logs a reconnect that could not resume back in, before anything buffered goes out. Without a way to,
 	/// the buffered commands are dropped rather than read as login-screen commands.
 	/// </summary>
-	private async Task ReloginAsync()
+	private async Task ReloginAsync(ClientWebSocket socket)
 	{
 		if (Relogin is not { } relogin)
 		{
@@ -354,7 +383,8 @@ public class WebSocketClientService : IWebSocketClientService
 
 		try
 		{
-			await relogin();
+			// The login goes straight to this socket; nothing else writes to it until it is ready.
+			await relogin(message => WriteAsync(socket, message));
 		}
 		// A cancellation is not a failed login: it ends this attempt, and the reconnect loop takes it.
 		catch (Exception ex) when (ex is WebSocketException or HttpRequestException or InvalidOperationException)

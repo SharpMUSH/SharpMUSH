@@ -398,6 +398,31 @@ public class WebSocketClientResumeTests
 		await terminal.DisposeAsync();
 	}
 
+	/// <summary>
+	/// What is typed after the reconnect opened but before its login went out still follows the login: the
+	/// socket is open, and a send straight to it would reach the login screen first.
+	/// </summary>
+	[Test]
+	public async Task A_command_typed_while_logging_in_again_waits_for_the_login()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("fresh-ott") { Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		await Assert.That(await Eventually.TrueAsync(() => !tokens.Asked.IsEmpty && terminal.IsConnected)).IsTrue();
+
+		await terminal.SendAsync("look");
+		tokens.Hold.SetResult();
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"))).IsTrue();
+		var frames = server.LaterFrames.ToList();
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsGreaterThan(-1);
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsLessThan(frames.IndexOf("look"));
+
+		await terminal.DisposeAsync();
+	}
+
 	/// <summary>A reconnect the server resumed is still logged in: no login goes to it, only what was typed.</summary>
 	[Test]
 	public async Task A_reconnect_that_resumes_sends_no_login()

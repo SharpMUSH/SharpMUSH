@@ -249,9 +249,13 @@ internal sealed class FakeLoginTokens(params string[] tokens) : ITerminalLoginTo
 
 	public ConcurrentQueue<TerminalIdentity> Asked { get; } = new();
 
-	public Task<string?> MintAsync(TerminalIdentity identity)
+	/// <summary>When set, a mint waits for it: the reconnect is open and logging in, but not logged in yet.</summary>
+	public TaskCompletionSource? Hold { get; init; }
+
+	public async Task<string?> MintAsync(TerminalIdentity identity)
 	{
 		Asked.Enqueue(identity);
-		return Task.FromResult(_tokens.TryDequeue(out var token) ? token : null);
+		if (Hold is { } hold) await hold.Task;
+		return _tokens.TryDequeue(out var token) ? token : null;
 	}
 }

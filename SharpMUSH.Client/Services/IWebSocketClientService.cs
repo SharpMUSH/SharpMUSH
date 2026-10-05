@@ -32,9 +32,10 @@ public interface IWebSocketClientService : IAsyncDisposable
 
 	/// <summary>
 	/// Logs a reconnect the server could not resume back in. It then landed in a fresh session at the login
-	/// screen; this runs before the commands buffered while disconnected are sent. Null drops them.
+	/// screen; this runs before the commands buffered while disconnected are sent, and is handed the only way
+	/// to write to the socket until it returns (<see cref="SendAsync"/> buffers meanwhile). Null drops them.
 	/// </summary>
-	Func<Task>? Relogin { get; set; }
+	Func<Func<string, Task>, Task>? Relogin { get; set; }
 
 	/// <summary>
 	/// Gets whether the WebSocket is currently connected
