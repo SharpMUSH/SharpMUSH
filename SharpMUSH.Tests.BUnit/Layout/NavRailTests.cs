@@ -78,7 +78,7 @@ public class NavRailTests : TrackingBunitContext
 	public async Task EverySection_IsAnIconWithAName()
 	{
 		var cut = RenderAt("/");
-		foreach (var href in new[] { "/", "/play", "/scenes", "/wiki", "/characters", "/help" })
+		foreach (var href in new[] { "/play", "/scenes", "/wiki", "/characters", "/help" })
 		{
 			var item = cut.Find($"a.phosphor-rail-item[href='{href}']");
 			await Assert.That(item.GetAttribute("aria-label")).IsNotNull().Because($"{href} is an icon-only link");
@@ -101,6 +101,27 @@ public class NavRailTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("a.phosphor-rail-item[href='/wiki']").Count).IsEqualTo(1);
 	}
 
+	/// <summary>The logo is the only link home; a separate Home icon went to the same place.</summary>
+	[Test]
+	public async Task TheLogo_IsTheOnlyHomeLink_AndIsMarkedOnTheHomePage()
+	{
+		var cut = RenderAt("/");
+		var links = cut.FindAll("nav.phosphor-rail a[href='/']");
+		await Assert.That(links.Count).IsEqualTo(1);
+		var logo = cut.Find("a.phosphor-rail-logo");
+		await Assert.That(logo.GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(logo.GetAttribute("aria-label")).Contains("Home");
+	}
+
+	[Test]
+	public async Task TheRail_LinksEachDestinationOnce()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = RenderAt("/");
+		var hrefs = cut.FindAll("nav.phosphor-rail a[href]").Select(a => a.GetAttribute("href")).ToList();
+		await Assert.That(hrefs.Distinct().Count()).IsEqualTo(hrefs.Count);
+	}
+
 	[Test]
 	public async Task TheCurrentSection_IsMarked_IncludingDeeperPages()
 	{
@@ -108,7 +129,7 @@ public class NavRailTests : TrackingBunitContext
 		var wiki = cut.Find("a.phosphor-rail-item[href='/wiki']");
 		await Assert.That(wiki.GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(wiki.ClassList).Contains("phosphor-rail-item--on");
-		await Assert.That(cut.Find("a.phosphor-rail-item[href='/']").GetAttribute("aria-current")).IsNull();
+		await Assert.That(cut.Find("a.phosphor-rail-logo").GetAttribute("aria-current")).IsNull();
 
 		var profile = RenderAt("/character/Tomas%20Reyes");
 		await Assert.That(profile.Find("a.phosphor-rail-item[href='/characters']").GetAttribute("aria-current")).IsEqualTo("page");
@@ -124,7 +145,7 @@ public class NavRailTests : TrackingBunitContext
 		var cut = RenderAt("/");
 		await Assert.That(cut.FindAll("a[href='/mail']").Count).IsEqualTo(1);
 		var order = cut.FindAll("a.phosphor-rail-item").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(order.IndexOf("/mail")).IsLessThan(order.IndexOf("/help")).Because("README §3: Home, Play, Scenes, Wiki, Characters, Mail; Help follows");
+		await Assert.That(order.IndexOf("/mail")).IsLessThan(order.IndexOf("/help")).Because("README §3: Play, Scenes, Wiki, Characters, Mail; Help follows");
 	}
 
 	[Test]
