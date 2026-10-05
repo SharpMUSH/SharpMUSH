@@ -41,7 +41,8 @@ public class SitelockControllerReadBasisTests(ServerWebAppFactory factory)
 		var configReloadService = factory.Services.GetRequiredService<ConfigurationReloadService>();
 		var banEnforcer = factory.Services.GetRequiredService<IBanEnforcer>();
 		var logger = factory.Services.GetRequiredService<ILogger<SitelockController>>();
-		return new SitelockController(options, Database, configReloadService, banEnforcer, logger);
+		return new SitelockController(options, Database, configReloadService, banEnforcer,
+			factory.Services.GetRequiredService<IAuditLog>(), logger);
 	}
 
 	/// <summary>

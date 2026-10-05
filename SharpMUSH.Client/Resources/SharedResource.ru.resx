@@ -156,10 +156,6 @@
     <value>Просмотр персонажей</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Администрирование персонажей появится позже.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Настройки сайта</value>
     <comment>MT — setting → настройка per locale sheet.</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Пароль для аккаунта «{0}» сброшен: {1} — передайте его безопасным способом; при следующем входе пароль потребуется изменить.</value>
     <comment>MT — account name is a quoted appositive after a genitive head noun; the new password follows a colon. Slightly longer than the English but within the same order of magnitude. [normalized: аккаунт, matching the rest of the locale]</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Карточка игрока появится позже.</value>
-    <comment>MT — player → игрок per corpus; here it is the descriptive noun, not the Player privilege enum.</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Администрирование · игрок</value>

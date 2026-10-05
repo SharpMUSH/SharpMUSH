@@ -2442,9 +2442,6 @@
   <data name="AdmCharactersAction" xml:space="preserve">
     <value>View Characters</value>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Character administration coming soon.</value>
-  </data>
   <data name="AdmProfilesTitle" xml:space="preserve">
     <value>Profiles</value>
   </data>
@@ -2467,7 +2464,7 @@
     <value>Reports &amp; Bans</value>
   </data>
   <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Reports, bans, and audit log coming soon.</value>
+    <value>Bans and moderation actions coming soon.</value>
   </data>
   <data name="AdmSuggestionsAction" xml:space="preserve">
     <value>Word Suggestions</value>
@@ -2510,9 +2507,6 @@
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administration · Player</value>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Player detail coming soon.</value>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Server</value>
@@ -5163,6 +5157,158 @@
   <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
     <value>Cannot be killed.</value>
   </data>
+  <data name="AdmCharactersSearchPlaceholder" xml:space="preserve">
+    <value>Search by name</value>
+  </data>
+  <data name="AdmCharactersConnection" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="AdmCharactersAny" xml:space="preserve">
+    <value>Any</value>
+  </data>
+  <data name="AdmCharactersOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="AdmCharactersOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="AdmCharactersFlag" xml:space="preserve">
+    <value>Flag</value>
+  </data>
+  <data name="AdmCharactersAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="AdmCharactersNoAccount" xml:space="preserve">
+    <value>No account</value>
+  </data>
+  <data name="AdmCharactersName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmCharactersDbref" xml:space="preserve">
+    <value>Object id</value>
+  </data>
+  <data name="AdmCharactersFlags" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="AdmCharactersLastConnect" xml:space="preserve">
+    <value>Last connect</value>
+  </data>
+  <data name="AdmCharactersNever" xml:space="preserve">
+    <value>Never</value>
+  </data>
+  <data name="AdmCharactersEmpty" xml:space="preserve">
+    <value>No characters match.</value>
+  </data>
+  <data name="AdmCharactersTotal" xml:space="preserve">
+    <value>{0} characters</value>
+  </data>
+  <data name="AdmCharacterNotFound" xml:space="preserve">
+    <value>There is no character #{0}.</value>
+  </data>
+  <data name="AdmCharacterOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="AdmCharacterActivity" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="AdmCharacterCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="AdmCharacterRoles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="AdmCharacterNoRoles" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmCharacterAttributes" xml:space="preserve">
+    <value>Attributes</value>
+  </data>
+  <data name="AdmCharacterMail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="AdmCharacterMailCount" xml:space="preserve">
+    <value>{0} ({1} unread)</value>
+  </data>
+  <data name="AdmCharacterConnections" xml:space="preserve">
+    <value>{0} connections</value>
+  </data>
+  <data name="AdmCharacterLastLogout" xml:space="preserve">
+    <value>Last logout</value>
+  </data>
+  <data name="AdmCharacterLastSite" xml:space="preserve">
+    <value>Last site</value>
+  </data>
+  <data name="AdmCharacterLastIp" xml:space="preserve">
+    <value>Last IP address</value>
+  </data>
+  <data name="AdmCharacterBoot" xml:space="preserve">
+    <value>Boot</value>
+  </data>
+  <data name="AdmCharacterBootConfirmTitle" xml:space="preserve">
+    <value>Boot {0}?</value>
+  </data>
+  <data name="AdmCharacterBootConfirm" xml:space="preserve">
+    <value>Every connection {0} has will be closed.</value>
+  </data>
+  <data name="AdmCharacterBooted" xml:space="preserve">
+    <value>{0} was booted.</value>
+  </data>
+  <data name="AdmCharacterUnlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="AdmCharacterUnlinkConfirmTitle" xml:space="preserve">
+    <value>Unlink {0}?</value>
+  </data>
+  <data name="AdmCharacterUnlinkConfirm" xml:space="preserve">
+    <value>{0} will no longer belong to the account '{1}'. The character itself is kept.</value>
+  </data>
+  <data name="AdmAuditTitle" xml:space="preserve">
+    <value>Audit log</value>
+  </data>
+  <data name="AdmAuditCardAction" xml:space="preserve">
+    <value>See who changed what, in the portal and in the game</value>
+  </data>
+  <data name="AdmAuditAction" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="AdmAuditBlurb" xml:space="preserve">
+    <value>Staff actions taken in the portal and in the game, newest first.</value>
+  </data>
+  <data name="AdmAuditAllActions" xml:space="preserve">
+    <value>All actions</value>
+  </data>
+  <data name="AdmAuditActor" xml:space="preserve">
+    <value>Who</value>
+  </data>
+  <data name="AdmAuditText" xml:space="preserve">
+    <value>Target or details</value>
+  </data>
+  <data name="AdmAuditFrom" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="AdmAuditTo" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="AdmAuditWhen" xml:space="preserve">
+    <value>When</value>
+  </data>
+  <data name="AdmAuditTarget" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="AdmAuditDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="AdmAuditSourcePortal" xml:space="preserve">
+    <value>Portal</value>
+  </data>
+  <data name="AdmAuditSourceGame" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="AdmAuditEmpty" xml:space="preserve">
+    <value>No entries match.</value>
+  </data>
+  <data name="AdmAuditLoadMore" xml:space="preserve">
+    <value>Load more</value>
   <data name="NavWikiUncategorized" xml:space="preserve">
     <value>Uncategorized</value>
   </data>

@@ -156,10 +156,6 @@
     <value>Zobacz postacie</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Administracja postaciami wkrótce.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Konfiguracja witryny</value>
     <comment>MT</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Hasło dla „{0}” zresetowano na: {1} — przekaż je bezpiecznie; przy następnym logowaniu użytkownik musi je zmienić.</value>
     <comment>MT — {0} quoted and {1} placed after a colon so both interpolations stay uninflected</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Szczegóły gracza wkrótce.</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administracja · Gracz</value>

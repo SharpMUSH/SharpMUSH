@@ -124,7 +124,7 @@
       ]
     },
     "@BOOT": {
-      "helpFull": "`@boot[/silent] <player>`<br>\n`@boot/port[/silent] <descriptor number>`<br>\n`@boot/me`\n\nThe first form of this command disconnects all of `<player>`'s connections from the game.\n\nThe `/port` switch disconnects a particular descriptor (as shown under \"Des\" in the Wizard WHO, returned by lports() and ports(), etc).\n\nIf the `/silent` switch is given, the message telling `<player>` he was booted is suppressed.\n\nThe `/me` switch boots all descriptors for the player using the command which have been idle for over 1 minute. Players can use this command to terminate hung connections.\n\nOnly admin and those with the \"boot\" power can @boot other players.\n\n\n**See Also:**\n- [QUIT]\n- [LOGOUT]",
+      "helpFull": "`@boot[/silent] <player>`<br>\n`@boot/port[/silent] <descriptor number>`<br>\n`@boot/me`\n\nThe first form of this command disconnects all of `<player>`'s connections from the game.\n\nThe `/port` switch disconnects a particular descriptor (as shown under \"Des\" in the Wizard WHO, returned by lports() and ports(), etc).\n\nIf the `/silent` switch is given, the message telling `<player>` he was booted is suppressed.\n\nThe `/me` switch boots all descriptors for the player using the command which have been idle for over 1 minute. Players can use this command to terminate hung connections.\n\nAnyone may @boot their own connections. Only holders of `players.moderate` and those with the \"boot\" power can @boot other players, and each time they do it is recorded in the audit log.\n\n\n**See Also:**\n- [QUIT]\n- [LOGOUT]",
       "helpPreview": "`@boot[/silent] <player>`<br>\n`@boot/port[/silent] <descriptor number>`<br>\n`@boot/me`",
       "maxArgs": 0,
       "minArgs": 0,

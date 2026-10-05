@@ -156,10 +156,6 @@
     <value>Visa karaktärer</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Karaktärsadministration kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Sajtkonfiguration</value>
     <comment>MT — corpus renders site as 'sajt'.</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Lösenordet för '{0}' återställdes till: {1} — dela det på ett säkert sätt; användaren måste byta det vid nästa inloggning.</value>
     <comment>MT — English 'they' recast as 'användaren' to avoid a pronoun choice.</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Spelardetaljer kommer snart.</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administration · Spelare</value>

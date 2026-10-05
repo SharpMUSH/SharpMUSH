@@ -156,10 +156,6 @@
     <value>Vizualizare personaje</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Administrarea personajelor va fi disponibilă în curând.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Configurare site</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Parola pentru „{0}” a fost resetată la: {1} — transmiteți-o în siguranță; va trebui schimbată la următoarea autentificare.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Detaliile jucătorului vor fi disponibile în curând.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">

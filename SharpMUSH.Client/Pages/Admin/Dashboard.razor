@@ -37,7 +37,7 @@
     private sealed record AdminCard(string TitleKey, string ActionKey, string Href, string Icon, string[] Policies, string[]? Roles = null);
 
     /// <remarks>
-    /// Only pages with something behind them. Characters, Moderation and Server are still placeholders
+    /// Only pages with something behind them. Moderation and Server are still placeholders
     /// (AdminComingSoon) and stay off the grid until they are built: a card that opens "coming soon" is a
     /// dead end. Their routes remain.
     /// </remarks>
@@ -45,6 +45,8 @@
     [
         new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats, ["queue.inspect", "queue.inspect.own"]),
         new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group, ["players.view"]),
+        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person, ["players.view"]),
+        new("AdmAuditTitle", "AdmAuditCardAction", "/admin/moderation/audit", Icons.Material.Filled.History, ["players.moderate"]),
         new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts, [], ["Wizard", "God"]),
         new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge, ["players.moderate"]),
         new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings, ["config.admin"]),

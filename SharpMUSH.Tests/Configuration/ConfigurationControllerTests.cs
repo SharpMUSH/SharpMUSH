@@ -27,7 +27,7 @@ public class ConfigurationControllerTests
 
 		return (new ConfigurationController(options, store, reload,
 			new MushCnfImportService(options, store, reload, NullLogger<MushCnfImportService>.Instance),
-			NullLogger<ConfigurationController>.Instance), store, reload);
+			Substitute.For<IAuditLog>(), NullLogger<ConfigurationController>.Instance), store, reload);
 	}
 
 	[Test]
