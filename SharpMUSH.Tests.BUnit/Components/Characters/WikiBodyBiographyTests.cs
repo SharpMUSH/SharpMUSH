@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
@@ -47,6 +48,8 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			""";
 	}
 
+	private BunitAuthorizationContext Auth { get; }
+
 	public WikiBodyBiographyTests()
 	{
 		var client = Track(new HttpClient(new Handler()) { BaseAddress = new Uri("https://localhost:8081/") });
@@ -58,7 +61,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			.AddSingleton<WikiMarkdigPipeline>()
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddLocalization();
-		AddAuthorization();
+		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -95,6 +98,39 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		var cut = Render<WikiBodyWidget>(p => p.Add(x => x.Config, config));
 		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".wiki-body-card .kit-card-title").TextContent).IsEqualTo("House Rules");
+	}
+
+	[Test]
+	public async Task WithoutWikiEdit_ThereIsNoEditButton()
+	{
+		var cut = RenderProfile();
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task WithWikiEdit_EditOpensTheEditorInTheCard_AndDiscardReturns()
+	{
+		Auth.SetAuthorized("Tomas Reyes");
+		Auth.SetPolicies("wiki.edit");
+		var cut = RenderProfile();
+
+		cut.Find(".wiki-body-card .wiki-body-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-edit-textarea"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wiki-body-card .wiki-edit-textarea").GetAttribute("value")).IsEqualTo("Lean and quiet.");
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
+			.Because("the editor is open; a second click would throw the draft away");
+
+		cut.Find(".wiki-body-card .wiki-edit-cancel").Click();
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-body-edit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-edit-textarea").Count).IsEqualTo(0);
+	}
+
+	private IRenderedComponent<CascadingWrapper> RenderProfile()
+	{
+		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
+			.Add(x => x.Context, new ProfilePageContext("Tomas Reyes", false)));
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
+		return cut;
 	}
 
 	/// <summary>Supplies the profile page context the way CharacterProfile does.</summary>

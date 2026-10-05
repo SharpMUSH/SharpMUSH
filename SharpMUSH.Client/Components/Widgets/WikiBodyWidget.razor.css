@@ -24,6 +24,14 @@
 	text-decoration: none;
 }
 
+.wiki-body-edit {
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: 13px;
+	cursor: pointer;
+}
+
 .wiki-body-history:hover,
 .wiki-body-history:focus-visible {
 	color: var(--text);
