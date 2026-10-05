@@ -220,6 +220,25 @@
                     </ul>
                 }
 
+                <h3 class="setup-group-title">@Loc["AdmSetupWikiGroup"]</h3>
+                <ul class="setup-apps">
+                    <li class="setup-app">
+                        <label class="setup-app-label">
+                            <input id="setup-starter-wiki" class="setup-app-check" type="checkbox"
+                                   checked="@(_starterWiki || _starterWikiApplied)" disabled="@(_busy || _starterWikiApplied)"
+                                   @onchange="@(e => _starterWiki = e.Value is true)" />
+                            <span class="setup-app-text">
+                                <span class="setup-app-title">@Loc["AdmSetupStarterWikiTitle"]</span>
+                                <span class="setup-app-desc">@Loc["AdmSetupStarterWikiDesc"]</span>
+                                @if (_starterWikiApplied)
+                                {
+                                    <span class="setup-app-note">@Loc["AdmSetupStarterWikiApplied"]</span>
+                                }
+                            </span>
+                        </label>
+                    </li>
+                </ul>
+
                 <button class="setup-submit setup-save" type="button" disabled="@_busy" @onclick="SavePackagesAsync">
                     @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupSaveContinue"])
                 </button>
@@ -317,6 +336,12 @@
     /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
     private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Whether the administrator wants the starter wiki pages; ticked until the game has them.</summary>
+    private bool _starterWiki;
+
+    /// <summary>Whether the game already has the starter wiki pages, which are offered once.</summary>
+    private bool _starterWikiApplied;
+
     /// <summary>
     /// Each step starts at its top. The shell, not the window, scrolls, and it kept the offset of the step
     /// before: a long step (handlers) left the next one opening below its heading.
@@ -375,6 +400,9 @@
         _packages = wizard.Packages;
         _chosen.Clear();
         _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
+
+        _starterWikiApplied = wizard.StarterWikiApplied;
+        _starterWiki = !wizard.StarterWikiApplied;
     }
 
     /// <summary>The two refusals the claim page words itself; anything else is the server's own sentence.</summary>
@@ -568,8 +596,23 @@
         _error = null;
         _busy = true;
 
-        switch (await Wizard.SetPackagesAsync(Effective.ToList()))
+        var packages = await Wizard.SetPackagesAsync(Effective.ToList());
+        var starterWiki = packages is SetupWizardResponse && _starterWiki && !_starterWikiApplied
+            ? await Wizard.ApplyStarterWikiAsync()
+            : new Success();
+
+        switch (packages)
         {
+            case SetupWizardResponse when starterWiki is ApiFailure failure:
+                // The packages are saved and the pages that could be written were. The step stays open with the
+                // reason; saving again finishes the wizard.
+                if (await Wizard.GetAsync() is SetupWizardResponse refreshed)
+                {
+                    Load(refreshed);
+                }
+
+                _error = Loc["AdmSetupStarterWikiFailed", failure.Message];
+                break;
             case SetupWizardResponse:
                 // The applications are saved either way; a wizard the server still counts as unfinished comes
                 // back at the next sign-in, so say so here rather than show it as done.

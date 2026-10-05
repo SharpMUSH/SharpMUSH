@@ -4618,6 +4618,21 @@
   <data name="AdmSetupContinue" xml:space="preserve">
     <value>Continue setup</value>
   </data>
+  <data name="AdmSetupWikiGroup" xml:space="preserve">
+    <value>In the wiki</value>
+  </data>
+  <data name="AdmSetupStarterWikiTitle" xml:space="preserve">
+    <value>Starter wiki pages</value>
+  </data>
+  <data name="AdmSetupStarterWikiDesc" xml:space="preserve">
+    <value>Adds Getting Started, Theme, Setting and Policies pages with prompts for what to write, and the categories that file them. Home links to all four. Only wiki administrators can edit Theme, Setting and Policies.</value>
+  </data>
+  <data name="AdmSetupStarterWikiApplied" xml:space="preserve">
+    <value>Already added. Pages deleted since then stay deleted.</value>
+  </data>
+  <data name="AdmSetupStarterWikiFailed" xml:space="preserve">
+    <value>The applications were saved, but some starter wiki pages could not be added: {0}</value>
+  </data>
   <data name="AdmSetupAppsFailed" xml:space="preserve">
     <value>Some applications could not be changed: {0}</value>
   </data>

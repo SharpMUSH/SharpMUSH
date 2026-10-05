@@ -64,6 +64,15 @@ file sealed class SetupApiHandler(
 
 	public int FinishCalls { get; private set; }
 
+	/// <summary>How many times api/setup/wizard/starter-wiki was posted.</summary>
+	public int StarterWikiCalls { get; private set; }
+
+	/// <summary>Whether the game already has the starter wiki pages.</summary>
+	public bool StarterWikiApplied { get; set; }
+
+	/// <summary>Whether api/setup/wizard/starter-wiki refuses (409), as when some pages could not be written.</summary>
+	public bool StarterWikiFails { get; set; }
+
 	/// <summary>Whether api/setup/wizard/finish refuses, leaving the wizard pending.</summary>
 	public bool FinishFails { get; set; }
 
@@ -108,6 +117,15 @@ file sealed class SetupApiHandler(
 			_installed.Clear();
 			_installed.UnionWith(document.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!));
 			return Json(Wizard(_wizardPending ?? true));
+		}
+
+		if (path == "api/setup/wizard/starter-wiki" && request.Method == HttpMethod.Post)
+		{
+			StarterWikiCalls++;
+			StarterWikiApplied = true;
+			return StarterWikiFails
+				? new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("Theme could not be written.") }
+				: Json(Wizard(_wizardPending ?? true));
 		}
 
 		if (path == "api/setup/wizard/finish" && request.Method == HttpMethod.Post)
@@ -171,6 +189,7 @@ file sealed class SetupApiHandler(
 	private object Wizard(bool pending) => new
 	{
 		pending,
+		starterWikiApplied = StarterWikiApplied,
 		handlers = new object[]
 		{
 			Handler("http", _httpHandler, _httpHandler is null ? null : "HTTP Handler", ["http-handler", "profile-handler"]),
@@ -416,6 +435,8 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				["http-handler", "profile-handler", "room-contents", "common-functions", "plus-help", "wiki-reader"]);
 		}
 		await Assert.That(handler.FinishCalls).IsEqualTo(1);
+		await Assert.That(handler.StarterWikiCalls).IsEqualTo(1)
+			.Because("a new game is offered the starter wiki pages ticked");
 
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 		var enterPortalButton = cut.Find("button.setup-signin");
@@ -443,6 +464,82 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupFinishFailed");
 		await Assert.That(cut.Markup).DoesNotContain("AuthSetupComplete");
 		await Assert.That(handler.FinishCalls).IsEqualTo(1);
+	}
+
+	/// <summary>An administrator who unticks the starter wiki pages gets none.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWikiUnticked_IsNotWritten()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-starter-wiki"));
+		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("checked")).IsTrue();
+
+		cut.Find("#setup-starter-wiki").Change(false);
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWikiCalls).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// The starter pages are offered once: a game that has them sees the box ticked and fixed, and saving does not
+	/// write them again, so a page the administrator deleted stays deleted.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWikiApplied_IsNotWrittenAgain()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.StarterWikiApplied = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-starter-wiki"));
+		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Markup).Contains("AdmSetupStarterWikiApplied");
+
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWikiCalls).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// Starter pages the server could not all write keep the wizard on this step with the reason; the packages are
+	/// saved, and saving again finishes without writing the pages a second time.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWikiFailure_ShowsTheReason()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.StarterWikiFails = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".setup-error"));
+		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupStarterWikiFailed");
+		await Assert.That(handler.FinishCalls).IsEqualTo(0);
+
+		cut.Find("button.setup-save").Click();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWikiCalls).IsEqualTo(1);
 	}
 
 	/// <summary>
