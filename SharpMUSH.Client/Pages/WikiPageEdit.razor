@@ -5,7 +5,7 @@
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-<div class="full-bleed full-height wiki-edit-host">
+<div class="full-height wiki-edit-host">
     <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
               Locale="@Lang" NewTitle="@NewTitle" Mode="WikiView.WikiMode.Edit" />
 </div>

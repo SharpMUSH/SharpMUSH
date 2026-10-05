@@ -86,25 +86,16 @@
 	padding-bottom: 18.75rem;
 }
 
+/* The page takes the whole content column at every width, so a page's left edge always sits against the
+   sidebar. A page that reads better narrower caps its own block (a form, an article's measure). */
 .phosphor-page {
 	container: page / inline-size;
 	min-height: 100%;
 }
 
 /* descendants, not children: a section page sits inside SectionShell's .kit-section-body */
-.phosphor-page:has(.full-bleed) {
-	max-width: none;
-}
-
 .phosphor-page:has(.full-height) {
 	height: 100%;
-}
-
-@media (min-width: 1601px) {
-	.phosphor-page {
-		max-width: var(--content-max);
-		margin-inline: auto;
-	}
 }
 
 /* ── Rail (D1 §3): 72px, one 44×44 icon per section, radius 14; the current one filled

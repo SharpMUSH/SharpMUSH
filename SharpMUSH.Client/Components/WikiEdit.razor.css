@@ -1,5 +1,4 @@
 .wiki-edit {
-    padding: var(--cpad);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -92,9 +91,11 @@
 
 .wiki-edit-split {
     flex: 1;
-    min-height: 0;
+    /* fills what the page leaves it; below this the page scrolls rather than the panes shrinking */
+    min-height: 20rem;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     border: 1px solid var(--border-soft);
     border-radius: 0 0 var(--radius) var(--radius);
     overflow: hidden;
@@ -111,6 +112,10 @@
     line-height: 1.7;
     caret-color: var(--accent);
     border-right: 1px solid var(--border-soft);
+    /* fills the pane and scrolls; in an embed the pane has no height of its own, and the
+       textarea grows with its content instead */
+    height: 100%;
+    overflow-y: auto;
     field-sizing: content;
 }
 .wiki-edit-preview {
@@ -216,7 +221,7 @@
 .wiki-edit-foot a:hover { text-decoration: underline; }
 
 @container page (max-width: 48rem) {
-    .wiki-edit-split { grid-template-columns: 1fr; }
+    .wiki-edit-split { grid-template-columns: minmax(0, 1fr); }
     .wiki-edit-preview { display: none; }
 }
 
