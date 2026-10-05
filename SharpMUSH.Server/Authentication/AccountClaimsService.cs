@@ -67,8 +67,8 @@ public class AccountClaimsService(
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			logger.LogWarning(ex, "Could not derive the portal tier for account {AccountId}; using Guest.",
-				Library.Logging.LogSanitizer.Sanitize(accountId));
+			// The exception carries the context; the account id stays out of the log.
+			logger.LogWarning(ex, "Could not derive an account's portal tier; using Guest.");
 			return PortalRole.Guest;
 		}
 	}

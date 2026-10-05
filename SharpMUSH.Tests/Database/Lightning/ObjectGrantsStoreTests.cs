@@ -27,7 +27,7 @@ public class ObjectGrantsStoreTests
 	[Before(Test)]
 	public async Task Setup()
 	{
-		_path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_path = Path.Join(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		_db = Create(_path);
 		await _db.Migrate();
 	}
@@ -36,8 +36,18 @@ public class ObjectGrantsStoreTests
 	public async Task Cleanup()
 	{
 		await _db.DisposeAsync();
-		try { Directory.Delete(_path, recursive: true); }
-		catch (IOException) { }
+		if (Directory.Exists(_path))
+		{
+			try
+			{
+				Directory.Delete(_path, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort: LMDB's lock file can outlive the writer thread by a few milliseconds.
+				// A leftover temp directory costs disk, not correctness.
+			}
+		}
 	}
 
 	private async Task<AnySharpObject> ThingAsync(string name)
