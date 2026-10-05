@@ -5024,8 +5024,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>Jelenetben</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Ezt a jelenetet nézed. Csatlakozz, hogy itt pózolhass.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Még nem csatlakoztál ehhez a jelenethez. Csatlakozz, hogy itt pózolhass.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5034,6 +5034,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Csatlakozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>A játék nem engedte, hogy csatlakozz ehhez a jelenethez.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

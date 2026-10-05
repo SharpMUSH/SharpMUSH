@@ -5024,8 +5024,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>场景中</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>你正在观看此场景。加入后即可在此发表姿态。</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>你尚未加入此场景。加入后即可在此发表姿态。</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5034,6 +5034,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>加入场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>游戏未允许你加入此场景。</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

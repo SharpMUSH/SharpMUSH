@@ -440,6 +440,8 @@ You say, "r baz"
 
   These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.
 
+  Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
+
 
 **See Also:**
 - [boolean values]
@@ -3734,6 +3736,8 @@ You say, "#1 #7 #56 #-1"
 `cor(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
   These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.
+
+  Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
 
 
 **See Also:**
