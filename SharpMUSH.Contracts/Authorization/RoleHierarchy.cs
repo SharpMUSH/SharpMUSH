@@ -19,7 +19,7 @@ public static class RoleHierarchy
 		IReadOnlyDictionary<string, PermissionState> current,
 		IReadOnlyDictionary<string, PermissionState> proposed,
 		IReadOnlySet<string> granted)
-		=> PortalPermission.AllScopes
+		=> PortalPermission.AllScopes.Concat(proposed.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
 			.Where(scope => PermissionResolver.StateOf(proposed, scope) == PermissionState.Allow
 				&& PermissionResolver.StateOf(current, scope) != PermissionState.Allow
 				&& !CanGrant(granted, scope))
@@ -27,11 +27,12 @@ public static class RoleHierarchy
 
 	/// <summary>
 	/// Whether a manager holding <paramref name="granted"/> may allow <paramref name="scope"/>: they hold it,
-	/// or it is an in-game scope and they are a wizard (in PennMUSH a wizard grants every power without
-	/// holding any).
+	/// or it is an in-game scope or a custom permission and they are a wizard (in PennMUSH a wizard grants
+	/// every power without holding any). Callers check that a custom scope exists first.
 	/// </summary>
 	public static bool CanGrant(IReadOnlySet<string> granted, string scope)
-		=> granted.Contains(scope) || (PortalPermission.IsGameScope(scope) && granted.Contains(PortalPermission.GameWizard));
+		=> granted.Contains(scope)
+			|| ((PortalPermission.IsGameScope(scope) || !PortalPermission.IsKnown(scope)) && granted.Contains(PortalPermission.GameWizard));
 
 	/// <summary>The roles in <paramref name="roles"/> that are not <c>everyone</c>, highest priority first.</summary>
 	public static IEnumerable<SharpRole> Ranked(IEnumerable<SharpRole> roles)

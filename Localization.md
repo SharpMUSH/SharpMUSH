@@ -268,7 +268,7 @@ design, which is what keeps the fallback rules unit-testable with no auth graph.
 
 ### Adding a translation
 
-- Portal: `/wiki/{ns}/{category}/{slug}/edit?lang=fr`
+- Portal: `/wiki/{ns}/{slug}/edit?lang=fr`
 - API: `PUT /api/wiki/{slug}/translations/{locale}?ns=&category=`, carrying the
   `expectedRevisionNumber` the editor loaded. A concurrent save answers **409**;
   the editor offers a reload and never retries, because retrying would re-apply

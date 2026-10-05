@@ -48,7 +48,7 @@ file sealed class GatedWikiHandler(string gatedSlug, params string[] existingSlu
 		MarkdownSource: "body", RenderedHtml: "<p>body</p>", PlainText: "body",
 		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
 		IsProtected: false, RevisionNumber: 1,
-		Category: "general", Tags: [], Published: true);
+		Categories: [], Published: true);
 }
 
 /// <summary>

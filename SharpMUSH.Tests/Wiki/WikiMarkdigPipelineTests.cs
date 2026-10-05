@@ -58,7 +58,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("See [[Getting Started]] for details.");
 
-		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/getting_started\"");
 		await Assert.That(html).Contains("Getting Started");
 	}
 
@@ -67,7 +67,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("See [[Click here|getting_started]] for details.");
 
-		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/getting_started\"");
 		await Assert.That(html).Contains("Click here");
 	}
 
@@ -76,7 +76,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
 	}
 
 	[Test]
@@ -84,7 +84,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/my_page\"");
 	}
 
 	[Test]
@@ -92,8 +92,8 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Page A]] and [[Page B]].");
 
-		await Assert.That(html).Contains("href=\"/wiki/main/general/page_a\"");
-		await Assert.That(html).Contains("href=\"/wiki/main/general/page_b\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/page_a\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/page_b\"");
 	}
 
 	[Test]
@@ -191,14 +191,14 @@ public class WikiMarkdigPipelineTests
 	}
 
 	/// <summary>
-	/// [[My Page]] → &lt;a href="/wiki/main/general/my_page"&gt;My Page&lt;/a&gt;
+	/// [[My Page]] → &lt;a href="/wiki/main/my_page"&gt;My Page&lt;/a&gt;
 	/// </summary>
 	[Test]
 	public async Task WikiLinkExtension_ValidPage_EmitsAnchorTag()
 	{
 		var html = Pipeline().RenderToHtml("[[My Page]]");
 
-		await Assert.That(html).Contains("<a href=\"/wiki/main/general/my_page\">");
+		await Assert.That(html).Contains("<a href=\"/wiki/main/my_page\">");
 		await Assert.That(html).Contains("My Page");
 	}
 
@@ -245,7 +245,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
 	}
 
 	/// <summary>
@@ -262,18 +262,6 @@ public class WikiMarkdigPipelineTests
 	}
 
 	/// <summary>
-	/// A character-namespace page in a non-default category has no /character URL to round-trip
-	/// through (that route carries no category segment), so it keeps its wiki path.
-	/// </summary>
-	[Test]
-	public async Task WikiLinkExtension_CharacterPageInOtherCategory_KeepsWikiPath()
-	{
-		var html = Pipeline().RenderToHtml("[[Character:NPCs:Mercutio]]");
-
-		await Assert.That(html).Contains("href=\"/wiki/character/npcs/mercutio\"");
-	}
-
-	/// <summary>
 	/// [[Click Here|My Page]] → anchor text is "Click Here", not the slug.
 	/// </summary>
 	[Test]
@@ -281,7 +269,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Click Here|my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/my_page\"");
 		await Assert.That(html).Contains("Click Here");
 		await Assert.That(html).DoesNotContain("my_page</"); // slug must not appear as link text
 	}
@@ -409,14 +397,31 @@ public class WikiMarkdigPipelineTests
 			.Contains("<div class=\"wiki-directive\" data-directive=\"category\" data-arg=\"lore\"></div>");
 	}
 
-	/// <summary>::: tag magic → placeholder div with data attributes.</summary>
+	/// <summary>Tags were merged into categories, so <c>::: tag</c> is no longer a live listing.</summary>
 	[Test]
-	public async Task RenderToHtml_TagDirective_EmitsPlaceholderDiv()
+	public async Task RenderToHtml_TagDirective_IsNoLongerADirective()
 	{
 		var html = Pipeline().RenderToHtml("::: tag magic\n:::");
 
-		await Assert.That(html)
-			.Contains("<div class=\"wiki-directive\" data-directive=\"tag\" data-arg=\"magic\"></div>");
+		await Assert.That(html).DoesNotContain("data-directive");
+	}
+
+	// --- Categories: [[Category:X]] is a link to the category page, not membership -------------
+
+	[Test]
+	public async Task CategoryLink_LinksToTheCategoryPage()
+	{
+		var html = Pipeline().RenderToHtml("Dragons are [[Category:Lore]].");
+
+		await Assert.That(html).Contains("href=\"/wiki/category/lore\"");
+	}
+
+	[Test]
+	public async Task LeadingColon_LinksToTheSameCategoryPage()
+	{
+		var html = Pipeline().RenderToHtml("See [[:Category:Places of Note]].");
+
+		await Assert.That(html).Contains("href=\"/wiki/category/places_of_note\"");
 	}
 
 	/// <summary>::: pagelist help → placeholder div with data attributes.</summary>

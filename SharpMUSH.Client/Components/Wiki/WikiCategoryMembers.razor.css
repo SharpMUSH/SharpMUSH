@@ -21,3 +21,9 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.wiki-cat-subs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}

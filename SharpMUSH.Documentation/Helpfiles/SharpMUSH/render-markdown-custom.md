@@ -149,7 +149,7 @@ The function looks for attributes on `<object>` with specific names that define 
   for a link with no display text, which renders as nothing
   - `%0` - The display text, plain
   - `%1` - The `@wiki` page reference, always fully qualified as
-    `<namespace>:<category>:<slug>`
+    `<namespace>:<slug>`
   - `%2` - The target page's title
   
 - ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering. Not
@@ -289,7 +289,7 @@ think rendermarkdowncustom(See %[%[Help:Markdown Guide%]%] first., #123)
 ```
 Output:
 ```markdown
-See Markdown Guide (@wiki help:general:markdown_guide) first.
+See Markdown Guide (@wiki help:markdown_guide) first.
 ```
 `%1` arrives fully qualified, so the command it builds resolves whatever
 namespace the link was written in. Under `@wiki` itself a wiki link is already

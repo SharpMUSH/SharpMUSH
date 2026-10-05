@@ -1006,12 +1006,6 @@
   <data name="WikiNamespace" xml:space="preserve">
     <value>Namespace</value>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Category</value>
-  </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Published</value>
   </data>
@@ -1058,9 +1052,6 @@
   </data>
   <data name="WikiMetadataSaveFailed" xml:space="preserve">
     <value>Metadata save failed: {0}</value>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Press Enter or the + to add a tag</value>
   </data>
   <data name="WikiNamespaceFilter" xml:space="preserve">
     <value>Namespace filter</value>
@@ -1909,6 +1900,14 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Close {0}</value>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expand {0}</value>
+    <comment>Softcode Editor attribute tree: unfold a branch attribute. {0} is the attribute name, e.g. FOO`BAR.</comment>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Collapse {0}</value>
+    <comment>Softcode Editor attribute tree: fold a branch attribute. {0} is the attribute name.</comment>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Select an object.</value>
   </data>
@@ -1924,11 +1923,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>No attribute selected</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluate without saving</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — run the saved attribute with u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Refresh attributes</value>
@@ -1941,9 +1937,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(no output)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(empty)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Command trigger</value>
@@ -2178,9 +2171,6 @@
   </data>
   <data name="LayCfgWikiBodyNamespace" xml:space="preserve">
     <value>Wiki namespace the page lives in. Only applies alongside a slug.</value>
-  </data>
-  <data name="LayCfgWikiBodyCategory" xml:space="preserve">
-    <value>Category segment of the page's identity.</value>
   </data>
   <data name="LayCfgWikiBodyLocale" xml:space="preserve">
     <value>Locale to render. Unset, each reader gets their own preference.</value>
@@ -2659,9 +2649,6 @@
   <data name="WkInsertImage" xml:space="preserve">
     <value>Insert image</value>
   </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>add tag…</value>
-  </data>
   <data name="WkSummaryPlaceholder" xml:space="preserve">
     <value>Summarize your change (e.g. 'fixed a typo')…</value>
   </data>
@@ -2689,9 +2676,6 @@
   </data>
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Category: {0}</value>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
   </data>
   <data name="WkNoAssets" xml:space="preserve">
     <value>No assets uploaded yet.</value>
@@ -2897,6 +2881,93 @@
   </data>
   <data name="RolTabAssignments" xml:space="preserve">
     <value>Assignments</value>
+  </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Custom permissions are ones your game defines for its own softcode to check, such as scene.close. Once defined, allow one on a role like any other permission; softcode asks permission(%#,scene.close) or locks with PERM^scene.close. In game: @permission/define.</value>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Permission name</value>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>What it lets someone do</value>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>A category is required.</value>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Roles and custom permissions each have their own list of categories, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category and @permission/category.</value>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>What belongs in it</value>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>No categories yet.</value>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Category {0} created.</value>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Category {0} saved.</value>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Delete {0}? Only a category that holds no role and no permission can be deleted.</value>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Category {0} deleted.</value>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# role} other {# roles}}</value>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permission} other {# permissions}}</value>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Role categories</value>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Permission categories</value>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Choose a category</value>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Create categories on the Categories tab.</value>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>A category needs a name and a description.</value>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Define</value>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>No custom permissions yet.</value>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permission {0} defined.</value>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Remove permission</value>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Remove {0}? Every role and override that sets it loses it.</value>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permission {0} removed.</value>
   </data>
   <data name="RolNewRole" xml:space="preserve">
     <value>New role</value>
@@ -3243,9 +3314,6 @@
   </data>
   <data name="ResOnThisPage" xml:space="preserve">
     <value>On this page</value>
-  </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>General</value>
   </data>
   <data name="ResScenesSubtitle" xml:space="preserve">
     <value>Browse and watch roleplay sessions.</value>
@@ -4390,14 +4458,17 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In scene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>You are watching this scene. Join it to pose here.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>You haven't joined this scene yet. Join it to pose here.</value>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
     <value>Your poses go to another scene. Join this one to pose here.</value>
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>The game did not let you join this scene.</value>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
@@ -4638,6 +4709,21 @@
   </data>
   <data name="AdmSetupContinue" xml:space="preserve">
     <value>Continue setup</value>
+  </data>
+  <data name="AdmSetupWikiGroup" xml:space="preserve">
+    <value>In the wiki</value>
+  </data>
+  <data name="AdmSetupStarterWikiTitle" xml:space="preserve">
+    <value>Starter wiki pages</value>
+  </data>
+  <data name="AdmSetupStarterWikiDesc" xml:space="preserve">
+    <value>Adds Getting Started, Theme, Setting and Policies pages with prompts for what to write, and the categories that file them. Home links to all four. Only wiki administrators can edit Theme, Setting and Policies.</value>
+  </data>
+  <data name="AdmSetupStarterWikiApplied" xml:space="preserve">
+    <value>Already added. Pages deleted since then stay deleted.</value>
+  </data>
+  <data name="AdmSetupStarterWikiFailed" xml:space="preserve">
+    <value>The applications were saved, but some starter wiki pages could not be added: {0}</value>
   </data>
   <data name="AdmSetupAppsFailed" xml:space="preserve">
     <value>Some applications could not be changed: {0}</value>
@@ -5073,5 +5159,20 @@
   </data>
   <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
     <value>Cannot be killed.</value>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Describe this category</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Add a category</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategory} other {# subcategories}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# page in this category} other {# pages in this category}}</value>
   </data>
 </root>

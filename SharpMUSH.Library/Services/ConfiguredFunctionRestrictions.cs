@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -34,8 +33,8 @@ public sealed class ConfiguredFunctionRestrictions(
 	public static readonly IReadOnlySet<string> PermissionWords =
 		new HashSet<string>(["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"], StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>A <see cref="PermissionWords"/> word, or a permission scope the caller must hold.</summary>
-	private static bool IsPermissionWord(string term) => PermissionWords.Contains(term) || PortalPermission.IsKnown(term);
+	/// <summary>A <see cref="PermissionWords"/> word, or a permission (any dotted word, built in or custom) the caller must hold.</summary>
+	private static bool IsPermissionWord(string term) => PermissionWords.Contains(term) || term.Contains('.');
 
 	private readonly Lock _gate = new();
 	private string[] _applied = [];

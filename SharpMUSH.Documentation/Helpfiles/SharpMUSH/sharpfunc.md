@@ -289,7 +289,8 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [WIKI()]         | [WIKILIST()]     | [WIKIRECENT()]   | [WIKISEARCH()]   |
+| [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
+| [WIKISEARCH()]   |                  |                  |                  |
 
 **See Also:**
 - [wiki]
@@ -438,6 +439,8 @@ You say, "r baz"
 `cand(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
   These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.
+
+  Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
 
 
 **See Also:**
@@ -3734,6 +3737,8 @@ You say, "#1 #7 #56 #-1"
 
   These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.
 
+  Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
+
 
 **See Also:**
 - [boolean values]
@@ -3826,7 +3831,7 @@ You say, "#1 #7 #56 #-1"
 # PERMISSION()
 `permission(<object>, <permission>)`
 
-  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all.
+  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. `<permission>` may be built in or one the game defined with `@permission/define`, such as `scene.close`. Any other name returns `#-1 NO SUCH PERMISSION`; @permission lists them all.
 
   Example:
 ```sharp

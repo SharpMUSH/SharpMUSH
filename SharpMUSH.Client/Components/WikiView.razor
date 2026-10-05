@@ -24,7 +24,7 @@ else if (_loadFailed)
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Locale="@Locale" Article="@_article"
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Locale="@Locale" Article="@_article"
                  Embedded="@Embedded" ShowTitle="@ShowTitle"
                  ActivateEditMode="ActivateEditMode" />
 }
@@ -37,6 +37,7 @@ else
                   SourceLocale="@_sourceLocale"
                   SelectedLocale="@_selectedLocale"
                   AvailableLocales="@_availableLocales"
+                  CategoryNames="@_categoryNames"
                   OnLocaleChanged="@HandleLocaleChanged"
                   OnSaved="@HandleSave"
                   OnCancel="@HandleCancel" />
@@ -65,8 +66,6 @@ else
     /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
     [Parameter] public string? Namespace { get; init; }
 
-    /// <summary>Category segment — part of the page's identity. Null defaults to "general".</summary>
-    [Parameter] public string? Category { get; init; }
 
     /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
     [Parameter] public string? Locale { get; init; }
@@ -101,6 +100,9 @@ else
 
     private string _sourceLocale = "en";
     private string _selectedLocale = "en";
+
+    /// <summary>Each category's name in the edited language, for the editor's category chips.</summary>
+    private IReadOnlyDictionary<string, string>? _categoryNames;
     private IReadOnlyList<string> _availableLocales = [];
 
     /// <summary>
@@ -113,6 +115,7 @@ else
 
     public async Task ActivateEditMode()
     {
+        _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
         _editDraft = BuildEditDraft();
         _saveError = null;
         Mode = WikiMode.Edit;
@@ -125,11 +128,10 @@ else
             {
                 Id = _article.Id,
                 Slug = _article.Slug,
-                Category = _article.Category,
-                Tags = [.. _article.Tags],
+                Categories = [.. _article.Categories],
                 Published = _article.Published,
             }
-            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null) { Category = Category };
+            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null);
 
     /// <summary>
     /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single
@@ -137,9 +139,7 @@ else
     /// </summary>
     private void HandleLocaleChanged(string locale)
     {
-        var ns = Namespace ?? "main";
-        var cat = Category ?? "general";
-        Nav.NavigateTo($"/wiki/{ns}/{cat}/{Slug}/edit?lang={Uri.EscapeDataString(locale)}");
+        Nav.NavigateTo($"{WikiRoutes.WikiPathFor(Namespace, Slug)}/edit?lang={Uri.EscapeDataString(locale)}");
     }
 
     /// <summary>
@@ -162,11 +162,11 @@ else
 
         if (!WikiHelpers.SameLanguage(_selectedLocale, _sourceLocale))
         {
-            // A translation owns Title, body and Published; Category, Tags and IsProtected are inherited
+            // A translation owns Title, body and Published; categories and IsProtected are inherited
             // structurally, so there is no metadata call to make here.
             var translationResult = await Wiki.UpsertTranslationAsync(
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
-                ExpectedTranslationRevision, editSummary: null, ns: Namespace, category: Category);
+                ExpectedTranslationRevision, editSummary: null, ns: Namespace);
 
             switch (translationResult)
             {
@@ -174,7 +174,7 @@ else
                     _editDraft = null;
                     Mode = WikiMode.View;
                     Nav.NavigateTo(
-                        $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(_selectedLocale)}",
+                        $"{WikiRoutes.WikiPathFor(Namespace, Slug)}?lang={Uri.EscapeDataString(_selectedLocale)}",
                         forceLoad: true);
                     break;
                 case WikiTranslationSaveError err:
@@ -195,23 +195,18 @@ else
 
         if (string.IsNullOrEmpty(draft.Slug))
         {
-            // New page — category is part of identity, so it's fixed at create from the draft.
-            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Category);
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Categories);
         }
         else
         {
-            // The page is identified by its current (route) category.
-            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace, category: Category);
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace);
         }
 
-        if (result is WikiArticle saved && MetadataChanged(saved, draft))
+        if (result is WikiArticle saved
+            && (saved.Published != draft.Published || !saved.Categories.Order().SequenceEqual(draft.Categories.Order())))
         {
-            // Content save succeeded; push the metadata separately. The created/updated article
-            // carries the server's current category, used as the lookup key in case the category
-            // itself is changing (a re-key/move).
-            result = await Wiki.SetMetadataAsync(
-                saved.Slug, draft.Category, draft.Tags, draft.Published, Namespace,
-                currentCategory: saved.Category);
+            // Content save succeeded; categories and the published switch are page metadata, their own call.
+            result = await Wiki.SetMetadataAsync(saved.Slug, draft.Categories, draft.Published, Namespace);
         }
 
         switch (result)
@@ -226,12 +221,6 @@ else
                 break;
         }
     }
-
-    /// <summary>True when the draft's metadata differs from the just-saved server copy.</summary>
-    private static bool MetadataChanged(WikiArticle saved, WikiArticle draft) =>
-        !string.Equals(saved.Category ?? string.Empty, draft.Category ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-        || saved.Published != draft.Published
-        || !saved.Tags.SequenceEqual(draft.Tags);
 
     /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
 
@@ -264,7 +253,7 @@ else
     /// </summary>
     private async Task<bool> LoadAsync()
     {
-        switch (await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale))
+        switch (await Wiki.GetWikiArticle(Slug, Namespace, Locale))
         {
             case WikiArticle article:
                 _article = article;
@@ -344,6 +333,7 @@ else
         {
             // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
             // itself or WikiEdit's `Article is not null` guard renders nothing.
+            _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
             _editDraft = BuildEditDraft();
         }
 

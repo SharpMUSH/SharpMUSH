@@ -51,19 +51,15 @@ public abstract class WikiControllerBase(
 		: Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
 
 	/// <summary>
-	/// Parses a wiki page reference into its (namespace, category, slug) identity. Accepts
-	/// "ns/category/slug" (canonical), "ns/slug" (category defaults to general), or "slug"
-	/// (main namespace, general category).
+	/// Parses a wiki page reference into its (namespace, slug) identity. Accepts "ns/slug" (canonical) or
+	/// "slug" (main namespace).
 	/// </summary>
-	protected static (WikiNamespace Ns, string Category, string Slug) ParseRef(string reference)
+	protected static (WikiNamespace Ns, string Slug) ParseRef(string reference)
 	{
-		var parts = reference.Split('/');
-		return parts.Length switch
-		{
-			>= 3 => (ParseNamespace(parts[0]), parts[1], string.Join('/', parts[2..])),
-			2 => (ParseNamespace(parts[0]), WikiHelpers.DefaultCategory, parts[1]),
-			_ => (WikiNamespace.Main, WikiHelpers.DefaultCategory, reference)
-		};
+		var parts = reference.Split('/', 2);
+		return parts.Length == 2
+			? (ParseNamespace(parts[0]), parts[1])
+			: (WikiNamespace.Main, reference);
 	}
 
 	/// <summary>True when the caller may see unpublished (draft) pages — i.e. holds the
@@ -103,12 +99,12 @@ public abstract class WikiControllerBase(
 	protected static WikiPageDto ToDto(WikiPage p) => new(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
-		p.Category, p.Tags, p.Published);
+		p.Categories, p.Published);
 
 	protected static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => new(
 		p.Page.Id, p.Page.Slug, p.Title, p.Page.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 		p.Page.CreatedAt, p.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
-		p.Page.Category, p.Page.Tags, p.Published)
+		p.Page.Categories, p.Published)
 	{
 		Locale = p.Locale,
 		RequestedLocale = p.RequestedLocale,
@@ -195,7 +191,7 @@ public abstract class WikiControllerBase(
 		{
 			dtos.Add(new WikiPageSummaryDto(
 				page.Page.Id, page.Page.Slug, page.Title, page.Page.Namespace, page.UpdatedAt, page.Page.IsProtected,
-				page.RevisionNumber, page.Page.Category, page.Page.Tags, page.Published, page.Locale, page.IsFallback,
+				page.RevisionNumber, page.Page.Categories, page.Published, page.Locale, page.IsFallback,
 				WikiImages.FirstImageUrl(page.RenderedHtml),
 				await Names.NameOfAsync(page.LastEditorDbref, HttpContext.RequestAborted)));
 		}

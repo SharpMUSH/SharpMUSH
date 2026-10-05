@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Wiki;
@@ -9,73 +10,64 @@ namespace SharpMUSH.Tests.Wiki;
 public class WikiRoutesTests
 {
 	[Test]
-	[Arguments("character", "general")]
-	[Arguments("Character", "general")]
-	[Arguments("character", null)]
-	[Arguments("character", "")]
-	public async Task IsCharacterProfile_CharacterNamespaceInDefaultCategory_IsTrue(string ns, string? category)
+	[Arguments("character")]
+	[Arguments("Character")]
+	[Arguments(" character ")]
+	public async Task IsCharacterProfile_CharacterNamespace_IsTrue(string ns)
 	{
-		await Assert.That(WikiRoutes.IsCharacterProfile(ns, category)).IsTrue();
-	}
-
-	/// <summary>
-	/// /character/{name} carries no category segment, so a character page filed under a
-	/// non-default category cannot round-trip through that URL and keeps its wiki path.
-	/// </summary>
-	[Test]
-	public async Task IsCharacterProfile_CharacterNamespaceInOtherCategory_IsFalse()
-	{
-		await Assert.That(WikiRoutes.IsCharacterProfile("character", "npcs")).IsFalse();
+		await Assert.That(WikiRoutes.IsCharacterProfile(ns)).IsTrue();
 	}
 
 	[Test]
 	[Arguments("main")]
 	[Arguments("help")]
 	[Arguments("system")]
-	public async Task IsCharacterProfile_OtherNamespaces_IsFalse(string ns)
+	[Arguments("category")]
+	[Arguments(null)]
+	public async Task IsCharacterProfile_OtherNamespaces_IsFalse(string? ns)
 	{
-		await Assert.That(WikiRoutes.IsCharacterProfile(ns, "general")).IsFalse();
+		await Assert.That(WikiRoutes.IsCharacterProfile(ns)).IsFalse();
 	}
 
 	[Test]
 	public async Task PathFor_CharacterProfile_UsesCharacterAlias()
 	{
-		await Assert.That(WikiRoutes.PathFor("character", "general", "mercutio"))
+		await Assert.That(WikiRoutes.PathFor("character", "mercutio"))
 			.IsEqualTo("/character/mercutio");
-	}
-
-	[Test]
-	public async Task PathFor_CharacterInOtherCategory_KeepsWikiPath()
-	{
-		await Assert.That(WikiRoutes.PathFor("character", "npcs", "mercutio"))
-			.IsEqualTo("/wiki/character/npcs/mercutio");
 	}
 
 	[Test]
 	public async Task PathFor_OrdinaryPage_UsesWikiPath()
 	{
-		await Assert.That(WikiRoutes.PathFor("help", "general", "markdown_guide"))
-			.IsEqualTo("/wiki/help/general/markdown_guide");
+		await Assert.That(WikiRoutes.PathFor("help", "markdown_guide"))
+			.IsEqualTo("/wiki/help/markdown_guide");
 	}
 
 	[Test]
-	public async Task PathFor_NormalizesNamespaceCaseAndMissingCategory()
+	public async Task PathFor_NormalizesNamespaceCase()
 	{
-		await Assert.That(WikiRoutes.PathFor("Help", null, "markdown_guide"))
-			.IsEqualTo("/wiki/help/general/markdown_guide");
+		await Assert.That(WikiRoutes.PathFor("Help", "markdown_guide"))
+			.IsEqualTo("/wiki/help/markdown_guide");
+	}
+
+	[Test]
+	public async Task PathFor_Enum_MatchesString()
+	{
+		await Assert.That(WikiRoutes.PathFor(WikiNamespace.Help, "markdown_guide"))
+			.IsEqualTo(WikiRoutes.PathFor("help", "markdown_guide"));
 	}
 
 	/// <summary>Display names reach the same path as the stored slug, per <c>WikiHelpers.Slugify</c>.</summary>
 	[Test]
 	public async Task PathFor_SlugifiesDisplayNames()
 	{
-		await Assert.That(WikiRoutes.PathFor("character", "general", "Mannaz Byron"))
+		await Assert.That(WikiRoutes.PathFor("character", "Mannaz Byron"))
 			.IsEqualTo("/character/mannaz_byron");
 	}
 
 	/// <summary>
 	/// A blank namespace must fall back to main like a null one does. Wiki markup can supply an
-	/// empty prefix (<c>[[ :Page]]</c>), and an empty segment would build <c>/wiki//general/x</c>.
+	/// empty prefix, and an empty segment would build <c>/wiki//x</c>.
 	/// </summary>
 	[Test]
 	[Arguments(null)]
@@ -83,8 +75,8 @@ public class WikiRoutesTests
 	[Arguments("   ")]
 	public async Task PathFor_BlankNamespace_FallsBackToMain(string? ns)
 	{
-		await Assert.That(WikiRoutes.PathFor(ns, "general", "page_name"))
-			.IsEqualTo("/wiki/main/general/page_name");
+		await Assert.That(WikiRoutes.PathFor(ns, "page_name"))
+			.IsEqualTo("/wiki/main/page_name");
 	}
 
 	// --- WikiPathFor: the storage route, for tooling links ------------------------------
@@ -94,15 +86,15 @@ public class WikiRoutesTests
 	[Test]
 	public async Task WikiPathFor_CharacterProfile_KeepsWikiRoute()
 	{
-		await Assert.That(WikiRoutes.WikiPathFor("character", "general", "mercutio"))
-			.IsEqualTo("/wiki/character/general/mercutio");
+		await Assert.That(WikiRoutes.WikiPathFor("character", "mercutio"))
+			.IsEqualTo("/wiki/character/mercutio");
 	}
 
 	[Test]
 	public async Task WikiPathFor_OrdinaryPage_MatchesPathFor()
 	{
-		await Assert.That(WikiRoutes.WikiPathFor("help", "general", "markdown_guide"))
-			.IsEqualTo(WikiRoutes.PathFor("help", "general", "markdown_guide"));
+		await Assert.That(WikiRoutes.WikiPathFor("help", "markdown_guide"))
+			.IsEqualTo(WikiRoutes.PathFor("help", "markdown_guide"));
 	}
 
 	/// <summary>Sub-routes appended to the tooling path must land on real routes.</summary>
@@ -112,7 +104,26 @@ public class WikiRoutesTests
 	[Arguments("diff")]
 	public async Task WikiPathFor_CharacterProfile_SupportsSubRoutes(string subRoute)
 	{
-		await Assert.That($"{WikiRoutes.WikiPathFor("character", "general", "mercutio")}/{subRoute}")
-			.IsEqualTo($"/wiki/character/general/mercutio/{subRoute}");
+		await Assert.That($"{WikiRoutes.WikiPathFor("character", "mercutio")}/{subRoute}")
+			.IsEqualTo($"/wiki/character/mercutio/{subRoute}");
+	}
+
+	// --- CategoryPath: a category's own page -----------------------------------------
+
+	[Test]
+	[Arguments("Help", "/wiki/category/help")]
+	[Arguments("Places of Note", "/wiki/category/places_of_note")]
+	[Arguments("places_of_note", "/wiki/category/places_of_note")]
+	public async Task CategoryPath_UsesCategoryKey(string category, string expected)
+	{
+		await Assert.That(WikiRoutes.CategoryPath(category)).IsEqualTo(expected);
+	}
+
+	/// <summary>A category's page is an ordinary page in the category namespace, so both routes agree.</summary>
+	[Test]
+	public async Task CategoryPath_MatchesCategoryNamespacePage()
+	{
+		await Assert.That(WikiRoutes.CategoryPath("Lore"))
+			.IsEqualTo(WikiRoutes.PathFor(WikiNamespace.Category, "lore"));
 	}
 }

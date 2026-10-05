@@ -75,7 +75,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		await Run(ilsa, $"page {wren.Name}=hello {marker}");
 		await Run(wren, $"page {ilsa.Name}=:waves {marker}");
 
-		var recall = Value(await (await As(ilsa)).ConversationRecall(Key(wren), null, CancellationToken.None));
+		var recall = Value(await (await As(ilsa)).ConversationRecall(Key(wren), null, null, CancellationToken.None));
 
 		await Assert.That(recall.Logging).IsTrue();
 		await Assert.That(recall.Lines.Count).IsEqualTo(2);
@@ -91,7 +91,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		await Assert.That(second.Id).IsGreaterThan(first.Id);
 		await Assert.That(second.Ts).IsGreaterThanOrEqualTo(first.Ts);
 
-		var wrens = Value(await (await As(wren)).ConversationRecall(Key(ilsa), null, CancellationToken.None));
+		var wrens = Value(await (await As(wren)).ConversationRecall(Key(ilsa), null, null, CancellationToken.None));
 		await Assert.That(wrens.Lines.Select(line => line.Id)).IsEquivalentTo(recall.Lines.Select(line => line.Id))
 			.Because("each side reads their own copy of the same pages");
 	}
@@ -107,9 +107,34 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 			await Run(ilsa, $"page {wren.Name}=line {i}");
 		}
 
-		var recall = Value(await (await As(wren)).ConversationRecall(Key(ilsa), 2, CancellationToken.None));
+		var recall = Value(await (await As(wren)).ConversationRecall(Key(ilsa), 2, null, CancellationToken.None));
 
 		await Assert.That(recall.Lines.Select(line => line.Text)).IsEquivalentTo(new[] { "line 2", "line 3" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// With a read marker's id, recall reaches back past the lines asked for to the first page after it, so a
+	/// character moving to another machine gets every page they missed.
+	/// </summary>
+	[Test]
+	public async Task Recall_ReachesBackToThePageAfterTheMarker()
+	{
+		var ilsa = await PlayerAsync("PageLogAfterIlsa");
+		var wren = await PlayerAsync("PageLogAfterWren");
+		using var _ = PageLog(on: true);
+		for (var i = 0; i < 5; i++)
+		{
+			await Run(ilsa, $"page {wren.Name}=line {i}");
+		}
+
+		var controller = await As(wren);
+		var all = Value(await controller.ConversationRecall(Key(ilsa), null, null, CancellationToken.None)).Lines;
+		var seen = all.Single(line => line.Text == "line 1").Id;
+
+		var missed = Value(await controller.ConversationRecall(Key(ilsa), 2, seen, CancellationToken.None));
+
+		await Assert.That(missed.Lines.Select(line => line.Text)).IsEquivalentTo(new[] { "line 2", "line 3", "line 4" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -124,9 +149,9 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		await Run(ilsa, $"page {wren.Name} {tomas.Name}=all of us");
 
 		var controller = await As(tomas);
-		var reversed = Value(await controller.ConversationRecall(Key(wren, ilsa), null, CancellationToken.None));
-		var withSelf = Value(await controller.ConversationRecall(Key(tomas, ilsa, wren), null, CancellationToken.None));
-		var pair = Value(await controller.ConversationRecall(Key(ilsa), null, CancellationToken.None));
+		var reversed = Value(await controller.ConversationRecall(Key(wren, ilsa), null, null, CancellationToken.None));
+		var withSelf = Value(await controller.ConversationRecall(Key(tomas, ilsa, wren), null, null, CancellationToken.None));
+		var pair = Value(await controller.ConversationRecall(Key(ilsa), null, null, CancellationToken.None));
 
 		await Assert.That(reversed.Lines.Single().Text).IsEqualTo("all of us");
 		await Assert.That(withSelf.Lines.Single().Text).IsEqualTo("all of us");
@@ -144,7 +169,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		await Run(tomas, $"page {ilsa.Name}=second");
 
 		var list = Value(await (await As(ilsa)).Conversations(CancellationToken.None));
-		var latest = Value(await (await As(ilsa)).ConversationRecall(Key(tomas), null, CancellationToken.None)).Lines.Single();
+		var latest = Value(await (await As(ilsa)).ConversationRecall(Key(tomas), null, null, CancellationToken.None)).Lines.Single();
 
 		await Assert.That(list.Character).IsEqualTo(ilsa.Objid);
 		await Assert.That(list.Logging).IsTrue();
@@ -172,7 +197,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		using var _ = PageLog(on: false);
 		await Run(ilsa, $"page {wren.Name}=while off");
 		var controller = await As(wren);
-		var recall = Value(await controller.ConversationRecall(Key(ilsa), null, CancellationToken.None));
+		var recall = Value(await controller.ConversationRecall(Key(ilsa), null, null, CancellationToken.None));
 		var list = Value(await controller.Conversations(CancellationToken.None));
 
 		await Assert.That(recall.Logging).IsFalse();
@@ -182,7 +207,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 
 		using (PageLog(on: true))
 		{
-			var kept = Value(await controller.ConversationRecall(Key(ilsa), null, CancellationToken.None));
+			var kept = Value(await controller.ConversationRecall(Key(ilsa), null, null, CancellationToken.None));
 			await Assert.That(kept.Lines.Select(line => line.Text)).IsEquivalentTo(new[] { "while on" })
 				.Because("the page sent while the option was off was never kept");
 		}
@@ -208,7 +233,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 			var controller = await As(snoop);
 			foreach (var key in new[] { Key(ilsa), Key(wren), Key(ilsa, wren) })
 			{
-				var recall = Value(await controller.ConversationRecall(key, null, CancellationToken.None));
+				var recall = Value(await controller.ConversationRecall(key, null, null, CancellationToken.None));
 				await Assert.That(recall.Lines).IsEmpty().Because($"{snoop.Name} is in no page with {key}");
 			}
 
@@ -225,7 +250,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		var ilsa = await PlayerAsync("PageLogBadKey");
 		using var _ = PageLog(on: true);
 
-		var result = await (await As(ilsa)).ConversationRecall(key, null, CancellationToken.None);
+		var result = await (await As(ilsa)).ConversationRecall(key, null, null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status400BadRequest);
 	}
@@ -237,7 +262,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 
 		await Assert.That(Status(await controller.Conversations(CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
-		await Assert.That(Status(await controller.ConversationRecall("#1:1", null, CancellationToken.None)))
+		await Assert.That(Status(await controller.ConversationRecall("#1:1", null, null, CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
 	}
 
@@ -274,7 +299,7 @@ public class PageLogApiTests(ServerWebAppFactory factory)
 		using var _ = PageLog(on: true);
 		await Run(wren, $"page {ilsa.Name}=read me");
 		var controller = await As(ilsa);
-		var line = Value(await controller.ConversationRecall(Key(wren), null, CancellationToken.None)).Lines.Single();
+		var line = Value(await controller.ConversationRecall(Key(wren), null, null, CancellationToken.None)).Lines.Single();
 
 		var marked = Value(await controller.MarkConversation(
 			new ConversationReadMarkerUpdate([wren.Objid], line.Id, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts)),

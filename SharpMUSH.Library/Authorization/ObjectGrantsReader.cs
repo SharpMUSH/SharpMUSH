@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// Reads what <see cref="ObjectGrants.For"/> needs from storage: the world's roles, the object's own
+/// Reads what <see cref="ObjectGrants.For"/> needs from storage: the world's roles and custom permissions, the object's own
 /// roles and overrides, and, for a character linked to an active account, the account's. Shared by the
 /// cached query behind <see cref="SharpObject.Grants"/> and by a provider with no host cache to ask.
 /// </summary>
@@ -35,6 +35,7 @@ public static class ObjectGrantsReader
 				await roles.GetAccountOverridesAsync(accountId, cancellationToken));
 		}
 
-		return ObjectGrants.For(number, isPlayer, all, objectRoles, objectOverrides, account);
+		return ObjectGrants.For(number, isPlayer, all, objectRoles, objectOverrides, account,
+			await roles.GetCustomPermissionsAsync(cancellationToken));
 	}
 }
