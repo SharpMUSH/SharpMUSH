@@ -168,6 +168,11 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
 										 + (items[i].block.LinesBefore?.Count ?? 0);
+			// Pipe tables keep no trivia, but a table always stands apart from its neighbours in the source.
+			if (blankLines == 0 && (items[i - 1].block is Table || items[i].block is Table))
+			{
+				blankLines = 1;
+			}
 			var delimiter = "\n" + new string('\n', blankLines);
 			result.Add(MarkupText.Plain(delimiter));
 			result.Add(items[i].rendered);

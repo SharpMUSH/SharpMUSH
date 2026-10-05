@@ -1,4 +1,5 @@
 using Markdig;
+using Markdig.Extensions.Tables;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -33,6 +34,9 @@ public static class HelpHtmlRenderer
 
 	private static readonly MarkdownPipeline Pipeline =
 		RecursiveMarkdownHelper.ConfigureHelpSyntax(new MarkdownPipelineBuilder()).Build();
+
+	/// <summary>The class a header-less table gets: a list of names in columns, drawn without borders.</summary>
+	public const string ListTableClass = "help-list";
 
 	/// <summary>The class a paragraph laid out in columns of spaces gets, so the portal sets it monospaced.</summary>
 	public const string AlignedClass = "help-aligned";
@@ -72,6 +76,11 @@ public static class HelpHtmlRenderer
 			}
 		}
 
+		foreach (var table in document.Descendants<Table>().ToList())
+		{
+			MarkHeaderlessList(table);
+		}
+
 		foreach (var paragraph in document.Descendants<ParagraphBlock>().ToList())
 		{
 			KeepTerminalSpacing(paragraph);
@@ -98,6 +107,26 @@ public static class HelpHtmlRenderer
 			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
 				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>")) + "</ul></nav>";
 		return toc + writer;
+	}
+
+	/// <summary>
+	/// A table whose header cells are all empty is a list laid out in columns, such as the topic index.
+	/// The terminal prints it without borders or a header line (<see cref="RecursiveMarkdownRenderer"/>),
+	/// so the empty header row is dropped here and the table marked <see cref="ListTableClass"/>.
+	/// </summary>
+	private static void MarkHeaderlessList(Table table)
+	{
+		var headers = table.OfType<TableRow>().Where(row => row.IsHeader).ToList();
+		if (headers.Count == 0 || headers.SelectMany(row => row.OfType<TableCell>())
+			.Any(cell => cell.Descendants<ParagraphBlock>().Any(paragraph => paragraph.Inline?.FirstChild is not null)))
+		{
+			return;
+		}
+		foreach (var header in headers)
+		{
+			table.Remove(header);
+		}
+		table.GetAttributes().AddClass(ListTableClass);
 	}
 
 	/// <summary>

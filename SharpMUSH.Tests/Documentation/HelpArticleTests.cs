@@ -178,4 +178,22 @@ public class HelpArticleTests
 			await Assert.That(line[^1]).IsEqualTo('|');
 		}
 	}
+
+	private const string TopicList = "Topics:\n\n|     |     |\n|-----|-----|\n| [newbie] | [ZONES] |\n\nAfter.";
+
+	[Test]
+	public async Task TerminalTopicListsNameTheTopicsBare()
+	{
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(TopicList).ToPlainText())
+			.IsEqualTo("Topics:\n\nnewbie  ZONES\n\nAfter.");
+	}
+
+	[Test]
+	public async Task WebTopicListsDropTheEmptyHeader()
+	{
+		var html = HelpHtmlRenderer.RenderToHtml(TopicList, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<table class=\"help-list\">");
+		await Assert.That(html).DoesNotContain("<thead>");
+		await Assert.That(html).Contains("<a href=\"/help/newbie\">newbie</a>");
+	}
 }

@@ -57,6 +57,14 @@
     border: 1px solid var(--border-soft);
 }
 
+/* A header-less table is a list of names in columns (the topic index); the terminal prints it bare. */
+.help-entry ::deep table.help-list td {
+    padding: 0.125rem 1.5rem 0.125rem 0;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+
 .help-ambiguous {
     margin: 0 0 0.75rem;
     font-size: 0.875rem;

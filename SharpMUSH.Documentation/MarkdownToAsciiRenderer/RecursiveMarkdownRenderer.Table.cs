@@ -42,8 +42,13 @@ public partial class RecursiveMarkdownRenderer
 		if (hasEmptyHeaders)
 		{
 			const int BORDERLESS_SEP_WIDTH = 2;
-			var borderlessWidths = ComputeColumnWidths(
-				cellsByRow, columnCount, _maxWidth - (columnCount - 1) * BORDERLESS_SEP_WIDTH);
+			// A list keeps its columns as narrow as their names, like PennMUSH's topic lists; only one
+			// too wide for the line is squeezed to fit.
+			var naturalWidths = NaturalColumnWidths(cellsByRow, columnCount);
+			var borderlessWidth = _maxWidth - (columnCount - 1) * BORDERLESS_SEP_WIDTH;
+			var borderlessWidths = naturalWidths.Sum() <= borderlessWidth
+				? naturalWidths
+				: FitColumnWidths(naturalWidths, borderlessWidth);
 
 			var borderlessSpecs = new StringBuilder();
 			for (var col = 0; col < columnCount; col++)

@@ -3,7 +3,7 @@ Help is available for the following MUSH commands:
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|  
-| [@chat]          | [:]          | ["]          | [:]          | [@emit]]         |
+| [@chat]          | [:]          | ["]          | [:]          | [@emit]          |
 | [ahelp]      | [ahelp]      | [brief]      | [who]      | [drop]       |
 | [enter]      | [EVENTS]     | [examine]    | [follow]     | [get]        |
 | [give]       | [go]         | [index]      | [leave]      | [look]       |

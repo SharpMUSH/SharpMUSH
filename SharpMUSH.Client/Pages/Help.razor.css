@@ -108,6 +108,14 @@
 	max-width: 100%;
 }
 
+/* A header-less table is a list of names in columns (the topic index); the terminal prints it bare. */
+.help-entry ::deep table.help-list td {
+	padding: 0.125rem 1.5rem 0.125rem 0;
+	border: none;
+	font-family: var(--font-mono);
+	font-size: 0.8125rem;
+}
+
 /* narrow: the card header's filter takes the full width it has, and the entry keeps less padding */
 @container page (max-width: 48rem) {
 	.help-page {
