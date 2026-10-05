@@ -6,6 +6,7 @@ namespace SharpMUSH.Library.Models;
 /// Stored as system data with the roles.
 /// </summary>
 /// <param name="Scope">The name, lowercase (see <see cref="Authorization.CustomPermissions.IsValidName"/>).</param>
+/// <param name="Category">What it is grouped under on the portal's Roles page (<see cref="Authorization.Categories"/>).</param>
 /// <param name="Description">What holding it lets someone do, shown beside it in lists.</param>
 /// <param name="CreatedAt">Creation time (unix ms).</param>
-public sealed record CustomPermission(string Scope, string Description, long CreatedAt);
+public sealed record CustomPermission(string Scope, string Category, string Description, long CreatedAt);

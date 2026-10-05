@@ -3230,10 +3230,6 @@
     <value>Berechtigungen</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Eigene</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Was sie erlaubt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Eine Kategorie ist erforderlich.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

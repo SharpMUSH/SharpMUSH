@@ -4,6 +4,7 @@ namespace SharpMUSH.Database.Lightning.Records;
 public sealed record CustomPermissionRecord
 {
 	public string Scope { get; init; } = "";
+	public string Category { get; init; } = "";
 	public string Description { get; init; } = "";
 	public long CreatedAt { get; init; }
 }

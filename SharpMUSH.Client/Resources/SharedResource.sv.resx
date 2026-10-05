@@ -3230,10 +3230,6 @@
     <value>Behörigheter</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Egna</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Egna behörigheter är sådana som ditt spel definierar för sin egen softcode, till exempel scene.close. Tillåt en i en roll som vilken behörighet som helst; softcode kontrollerar den med permission(%#,scene.close) eller ett PERM^scene.close-lås. I spelet: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Vad den låter någon göra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>En kategori krävs.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

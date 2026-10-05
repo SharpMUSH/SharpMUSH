@@ -1897,10 +1897,6 @@
     <value>Permissions</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Personnalisées</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Les permissions personnalisées sont celles que votre jeu définit pour son propre softcode, comme scene.close. Autorisez-en une sur un rôle comme toute autre permission ; le softcode la vérifie avec permission(%#,scene.close) ou un verrou PERM^scene.close. En jeu : @role/define.</value>
     <comment>MT</comment>
@@ -1911,6 +1907,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Ce qu'elle permet de faire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Une catégorie est requise.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

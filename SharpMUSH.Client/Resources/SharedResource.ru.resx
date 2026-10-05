@@ -3230,10 +3230,6 @@
     <value>Разрешения</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Пользовательские</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Что оно позволяет</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Требуется категория.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

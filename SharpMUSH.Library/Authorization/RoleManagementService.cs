@@ -37,6 +37,7 @@ public union RoleActor(CapabilityActor, AnySharpObject);
 public sealed record RoleDraft(
 	string Slug,
 	string Name,
+	string Category,
 	string? Color,
 	int Priority,
 	IReadOnlyDictionary<string, PermissionState> Permissions);
@@ -47,6 +48,7 @@ public sealed record RoleDraft(
 /// apply the same rules (<see cref="RoleHierarchy"/>):
 /// <list type="bullet">
 /// <item>Every change needs <see cref="PortalPermission.RolesAdmin"/>.</item>
+/// <item>Every role and custom permission has a category (<see cref="Categories"/>).</item>
 /// <item>A role can be created, edited, deleted, assigned or removed only when it sits below the
 /// actor's highest role, and only an account or object whose highest role is below the actor's can
 /// have its roles or overrides changed.</item>
@@ -95,11 +97,11 @@ public interface IRoleManagementService
 	Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
 
 	/// <summary>
-	/// Defines a custom permission (<see cref="CustomPermission"/>), or changes its description. Needs
-	/// <see cref="PortalPermission.RolesAdmin"/>; defining one grants it to nobody but the owner and
-	/// <c>administrator</c> holders.
+	/// Defines a custom permission (<see cref="CustomPermission"/>), or changes its category and
+	/// description. Needs <see cref="PortalPermission.RolesAdmin"/>; defining one grants it to nobody but
+	/// the owner and <c>administrator</c> holders.
 	/// </summary>
-	Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string description, CancellationToken ct = default);
+	Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string category, string description, CancellationToken ct = default);
 
 	/// <summary>
 	/// Removes a custom permission and every setting of it on roles, accounts and objects. Needs
@@ -162,7 +164,7 @@ public sealed partial class RoleManagementService(
 			return new Success();
 		}, ct);
 
-	public Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string description, CancellationToken ct = default)
+	public Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string category, string description, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
 			var name = scope.Trim().ToLowerInvariant();
@@ -170,13 +172,15 @@ public sealed partial class RoleManagementService(
 				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, PortalPermission.IsKnown(name)
 					? $"{name} is a built-in permission."
 					: $"A custom permission is two or more parts joined by '.', each of lowercase letters, digits or '_', such as scene.close; at most {CustomPermissions.MaxNameLength} characters, and not under {string.Join(", ", CustomPermissions.ReservedPrefixes)}.");
+			if (Categories.Normalize(category) is not { } group)
+				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, Categories.Rule);
 			var text = description.Trim();
 			if (text.Length > MaxDescriptionLength)
 				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, $"A description is at most {MaxDescriptionLength} characters.");
 			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
 
 			var existing = (await registry.GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == name);
-			var permission = new CustomPermission(name, text, existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			var permission = new CustomPermission(name, group, text, existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 			await registry.UpsertCustomPermissionAsync(permission);
 			await mediator.Send(new InvalidateGrantsCommand(null), ct);
 			return permission;
@@ -410,6 +414,8 @@ public sealed partial class RoleManagementService(
 		var slug = draft.Slug.Trim();
 		if (!SlugPattern().IsMatch(slug))
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role name is 1 to 32 lowercase letters, digits, '-' or '_'.");
+		if (Categories.Normalize(draft.Category) is not { } category)
+			return Refuse<SharpRole>(RoleRefusalKind.Invalid, Categories.Rule);
 		var color = string.IsNullOrWhiteSpace(draft.Color) ? null : draft.Color.Trim();
 		if (color is not null && !ColorPattern().IsMatch(color))
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role colour is a hex colour such as #5aa9ff.");
@@ -444,6 +450,7 @@ public sealed partial class RoleManagementService(
 			Id = existing?.Id,
 			Slug = slug,
 			Name = name.Length > 0 ? name : existing?.Name ?? slug,
+			Category = category,
 			Color = color,
 			Priority = draft.Priority,
 			IsSystem = existing?.IsSystem ?? false,

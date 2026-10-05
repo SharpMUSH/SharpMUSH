@@ -3230,10 +3230,6 @@
     <value>Dopuštenja</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Vlastita</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Što omogućuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategorija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategorija je obavezna.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

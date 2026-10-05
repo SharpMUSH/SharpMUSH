@@ -3230,10 +3230,6 @@
     <value>Разрешения</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Собствени</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Собствените разрешения са тези, които играта определя за собствения си софткод, например scene.close. Разрешете го в роля като всяко друго разрешение; софткодът го проверява с permission(%#,scene.close) или ключалка PERM^scene.close. В играта: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Какво позволява</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Изисква се категория.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

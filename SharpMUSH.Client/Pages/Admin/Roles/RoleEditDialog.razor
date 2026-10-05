@@ -17,6 +17,9 @@
                     <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_category" Label="@Loc["RolCategoryLabel"]" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
                                   HelperText="@Loc["RolColorHelper"]" />
                 </MudItem>
@@ -48,6 +51,7 @@
     private bool _saving;
     private string _slug = "";
     private string _name = "";
+    private string _category = "";
     private string _color = "#6cde9a";
     private int _priority;
 
@@ -58,6 +62,7 @@
         {
             _slug = Existing.Slug;
             _name = Existing.Name;
+            _category = Existing.Category;
             _color = Existing.Color;
             _priority = Existing.Priority;
         }
@@ -73,10 +78,17 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(_category))
+        {
+            Snackbar.Add(Loc["RolCategoryRequired"], Severity.Warning);
+            return;
+        }
+
         _saving = true;
         var model = new PortalRoleModel(
             _slug.Trim(),
             _name.Trim(),
+            _category.Trim(),
             string.IsNullOrWhiteSpace(_color) ? "#6cde9a" : _color.Trim(),
             _priority,
             IsSystem: false,

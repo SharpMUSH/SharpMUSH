@@ -40,6 +40,7 @@ public class RolesController(
 	public record RoleDto(
 		string Slug,
 		string Name,
+		string Category,
 		string? Color,
 		int Priority,
 		bool IsSystem,
@@ -57,7 +58,7 @@ public class RolesController(
 
 	public record OverrideDto(string Scope, string State);
 
-	public record CustomPermissionDto(string Scope, string Description);
+	public record CustomPermissionDto(string Scope, string Category, string Description);
 
 	[HttpGet("effective")]
 	public async Task<IActionResult> Effective()
@@ -89,7 +90,7 @@ public class RolesController(
 			permissions[scope] = state;
 		}
 
-		var draft = new RoleDraft(dto.Slug ?? string.Empty, dto.Name ?? string.Empty, dto.Color, dto.Priority, permissions);
+		var draft = new RoleDraft(dto.Slug ?? string.Empty, dto.Name ?? string.Empty, dto.Category ?? string.Empty, dto.Color, dto.Priority, permissions);
 		return await management.SaveRoleAsync(actor, draft, HttpContext.RequestAborted) switch
 		{
 			SharpRole role => Ok(ToDto(role)),
@@ -181,7 +182,7 @@ public class RolesController(
 	public async Task<IActionResult> DefinePermission([FromBody] CustomPermissionDto dto)
 	{
 		if (Actor() is not { } actor) return Forbid();
-		return await management.DefinePermissionAsync(actor, dto.Scope ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		return await management.DefinePermissionAsync(actor, dto.Scope ?? string.Empty, dto.Category ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
 		{
 			CustomPermission permission => Ok(permission),
 			RoleRefusal refusal => Refused(refusal)
@@ -214,6 +215,7 @@ public class RolesController(
 	private static RoleDto ToDto(SharpRole role) => new(
 		role.Slug,
 		role.Name,
+		role.Category,
 		role.Color,
 		role.Priority,
 		role.IsSystem,

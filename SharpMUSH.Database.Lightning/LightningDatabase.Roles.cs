@@ -22,6 +22,7 @@ public partial class LightningDatabase
 	{
 		Slug = role.Slug,
 		Name = role.Name,
+		Category = role.Category,
 		Color = role.Color,
 		Priority = role.Priority,
 		IsSystem = role.IsSystem,
@@ -35,6 +36,7 @@ public partial class LightningDatabase
 		Id = $"node_roles/{r.Slug}",
 		Slug = r.Slug,
 		Name = r.Name,
+		Category = r.Category,
 		Color = r.Color,
 		Priority = r.Priority,
 		IsSystem = r.IsSystem,
@@ -203,7 +205,7 @@ public partial class LightningDatabase
 		cancellationToken.ThrowIfCancellationRequested();
 		var permissions = Store.Read(tx => tx.Range(Tables.CustomPermission, [])
 			.Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value))
-			.Select(r => new CustomPermission(r.Scope, r.Description, r.CreatedAt))
+			.Select(r => new CustomPermission(r.Scope, r.Category, r.Description, r.CreatedAt))
 			.OrderBy(p => p.Scope, StringComparer.Ordinal)
 			.ToList());
 		return Task.FromResult<IReadOnlyList<CustomPermission>>(permissions);
@@ -213,6 +215,7 @@ public partial class LightningDatabase
 		=> await Store.WriteAsync(tx => tx.Put(Tables.CustomPermission, Keys.Str(permission.Scope), Codec.Serialize(new CustomPermissionRecord
 		{
 			Scope = permission.Scope,
+			Category = permission.Category,
 			Description = permission.Description,
 			CreatedAt = permission.CreatedAt
 		})));

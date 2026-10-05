@@ -103,7 +103,7 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	public async Task RoleThatAllowsAPowerGivesItToEveryHolder()
 	{
 		var slug = "r" + Guid.NewGuid().ToString("N")[..12];
-		await As($"@role/create {slug}");
+		await As($"@role/create {slug}=Staff");
 		await As($"@role/allow {slug}=game.see_all");
 		await As($"@role/assign {Target}={slug}");
 		await Assert.That(await AsWizard($"haspower({Target},See_All)")).IsEqualTo("1");

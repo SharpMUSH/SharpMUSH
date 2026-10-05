@@ -3230,10 +3230,6 @@
     <value>Permisiuni</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Personalizate</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Permisiunile personalizate sunt cele pe care jocul le definește pentru propriul softcode, de exemplu scene.close. Permiteți una într-un rol ca pe orice altă permisiune; softcode-ul o verifică cu permission(%#,scene.close) sau un lacăt PERM^scene.close. În joc: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Ce permite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Este necesară o categorie.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

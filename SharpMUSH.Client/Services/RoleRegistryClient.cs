@@ -101,15 +101,15 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 		}
 	}
 
-	/// <summary>Defines a custom permission, or changes its description.</summary>
-	public Task<ApiResult<Success>> DefinePermissionAsync(string scope, string description) =>
-		Client.PutApiAsync("api/roles/permissions", new CustomPermissionRequest(scope, description));
+	/// <summary>Defines a custom permission, or changes its category and description.</summary>
+	public Task<ApiResult<Success>> DefinePermissionAsync(string scope, string category, string description) =>
+		Client.PutApiAsync("api/roles/permissions", new CustomPermissionRequest(scope, category, description));
 
 	/// <summary>Removes a custom permission and every setting of it.</summary>
 	public Task<ApiResult<Success>> RemovePermissionAsync(string scope) =>
 		Client.DeleteApiAsync($"api/roles/permissions/{Uri.EscapeDataString(scope)}");
 
-	private sealed record CustomPermissionRequest(string Scope, string Description);
+	private sealed record CustomPermissionRequest(string Scope, string Category, string Description);
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 }

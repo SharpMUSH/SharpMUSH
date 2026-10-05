@@ -2901,9 +2901,6 @@
   <data name="RolTabPermissions" xml:space="preserve">
     <value>Permissions</value>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Custom</value>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Custom permissions are ones your game defines for its own softcode to check, such as scene.close. Once defined, allow one on a role like any other permission; softcode asks permission(%#,scene.close) or locks with PERM^scene.close. In game: @role/define.</value>
   </data>
@@ -2912,6 +2909,12 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>What it lets someone do</value>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>A category is required.</value>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Define</value>

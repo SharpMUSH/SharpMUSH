@@ -3230,10 +3230,6 @@
     <value>Jogosultságok</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Egyéni</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Az egyéni jogosultságokat a játék a saját softcode-ja számára határozza meg, például scene.close. Engedélyezze egy szerepkörön, mint bármely más jogosultságot; a softcode a permission(%#,scene.close) függvénnyel vagy PERM^scene.close zárral ellenőrzi. Játékban: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Mit tesz lehetővé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategória</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategória megadása kötelező.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

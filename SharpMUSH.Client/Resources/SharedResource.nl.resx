@@ -3230,10 +3230,6 @@
     <value>Rechten</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Eigen</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Wat het iemand laat doen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Een categorie is verplicht.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

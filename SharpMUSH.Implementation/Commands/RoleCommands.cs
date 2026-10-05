@@ -14,14 +14,14 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	private static readonly string[] RoleOperations =
-		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE"];
+		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "CATEGORY"];
 
 	/// <summary>
 	/// <c>@role</c>: list, inspect and manage roles, who holds them, and per-object or per-account
 	/// overrides. Every change goes through <see cref="IRoleManagementService"/>, the same rules the
 	/// portal applies, with the executor as the actor: an object needs no account to manage roles.
 	/// </summary>
-	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "OBJECT", "ACCOUNT"],
+	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "CATEGORY", "OBJECT", "ACCOUNT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["role or object", "value"])]
 	public async ValueTask<Option<CallState>> Role(IMUSHCodeParser parser, SharpCommandAttribute _)
@@ -71,9 +71,10 @@ public partial class Commands
 	{
 		var roles = await RoleRegistry(parser).GetRolesAsync(ExecutionBudget.CurrentToken);
 		var slugWidth = Math.Max(4, roles.Max(r => r.Slug.Length));
+		var categoryWidth = Math.Max(8, roles.Max(r => r.Category.Length));
 		var output = new StringBuilder("Roles, highest first:");
 		foreach (var role in roles)
-			output.Append($"\n{role.Priority,4}  {role.Slug.PadRight(slugWidth)}  {role.Name}{(role.IsSystem ? "  (system)" : "")}");
+			output.Append($"\n{role.Priority,4}  {role.Slug.PadRight(slugWidth)}  {role.Category.PadRight(categoryWidth)}  {role.Name}{(role.IsSystem ? "  (system)" : "")}");
 		return output.ToString();
 	}
 
@@ -81,7 +82,7 @@ public partial class Commands
 	{
 		if (await RoleRegistry(parser).GetRoleAsync(slug, ExecutionBudget.CurrentToken) is not SharpRole role)
 			return $"No role named '{slug}'. See @role/list.";
-		var output = new StringBuilder($"Role: {role.Name} ({role.Slug})  Priority: {role.Priority}");
+		var output = new StringBuilder($"Role: {role.Name} ({role.Slug})  Category: {role.Category}  Priority: {role.Priority}");
 		if (role.Color is not null) output.Append($"  Colour: {role.Color}");
 		if (role.IsSystem) output.Append(role.Slug switch
 		{
@@ -107,9 +108,13 @@ public partial class Commands
 		}
 
 		var custom = await RoleRegistry(parser).GetCustomPermissionsAsync(ExecutionBudget.CurrentToken);
-		output.Append(custom.Count == 0 ? "\nCustom permissions: none. Add one with @role/define." : "\nCustom permissions:");
-		foreach (var permission in custom)
-			output.Append($"\n  {permission.Scope}{(permission.Description.Length > 0 ? "  " + permission.Description : "")}");
+		output.Append(custom.Count == 0 ? "\nCustom permissions: none. Add one with @role/define." : "\nCustom permissions, by category:");
+		foreach (var category in custom.GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+		{
+			output.Append($"\n {category.Key}");
+			foreach (var permission in category)
+				output.Append($"\n  {permission.Scope}{(permission.Description.Length > 0 ? "  " + permission.Description : "")}");
+		}
 		return output.ToString();
 	}
 
@@ -157,7 +162,7 @@ public partial class Commands
 		RoleHolder holder, string left, string right, bool hasRight)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		if (left.Length == 0 || (operation is not ("DELETE" or "CREATE" or "DEFINE" or "UNDEFINE") && !hasRight))
+		if (left.Length == 0 || (operation is not ("DELETE" or "UNDEFINE") && !hasRight))
 			return $"Usage: @role/{operation.ToLowerInvariant()} {RoleUsage(operation)}. See help @role.";
 		var management = parser.ServiceProvider.GetRequiredService<IRoleManagementService>();
 		RoleActor actor = executor;
@@ -165,17 +170,33 @@ public partial class Commands
 		switch (operation)
 		{
 			case "CREATE":
+				var (category, name) = CategoryAndRest(right);
 				return Done(await management.SaveRoleAsync(actor,
-					new RoleDraft(left.ToLowerInvariant(), hasRight ? right : left, null, 1, new Dictionary<string, PermissionState>()), ct),
-					role => $"Role {role.Name} ({role.Slug}) created at priority {role.Priority}. Set what it allows with @role/allow.");
+					new RoleDraft(left.ToLowerInvariant(), name.Length > 0 ? name : left, category, null, 1, new Dictionary<string, PermissionState>()), ct),
+					role => $"Role {role.Name} ({role.Slug}) created in {role.Category} at priority {role.Priority}. Set what it allows with @role/allow.");
 			case "DELETE":
 				return Done(await management.DeleteRoleAsync(actor, left, ct), _ => $"Role {left} deleted.");
 			case "DEFINE":
-				return await management.DefinePermissionAsync(actor, left, right, ct) switch
+				var (group, description) = CategoryAndRest(right);
+				return await management.DefinePermissionAsync(actor, left, group, description, ct) switch
 				{
-					CustomPermission permission => $"Permission {permission.Scope} defined. Allow it on a role with @role/allow <role>={permission.Scope}.",
+					CustomPermission permission => $"Permission {permission.Scope} defined in {permission.Category}. Allow it on a role with @role/allow <role>={permission.Scope}.",
 					RoleRefusal refusal => refusal.Message
 				};
+			case "CATEGORY" when left.Contains('.'):
+				var scope = left.ToLowerInvariant();
+				if ((await RoleRegistry(parser).GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == scope) is not { } defined)
+					return PortalPermission.IsKnown(scope)
+						? $"{scope} is a built-in permission; its group is fixed."
+						: $"No custom permission named '{scope}'. See @role/scopes.";
+				return await management.DefinePermissionAsync(actor, scope, right, defined.Description, ct) switch
+				{
+					CustomPermission permission => $"Permission {permission.Scope} is now in {permission.Category}.",
+					RoleRefusal refusal => refusal.Message
+				};
+			case "CATEGORY":
+				return Done(await management.EditRoleAsync(actor, left, role => Draft(role) with { Category = right }, ct),
+					role => $"Role {role.Name} is now in {role.Category}.");
 			case "UNDEFINE":
 				return Done(await management.RemovePermissionAsync(actor, left, ct),
 					_ => $"Permission {left.ToLowerInvariant()} removed, with every role and override that set it.");
@@ -267,7 +288,14 @@ public partial class Commands
 	private static IAdministrativeCapabilityService Capabilities(IMUSHCodeParser parser)
 		=> parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>();
 
-	private static RoleDraft Draft(SharpRole role) => new(role.Slug, role.Name, role.Color, role.Priority, role.Permissions);
+	private static RoleDraft Draft(SharpRole role) => new(role.Slug, role.Name, role.Category, role.Color, role.Priority, role.Permissions);
+
+	/// <summary><c>&lt;category&gt;[/&lt;rest&gt;]</c>: the category, then everything after the first <c>/</c>.</summary>
+	private static (string Category, string Remainder) CategoryAndRest(string value)
+	{
+		var slash = value.IndexOf('/');
+		return slash < 0 ? (value.Trim(), "") : (value[..slash].Trim(), value[(slash + 1)..].Trim());
+	}
 
 	private static string Done(RoleOutcome<SharpRole> outcome, Func<SharpRole, string> success) => outcome switch
 	{
@@ -295,8 +323,9 @@ public partial class Commands
 		"PRIORITY" => "<role>=<number>",
 		"ALLOW" or "DENY" or "CLEAR" => "[/object|/account] <role, object or player>=<permission> [<permission> ...]",
 		"ASSIGN" or "UNASSIGN" => "[/account] <object>=<role>",
-		"CREATE" => "<role>[=<display name>]",
-		"DEFINE" => "<permission>[=<description>]",
+		"CREATE" => "<role>=<category>[/<display name>]",
+		"DEFINE" => "<permission>=<category>[/<description>]",
+		"CATEGORY" => "<role or custom permission>=<category>",
 		"UNDEFINE" => "<permission>",
 		_ => "<role>"
 	};

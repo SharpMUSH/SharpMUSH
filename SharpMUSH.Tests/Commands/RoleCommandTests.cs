@@ -62,7 +62,7 @@ public class RoleCommandTests : ServerTestBase
 	[Test]
 	public async Task WizardCreatesAllowsAndAssignsARole()
 	{
-		await Assert.That(await As(_wizard, $"@role/create {_slug}=Storyteller")).Contains("created");
+		await Assert.That(await As(_wizard, $"@role/create {_slug}=Staff/Storyteller")).Contains("created");
 		await Assert.That(await As(_wizard, $"@role/priority {_slug}=14")).Contains("priority 14");
 		await Assert.That(await As(_wizard, $"@role/allow {_slug}=wiki.delete")).Contains("allows wiki.delete");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("0");
@@ -114,7 +114,7 @@ public class RoleCommandTests : ServerTestBase
 	[Test]
 	public async Task WizardCannotRaiseARoleToItsOwnRank()
 	{
-		await As(_wizard, $"@role/create {_slug}");
+		await As(_wizard, $"@role/create {_slug}=Staff");
 		await Assert.That(await As(_wizard, $"@role/priority {_slug}=30")).Contains("not below your highest role");
 		await Assert.That(await As(_wizard, $"@role/allow {_slug}=server.admin")).Contains("do not hold");
 		await As(_wizard, $"@role/delete {_slug}");

@@ -37,7 +37,10 @@
                 {
                     <div class="ra-empty-list">@Loc["RolNoRolesDefined"]</div>
                 }
-                @foreach (var role in SortedRoles)
+                @foreach (var category in RoleCategories)
+                {
+                <div class="ra-list-group">@category.Key</div>
+                @foreach (var role in category)
                 {
                     var r = role;
                     var on = List.IsSelected(r);
@@ -53,6 +56,7 @@
                         }
                         <span class="ra-prio">@r.Priority</span>
                     </button>
+                }
                 }
             </div>
 
@@ -89,6 +93,17 @@
                             <input class="ra-input" type="text" value="@_editName"
                                    @oninput="@(e => _editName = e.Value?.ToString() ?? string.Empty)" />
                         </div>
+                        <div class="ra-field">
+                            <div class="ra-field-label">@Loc["RolCategoryLabel"]</div>
+                            <input class="ra-input" type="text" value="@_editCategory" list="ra-role-categories"
+                                   @oninput="@(e => _editCategory = e.Value?.ToString() ?? string.Empty)" />
+                            <datalist id="ra-role-categories">
+                                @foreach (var category in RoleCategories)
+                                {
+                                    <option value="@category.Key"></option>
+                                }
+                            </datalist>
+                        </div>
                         <div class="ra-field ra-field--narrow">
                             <div class="ra-field-label">@Loc["RolColorLabel"]</div>
                             <input class="ra-input" type="text" value="@_editColor"
@@ -115,12 +130,12 @@
                             </div>
                         </div>
                     }
-                    @if (_custom.Count > 0)
+                    @foreach (var category in CustomCategories)
                     {
                         <div class="ra-section">
-                            <div class="ra-section-label">@Loc["RolCustomSection"]</div>
+                            <div class="ra-section-label">@category.Key</div>
                             <div class="ra-perm-card">
-                                @foreach (var permission in _custom)
+                                @foreach (var permission in category)
                                 {
                                     @PermissionRow(permission.Scope, permission.Scope, permission.Description)
                                 }
@@ -150,6 +165,14 @@
             <div class="ra-override-add">
                 <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@_newScope"
                        @oninput="@(e => _newScope = e.Value?.ToString() ?? string.Empty)" />
+                <input class="ra-input" type="text" placeholder="@Loc["RolCategoryLabel"]" aria-label="@Loc["RolCategoryLabel"]" value="@_newCategory"
+                       list="ra-permission-categories" @oninput="@(e => _newCategory = e.Value?.ToString() ?? string.Empty)" />
+                <datalist id="ra-permission-categories">
+                    @foreach (var category in CustomCategories)
+                    {
+                        <option value="@category.Key"></option>
+                    }
+                </datalist>
                 <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@_newDescription"
                        @oninput="@(e => _newDescription = e.Value?.ToString() ?? string.Empty)" />
                 <button type="button" class="ra-btn ra-btn--primary" @onclick="DefinePermission" disabled="@_saving">@Loc["RolCustomAdd"]</button>
@@ -158,10 +181,11 @@
             {
                 <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
             }
-            else
+            @foreach (var category in CustomCategories)
             {
+                <div class="ra-section-label">@category.Key</div>
                 <div class="ra-perm-card">
-                    @foreach (var permission in _custom)
+                    @foreach (var permission in category)
                     {
                         var p = permission;
                         <div class="ra-perm-row">
@@ -325,6 +349,7 @@
         }
     };
     private string _editName = "";
+    private string _editCategory = "";
     private string _editColor = "#6cde9a";
     private int _editPriority;
     private Dictionary<string, string> _editPerms = new();
@@ -336,6 +361,15 @@
 
     private List<PortalRoleModel> SortedRoles =>
         List.Items.OrderByDescending(r => r.Priority).ThenBy(r => r.Name).ToList();
+
+    /// <summary>The roles by category, the category holding the highest role first, each highest first.</summary>
+    private List<IGrouping<string, PortalRoleModel>> RoleCategories =>
+        SortedRoles.GroupBy(r => r.Category, StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>The custom permissions by category, both alphabetical.</summary>
+    private List<IGrouping<string, CustomPermission>> CustomCategories =>
+        _custom.OrderBy(p => p.Category, StringComparer.OrdinalIgnoreCase).ThenBy(p => p.Scope, StringComparer.Ordinal)
+            .GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase).ToList();
 
     private List<PortalRoleModel> Assignable =>
         _account is null
@@ -351,6 +385,7 @@
     /// <summary>The custom permissions the game defines (@role/define).</summary>
     private IReadOnlyList<CustomPermission> _custom = [];
     private string _newScope = "";
+    private string _newCategory = "";
     private string _newDescription = "";
 
     private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
@@ -370,6 +405,7 @@
     private void LoadEditor(PortalRoleModel role)
     {
         _editName = role.Name;
+        _editCategory = role.Category;
         _editColor = role.Color;
         _editPriority = role.Priority;
         _editPerms = new Dictionary<string, string>(role.Permissions);
@@ -411,10 +447,17 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(_editCategory))
+        {
+            Snackbar.Add(Loc["RolCategoryRequired"], Severity.Warning);
+            return;
+        }
+
         _saving = true;
         var model = new PortalRoleModel(
             editing.Slug,
             _editName.Trim(),
+            _editCategory.Trim(),
             string.IsNullOrWhiteSpace(_editColor) ? "#6cde9a" : _editColor.Trim(),
             _editPriority,
             editing.IsSystem,
@@ -546,15 +589,21 @@
     private async Task DefinePermission()
     {
         if (string.IsNullOrWhiteSpace(_newScope)) return;
+        if (string.IsNullOrWhiteSpace(_newCategory))
+        {
+            Snackbar.Add(Loc["RolCategoryRequired"], Severity.Warning);
+            return;
+        }
 
         _saving = true;
-        var result = await Roles.DefinePermissionAsync(_newScope.Trim(), _newDescription.Trim());
+        var result = await Roles.DefinePermissionAsync(_newScope.Trim(), _newCategory.Trim(), _newDescription.Trim());
         _saving = false;
         switch (result)
         {
             case Success:
                 Snackbar.Add(Loc["RolCustomDefined", _newScope.Trim().ToLowerInvariant()], Severity.Success);
                 _newScope = "";
+                _newCategory = "";
                 _newDescription = "";
                 _custom = await Roles.ListCustomPermissionsAsync();
                 break;

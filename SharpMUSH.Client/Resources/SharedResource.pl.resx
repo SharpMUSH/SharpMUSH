@@ -3230,10 +3230,6 @@
     <value>Uprawnienia</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCustomSection" xml:space="preserve">
-    <value>Własne</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolCustomHelp" xml:space="preserve">
     <value>Własne uprawnienia to te, które gra definiuje dla swojego softcode'u, np. scene.close. Zezwól na nie w roli jak na każde inne uprawnienie; softcode sprawdza je przez permission(%#,scene.close) lub blokadę PERM^scene.close. W grze: @role/define.</value>
     <comment>MT</comment>
@@ -3244,6 +3240,14 @@
   </data>
   <data name="RolCustomDescriptionLabel" xml:space="preserve">
     <value>Na co pozwala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategoria jest wymagana.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomAdd" xml:space="preserve">

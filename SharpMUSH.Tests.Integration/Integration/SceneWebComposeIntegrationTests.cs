@@ -308,7 +308,7 @@ public class SceneWebComposeIntegrationTests
 
 		try
 		{
-			await God1("@role/define scene.close=Finish any scene");
+			await God1("@role/define scene.close=Scenes/Finish any scene");
 			await God1($"@role/allow/object {helper}=scene.close");
 
 			var finished = await RunAs(helperHandle, $"+scene/finish {sceneId}");

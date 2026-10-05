@@ -73,7 +73,7 @@ objects:
       FUN`OWNS: |-
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
       # Finishing is the one owner verb staff may need on someone else's scene. A game hands it out by
-      # defining the scene.close permission (@role/define scene.close) and allowing it on a role, such
+      # defining the scene.close permission (@role/define scene.close=Scenes) and allowing it on a role, such
       # as helper. permission() answers #-1 while the permission is undefined, which or() reads as false.
       FUN`CAN`CLOSE: |-
         or(u(%!/FUN`OWNS,%0,%1),permission(%0,scene.close))
@@ -623,7 +623,7 @@ objects:
         - `+scene/pitch <text>` — say what it is about, so people can decide to come
         - `+scene/finish` — close it
         - `+scene/finish <id>` — close a scene by id. Its owner can, and so can anyone holding the
-          `scene.close` permission: a game defines it with `@role/define scene.close` and allows it on
+          `scene.close` permission: a game defines it with `@role/define scene.close=Scenes` and allows it on
           a role, such as helper, with `@role/allow helper=scene.close`
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
