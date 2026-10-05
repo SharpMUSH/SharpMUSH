@@ -24,6 +24,9 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/roles/account/{accountId}/{slug}        — assign a role to an account
 ///   DELETE /api/roles/account/{accountId}/{slug}        — remove a role from an account
 ///   PUT    /api/roles/account/{accountId}/overrides     — set one per-account override
+///   GET    /api/roles/permissions                       — the custom permissions the game defines
+///   PUT    /api/roles/permissions                       — define one, or change its description
+///   DELETE /api/roles/permissions/{scope}               — remove one and every setting of it
 /// </summary>
 [ApiController]
 [Route("api/roles")]
@@ -53,6 +56,8 @@ public class RolesController(
 		Dictionary<string, string> Overrides);
 
 	public record OverrideDto(string Scope, string State);
+
+	public record CustomPermissionDto(string Scope, string Description);
 
 	[HttpGet("effective")]
 	public async Task<IActionResult> Effective()
@@ -162,6 +167,35 @@ public class RolesController(
 		return await management.SetOverridesAsync(actor, accountId, [dto.Scope], state, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	[HttpGet("permissions")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<ActionResult<IReadOnlyList<CustomPermission>>> ListPermissions()
+		=> Ok(await roles.GetCustomPermissionsAsync(HttpContext.RequestAborted));
+
+	[HttpPut("permissions")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> DefinePermission([FromBody] CustomPermissionDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.DefinePermissionAsync(actor, dto.Scope ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		{
+			CustomPermission permission => Ok(permission),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	[HttpDelete("permissions/{scope}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> RemovePermission(string scope)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.RemovePermissionAsync(actor, scope, HttpContext.RequestAborted) switch
+		{
+			Success => Ok(new { deleted = true }),
 			RoleRefusal refusal => Refused(refusal)
 		};
 	}

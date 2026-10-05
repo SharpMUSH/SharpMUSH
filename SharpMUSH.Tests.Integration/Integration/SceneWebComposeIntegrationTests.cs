@@ -280,6 +280,42 @@ public class SceneWebComposeIntegrationTests
 		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
 	}
 
+	/// <summary>
+	/// Staff finish a scene that is not theirs by id once the game defines <c>scene.close</c> and allows
+	/// it to them. Until then <c>+scene/finish &lt;id&gt;</c> refuses them, and the owner can still finish
+	/// their own.
+	/// </summary>
+	[Test]
+	public async Task FinishById_TakesTheSceneClosePermission()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Kai{Tag}");
+		var (helper, helperHandle) = await CreatePlayerAsync($"Lark{Tag}");
+		await RunAs(ownerHandle, $"+scene/create Kai Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await Assert.That(sceneId).DoesNotStartWith("#-1");
+
+		var refused = await RunAs(helperHandle, $"+scene/finish {sceneId}");
+		await Assert.That(refused.Any(m => m.Contains("not yours to finish", StringComparison.Ordinal)))
+			.IsTrue().Because($"saw instead: [{string.Join(" // ", refused)}]");
+		await Assert.That(await Eval($"scene({sceneId},status)")).IsNotEqualTo("finished");
+
+		try
+		{
+			await God1("@role/define scene.close=Finish any scene");
+			await God1($"@role/allow/object {helper}=scene.close");
+
+			var finished = await RunAs(helperHandle, $"+scene/finish {sceneId}");
+			await Assert.That(finished.Any(m => m.Contains($"Scene {sceneId} finished.", StringComparison.Ordinal)))
+				.IsTrue().Because($"saw instead: [{string.Join(" // ", finished)}]");
+			await Assert.That(await Eval($"scene({sceneId},status)")).IsEqualTo("finished");
+		}
+		finally
+		{
+			await God1("@role/undefine scene.close");
+		}
+	}
+
 	/// <summary>A pose still puts a poser who was NOT in the cast into it.</summary>
 	[Test]
 	public async Task WebCompose_StillAddsANewPoserToTheCast()

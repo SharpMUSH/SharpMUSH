@@ -3826,7 +3826,7 @@ You say, "#1 #7 #56 #-1"
 # PERMISSION()
 `permission(<object>, <permission>)`
 
-  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. An unknown permission returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all.
+  Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. `<permission>` may be built in or one the game defined with `@role/define`, such as `scene.close`. Any other name returns `#-1 NO SUCH PERMISSION`; @role/scopes lists them all.
 
   Example:
 ```sharp

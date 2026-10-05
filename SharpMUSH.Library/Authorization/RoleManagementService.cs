@@ -93,6 +93,19 @@ public interface IRoleManagementService
 
 	/// <summary>Sets overrides on a game object, all or none, as <see cref="SetOverridesAsync"/> does for accounts.</summary>
 	Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
+
+	/// <summary>
+	/// Defines a custom permission (<see cref="CustomPermission"/>), or changes its description. Needs
+	/// <see cref="PortalPermission.RolesAdmin"/>; defining one grants it to nobody but the owner and
+	/// <c>administrator</c> holders.
+	/// </summary>
+	Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string description, CancellationToken ct = default);
+
+	/// <summary>
+	/// Removes a custom permission and every setting of it on roles, accounts and objects. Needs
+	/// <see cref="PortalPermission.RolesAdmin"/> and the right to grant it.
+	/// </summary>
+	Task<RoleOutcome<Success>> RemovePermissionAsync(RoleActor actor, string scope, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -112,6 +125,9 @@ public sealed partial class RoleManagementService(
 
 	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
 	private static partial Regex ColorPattern();
+
+	/// <summary>The longest description a custom permission may carry.</summary>
+	public const int MaxDescriptionLength = 200;
 
 	public Task<RoleOutcome<SharpRole>> SaveRoleAsync(RoleActor actor, RoleDraft draft, CancellationToken ct = default)
 		=> Gated(async () => await SaveCoreAsync(actor, draft, ct), ct);
@@ -146,6 +162,44 @@ public sealed partial class RoleManagementService(
 			return new Success();
 		}, ct);
 
+	public Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string description, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			var name = scope.Trim().ToLowerInvariant();
+			if (!CustomPermissions.IsValidName(name))
+				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, PortalPermission.IsKnown(name)
+					? $"{name} is a built-in permission."
+					: $"A custom permission is two or more parts joined by '.', each of lowercase letters, digits or '_', such as scene.close; at most {CustomPermissions.MaxNameLength} characters, and not under {string.Join(", ", CustomPermissions.ReservedPrefixes)}.");
+			var text = description.Trim();
+			if (text.Length > MaxDescriptionLength)
+				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, $"A description is at most {MaxDescriptionLength} characters.");
+			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+
+			var existing = (await registry.GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == name);
+			var permission = new CustomPermission(name, text, existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			await registry.UpsertCustomPermissionAsync(permission);
+			await mediator.Send(new InvalidateGrantsCommand(null), ct);
+			return permission;
+		}, ct);
+
+	public Task<RoleOutcome<Success>> RemovePermissionAsync(RoleActor actor, string scope, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			var name = scope.Trim().ToLowerInvariant();
+			if ((await registry.GetCustomPermissionsAsync(ct)).All(p => p.Scope != name))
+				return Refuse<Success>(RoleRefusalKind.NotFound, PortalPermission.IsKnown(name)
+					? $"{name} is a built-in permission and cannot be removed."
+					: $"No custom permission named '{name}'.");
+			var me = (await ActorGrantsAsync(actor, ct)).Context;
+			if (Unauthorized(me) is { } refusal) return refusal;
+			if (!RoleHierarchy.CanGrant(resolver.Resolve(me), name))
+				return Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot remove a permission you could not grant: {name}.");
+
+			await registry.RemoveCustomPermissionAsync(name);
+			await mediator.Send(new InvalidateGrantsCommand(null), ct);
+			return new Success();
+		}, ct);
+
 	public Task<RoleOutcome<Success>> AssignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: true, ct);
 
@@ -155,8 +209,9 @@ public sealed partial class RoleManagementService(
 	public Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
-			if (OverrideScopes(scopes, state) is not List<string> canonical)
-				return OverrideRefusal(scopes, state);
+			var custom = await CustomScopesAsync(ct);
+			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
+				return OverrideRefusal(scopes, state, custom);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
@@ -228,8 +283,9 @@ public sealed partial class RoleManagementService(
 	public Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
-			if (OverrideScopes(scopes, state) is not List<string> canonical)
-				return OverrideRefusal(scopes, state);
+			var custom = await CustomScopesAsync(ct);
+			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
+				return OverrideRefusal(scopes, state, custom);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
@@ -304,14 +360,22 @@ public sealed partial class RoleManagementService(
 			await invalidator.InvalidateAsync(accountId, ct);
 	}
 
+	/// <summary>The custom permissions the world defines, by scope.</summary>
+	private async Task<IReadOnlySet<string>> CustomScopesAsync(CancellationToken ct)
+		=> (await registry.GetCustomPermissionsAsync(ct)).Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>The stored spelling of a built-in or custom permission, or null for neither.</summary>
+	private static string? Canonical(string scope, IReadOnlySet<string> custom)
+		=> PortalPermission.Canonical(scope) ?? (custom.Contains(scope) ? scope.ToLowerInvariant() : null);
+
 	/// <summary>The catalog spelling of each scope when every one may be overridden, else null.</summary>
-	private static List<string>? OverrideScopes(IReadOnlyCollection<string> scopes, PermissionState state)
+	private static List<string>? OverrideScopes(IReadOnlyCollection<string> scopes, PermissionState state, IReadOnlySet<string> custom)
 	{
 		if (scopes.Count == 0 || !Enum.IsDefined(state)) return null;
 		var canonical = new List<string>();
 		foreach (var scope in scopes)
 		{
-			if (PortalPermission.Canonical(scope) is not { } known || known == PortalPermission.Administrator) return null;
+			if (Canonical(scope, custom) is not { } known || known == PortalPermission.Administrator) return null;
 			canonical.Add(known);
 		}
 
@@ -319,14 +383,14 @@ public sealed partial class RoleManagementService(
 	}
 
 	/// <summary>Why <see cref="OverrideScopes"/> refused.</summary>
-	private static RoleOutcome<Success> OverrideRefusal(IReadOnlyCollection<string> scopes, PermissionState state)
+	private static RoleOutcome<Success> OverrideRefusal(IReadOnlyCollection<string> scopes, PermissionState state, IReadOnlySet<string> custom)
 	{
 		if (scopes.Count == 0)
 			return Refuse<Success>(RoleRefusalKind.Invalid, "Name at least one permission.");
 		if (!Enum.IsDefined(state))
 			return Refuse<Success>(RoleRefusalKind.Invalid, "Unknown permission state.");
-		var bad = scopes.First(scope => PortalPermission.Canonical(scope) is not { } known || known == PortalPermission.Administrator);
-		return PortalPermission.Canonical(bad) is null
+		var bad = scopes.First(scope => Canonical(scope, custom) is not { } known || known == PortalPermission.Administrator);
+		return Canonical(bad, custom) is null
 			? Refuse<Success>(RoleRefusalKind.Invalid, $"Unknown permission '{bad}'.")
 			: Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set as an override.");
 	}
@@ -350,9 +414,10 @@ public sealed partial class RoleManagementService(
 		if (color is not null && !ColorPattern().IsMatch(color))
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role colour is a hex colour such as #5aa9ff.");
 		var permissions = new Dictionary<string, PermissionState>();
+		var custom = await CustomScopesAsync(ct);
 		foreach (var (scope, state) in draft.Permissions)
 		{
-			if (PortalPermission.Canonical(scope) is not { } canonical)
+			if (Canonical(scope, custom) is not { } canonical)
 				return Refuse<SharpRole>(RoleRefusalKind.Invalid, $"Unknown permission '{scope}'.");
 			if (!Enum.IsDefined(state))
 				return Refuse<SharpRole>(RoleRefusalKind.Invalid, "Unknown permission state.");

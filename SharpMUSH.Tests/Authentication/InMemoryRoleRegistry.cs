@@ -13,6 +13,7 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	private readonly Dictionary<string, Dictionary<string, PermissionState>> _overrides = new();
 	private readonly Dictionary<int, HashSet<string>> _objectRoles = new();
 	private readonly Dictionary<int, Dictionary<string, PermissionState>> _objectOverrides = new();
+	private readonly Dictionary<string, CustomPermission> _custom = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>A registry seeded like a new world: system and starter roles.</summary>
 	public static InMemoryRoleRegistry Seeded()
@@ -114,6 +115,26 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		if (!_objectOverrides.TryGetValue(number, out var overrides)) _objectOverrides[number] = overrides = new(StringComparer.OrdinalIgnoreCase);
 		if (state == PermissionState.Inherit) overrides.Remove(scope);
 		else overrides[scope] = state;
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<CustomPermission>>(_custom.Values.OrderBy(p => p.Scope, StringComparer.Ordinal).ToList());
+
+	public Task UpsertCustomPermissionAsync(CustomPermission permission)
+	{
+		_custom[permission.Scope] = permission;
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveCustomPermissionAsync(string scope)
+	{
+		_custom.Remove(scope);
+		foreach (var role in _roles.Values)
+			role.Permissions = role.Permissions.Where(p => !string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase)).ToDictionary();
+		foreach (var overrides in _overrides.Values.Concat(_objectOverrides.Values))
+			foreach (var key in overrides.Keys.Where(k => string.Equals(k, scope, StringComparison.OrdinalIgnoreCase)).ToList())
+				overrides.Remove(key);
 		return Task.CompletedTask;
 	}
 }

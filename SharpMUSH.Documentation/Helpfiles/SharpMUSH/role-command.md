@@ -26,6 +26,11 @@
       "lookup": "@role overrides"
     },
     {
+      "id": "role-custom",
+      "heading": "Custom permissions",
+      "lookup": "@role define"
+    },
+    {
       "id": "role-rank",
       "heading": "Who may change what",
       "lookup": "@role rank"
@@ -54,7 +59,9 @@
 `@role/assign[/account] <object>=<role>`<br>
 `@role/unassign[/account] <object>=<role>`<br>
 `@role/allow/object <object>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
-`@role/allow/account <player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)
+`@role/allow/account <player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
+`@role/define <permission>[=<description>]`<br>
+`@role/undefine <permission>`
 
 @role shows and manages roles: named sets of permissions that decide what an object may do, in the game and in the web portal. See [roles] for how roles combine.
 
@@ -62,7 +69,7 @@ A role is named by its short name (`moderator`), which is lowercase letters, dig
 
 ## Viewing roles
 
-`@role` and `@role/list` list every role, highest priority first. `@role <role>` shows one role: its priority, colour, and what it allows and denies. `@role/scopes` lists every permission, with the narrower permissions each umbrella permission covers.
+`@role` and `@role/list` list every role, highest priority first. `@role <role>` shows one role: its priority, colour, and what it allows and denies. `@role/scopes` lists every permission, with the narrower permissions each umbrella permission covers, and then the game's custom permissions.
 
 `@role/player` shows your own roles and where each comes from, the overrides on you and on your account, and the permissions you hold and lack. `@role/player <object>` shows another object's, and needs the `players.view` or `roles.admin` permission, or that you may examine the object. `examine` also shows an object's roles and overrides.
 
@@ -115,13 +122,30 @@ Examples:
 @role/allow/account Ariel=wiki.delete
 ```
 
+## Custom permissions
+
+A game can add permissions of its own for its softcode to check. `@role/define scene.close=Finish any scene` defines `scene.close`; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,scene.close)` or locks with `PERM^scene.close`, and `@command/restrict` and `@function/restrict` accept it.
+
+A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its description.
+
+`@role/undefine <permission>` removes it, and every role and override that set it. It needs the right to grant the permission.
+
+A new custom permission is held only by #1 and holders of `administrator` until a role or override allows it. A holder of `game.wizard` may allow any custom permission.
+
+Examples:
+```sharp
+@role/define scene.close=Finish any scene
+@role/allow helper=scene.close
+think permission(*Ariel,scene.close)
+```
+
 ## Who may change what
 
 Every change needs the `roles.admin` permission, and follows Discord's role hierarchy:
 
 - You can create, edit, delete, assign or unassign only roles whose priority is below your own highest role.
 - You can change the roles and overrides of an object or account only when its highest role is below yours. You cannot change your own, except that a holder of `game.wizard` may set or clear power permissions (`game.see_all` and the like) on itself, as a PennMUSH wizard may `@power` itself.
-- You can only allow permissions you hold yourself. A holder of `game.wizard` may also allow any `game.` permission, as a PennMUSH wizard may give any power.
+- You can only allow permissions you hold yourself. A holder of `game.wizard` may also allow any `game.` permission, as a PennMUSH wizard may give any power, and any custom permission.
 
 As in PennMUSH, an object may give a role it holds to a thing it owns, or take it away, without `roles.admin`.
 

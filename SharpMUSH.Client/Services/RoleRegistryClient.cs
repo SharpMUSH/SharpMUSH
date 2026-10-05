@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Client.Models.Roles;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Client.Services;
 
@@ -85,6 +86,30 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountId)}/overrides", new OverrideRequest(scope, state));
 
 	private sealed record OverrideRequest(string Scope, string State);
+
+	/// <summary>The custom permissions the game defines, or none when unavailable.</summary>
+	public async Task<IReadOnlyList<CustomPermission>> ListCustomPermissionsAsync()
+	{
+		try
+		{
+			return await Client.GetFromJsonAsync<List<CustomPermission>>("api/roles/permissions") ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to list custom permissions.");
+			return [];
+		}
+	}
+
+	/// <summary>Defines a custom permission, or changes its description.</summary>
+	public Task<ApiResult<Success>> DefinePermissionAsync(string scope, string description) =>
+		Client.PutApiAsync("api/roles/permissions", new CustomPermissionRequest(scope, description));
+
+	/// <summary>Removes a custom permission and every setting of it.</summary>
+	public Task<ApiResult<Success>> RemovePermissionAsync(string scope) =>
+		Client.DeleteApiAsync($"api/roles/permissions/{Uri.EscapeDataString(scope)}");
+
+	private sealed record CustomPermissionRequest(string Scope, string Description);
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 }

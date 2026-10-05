@@ -3226,6 +3226,50 @@
     <value>Hozzárendelések</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Jogosultságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomSection" xml:space="preserve">
+    <value>Egyéni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Az egyéni jogosultságokat a játék a saját softcode-ja számára határozza meg, például scene.close. Engedélyezze egy szerepkörön, mint bármely más jogosultságot; a softcode a permission(%#,scene.close) függvénnyel vagy PERM^scene.close zárral ellenőrzi. Játékban: @role/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>A jogosultság neve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Mit tesz lehetővé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Meghatározás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Még nincsenek egyéni jogosultságok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>{0} jogosultság meghatározva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Jogosultság eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Eltávolítja: {0}? Minden szerepkör és felülbírálás, amely beállítja, elveszíti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>{0} jogosultság eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Szerepkörök</value>
     <comment>MT</comment>

@@ -4,6 +4,7 @@
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "roles.admin")]
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models
 @using SharpMUSH.Client.Components.Admin
 @inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
@@ -109,30 +110,19 @@
                             <div class="ra-perm-card">
                                 @foreach (var def in group)
                                 {
-                                    var d = def;
-                                    var state = StateFor(d.Scope);
-                                    <div class="ra-perm-row">
-                                        <div class="ra-perm-label">
-                                            <div class="ra-perm-name">@Loc[d.LabelKey]</div>
-                                            <div class="ra-perm-desc">@Loc[d.DescriptionKey]</div>
-                                            <code class="ra-perm-scope">@d.Scope</code>
-                                            @if (_effective.TryGetValue(d.Scope, out var decision))
-                                            {
-                                                <div>@Loc["RolEffectiveExplanation", Loc[decision.Allowed ? "RolAllow" : "RolDeny"], decision.Priority?.ToString() ?? "—", string.Join(", ", decision.Roles), decision.Reason]</div>
-                                            }
-                                        </div>
-                                        <div class="ra-tristate">
-                                            <button type="button"
-                                                    class="ra-tri ra-tri--inherit @(state == "Inherit" ? "ra-tri--on" : "")" aria-pressed="@(state == "Inherit" ? "true" : "false")"
-                                                    @onclick="@(() => SetState(d.Scope, "Inherit"))">@Loc["RolInherit"]</button>
-                                            <button type="button"
-                                                    class="ra-tri ra-tri--allow @(state == "Allow" ? "ra-tri--on" : "")" aria-pressed="@(state == "Allow" ? "true" : "false")"
-                                                    @onclick="@(() => SetState(d.Scope, "Allow"))">@Loc["RolAllow"]</button>
-                                            <button type="button"
-                                                    class="ra-tri ra-tri--deny @(state == "Deny" ? "ra-tri--on" : "")" aria-pressed="@(state == "Deny" ? "true" : "false")"
-                                                    @onclick="@(() => SetState(d.Scope, "Deny"))">@Loc["RolDeny"]</button>
-                                        </div>
-                                    </div>
+                                    @PermissionRow(def.Scope, Loc[def.LabelKey], Loc[def.DescriptionKey])
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (_custom.Count > 0)
+                    {
+                        <div class="ra-section">
+                            <div class="ra-section-label">@Loc["RolCustomSection"]</div>
+                            <div class="ra-perm-card">
+                                @foreach (var permission in _custom)
+                                {
+                                    @PermissionRow(permission.Scope, permission.Scope, permission.Description)
                                 }
                             </div>
                         </div>
@@ -152,6 +142,41 @@
                 }
             </KitCard>
         </div>
+    }
+    else if (_tab == Tab.Permissions)
+    {
+        <KitCard Class="roleadmin-assign">
+            <p class="ra-field-help">@Loc["RolCustomHelp"]</p>
+            <div class="ra-override-add">
+                <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@_newScope"
+                       @oninput="@(e => _newScope = e.Value?.ToString() ?? string.Empty)" />
+                <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@_newDescription"
+                       @oninput="@(e => _newDescription = e.Value?.ToString() ?? string.Empty)" />
+                <button type="button" class="ra-btn ra-btn--primary" @onclick="DefinePermission" disabled="@_saving">@Loc["RolCustomAdd"]</button>
+            </div>
+            @if (_custom.Count == 0)
+            {
+                <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
+            }
+            else
+            {
+                <div class="ra-perm-card">
+                    @foreach (var permission in _custom)
+                    {
+                        var p = permission;
+                        <div class="ra-perm-row">
+                            <div class="ra-perm-label">
+                                <code class="ra-perm-scope">@p.Scope</code>
+                                <div class="ra-perm-desc">@p.Description</div>
+                            </div>
+                            <button type="button" class="ra-btn ra-btn--danger" @onclick="@(() => RemovePermission(p))" disabled="@_saving">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </KitCard>
     }
     else
     {
@@ -279,10 +304,11 @@
 </div>
 
 @code {
-    private enum Tab { Roles, Assignments }
+    private enum Tab { Roles, Assignments, Permissions }
 
     private IReadOnlyList<(string Key, string Label)> TabItems =>
-        [(nameof(Tab.Roles), Loc["RolTabRoles"].Value), (nameof(Tab.Assignments), Loc["RolTabAssignments"].Value)];
+        [(nameof(Tab.Roles), Loc["RolTabRoles"].Value), (nameof(Tab.Assignments), Loc["RolTabAssignments"].Value),
+         (nameof(Tab.Permissions), Loc["RolTabPermissions"].Value)];
 
     private Tab _tab = Tab.Roles;
     private bool _saving;
@@ -316,11 +342,16 @@
             ? []
             : SortedRoles.Where(r => !BuiltInRoles.IsImplicit(r.Slug) && !_account.RoleSlugs.Contains(r.Slug)).ToList();
 
-    /// <summary>Every scope but administrator, which only a role can carry.</summary>
-    private static readonly IReadOnlyList<string> OverridableScopes =
-        PortalPermission.AllScopes.Where(s => s != PortalPermission.Administrator).ToList();
+    /// <summary>Every scope but administrator, which only a role can carry, and the custom permissions.</summary>
+    private IReadOnlyList<string> OverridableScopes =>
+        PortalPermission.AllScopes.Where(s => s != PortalPermission.Administrator).Concat(_custom.Select(p => p.Scope)).ToList();
 
-    private string _overrideScope = OverridableScopes[0];
+    private string _overrideScope = PortalPermission.AllScopes[0];
+
+    /// <summary>The custom permissions the game defines (@role/define).</summary>
+    private IReadOnlyList<CustomPermission> _custom = [];
+    private string _newScope = "";
+    private string _newDescription = "";
 
     private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
 
@@ -328,9 +359,12 @@
 
     private async Task<IEnumerable<PortalRoleModel>> FetchAsync()
     {
-        var roles = await Roles.ListAsync();
-        _effective = await Roles.EffectiveAsync();
-        return roles;
+        var roles = Roles.ListAsync();
+        var effective = Roles.EffectiveAsync();
+        var custom = Roles.ListCustomPermissionsAsync();
+        _effective = await effective;
+        _custom = await custom;
+        return await roles;
     }
 
     private void LoadEditor(PortalRoleModel role)
@@ -479,6 +513,71 @@
             case Success:
                 Snackbar.Add(Loc["RolOverrideSaved", scope], Severity.Success);
                 _account = await Roles.LookupAccountAsync(_account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    /// <summary>One permission's row in the role editor: what it is, why the viewer holds it or not, and its three states.</summary>
+    private RenderFragment PermissionRow(string scope, string label, string description) =>
+        @<div class="ra-perm-row">
+            <div class="ra-perm-label">
+                <div class="ra-perm-name">@label</div>
+                <div class="ra-perm-desc">@description</div>
+                <code class="ra-perm-scope">@scope</code>
+                @if (_effective.TryGetValue(scope, out var decision))
+                {
+                    <div>@Loc["RolEffectiveExplanation", Loc[decision.Allowed ? "RolAllow" : "RolDeny"], decision.Priority?.ToString() ?? "—", string.Join(", ", decision.Roles), decision.Reason]</div>
+                }
+            </div>
+            <div class="ra-tristate">
+                @foreach (var option in new[] { "Inherit", "Allow", "Deny" })
+                {
+                    var on = StateFor(scope) == option;
+                    <button type="button"
+                            class="ra-tri ra-tri--@option.ToLowerInvariant() @(on ? "ra-tri--on" : "")" aria-pressed="@(on ? "true" : "false")"
+                            @onclick="@(() => SetState(scope, option))">@Loc["Rol" + option]</button>
+                }
+            </div>
+        </div>;
+
+    private async Task DefinePermission()
+    {
+        if (string.IsNullOrWhiteSpace(_newScope)) return;
+
+        _saving = true;
+        var result = await Roles.DefinePermissionAsync(_newScope.Trim(), _newDescription.Trim());
+        _saving = false;
+        switch (result)
+        {
+            case Success:
+                Snackbar.Add(Loc["RolCustomDefined", _newScope.Trim().ToLowerInvariant()], Severity.Success);
+                _newScope = "";
+                _newDescription = "";
+                _custom = await Roles.ListCustomPermissionsAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    private async Task RemovePermission(CustomPermission permission)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["RolCustomRemoveTitle"], Loc["RolCustomRemoveConfirm", permission.Scope], yesText: Loc["Delete"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        _saving = true;
+        var result = await Roles.RemovePermissionAsync(permission.Scope);
+        _saving = false;
+        switch (result)
+        {
+            case Success:
+                Snackbar.Add(Loc["RolCustomRemoved", permission.Scope], Severity.Success);
+                await List.LoadAsync();
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);

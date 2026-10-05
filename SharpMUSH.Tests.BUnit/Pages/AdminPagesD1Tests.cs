@@ -485,4 +485,30 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find("input.ra-input").GetAttribute("value")).IsEqualTo("Builder");
 		await Assert.That(cut.FindAll(".ra-btn--danger").Count).IsEqualTo(1);
 	}
+
+	/// <summary>
+	/// A permission the game defined (<c>@role/define</c>) gets a row in the role editor's Custom section,
+	/// with the same three states as a built-in one, and is listed on the Permissions tab.
+	/// </summary>
+	[Test]
+	public async Task Roles_ShowsCustomPermissionsInTheEditorAndOnTheirTab()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","color":"#123456","priority":12,"isSystem":false,"permissions":{"scene.close":"Allow"},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/permissions"] = """
+			[{"scope":"scene.close","description":"Finish any scene","createdAt":0}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		var row = cut.FindAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "scene.close");
+		await Assert.That(row.QuerySelector(".ra-perm-desc")!.TextContent).IsEqualTo("Finish any scene");
+		await Assert.That(row.QuerySelector(".ra-tri--allow")!.ClassList.Contains("ra-tri--on")).IsTrue();
+
+		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabPermissions")).Click();
+		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-scope").TextContent).IsEqualTo("scene.close");
+		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-desc").TextContent).IsEqualTo("Finish any scene");
+	}
 }

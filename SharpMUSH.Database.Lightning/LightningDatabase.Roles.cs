@@ -197,4 +197,46 @@ public partial class LightningDatabase
 		=> tx.TryGet(Tables.ObjPermission, Keys.Dbref(number), out var bytes)
 			? new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(bytes), StringComparer.OrdinalIgnoreCase)
 			: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+	public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var permissions = Store.Read(tx => tx.Range(Tables.CustomPermission, [])
+			.Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value))
+			.Select(r => new CustomPermission(r.Scope, r.Description, r.CreatedAt))
+			.OrderBy(p => p.Scope, StringComparer.Ordinal)
+			.ToList());
+		return Task.FromResult<IReadOnlyList<CustomPermission>>(permissions);
+	}
+
+	public async Task UpsertCustomPermissionAsync(CustomPermission permission)
+		=> await Store.WriteAsync(tx => tx.Put(Tables.CustomPermission, Keys.Str(permission.Scope), Codec.Serialize(new CustomPermissionRecord
+		{
+			Scope = permission.Scope,
+			Description = permission.Description,
+			CreatedAt = permission.CreatedAt
+		})));
+
+	public async Task RemoveCustomPermissionAsync(string scope)
+		=> await Store.WriteAsync(tx =>
+		{
+			tx.Delete(Tables.CustomPermission, Keys.Str(scope));
+
+			foreach (var (key, value) in tx.Range(Tables.Role, []).ToList())
+			{
+				var role = Codec.Deserialize<RoleRecord>(value);
+				var kept = role.Permissions.Where(p => !string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase))
+					.ToDictionary(p => p.Key, p => p.Value);
+				if (kept.Count != role.Permissions.Count) tx.Put(Tables.Role, key, Codec.Serialize(role with { Permissions = kept }));
+			}
+
+			foreach (var table in new[] { Tables.AccountPermission, Tables.ObjPermission })
+				foreach (var (key, value) in tx.Range(table, []).ToList())
+				{
+					var overrides = new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(value), StringComparer.OrdinalIgnoreCase);
+					if (!overrides.Remove(scope)) continue;
+					if (overrides.Count == 0) tx.Delete(table, key);
+					else tx.Put(table, key, Codec.Serialize(overrides));
+				}
+		});
 }

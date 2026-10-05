@@ -228,4 +228,49 @@ public class RoleManagementServiceTests
 		await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Color = "blue" }), RoleRefusalKind.Invalid);
 		await Refused(world.Service.EditRoleAsync(A("owner"), "missing", role => Draft("missing", 1)), RoleRefusalKind.NotFound);
 	}
+
+	[Test]
+	public async Task CustomPermissionIsDefinedByARolesAdminAndGrantedLikeAnyOther()
+	{
+		var world = Build();
+		await Assert.That(await world.Service.DefinePermissionAsync(A("pl"), "scene.close", "Finish any scene") is RoleRefusal { Kind: RoleRefusalKind.Forbidden }).IsTrue();
+		await Assert.That(await world.Service.DefinePermissionAsync(A("mod"), "Scene.Close", "Finish any scene") is CustomPermission { Scope: "scene.close" }).IsTrue();
+		await Assert.That((await world.Registry.GetCustomPermissionsAsync()).Select(p => p.Description)).IsEquivalentTo(["Finish any scene"]);
+
+		// The moderator defined it but does not hold it, so cannot grant it; a wizard may.
+		await Refused(world.Service.SaveRoleAsync(A("mod"), Draft("closers", 2, "scene.close")), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SaveRoleAsync(A("wiz"), Draft("closers", 2, "scene.close")));
+		await Accepted(world.Service.AssignAsync(A("wiz"), "pl", "closers"));
+		await Accepted(world.Service.SetOverridesAsync(A("wiz"), "pl2", ["scene.close"], PermissionState.Allow));
+	}
+
+	[Test]
+	public async Task CustomPermissionNamesAreChecked()
+	{
+		var world = Build();
+		foreach (var name in new[] { "scene", "wiki.read", "game.thing", "control.x", "has space.x" })
+			await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), name, "") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue().Because(name);
+		await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), "scene.close", new string('x', RoleManagementService.MaxDescriptionLength + 1)) is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
+		// An undefined name is no permission at all.
+		await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1, "scene.close")), RoleRefusalKind.Invalid);
+		await Refused(world.Service.SetOverridesAsync(A("owner"), "pl", ["scene.close"], PermissionState.Allow), RoleRefusalKind.Invalid);
+	}
+
+	[Test]
+	public async Task RemovingACustomPermissionTakesEverySettingOfIt()
+	{
+		var world = Build();
+		await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "");
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("closers", 2, "scene.close", PortalPermission.WikiEdit)));
+		await Accepted(world.Service.SetOverridesAsync(A("owner"), "pl", ["scene.close"], PermissionState.Deny));
+
+		await Refused(world.Service.RemovePermissionAsync(A("mod"), "scene.close"), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.RemovePermissionAsync(A("owner"), "wiki.read"), RoleRefusalKind.NotFound);
+		await Accepted(world.Service.RemovePermissionAsync(A("wiz"), "scene.close"));
+
+		await Assert.That(await world.Registry.GetCustomPermissionsAsync()).IsEmpty();
+		var role = (await world.Registry.GetRoleAsync("closers")).Expect<SharpRole>();
+		await Assert.That(role.Permissions.Keys).IsEquivalentTo([PortalPermission.WikiEdit]);
+		await Assert.That(await world.Registry.GetAccountOverridesAsync("pl")).IsEmpty();
+	}
 }

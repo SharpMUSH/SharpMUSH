@@ -75,4 +75,16 @@ public interface IRoleRegistryService
 
 	/// <summary>Sets one override on an object; <see cref="PermissionState.Inherit"/> removes it.</summary>
 	Task SetObjectOverrideAsync(int number, string scope, PermissionState state);
+
+	/// <summary>The custom permissions the world defines, ordered by scope.</summary>
+	Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Defines a custom permission, or replaces its description (keyed by <see cref="CustomPermission.Scope"/>).</summary>
+	Task UpsertCustomPermissionAsync(CustomPermission permission);
+
+	/// <summary>
+	/// Removes a custom permission and every setting of it: on roles, on accounts and on objects, in one
+	/// write. Does not error if absent.
+	/// </summary>
+	Task RemoveCustomPermissionAsync(string scope);
 }

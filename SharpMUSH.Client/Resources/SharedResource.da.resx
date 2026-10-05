@@ -3226,6 +3226,50 @@
     <value>Tildelinger</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Tilladelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomSection" xml:space="preserve">
+    <value>Egne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Egne tilladelser er dem, dit spil definerer til sin egen softcode, f.eks. scene.close. Tillad en på en rolle som enhver anden tilladelse; softcode tjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @role/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Tilladelsens navn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Hvad den lader nogen gøre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definér</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Ingen egne tilladelser endnu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Tilladelsen {0} defineret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Fjern tilladelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Fjern {0}? Hver rolle og tilsidesættelse, der sætter den, mister den.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Tilladelsen {0} fjernet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Roller</value>
     <comment>MT</comment>

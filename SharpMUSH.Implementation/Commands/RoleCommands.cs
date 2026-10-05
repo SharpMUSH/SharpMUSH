@@ -14,14 +14,14 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	private static readonly string[] RoleOperations =
-		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN"];
+		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE"];
 
 	/// <summary>
 	/// <c>@role</c>: list, inspect and manage roles, who holds them, and per-object or per-account
 	/// overrides. Every change goes through <see cref="IRoleManagementService"/>, the same rules the
 	/// portal applies, with the executor as the actor: an object needs no account to manage roles.
 	/// </summary>
-	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "OBJECT", "ACCOUNT"],
+	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "OBJECT", "ACCOUNT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["role or object", "value"])]
 	public async ValueTask<Option<CallState>> Role(IMUSHCodeParser parser, SharpCommandAttribute _)
@@ -49,7 +49,7 @@ public partial class Commands
 			{
 				"LIST" => await RoleListAsync(parser),
 				"INFO" => await RoleInfoAsync(parser, left),
-				"SCOPES" => RoleScopes(),
+				"SCOPES" => await RoleScopesAsync(parser),
 				"PLAYER" => await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left),
 				_ => await RoleChangeAsync(parser, executor, operation, holder, left, right, hasRight)
 			};
@@ -97,7 +97,7 @@ public partial class Commands
 		return output.ToString();
 	}
 
-	private static string RoleScopes()
+	private static async ValueTask<string> RoleScopesAsync(IMUSHCodeParser parser)
 	{
 		var output = new StringBuilder("Permissions (an umbrella also covers the scopes listed after it):");
 		foreach (var scope in PortalPermission.AllScopes)
@@ -106,6 +106,10 @@ public partial class Commands
 			output.Append($"\n  {scope}{(implied.Count > 0 ? "  -> " + string.Join(", ", implied) : "")}");
 		}
 
+		var custom = await RoleRegistry(parser).GetCustomPermissionsAsync(ExecutionBudget.CurrentToken);
+		output.Append(custom.Count == 0 ? "\nCustom permissions: none. Add one with @role/define." : "\nCustom permissions:");
+		foreach (var permission in custom)
+			output.Append($"\n  {permission.Scope}{(permission.Description.Length > 0 ? "  " + permission.Description : "")}");
 		return output.ToString();
 	}
 
@@ -137,8 +141,9 @@ public partial class Commands
 		output.Append($"\nOverrides: allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny)}");
 		if (account is not null)
 			output.Append($"\nAccount overrides: allow {ScopeList(grants.Context.Overrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny)}");
-		output.Append($"\nHolds: {Joined(PortalPermission.AllScopes.Where(grants.Has))}");
-		output.Append($"\nLacks: {Joined(PortalPermission.AllScopes.Where(scope => !grants.Has(scope)))}");
+		var scopes = PortalPermission.AllScopes.Concat(grants.Context.CustomScopes).ToArray();
+		output.Append($"\nHolds: {Joined(scopes.Where(grants.Has))}");
+		output.Append($"\nLacks: {Joined(scopes.Where(scope => !grants.Has(scope)))}");
 		return output.ToString();
 	}
 
@@ -152,7 +157,7 @@ public partial class Commands
 		RoleHolder holder, string left, string right, bool hasRight)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		if (left.Length == 0 || (operation is not ("DELETE" or "CREATE") && !hasRight))
+		if (left.Length == 0 || (operation is not ("DELETE" or "CREATE" or "DEFINE" or "UNDEFINE") && !hasRight))
 			return $"Usage: @role/{operation.ToLowerInvariant()} {RoleUsage(operation)}. See help @role.";
 		var management = parser.ServiceProvider.GetRequiredService<IRoleManagementService>();
 		RoleActor actor = executor;
@@ -165,6 +170,15 @@ public partial class Commands
 					role => $"Role {role.Name} ({role.Slug}) created at priority {role.Priority}. Set what it allows with @role/allow.");
 			case "DELETE":
 				return Done(await management.DeleteRoleAsync(actor, left, ct), _ => $"Role {left} deleted.");
+			case "DEFINE":
+				return await management.DefinePermissionAsync(actor, left, right, ct) switch
+				{
+					CustomPermission permission => $"Permission {permission.Scope} defined. Allow it on a role with @role/allow <role>={permission.Scope}.",
+					RoleRefusal refusal => refusal.Message
+				};
+			case "UNDEFINE":
+				return Done(await management.RemovePermissionAsync(actor, left, ct),
+					_ => $"Permission {left.ToLowerInvariant()} removed, with every role and override that set it.");
 			case "RENAME":
 				return Done(await management.EditRoleAsync(actor, left, role => Draft(role) with { Name = right }, ct),
 					role => $"Role {role.Slug} is now named {role.Name}.");
@@ -180,7 +194,8 @@ public partial class Commands
 				var state = operation switch { "ALLOW" => PermissionState.Allow, "DENY" => PermissionState.Deny, _ => PermissionState.Inherit };
 				var scopes = right.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				if (scopes.Length == 0) return "Name at least one permission. See @role/scopes.";
-				if (scopes.FirstOrDefault(s => !PortalPermission.IsKnown(s)) is { } unknown)
+				var custom = (await RoleRegistry(parser).GetCustomPermissionsAsync(ct)).Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase);
+				if (scopes.FirstOrDefault(s => !PortalPermission.IsKnown(s) && !custom.Contains(s)) is { } unknown)
 					return $"Unknown permission '{unknown}'. See @role/scopes.";
 				var changed = $"{StateWord(state)} {string.Join(", ", scopes)}";
 				return holder switch
@@ -281,6 +296,8 @@ public partial class Commands
 		"ALLOW" or "DENY" or "CLEAR" => "[/object|/account] <role, object or player>=<permission> [<permission> ...]",
 		"ASSIGN" or "UNASSIGN" => "[/account] <object>=<role>",
 		"CREATE" => "<role>[=<display name>]",
+		"DEFINE" => "<permission>[=<description>]",
+		"UNDEFINE" => "<permission>",
 		_ => "<role>"
 	};
 

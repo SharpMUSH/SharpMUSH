@@ -3226,6 +3226,50 @@
     <value>Zuweisungen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Berechtigungen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomSection" xml:space="preserve">
+    <value>Eigene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @role/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Name der Berechtigung</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Was sie erlaubt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Festlegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Noch keine eigenen Berechtigungen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Berechtigung {0} festgelegt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Berechtigung entfernen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>{0} entfernen? Jede Rolle und jede Überschreibung, die sie setzt, verliert sie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Berechtigung {0} entfernt.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Rollen</value>
     <comment>MT</comment>

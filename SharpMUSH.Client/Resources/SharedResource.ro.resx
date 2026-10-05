@@ -3226,6 +3226,50 @@
     <value>Atribuiri</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permisiuni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomSection" xml:space="preserve">
+    <value>Personalizate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Permisiunile personalizate sunt cele pe care jocul le definește pentru propriul softcode, de exemplu scene.close. Permiteți una într-un rol ca pe orice altă permisiune; softcode-ul o verifică cu permission(%#,scene.close) sau un lacăt PERM^scene.close. În joc: @role/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Numele permisiunii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Ce permite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definește</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Încă nu există permisiuni personalizate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permisiunea {0} a fost definită.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Elimină permisiunea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Eliminați {0}? Fiecare rol și fiecare excepție care o setează o pierde.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permisiunea {0} a fost eliminată.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Roluri</value>
     <comment>MT</comment>

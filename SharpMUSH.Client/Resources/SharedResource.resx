@@ -2898,6 +2898,39 @@
   <data name="RolTabAssignments" xml:space="preserve">
     <value>Assignments</value>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="RolCustomSection" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Custom permissions are ones your game defines for its own softcode to check, such as scene.close. Once defined, allow one on a role like any other permission; softcode asks permission(%#,scene.close) or locks with PERM^scene.close. In game: @role/define.</value>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Permission name</value>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>What it lets someone do</value>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Define</value>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>No custom permissions yet.</value>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permission {0} defined.</value>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Remove permission</value>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Remove {0}? Every role and override that sets it loses it.</value>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permission {0} removed.</value>
+  </data>
   <data name="RolNewRole" xml:space="preserve">
     <value>New role</value>
   </data>

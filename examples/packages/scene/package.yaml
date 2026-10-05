@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.22.4
+version: 1.23.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -72,6 +72,11 @@ objects:
       # ---- owner / wizard guard -------------------------------------------------
       FUN`OWNS: |-
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
+      # Finishing is the one owner verb staff may need on someone else's scene. A game hands it out by
+      # defining the scene.close permission (@role/define scene.close) and allowing it on a role, such
+      # as helper. permission() answers #-1 while the permission is undefined, which or() reads as false.
+      FUN`CAN`CLOSE: |-
+        or(u(%!/FUN`OWNS,%0,%1),permission(%0,scene.close))
 
       # ---- approval guard -------------------------------------------------------
       # The ONE place +scene asks "may this thing be ASSOCIATED with a scene?". Two halves:
@@ -114,6 +119,8 @@ objects:
         You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
       DATA`DENY_NOT_OWNER: |-
         That scene is not yours to change. Its owner or a wizard can do it.
+      DATA`DENY_NOT_CLOSER: |-
+        That scene is not yours to finish. Its owner, a wizard, or anyone holding the scene.close permission can.
       DATA`DENY_NOT_AUTHOR: |-
         That pose is not yours to edit. Only its author can.
       # +scene/rewrite <id>= would otherwise blank the pose; deleting one is +scene/delete.
@@ -305,7 +312,11 @@ objects:
         $+scene/pause: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=paused; @pemit %#=Scene paused.
 
       CMD`FINISH: |-
-        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
+        $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`CAN`CLOSE,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_CLOSER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
+
+      # +scene/finish <id> closes a scene by id, without joining it: how staff close one they are not in.
+      CMD`FINISH`ID: |-
+        $+scene/finish *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @assert u(%!/FUN`CAN`CLOSE,%#,%0)=@pemit %#=[get(%!/DATA`DENY_NOT_CLOSER)]; @scene/set %0/status=finished; @if strmatch(scenefocus(%#),%0)={@scene/focus %#=}; @pemit %#=Scene %0 finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its
@@ -609,6 +620,9 @@ objects:
         - `+scene/create <title>` — start one here and focus it
         - `+scene/pitch <text>` — say what it is about, so people can decide to come
         - `+scene/finish` — close it
+        - `+scene/finish <id>` — close a scene by id. Its owner can, and so can anyone holding the
+          `scene.close` permission: a game defines it with `@role/define scene.close` and allows it on
+          a role, such as helper, with `@role/allow helper=scene.close`
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.

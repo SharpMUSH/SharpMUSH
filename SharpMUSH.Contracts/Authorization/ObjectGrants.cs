@@ -77,6 +77,13 @@ public sealed class ObjectGrants
 	public bool Has(string scope) => Granted.Contains(scope);
 
 	/// <summary>
+	/// The spelling <see cref="Has"/> expects for <paramref name="scope"/>, matched without regard to case:
+	/// the catalog's for a built-in permission, lowercase for a custom one, null for neither.
+	/// </summary>
+	public string? Canonical(string scope)
+		=> PortalPermission.Canonical(scope) ?? (Context.CustomScopes.Contains(scope) ? scope.ToLowerInvariant() : null);
+
+	/// <summary>
 	/// Whether a role or override allows <paramref name="scope"/> by name, leaving out the owner and
 	/// <c>administrator</c> roles, which hold everything. This is what <c>hasflag()</c>, <c>haspower()</c>,
 	/// <c>flags()</c> and <c>powers()</c> show: PennMUSH's God has no ROYALTY flag and no powers.
@@ -103,8 +110,10 @@ public sealed class ObjectGrants
 	/// <param name="objectRoles">The slugs assigned to the object.</param>
 	/// <param name="objectOverrides">The overrides set on the object.</param>
 	/// <param name="account">The linked account's grants, when the object is a character on an active account.</param>
+	/// <param name="custom">The custom permissions the world defines.</param>
 	public static ObjectGrants For(int number, bool isPlayer, IReadOnlyCollection<SharpRole> roles,
-		IEnumerable<string> objectRoles, IReadOnlyDictionary<string, PermissionState> objectOverrides, AccountGrants? account)
+		IEnumerable<string> objectRoles, IReadOnlyDictionary<string, PermissionState> objectOverrides, AccountGrants? account,
+		IEnumerable<CustomPermission> custom)
 	{
 		var bySlug = roles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
 		var held = new List<HeldRole>();
@@ -127,7 +136,8 @@ public sealed class ObjectGrants
 			account?.Overrides ?? new Dictionary<string, PermissionState>(),
 			owner)
 		{
-			ObjectOverrides = objectOverrides
+			ObjectOverrides = objectOverrides,
+			CustomScopes = custom.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		};
 		return new ObjectGrants(held, context);
 	}
