@@ -689,6 +689,8 @@
         // even when the tab being closed is another one.
         await CaptureEditorAsync();
         var active = _tabs.Close(idx);
+        if (active is not null)
+            RevealInTree(active);
         if (_monacoEditor is not null)
             await SetEditorValueAsync(active?.WorkingContent ?? string.Empty);
         StateHasChanged();
