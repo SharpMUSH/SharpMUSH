@@ -86,7 +86,7 @@ public class WikiControllerTranslationTests
 			ns: "main");
 
 		await Assert.That(result).IsTypeOf<ForbidResult>()
-			.Because("a translation write is gated on the source page's IsProtected, same as a page edit");
+			.Because("a translation write is gated on the source page's requirements, same as a page edit");
 	}
 
 	[Test]
@@ -219,7 +219,7 @@ public class WikiControllerTranslationTests
 	[Test]
 	public async Task CreatePage_StampsTheConfiguredDefaultAsTheSourceLocale()
 	{
-		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiCreate);
 
 		await wiki.Pages.CreatePage(
 			new CreatePageRequest("Dragons", "en body", Namespace: "main"));

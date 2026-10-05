@@ -211,7 +211,7 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiRead()
+	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiDrafts()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
@@ -222,7 +222,7 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiRead_Returns404()
+	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiDrafts_Returns404()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");

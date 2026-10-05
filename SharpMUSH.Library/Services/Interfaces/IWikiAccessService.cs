@@ -26,12 +26,13 @@ public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref)
 /// </summary>
 public sealed record WikiDecision(WikiAction Action, bool Allowed, bool Bypassed, string? MissingScope, WikiRuleTarget? RequiredBy)
 {
-	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit" or "category lore requires lore.edit".</summary>
+	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit" or "the page requires wiki.admin".</summary>
 	public string Describe() => (Allowed, Bypassed, RequiredBy) switch
 	{
 		(true, true, _) => "allowed (wiki.admin skips requirements)",
 		(true, false, _) => "allowed",
 		(false, _, null) => $"needs {MissingScope}",
+		(false, _, { Scope: WikiRuleScope.Page }) => $"the page requires {MissingScope}",
 		(false, _, { } source) => $"{source} requires {MissingScope}",
 	};
 }

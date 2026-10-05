@@ -100,13 +100,13 @@ public class WikiControllerLocaleTests
 	}
 
 	[Test]
-	public async Task GetPage_DraftTranslationIsVisibleToAReaderWhoHoldsWikiRead()
+	public async Task GetPage_DraftTranslationIsVisibleToAReaderWhoHoldsWikiDrafts()
 	{
-		// wiki.read is the draft-*page* scope; it also carries draft translations, because someone who may
+		// wiki.drafts is the draft-*page* scope; it also carries draft translations, because someone who may
 		// already read every unpublished page gains nothing from being denied their translations. What must
 		// not happen is the reverse: a plain reader with neither scope seeing one. That is the case above;
-		// this one pins that wiki.read is deliberately included rather than accidentally.
-		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiRead);
+		// this one pins that wiki.drafts is deliberately included rather than accidentally.
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiDrafts);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 

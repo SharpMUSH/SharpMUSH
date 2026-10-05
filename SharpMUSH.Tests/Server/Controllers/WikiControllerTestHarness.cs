@@ -74,7 +74,10 @@ internal static class WikiControllerTestHarness
 		var identity = authenticated
 			? new ClaimsIdentity(
 				new List<Claim> { new(GameHub.CharacterDbrefClaim, callerDbref) }
-					.Concat(scopes.Select(s => new Claim(PortalPermission.ClaimType, s))),
+					// Every account holds the everyone role, so its claims always carry wiki.read, as the real
+					// claims transformation's do.
+					.Concat(scopes.Append(PortalPermission.WikiRead).Distinct()
+						.Select(s => new Claim(PortalPermission.ClaimType, s))),
 				"test")
 			: new ClaimsIdentity();
 
