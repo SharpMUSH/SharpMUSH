@@ -879,6 +879,15 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd($"&{payload} #9=unset");
 			await Trigger(f.Room, "resume");
 			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo(string.Empty);
+
+			// A room nobody connected is in: the handler finds no viewer and builds nothing. The record also
+			// carries the info<n> register FN`PREPARE fills, so preparing the room's rows anyway shows.
+			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
+			var emptyRoom = $"LAST_PAYLOAD`{f.Dest[1..]}";
+			await Cmd($"&{emptyRoom} #9=unset");
+			await Trigger(f.Dest, "move-in");
+			await Assert.That(await Eval($"get(#9/{emptyRoom})")).IsEqualTo(string.Empty)
+				.Because("a room with no connected viewer is neither prepared nor sent anything");
 		}
 		finally
 		{

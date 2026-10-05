@@ -43,16 +43,17 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var home = new DBRef((int)options.CurrentValue.Database.DefaultHome);
-		var player = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreatePlayerCommand(
-			name, "TestPassword123", home, home, (int)options.CurrentValue.Limit.StartingQuota));
-		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player, "websocket");
 
-		// A room of its own, as the notification tests do: a connected player left in DefaultHome makes
-		// every later arrival there refresh one more viewer's room.contents, for the rest of the session.
-		var room = await factory.CommandParser.CommandParse(1, ConnectionService,
+		// Made and connected in a room of its own, as the notification tests do. A viewer that arrives in
+		// DefaultHome, or leaves it, has ROOM`CONTENTS queued for DefaultHome — a room the whole session
+		// fills, so each refresh of it builds a row for everything there, on the one queue every test's
+		// events wait behind.
+		var dug = await factory.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
-		await God($"@teleport/silent #{player.Number}={room.Message!.ToPlainText().Trim()}");
+		var room = DBRef.Parse(dug.Message!.ToPlainText().Trim());
+		var player = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreatePlayerCommand(
+			name, "TestPassword123", room, room, (int)options.CurrentValue.Limit.StartingQuota));
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player, "websocket");
 
 		return new Viewer(player, handle, name);
 	}
@@ -83,23 +84,28 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Watches the NATS subject websocket output is published on. <see cref="SentWhile"/> runs an action
-	/// and then has every watched player <c>oob()</c> itself a probe; since one publisher's messages arrive
-	/// in order, a handle's probe arriving means everything published to it before the probe has too.
+	/// Watches the NATS subject websocket output is published on. <see cref="SentWhile"/> runs an action,
+	/// waits for the events it queued to run, and then has every watched player <c>oob()</c> itself a probe;
+	/// since one publisher's messages arrive in order, a handle's probe arriving means everything published
+	/// to it before the probe has too.
 	/// </summary>
 	private sealed class OobWatch : IAsyncDisposable
 	{
 		private readonly NatsConnection _nats;
 		private readonly INatsSub<WebSocketOutputMessage> _sub;
+		private readonly ServerWebAppFactory _factory;
 
-		private OobWatch(NatsConnection nats, INatsSub<WebSocketOutputMessage> sub)
+		private OobWatch(NatsConnection nats, INatsSub<WebSocketOutputMessage> sub, ServerWebAppFactory factory)
 		{
 			_nats = nats;
 			_sub = sub;
+			_factory = factory;
 		}
 
 		public static async Task<OobWatch> OpenAsync(ServerWebAppFactory factory)
 		{
+			// What the test's setup queued (a join's PLAYER`CHANNELS, say) is pushed before the watch starts.
+			await factory.QueueBarrierAsync();
 			var nats = new NatsConnection(new NatsOpts
 			{
 				Url = $"nats://localhost:{factory.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
@@ -110,7 +116,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 				serializer: CompressingNatsSerializer<WebSocketOutputMessage>.Default);
 			// The subscription is in place on the server before anything is published.
 			await nats.PingAsync();
-			return new OobWatch(nats, sub);
+			return new OobWatch(nats, sub, factory);
 		}
 
 		/// <summary>The OOB frames (package, data) each watched viewer's connection was sent while <paramref name="action"/> ran.</summary>
@@ -118,6 +124,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 			Func<Task> action, Func<Viewer, string, Task> run, params Viewer[] watched)
 		{
 			await action();
+			// The events the action raised are queue entries of their own; their pushes come once they run.
+			await _factory.QueueBarrierAsync();
 
 			var probe = $"probe.{Guid.NewGuid():N}";
 			foreach (var viewer in watched)

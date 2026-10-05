@@ -88,6 +88,8 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// and is first in, first out, so a sentinel admitted now runs after the work a test's command queued —
 	/// an event, an <c>@aconnect</c>-family hook, a triad's action — without waiting, as
 	/// <see cref="ITaskScheduler.DrainImmediateQueueForTests"/> does, for every other test's work to stop.
+	/// It still waits behind whatever the rest of the session queued first, the event handlers above all,
+	/// which is why the default allows a minute.
 	/// </summary>
 	public async Task QueueBarrierAsync(TimeSpan? timeout = null)
 	{
@@ -99,7 +101,7 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		}, "test-barrier", SharpMUSH.Library.Services.TaskScheduler.EnqueueGroup);
 		if (!admission.Accepted)
 			throw new InvalidOperationException($"The queue barrier was refused: {admission.Reason}");
-		await reached.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(30));
+		await reached.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(60));
 	}
 
 	// Metrics collected via MeterListener — static so they persist across all factory instances
