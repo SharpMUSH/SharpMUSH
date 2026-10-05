@@ -65,7 +65,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null, relogin: null);
 
 	/// <param name="relogin">Logs a reconnect the server could not resume back in (<see cref="IWebSocketClientService.Relogin"/>).</param>
-	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity, Func<Func<string, Task>, Task>? relogin)
+	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity, Func<Func<string, Task>, Task<bool>>? relogin)
 	{
 		_serverUri = serverUri;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
@@ -124,18 +124,18 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// Logs a reconnect the server could not resume back in as the same character, with a fresh token.
 	/// Nothing is said in the terminal unless that cannot be done, when the reader has to log in themselves.
 	/// </summary>
-	private async Task ReloginAsync(ITerminalLoginTokens tokens, TerminalIdentity identity, Func<string, Task> send)
+	private async Task<bool> ReloginAsync(ITerminalLoginTokens tokens, TerminalIdentity identity, Func<string, Task> send)
 	{
 		if (await tokens.MintAsync(identity) is not { } ott)
 		{
 			_logger.LogWarning("No login token for the reconnected terminal; it stays at the login screen");
-			wsService.ClearSendBuffer();
 			AddSystemLine("Reconnected, but could not log back in. Log in again to continue.");
-			return;
+			return false;
 		}
 
 		_logger.LogInformation("Logging the reconnected terminal in again");
 		await send($"connect token {ott}");
+		return true;
 	}
 
 	public async Task ConnectAsGuestAsync(string serverUri)
@@ -143,7 +143,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ClearSendBuffer();
 		// No pause: the server holds early input until the connection registers (ConnectWithOttAsync).
 		// A guest has no resume point, so a reconnect is a new guest.
-		await ConnectAsync(serverUri, identity: null, relogin: send => send("connect guest"));
+		await ConnectAsync(serverUri, identity: null, relogin: async send => { await send("connect guest"); return true; });
 		AddSystemLine("[Guest] Connecting…");
 		await wsService.SendAsync("connect guest");
 	}

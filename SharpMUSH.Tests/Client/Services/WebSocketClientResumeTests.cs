@@ -463,4 +463,35 @@ public class WebSocketClientResumeTests
 
 		await terminal.DisposeAsync();
 	}
+
+	/// <summary>
+	/// What is typed while a reconnect fails to log back in was meant for the lost session and is dropped;
+	/// what is typed at the login screen afterwards goes out, so the reader can log in themselves.
+	/// </summary>
+	[Test]
+	public async Task A_failed_relogin_drops_what_was_typed_meanwhile_but_not_what_follows()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens { Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		await Assert.That(await Eventually.TrueAsync(() => !tokens.Asked.IsEmpty && terminal.IsConnected)).IsTrue();
+
+		await terminal.SendAsync("look");
+		tokens.Hold.SetResult();
+		await Assert.That(await Eventually.TrueAsync(() => terminal.Lines.Any(l => l.Text.StartsWith("Reconnected, but could not log back in", StringComparison.Ordinal)))).IsTrue();
+		// The notice goes up a moment before the socket is ready, and a line begun in that moment is still
+		// dropped; a reader takes longer than that, so the test retries the way one would.
+		for (var tries = 0; tries < 50 && !server.LaterFrames.Contains("connect Alice secret"); tries++)
+		{
+			await terminal.SendAsync("connect Alice secret");
+			await Eventually.TrueAsync(() => server.LaterFrames.Contains("connect Alice secret"), timeoutMs: 100);
+		}
+
+		await Assert.That(server.LaterFrames.Contains("connect Alice secret")).IsTrue();
+		await Assert.That(server.LaterFrames.Contains("look")).IsFalse();
+
+		await terminal.DisposeAsync();
+	}
 }

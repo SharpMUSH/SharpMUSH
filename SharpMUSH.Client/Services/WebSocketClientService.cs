@@ -91,7 +91,7 @@ public class WebSocketClientService : IWebSocketClientService
 	public event EventHandler? ResumeRefused;
 
 	/// <inheritdoc/>
-	public Func<Func<string, Task>, Task>? Relogin { get; set; }
+	public Func<Func<string, Task>, Task<bool>>? Relogin { get; set; }
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	/// <summary>
@@ -111,6 +111,12 @@ public class WebSocketClientService : IWebSocketClientService
 	/// reaches a login screen ahead of the login or goes out while the flush is writing.
 	/// </summary>
 	private ClientWebSocket? _ready;
+
+	/// <summary>
+	/// A ready socket left at the login screen because logging in again failed. A send begun before it was
+	/// ready was typed for the session that was lost and is dropped; one begun after is the reader's own login.
+	/// </summary>
+	private ClientWebSocket? _loggedOut;
 
 	/// <summary>Serializes writes to <see cref="_ready"/>: a send against the flush that opens it.</summary>
 	private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -257,13 +263,15 @@ public class WebSocketClientService : IWebSocketClientService
 				if (answer == ResumeVerdict.Interrupted) return answer;
 			}
 
-			if (reconnect && answer != ResumeVerdict.Resumed)
-				await ReloginAsync(_webSocket);
+			var loggedIn = !reconnect || answer == ResumeVerdict.Resumed || await ReloginAsync(_webSocket);
 
 			await _sendLock.WaitAsync(_cancellationTokenSource.Token);
 			try
 			{
+				// What was typed for the lost session is not read as login-screen commands.
+				if (!loggedIn) ClearSendBuffer();
 				await FlushSendBufferAsync();
+				_loggedOut = loggedIn ? null : _webSocket;
 				_ready = _webSocket;
 			}
 			finally
@@ -284,9 +292,16 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	public async Task SendAsync(string message)
 	{
+		var readyBefore = _ready;
 		await _sendLock.WaitAsync();
 		try
 		{
+			if (_ready is { } ready && !ReferenceEquals(ready, readyBefore) && ReferenceEquals(ready, _loggedOut))
+			{
+				_logger.LogDebug("Dropping a command typed for the session a reconnect could not log back in");
+				return;
+			}
+
 			// One read of the socket: the one checked for readiness is the one written to, even if a reconnect
 			// replaces it meanwhile.
 			if (_webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _ready))
@@ -370,27 +385,23 @@ public class WebSocketClientService : IWebSocketClientService
 	}
 
 	/// <summary>
-	/// Logs a reconnect that could not resume back in, before anything buffered goes out. Without a way to,
-	/// the buffered commands are dropped rather than read as login-screen commands.
+	/// Logs a reconnect that could not resume back in, before anything buffered goes out. False when there is
+	/// no way to or it failed: the session stays at the login screen.
 	/// </summary>
-	private async Task ReloginAsync(ClientWebSocket socket)
+	private async Task<bool> ReloginAsync(ClientWebSocket socket)
 	{
-		if (Relogin is not { } relogin)
-		{
-			ClearSendBuffer();
-			return;
-		}
+		if (Relogin is not { } relogin) return false;
 
 		try
 		{
 			// The login goes straight to this socket; nothing else writes to it until it is ready.
-			await relogin(message => WriteAsync(socket, message));
+			return await relogin(message => WriteAsync(socket, message));
 		}
 		// A cancellation is not a failed login: it ends this attempt, and the reconnect loop takes it.
 		catch (Exception ex) when (ex is WebSocketException or HttpRequestException or InvalidOperationException)
 		{
 			_logger.LogWarning(ex, "Logging in again after a reconnect failed");
-			ClearSendBuffer();
+			return false;
 		}
 	}
 
