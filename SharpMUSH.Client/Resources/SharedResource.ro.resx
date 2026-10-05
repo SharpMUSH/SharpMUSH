@@ -3250,6 +3250,62 @@
     <value>Este necesară o categorie.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categorii</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Fiecare rol și fiecare permisiune personalizată aparține unei categorii, iar această pagină le grupează după ea. Creați o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Ce conține</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Creează</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Încă nu există categorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Categoria {0} a fost creată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Categoria {0} a fost salvată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Șterge categoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Ștergeți {0}? Se poate șterge doar o categorie fără roluri și permisiuni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Categoria {0} a fost ștearsă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>Roluri: {0}, permisiuni: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Alegeți o categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Creați categorii în fila Categorii.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>O categorie are nevoie de un nume și o descriere.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Definește</value>
     <comment>MT</comment>

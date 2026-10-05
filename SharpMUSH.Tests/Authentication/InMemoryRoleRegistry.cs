@@ -14,6 +14,7 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	private readonly Dictionary<int, HashSet<string>> _objectRoles = new();
 	private readonly Dictionary<int, Dictionary<string, PermissionState>> _objectOverrides = new();
 	private readonly Dictionary<string, CustomPermission> _custom = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, RoleCategory> _categories = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>A registry seeded like a new world: system and starter roles.</summary>
 	public static InMemoryRoleRegistry Seeded()
@@ -21,6 +22,8 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		var registry = new InMemoryRoleRegistry();
 		foreach (var role in BuiltInRoles.All.Concat(BuiltInRoles.Starters))
 			registry.Add(role);
+		foreach (var category in Categories.Seeds)
+			registry._categories[category.Name] = category;
 		return registry;
 	}
 
@@ -124,6 +127,33 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	public Task UpsertCustomPermissionAsync(CustomPermission permission)
 	{
 		_custom[permission.Scope] = permission;
+		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<RoleCategory>>(_categories.Values.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList());
+
+	public Task UpsertCategoryAsync(RoleCategory category)
+	{
+		_categories.Remove(category.Name);
+		_categories[category.Name] = category;
+		return Task.CompletedTask;
+	}
+
+	public Task RenameCategoryAsync(string name, RoleCategory renamed)
+	{
+		_categories.Remove(name);
+		_categories[renamed.Name] = renamed;
+		foreach (var role in _roles.Values.Where(r => string.Equals(r.Category, name, StringComparison.OrdinalIgnoreCase)))
+			role.Category = renamed.Name;
+		foreach (var permission in _custom.Values.Where(p => string.Equals(p.Category, name, StringComparison.OrdinalIgnoreCase)).ToList())
+			_custom[permission.Scope] = permission with { Category = renamed.Name };
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveCategoryAsync(string name)
+	{
+		_categories.Remove(name);
 		return Task.CompletedTask;
 	}
 

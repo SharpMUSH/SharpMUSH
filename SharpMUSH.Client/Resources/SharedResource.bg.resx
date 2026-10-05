@@ -3250,6 +3250,62 @@
     <value>Изисква се категория.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Категории</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Всяка роля и всяко собствено разрешение принадлежат към категория и тази страница ги групира по нея. Създайте категория, преди да сложите нещо в нея. Категория, която още съдържа нещо, не може да бъде изтрита. В играта: @role/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Какво включва</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Създай</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Все още няма категории.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Категорията {0} е създадена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Категорията {0} е запазена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Изтриване на категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Да се изтрие ли {0}? Може да се изтрие само категория без роли и разрешения.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Категорията {0} е изтрита.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>Роли: {0}, разрешения: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Изберете категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Категориите се създават в раздела „Категории“.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Категорията трябва да има име и описание.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Определи</value>
     <comment>MT</comment>

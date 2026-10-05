@@ -31,6 +31,11 @@
       "lookup": "@role define"
     },
     {
+      "id": "role-categories",
+      "heading": "Categories",
+      "lookup": "@role categories"
+    },
+    {
       "id": "role-rank",
       "heading": "Who may change what",
       "lookup": "@role rank"
@@ -48,6 +53,7 @@
 `@role[/info] <role>`<br>
 `@role/player [<object>]`<br>
 `@role/scopes`<br>
+`@role/categories`<br>
 `@role/create <role>=<category>[/<display name>]`<br>
 `@role/delete <role>`<br>
 `@role/rename <role>=<display name>`<br>
@@ -62,13 +68,17 @@
 `@role/allow/object <object>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
 `@role/allow/account <player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
 `@role/define <permission>=<category>[/<description>]`<br>
-`@role/undefine <permission>`
+`@role/undefine <permission>`<br>
+`@role/category/create <category>=<description>`<br>
+`@role/category/describe <category>=<description>`<br>
+`@role/category/rename <category>=<new name>`<br>
+`@role/category/delete <category>`
 
 @role shows and manages roles: named sets of permissions that decide what an object may do, in the game and in the web portal. See [roles] for how roles combine.
 
-A role is named by its short name (`moderator`), which is lowercase letters, digits, `-` and `_`. Its display name, category, colour and priority can change; its short name cannot.
+A role is named by its short name (`moderator`), which is 1 to 32 lowercase letters, digits, `-` and `_`. Its display name, category, colour and priority can change; its short name cannot. A display name is up to 32 characters a player name may use.
 
-Every role and custom permission has a category, such as `Staff` or `Scenes`: up to 32 characters, without `/`. The portal's Roles page groups them by it. The system roles start in `System`, and the starter roles in `Staff`.
+Every role and custom permission is in a category, and the category must exist first (see [@role categories]). The portal's Roles page groups them by it. The system roles start in `System`, and the starter roles in `Staff`.
 
 ## Viewing roles
 
@@ -127,7 +137,7 @@ Examples:
 
 ## Custom permissions
 
-A game can add permissions of its own for its softcode to check. `@role/define scene.close=Scenes/Finish any scene` defines `scene.close` in the `Scenes` category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,scene.close)` or locks with `PERM^scene.close`, and `@command/restrict` and `@function/restrict` accept it.
+A game can add permissions of its own for its softcode to check. `@role/define scene.close=Staff/Finish any scene` defines `scene.close` in the `Staff` category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,scene.close)` or locks with `PERM^scene.close`, and `@command/restrict` and `@function/restrict` accept it.
 
 A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its category and description; `@role/category <permission>=<category>` changes only the category.
 
@@ -137,9 +147,24 @@ A new custom permission is held only by #1 and holders of `administrator` until 
 
 Examples:
 ```sharp
-@role/define scene.close=Scenes/Finish any scene
+@role/define scene.close=Staff/Finish any scene
 @role/allow helper=scene.close
 think permission(*Ariel,scene.close)
+```
+
+## Categories
+
+A category groups roles and custom permissions, and has a description of up to 200 characters. A new game has two: `System`, for the system roles, and `Staff`. `@role/categories` lists every category, with how many roles and permissions it holds and its description.
+
+`@role/category/create <category>=<description>` makes one. A name is 1 to 32 characters a player name may use, without `/`; `valid(rolecategory, <name>)` checks one. Names are matched without regard to case. Naming a category that does not exist in `@role/create`, `@role/define` or `@role/category` is refused, with a reminder to create it first.
+
+`@role/category/describe` changes the description, and `@role/category/rename` the name, taking everything in the category along. `@role/category/delete` removes an empty category; move what is in it elsewhere first. All of these need the `roles.admin` permission.
+
+Examples:
+```sharp
+@role/category/create Scenes=People who run and close scenes
+@role/create closer=Scenes/Scene closer
+@role/category/rename Scenes=Scene staff
 ```
 
 ## Who may change what

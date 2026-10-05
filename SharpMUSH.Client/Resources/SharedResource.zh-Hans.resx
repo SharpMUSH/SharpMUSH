@@ -3250,6 +3250,62 @@
     <value>必须填写类别。</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>每个角色和自定义权限都属于一个类别，本页按类别分组显示。放入内容之前请先创建类别。仍包含内容的类别无法删除。游戏内：@role/category。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>包含哪些内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>创建</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>还没有类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>已创建类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>已保存类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>删除类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>删除 {0}？只有不含角色和权限的类别才能删除。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>已删除类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>{0} 个角色，{1} 个权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>选择类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>请在“类别”标签页中创建类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>类别需要名称和描述。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>定义</value>
     <comment>MT</comment>

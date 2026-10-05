@@ -3250,6 +3250,62 @@
     <value>Kategorija je obavezna.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategorije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Svaka uloga i svako vlastito dopuštenje pripada kategoriji, a ova ih stranica grupira po njoj. Stvorite kategoriju prije nego što u nju išta stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Što pripada u nju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Stvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Još nema kategorija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Kategorija {0} stvorena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Kategorija {0} spremljena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Izbriši kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Izbrisati {0}? Može se izbrisati samo kategorija bez uloga i dopuštenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Kategorija {0} izbrisana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>Uloge: {0}, dopuštenja: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Odaberite kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Kategorije se stvaraju na kartici Kategorije.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Kategorija treba naziv i opis.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Definiraj</value>
     <comment>MT</comment>

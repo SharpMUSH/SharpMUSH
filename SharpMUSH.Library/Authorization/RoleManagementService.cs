@@ -48,7 +48,8 @@ public sealed record RoleDraft(
 /// apply the same rules (<see cref="RoleHierarchy"/>):
 /// <list type="bullet">
 /// <item>Every change needs <see cref="PortalPermission.RolesAdmin"/>.</item>
-/// <item>Every role and custom permission has a category (<see cref="Categories"/>).</item>
+/// <item>Every role and custom permission sits in a category (<see cref="RoleCategory"/>) that already
+/// exists; a category holding anything cannot be deleted.</item>
 /// <item>A role can be created, edited, deleted, assigned or removed only when it sits below the
 /// actor's highest role, and only an account or object whose highest role is below the actor's can
 /// have its roles or overrides changed.</item>
@@ -108,6 +109,18 @@ public interface IRoleManagementService
 	/// <see cref="PortalPermission.RolesAdmin"/> and the right to grant it.
 	/// </summary>
 	Task<RoleOutcome<Success>> RemovePermissionAsync(RoleActor actor, string scope, CancellationToken ct = default);
+
+	/// <summary>Creates a category with a description. Needs <see cref="PortalPermission.RolesAdmin"/>.</summary>
+	Task<RoleOutcome<RoleCategory>> CreateCategoryAsync(RoleActor actor, string name, string description, CancellationToken ct = default);
+
+	/// <summary>Replaces a category's description.</summary>
+	Task<RoleOutcome<RoleCategory>> DescribeCategoryAsync(RoleActor actor, string name, string description, CancellationToken ct = default);
+
+	/// <summary>Renames a category, moving every role and custom permission in it.</summary>
+	Task<RoleOutcome<RoleCategory>> RenameCategoryAsync(RoleActor actor, string name, string newName, CancellationToken ct = default);
+
+	/// <summary>Deletes a category, which must hold no role and no custom permission.</summary>
+	Task<RoleOutcome<Success>> DeleteCategoryAsync(RoleActor actor, string name, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -121,9 +134,6 @@ public sealed partial class RoleManagementService(
 {
 	/// <summary>Validation and the write it guards run one at a time, so two changes cannot both pass a stale check.</summary>
 	private readonly SemaphoreSlim _gate = new(1, 1);
-
-	[GeneratedRegex("^[a-z0-9_-]{1,32}$")]
-	private static partial Regex SlugPattern();
 
 	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
 	private static partial Regex ColorPattern();
@@ -172,15 +182,14 @@ public sealed partial class RoleManagementService(
 				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, PortalPermission.IsKnown(name)
 					? $"{name} is a built-in permission."
 					: $"A custom permission is two or more parts joined by '.', each of lowercase letters, digits or '_', such as scene.close; at most {CustomPermissions.MaxNameLength} characters, and not under {string.Join(", ", CustomPermissions.ReservedPrefixes)}.");
-			if (Categories.Normalize(category) is not { } group)
-				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, Categories.Rule);
 			var text = description.Trim();
 			if (text.Length > MaxDescriptionLength)
 				return Refuse<CustomPermission>(RoleRefusalKind.Invalid, $"A description is at most {MaxDescriptionLength} characters.");
 			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+			if (await FindCategoryAsync(category, ct) is not { } group) return MissingCategory(category);
 
 			var existing = (await registry.GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == name);
-			var permission = new CustomPermission(name, group, text, existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			var permission = new CustomPermission(name, group.Name, text, existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 			await registry.UpsertCustomPermissionAsync(permission);
 			await mediator.Send(new InvalidateGrantsCommand(null), ct);
 			return permission;
@@ -203,6 +212,93 @@ public sealed partial class RoleManagementService(
 			await mediator.Send(new InvalidateGrantsCommand(null), ct);
 			return new Success();
 		}, ct);
+
+	public Task<RoleOutcome<RoleCategory>> CreateCategoryAsync(RoleActor actor, string name, string description, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			var trimmed = name.Trim();
+			if (!Categories.IsValidName(trimmed)) return Refuse<RoleCategory>(RoleRefusalKind.Invalid, Categories.NameRule);
+			if (CategoryDescription(description) is not { } text) return DescriptionRefusal();
+			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+			if (await FindCategoryAsync(trimmed, ct) is { } taken)
+				return Refuse<RoleCategory>(RoleRefusalKind.Invalid, $"There is already a category named {taken.Name}.");
+
+			var category = new RoleCategory(trimmed, text, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			await registry.UpsertCategoryAsync(category);
+			return category;
+		}, ct);
+
+	public Task<RoleOutcome<RoleCategory>> DescribeCategoryAsync(RoleActor actor, string name, string description, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			if (CategoryDescription(description) is not { } text) return DescriptionRefusal();
+			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+			if (await FindCategoryAsync(name, ct) is not { } existing) return NoSuchCategory(name);
+
+			var category = existing with { Description = text };
+			await registry.UpsertCategoryAsync(category);
+			return category;
+		}, ct);
+
+	public Task<RoleOutcome<RoleCategory>> RenameCategoryAsync(RoleActor actor, string name, string newName, CancellationToken ct = default)
+		=> Gated(async () =>
+		{
+			var trimmed = newName.Trim();
+			if (!Categories.IsValidName(trimmed)) return Refuse<RoleCategory>(RoleRefusalKind.Invalid, Categories.NameRule);
+			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+			if (await FindCategoryAsync(name, ct) is not { } existing) return NoSuchCategory(name);
+			if (await FindCategoryAsync(trimmed, ct) is { } taken && !string.Equals(taken.Name, existing.Name, StringComparison.OrdinalIgnoreCase))
+				return Refuse<RoleCategory>(RoleRefusalKind.Invalid, $"There is already a category named {taken.Name}.");
+
+			var category = existing with { Name = trimmed };
+			await registry.RenameCategoryAsync(existing.Name, category);
+			await mediator.Send(new InvalidateGrantsCommand(null), ct);
+			return category;
+		}, ct);
+
+	public Task<RoleOutcome<Success>> DeleteCategoryAsync(RoleActor actor, string name, CancellationToken ct = default)
+		=> Gated<RoleOutcome<Success>>(async () =>
+		{
+			if (Unauthorized((await ActorGrantsAsync(actor, ct)).Context) is { } refusal) return refusal;
+			if (await FindCategoryAsync(name, ct) is not { } existing) return NoSuchCategory<Success>(name);
+			var members = (await registry.GetRolesAsync(ct)).Where(role => InCategory(role.Category, existing)).Select(role => role.Slug)
+				.Concat((await registry.GetCustomPermissionsAsync(ct)).Where(p => InCategory(p.Category, existing)).Select(p => p.Scope))
+				.ToArray();
+			if (members.Length > 0)
+				return Refuse<Success>(RoleRefusalKind.Invalid,
+					$"{existing.Name} still holds {string.Join(", ", members)}. Move them to another category first.");
+
+			await registry.RemoveCategoryAsync(existing.Name);
+			return new Success();
+		}, ct);
+
+	private static bool InCategory(string category, RoleCategory group)
+		=> string.Equals(category, group.Name, StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>The stored category named <paramref name="name"/>, matched without case, or null.</summary>
+	private async Task<RoleCategory?> FindCategoryAsync(string name, CancellationToken ct)
+		=> (await registry.GetCategoriesAsync(ct)).FirstOrDefault(c => InCategory(name.Trim(), c));
+
+	/// <summary>Why a role or permission cannot go in <paramref name="name"/>: there is no such category yet.</summary>
+	private static RoleRefusal MissingCategory(string name)
+		=> new(RoleRefusalKind.Invalid, name.Trim().Length == 0
+			? "A category is required. See @role/categories for the categories there are."
+			: $"No category named '{name.Trim()}'. Create the category first: @role/category/create {name.Trim()}=<description>, or the portal's Categories tab.");
+
+	private static RoleOutcome<T> NoSuchCategory<T>(string name)
+		=> Refuse<T>(RoleRefusalKind.NotFound, $"No category named '{name.Trim()}'. See @role/categories.");
+
+	private static RoleOutcome<RoleCategory> NoSuchCategory(string name) => NoSuchCategory<RoleCategory>(name);
+
+	/// <summary>A category's description trimmed, when it is present and short enough; otherwise null.</summary>
+	private static string? CategoryDescription(string description)
+	{
+		var text = description.Trim();
+		return text.Length is > 0 and <= Categories.MaxDescriptionLength && !text.Any(char.IsControl) ? text : null;
+	}
+
+	private static RoleOutcome<RoleCategory> DescriptionRefusal()
+		=> Refuse<RoleCategory>(RoleRefusalKind.Invalid, $"A category needs a description of 1 to {Categories.MaxDescriptionLength} characters.");
 
 	public Task<RoleOutcome<Success>> AssignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: true, ct);
@@ -412,10 +508,12 @@ public sealed partial class RoleManagementService(
 	private async Task<RoleOutcome<SharpRole>> SaveCoreAsync(RoleActor actor, RoleDraft draft, CancellationToken ct)
 	{
 		var slug = draft.Slug.Trim();
-		if (!SlugPattern().IsMatch(slug))
-			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role name is 1 to 32 lowercase letters, digits, '-' or '_'.");
-		if (Categories.Normalize(draft.Category) is not { } category)
-			return Refuse<SharpRole>(RoleRefusalKind.Invalid, Categories.Rule);
+		if (!RoleNames.IsValidShortName(slug))
+			return Refuse<SharpRole>(RoleRefusalKind.Invalid, RoleNames.ShortNameRule);
+		var name = draft.Name.Trim();
+		if (name.Length > 0 && !RoleNames.IsValidDisplayName(name))
+			return Refuse<SharpRole>(RoleRefusalKind.Invalid, RoleNames.DisplayNameRule);
+		if (await FindCategoryAsync(draft.Category, ct) is not { } category) return MissingCategory(draft.Category);
 		var color = string.IsNullOrWhiteSpace(draft.Color) ? null : draft.Color.Trim();
 		if (color is not null && !ColorPattern().IsMatch(color))
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role colour is a hex colour such as #5aa9ff.");
@@ -444,13 +542,12 @@ public sealed partial class RoleManagementService(
 			return Refuse<SharpRole>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.");
 
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		var name = draft.Name.Trim();
 		var role = new SharpRole
 		{
 			Id = existing?.Id,
 			Slug = slug,
 			Name = name.Length > 0 ? name : existing?.Name ?? slug,
-			Category = category,
+			Category = category.Name,
 			Color = color,
 			Priority = draft.Priority,
 			IsSystem = existing?.IsSystem ?? false,

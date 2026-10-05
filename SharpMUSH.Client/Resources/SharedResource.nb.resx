@@ -3250,6 +3250,62 @@
     <value>En kategori er påkrevd.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Hver rolle og egen tillatelse hører til en kategori, og denne siden grupperer dem etter den. Opprett en kategori før du legger noe i den. En kategori som fortsatt inneholder noe, kan ikke slettes. I spillet: @role/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Hva som hører hjemme der</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Opprett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Ingen kategorier ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Kategorien {0} ble opprettet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Kategorien {0} ble lagret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Slett kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Slette {0}? Bare en kategori uten roller og tillatelser kan slettes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Kategorien {0} ble slettet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>{0} roller, {1} tillatelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Velg en kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Opprett kategorier under fanen Kategorier.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>En kategori trenger et navn og en beskrivelse.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Definer</value>
     <comment>MT</comment>

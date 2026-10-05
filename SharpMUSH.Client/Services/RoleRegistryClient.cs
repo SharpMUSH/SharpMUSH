@@ -111,5 +111,33 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 
 	private sealed record CustomPermissionRequest(string Scope, string Category, string Description);
 
+	/// <summary>The categories of roles and permissions, or none when unavailable.</summary>
+	public async Task<IReadOnlyList<RoleCategory>> ListCategoriesAsync()
+	{
+		try
+		{
+			return await Client.GetFromJsonAsync<List<RoleCategory>>("api/roles/categories") ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to list role categories.");
+			return [];
+		}
+	}
+
+	/// <summary>Creates a category.</summary>
+	public Task<ApiResult<Success>> CreateCategoryAsync(string name, string description) =>
+		Client.PostApiAsync("api/roles/categories", new CategoryRequest(name, description));
+
+	/// <summary>Changes a category's description and, when <paramref name="newName"/> differs, its name.</summary>
+	public Task<ApiResult<Success>> UpdateCategoryAsync(string name, string newName, string description) =>
+		Client.PutApiAsync($"api/roles/categories/{Uri.EscapeDataString(name)}", new CategoryRequest(newName, description));
+
+	/// <summary>Deletes a category that holds nothing.</summary>
+	public Task<ApiResult<Success>> DeleteCategoryAsync(string name) =>
+		Client.DeleteApiAsync($"api/roles/categories/{Uri.EscapeDataString(name)}");
+
+	private sealed record CategoryRequest(string Name, string Description);
+
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 }

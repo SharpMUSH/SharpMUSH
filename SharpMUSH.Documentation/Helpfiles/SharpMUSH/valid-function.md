@@ -39,7 +39,10 @@ ansicodes   Test for a valid color code sequence for ansi(`<string>`, ...).<br>
 channel     Test for a valid channel name. If `<target>` is given, check to see if channel `<target>` could be renamed to `<string>`.<br>
 timezone    Test for a valid timezone; see [timezones]<br>
 locktype    Test for a valid locktype for @lock/`<string>` `<target>`. `<target>` defaults to the caller.<br>
-lockkey     Test for a valid lockkey for @lock me=`<string>`
+lockkey     Test for a valid lockkey for @lock me=`<string>`<br>
+rolename    Test for a valid role short name for @role/create: 1 to 32 lowercase letters, digits, `-` and `_`.<br>
+rolecategory Test for a valid category name for @role/category/create: 1 to 32 characters a player name may use, without `/`.<br>
+permission  Test for a valid custom permission name for @role/define, such as `scene.close`. It does not say whether the name is taken.
 
 Note that, for "playername", valid() returns 0 if the name is valid but currently in use by a player other than `<target>`.
 
@@ -48,6 +51,7 @@ For "ansicodes", when not using new-style color names or hex codes, valid() alwa
 **See Also:**
 - [colors()]
 - [ansi()]
+- [@role]
 
 ## Validation types
 

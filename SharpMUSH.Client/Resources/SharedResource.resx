@@ -2916,6 +2916,48 @@
   <data name="RolCategoryRequired" xml:space="preserve">
     <value>A category is required.</value>
   </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Every role and custom permission sits in a category, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category.</value>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>What belongs in it</value>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>No categories yet.</value>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Category {0} created.</value>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Category {0} saved.</value>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Delete {0}? Only a category that holds no role and no permission can be deleted.</value>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Category {0} deleted.</value>
+  </data>
+  <data name="RolCategoryHolds" xml:space="preserve">
+    <value>{0} roles, {1} permissions</value>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Choose a category</value>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Create categories on the Categories tab.</value>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>A category needs a name and a description.</value>
+  </data>
   <data name="RolCustomAdd" xml:space="preserve">
     <value>Define</value>
   </data>

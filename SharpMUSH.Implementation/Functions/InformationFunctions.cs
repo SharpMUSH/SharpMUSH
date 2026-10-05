@@ -1669,6 +1669,9 @@ public partial class Functions
 			"timezone" => IValidateService.ValidationType.Timezone,
 			"locktype" => IValidateService.ValidationType.LockType,
 			"lockkey" => IValidateService.ValidationType.LockKey,
+			"rolename" => IValidateService.ValidationType.RoleName,
+			"rolecategory" => IValidateService.ValidationType.RoleCategory,
+			"permission" => IValidateService.ValidationType.Permission,
 			_ => IValidateService.ValidationType.Invalid
 		};
 

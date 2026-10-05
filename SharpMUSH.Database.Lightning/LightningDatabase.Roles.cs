@@ -220,6 +220,55 @@ public partial class LightningDatabase
 			CreatedAt = permission.CreatedAt
 		})));
 
+	public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var categories = Store.Read(tx => tx.Range(Tables.RoleCategory, [])
+			.Select(e => MapCategory(Codec.Deserialize<RoleCategoryRecord>(e.Value)))
+			.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList());
+		return Task.FromResult<IReadOnlyList<RoleCategory>>(categories);
+	}
+
+	public async Task UpsertCategoryAsync(RoleCategory category)
+		=> await Store.WriteAsync(tx => PutCategory(tx, category));
+
+	public async Task RenameCategoryAsync(string name, RoleCategory renamed)
+		=> await Store.WriteAsync(tx =>
+		{
+			tx.Delete(Tables.RoleCategory, CategoryKey(name));
+			PutCategory(tx, renamed);
+
+			foreach (var (key, value) in tx.Range(Tables.Role, []).ToList())
+			{
+				var role = Codec.Deserialize<RoleRecord>(value);
+				if (string.Equals(role.Category, name, StringComparison.OrdinalIgnoreCase))
+					tx.Put(Tables.Role, key, Codec.Serialize(role with { Category = renamed.Name }));
+			}
+
+			foreach (var (key, value) in tx.Range(Tables.CustomPermission, []).ToList())
+			{
+				var permission = Codec.Deserialize<CustomPermissionRecord>(value);
+				if (string.Equals(permission.Category, name, StringComparison.OrdinalIgnoreCase))
+					tx.Put(Tables.CustomPermission, key, Codec.Serialize(permission with { Category = renamed.Name }));
+			}
+		});
+
+	public async Task RemoveCategoryAsync(string name)
+		=> await Store.WriteAsync(tx => tx.Delete(Tables.RoleCategory, CategoryKey(name)));
+
+	internal static byte[] CategoryKey(string name) => Keys.Str(name.ToLowerInvariant());
+
+	internal static void PutCategory(ITx tx, RoleCategory category)
+		=> tx.Put(Tables.RoleCategory, CategoryKey(category.Name), Codec.Serialize(new RoleCategoryRecord
+		{
+			Name = category.Name,
+			Description = category.Description,
+			CreatedAt = category.CreatedAt
+		}));
+
+	private static RoleCategory MapCategory(RoleCategoryRecord r) => new(r.Name, r.Description, r.CreatedAt);
+
 	public async Task RemoveCustomPermissionAsync(string scope)
 		=> await Store.WriteAsync(tx =>
 		{

@@ -468,8 +468,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	public async Task Roles_SelectsNothingOnLoad_AndFillsTheEditorFromTheClickedRole()
 	{
 		_api.Bodies["api/roles"] = """
-			[{"slug":"builder","name":"Builder","color":"#123456","priority":10,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
-			 {"slug":"admin","name":"Admin","color":"#654321","priority":90,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
+			[{"slug":"builder","name":"Builder","category":"Staff","color":"#123456","priority":10,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
+			 {"slug":"admin","name":"Admin","category":"System","color":"#654321","priority":90,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
 			""";
 		var cut = RenderPage(typeof(AdminRoles));
 
@@ -536,6 +536,37 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(order).IsEquivalentTo(new[] { "#System", "wizard", "#staff", "moderator", "helper" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
 		cut.FindAll(".ra-card").Single(card => card.TextContent.Contains("helper")).Click();
-		await Assert.That(cut.FindAll("input.ra-input")[1].GetAttribute("value")).IsEqualTo("Staff");
+		await Assert.That(cut.Find("select.ra-input").GetAttribute("value")).IsEqualTo("Staff");
+	}
+
+	/// <summary>
+	/// The Categories tab lists each category with its description and what it holds, and the role
+	/// editor offers the categories there are.
+	/// </summary>
+	[Test]
+	public async Task Roles_ListsCategoriesOnTheirTab()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/permissions"] = """
+			[{"scope":"scene.close","category":"Scenes","description":"Finish any scene","createdAt":0}]
+			""";
+		_api.Bodies["api/roles/categories"] = """
+			[{"name":"Scenes","description":"Who runs scenes"},{"name":"Staff","description":"Game staff"}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		var options = cut.Find("select.ra-input").QuerySelectorAll("option").Select(o => o.GetAttribute("value")).ToArray();
+		await Assert.That(options).IsEquivalentTo(new[] { "", "Scenes", "Staff" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabCategories")).Click();
+		var rows = cut.FindAll(".ra-category-row");
+		await Assert.That(rows.Count).IsEqualTo(2);
+		await Assert.That(rows[0].QuerySelectorAll("input.ra-input")[0].GetAttribute("value")).IsEqualTo("Scenes");
+		await Assert.That(rows[0].QuerySelectorAll("input.ra-input")[1].GetAttribute("value")).IsEqualTo("Who runs scenes");
+		await Assert.That(rows[0].QuerySelector(".ra-perm-desc")!.TextContent).Contains("RolCategoryHolds");
 	}
 }

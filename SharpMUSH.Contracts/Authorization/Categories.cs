@@ -1,13 +1,18 @@
+using SharpMUSH.Library.Models;
+
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// The category every role and custom permission carries, which the portal's Roles page groups them
-/// under. Free text chosen by the game, such as <c>Staff</c> or <c>Scenes</c>; compared without case.
+/// The rules for a <see cref="RoleCategory"/>. Every role and custom permission sits in one, and the
+/// portal's Roles page groups them by it. A category must exist before anything is put in it.
 /// </summary>
 public static class Categories
 {
-	/// <summary>The longest category allowed.</summary>
-	public const int MaxLength = 32;
+	/// <summary>The longest category name allowed.</summary>
+	public const int MaxNameLength = 32;
+
+	/// <summary>The longest category description allowed.</summary>
+	public const int MaxDescriptionLength = 200;
 
 	/// <summary>The category of the built-in system roles.</summary>
 	public const string System = "System";
@@ -15,20 +20,22 @@ public static class Categories
 	/// <summary>The category of the starter staff roles.</summary>
 	public const string Staff = "Staff";
 
-	/// <summary>
-	/// <paramref name="category"/> trimmed when it is a usable category: not blank, at most
-	/// <see cref="MaxLength"/> characters, with no <c>/</c> (which <c>@role</c> uses to separate it from
-	/// what follows) and no control characters; otherwise null.
-	/// </summary>
-	public static string? Normalize(string? category)
-	{
-		var trimmed = category?.Trim() ?? "";
-		return trimmed.Length is > 0 and <= MaxLength && !trimmed.Contains('/') && !trimmed.Any(char.IsControl)
-			? trimmed
-			: null;
-	}
+	/// <summary>The categories a new world starts with.</summary>
+	public static readonly IReadOnlyList<RoleCategory> Seeds =
+	[
+		new(System, "Roles the server defines: everyone, player, guest, builder, royalty, wizard and god.", 0),
+		new(Staff, "Roles for the people who help run the game.", 0)
+	];
 
-	/// <summary>The refusal sentence for a category <see cref="Normalize"/> rejected.</summary>
-	public static string Rule
-		=> $"A category is required: 1 to {MaxLength} characters, without '/'.";
+	/// <summary>The sentence a refusal gives for a name <see cref="IsValidName"/> rejects.</summary>
+	public static readonly string NameRule =
+		$"A category name is 1 to {MaxNameLength} characters a player name may use, without '/'.";
+
+	/// <summary>
+	/// Whether <paramref name="name"/> may name a category: the characters a player name may use
+	/// (<see cref="ObjectNames.IsLegal"/>), spaces included, at most <see cref="MaxNameLength"/> long,
+	/// and no <c>/</c>, which <c>@role</c> uses to separate a category from what follows it.
+	/// </summary>
+	public static bool IsValidName(string name)
+		=> name.Length <= MaxNameLength && !name.Contains('/') && ObjectNames.IsLegal(name);
 }

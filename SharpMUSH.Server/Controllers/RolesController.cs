@@ -27,6 +27,10 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/roles/permissions                       — the custom permissions the game defines
 ///   PUT    /api/roles/permissions                       — define one, or change its description
 ///   DELETE /api/roles/permissions/{scope}               — remove one and every setting of it
+///   GET    /api/roles/categories                        — the categories of roles and permissions
+///   POST   /api/roles/categories                        — create one
+///   PUT    /api/roles/categories/{name}                 — change its description, or rename it
+///   DELETE /api/roles/categories/{name}                 — delete one that holds nothing
 /// </summary>
 [ApiController]
 [Route("api/roles")]
@@ -59,6 +63,8 @@ public class RolesController(
 	public record OverrideDto(string Scope, string State);
 
 	public record CustomPermissionDto(string Scope, string Category, string Description);
+
+	public record CategoryDto(string Name, string Description);
 
 	[HttpGet("effective")]
 	public async Task<IActionResult> Effective()
@@ -195,6 +201,53 @@ public class RolesController(
 	{
 		if (Actor() is not { } actor) return Forbid();
 		return await management.RemovePermissionAsync(actor, scope, HttpContext.RequestAborted) switch
+		{
+			Success => Ok(new { deleted = true }),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	[HttpGet("categories")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<ActionResult<IReadOnlyList<RoleCategory>>> ListCategories()
+		=> Ok(await roles.GetCategoriesAsync(HttpContext.RequestAborted));
+
+	[HttpPost("categories")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> CreateCategory([FromBody] CategoryDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.CreateCategoryAsync(actor, dto.Name ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		{
+			RoleCategory category => Ok(category),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	/// <summary>Sets the description, then the name when <see cref="CategoryDto.Name"/> differs from the route's.</summary>
+	[HttpPut("categories/{name}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> UpdateCategory(string name, [FromBody] CategoryDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		var ct = HttpContext.RequestAborted;
+		if (await management.DescribeCategoryAsync(actor, name, dto.Description ?? string.Empty, ct) is RoleRefusal refusal)
+			return Refused(refusal);
+		var newName = dto.Name?.Trim() ?? string.Empty;
+		if (newName.Length == 0 || newName == name.Trim()) return Ok();
+		return await management.RenameCategoryAsync(actor, name, newName, ct) switch
+		{
+			RoleCategory category => Ok(category),
+			RoleRefusal renameRefusal => Refused(renameRefusal)
+		};
+	}
+
+	[HttpDelete("categories/{name}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> DeleteCategory(string name)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.DeleteCategoryAsync(actor, name, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(new { deleted = true }),
 			RoleRefusal refusal => Refused(refusal)

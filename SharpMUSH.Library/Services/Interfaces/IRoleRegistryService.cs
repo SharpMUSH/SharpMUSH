@@ -87,4 +87,19 @@ public interface IRoleRegistryService
 	/// write. Does not error if absent.
 	/// </summary>
 	Task RemoveCustomPermissionAsync(string scope);
+
+	/// <summary>The categories of roles and custom permissions, ordered by name.</summary>
+	Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Creates a category, or replaces its description (keyed by <see cref="RoleCategory.Name"/> without case).</summary>
+	Task UpsertCategoryAsync(RoleCategory category);
+
+	/// <summary>
+	/// Renames the category <paramref name="name"/> to <paramref name="renamed"/> and moves every role and
+	/// custom permission in it, in one write.
+	/// </summary>
+	Task RenameCategoryAsync(string name, RoleCategory renamed);
+
+	/// <summary>Removes a category. Does not error if absent. (Callers must check nothing is in it.)</summary>
+	Task RemoveCategoryAsync(string name);
 }

@@ -3,6 +3,7 @@ using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using System.Text.Json;
 
@@ -442,15 +443,35 @@ public partial class LightningDatabase
 	/// Writes what <see cref="BuiltInRoles.SeedChanges"/> asks for: the missing system roles, the starter
 	/// roles into a world with none, and new in-game scopes on existing system roles. Runs on every start,
 	/// here rather than in a hosted service, because the privilege checks read roles from the first
-	/// command on.
+	/// command on. Then the categories: the seeded ones into a world with none, and any category a role
+	/// or custom permission names but the world does not have, so nothing sits in a missing category.
 	/// </summary>
 	private static void SeedRoles(ITx tx)
 	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var existing = tx.Range(Tables.Role, []).Select(e => MapRole(Codec.Deserialize<RoleRecord>(e.Value))).ToList();
-		foreach (var role in BuiltInRoles.SeedChanges(existing, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()))
+		foreach (var role in BuiltInRoles.SeedChanges(existing, now))
 		{
 			tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role)));
 		}
+
+		var categories = tx.Range(Tables.RoleCategory, [])
+			.Select(e => Codec.Deserialize<RoleCategoryRecord>(e.Value).Name)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		if (categories.Count == 0)
+			foreach (var seed in Categories.Seeds)
+			{
+				PutCategory(tx, seed with { CreatedAt = now });
+				categories.Add(seed.Name);
+			}
+
+		var used = tx.Range(Tables.Role, []).Select(e => Codec.Deserialize<RoleRecord>(e.Value).Category)
+			.Concat(tx.Range(Tables.CustomPermission, []).Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value).Category))
+			.Where(name => name.Length > 0)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToList();
+		foreach (var name in used.Where(name => !categories.Contains(name)))
+			PutCategory(tx, new RoleCategory(name, "", now));
 	}
 
 	/// <summary>

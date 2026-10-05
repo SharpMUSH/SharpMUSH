@@ -17,7 +17,13 @@
                     <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_category" Label="@Loc["RolCategoryLabel"]" Required="true" Variant="Variant.Outlined" />
+                    <MudSelect T="string" @bind-Value="_category" Label="@Loc["RolCategoryLabel"]" Required="true" Variant="Variant.Outlined"
+                               HelperText="@Loc["RolCategoryHelper"]">
+                        @foreach (var category in _categories)
+                        {
+                            <MudSelectItem T="string" Value="@category.Name">@category.Name</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
@@ -52,10 +58,11 @@
     private string _slug = "";
     private string _name = "";
     private string _category = "";
+    private IReadOnlyList<SharpMUSH.Library.Models.RoleCategory> _categories = [];
     private string _color = "#6cde9a";
     private int _priority;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _isNew = Existing is null;
         if (Existing is not null)
@@ -66,6 +73,8 @@
             _color = Existing.Color;
             _priority = Existing.Priority;
         }
+
+        _categories = await Roles.ListCategoriesAsync();
     }
 
     private void Cancel() => MudDialog.Cancel();

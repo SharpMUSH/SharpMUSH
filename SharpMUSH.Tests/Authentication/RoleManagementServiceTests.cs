@@ -151,7 +151,7 @@ public class RoleManagementServiceTests
 			Slug = "legacy", Name = "Legacy", Priority = 5,
 			Permissions = new() { [PortalPermission.ServerAdmin] = PermissionState.Allow }
 		});
-		await Accepted(world.Service.EditRoleAsync(A("wiz"), "legacy", role => new RoleDraft(role.Slug, "Renamed", "Legacy", role.Color, role.Priority, role.Permissions)));
+		await Accepted(world.Service.EditRoleAsync(A("wiz"), "legacy", role => new RoleDraft(role.Slug, "Renamed", "Staff", role.Color, role.Priority, role.Permissions)));
 	}
 
 	[Test]
@@ -233,8 +233,8 @@ public class RoleManagementServiceTests
 	public async Task CustomPermissionIsDefinedByARolesAdminAndGrantedLikeAnyOther()
 	{
 		var world = Build();
-		await Assert.That(await world.Service.DefinePermissionAsync(A("pl"), "scene.close", "Scenes", "Finish any scene") is RoleRefusal { Kind: RoleRefusalKind.Forbidden }).IsTrue();
-		await Assert.That(await world.Service.DefinePermissionAsync(A("mod"), "Scene.Close", " Scenes ", "Finish any scene") is CustomPermission { Scope: "scene.close", Category: "Scenes" }).IsTrue();
+		await Assert.That(await world.Service.DefinePermissionAsync(A("pl"), "scene.close", "Staff", "Finish any scene") is RoleRefusal { Kind: RoleRefusalKind.Forbidden }).IsTrue();
+		await Assert.That(await world.Service.DefinePermissionAsync(A("mod"), "Scene.Close", " staff ", "Finish any scene") is CustomPermission { Scope: "scene.close", Category: "Staff" }).IsTrue();
 		await Assert.That((await world.Registry.GetCustomPermissionsAsync()).Select(p => p.Description)).IsEquivalentTo(["Finish any scene"]);
 
 		// The moderator defined it but does not hold it, so cannot grant it; a wizard may.
@@ -245,18 +245,62 @@ public class RoleManagementServiceTests
 	}
 
 	[Test]
-	public async Task RolesAndCustomPermissionsNeedACategory()
+	public async Task RolesAndCustomPermissionsGoInACategoryThatExists()
 	{
 		var world = Build();
-		foreach (var category in new[] { "", "   ", "Staff/Helpers", new string('x', Categories.MaxLength + 1) })
+		foreach (var category in new[] { "", "   ", "Scene staff" })
 		{
 			await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Category = category }), RoleRefusalKind.Invalid);
 			await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), "scene.close", category, "") is RoleRefusal { Kind: RoleRefusalKind.Invalid })
 				.IsTrue().Because($"'{category}'");
 		}
 
-		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Category = " Scene staff " }));
+		var missing = await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Category = "Scene staff" }), RoleRefusalKind.Invalid);
+		await Assert.That(missing.Message).Contains("Create the category first");
+
+		await Assert.That(await world.Service.CreateCategoryAsync(A("owner"), "Scene staff", "Who runs scenes") is RoleCategory).IsTrue();
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Category = " scene STAFF " }));
 		await Assert.That((await world.Registry.GetRoleAsync("ok")).Expect<SharpRole>().Category).IsEqualTo("Scene staff");
+	}
+
+	[Test]
+	public async Task RoleDisplayNamesUsePlayerNameCharacters()
+	{
+		var world = Build();
+		foreach (var name in new[] { "Bad=Name", "[Staff]", "50% off", "Café", new string('x', RoleNames.MaxLength + 1) })
+			await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Name = name }), RoleRefusalKind.Invalid);
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1) with { Name = "Scene Runner's Guild" }));
+	}
+
+	[Test]
+	public async Task CategoriesAreCreatedDescribedRenamedAndDeleted()
+	{
+		var world = Build();
+		await Assert.That(await world.Service.CreateCategoryAsync(A("pl"), "Scenes", "Scene running") is RoleRefusal { Kind: RoleRefusalKind.Forbidden }).IsTrue();
+		foreach (var name in new[] { "", "Staff/Helpers", "Bad=Name", "[x]", new string('x', Categories.MaxNameLength + 1) })
+			await Assert.That(await world.Service.CreateCategoryAsync(A("mod"), name, "Scene running") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue().Because($"'{name}'");
+		await Assert.That(await world.Service.CreateCategoryAsync(A("mod"), "Scenes", " ") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
+
+		await Assert.That(await world.Service.CreateCategoryAsync(A("mod"), "Scenes", "Scene running") is RoleCategory { Name: "Scenes" }).IsTrue();
+		await Assert.That(await world.Service.CreateCategoryAsync(A("mod"), "SCENES", "Again") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
+		await Assert.That(await world.Service.DescribeCategoryAsync(A("mod"), "scenes", "Who runs scenes") is RoleCategory { Name: "Scenes", Description: "Who runs scenes" }).IsTrue();
+		await Assert.That(await world.Service.DescribeCategoryAsync(A("mod"), "Nope", "x") is RoleRefusal { Kind: RoleRefusalKind.NotFound }).IsTrue();
+
+		await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Scenes", "");
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("closers", 2) with { Category = "Scenes" }));
+		var inUse = await Refused(world.Service.DeleteCategoryAsync(A("mod"), "Scenes"), RoleRefusalKind.Invalid);
+		await Assert.That(inUse.Message).Contains("closers").And.Contains("scene.close");
+
+		await Assert.That(await world.Service.RenameCategoryAsync(A("mod"), "Scenes", "Staff") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
+		await Assert.That(await world.Service.RenameCategoryAsync(A("mod"), "Scenes", "Scene staff") is RoleCategory { Name: "Scene staff", Description: "Who runs scenes" }).IsTrue();
+		await Assert.That((await world.Registry.GetRoleAsync("closers")).Expect<SharpRole>().Category).IsEqualTo("Scene staff");
+		await Assert.That((await world.Registry.GetCustomPermissionsAsync()).Single().Category).IsEqualTo("Scene staff");
+		await Assert.That((await world.Registry.GetCategoriesAsync()).Select(c => c.Name)).IsEquivalentTo(["Scene staff", "Staff", "System"]);
+
+		await Accepted(world.Service.EditRoleAsync(A("owner"), "closers", role => Draft("closers", 2) with { Category = "Staff" }));
+		await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Staff", "");
+		await Accepted(world.Service.DeleteCategoryAsync(A("mod"), "scene STAFF"));
+		await Assert.That((await world.Registry.GetCategoriesAsync()).Select(c => c.Name)).IsEquivalentTo(["Staff", "System"]);
 	}
 
 	[Test]
@@ -264,8 +308,8 @@ public class RoleManagementServiceTests
 	{
 		var world = Build();
 		foreach (var name in new[] { "scene", "wiki.read", "game.thing", "control.x", "has space.x" })
-			await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), name, "Scenes", "") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue().Because(name);
-		await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Scenes", new string('x', RoleManagementService.MaxDescriptionLength + 1)) is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
+			await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), name, "Staff", "") is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue().Because(name);
+		await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Staff", new string('x', RoleManagementService.MaxDescriptionLength + 1)) is RoleRefusal { Kind: RoleRefusalKind.Invalid }).IsTrue();
 		// An undefined name is no permission at all.
 		await Refused(world.Service.SaveRoleAsync(A("owner"), Draft("ok", 1, "scene.close")), RoleRefusalKind.Invalid);
 		await Refused(world.Service.SetOverridesAsync(A("owner"), "pl", ["scene.close"], PermissionState.Allow), RoleRefusalKind.Invalid);
@@ -275,7 +319,7 @@ public class RoleManagementServiceTests
 	public async Task RemovingACustomPermissionTakesEverySettingOfIt()
 	{
 		var world = Build();
-		await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Scenes", "");
+		await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Staff", "");
 		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("closers", 2, "scene.close", PortalPermission.WikiEdit)));
 		await Accepted(world.Service.SetOverridesAsync(A("owner"), "pl", ["scene.close"], PermissionState.Deny));
 
