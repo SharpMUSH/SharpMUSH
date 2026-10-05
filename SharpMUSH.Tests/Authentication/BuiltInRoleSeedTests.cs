@@ -19,7 +19,7 @@ public class BuiltInRoleSeedTests
 	{
 		var player = new SharpRole
 		{
-			Slug = "player", Name = "Citizen", Priority = 10, IsSystem = true,
+			Slug = "player", Name = "Citizen", Category = "Townsfolk", Priority = 10, IsSystem = true,
 			Permissions = new() { [PortalPermission.WikiEdit] = PermissionState.Deny }
 		};
 		var changes = BuiltInRoles.SeedChanges([player], 1);
@@ -48,6 +48,16 @@ public class BuiltInRoleSeedTests
 		await Assert.That(changed.Permissions[PortalPermission.ControlAll]).IsEqualTo(PermissionState.Deny);
 		// Portal scopes are not added back.
 		await Assert.That(changed.Permissions.ContainsKey(PortalPermission.WikiAdmin)).IsFalse();
+	}
+
+	[Test]
+	public async Task SystemRoleWithoutACategoryIsPutInSystem()
+	{
+		var player = new SharpRole { Slug = "player", Name = "Citizen", Priority = 10, IsSystem = true, CreatedAt = 5 };
+		var changed = BuiltInRoles.SeedChanges([player], 9).Single(r => r.Slug == "player");
+		await Assert.That(changed.Category).IsEqualTo(Categories.System);
+		await Assert.That(changed.Name).IsEqualTo("Citizen");
+		await Assert.That(BuiltInRoles.SeedChanges([], 1).Single(r => r.Slug == "helper").Category).IsEqualTo(Categories.Staff);
 	}
 
 	[Test]

@@ -28,7 +28,7 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	{
 		_roles[role.Slug] = new SharpRole
 		{
-			Slug = role.Slug, Name = role.Name, Color = role.Color, Priority = role.Priority, IsSystem = role.IsSystem,
+			Slug = role.Slug, Name = role.Name, Category = role.Category, Color = role.Color, Priority = role.Priority, IsSystem = role.IsSystem,
 			Permissions = new Dictionary<string, PermissionState>(role.Permissions)
 		};
 		return this;
