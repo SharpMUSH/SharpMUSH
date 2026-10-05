@@ -515,7 +515,7 @@
     /// <summary>The branches above <paramref name="tab"/>'s attribute, each with the attribute to open for it where the selected object has one.</summary>
     private IEnumerable<(string Path, string Segment, MushAttribute? Attribute)> Breadcrumbs(SoftcodeTab tab)
     {
-        var attributes = _selectedObject?.Dbref == tab.Obj.Dbref ? _selectedObject.Attributes : [];
+        var attributes = _selectedObject is { } selected && selected.Dbref == tab.Obj.Dbref ? selected.Attributes : [];
         return SoftcodeAttributeTree.Ancestors(tab.Attr.Name).Select(path => (
             path,
             SoftcodeAttributeTree.Segment(path),
