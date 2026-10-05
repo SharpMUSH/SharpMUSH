@@ -41,6 +41,8 @@ public static class AuditTargetKinds
 	public const string Character = "character";
 	public const string Object = "object";
 	public const string Role = "role";
+	public const string Permission = "permission";
+	public const string Category = "category";
 	public const string Host = "host";
 	public const string Setting = "setting";
 	public const string Name = "name";
@@ -122,6 +124,10 @@ public static class AuditActions
 	public const string RoleAssign = "role.assign";
 	public const string RoleUnassign = "role.unassign";
 	public const string RoleOverride = "role.override";
+	public const string PermissionDefine = "permission.define";
+	public const string PermissionRemove = "permission.remove";
+	public const string CategorySave = "category.save";
+	public const string CategoryDelete = "category.delete";
 	public const string SitelockAdd = "sitelock.add";
 	public const string SitelockRemove = "sitelock.remove";
 	public const string BannedNameAdd = "bannedname.add";
@@ -135,7 +141,8 @@ public static class AuditActions
 	public static readonly IReadOnlyList<string> All =
 	[
 		AccountStatus, AccountPassword, CharacterUnlink, PlayerCreate, PlayerDestroy, PlayerPassword, PlayerBoot,
-		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, SitelockAdd, SitelockRemove,
+		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove, CategorySave,
+		CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear
 	];
 }
