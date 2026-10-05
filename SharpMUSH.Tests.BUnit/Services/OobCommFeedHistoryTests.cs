@@ -1,3 +1,4 @@
+using NSubstitute;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
 
@@ -84,6 +85,43 @@ public class OobCommFeedHistoryTests
 		await Assert.That(feed.Messages("Public").Count).IsEqualTo(295)
 			.Because("the channel keeps as many as the backfill brought, dropping the oldest for the new line");
 		await Assert.That(feed.Messages("Public")[^1].Text).IsEqualTo("new");
+	}
+
+	/// <summary>
+	/// A reconnect logs in again without clearing the store or replaying what was sent while it was down, so the
+	/// first channel list after a drop pulls every channel again, back to its marker. A list without a drop
+	/// pulls nothing already pulled.
+	/// </summary>
+	[Test]
+	public async Task The_first_list_after_a_drop_pulls_what_was_missed()
+	{
+		var store = new OobChannelStore();
+		var history = new FakeCommHistory { Markers = Markers(publicId: 2) };
+		var connection = Substitute.For<ITerminalService>();
+		using var feed = new OobCommFeed(store, history: history, connection: connection);
+		history.Recall["Public"] = [Pulled(1, "one"), Pulled(2, "two")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+		await Assert.That(history.Recalled.Count).IsEqualTo(1).Because("no drop, and Public is already pulled");
+
+		connection.ConnectionStateChanged += Raise.Event<Action<bool>>(false);
+		history.Recall["Public"].Add(Pulled(3, "missed"));
+		connection.ConnectionStateChanged += Raise.Event<Action<bool>>(true);
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.Recalled.Count).IsEqualTo(2);
+		await Assert.That(history.RecallAfter[^1]).IsEqualTo(2);
+		await Assert.That(feed.Messages("Public").Select(m => m.Text)).IsEquivalentTo(new[] { "one", "two", "missed" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(1);
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+		await Assert.That(history.Recalled.Count).IsEqualTo(2).Because("that drop is covered");
 	}
 
 	/// <summary>With no marker, the whole recall buffer is history, past the lines a channel usually keeps.</summary>

@@ -219,7 +219,9 @@ of a missing `v` and of any malformed member):
   (`?lines=200&after=<marker id>`: the last 200 lines, or every line after the
   marker when that reaches further back), so the viewer gets all they missed
   that the buffer still holds; one without a marker takes the whole buffer
-  (`?lines=0`). A line with an `id` is kept once, however it
+  (`?lines=0`). A reconnect logs in again without replaying what was sent
+  while the connection was down, so the first `comm.channels` after a drop
+  pulls every channel again and lists the conversations again, the same way. A line with an `id` is kept once, however it
   arrived. A channel or conversation with a marker counts as unread only what
   came after it from someone else, so the count survives a reload and a change
   of device; one without a marker counts lines as they arrive. `MarkRead`, and

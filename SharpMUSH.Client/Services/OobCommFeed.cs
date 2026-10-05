@@ -93,6 +93,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private Task _sync = Task.CompletedTask;
 
+	/// <summary>The play connection, whose drops call for a pull of everything once the character is back.</summary>
+	private readonly ITerminalService? _connection;
+
+	/// <summary>How many times the connection has dropped, and how many of those a full pull has since covered.</summary>
+	private int _drops;
+	private int _resyncedDrops;
+
 	/// <summary>By conversation, the ids of lines that came from the page log and have not been pushed.</summary>
 	private readonly Dictionary<string, HashSet<long>> _pulledOnly = new(StringComparer.Ordinal);
 
@@ -105,12 +112,25 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <summary>Whether the game keeps a page log, as the server last said; null until it has.</summary>
 	private bool? _pageLogging;
 
-	public OobCommFeed(IOobChannelStore store, TimeProvider? time = null, ICommHistory? history = null)
+	/// <param name="connection">
+	/// The connection the store is fed from. A reconnect logs in again without clearing the store, and nothing
+	/// sent while it was down is replayed, so after a drop the next <c>comm.channels</c> (sent on connect) pulls
+	/// every channel and conversation again, back to its marker.
+	/// </param>
+	public OobCommFeed(IOobChannelStore store, TimeProvider? time = null, ICommHistory? history = null,
+		ITerminalService? connection = null)
 	{
 		_store = store;
 		_time = time ?? TimeProvider.System;
 		_server = history;
+		_connection = connection;
 		_store.ChannelUpdated += OnChannelUpdated;
+		if (_connection is not null) _connection.ConnectionStateChanged += OnConnectionStateChanged;
+	}
+
+	private void OnConnectionStateChanged(bool connected)
+	{
+		if (!connected) _drops++;
 	}
 
 	public event Action? Changed;
@@ -236,7 +256,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <inheritdoc/>
 	public bool? PageLogging => _pageLogging;
 
-	public void Dispose() => _store.ChannelUpdated -= OnChannelUpdated;
+	public void Dispose()
+	{
+		_store.ChannelUpdated -= OnChannelUpdated;
+		if (_connection is not null) _connection.ConnectionStateChanged -= OnConnectionStateChanged;
+	}
 
 	private int UnreadFor(string key) => _unread.GetValueOrDefault(key);
 
@@ -299,6 +323,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// Reads the viewer's markers once the feed knows who the viewer is, then pulls every channel's history.
 	/// With the markers read, a list naming a channel not pulled yet — one just joined, or one renamed, whose
 	/// marker the server has moved to the new name — reads the markers again and pulls only those channels.
+	/// The first list after the connection dropped pulls every channel, and lists the conversations again,
+	/// since what was sent while it was down is not replayed.
 	/// </summary>
 	private void SyncWithServer()
 	{
@@ -306,6 +332,14 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		if (string.Equals(_syncedFor, viewer, StringComparison.Ordinal))
 		{
+			if (_drops != _resyncedDrops)
+			{
+				_conversationsListed = false;
+				_sync = RefreshAsync(_server, viewer, _generation, _channels.Select(channel => channel.Name).ToArray(),
+					_drops);
+				return;
+			}
+
 			var unpulled = _channels.Select(channel => channel.Name).Where(name => !_pulled.Contains(name)).ToArray();
 			if (unpulled.Length > 0 || !_conversationsListed) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
 			return;
@@ -313,6 +347,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		if (string.Equals(_syncingFor, viewer, StringComparison.Ordinal)) return;
 
+		// A first read pulls everything, so it covers any drop before it.
+		_resyncedDrops = _drops;
 		_syncingFor = viewer;
 		_syncedFor = null;
 		_markers.Clear();
@@ -339,9 +375,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <summary>
 	/// Reads the markers again for a feed already synced, then pulls <paramref name="channels"/>, and lists the
 	/// conversations if an earlier listing failed. A failed read of the markers does neither: the next list
-	/// tries again.
+	/// tries again. A refresh after a drop names the <paramref name="drops"/> it covers, which then count as
+	/// covered.
 	/// </summary>
-	private async Task RefreshAsync(ICommHistory server, string viewer, int generation, IReadOnlyList<string> channels)
+	private async Task RefreshAsync(ICommHistory server, string viewer, int generation, IReadOnlyList<string> channels,
+		int? drops = null)
 	{
 		var answer = await server.MarkersAsync();
 		if (generation != _generation || !string.Equals(_syncedFor, viewer, StringComparison.Ordinal)) return;
@@ -349,6 +387,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		// Without the markers a pull would file the history uncounted and mark the channel done; leave it
 		// unpulled, so the next list tries again.
 		if (answer is not CommReadMarkers markers || !string.Equals(markers.Character, viewer, StringComparison.Ordinal)) return;
+
+		if (drops is { } covered && covered > _resyncedDrops) _resyncedDrops = covered;
 
 		ApplyMarkers(markers, viewer);
 		await PullAsync(channels);
