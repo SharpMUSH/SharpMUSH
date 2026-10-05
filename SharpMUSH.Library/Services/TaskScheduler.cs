@@ -967,7 +967,7 @@ public partial class TaskScheduler(
 				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session), notifyOnRejection: false);
 
 	/// <summary>
-	/// Fixes what a queued entry starts with at the moment it is queued: its executor, and the <c>%|</c>
+	/// Fixes what a queued entry starts with at the moment it is queued: its executor, and the <c>%></c>
 	/// the queuing list had then, since that list keeps running and changes it.
 	/// </summary>
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)

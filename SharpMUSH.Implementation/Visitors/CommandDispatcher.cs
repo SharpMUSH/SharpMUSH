@@ -40,7 +40,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	public async ValueTask<Option<CallState>> DispatchAsync(SharpMUSHParserVisitor visitor, MString src,
 		CommandContext context)
 	{
-		// Every command leaves a %|. A built-in records its own as its CommandOutput declares; anything that
+		// Every command leaves a %>. A built-in records its own as its CommandOutput declares; anything that
 		// recorded nothing — a command with no output, a $-command, a refusal before the command ran —
 		// leaves the #-1 error it failed with, or nothing.
 		var commandText = visitor.Parser.CurrentState.CommandText;

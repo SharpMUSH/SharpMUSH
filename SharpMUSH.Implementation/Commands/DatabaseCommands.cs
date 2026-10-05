@@ -187,14 +187,15 @@ public partial class Commands
 				// PennMUSH queues the attribute on the object that holds it and hands the triggerer both
 				// remaining identities: new_queue_actionlist_int(thing, triggerer, triggerer, …)
 				// (cque.c:866-868). So the target is %!, and the triggerer is %# and %@ alike.
-				ParserState CallbackState(Dictionary<string, CallState> arguments) => parser.CurrentState with
+				// Built at admission, so its %> copy is the one each queued callback starts with.
+				ParserState CallbackState(Dictionary<string, CallState> arguments) => (parser.CurrentState with
 				{
 					Executor = targetRef,
 					Enactor = triggererRef,
 					Caller = triggererRef,
 					Arguments = arguments,
 					EnvironmentRegisters = arguments
-				};
+				}).WithQueuedOutput();
 
 				try
 				{

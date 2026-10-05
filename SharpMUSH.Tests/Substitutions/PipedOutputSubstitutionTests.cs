@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Substitutions;
 
 /// <summary>
-/// <c>%|</c> is the logical output of the last command run in the queue entry: what the command's
+/// <c>%></c> is the logical output of the last command run in the queue entry: what the command's
 /// function analog would return (<c>@dig</c> gives what <c>dig()</c> gives), never the text it shows.
 /// A command with no output clears it; control flow that runs a list in place leaves that list's last
 /// output; a queued entry starts with a copy of the value its submitter had when it queued it.
@@ -64,20 +64,20 @@ public class PipedOutputSubstitutionTests
 	public async Task DigOutputsTheRoomAsDigDoes()
 	{
 		var name = Unique("piperoom");
-		var output = await Queued($"@dig {name};@pemit me=dug [name(%|)] [type(%|)]");
+		var output = await Queued($"@dig {name};@pemit me=dug [name(%>)] [type(%>)]");
 		await Assert.That(output).Contains($"dug {name} ROOM");
 	}
 
 	[Test]
 	public async Task ThinkOutputsWhatItThinks()
 	{
-		await Assert.That(await Queued("think [add(20,22)];@pemit me=out=%|")).Contains("out=42");
+		await Assert.That(await Queued("think [add(20,22)];@pemit me=out=%>")).Contains("out=42");
 	}
 
 	[Test]
 	public async Task CommandWithNoOutputClearsIt()
 	{
-		var output = await Queued("think pipedvalue;@pemit me=first=%|;@pemit me=second=[strlen(%|)]");
+		var output = await Queued("think pipedvalue;@pemit me=first=%>;@pemit me=second=[strlen(%>)]");
 		await Assert.That(output).Contains("first=pipedvalue");
 		await Assert.That(output).Contains("second=0");
 	}
@@ -86,30 +86,45 @@ public class PipedOutputSubstitutionTests
 	public async Task FailedCommandLeavesItsError()
 	{
 		var missing = Unique("nosuchthing");
-		await Assert.That(await Queued($"think before;@destroy {missing};@pemit me=err=[left(%|,3)]"))
+		await Assert.That(await Queued($"think before;@destroy {missing};@pemit me=err=[left(%>,3)]"))
 			.Contains("err=#-1");
 	}
 
 	[Test]
 	public async Task PassthroughCommandsLeaveItAlone()
 	{
-		await Assert.That(await Queued("think kept;@assert 1;@@ comment;@pemit me=after=%|"))
+		await Assert.That(await Queued("think kept;@assert 1;@@ comment;@pemit me=after=%>"))
 			.Contains("after=kept");
+	}
+
+	[Test]
+	public async Task BreakActionListLeavesItAlone()
+	{
+		// @break runs its action list in place; @include/nobreak lets the outer list carry on and read %>.
+		await Run("&BRK me=@break 1=think inner");
+		await Assert.That(await Queued("think kept;@include/nobreak me/BRK;@pemit me=after=%>")).Contains("after=kept");
+	}
+
+	[Test]
+	public async Task RetryLeavesTheLastRerunsOutput()
+	{
+		// The rerun think gets the retry argument as its text; a true condition reruns it until @retry's limit.
+		await Assert.That(await Queued("think start;@retry 1=again;@pemit me=after=%>")).Contains("after=again");
 	}
 
 	[Test]
 	public async Task InPlaceListLeavesItsLastOutput()
 	{
 		await Run("&INC me=think included");
-		await Assert.That(await Queued("think before;@include me/INC;@pemit me=after=%|")).Contains("after=included");
-		await Assert.That(await Queued("think before;@switch/inline 1=1,{think switched};@pemit me=after=%|"))
+		await Assert.That(await Queued("think before;@include me/INC;@pemit me=after=%>")).Contains("after=included");
+		await Assert.That(await Queued("think before;@switch/inline 1=1,{think switched};@pemit me=after=%>"))
 			.Contains("after=switched");
 	}
 
 	[Test]
 	public async Task QueuedListClearsIt()
 	{
-		await Assert.That(await Queued("think before;@switch 1=1,{think switched};@pemit me=after=[strlen(%|)]"))
+		await Assert.That(await Queued("think before;@switch 1=1,{think switched};@pemit me=after=[strlen(%>)]"))
 			.Contains("after=0");
 	}
 
@@ -119,7 +134,7 @@ public class PipedOutputSubstitutionTests
 		// @wait's command is evaluated when it fires, after this list has moved on to "later".
 		var marker = TestIsolationHelpers.GenerateUniqueName("Waited");
 		var before = Factory.Notifications.CountFor(_actor.DbRef);
-		await Queued($"think atqueue;@wait 0=@pemit me={marker}=%|;think later");
+		await Queued($"think atqueue;@wait 0=@pemit me={marker}=%>;think later");
 		await Factory.Notifications.WaitForAsync(_actor.DbRef, marker, startIndex: before);
 		await Assert.That(Factory.Notifications.For(_actor.DbRef).Skip(before)).Contains($"{marker}=atqueue");
 	}
@@ -127,7 +142,7 @@ public class PipedOutputSubstitutionTests
 	[Test]
 	public async Task FunctionReadsTheRunningListsOutput()
 	{
-		await Run("&UF me=from u: %|");
+		await Run("&UF me=from u: %>");
 		await Assert.That(await Queued("think infunction;@pemit me=[u(me/UF)]")).Contains("from u: infunction");
 	}
 
@@ -135,7 +150,7 @@ public class PipedOutputSubstitutionTests
 	public async Task TypedLineStartsEmpty()
 	{
 		await Run("think typed");
-		await Assert.That(await Direct("think x%|y")).IsEquivalentTo(["xy"]);
+		await Assert.That(await Direct("think x%>y")).IsEquivalentTo(["xy"]);
 	}
 
 	[Test]
@@ -145,7 +160,7 @@ public class PipedOutputSubstitutionTests
 		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
 		await God($"@open {exit}={destination},,{_room}");
 
-		await Assert.That(await Queued($"{exit};@pemit me=at=[num(%|)] [num(here)]"))
+		await Assert.That(await Queued($"{exit};@pemit me=at=[num(%>)] [num(here)]"))
 			.Contains($"at=#{DBRef.Parse(destination.Trim()).Number} #{DBRef.Parse(destination.Trim()).Number}");
 	}
 
@@ -155,7 +170,7 @@ public class PipedOutputSubstitutionTests
 	public async Task AfterHookReadsTheHookedCommandsOutput()
 	{
 		var hook = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "PipeHook");
-		await God($"&AFT {hook}=[if(strmatch(%n,{_actor.Name}),pemit(%#,hooked=%|))]");
+		await God($"&AFT {hook}=[if(strmatch(%n,{_actor.Name}),pemit(%#,hooked=%>))]");
 		await God($"@hook/after think={hook},AFT");
 		try
 		{

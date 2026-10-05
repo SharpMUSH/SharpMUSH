@@ -243,7 +243,7 @@ public class BreakPropagation
 /// same pair, so the last command of an included list is what the caller's next command reads. A queued
 /// entry or a <c>$</c>-command body gets a new pair (PE_INFO_DEFAULT / PE_INFO_CLONE).</para>
 ///
-/// <para>It also holds <see cref="Output"/>, <c>%|</c>: the logical output of the last command run in
+/// <para>It also holds <see cref="Output"/>, <c>%></c>: the logical output of the last command run in
 /// the entry. Unlike <c>%c</c>/<c>%u</c>, a queued entry starts with a copy of the value its submitter
 /// had when it queued it, the way q-registers are copied.</para>
 /// </summary>
@@ -303,7 +303,7 @@ public sealed class CommandText(MString? output = null)
 	/// <inheritdoc cref="KeepRawThroughRedispatch"/>
 	public void EndRedispatch() => _redispatchedRaw = null;
 
-	/// <summary><c>%|</c>: the logical output of the last command run in this entry.</summary>
+	/// <summary><c>%></c>: the logical output of the last command run in this entry.</summary>
 	public MString Output { get; private set; } = output ?? MarkupText.Empty;
 
 	/// <summary>
@@ -437,15 +437,15 @@ public partial record ParserState(
 	public CommandText? CommandText { get; init; }
 
 	/// <summary>
-	/// <c>%|</c> as the list that queued this state had it when it did. A queued entry has no
+	/// <c>%></c> as the list that queued this state had it when it did. A queued entry has no
 	/// <see cref="CommandText"/> of its own until its list starts, and starts it with this output.
 	/// </summary>
 	public MString? QueuedOutput { get; init; }
 
-	/// <summary><c>%|</c>: the logical output of the last command run in this queue entry.</summary>
+	/// <summary><c>%></c>: the logical output of the last command run in this queue entry.</summary>
 	public MString PipedOutput => CommandText?.Output ?? QueuedOutput ?? MarkupText.Empty;
 
-	/// <summary>This state, about to be queued: it keeps the value <c>%|</c> has now.</summary>
+	/// <summary>This state, about to be queued: it keeps the value <c>%></c> has now.</summary>
 	public ParserState WithQueuedOutput() => this with { QueuedOutput = PipedOutput };
 
 	/// <summary>
