@@ -538,6 +538,25 @@ public class MarkdownFunctionUnitTests
 	}
 
 	[Test]
+	public async Task RenderMarkdown_SeeAlsoFooter_PrintsOneLine()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(**See Also:**%r- \\[newbie\\]%r- \\[ZONES\\])")))?.Message;
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.ToPlainText()).IsEqualTo("See Also: newbie, ZONES");
+	}
+
+	[Test]
+	public async Task RenderMarkdownCustom_SeeAlsoTemplate_GetsTheTopics()
+	{
+		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message!.ToString().Trim();
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`SEEALSO {testDbref}=Related (%1): %0"));
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(**See Also:**%r- \\[newbie\\]%r- \\[ZONES\\],{testDbref})")))?.Message;
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.ToPlainText()).IsEqualTo("Related (2): newbie, ZONES");
+	}
+
+	[Test]
 	public async Task RenderMarkdownCustom_AllCustomTemplates_NonDefaultBehavior()
 	{
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownCustomTestObj)")))?.Message?.ToString()!;

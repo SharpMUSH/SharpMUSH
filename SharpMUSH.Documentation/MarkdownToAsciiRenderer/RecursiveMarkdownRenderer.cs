@@ -104,6 +104,7 @@ public partial class RecursiveMarkdownRenderer
 		return obj switch
 		{
 			MarkdownDocument doc => RenderDocument(doc),
+			SeeAlsoBlock seeAlso => RenderSeeAlso(seeAlso),
 			HeadingBlock heading => RenderHeading(heading),
 			ParagraphBlock para => RenderParagraph(para),
 			CodeBlock code => RenderCodeBlock(code),

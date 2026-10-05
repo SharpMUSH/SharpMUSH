@@ -20,17 +20,8 @@ public partial class RecursiveMarkdownRenderer
 		return MarkupText.Wrap(style, content.ToPlainText());
 	}
 
-	/// <summary>Lists already printed as a See Also footer by the label before them.</summary>
-	private readonly HashSet<ListBlock> _seeAlsoLists = [];
-
 	private MString RenderParagraph(ParagraphBlock para)
 	{
-		if (HelpSeeAlso.TryMatch(para, out var seeAlso, out var items))
-		{
-			_seeAlsoLists.Add(seeAlso);
-			return RenderSeeAlso(items);
-		}
-
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
@@ -38,56 +29,61 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// A See Also footer (<see cref="HelpSeeAlso"/>) as PennMUSH prints it: the label, then the topics
+	/// A See Also footer (<see cref="SeeAlsoBlock"/>) as PennMUSH prints it: the label, then the topics
 	/// separated by commas, wrapped at a comma with the continuation lines under the first topic.
 	/// </summary>
-	protected virtual MString RenderSeeAlso(IReadOnlyList<Inline> items)
+	protected virtual MString RenderSeeAlso(SeeAlsoBlock seeAlso)
 	{
-		var label = $"{HelpSeeAlso.Label}: ";
+		var label = $"{HelpSeeAlsoExtension.Label}: ";
 		var indent = MarkupText.Plain("\n" + new string(' ', label.Length));
 		var parts = new List<MString> { MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain(" ") };
 		var column = label.Length;
+		var items = RenderSeeAlsoItems(seeAlso);
+		for (var i = 0; i < items.Count; i++)
+		{
+			var width = items[i].ToPlainText().Length;
+			if (i > 0)
+			{
+				parts.Add(MarkupText.Plain(","));
+				column++;
+				var trailingComma = i < items.Count - 1 ? 1 : 0;
+				if (column + 1 + width + trailingComma > _maxWidth)
+				{
+					parts.Add(indent);
+					column = label.Length;
+				}
+				else
+				{
+					parts.Add(MarkupText.Plain(" "));
+					column++;
+				}
+			}
+			parts.Add(items[i]);
+			column += width;
+		}
+		return MarkupText.Concat(parts);
+	}
+
+	/// <summary>
+	/// Each topic of a See Also footer, rendered. A topic link is named bare (<c>@lock</c>, not
+	/// <c>help @lock</c>): the label already says these are help topics, as in PennMUSH.
+	/// </summary>
+	protected IReadOnlyList<MString> RenderSeeAlsoItems(SeeAlsoBlock seeAlso)
+	{
 		_bareCommandLabels = true;
 		try
 		{
-			for (var i = 0; i < items.Count; i++)
-			{
-				var item = Render(items[i]);
-				var width = item.ToPlainText().Length;
-				if (i > 0)
-				{
-					parts.Add(MarkupText.Plain(","));
-					column++;
-					var trailingComma = i < items.Count - 1 ? 1 : 0;
-					if (column + 1 + width + trailingComma > _maxWidth)
-					{
-						parts.Add(indent);
-						column = label.Length;
-					}
-					else
-					{
-						parts.Add(MarkupText.Plain(" "));
-						column++;
-					}
-				}
-				parts.Add(item);
-				column += width;
-			}
+			return seeAlso.Items.Select(Render).ToList();
 		}
 		finally
 		{
 			_bareCommandLabels = false;
 		}
-		return MarkupText.Concat(parts);
 	}
 
 	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
 	private MString RenderList(ListBlock list)
 	{
-		if (_seeAlsoLists.Contains(list))
-		{
-			return MarkupText.Empty;
-		}
 
 		var itemIndex = FirstItemIndex(list);
 		var items = list

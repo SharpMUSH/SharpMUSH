@@ -29,6 +29,8 @@ public static class RecursiveMarkdownHelper
 	///   known directives render as a dimmed placeholder.</item>
 	/// <item><see cref="MarkdownExtensions.UseTaskLists"/> — renders <c>- [x]</c>
 	///   task list markers.</item>
+	/// <item><see cref="HelpSeeAlsoExtension"/> — turns a <c>**See Also:**</c> label and the list of
+	///   topics under it into a <see cref="SeeAlsoBlock"/>, printed as one comma-separated line.</item>
 	/// <item><see cref="WikiLinkExtension"/> — parses <c>[[Page Name]]</c> wiki links;
 	///   rendered as underlined display text in-game, or as a clickable <c>@wiki &lt;page&gt;</c>
 	///   command link when the caller supplies <c>WikiCommandRenderer</c>.</item>
@@ -51,7 +53,8 @@ public static class RecursiveMarkdownHelper
 			.UseGenericAttributes()
 			.UseCustomContainers()
 			.UseTaskLists()
-			.Use<WikiLinkExtension>(); // parser only; its HTML renderer hook is a no-op for ASCII
+			.Use<WikiLinkExtension>() // parser only; its HTML renderer hook is a no-op for ASCII
+			.UseHelpSeeAlso(); // **See Also:** + a list of topics → SeeAlsoBlock
 
 	/// <summary>
 	/// Renders markdown text to MString using the recursive renderer

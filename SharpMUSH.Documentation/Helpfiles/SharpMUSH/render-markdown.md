@@ -48,6 +48,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right)
 - **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
+- **See Also footers**: a paragraph that is only `**See Also:**`, followed by a list whose every item is one `[topic]` or one `` `code` `` name, prints as one line: `See Also: @lock, @unlock`. Wrapped lines start under the first topic. A list with anything else in an item stays a list
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ## Syntax Highlighting in Code Blocks

@@ -212,6 +212,23 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		return custom ?? MarkupText.Concat(ListMarker(index, isOrdered), content);
 	}
 
+	/// <summary>
+	/// <c>RENDERMARKUP`SEEALSO</c>: <c>%0</c> the topics, each rendered (a link stays a link) and
+	/// separated by <c>, </c>; <c>%1</c> how many there are. The template supplies the label.
+	/// </summary>
+	protected override MString RenderSeeAlso(SeeAlsoBlock seeAlso)
+	{
+		if (!HasTemplate("SEEALSO")) return base.RenderSeeAlso(seeAlso);
+
+		var items = RenderSeeAlsoItems(seeAlso);
+		var args = new Dictionary<string, CallState>
+		{
+			{ "0", new CallState(MarkupText.Join(MarkupText.Plain(", "), items)) },
+			{ "1", new CallState(MarkupText.Plain(items.Count.ToString())) }
+		};
+		return TryEvaluateTemplate("SEEALSO", args).GetAwaiter().GetResult() ?? base.RenderSeeAlso(seeAlso);
+	}
+
 	protected override MString RenderQuote(QuoteBlock quote)
 	{
 		var parts = quote

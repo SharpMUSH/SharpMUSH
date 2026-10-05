@@ -85,6 +85,10 @@ The function looks for attributes on `<object>` with specific names that define 
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
   - `%0` - The quote content (already rendered)
   
+- ``RENDERMARKUP`SEEALSO`` - See Also footer rendering (see [rendermarkdown()])
+  - `%0` - The topics, each rendered (a topic link stays a link), separated by `, `
+  - `%1` - How many topics there are
+  
 ## Table templates
 
 - ``RENDERMARKUP`TABLE`` - Table rendering. Receives the table described as a

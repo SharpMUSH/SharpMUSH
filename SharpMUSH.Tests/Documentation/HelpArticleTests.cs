@@ -223,11 +223,10 @@ public class HelpArticleTests
 	}
 
 	[Test]
-	public async Task WebSeeAlsoIsMarkedForTheRowLayout()
+	public async Task WebSeeAlsoIsALabelledNavOfLinks()
 	{
 		var html = HelpHtmlRenderer.RenderToHtml(SeeAlso, topic => "/help/" + topic);
-		await Assert.That(html).Contains("<p class=\"help-see-also-label\"><strong>See Also:</strong></p>");
-		await Assert.That(html).Contains("<ul class=\"help-see-also\">");
-		await Assert.That(html).Contains("<li><a href=\"/help/newbie\">newbie</a></li>");
+		await Assert.That(html).IsEqualTo("<p>Body.</p>\n<nav class=\"help-see-also\" aria-label=\"See also\"><span class=\"help-see-also-label\">See Also</span>"
+			+ "<ul><li><a href=\"/help/newbie\">newbie</a></li><li><a href=\"/help/ZONES\">ZONES</a></li><li><code>[NO_TEL]</code></li></ul></nav>\n");
 	}
 }
