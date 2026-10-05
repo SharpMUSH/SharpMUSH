@@ -42,9 +42,7 @@ public class ChannelBroadcastServiceTests
 		await service.BroadcastAsync(Line(Channel(member, gagged: false), INotifyService.NotificationType.Say),
 			CancellationToken.None);
 
-		await eventService.Received(1).TriggerEventAsync(
-			Arg.Any<IMUSHCodeParser>(),
-			SharpEvents.ChannelMessage,
+		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			null,
 			Arg.Is<string[]>(args =>
 				args.Length == 8
@@ -79,7 +77,7 @@ public class ChannelBroadcastServiceTests
 
 		var raised = eventService.ReceivedCalls()
 			.Single(call => call.GetMethodInfo().Name == nameof(IEventService.TriggerEventAsync))
-			.GetArguments()[3] as string[];
+			.GetArguments()[2] as string[];
 		var buffered = mediator.ReceivedCalls()
 			.Select(call => call.GetArguments()[0])
 			.OfType<AddChannelMessageCommand>()
@@ -102,8 +100,7 @@ public class ChannelBroadcastServiceTests
 
 		await service.BroadcastAsync(Line(Channel(member, gagged: true)), CancellationToken.None);
 
-		await eventService.DidNotReceive().TriggerEventAsync(
-			Arg.Any<IMUSHCodeParser>(), Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
+		await eventService.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 
 	/// <summary>
@@ -128,9 +125,7 @@ public class ChannelBroadcastServiceTests
 		await Assert.That(async () => await service.BroadcastAsync(line, CancellationToken.None))
 			.Throws<InvalidOperationException>();
 
-		await eventService.Received(1).TriggerEventAsync(
-			Arg.Any<IMUSHCodeParser>(),
-			SharpEvents.ChannelMessage,
+		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			Arg.Any<DBRef?>(),
 			Arg.Is<string[]>(args => args[5] == member.Object().DBRef.ToString()));
 	}

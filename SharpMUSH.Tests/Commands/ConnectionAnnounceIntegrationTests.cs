@@ -60,9 +60,15 @@ public class ConnectionAnnounceIntegrationTests
 	private async ValueTask<AnySharpObject> KnownObjectAsync(DBRef dbRef)
 		=> (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Expect<AnySharpObject>();
 
-	/// <summary>Everything <paramref name="who"/> was notified of since <paramref name="before"/>, in order.</summary>
-	private string[] MessagesTo(DBRef who, int before)
-		=> [.. WebAppFactoryArg.Notifications.For(who).Skip(before)];
+	/// <summary>
+	/// Everything <paramref name="who"/> was notified of since <paramref name="before"/>, in order, once the
+	/// hooks and events queued so far have run.
+	/// </summary>
+	private async Task<string[]> MessagesTo(DBRef who, int before)
+	{
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return [.. WebAppFactoryArg.Notifications.For(who).Skip(before)];
+	}
 
 	/// <summary>
 	/// Creates a fresh, uniquely-named channel with the given privileges, owned by God, and returns it.
@@ -104,7 +110,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
@@ -135,7 +141,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle2 = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle2, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasReconnected}");
 	}
@@ -169,7 +175,7 @@ public class ConnectionAnnounceIntegrationTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("QUIT"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasDisconnected}");
 
 		await TestHelpers.WaitForAttribute(AttributeService, playerObj, "LASTLOGOUT");
@@ -204,7 +210,7 @@ public class ConnectionAnnounceIntegrationTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("QUIT"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasPartiallyDisconnected}");
 	}
 
@@ -230,7 +236,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"ch {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasHiddenConnected}");
 
 		// A mortal viewer's WHO must not list the hidden connection...
@@ -293,7 +299,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"cd {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains(
 			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasHiddenConnected}");
 
@@ -331,7 +337,7 @@ public class ConnectionAnnounceIntegrationTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("QUIT"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasHiddenDisconnected}");
 	}
 
@@ -356,7 +362,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains(
 			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
@@ -392,8 +398,8 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var chanMessages = MessagesTo(channelWitness.DbRef, chanBefore);
-		var roomMessages = MessagesTo(roomWitness.DbRef, roomBefore);
+		var chanMessages = await MessagesTo(channelWitness.DbRef, chanBefore);
+		var roomMessages = await MessagesTo(roomWitness.DbRef, roomBefore);
 
 		await Assert.That(chanMessages).IsEmpty()
 			.Because("channels with the Quiet privilege must not carry the connect announcement");
@@ -446,7 +452,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 
 		await Assert.That(messages).Contains("Zone hook fired for connection 1")
 			.Because("the zone room's contents' ACONNECT must fire, proving both that QueueHookAsync " +
@@ -504,7 +510,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 
 		await Assert.That(messages).Contains("Wizard zone hook fired for connection 1")
 			.Because("QueueHookAsync must check the hook OWNER's own permission to read/execute its " +
@@ -546,7 +552,7 @@ public class ConnectionAnnounceIntegrationTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("LOGOUT"));
 
-		var messages = MessagesTo(witness.DbRef, before);
+		var messages = await MessagesTo(witness.DbRef, before);
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasHiddenDisconnected}")
 			.Because("Unbind must not clear the Hidden metadata key before the disconnect notification is " +
 				"published, or ConnectionStateEventHandler's re-fetch of IsHidden for the disconnect " +
@@ -666,9 +672,9 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"ch {playerName} TestPassword123"));
 
-		await Assert.That(MessagesTo(wizardWitness.DbRef, wizardBefore)).Contains(expected)
+		await Assert.That(await MessagesTo(wizardWitness.DbRef, wizardBefore)).Contains(expected)
 			.Because("a See_All channel member still receives the hidden-connect line");
-		await Assert.That(MessagesTo(mortalWitness.DbRef, mortalBefore)).DoesNotContain(expected)
+		await Assert.That(await MessagesTo(mortalWitness.DbRef, mortalBefore)).DoesNotContain(expected)
 			.Because("CB_SEEALL keeps the hidden-connect line off an ordinary member's channel");
 
 		// The line is buffered tagged, so recall must apply the same gate (src/extchat.c:3559,4083) -
@@ -676,12 +682,12 @@ public class ConnectionAnnounceIntegrationTests
 		var mortalRecallBefore = WebAppFactoryArg.Notifications.CountFor(mortalWitness.DbRef);
 		await Parser.CommandParse(mortalWitness.Handle, ConnectionService,
 			MarkupText.Plain($"@channel/recall {chanName}=50"));
-		var mortalRecall = string.Join("\n", MessagesTo(mortalWitness.DbRef, mortalRecallBefore));
+		var mortalRecall = string.Join("\n", await MessagesTo(mortalWitness.DbRef, mortalRecallBefore));
 
 		var wizardRecallBefore = WebAppFactoryArg.Notifications.CountFor(wizardWitness.DbRef);
 		await Parser.CommandParse(wizardWitness.Handle, ConnectionService,
 			MarkupText.Plain($"@channel/recall {chanName}=50"));
-		var wizardRecall = string.Join("\n", MessagesTo(wizardWitness.DbRef, wizardRecallBefore));
+		var wizardRecall = string.Join("\n", await MessagesTo(wizardWitness.DbRef, wizardRecallBefore));
 
 		await Assert.That(wizardRecall).Contains(expected)
 			.Because("recall for a See_All member still shows the hidden-connect line");
@@ -714,7 +720,7 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		await Assert.That(MessagesTo(mortalWitness.DbRef, before)).Contains(
+		await Assert.That(await MessagesTo(mortalWitness.DbRef, before)).Contains(
 			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
 
@@ -752,9 +758,9 @@ public class ConnectionAnnounceIntegrationTests
 		var handle = await AnonymousHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
 
-		await Assert.That(MessagesTo(listening.DbRef, listeningBefore)).Contains(expected)
+		await Assert.That(await MessagesTo(listening.DbRef, listeningBefore)).Contains(expected)
 			.Because("the control: a member who did not mute the channel still hears the connect line");
-		await Assert.That(MessagesTo(muted.DbRef, mutedBefore)).DoesNotContain(expected)
+		await Assert.That(await MessagesTo(muted.DbRef, mutedBefore)).DoesNotContain(expected)
 			.Because("CB_CHECKQUIET withholds a presence announcement from a member who muted the channel");
 	}
 
@@ -783,6 +789,6 @@ public class ConnectionAnnounceIntegrationTests
 		await Parser.CommandParse(speaker.Handle, ConnectionService,
 			MarkupText.Plain($"@chat {chanName}=still audible"));
 
-		await Assert.That(string.Join("\n", MessagesTo(muted.DbRef, before))).Contains("still audible");
+		await Assert.That(string.Join("\n", await MessagesTo(muted.DbRef, before))).Contains("still audible");
 	}
 }

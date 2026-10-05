@@ -58,13 +58,15 @@ public class RoomContentsHandlerReferenceTests
 	private async Task<string> Eval(string expression) =>
 		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
-	private Task Trigger(string room, string cause) =>
-		EventService.TriggerEventAsync(
-			WebAppFactoryArg.CommandParser,
-			SharpEvents.RoomContents,
-			WebAppFactoryArg.ExecutorDBRef,
-			room,
-			cause).AsTask();
+	/// <summary>Raises ROOM`CONTENTS as God, and returns once the queued handler has run.</summary>
+	private Task Trigger(string room, string cause) => Raise(WebAppFactoryArg.ExecutorDBRef, room, cause);
+
+	/// <summary>Raises ROOM`CONTENTS as <paramref name="enactor"/>, and returns once the queued handler has run.</summary>
+	private async Task Raise(DBRef enactor, string room, string cause)
+	{
+		await EventService.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause);
+		await WebAppFactoryArg.QueueBarrierAsync();
+	}
 
 	/// <summary>
 	/// Installs (or reinstalls) every attribute the package manifest declares onto
@@ -101,46 +103,61 @@ public class RoomContentsHandlerReferenceTests
 			"FN`NOTEXIT", "FN`V1ROW",
 		})
 		{
-			await Cmd($"&{attr} #9=");
+			await Cmd($"@wipe #9/{attr}");
 		}
 
 		await InstallPackage();
+	}
+
+	/// <summary>
+	/// A room of the test's own holding one thing, built without moving God. A room another test can
+	/// walk into (God's, say) has ROOM`CONTENTS queued for it by that test too, so a handler recording
+	/// what it saw there could record that test's event instead of this one's.
+	/// </summary>
+	private async Task<(string Room, string Thing)> ProbeRoom()
+	{
+		var token = Guid.NewGuid().ToString("N")[..8];
+		var room = await Build($"dig(RcProbe{token})");
+		var thing = await Build($"create(RcProbeThing{token})");
+		await Eval($"tel({thing},{room})");
+		return (room, thing);
+	}
+
+	private async Task RemoveProbeRoom((string Room, string Thing) probe)
+	{
+		await Cmd($"@dest/override {probe.Thing}");
+		await Cmd($"@dest/override {probe.Room}");
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask HandlerReceivesCorrectRoomDbrefInPercent0()
 	{
+		var probe = await ProbeRoom();
 		try
 		{
-			// Install a simplified handler: record lcon(%0) (all occupants) into FANOUT_LIST
-			// so we can verify %0 was the correct room and that lcon sees its contents.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_LIST #9=[lcon(%0)]");
-
-			// Resolve God's (#1) current room — that is the room we'll pass as %0.
-			var room = await Eval("loc(#1)");
-			await Assert.That(room).StartsWith("#");
+			// Install a simplified handler: record lcon(%0) (all occupants) under the room's number, so
+			// we can verify %0 was the correct room and that lcon sees its contents.
+			await Cmd("&ROOM`CONTENTS #9=&FANOUT_LIST`[after(first(%0,:),#)] #9=[lcon(%0)]");
 
 			// Fire the event via the same service path that movement/connect/disconnect use.
-			// TriggerEventAsync runs the handler (#9) with its own permissions; #9 is seeded WIZARD,
-			// so it retains the elevated (see-all) access this handler needs.
-			await Trigger(room, "move-in");
+			// The handler (#9) runs with its own permissions; #9 is seeded WIZARD, so it retains the
+			// elevated (see-all) access this handler needs.
+			await Trigger(probe.Room, "move-in");
 
-			// Handler should have recorded lcon(room) into FANOUT_LIST on #9.
-			var recorded = await Eval("get(#9/FANOUT_LIST)");
+			var recorded = await Eval($"get(#9/FANOUT_LIST`{probe.Room[1..]})");
 
 			// Independently compute lcon of the same room to verify handler saw same contents.
-			var expected = await Eval($"lcon({room})");
+			var expected = await Eval($"lcon({probe.Room})");
 
 			// This assertion FAILS if the handler did not run OR if %0 was not the correct room.
 			await Assert.That(recorded).IsEqualTo(expected);
-
-			// Sanity: God (#1) should appear in the room's contents (uses objid format).
-			await Assert.That(recorded).Contains("#1");
+			await Assert.That(recorded).Contains(probe.Thing);
 		}
 		finally
 		{
 			await RestorePackage();
+			await RemoveProbeRoom(probe);
 		}
 	}
 
@@ -148,18 +165,16 @@ public class RoomContentsHandlerReferenceTests
 	[NotInParallel]
 	public async ValueTask HandlerCountsOccupantsMatchingIndependentLcon()
 	{
+		var probe = await ProbeRoom();
 		try
 		{
 			// Install a handler that records the occupant COUNT (via words()) for easier assertion.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_COUNT #9=[words(lcon(%0))]");
+			await Cmd("&ROOM`CONTENTS #9=&FANOUT_COUNT`[after(first(%0,:),#)] #9=[words(lcon(%0))]");
 
-			var room = await Eval("loc(#1)");
-			await Assert.That(room).StartsWith("#");
+			await Trigger(probe.Room, "move-in");
 
-			await Trigger(room, "move-in");
-
-			var recorded = await Eval("get(#9/FANOUT_COUNT)");
-			var expected = await Eval($"words(lcon({room}))");
+			var recorded = await Eval($"get(#9/FANOUT_COUNT`{probe.Room[1..]})");
+			var expected = await Eval($"words(lcon({probe.Room}))");
 
 			// Recorded count must equal the independently computed lcon count.
 			// Fails if the handler did not run, or ran against the wrong room.
@@ -168,6 +183,7 @@ public class RoomContentsHandlerReferenceTests
 		finally
 		{
 			await RestorePackage();
+			await RemoveProbeRoom(probe);
 		}
 	}
 
@@ -175,17 +191,16 @@ public class RoomContentsHandlerReferenceTests
 	[NotInParallel]
 	public async ValueTask HandlerCauseArgIsPassedAsPercent1()
 	{
+		var probe = await ProbeRoom();
 		try
 		{
 			// Install a handler that captures %1 (the cause) into LAST_CAUSE.
-			await Cmd("&ROOM`CONTENTS #9=&LAST_CAUSE #9=%1");
+			await Cmd("&ROOM`CONTENTS #9=&LAST_CAUSE`[after(first(%0,:),#)] #9=%1");
 
-			var room = await Eval("loc(#1)");
 			var cause = "move-in";
+			await Trigger(probe.Room, cause);
 
-			await Trigger(room, cause);
-
-			var recorded = await Eval("get(#9/LAST_CAUSE)");
+			var recorded = await Eval($"get(#9/LAST_CAUSE`{probe.Room[1..]})");
 
 			// %1 must carry the cause string "move-in".
 			await Assert.That(recorded).IsEqualTo(cause);
@@ -193,6 +208,7 @@ public class RoomContentsHandlerReferenceTests
 		finally
 		{
 			await RestorePackage();
+			await RemoveProbeRoom(probe);
 		}
 	}
 
@@ -200,42 +216,35 @@ public class RoomContentsHandlerReferenceTests
 	[NotInParallel]
 	public async ValueTask V1RowShape_StillBuildsValidJson()
 	{
-		var token = Guid.NewGuid().ToString("N")[..8];
-		var thingName = $"Probe{token}";
+		var probe = await ProbeRoom();
+		var thingName = await Eval($"name({probe.Thing})");
 		try
 		{
 			// The previous tests prove the handler fires with the right room/cause, but not that
 			// the v1 idioms (json_array + iter + filter + helper rows) actually produce VALID JSON for
 			// the room's occupants. This exercises exactly that, with the 1.0 row shape.
 
-			// A uniquely-named thing dropped into God's room becomes a who-list occupant.
-			await Cmd($"@create {thingName}");
-			await Cmd($"drop {thingName}");
-
 			// Install the v1 helpers under scratch names, plus a handler that records the
 			// room.contents payload (json_array of per-occupant rows) into LAST_PAYLOAD — oob() needs
 			// a live WebSocket the harness lacks, so we capture the built payload instead of sending it.
 			await Cmd("&FN`NOTEXIT #9=not(hastype(%0,exit))");
 			await Cmd("&FN`V1ROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
-			await Cmd("&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`V1ROW,itext(0)),%b,|),|))");
+			await Cmd("&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`V1ROW,itext(0)),%b,|),|))");
 
-			var room = await Eval("loc(#1)");
-			await Trigger(room, "move-in");
+			await Trigger(probe.Room, "move-in");
 
 			// The core assertion the earlier tests missed: the handler emits VALID JSON.
-			var valid = await Eval("isjson(get(#9/LAST_PAYLOAD))");
-			var one = "1";
-			await Assert.That(valid).IsEqualTo(one);
+			var payload = await Eval($"get(#9/LAST_PAYLOAD`{probe.Room[1..]})");
+			await Assert.That(await Eval($"isjson(get(#9/LAST_PAYLOAD`{probe.Room[1..]}))")).IsEqualTo("1");
 
-			// And the who list is built from the real occupants: it contains the unique thing and God.
-			var payload = await Eval("get(#9/LAST_PAYLOAD)");
+			// And the who list is built from the real occupants: it carries the room's one thing.
 			await Assert.That(payload).Contains(thingName);
-			await Assert.That(payload).Contains("\"dbref\":\"#1\"");
+			await Assert.That(payload).Contains($"\"dbref\":\"{probe.Thing}\"");
 		}
 		finally
 		{
 			await RestorePackage();
-			await Cmd($"@dest/override {thingName}");
+			await RemoveProbeRoom(probe);
 		}
 	}
 
@@ -243,23 +252,22 @@ public class RoomContentsHandlerReferenceTests
 	[NotInParallel]
 	public async ValueTask HandlerDoesNotRunAfterAttributeIsCleared()
 	{
+		var probe = await ProbeRoom();
 		try
 		{
 			// Install, then immediately clear. Trigger must not set FANOUT_SENTINEL.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_SENTINEL #9=ran");
+			await Cmd("&ROOM`CONTENTS #9=&FANOUT_SENTINEL`[after(first(%0,:),#)] #9=ran");
 			await Cmd("&ROOM`CONTENTS #9=");
 
-			var room = await Eval("loc(#1)");
-			await Trigger(room, "move-in");
+			await Trigger(probe.Room, "move-in");
 
-			var sentinel = await Eval("get(#9/FANOUT_SENTINEL)");
-			var emptyStr = string.Empty;
 			// Sentinel must be empty because the handler was cleared before the trigger.
-			await Assert.That(sentinel).IsEqualTo(emptyStr);
+			await Assert.That(await Eval($"get(#9/FANOUT_SENTINEL`{probe.Room[1..]})")).IsEqualTo(string.Empty);
 		}
 		finally
 		{
 			await RestorePackage();
+			await RemoveProbeRoom(probe);
 		}
 	}
 
@@ -822,7 +830,9 @@ public class RoomContentsHandlerReferenceTests
 			var handler = PackageAttributes.Value["ROOM`CONTENTS"];
 			await Assert.That(handler).StartsWith("think null(");
 			var body = handler["think null(".Length..];
-			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=strcat({body}");
+			// Recorded under the fixture room's number: another test's ROOM`CONTENTS cannot overwrite it.
+			var payload = $"LAST_PAYLOAD`{f.Room[1..]}";
+			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=strcat({body}");
 
 			// The causer (God, the test's enactor) is not in the room: two viewers, each sent
 			// room.contents and room.exits (0 deliveries each, no WebSocket), plus room.info to both on
@@ -830,49 +840,45 @@ public class RoomContentsHandlerReferenceTests
 			// joins the viewers with its default space.
 			foreach (var cause in new[] { "move-in", "move-out", "connect", "disconnect" })
 			{
-				await Cmd("&LAST_PAYLOAD #9=unset");
+				await Cmd($"&{payload} #9=unset");
 				await Trigger(f.Room, cause);
-				var result = await Eval("get(#9/LAST_PAYLOAD)");
+				var result = await Eval($"get(#9/{payload})");
 				await Assert.That(result).IsEqualTo(cause is "move-in" or "connect" ? "000 000" : "00 00")
 					.Because($"{cause}: the handler must run every oob() cleanly, got '{result}'");
 			}
 
 			// The causer is in the room (the mortal walked in): room.info goes to the mortal alone, so
 			// one viewer's run has three zeros and the other's two.
-			await Cmd("&LAST_PAYLOAD #9=unset");
-			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
-				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
-			var targeted = (await Eval("get(#9/LAST_PAYLOAD)")).Split(' ').Order().ToArray();
+			await Cmd($"&{payload} #9=unset");
+			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
+			var targeted = (await Eval($"get(#9/{payload})")).Split(' ').Order().ToArray();
 			await Assert.That(targeted).IsEquivalentTo(["00", "000"]);
 
 			// The causer is in the room but is not a viewer — a thing that moved itself in. Nobody
 			// would match it, so room.info goes to everyone rather than to no one.
-			await Cmd("&LAST_PAYLOAD #9=unset");
-			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
-				new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
-			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000 000")
+			await Cmd($"&{payload} #9=unset");
+			await Raise(new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
+			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("000 000")
 				.Because("a causer who is not a connected viewer must not swallow room.info for everyone");
 
 			// A resume re-sends one session's state, as connect does, and nothing changed for anyone
 			// else: the resuming player alone is sent room.contents, room.exits and room.info.
-			await Cmd("&LAST_PAYLOAD #9=unset");
-			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
-				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
-			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000")
+			await Cmd($"&{payload} #9=unset");
+			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
+			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("000")
 				.Because("a resume is sent to the resuming player alone, all three packages");
 
 			// A scene change (the Scene plugin's cause) re-sends room.info alone, to every viewer, the
 			// causer included when they are in the room: only the scene block changed, and it is per viewer.
-			await Cmd("&LAST_PAYLOAD #9=unset");
-			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
-				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "scene");
-			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("0 0")
+			await Cmd($"&{payload} #9=unset");
+			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "scene");
+			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("0 0")
 				.Because("a scene change sends room.info, and nothing else, to every viewer in the room");
 
 			// A resuming player who is not a viewer in the room is sent nothing, and nobody else is either.
-			await Cmd("&LAST_PAYLOAD #9=unset");
+			await Cmd($"&{payload} #9=unset");
 			await Trigger(f.Room, "resume");
-			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo(string.Empty);
+			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo(string.Empty);
 		}
 		finally
 		{

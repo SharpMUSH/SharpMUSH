@@ -37,7 +37,7 @@ public class SceneRoomRefreshTests
 	}
 
 	private static Task Fired(IEventService events, IMUSHCodeParser parser, string room) =>
-		events.Received(1).TriggerEventAsync(parser, SharpEvents.RoomContents, null,
+		events.Received(1).TriggerEventAsync(SharpEvents.RoomContents, null,
 			Arg.Is<string[]>(a => a.SequenceEqual(new[] { room, SceneRoomRefresh.Cause }))).AsTask();
 
 	[Test]
@@ -68,7 +68,7 @@ public class SceneRoomRefreshTests
 
 		await SceneRoomRefresh.AfterSetAsync(parser, "summary", "#12", SceneIn("#12"));
 
-		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default!, default, default(string[])!);
+		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public class SceneRoomRefreshTests
 
 		await SceneRoomRefresh.AfterFocusAsync(parser, new OneScene(SceneIn("#12")), "#7", "42", "42");
 
-		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default!, default, default(string[])!);
+		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
 	/// <summary>The write has committed by the time this runs; a failing handler must not turn it into an error.</summary>
@@ -97,11 +97,11 @@ public class SceneRoomRefreshTests
 	public async Task A_failing_event_does_not_reach_the_caller()
 	{
 		var (parser, events) = Rig();
-		events.TriggerEventAsync(default!, default!, default, default(string[])!)
+		events.TriggerEventAsync(default!, default, default(string[])!)
 			.ReturnsForAnyArgs(ValueTask.FromException(new InvalidOperationException("boom")));
 
 		await SceneRoomRefresh.RefreshAsync(parser, "#12");
 
-		await events.ReceivedWithAnyArgs(1).TriggerEventAsync(default!, default!, default, default(string[])!);
+		await events.ReceivedWithAnyArgs(1).TriggerEventAsync(default!, default, default(string[])!);
 	}
 }

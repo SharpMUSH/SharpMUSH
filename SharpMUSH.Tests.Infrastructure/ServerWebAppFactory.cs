@@ -83,6 +83,25 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// </summary>
 	public TestHelpers.NotificationRecorder Notifications { get; } = new();
 
+	/// <summary>
+	/// Returns once everything already admitted to the immediate queue has run. The queue has one consumer
+	/// and is first in, first out, so a sentinel admitted now runs after the work a test's command queued —
+	/// an event, an <c>@aconnect</c>-family hook, a triad's action — without waiting, as
+	/// <see cref="ITaskScheduler.DrainImmediateQueueForTests"/> does, for every other test's work to stop.
+	/// </summary>
+	public async Task QueueBarrierAsync(TimeSpan? timeout = null)
+	{
+		var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var admission = await Services.GetRequiredService<ITaskScheduler>().AdmitWork(() =>
+		{
+			reached.TrySetResult();
+			return ValueTask.FromResult<CallState?>(null);
+		}, "test-barrier", SharpMUSH.Library.Services.TaskScheduler.EnqueueGroup);
+		if (!admission.Accepted)
+			throw new InvalidOperationException($"The queue barrier was refused: {admission.Reason}");
+		await reached.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(30));
+	}
+
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;

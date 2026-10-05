@@ -261,12 +261,14 @@ public class CloneStateParityTests
 
 		try
 		{
+			// One attribute per created object, so another test's creation cannot overwrite this one's.
 			await AsGod($"&OBJECT`CREATE #{EventHandlerDbRefNumber}="
-				+ $"&CREATELOG #{EventHandlerDbRefNumber}=%0|%1");
+				+ $"&CREATELOG`[after(first(%0,:),#)] #{EventHandlerDbRefNumber}=%0|%1");
 
 			var clone = await Clone(throughTheFunction, original, $"CspEventClone{uid}");
+			await WebAppFactoryArg.QueueBarrierAsync();
 
-			var logged = await Attributes.GetAttributeAsync(eventHandler, ["CREATELOG"]).ToListAsync();
+			var logged = await Attributes.GetAttributeAsync(eventHandler, ["CREATELOG", clone.Number.ToString()]).ToListAsync();
 			await Assert.That(logged).IsNotEmpty()
 				.Because("cloning has to fire OBJECT`CREATE like every other creation");
 
@@ -301,12 +303,14 @@ public class CloneStateParityTests
 
 		try
 		{
+			// One attribute per created object, so another test's creation cannot overwrite this one's.
 			await AsGod($"&OBJECT`CREATE #{EventHandlerDbRefNumber}="
-				+ $"&CREATELOG #{EventHandlerDbRefNumber}=%0|%1");
+				+ $"&CREATELOG`[after(first(%0,:),#)] #{EventHandlerDbRefNumber}=%0|%1");
 
 			var clone = await Clone(false, exit, $"CspExitEventClone{uid}");
+			await WebAppFactoryArg.QueueBarrierAsync();
 
-			var logged = await Attributes.GetAttributeAsync(eventHandler, ["CREATELOG"]).ToListAsync();
+			var logged = await Attributes.GetAttributeAsync(eventHandler, ["CREATELOG", clone.Number.ToString()]).ToListAsync();
 			await Assert.That(logged).IsNotEmpty();
 
 			var fields = logged[^1].Value.ToPlainText().Split('|');

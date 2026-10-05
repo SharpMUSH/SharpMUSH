@@ -103,7 +103,7 @@ public static class BuildingHelpers
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CreatedObject), executor,
 			$"#{thing.Number}");
 
-		await eventService.TriggerEventAsync(parser, "OBJECT`CREATE", executor.Object().DBRef,
+		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef,
 			thing.ToString(),
 			""); // null for cloned-from (not a clone)
 
@@ -130,7 +130,7 @@ public static class BuildingHelpers
 	public static async ValueTask AnnounceCreatedAsync(IMUSHCodeParser parser, IEventService eventService,
 		AnySharpObject executor, DBRef created)
 	{
-		await eventService.TriggerEventAsync(parser, "OBJECT`CREATE", executor.Object().DBRef, created.ToString());
+		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef, created.ToString());
 
 		if (parser.ServiceProvider.GetService<IPluginHookDispatcher>() is { } createHooks)
 		{
@@ -151,9 +151,7 @@ public static class BuildingHelpers
 			name, player.Number, password);
 
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
-		await eventService.TriggerEventAsync(
-			parser,
-			"PLAYER`CREATE",
+		await eventService.TriggerEventAsync("PLAYER`CREATE",
 			executor.Object().DBRef, // Enactor is the wizard who did the creating
 			player.ToString(),
 			name,
@@ -925,7 +923,7 @@ public static class BuildingHelpers
 			await mediator.Send(new SetObjectParentCommand(clonedObj, parent));
 		}
 
-		await eventService.TriggerEventAsync(parser, "OBJECT`CREATE", executor.Object().DBRef,
+		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef,
 			cloneDbRef.ToString(),
 			target.Object().DBRef.ToString()); // cloned-from
 
@@ -1293,12 +1291,10 @@ public static class BuildingHelpers
 	/// </summary>
 	/// <remarks>
 	/// <paramref name="build"/> <b>allocates, and does nothing else</b>. No <c>OBJECT`CREATE</c>, no
-	/// plugin hook, no <c>real_did_it</c> — every one of those runs code the game's own softcode can
-	/// supply, and <see cref="IEventService.TriggerEventAsync"/> runs its handler inline
-	/// (<c>await evalParser.CommandListParse(...)</c>) rather than queueing it. A handler that then
-	/// built at a requested dbref would re-enter this gate on the same call stack, and
-	/// <see cref="SemaphoreSlim"/> is not reentrant: a deadlock, not a slow path. Everything after
-	/// the object exists belongs to the caller, outside.
+	/// plugin hook, no <c>real_did_it</c> — those lead to code the game's own softcode supplies, and a
+	/// plugin hook or a did-it message runs in place. Code that then built at a requested dbref would
+	/// re-enter this gate on the same call stack, and <see cref="SemaphoreSlim"/> is not reentrant: a
+	/// deadlock, not a slow path. Everything after the object exists belongs to the caller, outside.
 	/// <para>The contract this gate owes is only what check-then-allocate needs. PennMUSH has no lock
 	/// here at all, being single-threaded.</para>
 	/// </remarks>

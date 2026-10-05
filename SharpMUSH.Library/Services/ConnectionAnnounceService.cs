@@ -16,8 +16,8 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Ports PennMUSH's announce_connect/announce_disconnect (src/bsd.c:5906-6017): room/inventory
-/// broadcasts, a SUSPECT-&gt;WIZARD broadcast, the HEAR_CONNECT-flagged broadcast, and ACONNECT/
-/// ADISCONNECT attribute-hook dispatch to the player, their room, their zone, and the master room.
+/// broadcasts, a SUSPECT-&gt;WIZARD broadcast, the HEAR_CONNECT-flagged broadcast, and queueing the
+/// ACONNECT/ADISCONNECT hooks of the player, their room, their zone, and the master room.
 /// </summary>
 public class ConnectionAnnounceService(
 	ICommunicationService communicationService,
@@ -25,10 +25,11 @@ public class ConnectionAnnounceService(
 	IAttributeService attributeService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IMediator mediator,
+	Lazy<ITaskScheduler> scheduler,
 	ILogger<ConnectionAnnounceService> logger) : IConnectionAnnounceService
 {
 	/// <inheritdoc />
-	public async ValueTask AnnounceConnectAsync(IMUSHCodeParser parser, AnySharpObject player, int connectionCount, bool isHiddenConnection)
+	public async ValueTask AnnounceConnectAsync(AnySharpObject player, int connectionCount, bool isHiddenConnection)
 	{
 		try
 		{
@@ -61,7 +62,7 @@ public class ConnectionAnnounceService(
 
 			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
 
-			await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
+			await QueueHookAsync(player, player, "ACONNECT", connectionCount.ToString());
 
 			if (configuration.CurrentValue.Attribute.RoomConnects)
 			{
@@ -69,11 +70,11 @@ public class ConnectionAnnounceService(
 				var locObj = loc.WithExitOption();
 				if (locObj.IsRoom || locObj.IsThing)
 				{
-					await QueueHookAsync(parser, locObj, player, "ACONNECT", connectionCount.ToString());
+					await QueueHookAsync(locObj, player, "ACONNECT", connectionCount.ToString());
 				}
 			}
 
-			await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ACONNECT", connectionCount.ToString());
+			await DispatchZoneAndMasterRoomHooksAsync(player, "ACONNECT", connectionCount.ToString());
 		}
 		catch (Exception ex)
 		{
@@ -85,7 +86,7 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections, bool isHiddenConnection)
+	public async ValueTask AnnounceDisconnectAsync(AnySharpObject player, int remainingConnections, bool isHiddenConnection)
 	{
 		try
 		{
@@ -118,7 +119,7 @@ public class ConnectionAnnounceService(
 
 			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
 
-			await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
+			await QueueHookAsync(player, player, "ADISCONNECT", remainingConnections.ToString());
 
 			if (configuration.CurrentValue.Attribute.RoomConnects)
 			{
@@ -126,11 +127,11 @@ public class ConnectionAnnounceService(
 				var locObj = loc.WithExitOption();
 				if (locObj.IsRoom || locObj.IsThing)
 				{
-					await QueueHookAsync(parser, locObj, player, "ADISCONNECT", remainingConnections.ToString());
+					await QueueHookAsync(locObj, player, "ADISCONNECT", remainingConnections.ToString());
 				}
 			}
 
-			await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ADISCONNECT", remainingConnections.ToString());
+			await DispatchZoneAndMasterRoomHooksAsync(player, "ADISCONNECT", remainingConnections.ToString());
 
 			if (remainingConnections == 0)
 			{
@@ -214,7 +215,7 @@ public class ConnectionAnnounceService(
 	/// room's contents.
 	/// </summary>
 	private async ValueTask DispatchZoneAndMasterRoomHooksAsync(
-		IMUSHCodeParser parser, AnySharpObject player, string attrName, string countArg)
+		AnySharpObject player, string attrName, string countArg)
 	{
 		// PennMUSH zones the player's LOCATION, not the player itself (bsd.c:5992, loc = Location(player)) -
 		// zones are attached to rooms, so reading player.Object().Zone directly was dead code in practice.
@@ -223,13 +224,13 @@ public class ConnectionAnnounceService(
 		{
 			if (zone.IsThing)
 			{
-				await QueueHookAsync(parser, zone, player, attrName, countArg);
+				await QueueHookAsync(zone, player, attrName, countArg);
 			}
 			else if (zone.IsRoom)
 			{
 				await foreach (var content in zone.AsContainer.Content(mediator))
 				{
-					await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
+					await QueueHookAsync(content.WithRoomOption(), player, attrName, countArg);
 				}
 			}
 		}
@@ -239,7 +240,7 @@ public class ConnectionAnnounceService(
 		{
 			await foreach (var content in masterRoom.AsContainer.Content(mediator))
 			{
-				await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
+				await QueueHookAsync(content.WithRoomOption(), player, attrName, countArg);
 			}
 		}
 	}
@@ -290,32 +291,25 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <summary>
-	/// Ports PennMUSH's queue_attribute_base plus the %0/%1 PE_REGS binding: runs
-	/// <paramref name="attrName"/> on <paramref name="owner"/> (if set) as a fresh command-list
-	/// evaluation, with %0 reserved (empty, matching ACONNECT/ADISCONNECT) and %1 the connection
-	/// count. <paramref name="owner"/> is the hook's executor/%!; <paramref name="player"/> (the
-	/// connecting/disconnecting player) is both enactor/%# and caller/%@.
+	/// Ports PennMUSH's queue_attribute_base plus the %0/%1 PE_REGS binding: queues
+	/// <paramref name="attrName"/> on <paramref name="owner"/> (if set) as a queue entry of its own,
+	/// with %0 reserved (empty, matching ACONNECT/ADISCONNECT) and %1 the connection count.
+	/// <paramref name="owner"/> is the hook's executor/%! and is charged for it; <paramref name="player"/>
+	/// (the connecting/disconnecting player) is both enactor/%# and caller/%@.
 	/// </summary>
 	/// <remarks>
-	/// PennMUSH queues each hook independently, so one broken global object (a bad ACONNECT on a
-	/// zone or master-room object) can't take out the others. Catching here - rather than only in
-	/// the outer <c>AnnounceConnectAsync</c>/<c>AnnounceDisconnectAsync</c> try/catch - means a
-	/// throwing hook never stops the caller from reaching its later hooks or (on disconnect)
-	/// LASTLOGOUT.
+	/// Each hook is its own entry with its own time limit, as in PennMUSH, so one slow or broken global
+	/// object can neither take out the others nor run the login or logout that fired it out of time.
+	/// A failure to queue one hook is logged and the next is still queued.
 	/// </remarks>
 	private async ValueTask QueueHookAsync(
-		IMUSHCodeParser parser, AnySharpObject owner, AnySharpObject player, string attrName, string countArg)
+		AnySharpObject owner, AnySharpObject player, string attrName, string countArg)
 	{
 		try
 		{
-			// The read/execute permission check is whether OWNER may run its own attribute, not whether
-			// the connecting/disconnecting PLAYER may - queue_attribute_base (src/bsd.c) is an automatic,
-			// system-triggered execution that runs with the hook owner's own authority. Passing `player`
-			// here as the executor made this check PermissionService.CanEvalAttr(player, owner, ...), which
-			// fails whenever owner is a WIZARD/ROYALTY-flagged object (common for master-room utility
-			// objects) and player is an ordinary mortal - silently skipping the hook for the single most
-			// common real-world configuration. Self-evaluation (owner reading its own attribute) always
-			// satisfies PermissionService.CanEval regardless of owner's own privilege level.
+			// Whether OWNER may run its own attribute, not whether the player may: queue_attribute_base
+			// is a system-triggered execution with the hook owner's own authority, so a WIZARD master-room
+			// object's hook runs for a mortal player.
 			var attrResult = await attributeService.GetAttributeAsync(
 				owner, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
 
@@ -329,11 +323,21 @@ public class ConnectionAnnounceService(
 
 			var ownerRef = owner.Object().DBRef;
 			var playerRef = player.Object().DBRef;
-			var evalParser = parser.Push(ParserState.ForAttributeHook(
-				parser.State.IsEmpty ? null : parser.CurrentState, ownerRef, playerRef, playerRef, argsDict));
+			var state = ParserState.RootFor(ownerRef) with
+			{
+				Enactor = playerRef,
+				Caller = playerRef,
+				Arguments = argsDict,
+				EnvironmentRegisters = new(argsDict),
+				CurrentEvaluation = new DBAttribute(ownerRef, attrName)
+			};
 
-			var attributeText = hook.Last().Value.ToPlainText();
-			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
+			var admission = await scheduler.Value.AdmitCommandList(MarkupText.Plain(hook.Last().Value.ToPlainText()), state);
+			if (!admission.Accepted)
+			{
+				logger.LogWarning("{AttrName} hook on {Owner} for player {Player} was not queued: {Reason}",
+					attrName, ownerRef, playerRef, admission.Reason);
+			}
 		}
 		catch (Exception ex)
 		{

@@ -5,7 +5,7 @@ namespace SharpMUSH.Tests.Services;
 
 /// <summary>
 /// <see cref="ParserState"/>'s factories (<c>RootFor</c>, <c>ForTypedLine</c>, <c>ForTrackedEvaluation</c>,
-/// <c>ForAttributeHook</c>, <c>ForFunction</c>, <c>SnapshotForQueuedAction</c>) are the only places
+/// <c>ForFunction</c>, <c>SnapshotForQueuedAction</c>) are the only places
 /// that spell out the record's positional fields. A state built field by field somewhere else decides
 /// for itself which registers and counters it shares with its caller, which is how evaluations ended
 /// up sharing (or dropping) counters they should not have (#966).

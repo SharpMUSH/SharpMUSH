@@ -46,7 +46,7 @@ public class LoginBootstrapBudgetTests
 		var timer = new ManualDeadline();
 		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), default, timer);
 		var hookReached = false;
-		events.TriggerEventAsync(Arg.Any<IMUSHCodeParser>(), "PLAYER`CONNECT", Arg.Any<SharpMUSH.Library.Models.DBRef?>(), Arg.Any<string[]>())
+		events.TriggerEventAsync("PLAYER`CONNECT", Arg.Any<SharpMUSH.Library.Models.DBRef?>(), Arg.Any<string[]>())
 			.Returns(_ => { hookReached = true; if (expire) timer.Fire(); budget.ThrowIfExceeded(); return ValueTask.CompletedTask; });
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(services,
 			events, bus, notify, data, passwords);

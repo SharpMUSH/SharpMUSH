@@ -38,9 +38,13 @@ public class RoomAndExitCreationEventTests
 		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText()
 			?? string.Empty;
 
+	/// <summary>What the handler recorded, once the events queued so far have run.</summary>
 	private async Task<string> Get(string attribute)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"get(#{EventHandlerDbRefNumber}/{attribute})")))?.Message
+	{
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return (await Parser.FunctionParse(MarkupText.Plain($"get(#{EventHandlerDbRefNumber}/{attribute})")))?.Message
 			?.ToPlainText() ?? string.Empty;
+	}
 
 	/// <summary>The one object answering to <paramref name="name"/>.</summary>
 	private async Task<int> Only(string name)

@@ -179,7 +179,7 @@ public class HttpHandlerCommandService(
 			: AssembleResult(context);
 
 		// HTTP`COMMAND sysevent, mirroring Penn (src/bsd.c:4076): address, method, path, code,
-		// ctype, request body length, response body length.
+		// ctype, request body length, response body length. It is queued, so the response does not wait on it.
 		if (!DeadlineExpired() && handlerRef is { } resolvedHandler)
 		{
 			using (budget.Enter())
@@ -187,8 +187,7 @@ public class HttpHandlerCommandService(
 				try
 				{
 					budget.ThrowIfExceeded();
-					await eventService.TriggerEventAsync(
-						parser, "HTTP`COMMAND", resolvedHandler, budget.Token,
+					await eventService.TriggerEventAsync("HTTP`COMMAND", resolvedHandler,
 						clientIp, method, path, result.Status.ToString(), result.ContentType,
 						body.Length.ToString(), result.Body.Length.ToString());
 				}

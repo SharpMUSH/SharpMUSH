@@ -236,13 +236,15 @@ public class ObjectDestructionTests
 
 		try
 		{
+			// One attribute per destroyed object, so another test's @destroy cannot overwrite this one's.
 			await RunAsync($"&OBJECT`DESTROY #{EventHandlerDbRefNumber}="
-				+ $"&DESTROYLOG #{EventHandlerDbRefNumber}=%0|%1|%2|%3");
+				+ $"&DESTROYLOG`[after(first(%0,:),#)] #{EventHandlerDbRefNumber}=%0|%1|%2|%3");
 
 			await RunAsync($"@destroy {thing}");
 			await RunAsync($"@destroy {thing}");
+			await WebAppFactoryArg.QueueBarrierAsync();
 
-			var logged = await Database.GetAttributeAsync(eventHandler, ["DESTROYLOG"]).ToListAsync();
+			var logged = await Database.GetAttributeAsync(eventHandler, ["DESTROYLOG", thing.Number.ToString()]).ToListAsync();
 			await Assert.That(logged).IsNotEmpty()
 				.Because("the OBJECT`DESTROY handler should have run and written DESTROYLOG");
 

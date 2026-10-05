@@ -92,9 +92,7 @@ public class ChannelBroadcastService(
 
 		var named = Named(notification);
 
-		await eventService.TriggerEventAsync(
-			parser,
-			SharpEvents.ChannelMessage,
+		await eventService.TriggerEventAsync(SharpEvents.ChannelMessage,
 			sender?.Object().DBRef,
 			notification.Channel.Name.ToPlainText(),
 			named ? sender?.Object().DBRef.ToString() ?? string.Empty : string.Empty,
