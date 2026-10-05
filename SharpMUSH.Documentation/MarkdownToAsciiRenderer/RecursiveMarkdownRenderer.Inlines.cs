@@ -89,9 +89,9 @@ public partial class RecursiveMarkdownRenderer
 		if (isCommand)
 		{
 			var separator = url.IndexOf(' ');
-			// A table of topics is a list of names to pick from, as PennMUSH prints it; elsewhere the
-			// command is spelled out unless the text before the link already says it.
-			contentText = separator > 0 && (IsInTableCell(link) || HasCommandPrefix(link, url[..separator]))
+			// A table of topics or a See Also footer is a list of names to pick from, as PennMUSH prints
+			// it; elsewhere the command is spelled out unless the text before the link already says it.
+			contentText = separator > 0 && (_bareCommandLabels || IsInTableCell(link) || HasCommandPrefix(link, url[..separator]))
 				? url[(separator + 1)..]
 				: url;
 		}
@@ -102,6 +102,9 @@ public partial class RecursiveMarkdownRenderer
 			linkText: hint);
 		return MarkupText.Wrap(linkMarkup, contentText);
 	}
+
+	/// <summary>Set while a See Also footer renders, whose topics are named bare.</summary>
+	private bool _bareCommandLabels;
 
 	private static bool IsInTableCell(Inline inline)
 	{

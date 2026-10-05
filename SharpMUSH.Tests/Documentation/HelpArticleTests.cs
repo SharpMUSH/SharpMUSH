@@ -196,4 +196,38 @@ public class HelpArticleTests
 		await Assert.That(html).DoesNotContain("<thead>");
 		await Assert.That(html).Contains("<a href=\"/help/newbie\">newbie</a>");
 	}
+
+	private const string SeeAlso = "Body.\n\n**See Also:**\n- [newbie]\n- [ZONES]\n- `[NO_TEL]`";
+
+	[Test]
+	public async Task TerminalSeeAlsoIsOneCommaSeparatedLine()
+	{
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(SeeAlso).ToPlainText())
+			.IsEqualTo("Body.\n\nSee Also: newbie, ZONES, [NO_TEL]");
+	}
+
+	[Test]
+	public async Task TerminalSeeAlsoWrapsAtACommaUnderTheFirstTopic()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown(SeeAlso, maxWidth: 24).ToPlainText().Split('\n');
+		await Assert.That(lines[^2]).IsEqualTo("See Also: newbie, ZONES,");
+		await Assert.That(lines[^1]).IsEqualTo("          [NO_TEL]");
+	}
+
+	[Test]
+	public async Task SeeAlsoWithDescribedItemsStaysAList()
+	{
+		const string markdown = "**See Also:**\n- [newbie] — where to start";
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).Contains("* help newbie — where to start");
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).DoesNotContain("help-see-also");
+	}
+
+	[Test]
+	public async Task WebSeeAlsoIsMarkedForTheRowLayout()
+	{
+		var html = HelpHtmlRenderer.RenderToHtml(SeeAlso, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<p class=\"help-see-also-label\"><strong>See Also:</strong></p>");
+		await Assert.That(html).Contains("<ul class=\"help-see-also\">");
+		await Assert.That(html).Contains("<li><a href=\"/help/newbie\">newbie</a></li>");
+	}
 }

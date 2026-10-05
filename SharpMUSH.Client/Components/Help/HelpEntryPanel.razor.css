@@ -25,7 +25,7 @@
 .help-entry ::deep pre {
     overflow-x: auto;
     padding: 0.75rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     background: var(--surface-alt, rgba(127, 127, 127, 0.08));
 }
 
@@ -63,6 +63,46 @@
     border: none;
     font-family: var(--font-mono);
     font-size: 0.8125rem;
+}
+
+/* A See Also footer (HelpSeeAlso): the label, then its topics as one wrapping row of links rather than
+   a list a line per topic. The terminal prints it the same way, comma-separated. */
+.help-entry ::deep p.help-see-also-label {
+    margin: 1.25rem 0 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-soft);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.help-entry ::deep ul.help-see-also {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.help-entry ::deep ul.help-see-also li {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+
+.help-entry ::deep ul.help-see-also a,
+.help-entry ::deep ul.help-see-also code {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+}
+
+.help-entry ::deep ul.help-see-also a:hover,
+.help-entry ::deep ul.help-see-also a:focus-visible {
+    border-color: var(--accent);
 }
 
 .help-ambiguous {

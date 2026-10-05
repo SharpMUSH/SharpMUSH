@@ -168,8 +168,9 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
 										 + (items[i].block.LinesBefore?.Count ?? 0);
-			// Pipe tables keep no trivia, but a table always stands apart from its neighbours in the source.
-			if (blankLines == 0 && (items[i - 1].block is Table || items[i].block is Table))
+			// Pipe tables keep no trivia, but a table always stands apart from its neighbours in the source;
+			// and a heading starts a section, which a blank line sets off from the one before.
+			if (blankLines == 0 && (items[i - 1].block is Table || items[i].block is Table or HeadingBlock))
 			{
 				blankLines = 1;
 			}

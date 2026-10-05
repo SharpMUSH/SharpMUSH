@@ -72,7 +72,7 @@ More standard lock types:
 
 
 **See Also:**
-- [- [LOCKING]
+- [LOCKING]
 - [@lset]
 - [@CHANNEL CLOCK]
 - [failure]

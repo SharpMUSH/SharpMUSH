@@ -35,6 +35,12 @@ public static class HelpHtmlRenderer
 	private static readonly MarkdownPipeline Pipeline =
 		RecursiveMarkdownHelper.ConfigureHelpSyntax(new MarkdownPipelineBuilder()).Build();
 
+	/// <summary>The class a See Also label gets (<see cref="HelpSeeAlso"/>).</summary>
+	public const string SeeAlsoLabelClass = "help-see-also-label";
+
+	/// <summary>The class the list of a See Also footer gets, which the portal lays out as one row of links.</summary>
+	public const string SeeAlsoClass = "help-see-also";
+
 	/// <summary>The class a header-less table gets: a list of names in columns, drawn without borders.</summary>
 	public const string ListTableClass = "help-list";
 
@@ -83,6 +89,11 @@ public static class HelpHtmlRenderer
 
 		foreach (var paragraph in document.Descendants<ParagraphBlock>().ToList())
 		{
+			if (HelpSeeAlso.TryMatch(paragraph, out var seeAlso, out _))
+			{
+				paragraph.GetAttributes().AddClass(SeeAlsoLabelClass);
+				seeAlso.GetAttributes().AddClass(SeeAlsoClass);
+			}
 			KeepTerminalSpacing(paragraph);
 		}
 

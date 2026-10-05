@@ -73,7 +73,7 @@ allows non-players to pass, or players who do not have the "unregistered" flag s
 
 
 **See Also:**
-- [- [LOCKING]
+- [LOCKING]
 - [locktypes]
 - [@CHANNEL CLOCK]
 - [OBJID()]

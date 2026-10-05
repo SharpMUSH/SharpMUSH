@@ -25,7 +25,7 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 
 
 **See Also:**
-- [- [MAIL-SENDING]
+- [MAIL-SENDING]
 - [MAIL-READING]
 - [MAIL-FOLDERS]
 - [mail-forward]

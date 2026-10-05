@@ -106,7 +106,6 @@ In order for debug to be shown for triggered $-commands, you must either control
 
 **See Also:**
 - [debug]
-- []
 # @@
 `@@ [<text>]`
 
@@ -1158,7 +1157,7 @@ The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof`
 - [@CEMIT]
 - [@SPEECHMOD]
 - [NOSPOOF]
-- [SPOOFING].]
+- [SPOOFING]
 # @enable
 # @disable
 `@enable <option>`<br>
@@ -2077,7 +2076,7 @@ The `/noeval` switch causes `<message>` to not be evaluated.
 - [@oemit]
 - [SPOOFING]
 - [NOSPOOF]
-- [CONTROL].]
+- [CONTROL]
 # @restart
 `@restart <object>`<br>
 `@restart/all`

@@ -160,7 +160,7 @@ This locks *<object>* to players (and the objects of players) currently connecte
 
 
 **See Also:**
-- [- [IPADDR()]
+- [IPADDR()]
 - [HOST()]
 - [LASTSITE]
 
@@ -176,7 +176,7 @@ For rooms, it determines whether the @success or @failure verbs are triggered wh
 
 
 **See Also:**
-- [- [@asuccess]
+- [@asuccess]
 - [@afailure]
 - [go]
 - [get]
@@ -187,7 +187,7 @@ For players and things, the Enter lock controls who can "enter" an ENTER_OK obje
 
 
 **See Also:**
-- [- [@aenter]
+- [@aenter]
 - [@aefail]
 - [ENTER_OK]
 - [enter]
@@ -198,7 +198,7 @@ For players, things and rooms, the Leave lock controls who can leave the object,
 
 
 **See Also:**
-- [- [@leave]
+- [@leave]
 - [@lfail]
 - [leave]
 
@@ -207,7 +207,7 @@ For rooms, the Teleport lock controls who can "@teleport" into the room, if it h
 
 
 **See Also:**
-- [- [JUMP_OK]
+- [JUMP_OK]
 - [@teleport]
 - [LOCKING]
 - [locktypes]
@@ -229,7 +229,7 @@ For players, things and rooms, controls who can forward sound to an object, via 
 
 
 **See Also:**
-- [- [@forwardlist]
+- [@forwardlist]
 - [@debugforwardlist]
 - [@LOCK/PAGE]
 
@@ -238,7 +238,7 @@ For rooms, only objects which pass this lock will be sent to the rooms Drop-To. 
 
 
 **See Also:**
-- [- [DROP-TOS]
+- [DROP-TOS]
 - [drop]
 - [empty]
 - [LOCKING]
@@ -254,7 +254,7 @@ For players, things and rooms, this lock controls who may "use" the object. You 
 
 
 **See Also:**
-- [- [@ause]
+- [@ause]
 - [@aufail]
 - [use]
 - [$-commands]
@@ -266,7 +266,7 @@ For players, things and rooms, you must pass this lock (as well as the Use lock)
 
 
 **See Also:**
-- [- [$-commands]
+- [$-commands]
 - [failure]
 
 ## Listen Lock
@@ -287,7 +287,7 @@ For players, things and rooms, you must pass this lock to page or @pemit to the 
 
 
 **See Also:**
-- [- [failure]
+- [failure]
 - [@haven]
 
 ## Speech Lock
@@ -302,7 +302,7 @@ Controls who can send @mail to this object.
 
 
 **See Also:**
-- [- [MAIL]
+- [MAIL]
 - [failure]
 
 ## Mailforward Lock
@@ -310,7 +310,7 @@ Controls who can forward @mail to this object via @mailforward.
 
 
 **See Also:**
-- [- [MAIL]
+- [MAIL]
 - [@mailforward]
 - [@LOCK/FOLLOW]
 
@@ -330,7 +330,7 @@ For players and things, controls who can drop the object. Has no meaning for exi
 
 
 **See Also:**
-- [- [drop]
+- [drop]
 - [empty]
 
 ## Dropin Lock
@@ -353,7 +353,7 @@ Controls who can take from this container.
 
 
 **See Also:**
-- [- [give]
+- [give]
 - [buy]
 - [@LOCK/BASIC]
 - [@LOCK/BASIC]
@@ -367,7 +367,7 @@ These are lock versions of @filter and @infilter, respectively. Anyone who fails
 
 
 **See Also:**
-- [- [@filter]
+- [@filter]
 - [@infilter]
 
 # @LOCK/CONTROL
@@ -386,7 +386,7 @@ Limits who can @destroy a DESTROY_OK object.
 
 
 **See Also:**
-- [- [@destroy]
+- [@destroy]
 - [DESTROY_OK]
 
 ## Examine Lock
@@ -394,7 +394,7 @@ Limits who can examine a VISUAL object.
 
 
 **See Also:**
-- [- [examine]
+- [examine]
 - [VISUAL]
 
 # @LOCK/ZONE
@@ -409,7 +409,7 @@ Objects which pass a SHARED player's @lock/zone control all the objects the shar
 
 
 **See Also:**
-- [- [@chzone]
+- [@chzone]
 - [SHARED]
 - [zones]
 - [ZMR]
@@ -419,7 +419,7 @@ If set, controls who can @chzone an object to this zone.
 
 
 **See Also:**
-- [- [@chzone]
+- [@chzone]
 - [zones]
 
 ## Chown Lock
@@ -427,7 +427,7 @@ If set, controls who can change the owner of this CHOWN_OK object via @chown.
 
 
 **See Also:**
-- [- [CHOWN_OK]
+- [CHOWN_OK]
 - [@chown]
 
 ## Parent Lock
@@ -435,7 +435,7 @@ Controls who can @parent something to this LINK_OK object.
 
 
 **See Also:**
-- [- [@parent]
+- [@parent]
 - [LINK_OK]
 
 ## Link Lock
@@ -443,7 +443,7 @@ Controls who can @link this unlinked exit, or who can @link an exit to this LINK
 
 
 **See Also:**
-- [- [@link]
+- [@link]
 - [LINK_OK]
 - [LINK_ANYWHERE POWER]
 
@@ -452,7 +452,7 @@ Controls who can @open an exit from this OPEN_OK room.
 
 
 **See Also:**
-- [- [@open]
+- [@open]
 - [@dig]
 - [OPEN_OK]
 - [OPEN_ANYWHERE POWER]
@@ -471,7 +471,7 @@ and then test it with `elock(War Hammer/wield, %#)`.
 
 
 **See Also:**
-- [- [ELOCK()]
+- [ELOCK()]
 - [valid()]
 - [LOCKING]
 - [locktypes]

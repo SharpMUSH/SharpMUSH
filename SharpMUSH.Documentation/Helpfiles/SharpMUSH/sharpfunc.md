@@ -1167,7 +1167,6 @@ This is \[a%b[ansi(y,test)]\] %b%b
 - [@decompile output switches]
 - [ESCAPE()]
 - [SECURE()]
-- []
 # DEFAULT()
 `default([<obj>/]<attr>[, ... ,[<objN>]/<attrN>], <default>)`
 
@@ -1564,7 +1563,6 @@ think elock(Dancing Slippers/drop, Princess)
 **See Also:**
 - [DECOMPOSE()]
 - [SECURE()]
-- []
 # EVAL()
 # GET_EVAL()
 `eval(<object>, <attribute>)`<br>
