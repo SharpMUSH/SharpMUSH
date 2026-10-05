@@ -100,7 +100,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 1, ParameterNames = ["player", "password"])]
+		CommandLock = "PERM^players.moderate", MinArgs = 1, ParameterNames = ["player", "password"])]
 	public async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -125,6 +125,15 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> NewPasswordAsync(AnySharpObject executor, SharpPlayer asPlayer,
 		Dictionary<string, CallState> args, bool isGenerate)
 	{
+		// players.moderate is not a wizard's whole standing: only God resets God's password, and only a
+		// wizard resets a wizard's, or a moderator could take the account over.
+		AnySharpObject victim = asPlayer;
+		if (victim.IsGod() ? !executor.IsGod() : await victim.IsWizard() && !await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (isGenerate)
 		{
 			var generatedPassword = PasswordService.GenerateRandomPassword();
@@ -167,7 +176,7 @@ public partial class Commands
 	/// @sitelock/remove &lt;pattern&gt; - Removes a rule
 	/// </summary>
 	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["site", "rule"])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "PERM^players.moderate", MinArgs = 0, ParameterNames = ["site", "rule"])]
 	public async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -33,6 +34,9 @@ public sealed class ConfiguredFunctionRestrictions(
 	public static readonly IReadOnlySet<string> PermissionWords =
 		new HashSet<string>(["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"], StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>A <see cref="PermissionWords"/> word, or a permission scope the caller must hold.</summary>
+	private static bool IsPermissionWord(string term) => PermissionWords.Contains(term) || PortalPermission.IsKnown(term);
+
 	private readonly Lock _gate = new();
 	private string[] _applied = [];
 
@@ -56,13 +60,13 @@ public sealed class ConfiguredFunctionRestrictions(
 				// Only who may call the function is applied. A leading ! clears one of the function's own
 				// bits in PennMUSH (apply_restrictions), and a built-in's own restrictions are not in the
 				// overlay; the other words change how the function runs, which the overlay cannot express.
-				foreach (var ignored in terms.Where(term => !PermissionWords.Contains(term)))
+				foreach (var ignored in terms.Where(term => !IsPermissionWord(term)))
 				{
 					logger.LogWarning("CONFIG: restrict_function {Function} {Restriction}: only {Applied} are applied; ignored.",
 						name, ignored, string.Join(", ", PermissionWords));
 				}
 
-				var added = terms.Where(PermissionWords.Contains).ToArray();
+				var added = terms.Where(IsPermissionWord).ToArray();
 				if (added.Length == 0)
 				{
 					continue;

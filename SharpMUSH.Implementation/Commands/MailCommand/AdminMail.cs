@@ -1,4 +1,5 @@
-﻿using Mediator;
+using SharpMUSH.Library.Authorization;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -15,7 +16,7 @@ public static class AdminMail
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.ChatAdmin))
 		{
 			var errorResult = await notifyService!.NotifyAndReturn(
 				executor.Object().DBRef,

@@ -22,7 +22,7 @@ public partial class Commands
 	/// policy — which, unless the server was configured otherwise, keeps everything.</para>
 	/// </summary>
 	[SharpCommand(Name = "@STORAGE", Switches = ["HISTORY", "PURGE"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Storage(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

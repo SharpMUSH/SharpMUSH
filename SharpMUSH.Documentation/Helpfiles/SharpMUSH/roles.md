@@ -19,6 +19,11 @@
       "id": "roles-flags",
       "heading": "Roles, flags and powers",
       "lookup": "roles flags"
+    },
+    {
+      "id": "roles-wizard-split",
+      "heading": "What a wizard's work is split into",
+      "lookup": "roles wizard"
     }
   ],
   "redirects": {
@@ -58,9 +63,9 @@ To take a permission away from one object, use an override (`@role/deny/object`)
 | Priority | Role | Allows |
 |---|---|---|
 | 40 | god | administrator |
-| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `control.all`, `protect.wizard`, `protect.admin` |
+| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `server.operate`, `control.all`, `protect.wizard`, `protect.admin` |
 | 25 | moderator | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `queue.control`, `roles.admin` |
-| 20 | royalty | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
+| 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
 | 12 | helper | `players.view`, `queue.inspect` |
 | 10 | player | `wiki.create`, `wiki.edit`, `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
@@ -78,6 +83,21 @@ The privilege flags and the PennMUSH powers are roles and permissions:
 - The WIZARD flag is the `wizard` role, and ROYALTY the `royalty` role. `@set` assigns and removes them; `hasflag()`, `flags()` and `FLAG^` locks answer from them.
 - Each power is a `game.` permission: See_All is `game.see_all`. `@power` sets an Allow override on the object, and `haspower()`, `powers()` and `POWER^` locks answer from what the object holds, so a role that allows `game.see_all` gives every holder See_All. The Builder and Guest powers are the `builder` and `guest` roles.
 - Control reads permissions too. `control.all` controls everything except #1 and holders of `protect.wizard`; a holder of `protect.admin` is controlled only by another holder of it. Ownership, zones and locks still decide control as in PennMUSH.
+
+## What a wizard's work is split into
+
+Being a wizard (`game.wizard`) is split into groups, so a custom role can hand out one part of a wizard's work without the rest. The `wizard` role allows all of them.
+
+| Permission | Covers |
+|---|---|
+| `players.moderate` | @newpassword (not on a wizard), @sitelock, guests, @quota and @allquota, `checkpass()`, `connlog()`, `connrecord()` |
+| `config.admin` | @config/set, @enable, @disable, @command, @function, @attribute and @power definitions, @hook |
+| `packages.admin` | @package |
+| `chat.admin` | Wizard channels (and Admin channels), channel privileges, @channel changes and nuking on channels you don't own, @wizwall, @wall, @rwall, the MOTDs and `wizmotd()`, @mail admin and stats, mail alias admin |
+| `wiki.admin` | protected wiki pages |
+| `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
+
+Everything else a wizard does still needs `game.wizard`: wizard attributes, overrides in `examine` and `@destroy`, the preserve switches, @chownall and @chzoneall, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
 
 A power made with `@power/add` is stored on the object as before.
 

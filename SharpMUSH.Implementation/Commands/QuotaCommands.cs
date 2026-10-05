@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -30,7 +31,7 @@ public partial class Commands
 
 		if (switches.Contains("SET"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.PlayersModerate))
 			{
 				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -68,7 +69,7 @@ public partial class Commands
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.PlayersModerate))
 			{
 				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -251,7 +252,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.PlayersModerate))
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,

@@ -65,9 +65,13 @@ public static class BuiltInRoles
 
 	private static readonly string[] BuilderScopes = [PortalPermission.DiagnosticsProfile, PortalPermission.GamePower("Builder")];
 
+	/// <summary>
+	/// PennMUSH royalty sees everything and changes little, so it views players rather than moderating
+	/// them: <see cref="PortalPermission.PlayersModerate"/> also covers @newpassword, @boot and @sitelock.
+	/// </summary>
 	private static readonly string[] RoyaltyScopes =
 	[
-		PortalPermission.PlayersModerate,
+		PortalPermission.PlayersView,
 		PortalPermission.WikiAdmin,
 		PortalPermission.MediaAdmin,
 		PortalPermission.QueueInspect,
@@ -85,6 +89,8 @@ public static class BuiltInRoles
 		.. PortalPermission.AllScopes.Where(s => !PortalPermission.IsGameScope(s)
 			&& s is not (PortalPermission.ServerAdmin or PortalPermission.Administrator)),
 		PortalPermission.GameWizard,
+		PortalPermission.ChatAdmin,
+		PortalPermission.ServerOperate,
 		PortalPermission.ControlAll,
 		PortalPermission.ProtectWizard,
 		PortalPermission.ProtectAdmin,

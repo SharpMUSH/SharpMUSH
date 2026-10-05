@@ -56,6 +56,15 @@ public static partial class HelperFunctions
 		return obj.IsGod() || (await obj.GrantsAsync(cancellationToken)).Has(PortalPermission.GameWizard);
 	}
 
+	/// <summary>
+	/// Whether the object holds <paramref name="scope"/>: God, or a role or override allowing it. The
+	/// groups split out of WIZARD (<see cref="PortalPermission.ChatAdmin"/>,
+	/// <see cref="PortalPermission.ServerOperate"/>, <see cref="PortalPermission.PlayersModerate"/>,
+	/// <see cref="PortalPermission.ConfigAdmin"/>, ...) are asked through this, not <see cref="IsWizard(AnySharpObject)"/>.
+	/// </summary>
+	public static async ValueTask<bool> Can(this AnySharpObject obj, string scope)
+		=> obj.IsGod() || (await obj.GrantsAsync(ExecutionBudget.CurrentToken)).Has(scope);
+
 	public static ValueTask<bool> IsRoyalty(this AnySharpObject obj)
 		=> obj.IsRoyalty(ExecutionBudget.CurrentToken);
 
@@ -118,7 +127,8 @@ public static partial class HelperFunctions
 	/// <para>The restriction is a space-separated list of permission keywords, each optionally
 	/// prefixed with <c>!</c> to negate it. Recognised keywords: <c>nobody</c> (never permitted),
 	/// <c>god</c>, <c>wizard</c>, <c>royalty</c>, <c>admin</c> (wizard or royalty), and
-	/// <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c> (not a guest; owner not GAGGED; owner not FIXED). A bare keyword
+	/// <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c> (not a guest; owner not GAGGED; owner not FIXED), and any
+	/// permission scope (<c>players.moderate</c>: the executor holds it). A bare keyword
 	/// requires the executor to satisfy it; a <c>!</c>-prefixed keyword forbids executors that
 	/// satisfy it. All tokens must pass. An empty/whitespace restriction permits everyone.</para>
 	/// </summary>
@@ -149,6 +159,8 @@ public static partial class HelperFunctions
 				"noguest" => !await executor.IsGuest(),
 				"nogagged" => !await OwnerHasFlag(executor, "GAGGED"),
 				"nofixed" => !await OwnerHasFlag(executor, "FIXED"),
+				// A permission scope, e.g. players.moderate: the executor holds it.
+				_ when PortalPermission.IsKnown(keyword) => await executor.Can(keyword),
 				// Unknown keywords are treated permissively (ignored) so that unsupported PennMUSH
 				// restriction flags never silently lock everyone out of a function.
 				_ => true

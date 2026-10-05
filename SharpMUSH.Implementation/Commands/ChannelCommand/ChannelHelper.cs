@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Configuration.Options;
@@ -569,7 +570,7 @@ public static class ChannelHelper
 			return new JoinCheck(null, null);
 		}
 
-		return await actor.IsWizard()
+		return await actor.Can(PortalPermission.ChatAdmin)
 			? new JoinCheck(null, actor.Id() == victim.Id()
 				? ErrorMessages.Notifications.ChatJoinOverrideSelf
 				: ErrorMessages.Notifications.ChatJoinOverrideTarget)

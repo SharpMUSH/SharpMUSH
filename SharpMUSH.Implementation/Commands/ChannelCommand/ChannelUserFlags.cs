@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -139,7 +140,7 @@ public static class ChannelUserFlags
 			// extchat.c:2001 — the Hide_Ok privilege and the hide lock decide who may vanish from a
 			// channel's who-list. A wizard overrides both.
 			if (flag == UserFlag.Hide && setting
-					&& !await PermissionService.ChannelCanHide(executor, channel) && !await executor.IsWizard())
+					&& !await PermissionService.ChannelCanHide(executor, channel) && !await executor.Can(PortalPermission.ChatAdmin))
 			{
 				if (!silent)
 				{

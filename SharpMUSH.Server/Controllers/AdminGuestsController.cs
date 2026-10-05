@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -102,9 +103,9 @@ public class AdminGuestsController(
 	public async Task<IActionResult> Create([FromBody] CreateGuestRequest request, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.PlayersModerate))
 			return StatusCode(StatusCodes.Status403Forbidden,
-				new ApiErrorDto("Only a wizard may create guest characters."));
+				new ApiErrorDto("Creating guest characters needs players.moderate."));
 
 		var name = string.IsNullOrWhiteSpace(request.Name)
 			? await NextFreeGuestNameAsync(ct)
@@ -167,9 +168,9 @@ public class AdminGuestsController(
 	public async Task<IActionResult> Delete(int dbref, [FromQuery] long? created, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.PlayersModerate))
 			return StatusCode(StatusCodes.Status403Forbidden,
-				new ApiErrorDto("Only a wizard may remove guest characters."));
+				new ApiErrorDto("Removing guest characters needs players.moderate."));
 
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
 			return NotFound();
@@ -244,9 +245,9 @@ public class AdminGuestsController(
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
 
-		return await executor.IsWizard()
+		return await executor.Can(PortalPermission.PlayersModerate)
 			? null
 			: StatusCode(StatusCodes.Status403Forbidden,
-				new ApiErrorDto("Only a wizard may view the guest roster."));
+				new ApiErrorDto("Viewing the guest roster needs players.moderate."));
 	}
 }

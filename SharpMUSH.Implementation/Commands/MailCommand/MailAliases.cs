@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -392,7 +393,7 @@ public static class MailAliases
 
 	/// <summary>The owner, or a wizard: who may change an alias.</summary>
 	private static async ValueTask<bool> MayManageAsync(SharpMailAlias alias, AnySharpObject executor)
-		=> IsOwner(alias, executor) || await executor.IsWizard();
+		=> IsOwner(alias, executor) || await executor.Can(PortalPermission.ChatAdmin);
 
 	/// <summary>do_malias_destroy.</summary>
 	private static async ValueTask DestroyAsync(Services services, AnySharpObject executor, string name)
@@ -575,7 +576,7 @@ public static class MailAliases
 			return;
 		}
 
-		if (!await executor.IsWizard())
+		if (!await executor.Can(PortalPermission.ChatAdmin))
 		{
 			await Tell(services, executor, "MAIL: You cannot do that!");
 			return;

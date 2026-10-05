@@ -59,6 +59,19 @@ public static class PortalPermission
 	/// <summary>PennMUSH's ROYALTY flag. The <c>royalty</c> role allows it.</summary>
 	public const string GameRoyalty = "game.royalty";
 
+	/// <summary>
+	/// Runs channels and staff messaging: Wizard channels, channel administration, @wizwall and @wall,
+	/// the MOTDs and mail administration. Part of what WIZARD meant; the <c>wizard</c> role allows it.
+	/// </summary>
+	public const string ChatAdmin = "chat.admin";
+
+	/// <summary>
+	/// Operates the running server: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and the
+	/// like. Part of what WIZARD meant; the <c>wizard</c> role allows it. Not <see cref="ServerAdmin"/>,
+	/// which is the owner's.
+	/// </summary>
+	public const string ServerOperate = "server.operate";
+
 	/// <summary>Controls every object except the owner's, whoever owns it (the wizard half of PennMUSH <c>controls()</c>).</summary>
 	public const string ControlAll = "control.all";
 
@@ -122,6 +135,8 @@ public static class PortalPermission
 		new(Administrator, "EnumPermAdministrator", GroupManage, "EnumPermAdministratorDesc"),
 		new(GameWizard, "EnumPermGameWizard", GroupGame, "EnumPermGameWizardDesc"),
 		new(GameRoyalty, "EnumPermGameRoyalty", GroupGame, "EnumPermGameRoyaltyDesc"),
+		new(ChatAdmin, "EnumPermChatAdmin", GroupGame, "EnumPermChatAdminDesc"),
+		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
 		new(ProtectWizard, "EnumPermProtectWizard", GroupGame, "EnumPermProtectWizardDesc"),
 		new(ProtectAdmin, "EnumPermProtectAdmin", GroupGame, "EnumPermProtectAdminDesc"),

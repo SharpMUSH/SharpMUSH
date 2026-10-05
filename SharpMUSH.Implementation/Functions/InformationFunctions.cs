@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -86,7 +87,7 @@ public partial class Functions
 			}
 			else
 			{
-				if (!await executor.IsWizard())
+				if (!await executor.Can(PortalPermission.ChatAdmin))
 				{
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
@@ -108,7 +109,7 @@ public partial class Functions
 		}
 		else if (args.Count == 2)
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.ChatAdmin))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1259,21 +1260,21 @@ public partial class Functions
 		return new CallState(motdData?.ConnectMotd ?? string.Empty);
 	}
 
-	[SharpFunction(Name = "wizmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
+	[SharpFunction(Name = "wizmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.ChatAdmin], ParameterNames = [])]
 	public async ValueTask<CallState> WizMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.WizardMotd ?? string.Empty);
 	}
 
-	[SharpFunction(Name = "downmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
+	[SharpFunction(Name = "downmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.ChatAdmin], ParameterNames = [])]
 	public async ValueTask<CallState> DownMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.DownMotd ?? string.Empty);
 	}
 
-	[SharpFunction(Name = "fullmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
+	[SharpFunction(Name = "fullmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.ChatAdmin], ParameterNames = [])]
 	public async ValueTask<CallState> FullMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
@@ -1484,7 +1485,7 @@ public partial class Functions
 		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string which)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.ChatAdmin))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}

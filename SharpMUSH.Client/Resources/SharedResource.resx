@@ -4808,13 +4808,25 @@
     <value>Game · Wizard</value>
   </data>
   <data name="EnumPermGameWizardDesc" xml:space="preserve">
-    <value>Acts as a wizard in game: the WIZARD flag, wizard-only commands and functions.</value>
+    <value>Acts as a wizard in game: the WIZARD flag and the wizard-only commands and functions not covered by a narrower permission.</value>
   </data>
   <data name="EnumPermGameRoyalty" xml:space="preserve">
     <value>Game · Royalty</value>
   </data>
   <data name="EnumPermGameRoyaltyDesc" xml:space="preserve">
     <value>Acts as royalty in game: the ROYALTY flag and royalty-only commands and functions.</value>
+  </data>
+  <data name="EnumPermChatAdmin" xml:space="preserve">
+    <value>Game · Chat admin</value>
+  </data>
+  <data name="EnumPermChatAdminDesc" xml:space="preserve">
+    <value>Runs channels and staff messaging in game: Wizard channels, channel administration, @wizwall and @wall, the MOTDs and mail administration.</value>
+  </data>
+  <data name="EnumPermServerOperate" xml:space="preserve">
+    <value>Game · Operate the server</value>
+  </data>
+  <data name="EnumPermServerOperateDesc" xml:space="preserve">
+    <value>Runs server operations in game: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and @uptime details.</value>
   </data>
   <data name="EnumPermControlAll" xml:space="preserve">
     <value>Game · Control everything</value>
