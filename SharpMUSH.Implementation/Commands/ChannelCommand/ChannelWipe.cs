@@ -18,7 +18,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelWipe
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName,
 		MString message)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -36,7 +36,7 @@ public static class ChannelWipe
 		};
 	}
 
-	private static async ValueTask<CallState> WipeAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> WipeAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, SharpChannel channel)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))

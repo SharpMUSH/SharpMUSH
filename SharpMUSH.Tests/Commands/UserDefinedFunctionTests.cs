@@ -53,31 +53,7 @@ public class UserDefinedFunctionTests
 			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			Services,
-			state: new ParserState(
-				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: [],
-				Executor: executor,
-				Enactor: executor,
-				Caller: executor,
-				Handle: 1,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag())
-			{
-				MoveDepth = new InvocationCounter()
-			});
+			state: ParserState.RootFor(executor) with { Command = "think", Handle = 1 });
 
 		return (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 	}
@@ -249,6 +225,22 @@ public class UserDefinedFunctionTests
 
 		var player = await NewNonWizardPlayer();
 		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("plebsonly");
+	}
+
+	[Test]
+	public async ValueTask RestrictNobodyDisablesTheFunction()
+	{
+		// nobody is FN_DISABLED (src/function.c): the call answers e_disabled, for a wizard too, rather
+		// than e_perm (src/parse.c).
+		var fn = $"nobodyfn{U()}";
+		var attr = $"NOBODYATTR{U()}";
+		await Cmd($"&{attr} me=never");
+		await Cmd($"@function {fn}=me,{attr}");
+		await Cmd($"@function/restrict {fn}=nobody");
+
+		var player = await NewNonWizardPlayer();
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo(ErrorMessages.Returns.FunctionDisabled);
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo(ErrorMessages.Returns.FunctionDisabled);
 	}
 
 	[Test]

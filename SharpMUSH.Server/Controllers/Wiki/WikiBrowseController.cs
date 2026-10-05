@@ -16,12 +16,15 @@ namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// Read-only listings over the wiki: recent changes, a namespace, a category, a tag, the paginated
-/// index, and the batch existence check the reader uses to mark redlinks.
+/// index, the counts by state, and the batch existence check the reader uses to mark redlinks.
+/// Listings return <see cref="WikiPageSummaryDto"/> rows (no bodies), at most
+/// <see cref="WikiControllerBase.MaxListTake"/> per request.
 ///
 /// Routes:
 ///   GET  /api/wiki/recent          — recently updated pages
 ///   GET  /api/wiki/ns/{ns}         — pages in a namespace
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
+///   GET  /api/wiki/counts          — page counts by state (published, draft, protected)
 ///   GET  /api/wiki/category/{cat}  — pages in a category
 ///   GET  /api/wiki/tag/{tag}       — pages carrying a tag
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
@@ -41,7 +44,7 @@ public class WikiBrowseController(
 	[HttpGet("recent")]
 	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetRecentChangesAsync(count, Visibility);
+		var pages = await Wiki.GetRecentChangesAsync(Math.Clamp(count, 0, MaxListTake), Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -53,6 +56,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListNamespacePages(
 		string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
+		(skip, take) = ClampPage(skip, take);
 		var pages = await Wiki.GetByNamespaceAsync(ParseNamespace(ns), skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
@@ -79,10 +83,24 @@ public class WikiBrowseController(
 		[FromQuery] string? ns = null, [FromQuery] string? lang = null)
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
+		(skip, take) = ClampPage(skip, take);
 		var pages = await Wiki.GetAllPagesAsync(skip, take, nsFilter, Visibility);
 		Response.Headers["X-Total-Count"] =
 			(await Wiki.CountPagesAsync(nsFilter, CanSeeUnpublished)).ToString();
 		return Ok(await LocalizedListAsync(pages, lang));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/counts
+	/// Pages by state, counted from the store's indexes without reading a page. Drafts are counted only for
+	/// a caller who may see them, the same population <see cref="ListAllPages"/>' total counts; anyone else
+	/// gets published pages only (drafts zero, protected among published).
+	/// </summary>
+	[HttpGet("counts")]
+	public async Task<IActionResult> GetCounts()
+	{
+		var counts = await Wiki.CountPagesByStateAsync(CanSeeUnpublished);
+		return Ok(new WikiPageCountsDto(counts.Total, counts.Published, counts.Drafts, counts.Protected));
 	}
 
 	/// <summary>
@@ -93,6 +111,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListCategoryPages(
 		string category, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
+		(skip, take) = ClampPage(skip, take);
 		var pages = await Wiki.GetByCategoryAsync(category, skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
@@ -105,6 +124,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListTagPages(
 		string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
+		(skip, take) = ClampPage(skip, take);
 		var pages = await Wiki.GetByTagAsync(tag, skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}

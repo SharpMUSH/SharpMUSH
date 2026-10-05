@@ -112,35 +112,9 @@ public class EventService(
 			//   handler object runs unprivileged (flag it wizard to grant elevated powers).
 			// Enactor = resolvedEnactorRef (%# — the object that caused the event)
 			// Caller  = handlerRef (%@ — who triggered this evaluation; the handler itself)
-			var isEmpty = parser.State.IsEmpty;
-			var evalParser = parser.Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: argsDict,
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: isEmpty
-					? _ => ValueTask.FromResult(new Option<CallState>(new None()))
-					: parser.CurrentState.CommandInvoker,
-				Switches: [],
-				Arguments: argsDict,
-				Executor: handlerRef,
-				Enactor: resolvedEnactorRef,
-				Caller: handlerRef,
-				Handle: isEmpty ? null : parser.CurrentState.Handle,
-				CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
-				FunctionRecursionDepths: isEmpty
-					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag())
+			var evalParser = parser.Push(ParserState.ForAttributeHook(
+				parser.State.IsEmpty ? null : parser.CurrentState, handlerRef, resolvedEnactorRef, handlerRef, argsDict) with
 			{
-				MoveDepth = isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter(),
 				ExecutionBudget = ExecutionBudget.Current
 			});
 

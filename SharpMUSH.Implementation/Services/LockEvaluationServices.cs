@@ -15,6 +15,7 @@ public sealed class LockEvaluationServices(
 	Lazy<ILockService> locks,
 	Lazy<IMUSHCodeParser> parser,
 	Lazy<IPermissionService> permissions,
+	Lazy<IConnectionService> connections,
 	ILogger<LockEvaluationServices> logger) : ILockEvaluationServices
 {
 	/// <remarks>
@@ -42,32 +43,11 @@ public sealed class LockEvaluationServices(
 			var unlockerRef = unlocker.Object().DBRef;
 			var arguments = LockEvaluationArguments.CreateArguments();
 
-			var evalParser = parser.Value.Push(new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				SwitchStack: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: null,
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-				Switches: [],
-				Arguments: arguments,
-				Executor: unlockerRef,
-				Enactor: unlockerRef,
-				Caller: unlockerRef,
-				Handle: null,
-				ParseMode: ParseMode.Default,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter(),
-				// A limit the lock's evaluation hits halts the evaluation that asked for the lock.
-				LimitExceeded: OutputCeiling.Current?.Flag ?? new LimitExceededFlag())
+			var evalParser = parser.Value.Push(ParserState.RootFor(unlockerRef) with
 			{
-				MoveDepth = new InvocationCounter(),
+				Arguments = arguments,
+				// A limit the lock's evaluation hits halts the evaluation that asked for the lock.
+				LimitExceeded = OutputCeiling.Current?.Flag ?? new LimitExceededFlag(),
 				Restrictions = EvaluationRestrictions.Current
 			});
 
@@ -103,7 +83,7 @@ public sealed class LockEvaluationServices(
 		var showReference = await permissions.Value.CanExamine(viewer, obj)
 			|| await permissions.Value.CanLinkToAsync(viewer, obj) || await obj.HasFlag("JUMP_OK")
 			|| await obj.HasFlag("CHOWN_OK") || await obj.HasFlag("DESTROY_OK");
-		return showReference ? await MessageFormatting.FormatObjectWithDbref(obj.Object()) : obj.Object().Name;
+		return showReference ? await MessageFormatting.FormatObjectWithDbref(obj.Object(), await FlagView.ForAsync(viewer, connections.Value)) : obj.Object().Name;
 	}
 
 }

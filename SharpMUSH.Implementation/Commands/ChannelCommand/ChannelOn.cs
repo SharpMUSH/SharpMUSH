@@ -19,7 +19,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// </summary>
 public static class ChannelOn
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
@@ -52,19 +52,19 @@ public static class ChannelOn
 		// what makes `@channel/on pub` unambiguous for a player who is on Public already, and it is the only
 		// way the "you are already on" answer below is reachable.
 		var maybeChannel = arg1 is null
-			? await SelfJoinChannel(PermissionService, Mediator, NotifyService, executor, channelName)
-			: await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			? await SelfJoinChannel(ChannelPermissions, Mediator, NotifyService, executor, channelName)
+			: await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 				NotifyService, executor, channelName, true);
 
 		return maybeChannel switch
 		{
-			SharpChannel channel => await JoinAsync(PermissionService, Mediator, NotifyService, executor, target, channel),
+			SharpChannel channel => await JoinAsync(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, target, channel),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	/// <summary>Puts <paramref name="target"/> on the channel, if the executor may and it passes the channel's gates.</summary>
-	private static async ValueTask<CallState> JoinAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> JoinAsync(IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
 	{
 		var channelLabel = channel.Name.ToPlainText();
@@ -76,7 +76,7 @@ public static class ChannelOn
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (await ChannelHelper.IsMemberOfChannel(target, channel))
+		if (await ChannelHelper.IsMemberOfChannel(Mediator, target, channel))
 		{
 			var alreadyOn = string.Format(ErrorMessages.Notifications.ChatTargetAlreadyOnChannel,
 				target.Object().Name, channelLabel);
@@ -84,7 +84,7 @@ public static class ChannelOn
 			return new CallState(alreadyOn);
 		}
 
-		var joinCheck = await ChannelHelper.JoinRefusal(PermissionService, executor, target, channel);
+		var joinCheck = await ChannelHelper.JoinRefusal(ChannelPermissions, executor, target, channel);
 		if (joinCheck.Refused)
 		{
 			await NotifyService.Notify(executor, joinCheck.Refusal!, executor);
@@ -123,7 +123,7 @@ public static class ChannelOn
 	/// the channels the joiner is NOT on, and when that finds nothing, check whether the name names a
 	/// channel they are already on so the refusal can say so instead of denying the channel exists.
 	/// </summary>
-	private static async ValueTask<ChannelOrError> SelfJoinChannel(IPermissionService permissionService,
+	private static async ValueTask<ChannelOrError> SelfJoinChannel(IChannelPermissionService permissionService,
 		IMediator mediator, INotifyService notifyService, AnySharpObject executor, MString channelName)
 	{
 		var match = await ChannelHelper.MatchChannel(permissionService, mediator, executor, channelName,

@@ -229,10 +229,10 @@ public class BuildingCommandTests
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitDbRef))).Expect<SharpExit>();
 		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 		await Assert.That(destination.Object().DBRef).IsEqualTo(roomDbRef);
-		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
-			nameof(ErrorMessages.Notifications.LinkedExitToRoom), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], exitDbRef.Number) &&
-				Equals(args[1], roomDbRef.Number)));
+		// do_link names the destination through unparse_object (src/create.c:385-386), where
+		// do_real_open prints a bare dbref.
+		await WebAppFactoryArg.Notifications.WaitForAsync(executor,
+			$"Linked exit #{exitDbRef.Number} to LinkExitTestRoom(#{roomDbRef.Number}R");
 	}
 
 	[Test]
@@ -247,7 +247,7 @@ public class BuildingCommandTests
 		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 		await Assert.That(clone.Object()!.Name).IsEqualTo("CloneObjectTestSource");
 		await Assert.That(cloneDbRef).IsNotEqualTo(sourceDbRef);
-		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
+		await NotifyService.Received(1).NotifyLocalized(executor,
 			nameof(ErrorMessages.Notifications.ClonedObject), TestHelpers.MatchingObject(executor),
 			Arg.Is<object[]>(args => args.Length == 1 && Equals(args[0], $"#{cloneDbRef.Number}")));
 	}
@@ -568,7 +568,7 @@ public class BuildingCommandTests
 		var locked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(locked.Object().Locks["Basic"].LockString).IsEqualTo("#TRUE");
 
-		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
+		await NotifyService.Received(1).NotifyLocalized(executor,
 			nameof(ErrorMessages.Notifications.ObjectLocked), TestHelpers.MatchingObject(executor),
 			Arg.Is<object[]>(args => args.Length == 3 && Equals(args[0], "LockObjectTest") &&
 				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic")));
@@ -589,7 +589,7 @@ public class BuildingCommandTests
 		var unlocked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(unlocked.Object().Locks.ContainsKey("Basic")).IsFalse();
 
-		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
+		await NotifyService.Received(1).NotifyLocalized(executor,
 			nameof(ErrorMessages.Notifications.ObjectUnlocked), TestHelpers.MatchingObject(executor),
 			Arg.Is<object[]>(args => args.Length == 3 && Equals(args[0], "UnlockObjectTest") &&
 				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic")));

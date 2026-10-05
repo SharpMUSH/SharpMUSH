@@ -49,15 +49,9 @@ public partial class Functions
 		bool succeeded, bool wasSet)
 	{
 		// A player's alias list was reported by the write itself (PlayerAliases).
-		if (!succeeded || PlayerAliases.Applies(thing, attribute) || await thing.Object().AreQuietAsync(executor))
-		{
-			return;
-		}
-
 		// Read back the attribute that was just written, as Penn does, so its own quiet flag counts.
-		var written = await AttributeService.GetAttributeAsync(executor, thing, attribute,
-			mode: IAttributeService.AttributeMode.Read, parent: false);
-		if (written is SharpAttribute[] chain && chain.Last().IsQuiet())
+		if (!succeeded || PlayerAliases.Applies(thing, attribute)
+				|| await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, thing, attribute))
 		{
 			return;
 		}
@@ -279,8 +273,9 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
-					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
+					// fun_flags is unparse_flags (src/flags.c:1638): the type letter, then the flags in bit order.
+					return await MessageFormatting.FlagSymbolsAsync(found.Object(),
+						await FlagView.ForAsync(executor, ConnectionService));
 				}
 
 				var attr = await AttributeService.LazilyGetAttributeAsync(
@@ -443,6 +438,23 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
+				// Without the VAL forms only existence and permission matter, so the value is never read.
+				if (!requireValue)
+				{
+					return await AttributeService.LazilyGetAttributeAsync(
+							executor,
+							found,
+							attribute,
+							mode: IAttributeService.AttributeMode.Read,
+							parent: checkParents) switch
+					{
+						Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => new CallState(ErrorMessages.Returns.PermissionDenied),
+						Error<string> error => new CallState(error.Value),
+						LazySharpAttribute[] => new CallState("1"),
+						_ => new CallState("0")
+					};
+				}
+
 				var maybeAttr = await AttributeService.GetAttributeAsync(
 					executor,
 					found,
@@ -546,13 +558,34 @@ public partial class Functions
 	/// they had already drifted: five of the six regular-expression variants reported <c>GET</c> in
 	/// the error PennMUSH reports as <c>called_as</c> (<c>src/fundb.c:225</c>), and <c>lattr</c>
 	/// ignored the output delimiter it declares a second argument for.
+	/// <para>
+	/// Every variant needs names or a count, never a value, so the read is the lazy one: the same
+	/// permission walk over metadata, with no <c>attr.val</c> row read for a match or for any branch
+	/// node the walk checks. <paramref name="project"/> receives the permitted long names in the
+	/// order the eager read sorted them. A regular expression that does not compile, or a match that
+	/// runs out its time, answers <c>#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION</c> or
+	/// <c>#-1 REGEXP TIMEOUT</c>, as <c>regrep</c> does.
+	/// </para>
+	/// </summary>
+	private ValueTask<CallState> AttributePatternAsync(
+		IMUSHCodeParser parser,
+		string calledAs,
+		bool checkParents,
+		IAttributeService.AttributePatternMode mode,
+		Func<string[], CallState> project)
+		=> AttributePatternAsync(parser, calledAs, checkParents, mode,
+			async names => project(await names.ToArrayAsync(ExecutionBudget.CurrentToken)));
+
+	/// <summary>
+	/// As above, with the names handed over as the stream they are read from, for a caller that needs
+	/// only a window of them or their count. The stream is enumerated inside the regexp error handling.
 	/// </summary>
 	private async ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
 		string calledAs,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
-		Func<SharpAttribute[], CallState> project)
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(
@@ -567,16 +600,33 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? (mode is IAttributeService.AttributePatternMode.Regex ? ".*" : "*"),
 					checkParents, mode);
 
 				return attributes switch
 				{
 					Error<string> error => error,
-					SharpAttribute[] matched => project(matched)
+					IAsyncEnumerable<LazySharpAttribute> matched => await ProjectNamesAsync(matched, project)
 				};
 			});
+	}
+
+	private static async ValueTask<CallState> ProjectNamesAsync(IAsyncEnumerable<LazySharpAttribute> matched,
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
+	{
+		try
+		{
+			return await project(matched.Select(x => x.LongName));
+		}
+		catch (System.Text.RegularExpressions.RegexParseException)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 	}
 
 	/// <summary>
@@ -587,8 +637,8 @@ public partial class Functions
 		IMUSHCodeParser parser, string calledAs, bool checkParents, IAttributeService.AttributePatternMode mode)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (!int.TryParse(args["1"].Message!.ToPlainText(), out var start) ||
-			!int.TryParse(args["2"].Message!.ToPlainText(), out var count))
+		if (!ArgHelpers.TryStrictInteger(args["1"].Message!.ToPlainText(), out int start) ||
+			!ArgHelpers.TryStrictInteger(args["2"].Message!.ToPlainText(), out int count))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
 		}
@@ -598,29 +648,28 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.ArgRange);
 		}
 
+		// The window is taken from the stream: names past it are never read.
 		return AttributePatternAsync(parser, calledAs, checkParents, mode,
-			matched => string.Join(AttributeListSeparator(parser, "3"),
-				matched.Skip(start - 1).Take(count).Select(x => x.LongName)));
+			async names => new CallState(string.Join(AttributeListSeparator(parser, 3),
+				await names.Skip(start - 1).Take(count).ToArrayAsync(ExecutionBudget.CurrentToken))));
 	}
 
 	/// <summary>
 	/// The optional output delimiter, a space when absent — PennMUSH's <c>delim_check</c> default
 	/// (<c>src/fundb.c:172,177</c>).
 	/// </summary>
-	private static string AttributeListSeparator(IMUSHCodeParser parser, string argument)
-		=> parser.CurrentState.Arguments.TryGetValue(argument, out var separator)
-			? separator.Message!.ToPlainText()
-			: " ";
+	private static string AttributeListSeparator(IMUSHCodeParser parser, int argument)
+		=> ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, argument, " ").ToPlainText();
 
 	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -647,8 +696,9 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
-					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
+					// fun_lflags is bits_to_string (src/flags.c:1432): names in bit order, no type.
+					return string.Join(" ", (await MessageFormatting.VisibleFlagsAsync(found.Object(),
+						await FlagView.ForAsync(executor, ConnectionService))).Select(x => x.Name));
 				}
 
 				var attr = await AttributeService.LazilyGetAttributeAsync(
@@ -666,12 +716,12 @@ public partial class Functions
 	[SharpFunction(Name = "nattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "obj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -926,7 +976,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var result = await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+		var result = await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
 			NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message!,
 			parser.CurrentState.Arguments["1"].Message!);
@@ -1092,7 +1142,9 @@ public partial class Functions
 			case "c" or "C":
 				return Substitutions.Substitutions.CommandBeforeEvaluation(parser);
 			default:
-				if (int.TryParse(plainText, out _))
+				// fun_v reads %0-%9 only for a single digit (src/fundb.c:452-468); anything longer,
+				// "10" included, is an attribute name.
+				if (plainText is [>= '0' and <= '9'])
 				{
 					return parser.CurrentState.EnvironmentRegisters.TryGetValue(plainText, out var value)
 						? value

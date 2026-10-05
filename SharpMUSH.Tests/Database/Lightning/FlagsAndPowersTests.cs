@@ -39,6 +39,8 @@ public class FlagsAndPowersTests
 		{
 			Name = key, Alias = "OLDNAME", TypeRestrictions = ["PLAYER"]
 		})));
+		// Written past the provider's own definition writes, so its in-memory copy has to be told.
+		_db.InvalidateDefinitions();
 
 		var power = await _db.GetPowerAsync(key);
 
@@ -56,7 +58,7 @@ public class FlagsAndPowersTests
 
 		await Assert.That(announce!.Aliases).IsEquivalentTo(["@wall", "wall"]);
 		await Assert.That(anywhere!.AnswersTo("TEL_ANYWHERE")).IsTrue();
-		await Assert.That(vacation?.Name).IsEqualTo("ON_VACATION");
+		await Assert.That(vacation?.Name).IsEqualTo("ON-VACATION");
 	}
 
 	[Test]
@@ -223,6 +225,82 @@ public class FlagsAndPowersTests
 		// Unsetting an already-unset power is refused.
 		await Assert.That(await _db.UnsetObjectPowerAsync(god, power!)).IsFalse();
 	}
+
+	/// <summary>
+	/// The definition copies follow every definition write: a flag created, updated, disabled and deleted is seen
+	/// that way by the whole-table read, the single lookup, the alias lookup and an object already carrying it.
+	/// </summary>
+	[Test]
+	public async Task FlagDefinitionWrites_AreSeenByEveryRead()
+	{
+		var name = "DEFCACHE_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var alias = name + "_ALIAS";
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+
+		// Warm every copy first, so the reads below can only pass if the writes replaced them.
+		await Assert.That(await _db.GetObjectFlagsAsync().AnyAsync(flag => flag.Name == name)).IsFalse();
+		await Assert.That(await _db.GetObjectFlagAsync(name)).IsNull();
+
+		var created = await _db.CreateObjectFlagAsync(name, [alias], "q", false, [], [], ["PLAYER"]);
+		await Assert.That(await _db.GetObjectFlagsAsync().AnyAsync(flag => flag.Name == name)).IsTrue();
+		await Assert.That((await _db.GetObjectFlagAsync(alias.ToLowerInvariant()))?.Name).IsEqualTo(name);
+
+		await _db.SetObjectFlagAsync(god, created!);
+		await Assert.That(await ObjectFlag(god, name)).IsNotNull();
+
+		await Assert.That(await _db.UpdateObjectFlagAsync(name, ["OTHER_" + name], "z", [], [], ["PLAYER"])).IsTrue();
+		await Assert.That((await _db.GetObjectFlagAsync(name))!.Symbol).IsEqualTo("z");
+		await Assert.That(await _db.GetObjectFlagAsync(alias)).IsNull();
+		await Assert.That((await ObjectFlag(god, name))!.Symbol).IsEqualTo("z");
+
+		await Assert.That(await _db.SetObjectFlagDisabledAsync(name, true)).IsTrue();
+		await Assert.That((await _db.GetObjectFlagAsync(name))!.Disabled).IsTrue();
+		await Assert.That((await ObjectFlag(god, name))!.Disabled).IsTrue();
+
+		await Assert.That(await _db.DeleteObjectFlagAsync(name)).IsTrue();
+		await Assert.That(await _db.GetObjectFlagAsync(name)).IsNull();
+		await Assert.That(await _db.GetObjectFlagsAsync().AnyAsync(flag => flag.Name == name)).IsFalse();
+		await Assert.That(await ObjectFlag(god, name)).IsNull();
+	}
+
+	[Test]
+	public async Task PowerDefinitionWrites_AreSeenByEveryRead()
+	{
+		var name = "DEFCACHE_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+		await Assert.That(await _db.GetObjectPowersAsync().AnyAsync(power => power.Name == name)).IsFalse();
+		await Assert.That(await _db.GetPowerAsync(name)).IsNull();
+
+		var created = await _db.CreatePowerAsync(name, ["A_" + name], "", false, [], [], ["PLAYER"]);
+		await Assert.That(await _db.GetObjectPowersAsync().AnyAsync(power => power.Name == name)).IsTrue();
+		await _db.SetObjectPowerAsync(god, created!);
+
+		await Assert.That(await _db.UpdatePowerAsync(name, ["B_" + name], "", [], [], ["PLAYER"])).IsTrue();
+		await Assert.That((await _db.GetPowerAsync(name.ToLowerInvariant()))!.Aliases).IsEquivalentTo(["B_" + name]);
+
+		await Assert.That(await _db.SetPowerDisabledAsync(name, true)).IsTrue();
+		var held = await (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value
+			.FirstOrDefaultAsync(power => power.Name == name);
+		await Assert.That(held!.Disabled).IsTrue();
+
+		await Assert.That(await _db.DeletePowerAsync(name)).IsTrue();
+		await Assert.That(await _db.GetPowerAsync(name)).IsNull();
+		await Assert.That(await _db.GetObjectPowersAsync().AnyAsync(power => power.Name == name)).IsFalse();
+	}
+
+	/// <summary>Each read hands out its own model: changing one does not change what the next read sees.</summary>
+	[Test]
+	public async Task FlagModels_AreNotSharedBetweenReads()
+	{
+		var first = (await _db.GetObjectFlagAsync("WIZARD"))!;
+		first.Symbol = "?";
+
+		await Assert.That((await _db.GetObjectFlagAsync("WIZARD"))!.Symbol).IsNotEqualTo("?");
+	}
+
+	private async Task<SharpObjectFlag?> ObjectFlag(AnySharpObject target, string name)
+		=> await (await _db.GetObjectNodeAsync(new DBRef(target.Object().Key))).Expect<AnySharpObject>().Object().Flags.Value
+			.FirstOrDefaultAsync(flag => flag.Name == name);
 
 	[After(Test)]
 	public async Task Cleanup()

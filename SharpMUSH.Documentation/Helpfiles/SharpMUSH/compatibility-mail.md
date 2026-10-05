@@ -50,7 +50,9 @@ parity run.
 `parse_folder` (`extmail.c:2839-2855`) accepts a digit `0`–`MAX_FOLDERS` or the name of a folder the
 player has already used, and answers `MAIL: Invalid folder specification` otherwise.<br>
 **SharpMUSH** accepts any alphanumeric name (`extmail.c:333`'s own rule for one) and makes it one of
-the player's folders as the message is filed, exactly as `@mail/file` does.<br>
+the player's folders as the message is filed, exactly as `@mail/file` does. The new folder takes the
+lowest folder number from 1 to 15 not already in use, so `maillist()` and `<folder>:<message>` name it
+by number as they do any other; when all fifteen are taken, the name is refused as PennMUSH refuses it.<br>
 **Why.** A filter is written before the folder it files into exists; requiring the player to create it
 first means the first message that matches is the one that goes astray.<br>
 **Workaround.** Filters written for PennMUSH keep working. A filter that returns a name PennMUSH would

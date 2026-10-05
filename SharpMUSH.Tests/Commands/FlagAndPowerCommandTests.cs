@@ -409,7 +409,7 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
-		// ManipulateSharpObjectService reports flag and power changes with no explicit sender.
+		// FlagAndPowerService reports flag and power changes with no explicit sender.
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),

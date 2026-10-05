@@ -95,7 +95,7 @@ public static class CommandAttributeScanner
 			var isRegex = attr.IsRegexp();
 			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
 			// both handled correctly — a leading space would otherwise cause an empty command name
-			// when EvaluateCommands strips the first token at its space boundary.
+			// when CommandDispatcher.DispatchAsync strips the first token at its space boundary.
 			var commandBodyStart = match.Length;
 			while (commandBodyStart < plainValue.Length && plainValue[commandBodyStart] == ' ')
 				commandBodyStart++;

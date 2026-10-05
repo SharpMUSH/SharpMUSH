@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -34,6 +35,8 @@ public class GameBroadcastService(
 	/// <inheritdoc />
 	public async ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, string message)
 	{
+		// One decision per player, however many connections it has: its flags are read once.
+		var decided = new Dictionary<DBRef, bool>();
 		await foreach (var conn in connectionService.GetAll())
 		{
 			if (conn.State != IConnectionService.ConnectionState.LoggedIn || conn.Ref is null)
@@ -43,18 +46,19 @@ public class GameBroadcastService(
 
 			try
 			{
-				if (await mediator.Send(new GetObjectNodeQuery(conn.Ref.Value)) is not AnySharpObject player)
+				if (!decided.TryGetValue(conn.Ref.Value, out var hears))
 				{
-					continue;
+					if (await mediator.Send(new GetObjectNodeQuery(conn.Ref.Value)) is not AnySharpObject player)
+					{
+						continue;
+					}
+
+					var flags = await player.ReadFlagsAsync();
+					hears = (anyOfFlags is null || anyOfFlags.Any(flags.Has)) && flags.Has(requiredFlag);
+					decided[conn.Ref.Value] = hears;
 				}
 
-				if (anyOfFlags is not null
-						&& !await anyOfFlags.ToAsyncEnumerable().AnyAsync(async (flag, _) => await player.HasFlag(flag)))
-				{
-					continue;
-				}
-
-				if (await player.HasFlag(requiredFlag))
+				if (hears)
 				{
 					await notifyService.Notify(conn.Handle, message);
 				}

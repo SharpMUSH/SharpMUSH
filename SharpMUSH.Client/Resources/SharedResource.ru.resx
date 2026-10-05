@@ -3190,6 +3190,14 @@
     <value>Сцена не найдена.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Сцена не была начата.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Сцена начата, но сделать её закрытой не удалось.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Найдите аккаунт, чтобы управлять его ролями.</value>
     <comment>MT</comment>
@@ -3236,14 +3244,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Разрешить всем смотреть</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Терминал в этой вкладке играет за {0}, а не за {1}. Начните сцену во вкладке, где играет {1}, или переключитесь обратно на {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Не удалось подтвердить, за какого персонажа играет терминал в этой вкладке. Повторите попытку через мгновение.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -5052,6 +5052,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>В сцене</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Вы наблюдаете за этой сценой. Присоединитесь, чтобы позировать здесь.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Ваши позы уходят в другую сцену. Присоединитесь к этой, чтобы позировать здесь.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Присоединиться</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Покинуть сцену</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Каналы</value>

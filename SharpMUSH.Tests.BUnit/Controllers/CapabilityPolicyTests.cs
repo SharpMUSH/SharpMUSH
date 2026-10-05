@@ -92,13 +92,31 @@ public class CapabilityPolicyTests
 		capabilities.GetGrantedScopesAsync(new CapabilityActor("a"), Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.WikiEdit });
 		var cached = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "a"),
 			new Claim(PortalPermission.ClaimType, PortalPermission.WikiAdmin)], "test"));
-		var transformation = new FreshPermissionClaimsTransformation(capabilities);
+		var transformation = new FreshPermissionClaimsTransformation(capabilities, new HttpContextAccessor());
 		var current = await transformation.TransformAsync(cached);
 		await Assert.That(current.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin)).IsFalse();
 		await Assert.That(current.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiEdit)).IsTrue();
 		await Assert.That(cached.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin)).IsTrue();
 		capabilities.GetGrantedScopesAsync(new CapabilityActor("a"), Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.WikiEdit, PortalPermission.WikiAdmin });
 		await Assert.That((await transformation.TransformAsync(cached)).HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin)).IsTrue();
+	}
+
+	[Test]
+	public async Task ScopesAreReadOncePerRequestAndAgainOnTheNext()
+	{
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.GetGrantedScopesAsync(new CapabilityActor("a"), Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.WikiEdit });
+		var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+		var transformation = new FreshPermissionClaimsTransformation(capabilities, accessor);
+		var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "a")], "test"));
+		var first = await transformation.TransformAsync(principal);
+		var second = await transformation.TransformAsync(principal);
+		await Assert.That(first.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiEdit)).IsTrue();
+		await Assert.That(second.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiEdit)).IsTrue();
+		await capabilities.Received(1).GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>());
+		accessor.HttpContext = new DefaultHttpContext();
+		await transformation.TransformAsync(principal);
+		await capabilities.Received(2).GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

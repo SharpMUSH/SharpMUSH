@@ -16,14 +16,52 @@ public static class FunctionDispatcher
 		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
-			argumentCount, permissionsChecked, deferredArguments);
+			argumentCount, permissionsChecked, deferredArguments, argumentsValidated: false);
 		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
 			? result with { HadErrors = true } : result;
 	}
 
+	/// <summary>
+	/// Invokes a parsed call: one whose caller has already checked its permissions and its argument
+	/// count with <see cref="ValidateArgumentCount"/> before evaluating the arguments, and whose
+	/// arguments are deferred, so they are not checked a second time here.
+	/// </summary>
+	/// <param name="argumentCount">The number of arguments the call was written with.</param>
+	public static async ValueTask<CallState> InvokeValidatedAsync(IMUSHCodeParser parser, FunctionDefinition definition,
+		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int argumentCount)
+	{
+		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
+			argumentCount, permissionsChecked: true, deferredArguments: true, argumentsValidated: true);
+		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
+			? result with { HadErrors = true } : result;
+	}
+
+	/// <summary>
+	/// The arity and parity rules for a call of <paramref name="name"/> with <paramref name="count"/>
+	/// arguments: the PennMUSH error string of the first that fails, or null. Too many is checked before
+	/// too few, and an even count against <see cref="FunctionFlags.UnEvenArgsOnly"/> before an odd one
+	/// against <see cref="FunctionFlags.EvenArgsOnly"/>.
+	/// </summary>
+	/// <param name="name">The name the call was written with, which is what the error names.</param>
+	public static string? ValidateArgumentCount(SharpFunctionAttribute attribute, string name, int count)
+	{
+		if (count > attribute.MaxArgs)
+			return string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, count);
+		if (count < attribute.MinArgs)
+			return string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, count);
+		// Test the individual bits: switching on the whole Flags value only ever matched a
+		// function whose flags were *exactly* the parity flag, so any declaration that
+		// combined it with another flag (letq's NoParse, for instance) skipped the check.
+		if (attribute.Flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && count % 2 == 0)
+			return string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant());
+		if (attribute.Flags.HasFlag(FunctionFlags.EvenArgsOnly) && count % 2 != 0)
+			return string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant());
+		return null;
+	}
+
 	private static async ValueTask<CallState> InvokeCoreAsync(IMUSHCodeParser parser, FunctionDefinition definition,
 		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount,
-		bool permissionsChecked, bool deferredArguments)
+		bool permissionsChecked, bool deferredArguments, bool argumentsValidated)
 	{
 		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
@@ -50,14 +88,8 @@ public static class FunctionDispatcher
 		}
 		var count = argumentCount ?? parser.CurrentState.Arguments.Count;
 
-		if (count < attribute.MinArgs)
-			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name, attribute.MinArgs, count));
-		if (count > attribute.MaxArgs)
-			return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name, attribute.MaxArgs, count));
-		if (flags.HasFlag(FunctionFlags.EvenArgsOnly) && count % 2 != 0)
-			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name));
-		if (flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && count % 2 == 0)
-			return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name));
+		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count) is { } arityError)
+			return new CallState(arityError);
 		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser);

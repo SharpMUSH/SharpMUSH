@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Substitutions;
 /// command whose arguments were parsed in the same queue entry (PennMUSH <c>pe_info-&gt;cmd_raw</c> and
 /// <c>cmd_evaled</c>). Every expectation mirrors a PennMUSH 1.8.8 (95ad3511d) transcript taken through
 /// tools/oracle. Object names differ, and the /noeval case uses <c>@emit</c> where the transcript used
-/// <c>@pemit</c>, because SharpMUSH still evaluates the right side of an <c>=</c> command under /noeval.
+/// <c>@pemit</c>.
 /// </summary>
 public class CommandTextSubstitutionTests
 {

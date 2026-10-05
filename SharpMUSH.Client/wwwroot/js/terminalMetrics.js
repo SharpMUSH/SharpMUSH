@@ -8,9 +8,16 @@ window.SharpMUSH = window.SharpMUSH || {};
 // preferred line width, min 78), the font is SCALED so exactly that many columns fill the
 // available width: it grows on a roomy screen (bigger, more readable) and shrinks on a tight
 // one, clamped to a legible range. With no target, the natural grid at the base font is used.
+//
+// Growing is for a roomy screen, so it also answers to height: the font grows past the stylesheet's
+// size only while the output still shows GROW_MIN_ROWS rows. A phone held sideways is wide and short,
+// and width alone would fit 78 columns at ~17px and leave about seven lines; it keeps the base size
+// there instead (the target's columns still fit, with room to spare). Height never shrinks the font
+// below the base: that is width's job alone.
 window.SharpMUSH.Metrics = {
     MIN_FONT_PX: 6,    // below this, fall back to horizontal scroll rather than illegible text
     MAX_FONT_PX: 24,   // above this, stop growing (line-length cap) — content left-aligns
+    GROW_MIN_ROWS: 16, // grow past the base font only while at least this many rows still show
     _targets: {},      // elementId -> target column count
     _fire: {},         // elementId -> re-measure fn (so setTarget can refit immediately)
 
@@ -71,9 +78,10 @@ window.SharpMUSH.Metrics = {
             var lineRatio = lineHeight / baseFontPx;
             var targetW = contentW - 1;            // a hair inside the box (no sub-pixel scrollbar)
             var fitFont = targetW / target / advanceRatio;
-            if (fitFont > this.MAX_FONT_PX) fitFont = this.MAX_FONT_PX;
+            var growCap = this.growthCap(baseFontPx, lineRatio, contentH);
+            if (fitFont > growCap) fitFont = growCap;
             // Closed-loop: glyph advance isn't perfectly linear with size (hinting), so correct
-            // downward if the real width overflows. Growth is already bounded by MAX_FONT_PX.
+            // downward if the real width overflows. Growth is already bounded by growthCap.
             for (var i = 0; i < 4; i++) {
                 if (fitFont <= this.MIN_FONT_PX) { fitFont = this.MIN_FONT_PX; break; }
                 var actual = this._runWidth(el, cs, fitFont, '0'.repeat(target));
@@ -90,6 +98,13 @@ window.SharpMUSH.Metrics = {
             cols: clamp(Math.floor(contentW / advance)),
             rows: clamp(Math.floor(contentH / lineHeight))
         };
+    },
+
+    // The largest font the fit may grow to: MAX_FONT_PX, or less when the output is too short to show
+    // GROW_MIN_ROWS rows at that size, but never less than the base font (growing is what is capped).
+    growthCap: function (baseFontPx, lineRatio, contentH) {
+        var byHeight = contentH > 0 && lineRatio > 0 ? contentH / this.GROW_MIN_ROWS / lineRatio : this.MAX_FONT_PX;
+        return Math.min(this.MAX_FONT_PX, Math.max(baseFontPx, byHeight));
     },
 
     observe: function (elementId, dotNetRef, target) {

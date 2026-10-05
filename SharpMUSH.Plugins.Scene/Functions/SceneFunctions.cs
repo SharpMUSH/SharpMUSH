@@ -605,9 +605,14 @@ public static class SceneFunctions
 		var value = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		return await service.SetSceneMetaAsync(id, key, value) is Contracts.Scene scene
-			? new CallState(scene.Id)
-			: new CallState(SceneNotFound);
+		var roomBefore = await SceneRoomRefresh.RoomOfAsync(service, id);
+		if (await service.SetSceneMetaAsync(id, key, value) is not Contracts.Scene scene)
+		{
+			return new CallState(SceneNotFound);
+		}
+
+		await SceneRoomRefresh.AfterSetAsync(parser, key, roomBefore, scene);
+		return new CallState(scene.Id);
 	}
 
 	/// <summary>
@@ -824,9 +829,13 @@ public static class SceneFunctions
 		var role = args["2"].Message!.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		return await service.AddMemberAsync(id, player, role) is SceneMember member
-			? new CallState(member.MemberDbref ?? member.MemberName)
-			: new CallState(SceneNotFound);
+		if (await service.AddMemberAsync(id, player, role) is not SceneMember member)
+		{
+			return new CallState(SceneNotFound);
+		}
+
+		await SceneRoomRefresh.AfterMembershipAsync(parser, service, id);
+		return new CallState(member.MemberDbref ?? member.MemberName);
 	}
 
 	/// <summary>
@@ -848,10 +857,13 @@ public static class SceneFunctions
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.RemoveMemberAsync(id, player);
-		return result is NotFound
-			? new CallState(SceneNotFound)
-			: new CallState(id);
+		if (await service.RemoveMemberAsync(id, player) is NotFound)
+		{
+			return new CallState(SceneNotFound);
+		}
+
+		await SceneRoomRefresh.AfterMembershipAsync(parser, service, id);
+		return new CallState(id);
 	}
 
 	/// <summary>
@@ -876,10 +888,15 @@ public static class SceneFunctions
 			: string.Empty;
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.SetFocusAsync(player, id);
-		return result is NotFound
-			? new CallState(SceneNotFound)
-			: new CallState(id);
+		var focusBefore = await SceneRoomRefresh.FocusOfAsync(service, player);
+		if (await service.SetFocusAsync(player, id) is NotFound)
+		{
+			return new CallState(SceneNotFound);
+		}
+
+		await SceneRoomRefresh.AfterFocusAsync(parser, service, player, focusBefore,
+			await SceneRoomRefresh.FocusOfAsync(service, player));
+		return new CallState(id);
 	}
 
 	/// <summary>

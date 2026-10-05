@@ -2,7 +2,11 @@ using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Library.Attributes;
 
-[AttributeUsage(AttributeTargets.Method)]
+/// <summary>
+/// Registers a method as a softcode function. A method that answers to more than one name carries
+/// one of these per name; each is registered with its own arity, flags and parameter names.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public class SharpFunctionAttribute : Attribute
 {
 	public required string Name { get; set; }

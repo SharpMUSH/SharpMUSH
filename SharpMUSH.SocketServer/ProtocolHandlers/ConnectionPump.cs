@@ -147,9 +147,14 @@ public sealed class ConnectionPump(
 			try
 			{
 				if (sink.Ended || connectionService.Get(oldHandle) is null) return null;
-				var history = await replayStore.ReadAsync(oldSession, lastSeq, ct);
-				if (!history.Complete) return null;
-				var frames = history.Frames;
+				var opening = await replayStore.OpenAsync(oldSession, lastSeq, ct);
+				if (opening is IncompleteReplay gap)
+				{
+					logger.LogInformation("Replay for {Handle} is incomplete ({Reason}); starting a fresh session", oldHandle, gap.Reason);
+					return null;
+				}
+				if (opening is not ReplayFrames frames) return null;
+				await using var replay = frames;
 				var consumed = await resumeTokens.TryConsumeAsync(token, ct);
 				if (!consumed.Found || consumed.Handle != oldHandle || consumed.Session != oldSession) return null;
 				// Logout and this transition CAS the same persisted incarnation. Perform the fence
@@ -166,7 +171,10 @@ public sealed class ConnectionPump(
 				sink.Detach();
 				if (previous is not null) await CloseTransportAsync(previous, ct);
 				await SendTransportAsync(transport, SeqEnvelope.Reattached(), ct);
-				foreach (var frame in frames)
+				// Sent as read, a page at a time, while this resume still holds the output gate: live output
+				// cannot overtake the replay, and memory does not grow with the session's history. Frames
+				// vanishing part-way throw, so the resume fails instead of claiming a complete history.
+				await foreach (var frame in replay.ReadAsync(ct))
 					await SendTransportAsync(transport, frame, ct);
 				var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 				await SendTransportAsync(transport, SeqEnvelope.ResumeToken(newToken), ct);

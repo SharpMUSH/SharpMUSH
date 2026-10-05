@@ -37,6 +37,16 @@ public partial class Functions
 		return named.Count == 0 ? RegisterKinds.All : named.Aggregate(RegisterKinds.None, (kinds, kind) => kinds | kind);
 	}
 
+	/// <summary>
+	/// An iteration or switch level as <c>fun_r</c> reads one: any strict number, truncated by
+	/// <c>parse_integer</c> (<c>src/funmisc.c:752-756</c>), so <c>1.9</c> is level 1.
+	/// </summary>
+	private static bool TryRegisterLevel(string text, out int level)
+	{
+		level = ArgHelpers.ParseInteger(text);
+		return NumericEvaluation.Strict.TryDouble(text, out _);
+	}
+
 	private static RegisterKinds ParseRegisterKind(string type) => type.ToLowerInvariant() switch
 	{
 		"qregisters" => RegisterKinds.QRegisters,
@@ -179,8 +189,10 @@ public partial class Functions
 						return ValueTask.FromResult(maxCount == 0
 							? new CallState(ErrorMessages.Returns.RegisterRange)
 							: new CallState(parser.CurrentState.IterationRegisters.Last().Value));
-					if (!int.TryParse(registerName, out var lvl))
-						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+					// fun_r takes a level that is_strict_number accepts, truncated by parse_integer, and
+					// calls anything else a bad register name (src/funmisc.c:752-756).
+					if (!TryRegisterLevel(registerName, out var lvl))
+						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
 					if (lvl < 0 || lvl >= maxCount)
 						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 					// The stack enumerates innermost-first, so the level IS the index — the same
@@ -196,7 +208,9 @@ public partial class Functions
 					var depth = 0;
 					if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
 						depth = stack.Count - 1;
-					else if (!string.IsNullOrEmpty(registerName) && (!int.TryParse(registerName, out depth) || depth < 0))
+					else if (!TryRegisterLevel(registerName, out depth))
+						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
+					else if (depth < 0)
 						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 					if (stack.Count == 0 || depth < 0 || depth >= stack.Count)
 						return ValueTask.FromResult(new CallState(string.Empty));
@@ -307,7 +321,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
 		}
 
-		if (!int.TryParse(levelArg, out var level))
+		if (!ArgHelpers.TryStrictInteger(levelArg, out int level))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -348,7 +362,7 @@ public partial class Functions
 				{
 					depth = stack.Count - 1;
 				}
-				else if (!int.TryParse(depthStr, out depth) || depth < 0)
+				else if (!ArgHelpers.TryStrictInteger(depthStr, out depth) || depth < 0)
 				{
 					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 				}
@@ -383,7 +397,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "1").ToPlainText();
-		if (!long.TryParse(text, out var levels))
+		if (!ArgHelpers.TryStrictInteger(text, out long levels))
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		if (levels < 0 || levels > parser.CurrentState.IterationRegisters.Count)
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
@@ -416,7 +430,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
 		}
 
-		if (!int.TryParse(levelArg, out var level))
+		if (!ArgHelpers.TryStrictInteger(levelArg, out int level))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}

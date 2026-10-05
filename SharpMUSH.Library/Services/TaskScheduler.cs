@@ -47,7 +47,8 @@ public partial class TaskScheduler(
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
 	INotifyService? notifyService = null,
 	IInputSessionService? inputSessions = null,
-	IQueueDiagnosticsRecorder? diagnostics = null) : ITaskScheduler, IAsyncDisposable
+	IQueueDiagnosticsRecorder? diagnostics = null)
+	: ITaskScheduler, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -75,10 +76,25 @@ public partial class TaskScheduler(
 		public PendingInputCommand? PendingInput { get; init; }
 
 		/// <summary>
-		/// Whether this entry is part of <see cref="Owner"/>'s queue quota. False for a typed line and
+		/// The entry's enactor, who hears "CPU usage exceeded." when it runs out of time
+		/// (<c>src/parse.c:2083-2084</c>). Its executor when the work has no other enactor.
+		/// </summary>
+		public DBRef? Enactor { get; init; }
+
+		/// <summary>
+		/// Whether this entry is part of the queue quota. False for a typed line and
 		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
 		/// </summary>
 		public bool ChargesOwner { get; init; } = true;
+
+		/// <summary>
+		/// The object whose own <c>player_queue_limit</c> count this entry is in when <c>owner_queues</c>
+		/// is off: its executor, or <see cref="Owner"/> for an entry with no executor. With
+		/// <c>owner_queues</c> on, <see cref="Owner"/>'s count is the one admission reads (PennMUSH
+		/// <c>pay_queue</c>, <c>src/cque.c:303</c>). Both counts are kept for every entry, so turning the
+		/// option over leaves no pending entry uncounted.
+		/// </summary>
+		public string ChargedObject { get; init; } = Owner;
 	}
 
 	// Stored only on admitted entries. An escape cannot retain a future-start tombstone.
@@ -93,21 +109,6 @@ public partial class TaskScheduler(
 		public bool Completed { get; set; }
 		public bool EscapeRequested { get; set; }
 	}
-
-	/// <summary>
-	/// Whether two typed lines belong to the same socket incarnation, for the per-connection burst.
-	/// </summary>
-	/// <remarks>
-	/// Not <c>ReferenceEquals</c> on the <see cref="IConnectionService.ConnectionData"/> itself:
-	/// <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace it with a <c>with</c> copy on the same
-	/// handle, and logging in mid-burst is not a new socket. A <c>with</c> copy carries the same
-	/// <c>Metadata</c> instance, and only <c>Register</c> (or startup reconciliation) builds a new one,
-	/// so that dictionary is the identity that survives a state change and is replaced by a new socket.
-	/// The transport session id separates two registrations that the state store can tell apart.
-	/// </remarks>
-	private static bool SameIncarnation(PendingInputCommand queued, PendingInputCommand typed)
-		=> ReferenceEquals(queued.Connection?.Metadata, typed.Connection?.Metadata)
-			&& (queued.Transport ?? "") == (typed.Transport ?? "");
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
 		string LongName, int? CommandListIndex, DBRef? Owner, string Flags);
@@ -135,12 +136,12 @@ public partial class TaskScheduler(
 	public QueueUsage GetQueueUsage()
 	{
 		lock (_admissionLock) return new(_pendingEntries.Count,
-		 _pendingEntries.Values.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
+		 LockedPendingEntries.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
 		 new Dictionary<QueueRejectionReason, long>(_rejections));
 	}
 	public bool HasPendingWork(string triggerName, string group)
 	{
-		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == SchedulerKeys.TriggerName(triggerName, entry.Pid) && entry.Group == group);
+		lock (_admissionLock) return LockedPendingEntries.Any(entry => entry.Group == group && entry.TriggerName == SchedulerKeys.TriggerName(triggerName, entry.Pid));
 	}
 	private QueueAdmissionResult Reject(QueueRejectionReason reason)
 	{
@@ -155,8 +156,109 @@ public partial class TaskScheduler(
 		_running.Remove(pid);
 		if (!_pendingEntries.TryRemove(pid, out var entry)) return null;
 		_orderedPids.Remove(pid);
+		Uncount(entry);
 		return entry;
 	}
+
+	/// <summary>
+	/// The one write path into <see cref="_pendingEntries"/>, so the admission tallies below always
+	/// describe exactly what it holds. Caller holds <see cref="_admissionLock"/>.
+	/// </summary>
+	private void StoreEntry(QueueEntry entry)
+	{
+		if (_pendingEntries.TryGetValue(entry.Pid, out var previous)) Uncount(previous);
+		_pendingEntries[entry.Pid] = entry;
+		Count(entry);
+	}
+
+	/// <summary>
+	/// A typed line's socket incarnation, for the per-connection burst: the handle, the connection's
+	/// <c>Metadata</c> instance by reference, and the transport session.
+	/// </summary>
+	/// <remarks>
+	/// Not <c>ReferenceEquals</c> on the <see cref="IConnectionService.ConnectionData"/> itself:
+	/// <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace it with a <c>with</c> copy on the same
+	/// handle, and logging in mid-burst is not a new socket. A <c>with</c> copy carries the same
+	/// <c>Metadata</c> instance, and only <c>Register</c> (or startup reconciliation) builds a new one,
+	/// so that dictionary is the identity that survives a state change and is replaced by a new socket.
+	/// The transport session id separates two registrations that the state store can tell apart.
+	/// </remarks>
+	private readonly record struct IncarnationKey(long Handle, object? Metadata, string Transport)
+	{
+		public IncarnationKey(PendingInputCommand input)
+			: this(input.Handle, input.Connection?.Metadata, input.Transport ?? "") { }
+
+		public bool Equals(IncarnationKey other)
+			=> Handle == other.Handle && ReferenceEquals(Metadata, other.Metadata) && Transport == other.Transport;
+
+		public override int GetHashCode()
+			=> HashCode.Combine(Handle, RuntimeHelpers.GetHashCode(Metadata), Transport);
+	}
+
+	// Pending charged entries per object and per owner (owner_queues picks which one admission reads),
+	// and pending typed lines per connection incarnation.
+	// Kept with _pendingEntries under _admissionLock so admission never enumerates it (#1336).
+	private readonly Dictionary<string, int> _chargedPerObject = new();
+	private readonly Dictionary<string, int> _chargedPerOwner = new();
+	private readonly Dictionary<IncarnationKey, int> _typedPerIncarnation = new();
+
+	private void Count(QueueEntry entry)
+	{
+		if (entry.ChargesOwner)
+		{
+			_chargedPerObject[entry.ChargedObject] = _chargedPerObject.GetValueOrDefault(entry.ChargedObject) + 1;
+			_chargedPerOwner[entry.Owner] = _chargedPerOwner.GetValueOrDefault(entry.Owner) + 1;
+		}
+		if (entry.PendingInput is { } input)
+		{
+			var key = new IncarnationKey(input);
+			_typedPerIncarnation[key] = _typedPerIncarnation.GetValueOrDefault(key) + 1;
+		}
+	}
+
+	private void Uncount(QueueEntry entry)
+	{
+		if (entry.ChargesOwner)
+		{
+			Decrement(_chargedPerObject, entry.ChargedObject);
+			Decrement(_chargedPerOwner, entry.Owner);
+		}
+		if (entry.PendingInput is { } input) Decrement(_typedPerIncarnation, new IncarnationKey(input));
+	}
+
+	private static void Decrement<TKey>(Dictionary<TKey, int> counts, TKey key) where TKey : notnull
+	{
+		var remaining = counts.GetValueOrDefault(key) - 1;
+		if (remaining > 0) counts[key] = remaining;
+		else counts.Remove(key);
+	}
+
+	/// <summary>
+	/// For tests: the admission tallies as kept, and the same tallies counted from the ledger the way
+	/// admission used to. Both are empty strings when nothing is pending.
+	/// </summary>
+	internal (string Tallied, string Recounted) AdmissionTalliesAgainstLedger()
+	{
+		lock (_admissionLock)
+		{
+			var charged = LockedPendingEntries.Where(e => e.ChargesOwner).ToList();
+			var objects = charged.GroupBy(e => e.ChargedObject).ToDictionary(g => g.Key, g => g.Count());
+			var owners = charged.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count());
+			var typed = LockedPendingEntries.Where(e => e.PendingInput is not null)
+				.GroupBy(e => new IncarnationKey(e.PendingInput!)).ToDictionary(g => g.Key, g => g.Count());
+			return (DescribeTallies(_chargedPerObject, _chargedPerOwner, _typedPerIncarnation),
+				DescribeTallies(objects, owners, typed));
+		}
+	}
+
+	private static string DescribeTallies(IReadOnlyDictionary<string, int> objects, IReadOnlyDictionary<string, int> owners,
+		IReadOnlyDictionary<IncarnationKey, int> typed)
+		=> string.Join(';', objects.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"object {pair.Key}={pair.Value}")
+			.Concat(owners.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"owner {pair.Key}={pair.Value}"))
+			.Concat(typed.OrderBy(pair => pair.Key.Handle).ThenBy(pair => pair.Key.Transport, StringComparer.Ordinal)
+				.ThenBy(pair => pair.Value)
+				.Select(pair => $"#{pair.Key.Handle}/{pair.Key.Transport}={pair.Value}")));
+
 	private void Release(long pid, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
 		QueueEntry? entry;
@@ -189,9 +291,9 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
-	 bool chargesOwner = true)
+	 bool chargesOwner = true, DBRef? enactor = null)
 	{
-		// A typed line is invisible to the owner quota, as it is in PennMUSH: run_user_input builds its
+		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
 		// reaches insert_que, never reaches pay_queue, and never touches the add_to tally queue_limit
 		// reads (:226-235). It can therefore neither be refused by the quota nor be the reason someone
@@ -204,6 +306,8 @@ public partial class TaskScheduler(
 		string owner = handle is not null ? SchedulerKeys.Owner(handle)
 			: chargesOwner ? SchedulerKeys.SystemOwner
 			: SchedulerKeys.SocketOwner;
+		string? chargedObject = null;
+		var pooled = false;
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		var executorIsPlayer = false;
 		if (executor is not null)
@@ -227,24 +331,31 @@ public partial class TaskScheduler(
 					SchedulerKeys.KindOf(group), QueueOutcome.Halted);
 				return Reject(QueueRejectionReason.Halted);
 			}
-			if (await target.IsWizard(ExecutionBudget.CurrentToken) || await target.HasPower("Queue", ExecutionBudget.CurrentToken))
+			// pay_queue charges queue_limit(QUEUE_PER_OWNER ? Owner(player) : player) (src/cque.c:303):
+			// each object has a count of its own unless owner_queues pools them on the owner, and
+			// HugeQueue asks about whichever of the two is charged (:231).
+			pooled = configuration?.CurrentValue.Command.OwnerQueues == true;
+			var targetOwner = await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+			var charged = pooled ? new AnySharpObject(targetOwner) : target;
+			if (await charged.IsWizard(ExecutionBudget.CurrentToken) || await charged.HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
-			owner = (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
+			owner = targetOwner.Object.DBRef.ToString();
+			chargedObject = target.Object().DBRef.ToString();
 		}
+		chargedObject ??= owner;
 		QueueAdmissionResult result;
 		lock (_admissionLock)
 		{
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
 			// Only charged entries are in the tally, so a typed line cannot make its owner a runaway.
-			else if (chargesOwner && _pendingEntries.Values.Count(e => e.ChargesOwner && e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (chargesOwner && (pooled ? _chargedPerOwner.GetValueOrDefault(owner) : _chargedPerObject.GetValueOrDefault(chargedObject)) >= ownerLimit)
+				result = Reject(QueueRejectionReason.OwnerLimit);
 			// Per connection incarnation, not per numeric handle: a replaced socket reuses the handle,
 			// and work the previous occupant left behind (which the entry's own session check will
 			// discard when it reaches the consumer) must not spend the new one's allowance.
 			else if (!chargesOwner && pendingInput is { } typed
-				&& _pendingEntries.Values.Count(e => e.PendingInput is { } queued
-					&& queued.Handle == typed.Handle
-					&& SameIncarnation(queued, typed))
+				&& _typedPerIncarnation.GetValueOrDefault(new IncarnationKey(typed))
 					>= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
 				result = Reject(QueueRejectionReason.ConnectionLimit);
 			else
@@ -255,9 +366,11 @@ public partial class TaskScheduler(
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
 					PendingInput = pendingInput,
-					ChargesOwner = chargesOwner
+					Enactor = enactor ?? executor,
+					ChargesOwner = chargesOwner,
+					ChargedObject = chargedObject
 				};
-				_pendingEntries[pid] = entry;
+				StoreEntry(entry);
 				_orderedPids.Add(pid);
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -285,11 +398,15 @@ public partial class TaskScheduler(
 		// (src/game.c:1181) refuses only what the queue carries for them. An uncharged entry can no
 		// longer be refused for the owner limit at all, so no group test is needed here.
 		//
-		// Scheduled before the rejection notice, which is best-effort and can fail: telling nobody
-		// about a runaway is survivable, leaving one running is not.
+		// Scheduled before any notice, which is best-effort and can fail: telling nobody about a
+		// runaway is survivable, leaving one running is not.
 		if (result.Reason == QueueRejectionReason.OwnerLimit && executor is { } offender)
 			QueueRunawayHalt(offender, owner);
-		if (!result.Accepted && notifyOnRejection && notifyService is not null)
+		// An object refused for its quota hears about it from the runaway path alone, as pay_queue
+		// prints only "Runaway object" (src/cque.c:304); what else it queues before the HALT lands is
+		// dropped silently, as insert_que drops a halted object's work (:530).
+		if (!result.Accepted && notifyOnRejection && notifyService is not null
+			&& !(result.Reason == QueueRejectionReason.OwnerLimit && executor is not null))
 		{
 			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
 			else if (DBRef.TryParse(owner, out var player))
@@ -359,11 +476,20 @@ public partial class TaskScheduler(
 			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(haltable, haltFlag), ExecutionBudget.CurrentToken);
 		}
 
-		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
-			await notifyService.NotifyLocalized(ownerRef!.Value,
-				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, offender.ToString());
+		// pay_queue tells the owner, then do_halt does unless the owner is QUIET (src/cque.c:304,
+		// :2176-2178). Both name the object by its plain dbref.
+		if (notifyService is not null && DBRef.TryParse(owner, out var parsedOwner) && parsedOwner is { } ownerRef)
+		{
+			var dbref = $"#{offender.Number}";
+			await notifyService.NotifyLocalized(ownerRef,
+				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, dbref);
+			if (await mediator.Send(new GetObjectNodeQuery(ownerRef), ExecutionBudget.CurrentToken) is AnySharpObject ownerObject
+				&& !await ownerObject.HasFlag("QUIET", ExecutionBudget.CurrentToken))
+				await notifyService.NotifyLocalized(ownerRef,
+					nameof(ErrorMessages.Notifications.HaltedNoticeFormat), name, dbref);
+		}
 
-		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its owner's queue quota; commands halted",
+		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its queue quota; commands halted",
 			name, offender);
 	}
 
@@ -516,7 +642,7 @@ public partial class TaskScheduler(
 					// cancelled entry now needs consumer disposal only, not another halt
 					// decrement or retained-notification cleanup attempt.
 					if (_pendingEntries.TryGetValue(entry.Pid, out var pending))
-						_pendingEntries[entry.Pid] = pending with { Deferred = null, HaltAccountingSettled = true };
+						StoreEntry(pending with { Deferred = null, HaltAccountingSettled = true });
 				}
 				await Activate(entry.Pid);
 			};
@@ -592,12 +718,12 @@ public partial class TaskScheduler(
 			if (entry.Deferred?.Paused == true)
 			{
 				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
-				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true } };
+				StoreEntry(entry with { Deferred = entry.Deferred with { ReleasePending = true } });
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}
 			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			entry = entry with { Group = EnqueueGroup };
-			_pendingEntries[pid] = entry;
+			StoreEntry(entry);
 			_immediateQueue.Writer.TryWrite(entry);
 		}
 		EnsureConsumerStarted();
@@ -614,9 +740,16 @@ public partial class TaskScheduler(
 			if (executor is AnySharpObject { IsPlayer: false } thing && await thing.HasFlag("HALT", ExecutionBudget.CurrentToken)) return null;
 		}
 		// Deferred bodies cannot consume the submitting command list's break/include state.
-		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0 }).CommandListParse(command);
+		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0, InplaceDepth = 0 }).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
+
+	/// <summary>
+	/// The pending entries, enumerated in place. Only for a caller holding <see cref="_admissionLock"/>,
+	/// under which every write to <see cref="_pendingEntries"/> happens, so this sees what
+	/// <c>Values</c> would without the copy <c>Values</c> takes of the whole table.
+	/// </summary>
+	private IEnumerable<QueueEntry> LockedPendingEntries => _pendingEntries.Select(pair => pair.Value);
 	private readonly CancellationTokenSource _shutdownCts = new();
 	private Task? _consumerTask;
 
@@ -668,6 +801,12 @@ public partial class TaskScheduler(
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested) { }
 	}
 
+	/// <summary>
+	/// PennMUSH's notice for a queue entry that ran out of <c>queue_entry_cpu_time</c>: once per entry,
+	/// <c>if (GoodObject(enactor) &amp;&amp; !Quiet(enactor)) notify(enactor, T("CPU usage exceeded."))</c>
+	/// (<c>src/parse.c:2077-2084</c>). The enactor hears it, not the owner, and only the enactor's own
+	/// QUIET flag silences it. A line typed before login has no enactor object; its connection hears it.
+	/// </summary>
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
 		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
@@ -677,10 +816,14 @@ public partial class TaskScheduler(
 		using var reportScope = reportBudget.Enter();
 		try
 		{
-			if (DBRef.TryParse(entry.Owner, out var owner))
-				await foreach (var connection in connectionService.Get(owner!.Value)) await notifyService.Notify(connection.Handle, ExecutionBudget.Error);
+			if (entry.Enactor is { } enactorRef)
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(enactorRef), ExecutionBudget.CurrentToken) is AnySharpObject enactor
+					&& !await enactor.HasFlag("QUIET", ExecutionBudget.CurrentToken))
+					await notifyService.NotifyLocalized(enactor, nameof(ErrorMessages.Notifications.CpuUsageExceeded));
+			}
 			else if (SchedulerKeys.TryHandleOwner(entry.Owner, out var handle))
-				await notifyService.Notify(handle, ExecutionBudget.Error);
+				await notifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.CpuUsageExceeded));
 		}
 		catch (Exception ex) { logger.LogWarning(ex, "Could not report execution limit for PID {Pid}", entry.Pid); }
 	}
@@ -833,13 +976,13 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		return await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state));
+		return await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 	}
 
 	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false);
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false, enactor: state.Enactor);
 		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
 		var pid = admission.Pid!.Value;
 		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
@@ -848,7 +991,7 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
 	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
-	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
 	{
 		if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
@@ -864,7 +1007,7 @@ public partial class TaskScheduler(
 			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
 			if (attr is not SharpAttribute[] chain) return new CallState("#-1");
 			return await ExecuteList(chain.Last().Value, parserState);
-		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
+		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null, enactor: enactor);
 	}
 
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
@@ -886,7 +1029,7 @@ public partial class TaskScheduler(
 		if (await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
 		var group = SchedulerKeys.Semaphore(dbRefAttribute);
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, semaphoreTarget: target.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, semaphoreTarget: target.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount, enactor: state.Enactor);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		lock (_admissionLock) _semaphorePublications.Add(pid);
@@ -950,8 +1093,8 @@ public partial class TaskScheduler(
 			}
 			timeout = Nonnegative(timeout);
 			var due = DateTimeOffset.UtcNow + timeout;
-			lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) };
+			lock (_admissionLock) StoreEntry(_pendingEntries[pid] with
+			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) });
 			scheduleWriteAttempted = true;
 			await Schedule(due, 0);
 			return admission;
@@ -1034,7 +1177,7 @@ public partial class TaskScheduler(
 		QueueEntry[] waiting;
 		var group = SchedulerKeys.Semaphore(dbAttribute);
 		lock (_admissionLock)
-			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+			waiting = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
@@ -1055,7 +1198,7 @@ public partial class TaskScheduler(
 		QueueEntry? entry;
 		var group = SchedulerKeys.Semaphore(dbAttribute);
 		lock (_admissionLock)
-			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+			entry = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).MinBy(e => e.Pid);
 		if (entry?.Deferred is not { } deferred) return false;
 		if (!deferred.State.Registers.TryPeek(out var registers))
@@ -1078,7 +1221,7 @@ public partial class TaskScheduler(
 			var group = SchedulerKeys.Semaphore(dbAttribute);
 			lock (_admissionLock)
 			{
-				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+				removed = LockedPendingEntries.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
 			}
 			foreach (var entry in removed) await RemoveDeferredTrigger(entry);
@@ -1108,7 +1251,7 @@ public partial class TaskScheduler(
 	private async ValueTask HaltWhere(DBRef dbRef, Func<QueueEntry, bool> include)
 	{
 		long[] pids;
-		lock (_admissionLock) pids = _pendingEntries.Values
+		lock (_admissionLock) pids = LockedPendingEntries
 			.Where(entry => include(entry)
 				&& (entry.Executor?.Matches(dbRef) == true
 					|| (SchedulerKeys.IsSemaphore(entry.Group) && entry.SemaphoreTarget?.Matches(dbRef) == true)))
@@ -1175,7 +1318,7 @@ public partial class TaskScheduler(
 		var group = SchedulerKeys.Delay(state.Executor);
 		delay = Nonnegative(delay);
 		var due = DateTimeOffset.UtcNow + delay;
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		QueueEntry entry;
@@ -1191,8 +1334,8 @@ public partial class TaskScheduler(
 			publication.Token.ThrowIfCancellationRequested();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
-		lock (_admissionLock) _pendingEntries[pid] = entry with
-		{ Deferred = new(due, Schedule, null, command, state) };
+		lock (_admissionLock) StoreEntry(entry with
+		{ Deferred = new(due, Schedule, null, command, state) });
 		try { await Schedule(due, 0); return admission; }
 		catch
 		{
@@ -1205,7 +1348,7 @@ public partial class TaskScheduler(
 				lock (_admissionLock)
 				{
 					_delayedRepairs.Add(pid);
-					_pendingEntries[pid] = _pendingEntries[pid] with { DeferredReleaseOutcome = QueueOutcome.ScheduleFailed };
+					StoreEntry(_pendingEntries[pid] with { DeferredReleaseOutcome = QueueOutcome.ScheduleFailed });
 				}
 				logger.LogError(cleanupFailure, "Delayed schedule cleanup failed for PID {Pid}; retry halt to release its reservation", pid);
 				throw;
@@ -1234,6 +1377,7 @@ public partial class TaskScheduler(
 			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
+		// Not under the lock and enumerated across yields, so this keeps the copy Values makes.
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
 		{
 			token.ThrowIfCancellationRequested();
@@ -1254,22 +1398,38 @@ public partial class TaskScheduler(
 		=> SemaphoreSnapshots(e => e.SemaphoreTarget?.Matches(obj) == true).ToAsyncEnumerable();
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
-		=> SemaphoreSnapshots(e => e.Pid == pid).ToAsyncEnumerable();
+	{
+		lock (_admissionLock)
+		{
+			return (_pendingEntries.TryGetValue(pid, out var entry) && IsWaitingSemaphore(entry)
+				? [SemaphoreSnapshot(entry, DateTimeOffset.UtcNow)]
+				: Array.Empty<SemaphoreTaskData>()).ToAsyncEnumerable();
+		}
+	}
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
-		=> SemaphoreSnapshots(e => e.Group == SchedulerKeys.Semaphore(objAttribute)).ToAsyncEnumerable();
+	{
+		var group = SchedulerKeys.Semaphore(objAttribute);
+		return SemaphoreSnapshots(e => e.Group == group).ToAsyncEnumerable();
+	}
 
 	private SemaphoreTaskData[] SemaphoreSnapshots(Func<QueueEntry, bool> predicate)
 	{
 		lock (_admissionLock)
 		{
 			var now = DateTimeOffset.UtcNow;
-			return _pendingEntries.Values.Where(e => e.Deferred?.Semaphore is not null && !_ready.Contains(e.Pid) && predicate(e))
-				.OrderBy(e => e.Pid).Select(e => new SemaphoreTaskData(e.Pid, e.Deferred!.Command,
-					e.Executor ?? new DBRef(-1), new DbRefAttribute(e.SemaphoreTarget!.Value, e.Deferred.Semaphore!.Value.Attribute),
-					e.Deferred.Paused ? e.Deferred.Remaining : Nonnegative(e.Deferred.Due - now))).ToArray();
+			return LockedPendingEntries.Where(e => IsWaitingSemaphore(e) && predicate(e))
+				.OrderBy(e => e.Pid).Select(e => SemaphoreSnapshot(e, now)).ToArray();
 		}
 	}
+
+	// Caller holds _admissionLock.
+	private bool IsWaitingSemaphore(QueueEntry e) => e.Deferred?.Semaphore is not null && !_ready.Contains(e.Pid);
+
+	private static SemaphoreTaskData SemaphoreSnapshot(QueueEntry e, DateTimeOffset now)
+		=> new(e.Pid, e.Deferred!.Command,
+			e.Executor ?? new DBRef(-1), new DbRefAttribute(e.SemaphoreTarget!.Value, e.Deferred.Semaphore!.Value.Attribute),
+			e.Deferred.Paused ? e.Deferred.Remaining : Nonnegative(e.Deferred.Due - now));
 
 	public IAsyncEnumerable<long> GetDelayTasks(DBRef obj)
 		=> ReadDelayTasks(obj, ExecutionBudget.CurrentToken);
@@ -1307,7 +1467,7 @@ public partial class TaskScheduler(
 	{
 		long[] pids;
 		lock (_admissionLock)
-			pids = _pendingEntries.Values
+			pids = LockedPendingEntries
 				.Where(entry => entry.Executor?.Matches(obj) == true
 					&& entry.Group != DirectInputGroup
 					&& _ready.Contains(entry.Pid))
@@ -1328,7 +1488,7 @@ public partial class TaskScheduler(
 			delay = Nonnegative(delay);
 			if (entry.Deferred.Paused)
 			{
-				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { Remaining = delay } };
+				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay } });
 				return;
 			}
 		}
@@ -1336,8 +1496,8 @@ public partial class TaskScheduler(
 		catch
 		{
 			lock (_admissionLock)
-				if (_pendingEntries.TryGetValue(pid, out entry!)) _pendingEntries[pid] = entry with
-				{ Deferred = entry.Deferred! with { Paused = true, Remaining = delay, Reason = "Schedule update failed" } };
+				if (_pendingEntries.TryGetValue(pid, out entry!)) StoreEntry(entry with
+				{ Deferred = entry.Deferred! with { Paused = true, Remaining = delay, Reason = "Schedule update failed" } });
 			throw;
 		}
 	}
@@ -1345,7 +1505,7 @@ public partial class TaskScheduler(
 	public async ValueTask DisposeAsync()
 	{
 		QueueEntry[] entries;
-		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = _pendingEntries.Values.ToArray(); }
+		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = LockedPendingEntries.ToArray(); }
 		foreach (var entry in entries) CancelEntry(entry);
 		await _shutdownCts.CancelAsync();
 		if (_consumerTask is not null)

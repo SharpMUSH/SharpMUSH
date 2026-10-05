@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
@@ -33,8 +34,7 @@ public class ObjectFlagChangeHandler(
 			return;
 		}
 
-		var connections = await connectionService.GetAll()
-			.Where(c => c.Ref == notification.Target.Object().DBRef)
+		var connections = await connectionService.Get(notification.Target.Object().DBRef)
 			.ToListAsync(cancellationToken);
 
 		if (connections.Count == 0)
@@ -45,14 +45,11 @@ public class ObjectFlagChangeHandler(
 		}
 
 		var player = notification.Target.Object();
-		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase), cancellationToken);
-		var truecolorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "TRUECOLOR", StringComparison.OrdinalIgnoreCase), cancellationToken);
+		var flags = await player.ReadFlagsAsync(cancellationToken);
+		var ansiEnabled = flags.Has("ANSI");
+		var colorEnabled = flags.Has("COLOR");
+		var xterm256Enabled = flags.Has("XTERM256");
+		var truecolorEnabled = flags.Has("TRUECOLOR");
 
 		foreach (var connection in connections)
 		{

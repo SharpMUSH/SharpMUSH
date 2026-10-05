@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -46,12 +47,8 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoQuerySpecified) { HadErrors = hadErrors };
 		}
 
-		var rowSeparator = args.Count > 1 && args.TryGetValue("1", out var value)
-			? value.Message?.ToPlainText() ?? " "
-			: " ";
-		var fieldSeparator = args.Count > 2 && args.TryGetValue("2", out var value1)
-			? value1.Message?.ToPlainText() ?? " "
-			: " ";
+		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
+		var fieldSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var registerName = args.Count > 3 && args.TryGetValue("3", out var value2)
 			? value2.Message?.ToPlainText() ?? string.Empty
 			: string.Empty;

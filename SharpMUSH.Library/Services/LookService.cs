@@ -51,8 +51,9 @@ public class LookService(
 		var lookThroughExit = key.HasFlag(LookKey.Trans) || key.HasFlag(LookKey.Cloudy);
 
 		// look.c:492 and look.c:503: an automatic look — the one a mover gets on arrival — shows a
-		// TERSE player no description at all.
-		var terse = key.HasFlag(LookKey.Auto) && await looker.HasFlag("TERSE");
+		// Terse() looker no description at all: one whose owner is a TERSE player, or a TERSE thing
+		// (dbdefs.h:91).
+		var terse = key.HasFlag(LookKey.Auto) && await IsTerseAsync(looker);
 
 		// look.c:492 for a container viewed from inside, look.c:503-504 for a room: LOOK_TRANS puts
 		// the description back even when the look is coming through an exit.
@@ -142,7 +143,8 @@ public class LookService(
 		// arrives through a transparent exit.
 		if (!lookThroughExit)
 		{
-			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject);
+			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject,
+				await FlagView.ForAsync(looker, connectionService));
 
 			formattedName = defaultFormattedName;
 			if (realViewing.IsRoom && viewingFromInside)
@@ -262,8 +264,6 @@ public class LookService(
 		{
 			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
 
-			var canSeeAll = await looker.IsSee_All();
-
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
 
@@ -283,11 +283,13 @@ public class LookService(
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
 				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+				// The flag view is needed only for the Name(#dbrefFlags) form.
+				var flagView = await looker.IsSee_All() ? await FlagView.ForAsync(looker, connectionService) : null;
 				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
 				{
-					if (canSeeAll)
+					if (flagView is not null)
 					{
-						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object());
+						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
 					}
 					return MarkupText.Plain(item.Object().Name);
 				}));
@@ -450,5 +452,17 @@ public class LookService(
 		var template = localizationService.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
 			?? ErrorMessages.Notifications.ExitNameToDestFormat;
 		return MarkupTemplateFormatter.Format(template, exitName, MarkupText.Plain(destName));
+	}
+
+	/// <summary>dbdefs.h <c>Terse(x)</c>: the object's owner is a TERSE player, or it is itself a TERSE thing.</summary>
+	private static async ValueTask<bool> IsTerseAsync(AnySharpObject looker)
+	{
+		if (looker.IsThing && await looker.HasFlag("TERSE"))
+		{
+			return true;
+		}
+
+		AnySharpObject owner = await looker.Object().Owner.WithCancellation(CancellationToken.None);
+		return await owner.HasFlag("TERSE");
 	}
 }

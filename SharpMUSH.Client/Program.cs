@@ -48,6 +48,8 @@ builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService
 // implementation — reads go through this HTTP service, writes go through a game command.
 builder.Services.AddSingleton<SceneService>();
+// Commands the portal issues itself, run as the acting character (POST api/commands).
+builder.Services.AddSingleton<GameCommandService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();

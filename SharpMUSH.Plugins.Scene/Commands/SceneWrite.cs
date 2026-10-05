@@ -52,11 +52,14 @@ public static class SceneWrite
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
+		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
 		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
 		{
 			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
+
+		await SceneRoomRefresh.AfterSetAsync(parser, key!, roomBefore, scene);
 
 		await notifyService.Notify(executor, $"SCENE: #{scene.Id} {key} set.");
 		return MarkupText.Plain(scene.Id);

@@ -50,6 +50,26 @@ public class ForcePlayerParityTests
 		await Assert.That(Factory.Notifications.For(wizard.DbRef)).Contains($"{target.Name} says, \"{text}\"");
 	}
 
+	/// <summary>
+	/// <c>/noeval</c> on a command with an <c>=</c> leaves the right side raw (<c>command_parse</c>,
+	/// <c>src/command.c:1436-1446</c>), so the forced player is the one who evaluates it: <c>%!</c> is
+	/// the forced player and <c>%#</c> the forcer. Without the switch the forcer evaluates it first (#1389).
+	/// </summary>
+	[Test]
+	public async Task ForceNoEvalLeavesTheCommandForTheForcedPlayerToEvaluate()
+	{
+		var (wizard, target) = await Setup("ForceNoEval");
+		var raw = TestIsolationHelpers.GenerateUniqueName("raw");
+		var evaluated = TestIsolationHelpers.GenerateUniqueName("evaluated");
+
+		await Run(wizard.Handle, $"@force/noeval *{target.Name}=think {raw} me:%! en:%#");
+		await Run(wizard.Handle, $"@force *{target.Name}=think {evaluated} me:%! en:%#");
+
+		var heard = Factory.Notifications.For(target.DbRef);
+		await Assert.That(heard).Contains($"{raw} me:#{target.DbRef.Number} en:#{wizard.DbRef.Number}");
+		await Assert.That(heard).Contains($"{evaluated} me:#{wizard.DbRef.Number} en:#{wizard.DbRef.Number}");
+	}
+
 	[Test]
 	public async Task TriggeredSayIsSpokenByTheTriggeredPlayer()
 	{

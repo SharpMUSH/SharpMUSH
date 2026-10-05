@@ -18,7 +18,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelWhat
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService locateService,
-		IPermissionService permissionService, IMediator mediator, INotifyService notifyService, MString prefixArgument)
+		IChannelPermissionService permissionService, IMediator mediator, INotifyService notifyService, MString prefixArgument)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var prefix = prefixArgument.ToPlainText().Trim();

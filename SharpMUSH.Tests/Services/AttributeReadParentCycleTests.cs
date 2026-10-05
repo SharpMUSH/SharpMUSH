@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Services;
 /// <summary>
 /// The read side of the <c>@parent</c> chain has no write-time guard to rely on: legacy data, a
 /// direct database edit, or a bug in some other write path could leave a cycle in place even
-/// though <c>SafeToAddParent</c>/<c>ExceedsMaxParentDepthAsync</c> keep every in-app write from
+/// though <c>SafeToAddParentAsync</c>/<c>ExceedsMaxParentDepthAsync</c> keep every in-app write from
 /// creating one. <see cref="GetAttributesQueryHandler.GetAttributesWithParentsAsync"/> (backing
 /// <c>IAttributeService.GetAttributePatternAsync</c> with <c>checkParents: true</c> - the path
 /// <c>lattr()</c>-style callers use) used to walk that chain with an unconditional <c>while
@@ -24,8 +24,8 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 /// <remarks>
 /// The cycle is built by sending <see cref="SetObjectParentCommand"/> directly in both directions -
-/// the same way <c>ZoneParentCycleTests.cs</c> bypasses <c>SafeToAddParent</c> to set up its
-/// fixtures - since going through <c>ManipulateSharpObjectService.SetParent</c> would (correctly)
+/// the same way <c>ZoneParentCycleTests.cs</c> bypasses <c>SafeToAddParentAsync</c> to set up its
+/// fixtures - since going through <c>ObjectRelationshipService.SetParent</c> would (correctly)
 /// refuse to ever create the cycle in the first place. Each test bounds the read itself, not the
 /// fixture before it, so a regression here fails the test outright instead of hanging the whole
 /// suite, and a slow runner building the fixture does not.
@@ -56,8 +56,8 @@ public class AttributeReadParentCycleTests
 		var a = await CreateAsync($"{label}A");
 		var b = await CreateAsync($"{label}B");
 
-		// Bypasses SafeToAddParent on both edges - this is the only way to get a genuine cycle
-		// into the database, since the guarded path (ManipulateSharpObjectService.SetParent)
+		// Bypasses SafeToAddParentAsync on both edges - this is the only way to get a genuine cycle
+		// into the database, since the guarded path (ObjectRelationshipService.SetParent)
 		// refuses the second edge.
 		await Mediator.Send(new SetObjectParentCommand(a, b));
 		await Mediator.Send(new SetObjectParentCommand(b, a));

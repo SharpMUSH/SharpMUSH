@@ -3,6 +3,7 @@ using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Tests.Database.Lightning;
@@ -111,7 +112,7 @@ public partial class NavigationTests
 		var exits = Edges(Tables.Exit.Forward);
 		if (rawSetter) await _db.SetContentLocation(content, next);
 		else await _db.MoveObjectAsync(content, next);
-		await Assert.That((await _db.GetLocationAsync(content.Object().DBRef)).Expect<AnySharpContainer>().Object().DBRef).IsEqualTo(next.Object().DBRef);
+		await Assert.That((await _db.GetLocationRefAsync(content.Object().DBRef)).Expect<DBRef>()).IsEqualTo(next.Object().DBRef);
 		await Assert.That(Edges(Tables.Home.Forward).SequenceEqual(home)).IsTrue();
 		await Assert.That(Edges(Tables.Exit.Forward).SequenceEqual(exits)).IsTrue();
 	}

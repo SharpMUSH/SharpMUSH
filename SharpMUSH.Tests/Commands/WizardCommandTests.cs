@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -24,7 +25,7 @@ public class WizardCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
-	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+	private QueueScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 
 	/// <summary>
 	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
@@ -41,23 +42,248 @@ public class WizardCommandTests
 		return [.. recorder.For(who).Skip(before)];
 	}
 
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask HaltCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique thing to halt, instead of halting shared God (#1).
-		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltTarget");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@halt {thingDbRef}"));
+	private Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Halted God and all their objects."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	private Task RunAs(TestIsolationHelpers.TestPlayer player, string command) =>
+		WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+			.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command)).AsTask();
+
+	private Task AsGod(string command) =>
+		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
+
+	private async Task<string> Eval(string expression) =>
+		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+
+	/// <summary>A thing of <paramref name="owner"/>'s, not HALTed, and its unique name.</summary>
+	private async Task<(DBRef Thing, string Name)> OwnedThingAsync(TestIsolationHelpers.TestPlayer owner, string prefix)
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, prefix);
+		await AsGod($"@chown/preserve {thing}={owner.DbRef}");
+		await AsGod($"@set {thing}=!HALT");
+		return (thing, await Eval($"name({thing})"));
 	}
 
 	/// <summary>
-	/// <c>@allhalt</c> asks for every object's queue to be halted and reports how many it asked for.
+	/// PennMUSH <c>do_halt</c> (<c>src/cque.c:2176-2178</c>) tells the owner <c>Halted: QA(#n)</c>, and
+	/// <c>do_halt1</c> says nothing more when the enactor owns the object, but leaves it HALTed
+	/// (<c>:2277-2278</c>). SharpMUSH said <c>Halted QA.</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltOwnObjectReportsHaltedNameAndDbref()
+	{
+		var owner = await PlayerAsync("HaltOwner");
+		try
+		{
+			var (thing, name) = await OwnedThingAsync(owner, "HaltOwnThing");
+
+			var heard = await MessagesWhile(owner.DbRef, () => RunAs(owner, $"@halt {thing}"));
+
+			await Assert.That(heard.Where(message => message.Contains(name))).IsEquivalentTo([$"Halted: {name}(#{thing.Number})"]);
+			await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+		}
+	}
+
+	/// <summary>
+	/// Halting someone else's object tells the enactor whose it was and the owner who did it
+	/// (<c>src/cque.c:2267-2275</c>), after <c>do_halt</c>'s own report to the owner.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltOthersObjectTellsEnactorAndOwner()
+	{
+		var owner = await PlayerAsync("HaltVictimOwner");
+		var wizard = await PlayerAsync("HaltWizard");
+		try
+		{
+			await AsGod($"@set {wizard.DbRef}=WIZARD");
+			var (thing, name) = await OwnedThingAsync(owner, "HaltOthersThing");
+			var ownerBefore = WebAppFactoryArg.Notifications.CountFor(owner.DbRef);
+
+			var wizardHeard = await MessagesWhile(wizard.DbRef, () => RunAs(wizard, $"@halt {thing}"));
+			var ownerHeard = WebAppFactoryArg.Notifications.For(owner.DbRef).Skip(ownerBefore).ToList();
+
+			await Assert.That(wizardHeard.Where(message => message.Contains(name)))
+				.IsEquivalentTo([$"Halted: {owner.Name}'s {name}(#{thing.Number})"]);
+			await Assert.That(ownerHeard.Where(message => message.Contains(name))).IsEquivalentTo(
+				[$"Halted: {name}(#{thing.Number})", $"Halted: {name}(#{thing.Number}), by {wizard.Name}"]);
+			await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+			await ConnectionService.Disconnect(wizard.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>@halt</c> alone is <c>do_halt</c> on the enactor (<c>src/cque.c:2239-2240</c>); <c>@halt me</c>
+	/// adds <c>All of your objects have been halted.</c> (<c>:2259</c>). Neither sets HALT on a player.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltSelfReportsAsPennMUSHDoes()
+	{
+		var player = await PlayerAsync("HaltSelf");
+		try
+		{
+			var bare = await MessagesWhile(player.DbRef, () => RunAs(player, "@halt"));
+			var me = await MessagesWhile(player.DbRef, () => RunAs(player, "@halt me"));
+
+			await Assert.That(bare).Contains($"Halted: {player.Name}(#{player.DbRef.Number})");
+			await Assert.That(bare).DoesNotContain("All of your objects have been halted.");
+			await Assert.That(me).Contains($"Halted: {player.Name}(#{player.DbRef.Number})");
+			await Assert.That(me).Contains("All of your objects have been halted.");
+			await Assert.That(await Eval($"hasflag({player.DbRef},HALT)")).IsEqualTo("0");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	/// <summary>Halting another player (<c>src/cque.c:2260-2264</c>).</summary>
+	[Test]
+	public async ValueTask HaltOtherPlayerTellsBothPlayers()
+	{
+		var victim = await PlayerAsync("HaltedPlayer");
+		var wizard = await PlayerAsync("HaltPlayerWizard");
+		try
+		{
+			await AsGod($"@set {wizard.DbRef}=WIZARD");
+			var victimBefore = WebAppFactoryArg.Notifications.CountFor(victim.DbRef);
+
+			var wizardHeard = await MessagesWhile(wizard.DbRef, () => RunAs(wizard, $"@halt {victim.DbRef}"));
+			var victimHeard = WebAppFactoryArg.Notifications.For(victim.DbRef).Skip(victimBefore).ToList();
+
+			await Assert.That(wizardHeard.Where(message => message.Contains(victim.Name)))
+				.IsEquivalentTo([$"All objects for {victim.Name} have been halted."]);
+			await Assert.That(victimHeard.Where(message => message.Contains(victim.Name) || message.Contains(wizard.Name))).IsEquivalentTo([
+				$"Halted: {victim.Name}(#{victim.DbRef.Number})",
+				$"All of your objects have been halted by {wizard.Name}."
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(victim.Handle);
+			await ConnectionService.Disconnect(wizard.Handle);
+		}
+	}
+
+	/// <summary><c>do_halt</c>'s report is skipped for a QUIET owner (<c>src/cque.c:2176</c>).</summary>
+	[Test]
+	public async ValueTask HaltIsSilentForQuietOwner()
+	{
+		var owner = await PlayerAsync("HaltQuietOwner");
+		try
+		{
+			var (thing, name) = await OwnedThingAsync(owner, "HaltQuietThing");
+			await AsGod($"@set {owner.DbRef}=QUIET");
+
+			var heard = await MessagesWhile(owner.DbRef, () => RunAs(owner, $"@halt {thing}"));
+
+			await Assert.That(heard).DoesNotContain($"Halted: {name}(#{thing.Number})");
+			await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+		}
+	}
+
+	/// <summary>
+	/// Replacement actions need control (<c>src/cque.c:2249-2251</c>): the HALT power lets a player halt
+	/// what they do not control, but not hand it new work.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltWithActionsNeedsControl()
+	{
+		var owner = await PlayerAsync("HaltActionsOwner");
+		var halter = await PlayerAsync("HaltPowered");
+		try
+		{
+			await AsGod($"@power {halter.DbRef}=Halt");
+			var (thing, _) = await OwnedThingAsync(owner, "HaltActionsThing");
+
+			var heard = await MessagesWhile(halter.DbRef, () => RunAs(halter, $"@halt {thing}=think nope"));
+
+			await Assert.That(heard).Contains("You may not use @halt obj=command on this object.");
+			await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("0");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+			await ConnectionService.Disconnect(halter.Handle);
+		}
+	}
+
+	/// <summary><c>do_haltpid</c> (<c>src/cque.c:2293-2303</c>): not a number, or nobody's pid.</summary>
+	[Test]
+	public async ValueTask HaltPidRejectsWhatIsNotAPid()
+	{
+		var player = await PlayerAsync("HaltPidBad");
+		try
+		{
+			var word = await MessagesWhile(player.DbRef, () => RunAs(player, "@halt/pid abc"));
+			var unknown = await MessagesWhile(player.DbRef, () => RunAs(player, "@halt/pid 999999999"));
+
+			await Assert.That(word).Contains("That is not a valid pid!");
+			await Assert.That(unknown).Contains("That is not a valid pid!");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	/// <summary><c>@halt/pid</c> reports the halted entry as <c>do_haltpid</c> does (<c>src/cque.c:2335</c>).</summary>
+	[Test]
+	public async ValueTask HaltPidReportsQueueEntryHalted()
+	{
+		var owner = await PlayerAsync("HaltPidOwner");
+		try
+		{
+			var (thing, _) = await OwnedThingAsync(owner, "HaltPidThing");
+			var parked = await Scheduler.AdmitCommandList(MarkupText.Plain("think parked"),
+				ParserState.Empty with { Executor = thing, Enactor = thing, Caller = thing }, TimeSpan.FromMinutes(10));
+			await Assert.That(parked.Accepted).IsTrue();
+
+			var heard = await MessagesWhile(owner.DbRef, () => RunAs(owner, $"@halt/pid {parked.Pid}"));
+
+			await Assert.That(heard).Contains($"Queue entry with pid {parked.Pid} halted.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>@halt/all</c> without HaltAny (<c>src/cque.c:2346-2349</c>), refused before anything is halted.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltAllNeedsThePowerToHaltTheWorld()
+	{
+		var player = await PlayerAsync("HaltAllMortal");
+		try
+		{
+			var heard = await MessagesWhile(player.DbRef, () => RunAs(player, "@halt/all"));
+
+			await Assert.That(heard).Contains("You do not have the power to bring the world to a halt.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>@allhalt</c> is PennMUSH's <c>do_allhalt</c> (<c>src/cque.c:2343-2358</c>): every object's queue
+	/// is halted, and every player is told who did it and then, unless QUIET, <c>do_halt</c>'s
+	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c>. The enactor is told nothing more than any other
+	/// player — no count.
 	/// </summary>
 	/// <remarks>
 	/// The halts are recorded here, not carried out. The scheduler is session-wide, so a real
@@ -68,8 +294,9 @@ public class WizardCommandTests
 	/// command still runs through the ordinary parser and dispatch, against a <see cref="SharpMUSH.Implementation.Commands.Commands"/>
 	/// whose Mediator keeps <see cref="HaltObjectQueueRequest"/> to itself.
 	/// <para>
-	/// A wizard of this test's own runs it, so the report it receives is read from the recipient-keyed
-	/// recorder and belongs to this test alone.
+	/// The notices go to every player in the world, so that instance also has a notifier of its own:
+	/// another suite's players never hear this test's world halt, and what this test's own players
+	/// heard is read from that notifier's private recorder.
 	/// </para>
 	/// </remarks>
 	[Test]
@@ -78,6 +305,8 @@ public class WizardCommandTests
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AllhaltWizard");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		var quiet = await PlayerAsync("AllhaltQuiet");
+		await AsGod($"@set {quiet.DbRef}=QUIET");
 		var bystander = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AllhaltBystander");
 		var parked = await Scheduler.AdmitCommandList(MarkupText.Plain("think parked"),
 			ParserState.Empty with { Executor = bystander, Enactor = bystander, Caller = bystander }, TimeSpan.FromMinutes(10));
@@ -86,19 +315,24 @@ public class WizardCommandTests
 		try
 		{
 			var halts = new ConcurrentQueue<DBRef>();
+			var heard = new TestHelpers.NotificationRecorder();
 			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
-				WebAppFactoryArg.Services, HaltRecordingMediator.Wrap(Mediator, halts));
+				WebAppFactoryArg.Services, HaltRecordingMediator.Wrap(Mediator, halts),
+				TestHelpers.CreateNotifyServiceSubstitute(heard));
 			var parser = WebAppFactoryArg.CommandParserWith(
 				((ILibraryProvider<CommandDefinition>)commands).Get(), wizard.DbRef, wizard.Handle);
 
-			var messages = await MessagesWhile(wizard.DbRef, () =>
-				parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@allhalt")).AsTask());
+			await parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@allhalt"));
 
 			await Assert.That(halts.Select(halted => halted.Number)).Contains(bystander.Number)
 				.Because("every object in the world is asked to halt, the one this test made among them");
 			await Assert.That(halts.Select(halted => halted.Number)).Contains(wizard.DbRef.Number);
-			await Assert.That(messages).Contains(
-				string.Format(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat, halts.Count));
+			await Assert.That(heard.For(wizard.DbRef)).IsEquivalentTo([
+				$"Your objects have been globally halted by {wizard.Name}",
+				$"Halted: {wizard.Name}(#{wizard.DbRef.Number})"
+			]);
+			await Assert.That(heard.For(quiet.DbRef)).IsEquivalentTo([$"Your objects have been globally halted by {wizard.Name}"])
+				.Because("do_halt's report is skipped for a QUIET player; the global notice is not");
 			await Assert.That(Scheduler.HasPendingWork($"dbref:{bystander}", $"delay:{bystander}")).IsTrue()
 				.Because("the scheduler is session-wide: whatever another suite has queued must survive this test");
 		}
@@ -106,6 +340,7 @@ public class WizardCommandTests
 		{
 			await Scheduler.HaltByPid(parked.Pid!.Value);
 			await ConnectionService.Disconnect(wizard.Handle);
+			await ConnectionService.Disconnect(quiet.Handle);
 		}
 	}
 
@@ -760,10 +995,12 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chownall #{owner.DbRef.Number}"));
 
 		// Read from the recorder, keyed on this test's own player: the session-shared substitute's
-		// call list is not this test's to rely on (#1251).
+		// call list is not this test's to rely on (#1251). do_chownall tells the executor alone,
+		// "Ownership changed for %d objects." (src/wiz.c:1002) — the player itself is not swept.
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(executor).Skip(before).Any(delivery =>
-			delivery.Message.StartsWith("Changed ownership of ", StringComparison.Ordinal)
-			&& delivery.Message.Contains($" from {owner.Name} to ", StringComparison.Ordinal))).IsTrue();
+			delivery.Message == "Ownership changed for 1 objects.")).IsTrue();
+		await Assert.That(WebAppFactoryArg.Notifications.For(owner.DbRef)
+			.Any(message => message.StartsWith("Ownership changed for ", StringComparison.Ordinal))).IsFalse();
 	}
 
 	[Test]

@@ -16,7 +16,7 @@ public static class ChannelRename
 	public static async ValueTask<CallState> Handle(
 		IMUSHCodeParser parser,
 		ILocateService LocateService,
-		IPermissionService PermissionService,
+		IChannelPermissionService PermissionService,
 		IMediator Mediator,
 		INotifyService NotifyService,
 		IOptionsWrapper<SharpMUSHOptions> Configuration,
@@ -39,7 +39,7 @@ public static class ChannelRename
 		};
 	}
 
-	private static async ValueTask<CallState> RenameAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> RenameAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, IOptionsWrapper<SharpMUSHOptions> Configuration, AnySharpObject executor,
 		SharpChannel channel, MString newChannelName)
 	{

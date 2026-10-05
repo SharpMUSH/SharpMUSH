@@ -17,19 +17,30 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// Serves <c>/api/wiki/pages</c> from a fixed page list and <c>/api/wiki/{slug}/translations</c> from a
-/// per-slug locale map, so the admin grid's coverage column has something real to read.
+/// Serves <c>/api/wiki/pages</c> from a fixed page list, <c>/api/wiki/counts</c> from it too, and
+/// <c>/api/wiki/{slug}/translations</c> from a per-slug locale map, so the admin grid's coverage column
+/// has something real to read. Every request URI is recorded in <see cref="Requests"/>.
 /// </summary>
 internal sealed class AdminWikiCoverageHandler(
-	IReadOnlyList<WikiPageDto> pages,
+	IReadOnlyList<WikiPageSummaryDto> pages,
 	IReadOnlyDictionary<string, string[]> translations) : HttpMessageHandler
 {
 	private static readonly Regex _translationsRoute =
 		new(@"^/api/wiki/([^/]+)/translations$", RegexOptions.Compiled);
 
+	public System.Collections.Concurrent.ConcurrentQueue<Uri> Requests { get; } = new();
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
+		Requests.Enqueue(request.RequestUri!);
 		var path = request.RequestUri!.AbsolutePath;
+
+		if (path == "/api/wiki/counts")
+		{
+			var published = pages.Count(p => p.Published);
+			var counts = new WikiPageCountsDto(pages.Count, published, pages.Count - published, pages.Count(p => p.IsProtected));
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(counts) });
+		}
 
 		if (path == "/api/wiki/pages")
 		{
@@ -61,27 +72,30 @@ internal sealed class AdminWikiCoverageHandler(
 /// </summary>
 public class AdminWikiCoverageTests : TrackingBunitContext
 {
-	private static WikiPageDto Summary(string slug, string title) => new(
+	private static WikiPageSummaryDto Summary(string slug, string title, bool published = true, bool isProtected = false) => new(
 		Id: slug,
 		Slug: slug,
 		Title: title,
 		Namespace: "main",
-		MarkdownSource: string.Empty,
-		RenderedHtml: string.Empty,
-		PlainText: string.Empty,
-		CreatedAt: DateTimeOffset.UnixEpoch,
 		UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: false,
+		IsProtected: isProtected,
 		RevisionNumber: 1,
 		Category: "general",
 		Tags: [],
-		Published: true);
+		Published: published,
+		Locale: "en",
+		IsFallback: false,
+		Image: null,
+		LastEditedBy: null);
+
+	private AdminWikiCoverageHandler? _handler;
 
 	private IRenderedComponent<SharpMUSH.Client.Pages.Admin.AdminWiki> RenderAdminWikiWith(
-		IReadOnlyList<WikiPageDto> pages,
+		IReadOnlyList<WikiPageSummaryDto> pages,
 		Dictionary<string, string[]> translations)
 	{
-		var apiClient = Track(new HttpClient(new AdminWikiCoverageHandler(pages, translations))
+		_handler = new AdminWikiCoverageHandler(pages, translations);
+		var apiClient = Track(new HttpClient(_handler)
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -115,6 +129,28 @@ public class AdminWikiCoverageTests : TrackingBunitContext
 		}
 
 		return cut;
+	}
+
+	[Test]
+	public async Task Stats_come_from_the_counts_endpoint_not_from_listing_every_page()
+	{
+		var cut = RenderAdminWikiWith(
+			pages: [Summary("a", "A"), Summary("b", "B", published: false), Summary("c", "C", isProtected: true)],
+			translations: new());
+
+		cut.WaitForAssertion(
+			() =>
+			{
+				if (cut.Find("[data-stat='pages'] .adm-stat-value").TextContent != "3")
+					throw new InvalidOperationException("stats not loaded yet");
+			},
+			TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("[data-stat='published'] .adm-stat-value").TextContent).IsEqualTo("2");
+		await Assert.That(cut.Find("[data-stat='drafts'] .adm-stat-value").TextContent).IsEqualTo("1");
+		await Assert.That(cut.Find("[data-stat='protected'] .adm-stat-value").TextContent).IsEqualTo("1");
+		await Assert.That(_handler!.Requests.Any(u => u.AbsolutePath == "/api/wiki/counts")).IsTrue();
+		await Assert.That(_handler.Requests.Any(u => u.Query.Contains("take=2000", StringComparison.Ordinal))).IsFalse()
+			.Because("the stats tiles no longer page through the whole wiki to count it");
 	}
 
 	[Test]

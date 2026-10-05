@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Authentication;
 /// <summary>
 /// Unit tests for <see cref="SitelockGuard"/>: the thin DI wrapper that reads the live
 /// <see cref="IOptionsWrapper{SharpMUSHOptions}"/>.<c>CurrentValue.SitelockRules</c> on every call
-/// and delegates the actual matching to <see cref="SharpMUSH.Library.Services.SitelockMatcher.IsBlocked"/>.
+/// and delegates the actual matching to <see cref="SharpMUSH.Library.Common.SitelockMatcher.IsBlocked"/>.
 ///
 /// <see cref="SharpMUSHOptions"/> is a record with many <c>required</c> properties, so rather than
 /// hand-constructing one, tests load the checked-in minimal config fixture (same pattern as

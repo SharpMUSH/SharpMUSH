@@ -188,8 +188,9 @@ public class AccountSessionAuthHandlerTests
 		await Assert.That(result.Succeeded).IsTrue();
 		await Assert.That(result.Principal!.FindFirst(GameHub.CharacterDbrefClaim)!.Value).IsEqualTo("#1:0");
 		await Assert.That(result.Principal!.IsInRole("Wizard")).IsTrue();
-		await Assert.That(result.Principal!.FindAll(PortalPermission.ClaimType).Select(c => c.Value))
-			.Contains("players.view");
+		// Scope claims are FreshPermissionClaimsTransformation's to add, after the handler; the
+		// handler computing them too was work the transformation threw away on every request.
+		await Assert.That(result.Principal!.FindAll(PortalPermission.ClaimType)).IsEmpty();
 		await Assert.That(result.Principal!.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value)
 			.IsEqualTo("node_accounts/1");
 	}

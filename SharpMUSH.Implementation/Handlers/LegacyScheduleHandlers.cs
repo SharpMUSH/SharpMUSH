@@ -11,7 +11,7 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 	public async ValueTask<Unit> Handle(QueueCommandListRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue);
+		await scheduler.AdmitCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue);
 		return Unit.Value;
 	}
 }
@@ -20,7 +20,7 @@ public class AsyncScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<Qu
 	public async ValueTask<Unit> Handle(QueueAttributeRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.WriteAsyncAttribute(request.Input, request.DbRefAttribute);
+		await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute);
 		return Unit.Value;
 	}
 }
@@ -29,7 +29,7 @@ public class DelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<
 	public async ValueTask<Unit> Handle(QueueDelayedCommandListRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.WriteCommandList(request.Command, request.State, request.Delay);
+		await scheduler.AdmitCommandList(request.Command, request.State, request.Delay);
 		return Unit.Value;
 	}
 }
@@ -38,25 +38,25 @@ public class ScheduleTimeoutHandler(ITaskScheduler scheduler) : IRequestHandler<
 	public async ValueTask<Unit> Handle(QueueCommandListWithTimeoutRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue, request.Timeout);
+		await scheduler.AdmitCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue, request.Timeout);
 		return Unit.Value;
 	}
 }
-public class ScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<NotifySemaphoreRequest>
+public class ScheduleNotifyHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifySemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(NotifySemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.Notify(request.DbRefAttribute, request.OldValue, request.Count);
+		await semaphores.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
 		return Unit.Value;
 	}
 }
-public class ScheduleNotifyAllHandler(ITaskScheduler scheduler) : IRequestHandler<NotifyAllSemaphoreRequest>
+public class ScheduleNotifyAllHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifyAllSemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(NotifyAllSemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.NotifyAll(request.DbRefAttribute);
+		await semaphores.NotifyAllCounted(request.DbRefAttribute);
 		return Unit.Value;
 	}
 }

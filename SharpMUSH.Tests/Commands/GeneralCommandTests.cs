@@ -271,7 +271,8 @@ public class GeneralCommandTests
 	}
 
 	/// <summary>
-	/// Restarting a player restarts the player and everything they own.
+	/// Restarting another player tells both of them, as PennMUSH's <c>do_restart_com</c> does
+	/// (<c>src/cque.c:2424-2429</c>), and then <c>do_halt</c> tells the player it halted them.
 	/// </summary>
 	/// <remarks>
 	/// The player is one this test makes. Restarting God would halt the queue of God and of every
@@ -281,17 +282,86 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RestartTarget");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RestartWizard");
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@restart {player.DbRef}"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+			var recorder = WebAppFactoryArg.Notifications;
+			var wizardBefore = recorder.CountFor(wizard.DbRef);
+			var playerBefore = recorder.CountFor(player.DbRef);
 
-			await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
-				nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat),
-				string.Format(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat, player.Name), executor)).IsTrue();
+			await WebAppFactoryArg.CommandParserFor(wizard.DbRef, wizard.Handle)
+				.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain($"@restart {player.DbRef}"));
+
+			await Assert.That(recorder.For(wizard.DbRef).Skip(wizardBefore).Where(message => message.Contains(player.Name)))
+				.IsEquivalentTo([$"All objects for {player.Name} are being restarted."]);
+			await Assert.That(recorder.For(player.DbRef).Skip(playerBefore)
+				.Where(message => message.Contains(player.Name) || message.Contains(wizard.Name))).IsEquivalentTo([
+				$"All of your objects are being restarted by {wizard.Name}.",
+				$"Halted: {player.Name}(#{player.DbRef.Number})"
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+			await ConnectionService.Disconnect(wizard.Handle);
+		}
+	}
+
+	/// <summary>
+	/// An object of one's own: <c>Restarting: &lt;name&gt;(#&lt;dbref&gt;)</c>, then <c>do_halt</c>'s
+	/// <c>Halted:</c> (<c>src/cque.c:2443-2447</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask Restart_OwnObject_ReportsRestartingThenHalted()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RestartOwner");
+
+		try
+		{
+			var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "RestartOwnThing");
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown/preserve {thing}={owner.DbRef}"));
+			var name = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"name({thing})")))!
+				.Message!.ToPlainText();
+			var recorder = WebAppFactoryArg.Notifications;
+			var before = recorder.CountFor(owner.DbRef);
+
+			await WebAppFactoryArg.CommandParserFor(owner.DbRef, owner.Handle)
+				.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@restart {thing}"));
+
+			await Assert.That(recorder.For(owner.DbRef).Skip(before).Where(message => message.Contains(name))).IsEquivalentTo([
+				$"Restarting: {name}(#{thing.Number})",
+				$"Halted: {name}(#{thing.Number})"
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(owner.Handle);
+		}
+	}
+
+	/// <summary><c>@restart/all</c> without HaltAny (<c>src/cque.c:2370-2372</c>).</summary>
+	[Test]
+	public async ValueTask RestartAll_WithoutHaltPower_IsRefused()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RestartAllMortal");
+
+		try
+		{
+			var recorder = WebAppFactoryArg.Notifications;
+			var before = recorder.CountFor(player.DbRef);
+
+			await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+				.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@restart/all"));
+
+			await Assert.That(recorder.For(player.DbRef).Skip(before).ToList())
+				.Contains("You do not have the power to restart the world.");
 		}
 		finally
 		{
@@ -381,6 +451,34 @@ public class GeneralCommandTests
 		await Assert.That(messages[1]).Contains($" [from {token}Room(#");
 		await Assert.That(messages[1]).EndsWith(" to NOWHERE]");
 		await Assert.That(messages[^1]).IsEqualTo("Totals: Rooms...0  Exits...1  Things...0  Players...0");
+	}
+
+	/// <summary>
+	/// do_search's START is 1-based (init_search_spec, src/wiz.c:2270): START=2 COUNT=1 is the second
+	/// match. A START or COUNT below 1 is refused before anything is searched, with fill_search_spec's
+	/// own text (src/wiz.c:2388-2399) and no report.
+	/// </summary>
+	[Test]
+	public async ValueTask Search_StartIsOneBasedAndBelowOneIsRefused()
+	{
+		var mortal = await MortalInARoomOfItsOwnAsync("SearchStart");
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchStartTok");
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}A"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}B"));
+
+		async Task<List<string>> SearchAs(string spec) => await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(
+			mortal.Handle, ConnectionService, MarkupText.Plain($"@search name={token},{spec}")).AsTask());
+
+		var second = await SearchAs("start=2,count=1");
+		await Assert.That(second.Any(m => m.StartsWith($"{token}B(#"))).IsTrue();
+		await Assert.That(second.Any(m => m.StartsWith($"{token}A(#"))).IsFalse();
+
+		var first = await SearchAs("start=1,count=1");
+		await Assert.That(first.Any(m => m.StartsWith($"{token}A(#"))).IsTrue();
+		await Assert.That(first.Any(m => m.StartsWith($"{token}B(#"))).IsFalse();
+
+		await Assert.That(await SearchAs("start=0")).IsEquivalentTo(new[] { "Invalid start index" });
+		await Assert.That(await SearchAs("count=0")).IsEquivalentTo(new[] { "Invalid count index" });
 	}
 
 	// Regression coverage for "@search all type=PLAYER" being parsed as a NAME search for the
@@ -519,22 +617,6 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, executor)).IsTrue();
-	}
-
-	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
-	public async ValueTask Halt_ClearsQueue()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique thing to halt, instead of halting shared God (#1).
-		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltQueueTest");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@halt {thingDbRef}"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessageContains(s, "@halt:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

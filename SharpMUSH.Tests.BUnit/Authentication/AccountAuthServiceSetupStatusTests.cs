@@ -49,7 +49,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result.Value).IsTypeOf<Error>();
+		result.Expect<ApiFailure>();
 	}
 
 	[TUnit.Core.Test]
@@ -69,7 +69,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result.Value).IsTypeOf<Error>();
+		result.Expect<ApiFailure>();
 	}
 
 	/// <summary>
@@ -98,7 +98,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 
 		var first = await service.NeedsSetupAsync();
 		if (first is bool firstAnswer) cachedNeedsSetup = firstAnswer;
-		await Assert.That(first.Value).IsTypeOf<Error>();
+		first.Expect<ApiFailure>();
 		await Assert.That(cachedNeedsSetup).IsNull();
 
 		var second = await service.NeedsSetupAsync();

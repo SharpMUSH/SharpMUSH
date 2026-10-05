@@ -26,7 +26,8 @@ public class NotifyService(
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
 	IHttpOutputCapture? httpOutputCapture = null,
-	IOptionsWrapper<SharpMUSHOptions>? configuration = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
+	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
+	ICommandOutputCapture? commandOutputCapture = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
 {
 	/// <summary>Connection metadata naming a socket owner that takes prompts in order with output ("1").</summary>
 	public const string OrderedPromptsMetadata = ConnectionEstablishedMessage.OrderedPromptsMetadata;
@@ -214,17 +215,24 @@ public class NotifyService(
 			return false;
 		}
 
-		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
-		// the handler becomes the HTTP response body instead of going to a (nonexistent)
-		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
-		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0) && httpOutputCapture?.TryCapture(who.Number,
-				context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
-				{
-					MString markupString => markupString.ToPlainText(),
-					string str => str
-				}) == true)
+		// The text is built only when a capture frame is for this recipient; Offer and TryCapture do
+		// nothing for anyone else.
+		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0)
+			&& (httpOutputCapture?.Captures(who.Number) == true || commandOutputCapture?.Captures(who.Number) == true))
 		{
-			return false;
+			var text = context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
+			{
+				MString markupString => markupString.ToPlainText(),
+				string str => str
+			};
+
+			// A portal command's answer is a copy: the character still hears it everywhere it is connected.
+			commandOutputCapture?.Offer(who.Number, text);
+
+			// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
+			// the handler becomes the HTTP response body instead of going to a (nonexistent)
+			// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
+			if (httpOutputCapture?.TryCapture(who.Number, text) == true) return false;
 		}
 
 		if (listenerRoutingService != null && mediator != null && sender != null)
@@ -279,14 +287,20 @@ public class NotifyService(
 		var delivered = context is null ? body : MString.Concat(context.Prefix, body);
 		// Empty relays can reach nested listeners without producing framing or an empty transport message.
 		if (!prompt && delivered.Length == 0) return;
+		// Listener routing has already run above. With no connection to deliver to, the NOSPOOF/PARANOID
+		// header would be built for nobody, so the recipient's connections are looked up first.
+		await using var bound = connections.Get(who).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
+		if (!await bound.MoveNextAsync()) return;
 		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
+		do
 		{
+			var conn = bound.Current;
 			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			if (prompt) await PublishMarkupPrompt(conn.Handle, outgoing);
 			else await PublishMarkup(conn.Handle, outgoing);
 		}
+		while (await bound.MoveNextAsync());
 	}
 
 	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -349,12 +363,12 @@ public class NotifyService(
 			return;
 		}
 
+		if (!await CanReceive(who, sender)) return;
 		var excludeHandles = await except.ToAsyncEnumerable()
 			.SelectMany(dbRef => connections.Get(dbRef))
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
-		if (!await CanReceive(who, sender)) return;
 		var outgoing = await PrepareRecipient(Prepare(what), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
@@ -398,23 +412,15 @@ public class NotifyService(
 	/// HTTP output capture for localized notifications: these resolve per-connection (locale),
 	/// so without this check a localized message to a connectionless http_handler would silently
 	/// vanish instead of joining the response body (e.g. @include's "No such attribute: …").
-	/// Captured text uses the neutral locale.
+	/// Captured text uses the neutral locale. A portal command's copy (<see cref="ICommandOutputCapture"/>)
+	/// is taken here too, and never stops delivery.
 	/// </summary>
 	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
-		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
-
-	public ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
-		=> NotifyLocalized(who, key, sender: null, args: args);
-
-	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, args);
-
-	public async ValueTask NotifyLocalized(long handle, string key, params object[] args)
 	{
-		var conn = connections.Get(handle);
-		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
-		var message = localizationService.Format(key, locale, args);
-		await Notify(handle, message, sender: null);
+		if (httpOutputCapture is null && commandOutputCapture is null) return false;
+		var neutral = localizationService.Format(key, null, args);
+		commandOutputCapture?.Offer(who.Number, neutral);
+		return httpOutputCapture?.TryCapture(who.Number, neutral) == true;
 	}
 
 	public async ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
@@ -444,9 +450,6 @@ public class NotifyService(
 		}
 	}
 
-	public ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, sender, args);
-
 	public async ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args)
 	{
 		var conn = connections.Get(handle);
@@ -458,10 +461,11 @@ public class NotifyService(
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
 		if (!await CanReceive(who, sender)) return;
-		if (httpOutputCapture is not null)
+		if (httpOutputCapture is not null || commandOutputCapture is not null)
 		{
-			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
-			if (httpOutputCapture.TryCapture(who.Number, neutral.ToPlainText()))
+			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args).ToPlainText();
+			commandOutputCapture?.Offer(who.Number, neutral);
+			if (httpOutputCapture?.TryCapture(who.Number, neutral) == true)
 			{
 				return;
 			}
@@ -477,9 +481,6 @@ public class NotifyService(
 			if (message.Length > 0) await PublishMarkup(conn.Handle, Prepare(message));
 		}
 	}
-
-	public ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args)
-		=> NotifyLocalizedMarkup(who.Object().DBRef, key, sender, args);
 
 	public async ValueTask NotifyLocalizedMarkup(long handle, string key, AnySharpObject? sender, params MString[] args)
 	{

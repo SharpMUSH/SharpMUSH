@@ -65,6 +65,7 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	public IPasswordService Passwords => _services.GetRequiredService<IPasswordService>();
 
 	public IPermissionService Permissions => _services.GetRequiredService<IPermissionService>();
+	public IChannelPermissionService ChannelPermissions => _services.GetRequiredService<IChannelPermissionService>();
 
 	internal string LightningPath => _lightningPath;
 
@@ -113,8 +114,15 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 			// process-wide log provider at this container's logger factory, which dies with the world and
 			// takes every other host's Quartz logging down with it. Removing the factory makes anything that
 			// still reaches for Quartz fail here rather than repoint that static.
+			services.RemoveAll<SharpMUSH.Library.Services.TaskScheduler>();
 			services.RemoveAll<ITaskScheduler>();
 			services.AddSingleton(Substitute.For<ITaskScheduler>());
+			services.RemoveAll<ISemaphoreQueue>();
+			services.AddSingleton(Substitute.For<ISemaphoreQueue>());
+			services.RemoveAll<ITaskQueueControl>();
+			services.AddSingleton(Substitute.For<ITaskQueueControl>());
+			services.RemoveAll<ITaskQueueReader>();
+			services.AddSingleton(Substitute.For<ITaskQueueReader>());
 			services.RemoveAll<ISchedulerFactory>();
 			// As on the shared test host: the advisor is a delayed diagnostic task that outlives a short-lived
 			// container and faults once it is disposed.

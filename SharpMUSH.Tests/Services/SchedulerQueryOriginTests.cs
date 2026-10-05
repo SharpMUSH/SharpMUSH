@@ -17,7 +17,7 @@ public class SchedulerQueryOriginTests
 		await foreach (var row in rows) { }
 	};
 
-	private static Func<Task> Capture(ITaskScheduler scheduler, string kind) => kind switch
+	private static Func<Task> Capture(ITaskQueueReader scheduler, string kind) => kind switch
 	{
 		"semaphore" => ConsumeLater(new GetScheduledTasksHandler(scheduler).Handle(new ScheduleSemaphoreQuery(new DBRef(10)), CancellationToken.None)),
 		"delay" => ConsumeLater(new GetDelayTasksHandler(scheduler).Handle(new ScheduleDelayQuery(new DBRef(10)), CancellationToken.None)),
@@ -32,7 +32,7 @@ public class SchedulerQueryOriginTests
 	[Arguments("all")]
 	public async Task DeferredQueryPreservesOriginatingCancellation(string kind)
 	{
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		using var source = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var origin = new ExecutionBudget(TimeSpan.FromSeconds(30), source.Token);
@@ -68,7 +68,7 @@ public class SchedulerQueryOriginTests
 	[Test]
 	public async Task DeferredQueryCannotReplaceExpiredOriginWithFreshConsumer()
 	{
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		var calls = 0;
 		scheduler.GetDelayTasks(Arg.Any<DBRef>()).Returns(_ => { calls++; return AsyncEnumerable.Empty<long>(); });
 		Func<Task> consume;
@@ -83,7 +83,7 @@ public class SchedulerQueryOriginTests
 	[Test]
 	public async Task StreamReentersLinkedBudgetAfterYieldWithoutLeakingToConsumer()
 	{
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		using var request = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var consumer = new ExecutionBudget(TimeSpan.FromSeconds(30));

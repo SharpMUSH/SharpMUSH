@@ -66,9 +66,11 @@ If `<class>`=EVAL, only objects for which `<restriction>` evaluates to a true bo
 
 If `<class>`=MINDB, only objects with dbrefs of `<restriction>` or higher will be listed. If `<class>`=MAXDB, only objects with dbrefs of `<restriction>` or lower will be listed.
 
-If `<class>`=START, then @search will start returning results at the `<restriction>`th result.
+If `<class>`=START, then @search will start returning results at the `<restriction>`th result. The first result is 1.
 
 If `<class>`=COUNT, then @search will only return up to `<restriction>` results.
+
+A START or COUNT below 1 is an error ("Invalid start index" / "Invalid count index"); nothing is searched, and lsearch() returns #-1.
 
 If `<class>`=COMMAND, then @search will only return objects that respond to `<restriction>` as an $-command.
 

@@ -69,7 +69,7 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// C# after the index range is read. Visibility filtering: the viewer
 /// scopes <c>mine</c> and nothing else; who may SEE a scene is decided above this layer.</para>
 /// </remarks>
-public sealed class LightningSceneStorage : ISceneStorage
+public sealed partial class LightningSceneStorage : ISceneStorage
 {
 	/// <summary>
 	/// Reflection-based and PascalCase. The plugin runs in its own <c>AssemblyLoadContext</c> and cannot
@@ -155,6 +155,10 @@ public sealed class LightningSceneStorage : ISceneStorage
 		public Dictionary<string, string> Meta { get; init; } = [];
 		public long CreatedAt { get; init; }
 		public bool IsDeleted { get; set; }
+
+		/// <summary>When the pose was soft-deleted (UTC millis); null on a live pose, and on one deleted
+		/// before this was recorded. The deleted-pose retention rule ages a pose from here.</summary>
+		public long? DeletedAt { get; set; }
 
 		/// <summary>The <c>current_edit</c> pointer: which <c>scene.log</c> version this pose shows.</summary>
 		public uint CurrentEditSeq { get; set; }
@@ -441,21 +445,52 @@ public sealed class LightningSceneStorage : ISceneStorage
 				return new NotFound();
 			}
 
-			// Filtered on the projected, live-resolved author: a pose whose author has since been destroyed
-			// carries a null AuthorDbref and matches nobody.
+			// Filtered on the live-resolved author, as the projection reports it: a pose whose author has
+			// since been destroyed carries a null AuthorDbref and matches nobody. Tested before projecting, so
+			// a pose that does not match never has its current edit read.
 			var author = DbrefNumber(authorDbref) is { } number ? $"#{number}" : null;
-			var poses = ScenePoses(tx, id)
-				.Select(entry => ProjectPose(tx, entry.Pose))
-				.Where(p => author is null || p.AuthorDbref == author)
-				.ToList();
+			bool Matches(ScenePoseRecord pose) => author is null || LiveDbref(tx, pose.AuthorDbref) == author;
 
-			// The last `count` poses: drop the head in place rather than copying the tail out.
-			if (count is { } limit && limit >= 0 && poses.Count > limit)
+			if (count is { } limit && limit >= 0)
 			{
-				poses.RemoveRange(0, poses.Count - limit);
+				// The last `limit` matching poses: the key's sequence is the chain order, so the scene's range
+				// read backwards meets them newest first and the read stops at the last one needed.
+				var tail = tx.RangeReverse(_poses, ScenePosePrefix(id))
+					.Select(entry => Decode<ScenePoseRecord>(entry.Value))
+					.Where(Matches)
+					.Take(limit)
+					.Select(pose => ProjectPose(tx, pose))
+					.ToList();
+				tail.Reverse();
+				return tail;
 			}
 
-			return poses;
+			return ScenePoses(tx, id)
+				.Where(entry => Matches(entry.Pose))
+				.Select(entry => ProjectPose(tx, entry.Pose))
+				.ToList();
+		}));
+
+	public Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take)
+		=> Task.FromResult(_accessor.Read<Found<ScenePosePage>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is null)
+			{
+				return new NotFound();
+			}
+
+			var limit = Math.Max(1, take);
+			var prefix = ScenePosePrefix(id);
+			var start = after is { } cursor ? PoseKey(id, (uint)Math.Clamp(cursor, 0, uint.MaxValue)) : null;
+			// One entry past the page tells whether another follows without decoding it.
+			var entries = (start is null ? tx.Range(_poses, prefix) : tx.RangeFromKey(_poses, start))
+				.TakeWhile(entry => Keys.StartsWith(entry.Key, prefix))
+				.SkipWhile(entry => start is not null && entry.Key.AsSpan().SequenceEqual(start))
+				.Take(limit + 1)
+				.ToList();
+			var page = entries.Take(limit).Select(entry => ProjectPose(tx, Decode<ScenePoseRecord>(entry.Value))).ToList();
+			return new ScenePosePage(page, entries.Count > limit ? SeqOf(entries[limit - 1].Key) : null);
 		}));
 
 	public Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
@@ -610,8 +645,10 @@ public sealed class LightningSceneStorage : ISceneStorage
 			}
 
 			var pose = found.Pose;
-			// Soft delete: the slot stays in the chain so the poses around it keep their order.
+			// Soft delete: the slot stays in the chain so the poses around it keep their order. Its content
+			// and edit history stay too, until the deleted-pose retention rule (if one is set) purges them.
 			pose.IsDeleted = true;
+			pose.DeletedAt ??= UtcMillis();
 			tx.Put(_poses, found.Key, Encode(pose));
 
 			if (ReadScene(tx, pose.SceneId) is { } scene)
@@ -636,9 +673,11 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return edits;
 		}));
 
+	// Tags and cast are copied verbatim from the pose record by ProjectPose, so they are read off the
+	// decoded records: no current-edit read and no live dbref resolution per pose.
 	public Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
-			=> LivePoses(tx, BareId(sceneId)) is not { } poses
+			=> LivePoseRecords(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
 				: poses
 					.SelectMany(p => p.Tags)
@@ -648,7 +687,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 
 	public Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
-			=> LivePoses(tx, BareId(sceneId)) is not { } poses
+			=> LivePoseRecords(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
 				: poses
 					.Select(p => string.IsNullOrEmpty(p.ShowAsName) ? p.AuthorName : p.ShowAsName)
@@ -1037,13 +1076,13 @@ public sealed class LightningSceneStorage : ISceneStorage
 			.Select(e => (e.Key, e.Value, Decode<ScenePoseRecord>(e.Value)))
 			.ToList();
 
-	/// <summary>A scene's non-deleted poses, projected; null when the scene itself is missing.</summary>
-	private List<ScenePose>? LivePoses(ITx tx, string sceneId) =>
+	/// <summary>A scene's non-deleted pose records, unprojected; null when the scene itself is missing.</summary>
+	private List<ScenePoseRecord>? LivePoseRecords(ITx tx, string sceneId) =>
 		ReadScene(tx, sceneId) is null
 			? null
 			: ScenePoses(tx, sceneId)
 				.Where(e => !e.Pose.IsDeleted)
-				.Select(e => ProjectPose(tx, e.Pose))
+				.Select(e => e.Pose)
 				.ToList();
 
 	private List<SceneMemberRecord> SceneMembers(ITx tx, string sceneId) =>
@@ -1060,22 +1099,17 @@ public sealed class LightningSceneStorage : ISceneStorage
 			.ToList();
 
 	/// <summary>
-	/// The version a pose currently shows and how many it has, from one pass over its log — the sequence
-	/// sits in the key, so every version except the shown one is counted without being decoded.
+	/// The version a pose currently shows, read by its key, and how many versions it has, read off the last
+	/// key of its log. A log's sequences are always exactly 1..N — a pose starts with version 1, and an edit
+	/// first drops every version past the pointer and then writes pointer + 1 — so the highest sequence is
+	/// the count, and neither depends on how long the history is.
 	/// </summary>
 	private (int Count, ScenePoseEditRecord? Current) CurrentEdit(ITx tx, string poseId, uint currentSeq)
 	{
-		var count = 0;
-		ScenePoseEditRecord? current = null;
-		foreach (var (key, value) in tx.Range(_log, PoseLogPrefix(poseId)))
-		{
-			count++;
-			if (SeqOf(key) == currentSeq)
-			{
-				current = Decode<ScenePoseEditRecord>(value);
-			}
-		}
-
+		var current = tx.TryGet(_log, Keys.Composite(poseId, "", currentSeq), out var bytes)
+			? Decode<ScenePoseEditRecord>(bytes)
+			: null;
+		var count = tx.RangeReverse(_log, PoseLogPrefix(poseId)).Select(entry => (int)SeqOf(entry.Key)).FirstOrDefault();
 		return (count, current);
 	}
 
@@ -1155,8 +1189,9 @@ public sealed class LightningSceneStorage : ISceneStorage
 	private ScenePose ProjectPose(ITx tx, ScenePoseRecord rec)
 	{
 		var (versions, current) = CurrentEdit(tx, rec.Id, rec.CurrentEditSeq);
-		// "Edited" iff more than one version exists — an unedited pose reports no editor at all.
-		var edited = versions > 1 && current is not null;
+		// "Edited" iff more than one version exists — an unedited pose reports no editor at all. A pose
+		// showing a version past the first was edited even when retention has purged every older one.
+		var edited = current is not null && (versions > 1 || rec.CurrentEditSeq > 1);
 
 		return new ScenePose(
 			Id: rec.Id,

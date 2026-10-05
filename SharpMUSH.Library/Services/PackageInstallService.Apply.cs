@@ -24,6 +24,39 @@ public partial class PackageInstallService
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
 		IManagedPackageBinarySource? binarySource = null)
+		=> await gate.RunAsync(() => ApplyExclusiveAsync(manifest, request, binarySource, cancellationToken), cancellationToken) switch
+		{
+			CommittedApply committed => await RunLifecycleAsync(committed, cancellationToken),
+			Error<string> error => error
+		};
+
+	/// <summary>
+	/// A committed apply, and the changeset whose lifecycle hooks are still to run: none for a managed
+	/// package, which has no objects to run them on.
+	/// </summary>
+	private sealed record CommittedApply(PackageApplyResult Result, PackageChangeset? Changeset);
+
+	/// <summary>
+	/// Runs a committed apply's <c>AINSTALL</c> or <c>AUPDATE</c>, outside the gate: it is softcode, it is
+	/// not part of the apply and is never undone, and the runner swallows and logs its failures, so a
+	/// bad hook never fails an install.
+	/// </summary>
+	private async Task<Result<PackageApplyResult>> RunLifecycleAsync(CommittedApply committed, CancellationToken cancellationToken)
+	{
+		if (committed.Changeset is not null)
+		{
+			await lifecycle.RunLifecycleAsync(committed.Changeset, committed.Result.CreatedObjects, cancellationToken);
+		}
+
+		return committed.Result;
+	}
+
+	/// <summary>Everything an apply reads and writes, run inside the package-operation gate.</summary>
+	private async Task<Result<CommittedApply>> ApplyExclusiveAsync(
+		PackageManifest manifest,
+		PackageApplyRequest request,
+		IManagedPackageBinarySource? binarySource,
+		CancellationToken cancellationToken)
 	{
 		// Managed packages (Phase 4) carry a compiled C# plugin DLL rather than
 		// softcode: there is no plan/changeset to compute. Verify + trust-gate +
@@ -31,7 +64,11 @@ public partial class PackageInstallService
 		// list) and return. The plugin loads on the next boot.
 		if (manifest.Kind == PackageKind.Managed)
 		{
-			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken);
+			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken) switch
+			{
+				PackageApplyResult applied => new CommittedApply(applied, null),
+				Error<string> error => error
+			};
 		}
 
 		if (manifest.Objects.Any(o => o.Type == PackageObjectType.Player))
@@ -110,20 +147,19 @@ public partial class PackageInstallService
 
 		return await ApplyChangesetAsync(run, application, cancellationToken) switch
 		{
-			PackageApplyResult applied => await AfterCommitAsync(run, applied, cancellationToken),
+			PackageApplyResult applied => await AfterCommitAsync(run, applied),
 			Error<string> error => await writes.RevertAsync(error)
 		};
 	}
 
 	/// <summary>
-	/// What follows a committed apply. Neither step is part of it and neither is undone; the lifecycle
-	/// runner swallows and logs failures, so a bad AINSTALL or AUPDATE never fails an install.
+	/// What follows a committed apply inside the gate: pruning old revisions, which is not part of the
+	/// apply and is not undone. Its lifecycle hooks run once the gate is released.
 	/// </summary>
-	private async Task<PackageApplyResult> AfterCommitAsync(ApplyRun run, PackageApplyResult applied, CancellationToken cancellationToken)
+	private async Task<CommittedApply> AfterCommitAsync(ApplyRun run, PackageApplyResult applied)
 	{
 		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
-		await lifecycle.RunLifecycleAsync(run.Changeset, run.Created, cancellationToken);
-		return applied;
+		return new CommittedApply(applied, run.Changeset);
 	}
 
 	/// <summary>

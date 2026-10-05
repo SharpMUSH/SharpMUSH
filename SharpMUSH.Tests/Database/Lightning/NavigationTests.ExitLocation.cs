@@ -36,8 +36,8 @@ public partial class NavigationTests
 			await Assert.That((await _db.GetExitsAsync(source.Object().DBRef).ToArrayAsync()).Select(item => item.Object.DBRef)).Contains(reference);
 			await Assert.That((await _db.GetExitsAsync(other.Object().DBRef).ToArrayAsync()).Select(item => item.Object.DBRef)).DoesNotContain(reference);
 			await Assert.That((await _db.GetExitsAsync(other).ToArrayAsync()).Select(item => item.Object.DBRef)).DoesNotContain(reference);
-			await Assert.That((await _db.GetContentsAsync(source).ToArrayAsync()).Select(item => item.Object().DBRef)).Contains(reference);
-			await Assert.That((await _db.GetContentsAsync(other).ToArrayAsync()).Select(item => item.Object().DBRef)).DoesNotContain(reference);
+			await Assert.That((await _db.GetContentRefsAsync(source.Object().DBRef).ToArrayAsync()).Select(item => item.Number)).Contains(reference.Number);
+			await Assert.That((await _db.GetContentRefsAsync(other.Object().DBRef).ToArrayAsync()).Select(item => item.Number)).DoesNotContain(reference.Number);
 			var reloaded = (await _db.GetObjectNodeAsync(reference)).Expect<SharpExit>();
 			await Assert.That((await reloaded.Location.WithCancellation(CancellationToken.None)).Object().DBRef).IsEqualTo(source.Object().DBRef);
 			var home = await reloaded.Home.WithCancellation(CancellationToken.None);

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
-using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Library.Authorization;
@@ -39,15 +38,17 @@ public interface IGameHubClient
 ///   OnDisconnectedAsync — removes the client from all groups it joined
 ///
 /// Client-to-server:
-///   SendCommand  — forwards a player command to the game engine via NATS
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
+///
+/// Game commands do not go through this hub. The portal runs them with <c>POST api/commands</c>
+/// (<see cref="Controllers.CommandsController"/>), which answers with the command's own output.
 ///
 /// (Scene realtime — JoinScene/LeaveScene/ReceiveSceneMessage — moved out of this hub into the Scene
 /// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
-public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
+public class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
 	IVisibleWorldProjection projection) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
@@ -105,32 +106,6 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 		logger.LogInformation("[GameHub] Connection {ConnectionId} disconnected", Context.ConnectionId);
 		registry.Remove(Context.ConnectionId);
 		await base.OnDisconnectedAsync(exception);
-	}
-
-	/// <summary>
-	/// Client invokes this to send a command string to the game engine.
-	/// Publishes a <see cref="GameCommandMessage"/> to NATS (subject
-	/// <c>{prefix}.game-command</c>) for the engine to consume.
-	/// </summary>
-	/// <param name="command">The raw command string typed by the player.</param>
-	public async Task SendCommand(string command)
-	{
-		if (Context.User?.GetCapabilityActor() is not { } actor
-			|| await projection.ResolveCharacterAsync(actor, Context.ConnectionAborted) is not { } player)
-		{
-			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a current linked character; rejecting",
-				Context.ConnectionId);
-			throw new HubException("No current linked character on this connection.");
-		}
-
-		var dbref = player.Object.DBRef.ToString();
-		logger.LogDebug("[GameHub] Connection {ConnectionId} (char:{Dbref}) sent command: {Command}",
-			Context.ConnectionId, dbref, command);
-
-		var message = new GameCommandMessage(dbref, command, DateTimeOffset.UtcNow);
-		await messageBus.Publish(message, Context.ConnectionAborted);
-		logger.LogDebug("[GameHub] Published GameCommandMessage for char:{Dbref} at {Timestamp}",
-			message.CharacterDbref, message.Timestamp);
 	}
 
 	/// <summary>

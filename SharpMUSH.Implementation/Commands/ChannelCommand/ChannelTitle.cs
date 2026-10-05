@@ -3,6 +3,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -22,7 +23,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelTitle
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
 		IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString? title)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -40,7 +41,7 @@ public static class ChannelTitle
 	{
 		var channelLabel = channel.Name.ToPlainText();
 
-		var memberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		var memberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 		if (memberStatus is null)
 		{
 			var notOn = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelLabel);
@@ -73,7 +74,11 @@ public static class ChannelTitle
 				status with { Title = MarkupText.Empty }));
 
 			var cleared = string.Format(ErrorMessages.Notifications.ChatTitleCleared, noTitles, channelLabel);
-			await NotifyService.Notify(executor, cleared, executor);
+			// extchat.c:2101 — `if (!Quiet(player))`: the player's own QUIET flag, not its owner's.
+			if (!await executor.Object().HasQuietFlagAsync())
+			{
+				await NotifyService.Notify(executor, cleared, executor);
+			}
 			return new CallState(cleared);
 		}
 
@@ -97,7 +102,11 @@ public static class ChannelTitle
 		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor, status with { Title = title }));
 
 		var response = string.Format(ErrorMessages.Notifications.ChatTitleSet, noTitles, channelLabel);
-		await NotifyService.Notify(executor, response, executor);
+		// extchat.c:2125 — `if (!Quiet(player))`.
+		if (!await executor.Object().HasQuietFlagAsync())
+		{
+			await NotifyService.Notify(executor, response, executor);
+		}
 		return new CallState(response);
 	}
 }

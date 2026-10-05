@@ -53,3 +53,46 @@ think mail(here,1)
 think mailfrom(here,1)
 think maillist(here,1)
 think maillist(*nosuchmailplayer,1)
+
+::case mail.malias-lookup  @malias members: lookup_player tests # before it drops one * (#1391)
+::as bob
+@malias +parity1391=*Alice *#1 **Alice
+
+::case mail.folder-numbers  maillist() writes <folder number>:<message>, which mail() and @mail take back (#1494)
+::as alice
+@mail Alice=Numbered/A message to file.
+think maillist()
+@mail/file 2=3
+think maillist(3:)
+think maillist(all)
+think [mailsubject(3:1)]|[mail(me,3:1)]|[mailsubject(me,3:1)]|[mailstatus(3:1)]
+think [mailsubject(3:2)]|[mailsubject(16:1)]|[maillist(16:)]
+@mail/folder 3=Kept
+think maillist(3:)
+@mail/folder Kept
+think maillist()
+think mailsubject(1)
+@mail/folder
+@mail/unfolder Kept
+@mail/folder 3
+@mail/file 1=1
+think maillist(all)
+@mail/file 1:1=2
+@mail/file 2:1=0
+@mail/folder 0
+think maillist()
+@mail/folder 99
+@mail/file 1=99
+
+::case mail.fwd-msglist  @mail/fwd takes a message list and forwards each message it matches
+::as alice
+@mail/folder 0
+@mail Alice=Range one/First of a range.
+@mail Alice=Range two/Second of a range.
+@mail/fwd 1-2=Bob
+@mail/fwd 0:1=Bob
+@mail/forward 1=Bob
+@mail/fwd 1-2=Nobody
+@mail/fwd 1=99
+@mail/fwd bogus=Bob
+@mail/fwd 1

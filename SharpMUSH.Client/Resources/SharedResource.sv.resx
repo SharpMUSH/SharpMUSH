@@ -3190,6 +3190,14 @@
     <value>Scenen hittades inte.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Scenen startades inte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scenen startades, men den kunde inte göras privat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Sök efter ett konto för att hantera dess roller.</value>
     <comment>MT</comment>
@@ -3236,14 +3244,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Låt vem som helst titta</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Terminalen i den här fliken spelar {0}, inte {1}. Starta scenen från en flik som spelar {1}, eller byt tillbaka till {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Det gick inte att bekräfta vilken karaktär terminalen i den här fliken spelar. Försök igen om en stund.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -5052,6 +5052,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scen</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Du tittar på den här scenen. Gå med för att posera här.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Dina poser hamnar i en annan scen. Gå med i den här för att posera här.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Gå med i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Lämna scenen</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>

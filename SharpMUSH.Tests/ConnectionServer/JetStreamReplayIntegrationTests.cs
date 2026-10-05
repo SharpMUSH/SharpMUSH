@@ -4,6 +4,7 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -17,8 +18,8 @@ public class JetStreamReplayIntegrationTests
 
 	private string Url => $"nats://localhost:{NatsTestServer.Instance.GetMappedPublicPort(4222)}";
 
-	private static Task<JetStreamTerminalReplayStore> Replay(string url) =>
-		JetStreamTerminalReplayStore.CreateAsync(url, NullLogger<JetStreamTerminalReplayStore>.Instance);
+	private static Task<JetStreamTerminalReplayStore> Replay(string url, ReplayOptions? options = null) =>
+		JetStreamTerminalReplayStore.CreateAsync(url, NullLogger<JetStreamTerminalReplayStore>.Instance, options);
 
 	private static Task<NatsKvResumeTokenStore> Tokens(string url) =>
 		NatsKvResumeTokenStore.CreateAsync(url, NullLogger<NatsKvResumeTokenStore>.Instance);
@@ -126,5 +127,128 @@ public class JetStreamReplayIntegrationTests
 		await Assert.That(await replay.AfterAsync(session, 0)).IsEmpty();
 		await Assert.That((await replay.AfterAsync(otherSession, 0)).Count).IsEqualTo(1);
 		await replay.DropAsync(otherSession);
+	}
+
+	[Test]
+	public async Task Replay_reports_expired_history_when_the_clients_last_frame_is_gone()
+	{
+		var url = Url;
+		await using var replay = await Replay(url);
+		var session = Guid.NewGuid().ToString("N");
+		var first = (await replay.AppendAsync(session, "one"u8.ToArray())).Seq;
+		var second = (await replay.AppendAsync(session, "two"u8.ToArray())).Seq;
+		await replay.AppendAsync(session, "three"u8.ToArray());
+		await using var connection = new NatsConnection(new NatsOpts { Url = url });
+		var js = new NatsJSContext(connection);
+		// The client acknowledged "one"; age or the byte budget then evicted it.
+		await js.DeleteMessageAsync(JetStreamTerminalReplayStore.ReplayStreamName, new StreamMsgDeleteRequest { Seq = (ulong)first });
+
+		await Assert.That(await replay.OpenAsync(session, first) is IncompleteReplay { Reason: ReplayGap.Expired }).IsTrue();
+		// A client that already has "two" loses nothing.
+		await Assert.That((await replay.AfterAsync(session, second)).Count).IsEqualTo(1);
+		await replay.DropAsync(session);
+	}
+
+	[Test]
+	public async Task Replay_longer_than_the_frame_budget_is_incomplete()
+	{
+		await using var replay = await Replay(Url, new ReplayOptions { MaxFrames = 5 });
+		var session = Guid.NewGuid().ToString("N");
+		var sequences = new List<long>();
+		for (var i = 0; i < 8; i++)
+			sequences.Add((await replay.AppendAsync(session, Encoding.UTF8.GetBytes($"line {i}"))).Seq);
+
+		await Assert.That(await replay.OpenAsync(session, 0) is IncompleteReplay { Reason: ReplayGap.OverBudget }).IsTrue();
+		await Assert.That((await replay.AfterAsync(session, sequences[2])).Select(SeqEnvelope.ReadSeq).ToArray())
+			.IsEquivalentTo(sequences.Skip(3).ToArray());
+		await replay.DropAsync(session);
+	}
+
+	[Test]
+	public async Task Replay_reads_a_page_at_a_time_and_reports_frames_lost_mid_replay()
+	{
+		await using var replay = await Replay(Url, new ReplayOptions { PageSize = 4 });
+		var session = Guid.NewGuid().ToString("N");
+		for (var i = 0; i < 10; i++)
+			await replay.AppendAsync(session, Encoding.UTF8.GetBytes($"line {i}"));
+
+		var opening = await replay.OpenAsync(session, 0);
+		var frames = opening.Expect<ReplayFrames>();
+		await using (frames)
+		{
+			var read = 0;
+			// The frames are purged after the first page was fetched. Only that page was in memory, so the
+			// replay delivers it and then reports the gap instead of claiming a complete history.
+			await Assert.That(async () =>
+			{
+				await foreach (var _ in frames.ReadAsync())
+				{
+					if (++read == 1) await replay.DropAsync(session);
+				}
+			}).Throws<ReplayInterruptedException>();
+			await Assert.That(read).IsEqualTo(4);
+		}
+	}
+
+	[Test]
+	public async Task Cancelling_a_replay_stops_it_and_leaves_the_history_readable()
+	{
+		await using var replay = await Replay(Url, new ReplayOptions { PageSize = 2 });
+		var session = Guid.NewGuid().ToString("N");
+		for (var i = 0; i < 6; i++)
+			await replay.AppendAsync(session, Encoding.UTF8.GetBytes($"line {i}"));
+		using var cancellation = new CancellationTokenSource();
+
+		var frames = (await replay.OpenAsync(session, 0)).Expect<ReplayFrames>();
+		await using (frames)
+		{
+			await Assert.That(async () =>
+			{
+				await foreach (var _ in frames.ReadAsync(cancellation.Token))
+					await cancellation.CancelAsync();
+			}).Throws<OperationCanceledException>();
+		}
+
+		await Assert.That((await replay.AfterAsync(session, 0)).Count).IsEqualTo(6);
+		await replay.DropAsync(session);
+	}
+
+	[Test]
+	public async Task Concurrent_reconnects_each_replay_their_own_session_in_order()
+	{
+		await using var replay = await Replay(Url, new ReplayOptions { PageSize = 16 });
+		var sessions = Enumerable.Range(0, 8).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
+		var appended = sessions.ToDictionary(session => session, _ => new List<long>());
+		for (var i = 0; i < 100; i++)
+			foreach (var session in sessions)
+				appended[session].Add((await replay.AppendAsync(session, Encoding.UTF8.GetBytes($"{session} {i}"))).Seq);
+
+		var replayed = await Task.WhenAll(sessions.Select(async session =>
+			(Session: session, Seqs: (await replay.AfterAsync(session, 0)).Select(SeqEnvelope.ReadSeq).ToArray())));
+
+		foreach (var (session, seqs) in replayed)
+			await Assert.That(seqs).IsEquivalentTo(appended[session].ToArray(), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		foreach (var session in sessions) await replay.DropAsync(session);
+	}
+
+	[Test]
+	public async Task Replay_stream_keeps_its_own_retention_and_byte_budget()
+	{
+		var url = Url;
+		var defaults = new ReplayOptions();
+		await using var replay = await Replay(url);
+		await using var connection = new NatsConnection(new NatsOpts { Url = url });
+		var js = new NatsJSContext(connection);
+
+		var config = (await js.GetStreamAsync(JetStreamTerminalReplayStore.ReplayStreamName)).Info.Config;
+
+		await Assert.That(config.MaxAge).IsEqualTo(defaults.Retention);
+		await Assert.That(config.MaxBytes).IsEqualTo(defaults.MaxBytes);
+		await Assert.That(config.Retention).IsEqualTo(StreamConfigRetention.Limits);
+		await Assert.That(config.Discard).IsEqualTo(StreamConfigDiscard.Old);
+		// Configured apart from the bus's transport retention.
+		var custom = JetStreamTerminalReplayStore.StreamConfiguration(new ReplayOptions { Retention = TimeSpan.FromHours(6), MaxBytes = 1024 });
+		await Assert.That(custom.MaxAge).IsEqualTo(TimeSpan.FromHours(6));
+		await Assert.That(custom.MaxBytes).IsEqualTo(1024L);
 	}
 }

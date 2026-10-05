@@ -84,8 +84,8 @@ public class TerminalLoginServiceTests : TrackingBunitContext, IAsyncDisposable
 		factory.CreateClient("api").Returns(client);
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
-		var (ok, err, _) = await auth.LoginAsync("wiz", "pw");
-		if (!ok) throw new InvalidOperationException($"login failed: {err}");
+		if (await auth.LoginAsync("wiz", "pw") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"login failed: {loginFailure.Message}");
 
 		var terminal = Substitute.For<ITerminalService>();
 		var nav = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();

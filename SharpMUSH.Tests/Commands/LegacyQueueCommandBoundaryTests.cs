@@ -108,7 +108,7 @@ public class LegacyQueueCommandBoundaryTests
 		await mediator.DidNotReceive().Send(Arg.Any<HaltByPidRequest>(), Arg.Any<CancellationToken>());
 	}
 
-	private (SharpMUSH.Implementation.Commands.Commands Commands, IMUSHCodeParser Parser, ITaskScheduler Scheduler, IMediator Mediator)
+	private (SharpMUSH.Implementation.Commands.Commands Commands, IMUSHCodeParser Parser, ITaskQueueReader Scheduler, IMediator Mediator)
 		Create(string method, string commandSwitch)
 	{
 		var actor = new TestObjectFactory().CreatePlayer(commandSwitch == "ALL" ? 1 : 40, "Queue actor");
@@ -125,15 +125,15 @@ public class LegacyQueueCommandBoundaryTests
 			.Returns(AsyncEnumerable.Empty<(string, (DateTimeOffset, NameOrDbRef)[])>());
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		var capabilities = Substitute.For<SharpMUSH.Library.Authorization.IAdministrativeCapabilityService>();
 		var capabilityActor = new SharpMUSH.Library.Authorization.CapabilityActor("legacy-test", actor.Object().DBRef, actor.Object().DBRef);
 		capabilities.GetGameActorAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(capabilityActor);
 		capabilities.GetGrantedScopesAsync(capabilityActor, Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
-		var controls = new QueueControlService(scheduler, capabilities, mediator, permissions);
+		var controls = new QueueControlService(scheduler, Substitute.For<ITaskQueueControl>(), capabilities, mediator, permissions);
 		var notifications = Substitute.For<INotifyService>();
 		var provider = Substitute.For<IServiceProvider>();
-		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ITaskScheduler)
+		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ITaskQueueReader)
 			? scheduler : call.Arg<Type>() == typeof(SharpMUSH.Library.Authorization.IAdministrativeCapabilityService) ? capabilities : call.Arg<Type>() == typeof(INotifyService) ? notifications
 			: call.Arg<Type>() == typeof(IQueueControlService) ? controls : Factory.Services.GetService(call.Arg<Type>()));
 		var parser = Substitute.For<IMUSHCodeParser>();

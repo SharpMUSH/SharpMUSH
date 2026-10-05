@@ -28,6 +28,9 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
 		=> store.CountPagesAsync(ns is { } value ? Namespace(value) : null, includeDrafts);
 
+	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+		=> store.CountPagesByStateAsync(includeDrafts);
+
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
 		=> store.GetPagesByCategoryAsync(WikiHelpers.NormalizeCategory(category), skip, take, visibility ?? WikiVisibility.All);
 
@@ -161,6 +164,10 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)
 		=> RevisionStream(locale) is { } stream ? await store.GetRevisionsAsync(pageId, stream, skip, take) : [];
+
+	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeForLocaleAsync(string pageId, string locale,
+		int beforeRevisionNumber, int take)
+		=> RevisionStream(locale) is { } stream ? await store.GetRevisionsBeforeAsync(pageId, stream, beforeRevisionNumber, take) : [];
 
 	public async Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
 		=> revisionNumber >= 0 && RevisionStream(locale) is { } stream

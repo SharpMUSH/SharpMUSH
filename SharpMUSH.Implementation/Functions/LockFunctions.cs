@@ -119,6 +119,12 @@ public partial class Functions
 			});
 	}
 
+	/// <remarks>
+	/// With a key, <c>fun_lock</c> is <c>do_lock</c> on the object half of argument 0 with the type half
+	/// as the lock type (<c>src/fundb.c:1311-1335</c>) — <see cref="LockHelpers.LockAsync"/>, which
+	/// <c>@lock</c> is too, so it reports exactly what <c>@lock</c> reports. Either way it then answers
+	/// the lock as it now stands.
+	/// </remarks>
 	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object", "expression"])]
 	public async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -127,10 +133,8 @@ public partial class Functions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			if (!await CanInvokeLockCommandAsync(parser, executor, "@LOCK")) return new CallState(ErrorMessages.Returns.PermissionDenied);
 			var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
-			var located = await LocateService.Locate(parser, executor, executor, parts[0], LocateFlags.All);
-			if (located is not AnySharpObject target) return new CallState(LocateFailure(located));
-			if (await LockService.SetAsync(executor, target, parts.Length > 1 ? parts[1] : "Basic", expression.Message!.ToPlainText()) is Error<string> error)
-				await NotifyService.Notify(executor, error.Value);
+			await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
+				parts[0], expression.Message!.ToPlainText(), parts.Length > 1 ? parts[1] : null);
 		}
 		return await ReadLockAsync(parser, ErrorMessages.Returns.PermissionDenied, async (executor, _, resolved) => new CallState(resolved is null
 			? "*UNLOCKED*" : await BooleanExpressionParser.RenderAsync(resolved.Data.LockString, executor, LockRenderMode.Readback)));
@@ -148,22 +152,20 @@ public partial class Functions
 			};
 		});
 
+	/// <remarks><c>fun_lset</c> is one call to <c>do_lset</c> (<c>src/fundb.c:1296-1308</c>), as <c>@lset</c> is.</remarks>
 	[SharpFunction(Name = "lset", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public async ValueTask<CallState> SetLockFlagsFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await CanInvokeLockCommandAsync(parser, executor, "@LSET")) return new CallState(ErrorMessages.Returns.PermissionDenied);
-		var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
-		if (parts.Length < 2)
+		// A refusal do_lset words is told to the caller, not answered; an object that does not match
+		// answers with the matcher's error, as SharpMUSH's side-effect functions do.
+		return await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
+				parser.CurrentState.Arguments["0"].Message!.ToPlainText(), parser.CurrentState.Arguments["1"].Message!.ToPlainText()) switch
 		{
-			await NotifyService.Notify(executor, "No lock name given.");
-			return CallState.Empty;
-		}
-		var located = await LocateService.Locate(parser, executor, executor, parts[0], LocateFlags.All);
-		if (located is not AnySharpObject target) return new CallState(LocateFailure(located));
-		if (await LockService.SetFlagsAsync(executor, target, parts.Length > 1 ? parts[1] : "Basic", parser.CurrentState.Arguments["1"].Message!.ToPlainText()) is Error<string> error)
-			await NotifyService.Notify(executor, error.Value);
-		return CallState.Empty;
+			Error<string> { Value: var unmatched } when unmatched.StartsWith("#-", StringComparison.Ordinal) => new CallState(unmatched),
+			_ => CallState.Empty
+		};
 	}
 
 	private async ValueTask<bool> CanInvokeLockCommandAsync(IMUSHCodeParser parser, AnySharpObject executor, string command)
@@ -239,7 +241,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		if (await BooleanExpressionParser.BindAsync(args["0"].Message!.ToPlainText(), executor) is not string expression)
 			return new CallState(ErrorMessages.Returns.InvalidBoolexp);
-		var delimiter = args.TryGetValue("2", out var separator) ? separator.Message!.ToPlainText() : " ";
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		if (delimiter.Length != 1) return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		var results = new List<string>();
 		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))

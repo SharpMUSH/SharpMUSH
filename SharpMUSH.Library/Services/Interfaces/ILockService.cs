@@ -20,6 +20,9 @@ public interface ILockService
 	ValueTask<Result<Success>> SetAsync(AnySharpObject executor, AnySharpObject target, string name, string expression, CancellationToken cancellationToken = default);
 	ValueTask<Result<Success>> UnsetAsync(AnySharpObject executor, AnySharpObject target, string name, CancellationToken cancellationToken = default);
 
+	/// <inheritdoc cref="LockService.RestoreAsync"/>
+	ValueTask<Result<Success>> RestoreAsync(AnySharpObject executor, AnySharpObject target, string name, SharpLockData data, CancellationToken cancellationToken = default);
+
 	/// <inheritdoc cref="LockService.SetSystemAsync"/>
 	ValueTask SetSystemAsync(AnySharpObject target, string name, string expression, CancellationToken cancellationToken = default);
 	ValueTask<Result<Success>> SetFlagsAsync(AnySharpObject executor, AnySharpObject target, string name, string flags, CancellationToken cancellationToken = default);

@@ -86,12 +86,9 @@ public partial class Functions
 	// PennMUSH registers no CNAND; SharpMUSH offers it as a second spelling of NCAND
 	// ({"NCAND", fun_cand, 1, INT_MAX, …}, function.c:385) and so declares NCAND's arity.
 	[SharpFunction(Name = "cnand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "ncand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: false, truthy: false);
-
-	[SharpFunction(Name = "ncand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
-	public ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> CancellingNegativeAnd(parser, _2);
 
 	[SharpFunction(Name = "neq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value..."])]
 	public ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -153,7 +150,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(long.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(ArgHelpers.TryStrictInteger(parser.CurrentState.Arguments["0"].Message!.ToString(), out long _) ? "1" : "0"));
 
 	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

@@ -20,7 +20,7 @@ public record LimitOptions(
 		ValidationPattern = @"^\d*$",
 		Group = "Database",
 		Order = 1,
-		Min = 1000,
+		Min = 0,
 		Max = 2147483647)]
 	uint? MaxDbReference,
 
@@ -86,7 +86,7 @@ public record LimitOptions(
 		ValidationPattern = @"^\d+$",
 		Group = "Connections",
 		Order = 4,
-		Min = 60,
+		Min = 0,
 		Max = 86400)]
 	uint IdleTimeout,
 
@@ -186,7 +186,7 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 7,
 		Min = 0,
-		Max = 100000)]
+		Max = 2147483647)]
 	uint MaxGuestPennies,
 
 	[property: SharpConfig(
@@ -203,7 +203,7 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "mail_limit",
 		Category = "Limit",
-		Description = "Maximum number of mail messages per player",
+		Description = "Maximum number of mail messages the folder new mail arrives in may hold (per folder, not a ceiling on all of a player's mail)",
 		ValidationPattern = @"^\d+$",
 		Group = "Players",
 		Order = 4,

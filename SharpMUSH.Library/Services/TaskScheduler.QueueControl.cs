@@ -71,7 +71,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			var now = DateTimeOffset.UtcNow;
-			return _pendingEntries.Values.OrderBy(e => e.Pid).Select(e => Snapshot(e, now)).ToArray();
+			return LockedPendingEntries.OrderBy(e => e.Pid).Select(e => Snapshot(e, now)).ToArray();
 		}
 	}
 	public QueueEntrySnapshot? GetQueueEntry(long pid)
@@ -126,7 +126,7 @@ public partial class TaskScheduler
 					Generation = entry.Deferred.Generation + 1
 				}
 			};
-			_pendingEntries[pid] = entry;
+			StoreEntry(entry);
 		}
 		try { await _scheduler.PauseTrigger(new TriggerKey(entry.TriggerName, entry.Group), ExecutionBudget.CurrentToken); }
 		catch (Exception ex)
@@ -163,7 +163,7 @@ public partial class TaskScheduler
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
 			deferred = entry.Deferred!;
-			_pendingEntries[pid] = entry with { Deferred = deferred with { Paused = false, Reason = "" } };
+			StoreEntry(entry with { Deferred = deferred with { Paused = false, Reason = "" } });
 		}
 		if (deferred.ReleasePending) await Activate(pid);
 		return QueueControlResult.Applied;
@@ -191,7 +191,7 @@ public partial class TaskScheduler
 		{
 			entry = _pendingEntries[entry.Pid];
 			deferred = entry.Deferred! with { Generation = entry.Deferred!.Generation + 1, Due = DateTimeOffset.UtcNow + delay };
-			_pendingEntries[entry.Pid] = entry with { Deferred = deferred };
+			StoreEntry(entry with { Deferred = deferred });
 		}
 		await RemoveDeferredTrigger(entry);
 		await deferred.Schedule(deferred.Due, deferred.Generation);
@@ -206,13 +206,13 @@ public partial class TaskScheduler
 			if (!_pendingEntries.TryGetValue(entry.Pid, out var current)) return;
 			job = current.Deferred?.CleanupJob ?? trigger?.JobKey;
 			if (current.Deferred is { } deferred)
-				_pendingEntries[entry.Pid] = current with { Deferred = deferred with { CleanupJob = job } };
+				StoreEntry(current with { Deferred = deferred with { CleanupJob = job } });
 		}
 		await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
 		if (job is not null) await _scheduler.DeleteJob(job, ExecutionBudget.CurrentToken);
 		lock (_admissionLock)
 			if (_pendingEntries.TryGetValue(entry.Pid, out var current) && current.Deferred is { } deferred)
-				_pendingEntries[entry.Pid] = current with { Deferred = deferred with { CleanupJob = null } };
+				StoreEntry(current with { Deferred = deferred with { CleanupJob = null } });
 	}
 	private static TimeSpan Nonnegative(TimeSpan value) => value < TimeSpan.Zero ? TimeSpan.Zero : value;
 }

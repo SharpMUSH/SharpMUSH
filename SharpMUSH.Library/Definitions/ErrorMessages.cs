@@ -116,6 +116,10 @@ public static partial class ErrorMessages
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
+		/// <summary><c>fun_die</c>'s answer for a count of dice outside 1..700 (<c>src/funmisc.c:851-852</c>).</summary>
+		public const string NumberOutOfRange = "#-1 NUMBER OUT OF RANGE";
+		/// <summary><c>fun_wrap</c>'s answer for a width below 2 (<c>src/funstr.c:1666-1668</c>).</summary>
+		public const string WidthTooSmall = "#-1 WIDTH TOO SMALL";
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
@@ -178,7 +182,6 @@ public static partial class ErrorMessages
 		public const string InvalidFormat = "#-1 INVALID FORMAT";
 		public const string InvalidInfoType = "#-1 INVALID INFO TYPE";
 		public const string InvalidJsonMessage = "#-1 INVALID JSON MESSAGE";
-		public const string InvalidLevel = "#-1 INVALID LEVEL";
 		public const string InvalidLineWidth = "#-1 INVALID LINE WIDTH";
 		public const string InvalidLocation = "#-1 INVALID LOCATION";
 		public const string InvalidLock = "#-1 INVALID LOCK";
@@ -233,6 +236,7 @@ public static partial class ErrorMessages
 		/// "not yours to see" have to read the same, or the answer says whether the descriptor exists.
 		/// </summary>
 		public const string NoSuchDescriptorOrPermissionDenied = "#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED";
+		public const string NeedAWord = "#-1 NEED A WORD";
 		public const string NonNegativeInteger = "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER";
 		public const string NotAMember = "#-1 NOT A MEMBER OF THAT CHANNEL";
 		public const string NotAnArray = "#-1 NOT AN ARRAY";
@@ -250,6 +254,7 @@ public static partial class ErrorMessages
 		public const string StringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
+		public const string TooManyWords = "#-1 TOO MANY WORDS";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
 		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";
@@ -762,6 +767,8 @@ public static partial class ErrorMessages
 		/// zone is cleared, which is why there is no separate "Zone cleared." here.
 		/// </summary>
 		public const string ZoneChanged = "Zone changed.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:238</c>): to the enactor, after every successful <c>@chown</c>; QUIET does not suppress it.</summary>
+		public const string OwnerChanged = "Owner changed.";
 		public const string CantMakeCircularZones = "You can't make circular zones!";
 		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
 		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
@@ -820,12 +827,41 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH src/lock.c:949, do_lset.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LockFlagsUnset = "{0}/{1} - lock flags unset.";
+		/// <summary>PennMUSH src/lock.c:726, do_lock: the object matched but the locker does not control it.</summary>
+		public const string CantLockThat = "You can't lock that!";
+		/// <summary>PennMUSH src/lock.c:633, check_lock_type.</summary>
+		public const string UnknownLockType = "Unknown lock type.";
+		/// <summary>PennMUSH src/lock.c:646, check_lock_type.</summary>
+		public const string InvalidLockName = "That is not a valid lock name.";
+		/// <summary>PennMUSH src/lock.c:638, check_lock_type.</summary>
+		public const string LockNameHasPipe = "The character '|' may not be used in lock names.";
+		/// <summary>PennMUSH src/lock.c:928, do_lset.</summary>
+		public const string UnrecognizedLockFlag = "Unrecognized lock flag.";
+		/// <summary>PennMUSH src/lock.c:934, do_lset.</summary>
+		public const string NoSuchLock = "No such lock.";
 
 		// --- Link/Unlink messages aligned with PennMUSH src/create.c ---
+		/// <summary>
+		/// <c>do_real_open</c>'s link report (<c>src/create.c:175</c>), which prints both dbrefs bare —
+		/// <c>@open</c>, <c>open()</c> and the exits <c>@dig</c> makes.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LinkedExitToRoom = "Linked exit #{0} to #{1}";
+		/// <summary>
+		/// <c>do_link</c>'s exit report (<c>src/create.c:385</c>): the destination through
+		/// <c>unparse_object</c>, so <c>*HOME*</c> and <c>*VARIABLE*</c> for the two keywords.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string UnlinkedExit = "Unlinked exit #{0}.";
+		public const string LinkedExitToObject = "Linked exit #{0} to {1}";
+		/// <summary><c>do_unlink</c> (<c>src/create.c:275-276</c>): the old destination through <c>unparse_object</c>.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnlinkedExit = "Unlinked exit #{0} (Used to lead to {1}).";
+		/// <summary><c>do_open</c>'s source-room refusal (<c>src/create.c:214</c>).</summary>
+		public const string OpenFromWhere = "Open from where?";
+		/// <summary><c>parse_linkable_room</c> (<c>src/create.c:56</c>): not here, home or a dbref.</summary>
+		public const string NotAValidObject = "That is not a valid object.";
+		/// <summary><c>parse_linkable_room</c> (<c>src/create.c:59</c>).</summary>
+		public const string RoomBeingDestroyed = "That room is being destroyed. Sorry.";
 		/// <summary>
 		/// <c>do_unlink</c>'s <c>NOTHING</c> arm (<c>src/create.c:261</c>). Its match is silent, so a name
 		/// that resolves to nothing — including one dropped because a mortal does not control it — reports
@@ -873,8 +909,6 @@ public static partial class ErrorMessages
 		public const string ObjectIsProtectedSafe = "That object is protected (SAFE).";
 
 		public const string Destroyed = "Destroyed.";
-		public const string LinkedToHome = "Linked to home.";
-		public const string LinkedToVariable = "Linked to variable.";
 		public const string HomeSet = "Home set.";
 		/// <summary><c>do_name</c>'s confirmation (<c>src/set.c:154</c>), gated on <c>AreQuiet</c>.</summary>
 		public const string NameSet = "Name set.";
@@ -882,7 +916,6 @@ public static partial class ErrorMessages
 		public const string DropToRemoved = "Dropto removed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SparedFromDestructionFormat = "Spared from destruction: {0}";
-		public const string SourceMustBeARoom = "Source must be a room.";
 		/// <summary>
 		/// <c>do_real_open</c>'s first refusal (<c>src/create.c:108-110</c>): an exit is sourced in a
 		/// room or nowhere. Reached by <c>@open</c> with a source that is not a room, and by cloning an
@@ -950,14 +983,14 @@ public static partial class ErrorMessages
 
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";
-		public const string AllObjectsHalted = "All objects halted.";
 		public const string Notified = "Notified.";
+		/// <summary>PennMUSH <c>cmd_notify_drain</c> (<c>src/cque.c:1539</c>), unless the executor or its owner is QUIET.</summary>
+		public const string Drained = "Drained.";
 		public const string YouDoNotHavePermissionToSpoofEmits = "You do not have permission to spoof emits.";
 		public const string NoSuchCommandAtLogin = "No such command available at login.";
 		public const string InvalidRoomSpecified = "Invalid room specified.";
 		public const string YouMustProvideMatchString = "You must provide a string to match when using /match.";
 		public const string YouMustSpecifyObjectToDecompile = "You must specify an object to decompile.";
-		public const string AllObjectsRestarted = "All objects restarted.";
 		public const string YouMustSpecifyObjectToRestart = "You must specify an object to restart.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AmbiguousChannelNameFormat = "Ambiguous channel name '{0}'. Please be more specific.";
@@ -1013,8 +1046,6 @@ public static partial class ErrorMessages
 		public const string AhelpTopicsMatchingFormat = "Admin help topics matching '{0}':";
 		public const string AhelpTryPattern = "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.";
 
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AllObjectsHaltedWithCountFormat = "All objects halted. {0} objects processed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCreateFlagFormat = "Failed to create flag '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1125,6 +1156,9 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
+		/// <summary>PennMUSH <c>do_halt</c> (<c>src/cque.c:2176-2178</c>): the owner of an object whose queue is wiped by hardcode, unless QUIET.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string HaltedNoticeFormat = "Halted: {0}({1})";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectDoesNotWantToHearFromYouFormat = "{0} does not want to hear from you.";
@@ -1161,16 +1195,18 @@ public static partial class ErrorMessages
 		/// <summary><c>examine_atrs</c>'s answer to a named pattern that matched nothing (<c>src/look.c:384</c>).</summary>
 		public const string ExamineNoMatchingAttributes = "No matching attributes.";
 
-		public const string EditInvalidArguments = "Invalid arguments to @edit.";
-		public const string EditInvalidFormat = "Invalid format. Use: object/attribute=search,replace";
-		public const string EditMustSpecifySearchAndReplace = "You must specify search and replace strings.";
-		public const string EditNoMatchingAttributesFound = "No matching attributes found.";
+		/// <summary><c>do_edit</c>'s answers (<c>src/set.c:963</c>) and <c>edit_helper</c>'s per-attribute lines (<c>src/set.c:917</c>).</summary>
+		public const string EditInvalidFormat = "I need to know what you want to edit.";
+		public const string EditMustSpecifySearchAndReplace = "Nothing to do.";
+		public const string EditNoMatchingAttributesFound = "No matching attributes.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditAttributeSetFormat = "{0} - Set.";
+		public const string EditAttributeSetFormat = "{0} - Set: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditWouldChangeToFormat = "{0} - Would change to: {1}";
+		public const string EditAttributeUnchangedFormat = "{0} - Unchanged.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EditSummaryFormat = "{0} {1} attribute{2}. {3} unchanged.";
+		public const string EditQuietSummaryFormat = "{0} attributes edited, {1} skipped.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string EditInvalidRegexpFormat = "Invalid regexp: {0}";
 
 		public const string GrepInvalidArguments = "Invalid arguments to @grep.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1200,12 +1236,6 @@ public static partial class ErrorMessages
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
 		public const string PasswordInvalid = "Invalid password.";
-
-		public const string RestartMustSpecifyObject = "You must specify an object to restart.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string RestartedPlayerAndObjectsFormat = "Restarted {0} and all their objects.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string RestartedObjectFormat = "Restarted {0}.";
 
 		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
 		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section
@@ -1271,6 +1301,9 @@ public static partial class ErrorMessages
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
+		// PennMUSH fill_search_spec (src/wiz.c:2388-2399): START and COUNT are 1-based and at least one.
+		public const string SearchInvalidStart = "Invalid start index";
+		public const string SearchInvalidCount = "Invalid count index";
 		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
 		public const string SearchRoomsHeader = "\nROOMS:";
 		public const string SearchExitsHeader = "\nEXITS:";
@@ -1358,8 +1391,9 @@ public static partial class ErrorMessages
 		public const string PurgeComplete = "Purge complete.";
 
 		public const string ChownAllUsage = "Usage: @chownall <player>[=<new owner>]";
+		/// <summary>PennMUSH <c>do_chownall</c> (<c>src/wiz.c:1002</c>), to the executor: <c>{0}</c> objects chowned.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
+		public const string ChownAllCompleteFormat = "Ownership changed for {0} objects.";
 
 		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";

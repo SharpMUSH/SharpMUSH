@@ -526,7 +526,7 @@ public class QueuePauseTests
 		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(RequirePid(job), "hold");
-		if (notified) await queue.Notify(semaphore, 1);
+		if (notified) await queue.NotifyCounted(semaphore, 1);
 		await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(notified ? 0 : 1);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(notified ? 1 : 0);
 		await Assert.That(executed.Task.IsCompleted).IsFalse();
@@ -672,7 +672,7 @@ public class QueuePauseTests
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think signal"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(RequirePid(job), "hold");
 		await Assert.That(await queue.ModifyQRegisters(semaphore, new() { ["signal"] = MarkupText.Plain("retained") })).IsTrue();
-		await queue.Notify(semaphore, 1);
+		await queue.NotifyCounted(semaphore, 1);
 		await queue.ResumePending(RequirePid(job));
 		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		captured!.Registers.TryPeek(out var registers);
@@ -768,7 +768,7 @@ public class QueuePauseTests
 		await using var queue = Create(parser);
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think notified"), ParserState.Empty, new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
 		await queue.PausePending(RequirePid(job), "inspect");
-		await queue.Notify(new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
+		await queue.NotifyCounted(new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
 		await Assert.That(ran.Task.IsCompleted).IsFalse();
 		await Assert.That(queue.GetQueueEntries().Single().ReleasePending).IsTrue();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);

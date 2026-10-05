@@ -41,13 +41,15 @@ public static class ZoneHelpers
 	public static async ValueTask<Result<Success>> ChangeZoneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
 		IDidItService didItService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectRelationshipService objectRelationshipService,
+		IFlagAndPowerService flagAndPowerService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnyOptionalSharpObject zone,
@@ -73,7 +75,7 @@ public static class ZoneHelpers
 		{
 			// Clearing a zone skips the destination gate, the cycle walk and the strip, all of which
 			// set.c guards on `zone != NOTHING` (:412, :421, :472).
-			return Written(await manipulateSharpObjectService.UnsetZone(executor, target, noisy));
+			return Written(await objectRelationshipService.UnsetZone(executor, target, noisy));
 		}
 
 		if (await ZoneRefusedAsync(parser, notifyService, permissionService, lockService, didItService, executor,
@@ -82,7 +84,7 @@ public static class ZoneHelpers
 			return refusedZone;
 		}
 
-		if (await CycleRefusedAsync(mediator, database, notifyService, executor, target, destination, noisy)
+		if (await CycleRefusedAsync(cycleChecker, notifyService, executor, target, destination, noisy)
 			is Error<string> refusedCycle)
 		{
 			return refusedCycle;
@@ -96,8 +98,8 @@ public static class ZoneHelpers
 		}
 
 		// set.c:449-450.
-		await CheckZoneLockAsync(mediator, notifyService, permissionService, lockService, configuration, executor,
-			destination, noisy);
+		await CheckZoneLockAsync(mediator, notifyService, permissionService, lockService, configuration, connections,
+			executor, destination, noisy);
 
 		// set.c:452-456. Hasprivs(Owner(thing)), so a mortal's object owned by nobody privileged is quiet.
 		var owner = new AnySharpObject(await target.Object().Owner.WithCancellation(CancellationToken.None));
@@ -111,7 +113,7 @@ public static class ZoneHelpers
 		//
 		// PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(), which ask nobody's
 		// permission, so its one controls() check above is the whole authorization. These go through
-		// ManipulateSharpObjectService, which checks Controls itself — and Controls reads the object's
+		// IFlagAndPowerService, which checks Controls itself — and Controls reads the object's
 		// *current* zone (PermissionService.Controls, Zone Master Object branch). Once the zone has
 		// moved, an executor who held the object only through the zone it is leaving no longer controls
 		// it, the strip is refused, and @CHZONE reports "Zone changed." over an object that kept every
@@ -119,7 +121,7 @@ public static class ZoneHelpers
 		// method the one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 		if (!preserve && !target.IsPlayer)
 		{
-			await StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
+			await PrivilegeHelpers.StripPrivilegeAsync(flagAndPowerService, executor, target);
 		}
 		else if (noisy)
 		{
@@ -127,7 +129,7 @@ public static class ZoneHelpers
 			await WarnAboutKeptPrivilegeAsync(notifyService, executor, target);
 		}
 
-		return Written(await manipulateSharpObjectService.SetZone(executor, target, destination, noisy));
+		return Written(await objectRelationshipService.SetZone(executor, target, destination, noisy));
 	}
 
 	/// <summary>
@@ -148,6 +150,7 @@ public static class ZoneHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
 		AnySharpObject executor,
 		AnySharpObject destination,
 		bool noisy)
@@ -162,7 +165,7 @@ public static class ZoneHelpers
 
 			if (noisy)
 			{
-				await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+				await NotifyAboutZoneAsync(notifyService, permissionService, connections, executor, destination,
 					nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat));
 			}
 
@@ -189,7 +192,7 @@ public static class ZoneHelpers
 		var trivial = playerStart is AnySharpObject start && await lockService.Evaluate(LockType.Zone, destination, start)
 			&& masterRoom is AnySharpObject master && await lockService.Evaluate(LockType.Zone, destination, master);
 
-		await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+		await NotifyAboutZoneAsync(notifyService, permissionService, connections, executor, destination,
 			trivial
 				? nameof(ErrorMessages.Notifications.ZoneShouldHaveMoreSecureLockFormat)
 				: nameof(ErrorMessages.Notifications.ZoneMayHaveLooseLockFormat));
@@ -197,9 +200,10 @@ public static class ZoneHelpers
 
 	/// <summary>One of <c>check_zone_lock</c>'s three notices, all of which name the zone by <c>unparse_object</c>.</summary>
 	private static async ValueTask NotifyAboutZoneAsync(INotifyService notifyService,
-		IPermissionService permissionService, AnySharpObject executor, AnySharpObject destination, string key)
+		IPermissionService permissionService, IConnectionService connections, AnySharpObject executor,
+		AnySharpObject destination, string key)
 		=> await notifyService.NotifyLocalized(executor, key, executor,
-			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination));
+			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination, connections));
 
 	/// <summary><c>PLAYER_START</c> and <c>MASTER_ROOM</c>, which a world need not actually hold.</summary>
 	private static async ValueTask<AnyOptionalSharpObject> RoomAsync(IMediator mediator, uint dbref)
@@ -295,21 +299,20 @@ public static class ZoneHelpers
 	/// PennMUSH refuses the self-zone to mortals only (<c>:422</c>) — its walk stops on
 	/// <c>tmp == Zone(tmp)</c>, so a privileged player may build that fixed point. SharpMUSH refuses it
 	/// to everyone: <see cref="IObjectStore.IsReachableViaParentOrZoneAsync"/> and
-	/// <see cref="IManipulateSharpObjectService.SetZone"/> both treat a self-loop as unsafe, and
+	/// <see cref="IObjectRelationshipService.SetZone"/> both treat a self-loop as unsafe, and
 	/// <c>ZoneParentCycleTests.SelfZone_ShouldFail</c> fixes that as the rule. Exempting a wizard here
 	/// would not let the write through — <c>SetZone</c> refuses it again — it would only strip the
 	/// object's flags and powers and install a zone lock on the way to the refusal. A deliberate
 	/// difference for the compatibility profile (#1134), not a gap to close in this method.
 	/// </remarks>
 	private static async ValueTask<Result<Success>> CycleRefusedAsync(
-		IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker cycleChecker,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnySharpObject destination,
 		bool noisy)
-		=> await HelperFunctions.SafeToAddRelationship(mediator, database, target, destination) switch
+		=> await cycleChecker.SafeToAddZoneAsync(target, destination) switch
 		{
 			RelationshipSafety.SelfReference
 				=> await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.ZoneLoop,
@@ -321,27 +324,7 @@ public static class ZoneHelpers
 		};
 
 	/// <summary>
-	/// <c>clear_flag_internal</c> on <c>WIZARD</c>, <c>ROYALTY</c> and <c>TRUST</c>, then the whole
-	/// power bitmask (<c>src/set.c:477-481</c>).
-	/// </summary>
-	private static async ValueTask StripPrivilegeAsync(IManipulateSharpObjectService manipulateSharpObjectService,
-		AnySharpObject executor, AnySharpObject target)
-	{
-		string[] privileged = ["WIZARD", "ROYALTY", "TRUST"];
-
-		foreach (var flag in privileged)
-		{
-			if (await target.HasFlag(flag))
-			{
-				await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, $"!{flag}", false);
-			}
-		}
-
-		await manipulateSharpObjectService.ClearAllPowers(executor, target, false);
-	}
-
-	/// <summary>
-	/// The outcome of the store write, which <see cref="IManipulateSharpObjectService"/> reports as
+	/// The outcome of the store write, which <see cref="IObjectRelationshipService"/> reports as
 	/// <c>"1"</c> or as the <c>#-1 …</c> return of a check this method already made.
 	/// </summary>
 	private static Result<Success> Written(CallState written)

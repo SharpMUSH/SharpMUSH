@@ -5,7 +5,7 @@
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
 @attribute [Authorize(Policy = "applications.admin")]
-@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Client.Components.Admin
 @inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
@@ -24,18 +24,18 @@
     <AdminStats>
         @foreach (var tile in new[]
         {
-            ("apps",    _apps.Count.ToString(),                                              "LayApplications",  "LayAppsStatRegistered", Icons.Material.Filled.Apps),
-            ("pages",   _apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "LayAppsPages",     "LayAppsStatPages",      Icons.Material.Filled.WebAsset),
-            ("widgets", _apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "LayAppsWidgets",   "LayAppsStatWidgets",    Icons.Material.Filled.Dashboard),
-            ("schemas", _apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "LayAppsSchemas",   "LayAppsStatSchemas",    Icons.Material.Filled.DataObject),
+            ("apps",    Apps.Count.ToString(),                                              "LayApplications",  "LayAppsStatRegistered", Icons.Material.Filled.Apps),
+            ("pages",   Apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "LayAppsPages",     "LayAppsStatPages",      Icons.Material.Filled.WebAsset),
+            ("widgets", Apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "LayAppsWidgets",   "LayAppsStatWidgets",    Icons.Material.Filled.Dashboard),
+            ("schemas", Apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "LayAppsSchemas",   "LayAppsStatSchemas",    Icons.Material.Filled.DataObject),
         })
         {
             var (key, val, labelKey, subKey, icon) = tile;
-            <AdminStat Key="@key" Icon="@icon" Label="@Loc[labelKey]" Sub="@Loc[subKey]" Value="@(_loading ? "—" : val)" />
+            <AdminStat Key="@key" Icon="@icon" Label="@Loc[labelKey]" Sub="@Loc[subKey]" Value="@(List.Loading ? "—" : val)" />
         }
     </AdminStats>
 
-    @if (_loading)
+    @if (List.Loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
     }
@@ -56,8 +56,8 @@
                 @foreach (var app in Filtered)
                 {
                     var a = app;
-                    var on = _selected?.Slug == a.Slug;
-                    <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => _selected = a)">
+                    var on = List.IsSelected(a);
+                    <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => List.Select(a))">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">
                                 <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--card" />
@@ -73,7 +73,7 @@
             </div>
 
             <KitCard Class="appadmin-detail">
-                @if (_selected is null)
+                @if (List.Selected is not { } selected)
                 {
                     <div class="aa-empty-detail">
                         <MudIcon Icon="@Icons.Material.Filled.Apps" Class="aa-ico aa-ico--empty" />
@@ -87,21 +87,21 @@
                 {
                     <div class="aa-detail-head">
                         <span class="aa-detail-icon">
-                            <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--detail" />
+                            <MudIcon Icon="@(selected.Icon ?? Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--detail" />
                         </span>
                         <div class="aa-grow">
                             <div class="aa-detail-titles">
-                                <h2 class="aa-detail-name">@_selected.DisplayName</h2>
-                                <span class="aa-kind @KindClass(_selected.Kind)">@KindLabel(_selected.Kind)</span>
-                                <span class="aa-role">@_selected.MinimumRole</span>
+                                <h2 class="aa-detail-name">@selected.DisplayName</h2>
+                                <span class="aa-kind @KindClass(selected.Kind)">@KindLabel(selected.Kind)</span>
+                                <span class="aa-role">@selected.MinimumRole</span>
                             </div>
-                            <div class="aa-detail-slug">/apps/@_selected.Slug</div>
+                            <div class="aa-detail-slug">/apps/@selected.Slug</div>
                         </div>
                         <div class="aa-detail-headbtns">
-                            <button type="button" class="aa-icon-btn" title="@Loc["LayEdit"]" aria-label="@Loc["LayEdit"]" @onclick="@(() => Edit(_selected))">
+                            <button type="button" class="aa-icon-btn" title="@Loc["LayEdit"]" aria-label="@Loc["LayEdit"]" @onclick="@(() => Edit(selected))">
                                 <MudIcon Icon="@Icons.Material.Filled.Edit" Class="aa-ico aa-ico--btn" />
                             </button>
-                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="@Loc["LayRemove"]" aria-label="@Loc["LayRemove"]" @onclick="@(() => Delete(_selected))">
+                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="@Loc["LayRemove"]" aria-label="@Loc["LayRemove"]" @onclick="@(() => Delete(selected))">
                                 <MudIcon Icon="@Icons.Material.Filled.Delete" Class="aa-ico aa-ico--btn" />
                             </button>
                         </div>
@@ -110,14 +110,14 @@
                     <div class="aa-meta-grid">
                         @foreach (var field in new (string LabelKey, string Value)[]
                         {
-                            ("LayAppSchemaUrl",    _selected.SchemaUrl),
-                            ("LayAppDataUrl",      _selected.DataUrl ?? "—"),
-                            ("LayAppSubmitRoute",  _selected.SubmitRoute ?? "—"),
-                            ("LayAppNavPlacement", _selected.NavPlacement ?? "—"),
-                            ("LayAppScope",        _selected.Scope ?? "—"),
-                            ("LayAppOobPackage",   _selected.OobPackage ?? "—"),
-                            ("LayAppDisplayOrder", _selected.Order.ToString()),
-                            ("LayAppMinRole",      _selected.MinimumRole),
+                            ("LayAppSchemaUrl",    selected.SchemaUrl),
+                            ("LayAppDataUrl",      selected.DataUrl ?? "—"),
+                            ("LayAppSubmitRoute",  selected.SubmitRoute ?? "—"),
+                            ("LayAppNavPlacement", selected.NavPlacement ?? "—"),
+                            ("LayAppScope",        selected.Scope ?? "—"),
+                            ("LayAppOobPackage",   selected.OobPackage ?? "—"),
+                            ("LayAppDisplayOrder", selected.Order.ToString()),
+                            ("LayAppMinRole",      selected.MinimumRole),
                         })
                         {
                             <div class="aa-meta">
@@ -127,12 +127,12 @@
                         }
                     </div>
 
-                    @if (_selected.ZoneEnums.Count > 0)
+                    @if (selected.ZoneEnums.Count > 0)
                     {
                         <div class="aa-section">
                             <div class="aa-section-label">@Loc["LayAppAllowedZones"]</div>
                             <div class="aa-chips">
-                                @foreach (var zone in _selected.ZoneEnums)
+                                @foreach (var zone in selected.ZoneEnums)
                                 {
                                     <span class="aa-zone">@Loc[zone.ResourceKey()]</span>
                                 }
@@ -143,15 +143,15 @@
                     <div class="aa-section">
                         <div class="aa-section-label">@Loc["LayActions"]</div>
                         <div class="aa-actions">
-                            <a class="aa-btn aa-btn--primary" href="@($"/apps/{_selected.Slug}")">
+                            <a class="aa-btn aa-btn--primary" href="@($"/apps/{selected.Slug}")">
                                 <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Class="aa-ico" /> @Loc["LayAppOpen"]
                             </a>
                             <a class="aa-btn" href="/softcode">
                                 <MudIcon Icon="@Icons.Material.Filled.Code" Class="aa-ico" /> @Loc["LayAppEditInSoftcode"]
                             </a>
-                            @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
+                            @if (!string.IsNullOrEmpty(selected.SchemaUrl))
                             {
-                                <a class="aa-btn" href="@_selected.SchemaUrl" target="_blank" rel="noopener noreferrer">
+                                <a class="aa-btn" href="@selected.SchemaUrl" target="_blank" rel="noopener noreferrer">
                                     <MudIcon Icon="@Icons.Material.Filled.Link" Class="aa-ico" /> @Loc["LayAppViewSchema"]
                                 </a>
                             }
@@ -164,69 +164,44 @@
 </div>
 
 @code {
-    private bool _loading = true;
     private string _search = string.Empty;
-    private List<PortalApplication> _apps = [];
-    private PortalApplication? _selected;
 
-    private List<PortalApplication> Filtered =>
+    private AdminRecordList<PortalApplication>? _list;
+
+    /// <summary>The registered applications; with any registered, one is always selected.</summary>
+    private AdminRecordList<PortalApplication> List => _list ??= new(
+        DialogService, Snackbar,
+        async () => await Registry.ListAsync(),
+        app => app.Slug,
+        AdminReselect.First);
+
+    private IReadOnlyList<PortalApplication> Apps => List.Items;
+
+    private IReadOnlyList<PortalApplication> Filtered =>
         string.IsNullOrWhiteSpace(_search)
-            ? _apps
-            : _apps.Where(a =>
+            ? Apps
+            : Apps.Where(a =>
                 a.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase)
                 || a.Slug.Contains(_search, StringComparison.OrdinalIgnoreCase)
                 || (a.SchemaUrl ?? string.Empty).Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override Task OnInitializedAsync() => List.LoadAsync();
 
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _apps = (await Registry.ListAsync()).ToList();
-        _loading = false;
-        _selected = _selected is not null
-            ? _apps.FirstOrDefault(a => a.Slug == _selected.Slug) ?? _apps.FirstOrDefault()
-            : _apps.FirstOrDefault();
-    }
+    private Task Edit(PortalApplication? existing) =>
+        List.EditAsync<ApplicationEditDialog>(
+            existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug],
+            new DialogParameters<ApplicationEditDialog> { { x => x.Existing, existing } });
 
-    private async Task Edit(PortalApplication? existing)
-    {
-        var parameters = new DialogParameters<ApplicationEditDialog>
-        {
-            { x => x.Existing, existing }
-        };
-        // FullWidth is required: the dialog body declares container-type, and inline-size
-        // containment zeroes its contribution to the paper's shrink-to-fit width.
-        var dialog = await DialogService.ShowAsync<ApplicationEditDialog>(
-            existing is null ? Loc["LayAppsRegister"] : Loc["LayAppEditTitle", existing.Slug], parameters,
-            new DialogOptions { FullWidth = true });
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled)
-            await LoadAsync();
-    }
-
-    private async Task Delete(PortalApplication app)
-    {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["LayAppRemoveTitle"],
-            Loc["LayAppRemoveConfirm", app.DisplayName, app.Slug],
-            yesText: Loc["LayRemove"], cancelText: Loc["Cancel"]);
-
-        if (confirmed == true)
-        {
-            switch (await Registry.DeleteAsync(app.Slug))
-            {
-                case Success:
-                    Snackbar.Add(Loc["LayAppRemoved", app.Slug], Severity.Success);
-                    if (_selected?.Slug == app.Slug) _selected = null;
-                    await LoadAsync();
-                    break;
-                case ApiFailure failure:
-                    Snackbar.Add(Loc["LayAppRemoveFailed", failure.Message], Severity.Error);
-                    break;
-            }
-        }
-    }
+    private Task Delete(PortalApplication app) =>
+        List.DeleteAsync(app,
+            new AdminDeleteText(
+                Loc["LayAppRemoveTitle"],
+                Loc["LayAppRemoveConfirm", app.DisplayName, app.Slug],
+                Loc["LayRemove"],
+                Loc["Cancel"],
+                Loc["LayAppRemoved", app.Slug],
+                failure => Loc["LayAppRemoveFailed", failure.Message]),
+            () => Registry.DeleteAsync(app.Slug));
 
     // Kind travels from the API as a string and a registration may carry a value outside
     // ApplicationKind (the badge palette still styles a legacy "Form"), so an unrecognized kind shows

@@ -32,7 +32,7 @@ public class ChannelPermissionTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+	private IChannelPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IChannelPermissionService>();
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
@@ -733,12 +733,12 @@ public class ChannelPermissionTests
 		};
 
 		await Run(mortal, $"@channel/{setSwitch} {name}");
-		var afterSet = await ChannelHelper.ChannelMemberStatus(mortalObject,
+		var afterSet = await ChannelHelper.ChannelMemberStatus(Mediator, mortalObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(Flag(afterSet!.Status)).IsTrue();
 
 		await Run(mortal, $"@channel/{clearSwitch} {name}");
-		var afterClear = await ChannelHelper.ChannelMemberStatus(mortalObject,
+		var afterClear = await ChannelHelper.ChannelMemberStatus(Mediator, mortalObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(Flag(afterClear!.Status)).IsFalse();
 	}
@@ -767,14 +767,14 @@ public class ChannelPermissionTests
 		var bystanderObject = (await Mediator.Send(new GetObjectNodeQuery(bystander.DbRef))).Expect<AnySharpObject>();
 		await Run(muter, $"@channel/mute {name}={bystanderObject.Object().Name}");
 
-		var bystanderStatus = await ChannelHelper.ChannelMemberStatus(bystanderObject,
+		var bystanderStatus = await ChannelHelper.ChannelMemberStatus(Mediator, bystanderObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(bystanderStatus!.Status.Mute ?? false).IsFalse()
 			.Because("a mortal cannot silence another member by naming them");
 
 		await Run(muter, $"@channel/mute {name}");
 
-		var muterStatus = await ChannelHelper.ChannelMemberStatus(
+		var muterStatus = await ChannelHelper.ChannelMemberStatus(Mediator,
 			(await Mediator.Send(new GetObjectNodeQuery(muter.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(muterStatus!.Status.Mute ?? false).IsTrue();

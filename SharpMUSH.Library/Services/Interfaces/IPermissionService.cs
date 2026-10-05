@@ -131,28 +131,4 @@ public interface IPermissionService
 	ValueTask<bool> CanLogin(AnySharpObject executor);
 
 	ValueTask<bool> CanIdle(AnySharpObject executor);
-
-	bool ChannelOkType(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType);
-
-	ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType);
-
-	ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanJoin(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanSpeak(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanHide(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel);
-
-	ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel);
 }

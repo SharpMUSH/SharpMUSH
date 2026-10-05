@@ -6777,6 +6777,14 @@
       "file": "sharpcmd.md",
       "corpus": "help",
       "names": [
+        "@storage"
+      ],
+      "canonical": "@storage"
+    },
+    {
+      "file": "sharpcmd.md",
+      "corpus": "help",
+      "names": [
         "@sweep"
       ],
       "canonical": "@sweep"

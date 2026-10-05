@@ -23,29 +23,29 @@ public class AdmissionAsyncScheduleHandler(ITaskScheduler scheduler) : IRequestH
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitAttributeRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute, request.Executor);
+		return await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute, request.Executor, request.Enactor);
 	}
 }
 
-public class GetScheduledTasksHandler(ITaskScheduler scheduler)
+public class GetScheduledTasksHandler(ITaskQueueReader queue)
 	: IStreamQueryHandler<ScheduleSemaphoreQuery, SemaphoreTaskData>
 {
 	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
 		CancellationToken cancellationToken)
 		=> SchedulerQueryLifetime.Read(() => query.Query switch
 		{
-			long pid => scheduler.GetSemaphoreTasks(pid),
-			DBRef obj => scheduler.GetSemaphoreTasks(obj),
-			DbRefAttribute attribute => scheduler.GetSemaphoreTasks(attribute)
+			long pid => queue.GetSemaphoreTasks(pid),
+			DBRef obj => queue.GetSemaphoreTasks(obj),
+			DbRefAttribute attribute => queue.GetSemaphoreTasks(attribute)
 		}, cancellationToken);
 }
 
-public class GetDelayTasksHandler(ITaskScheduler scheduler)
+public class GetDelayTasksHandler(ITaskQueueReader queue)
 	: IStreamQueryHandler<ScheduleDelayQuery, long>
 {
 	public IAsyncEnumerable<long> Handle(ScheduleDelayQuery query,
 		CancellationToken cancellationToken)
-		=> SchedulerQueryLifetime.Read(() => scheduler.GetDelayTasks(query.Query), cancellationToken);
+		=> SchedulerQueryLifetime.Read(() => queue.GetDelayTasks(query.Query), cancellationToken);
 }
 
 public class AdmissionDelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<AdmitDelayedCommandListRequest, QueueAdmissionResult>
@@ -67,94 +67,94 @@ public class AdmissionScheduleTimeoutHandler(ITaskScheduler scheduler) : IReques
 	}
 }
 
-public class AdmissionScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<NotifySemaphoreCountedRequest, IReadOnlyList<QueueAdmissionResult>>
+public class AdmissionScheduleNotifyHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifySemaphoreCountedRequest, IReadOnlyList<QueueAdmissionResult>>
 {
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Handle(NotifySemaphoreCountedRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
+		return await semaphores.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
 	}
 }
 
-public class RescheduleSemaphoreHandler(ITaskScheduler scheduler) : IRequestHandler<RescheduleSemaphoreRequest>
+public class RescheduleSemaphoreHandler(ISemaphoreQueue semaphores) : IRequestHandler<RescheduleSemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(RescheduleSemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.RescheduleSemaphoreTask(request.ProcessIdentifier, request.NewDelay);
+		await semaphores.RescheduleSemaphoreTask(request.ProcessIdentifier, request.NewDelay);
 		return await Unit.ValueTask;
 	}
 }
 
-public class AdmissionScheduleNotifyAllHandler(ITaskScheduler scheduler) : IRequestHandler<NotifyAllSemaphoreCountedRequest, IReadOnlyList<QueueAdmissionResult>>
+public class AdmissionScheduleNotifyAllHandler(ISemaphoreQueue semaphores) : IRequestHandler<NotifyAllSemaphoreCountedRequest, IReadOnlyList<QueueAdmissionResult>>
 {
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Handle(NotifyAllSemaphoreCountedRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.NotifyAllCounted(request.DbRefAttribute);
+		return await semaphores.NotifyAllCounted(request.DbRefAttribute);
 	}
 }
 
-public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<DrainSemaphoreRequest>
+public class ScheduleDrainHandler(ISemaphoreQueue semaphores) : IRequestHandler<DrainSemaphoreRequest>
 {
 	public async ValueTask<Unit> Handle(DrainSemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.Drain(request.DbRefAttribute, request.Count);
+		await semaphores.Drain(request.DbRefAttribute, request.Count);
 		return await Unit.ValueTask;
 	}
 }
 
-public class ScheduleDrainCountedHandler(ITaskScheduler scheduler) : IRequestHandler<DrainSemaphoreCountedRequest, int>
+public class ScheduleDrainCountedHandler(ISemaphoreQueue semaphores) : IRequestHandler<DrainSemaphoreCountedRequest, int>
 {
 	public async ValueTask<int> Handle(DrainSemaphoreCountedRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.DrainCounted(request.DbRefAttribute, request.Count);
+		return await semaphores.DrainCounted(request.DbRefAttribute, request.Count);
 	}
 }
 
-public class ScheduleHaltHandler(ITaskScheduler scheduler) : IRequestHandler<HaltObjectQueueRequest>
+public class ScheduleHaltHandler(ITaskQueueControl control) : IRequestHandler<HaltObjectQueueRequest>
 {
 	public async ValueTask<Unit> Handle(HaltObjectQueueRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		await scheduler.Halt(request.DbRef);
+		await control.Halt(request.DbRef);
 		return await Unit.ValueTask;
 	}
 }
 
-public class GetEnqueueTasksHandler(ITaskScheduler scheduler)
+public class GetEnqueueTasksHandler(ITaskQueueReader queue)
 	: IStreamQueryHandler<ScheduleEnqueueQuery, long>
 {
 	public IAsyncEnumerable<long> Handle(ScheduleEnqueueQuery query,
 		CancellationToken cancellationToken)
-		=> SchedulerQueryLifetime.Read(() => scheduler.GetEnqueueTasks(query.Query), cancellationToken);
+		=> SchedulerQueryLifetime.Read(() => queue.GetEnqueueTasks(query.Query), cancellationToken);
 }
 
-public class GetAllTasksHandler(ITaskScheduler scheduler)
+public class GetAllTasksHandler(ITaskQueueReader queue)
 	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, NameOrDbRef)[])>
 {
 	public IAsyncEnumerable<(string Group, (DateTimeOffset, NameOrDbRef)[])> Handle(ScheduleAllTasksQuery query,
 		CancellationToken cancellationToken)
-		=> SchedulerQueryLifetime.Read(() => scheduler.GetAllTasks(), cancellationToken);
+		=> SchedulerQueryLifetime.Read(() => queue.GetAllTasks(), cancellationToken);
 }
 
-public class HaltByPidHandler(ITaskScheduler scheduler) : IRequestHandler<HaltByPidRequest, bool>
+public class HaltByPidHandler(ITaskQueueControl control) : IRequestHandler<HaltByPidRequest, bool>
 {
 	public async ValueTask<bool> Handle(HaltByPidRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.HaltByPid(request.Pid);
+		return await control.HaltByPid(request.Pid);
 	}
 }
 
-public class ModifyQRegistersHandler(ITaskScheduler scheduler) : IRequestHandler<ModifyQRegistersRequest, bool>
+public class ModifyQRegistersHandler(ISemaphoreQueue semaphores) : IRequestHandler<ModifyQRegistersRequest, bool>
 {
 	public async ValueTask<bool> Handle(ModifyQRegistersRequest request, CancellationToken cancellationToken)
 	{
 		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		return await scheduler.ModifyQRegisters(request.DbRefAttribute, request.QRegisters);
+		return await semaphores.ModifyQRegisters(request.DbRefAttribute, request.QRegisters);
 	}
 }
 

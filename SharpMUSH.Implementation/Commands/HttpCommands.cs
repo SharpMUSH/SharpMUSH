@@ -113,7 +113,7 @@ public partial class Commands
 							EnvironmentRegisters = contentDict
 						};
 					},
-					dbRefAttribute, parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+					dbRefAttribute, parser.CurrentState.Executor, parser.CurrentState.Enactor), ExecutionBudget.CurrentToken);
 
 				if (!admission.Accepted)
 				{
@@ -134,7 +134,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Respond(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToList();
+		var switches = parser.CurrentState.Switches;
 		var httpResponse = parser.CurrentState.HttpResponse;
 
 		var isHttpContext = httpResponse is not null;

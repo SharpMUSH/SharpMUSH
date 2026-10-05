@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using SharpMUSH.Implementation.Common;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -38,7 +39,7 @@ public partial class Functions
 
 		// extchat.c:2434 (fun_ctitle) / :2491 (fun_cstatus) — "You must pass the channel's see-lock".
 		async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)> WithChannel(AnySharpObject player)
-			=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 					NotifyService, executor, MarkupText.Plain(channelName), false) switch
 			{
 				Error<CallState> error => (player, null, error.Value),
@@ -52,7 +53,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
 		Func<SharpChannel, ValueTask<CallState>> channelFunc)
-		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+		=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator, NotifyService, executor,
 				channelName, false) switch
 		{
 			Error<CallState> error => error.Value,
@@ -62,7 +63,7 @@ public partial class Functions
 	/// <inheritdoc cref="WithVisibleChannel(AnySharpObject, MString, Func{SharpChannel, ValueTask{CallState}})"/>
 	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
 		Func<SharpChannel, CallState> channelFunc)
-		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+		=> await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator, NotifyService, executor,
 				channelName, false) switch
 		{
 			Error<CallState> error => error.Value,
@@ -90,7 +91,7 @@ public partial class Functions
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
 			// extchat.c:2393 — Chan_Can_Modify, the same gate @channel/buffer and @channel/wipe answer to.
-			if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+			if (!await ChannelPermissions.ChannelCanModifyAsync(executor, channel))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -136,7 +137,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await ChannelEmit.Handle(PermissionService, Mediator, NotifyService, executor,
+		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message!,
 			parser.CurrentState.Arguments["1"].Message!,
 			spoof);
@@ -177,7 +178,7 @@ public partial class Functions
 						return new CallState(ErrorMessages.Returns.PermissionDenied);
 					}
 
-					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
+					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player, channel);
 
 					if (maybeMemberStatus is null)
 					{
@@ -230,10 +231,18 @@ public partial class Functions
 		// Materialised before the loop: the per-channel checks below open their own streams, and
 		var channelArray = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 
+		// Chan_Can_See for the executor, with its membership fallback (ChannelHelper.CanSeeChannel); when the
+		// executor is the object asked about, its membership is the one already read.
+		async ValueTask<bool> ExecutorCanSee(SharpChannel channel, bool playerIsMember)
+			=> await ChannelPermissions.ChannelCanSeeAsync(executor, channel)
+				|| (askingAboutSomeoneElse ? await ChannelHelper.IsMemberOfChannel(Mediator, executor, channel) : playerIsMember);
+
 		var filteredChannels = new List<string>();
 		foreach (var channel in channelArray)
 		{
-			var isMember = await ChannelHelper.IsMemberOfChannel(player, channel);
+			// One membership read per channel: whether the object is on it, and its standing there.
+			var status = await ChannelHelper.ChannelMemberStatus(Mediator, player, channel);
+			var isMember = status is not null;
 
 			var matchesType = type switch
 			{
@@ -251,15 +260,14 @@ public partial class Functions
 			{
 				// Not examinable: the executor may only learn about channels they can see themselves, that
 				// the object is actually on, and on which the object is not hidden from them.
-				var status = await ChannelHelper.ChannelMemberStatus(player, channel);
 				if (status is null
 						|| (!privWho && (status.Status.Hide ?? false))
-						|| !await ChannelHelper.CanSeeChannel(PermissionService, executor, channel))
+						|| !await ExecutorCanSee(channel, isMember))
 				{
 					continue;
 				}
 			}
-			else if (!await ChannelHelper.CanSeeChannel(PermissionService, executor, channel))
+			else if (!await ExecutorCanSee(channel, isMember))
 			{
 				continue;
 			}
@@ -310,7 +318,7 @@ public partial class Functions
 
 			// extchat.c:3437 — reading a channel's lock needs Chan_Can_Decomp. This handed every channel's
 			// join/speak/see/hide/mod lock key to any mortal who asked for it.
-			if (!await PermissionService.ChannelCanDecomposeAsync(executor, channel))
+			if (!await ChannelPermissions.ChannelCanDecomposeAsync(executor, channel))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -359,7 +367,7 @@ public partial class Functions
 		MString Argument(string key)
 			=> arguments.TryGetValue(key, out var value) ? value.Message! : MarkupText.Empty;
 
-		return await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
+		return await ChannelRecall.SelectAsync(ChannelPermissions, Mediator, NotifyService, executor,
 			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false) switch
 		{
 			ChannelRecall.RecallWindow window => RecalledLines(window, arguments),
@@ -392,7 +400,7 @@ public partial class Functions
 			return error;
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player!, channel!);
 
 		if (maybeMemberStatus is null)
 		{
@@ -423,7 +431,7 @@ public partial class Functions
 			return error;
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player!, channel!);
 
 		if (maybeMemberStatus is null)
 		{
@@ -505,8 +513,7 @@ public partial class Functions
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			var count = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-				.CountAsync();
+			var count = await Mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 
 			return new CallState(count.ToString());
 		});
@@ -520,7 +527,7 @@ public partial class Functions
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			var memberCount = await channel.Members.Value.CountAsync();
+			var memberCount = await Mediator.Send(new GetChannelMemberCountQuery(channel));
 
 			return new CallState(memberCount.ToString());
 		});
@@ -531,9 +538,7 @@ public partial class Functions
 	public async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var infoType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
-			? typeArg.Message!.ToPlainText().ToLowerInvariant()
-			: "name";
+		var infoType = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "name").ToPlainText().ToLowerInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await WithVisibleChannel(executor, channelName, async channel =>
@@ -543,7 +548,7 @@ public partial class Functions
 			{
 				"name" => new CallState(channel.Name),
 				"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
-				"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
+				"members" => new CallState((await Mediator.Send(new GetChannelMemberCountQuery(channel))).ToString()),
 				"buffer" => new CallState("50"), // Default buffer size
 				_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
 			};

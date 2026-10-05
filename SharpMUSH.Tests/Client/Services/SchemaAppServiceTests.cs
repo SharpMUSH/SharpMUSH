@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Text;
@@ -40,37 +41,38 @@ public class SchemaAppServiceTests : TrackingTestContext
 			  {"name":"Demographics","order":1,"elements":[]}]}]}
 			""");
 
-		var doc = await svc.GetSchemaAsync("http/profile/schema");
+		var doc = (await svc.GetSchemaAsync("http/profile/schema")).Expect<PortalSchemaDocument>();
 
-		await Assert.That(doc).IsNotNull();
-		await Assert.That(doc!.Kind).IsEqualTo("view");
+		await Assert.That(doc.Kind).IsEqualTo("view");
 		await Assert.That(doc.Pages!.Count).IsEqualTo(1);
 		await Assert.That(doc.Pages![0].Sections!.Count).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task GetSchemaAsync_HandlerError502_ReturnsNullNotThrow()
+	public async Task GetSchemaAsync_HandlerError502_ReturnsTheFailureNotThrow()
 	{
 		var svc = BuildService((HttpStatusCode)502, """{"status":502,"error":"...","detail":"#-1 ..."}""");
 
-		await Assert.That(await svc.GetSchemaAsync("http/profile/schema")).IsNull();
+		var failure = (await svc.GetSchemaAsync("http/profile/schema")).Expect<ApiFailure>();
+		await Assert.That(failure.Status).IsEqualTo((HttpStatusCode)502);
 	}
 
 	[Test]
-	public async Task GetSchemaAsync_EmptyOkBody_ReturnsNullNotThrow()
+	public async Task GetSchemaAsync_EmptyOkBody_ReturnsTheFailureNotThrow()
 	{
-		// Defensive: a 200 with an empty body (the original crash) must be swallowed as JsonException.
+		// Defensive: a 200 with an empty body (the original crash) is an unreadable answer, not a throw.
 		var svc = BuildService(HttpStatusCode.OK, string.Empty);
 
-		await Assert.That(await svc.GetSchemaAsync("http/profile/schema")).IsNull();
+		var failure = (await svc.GetSchemaAsync("http/profile/schema")).Expect<ApiFailure>();
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Unexpected);
 	}
 
 	[Test]
-	public async Task GetDataAsync_HandlerError502_ReturnsNullNotThrow()
+	public async Task GetDataAsync_HandlerError502_ReturnsTheFailureNotThrow()
 	{
 		var svc = BuildService((HttpStatusCode)502, """{"status":502,"error":"...","detail":""}""");
 
-		await Assert.That(await svc.GetDataAsync("http/profile?objid=%231:1")).IsNull();
+		(await svc.GetDataAsync("http/profile?objid=%231:1")).Expect<ApiFailure>();
 	}
 
 	[Test]

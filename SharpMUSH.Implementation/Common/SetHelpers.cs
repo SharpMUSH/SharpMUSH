@@ -36,7 +36,7 @@ public static class SetHelpers
 		IMUSHCodeParser parser,
 		ILocateService locateService,
 		IAttributeService attributeService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IFlagAndPowerService flagAndPowerService,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		MString objectAndOptionalAttribute,
@@ -118,11 +118,8 @@ public static class SetHelpers
 
 			// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
 			// written attribute's own AF_Quiet suppresses the line as well.
-			var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
-				IAttributeService.AttributeMode.Read, false);
-			var attributeIsQuiet = written is SharpAttribute[] writtenAttribute && writtenAttribute.Last().IsQuiet();
-
-			if (!areQuiet && !attributeIsQuiet)
+			if (!areQuiet && !await AttributeWriteReport.IsSuppressedAsync(attributeService, executor, found,
+						attribute.ToPlainText()))
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 					found.Object().Name, attribute.ToPlainText());
@@ -144,7 +141,7 @@ public static class SetHelpers
 				// set_flag reports when `is_flag(f, "QUIET") || !AreQuiet(player, thing)` — touching the
 				// QUIET flag itself always reports, so you can see what you just made quiet.
 				var togglesQuiet = flagName.TrimStart('!').Equals("QUIET", StringComparison.OrdinalIgnoreCase);
-				var result = await manipulateSharpObjectService.SetOrUnsetFlag(executor, found, flagName,
+				var result = await flagAndPowerService.SetOrUnsetFlag(executor, found, flagName,
 					togglesQuiet || !areQuiet);
 
 				if (failure is null && result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)

@@ -9,7 +9,7 @@
 - [x] Implement cursor-based pagination helper (for feeds) — `CursorPagination.cs` (opaque Base64 cursors, 1–200 clamp)
 - [x] Implement offset-based pagination helper (for stable lists) — `OffsetPagination.cs` (`PagedResult<T>`, `FromSlice` overload)
 - [x] Game engine bridge — `IGameEngineBridge` interface exists; the `/mush/...` HTTP handler was superseded by SignalR (`GameHub`) + NATS, which provide the bidirectional channel the HTTP design was approximating
-- [x] Implement SignalR hub methods for write operations + push — `GameHub` (`SendCommand`, `JoinRoom/LeaveRoom`, `JoinScene/LeaveScene`, `SendToCharacterAsync`, `SendToRoomAsync`, `BroadcastSystemMessageAsync`)
+- [x] Implement SignalR hub methods for write operations + push — `GameHub` (`JoinRoom/LeaveRoom`, `JoinScene/LeaveScene`, `SendToCharacterAsync`, `SendToRoomAsync`, `BroadcastSystemMessageAsync`)
 - [x] Standardize error response format (problem details RFC 7807) — `ProblemDetailsExceptionHandler.cs` global handler + `ApiControllerBase.Problem*()` helpers
 - [x] Rate limiting on public endpoints — fixed-window `public-api` policy (30 req/min) applied to all auth endpoints via `[EnableRateLimiting]`
 - [x] API versioning strategy — `Asp.Versioning` configured (URL segment + `x-api-version` header, default 1.0 assumed); attributes to be added when a v2 endpoint first ships

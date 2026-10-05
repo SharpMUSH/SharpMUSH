@@ -6,26 +6,22 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStore objects)
+/// <summary>
+/// Streams the zone's member refs and resolves each through the object node cache, so a miss builds each
+/// member once (see <see cref="GetContentsQueryHandler"/>).
+/// </summary>
+public class GetObjectsByZoneQueryHandler(INavigationStore database, IMediator mediator)
 	: IStreamQueryHandler<GetObjectsByZoneQuery, SharpObject>
 {
-	public async IAsyncEnumerable<SharpObject> Handle(GetObjectsByZoneQuery request, CancellationToken cancellationToken)
+	public IAsyncEnumerable<SharpObject> Handle(GetObjectsByZoneQuery request, CancellationToken cancellationToken)
 	{
 		var zone = request.Zone switch
 		{
-			DBRef zoneRef => await objects.GetObjectNodeAsync(zoneRef, cancellationToken),
-			AnySharpObject known => known.WithNoneOption()
+			DBRef dbref => dbref,
+			AnySharpObject known => known.Object().DBRef
 		};
 
-		if (zone is not AnySharpObject knownZone)
-		{
-			yield break;
-		}
-
-		await foreach (var obj in database.GetObjectsByZoneAsync(knownZone, cancellationToken)
-			.WithCancellation(cancellationToken))
-		{
-			yield return obj;
-		}
+		return ObjectRefs.ResolveAsync<SharpObject>(mediator, database.GetZoneMemberRefsAsync(zone, cancellationToken),
+			cancellationToken);
 	}
 }

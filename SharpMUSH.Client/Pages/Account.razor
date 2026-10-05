@@ -2,6 +2,7 @@
 @layout SettingsLayout
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
@@ -219,24 +220,24 @@
     {
         ClearMessages();
         _busy = true;
-        var (success, error) = await AccountAuth.ChangeUsernameAsync(_newUsername);
+        var result = await AccountAuth.ChangeUsernameAsync(_newUsername);
         _busy = false;
-        _editingUsername = !success;
-        if (success) _profileSuccess = Loc["AuthUsernameUpdated"];
-        else _profileError = error;
+        _editingUsername = result is not Success;
+        if (result is ApiFailure failure) _profileError = failure.Message;
+        else _profileSuccess = Loc["AuthUsernameUpdated"];
     }
 
     private async Task SavePasswordAsync()
     {
         ClearMessages();
         _busy = true;
-        var (success, error) = await AccountAuth.ChangePasswordAsync(_oldPassword, _newPassword);
+        var result = await AccountAuth.ChangePasswordAsync(_oldPassword, _newPassword);
         _busy = false;
-        _editingPassword = !success;
+        _editingPassword = result is not Success;
         _oldPassword = string.Empty;
         _newPassword = string.Empty;
-        if (success) _profileSuccess = Loc["AuthPasswordUpdated"];
-        else _profileError = error;
+        if (result is ApiFailure failure) _profileError = failure.Message;
+        else _profileSuccess = Loc["AuthPasswordUpdated"];
     }
 
     private async Task UnlinkCharacterAsync(int dbrefNumber, string name)
@@ -250,12 +251,15 @@
         if (confirmed != true) return;
 
         _busy = true;
-        var (success, error) = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);
+        var result = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);
         _busy = false;
-        // An error alongside success is advisory: the unlink landed, but something after it did not
-        // (the session could not be rebound), and the player has to know to pick a character.
-        if (error is not null) _profileError = error;
-        else if (success) _profileError = null;
+        // An advisory is not a failure: the unlink landed, but something after it did not (the
+        // session could not be rebound), and the player has to know to pick a character.
+        _profileError = result switch
+        {
+            AccountAuthService.CharacterUnlinked unlinked => unlinked.Advisory,
+            ApiFailure failure => failure.Message,
+        };
         StateHasChanged();
     }
 

@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
+using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Library.Services;
 
@@ -606,6 +607,7 @@ public class AttributeService(
 
 		var origin = obj.Object().DBRef;
 		List<DBRef>? parentChain = null;
+		var ancestors = new Dictionary<(DBRef Target, string Path), SharpAttribute?>();
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
@@ -620,7 +622,8 @@ public class AttributeService(
 				: parentChain ??= await ParentChainAsync(obj);
 
 			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
-					(target, parts) => FetchAncestorAsync(target, parts, knownBySource),
+					(target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
+						() => FetchAncestorAsync(target, parts, knownBySource)),
 					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path))))
 			{
 				permitted.Add(attr);
@@ -671,7 +674,7 @@ public class AttributeService(
 
 			var parentObj = parent.Object();
 
-			// A pre-existing cycle isn't this method's concern (SafeToAddParent's reachability
+			// A pre-existing cycle isn't this method's concern (SafeToAddParentAsync's reachability
 			// check owns that); stop rather than spin so this can't itself hang on legacy/bad data.
 			if (!seen.Add(parentObj.DBRef.Number)) return false;
 
@@ -702,6 +705,29 @@ public class AttributeService(
 		return await mediator
 			.CreateStream(new GetAttributeQuery(target, path), ExecutionBudget.CurrentToken)
 			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+	}
+
+	/// <summary>
+	/// One pattern read's memo of the branch nodes its read walks have resolved, keyed by the target
+	/// they were resolved on and the full upper-cased path. Leaves under one branch all walk that
+	/// branch's prefixes over the same targets, so without it a hundred matched leaves of
+	/// <c>FOO`*</c> resolve <c>FOO</c> a hundred times. A miss is remembered too: it is an answer
+	/// ("abandon this target"), not a reason to ask again. Per call, never shared: it holds the
+	/// answers of one read, not a cache that a write would have to invalidate.
+	/// </summary>
+	private static async ValueTask<T?> MemoizedAncestorAsync<T>(Dictionary<(DBRef Target, string Path), T?> memo,
+		DBRef target, string[] path, Func<ValueTask<T?>> fetch)
+		where T : class
+	{
+		var key = (target, string.Join('`', path).ToUpperInvariant());
+		if (memo.TryGetValue(key, out var known))
+		{
+			return known;
+		}
+
+		var found = await fetch();
+		memo[key] = found;
+		return found;
 	}
 
 	/// <summary>
@@ -896,6 +922,7 @@ public class AttributeService(
 		var ordered = results.OrderBy(x => x.Attribute.LongName, _attributeSort);
 		var origin = obj.Object().DBRef;
 		List<DBRef>? parentChain = null;
+		var ancestors = new Dictionary<(DBRef Target, string Path), LazySharpAttribute?>();
 
 		foreach (var (attr, source) in ordered)
 		{
@@ -910,7 +937,8 @@ public class AttributeService(
 					? [origin]
 					: parentChain ??= await ParentChainAsync(obj, cancellationToken);
 				canRead = await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
-					(target, parts) => FetchLazyAncestorAsync(target, parts, knownBySource, cancellationToken),
+					(target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
+						() => FetchLazyAncestorAsync(target, parts, knownBySource, cancellationToken)),
 					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path), cancellationToken));
 			}
 			if (canRead) yield return attr;

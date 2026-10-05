@@ -69,6 +69,17 @@ behaved differently.
   had been copied into three places and none of the three carried them.
 - `render()` once evaluated its second argument as the object named by its first, which is what
   `objeval()` does, rather than rendering a string.
+- A QUIET player, or a player writing to a QUIET object they own, was once still told
+  `<object>/<attr> - Set.` by `&`, `@desc` and the other attribute commands, and `Parent changed.`,
+  `Home set.`, `@edit`'s `- Set.` and `@power`'s `granted.`; `@notify` and `@drain` now say nothing
+  for a QUIET executor, and `@drain` says `Drained.` otherwise. See `help QUIET`.
+- A queue entry that runs out of `queue_entry_cpu_time` once sent
+  `#-1 EXECUTION TIME LIMIT EXCEEDED` to every connection of its owner; its enactor now hears
+  `CPU usage exceeded.`, unless QUIET.
+- `@chownall` once said `Changed ownership of N object(s) from A to B.`; it now says
+  `Ownership changed for N objects.`
+- A new game once started with `function_recursion_limit 100`, `function_invocation_limit 100000`
+  and `max_named_qregs 100`; it now starts with PennMUSH's 50, 25000 and 50.
 
 ## Known limitations
 
@@ -80,6 +91,10 @@ Not yet at parity; may change in a future release.
   written, where PennMUSH shows it evaluated in a queued list, and a computed `&` attribute name as
   written (`ATTRIB_SET/[CAT(F,OO)]`), where PennMUSH shows the name it evaluated to
   (`ATTRIB_SET/FOO`).
+- **`@trigger` and `@force` count toward the in-place depth.** Both run their list in place rather
+  than queueing it, so it is one more of the 50 in-place levels a queue entry may nest (see
+  `help @include`). An attribute that `@trigger`s itself stops after 50 rounds, where PennMUSH
+  queues each round as a new entry and goes on.
 - **Characters above U+FFFF** (emoji and other supplementary-plane characters) are stored as UTF-16
   surrogate pairs. This is internally consistent, but a substitution or slice that lands between the
   two halves of a pair could split it. Rare in practice.

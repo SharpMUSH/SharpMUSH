@@ -28,7 +28,8 @@ public class PackageWriteTransactionTests
 		(await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 
 	private async Task<PackageWriteTransaction> BeginAsync() => new(
-		Mediator, Database, Database, Database, Registry, (IApplicationRegistryService)Database, await PackageManagerAsync());
+		Mediator, Database, Database, Database, Registry, (IApplicationRegistryService)Database,
+		WebAppFactoryArg.Services.GetRequiredService<ILockService>(), await PackageManagerAsync());
 
 	/// <summary>A thing with a name, one attribute, no DARK flag and no use lock, and a baseline row for it.</summary>
 	private async Task<(AnySharpObject Node, DBRef DBRef, string Objid)> SubjectAsync(string name, string package)
@@ -52,7 +53,7 @@ public class PackageWriteTransactionTests
 		await writes.SetAttributeAsync(dbref, ["TX_ADDED"], MarkupText.Plain("added"), pm, CancellationToken.None);
 		await writes.SetNameAsync(node, "Tx Renamed", CancellationToken.None);
 		await writes.SetFlagAsync(node, dark, CancellationToken.None);
-		await Assert.That((await writes.SetLockAsync(node.Object(), "Use", "#FALSE", CancellationToken.None)).Value).IsTypeOf<Success>();
+		await Assert.That((await writes.SetLockAsync(node, "Use", "#FALSE", CancellationToken.None)).Value).IsTypeOf<Success>();
 		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_VALUE", "second", "h", "2.0.0"));
 		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_ADDED", "added", "h", "2.0.0"));
 	}

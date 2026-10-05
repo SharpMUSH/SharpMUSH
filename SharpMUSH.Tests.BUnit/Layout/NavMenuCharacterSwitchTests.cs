@@ -54,6 +54,14 @@ file sealed class NavMenuSwitchApiHandler(IReadOnlyList<CharacterSummary> charac
 			});
 		}
 
+		if (request.Method == HttpMethod.Post && path == "api/auth/mush-token")
+		{
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new { token = "command-ott", expiresIn = 60 })
+			});
+		}
+
 		if (request.Method == HttpMethod.Post && path == "api/auth/switch-character")
 		{
 			// failSwitch simulates an expired account session: the server rejects the OTT mint, which
@@ -109,7 +117,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 	}
 
 	private sealed record TerminalRig(ITerminalService First, ITerminalService Second);
-	private sealed record PlayTerminalRig(IPlayTerminalService First);
+	private sealed record PlayTerminalRig(IPlayTerminalService First, IPlayTerminalService Second);
 
 	/// <summary>Real TerminalServiceHost (concrete type AND interface aliased to the same instance,
 	/// mirroring <c>TerminalServiceCollectionExtensions.AddTerminalServices</c>), backed by a
@@ -134,7 +142,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		var host = new PlayTerminalServiceHost(() => queue.Dequeue());
 		Services.AddSingleton(host);
 		Services.AddSingleton<IPlayTerminalService>(host);
-		return new PlayTerminalRig(first);
+		return new PlayTerminalRig(first, second);
 	}
 
 	private async Task<AccountAuthService> CreateLoggedInAuthAsync(bool failSwitch = false)
@@ -149,9 +157,8 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(new ApplicationCatalog([]));
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
-		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
-		if (!success)
-			throw new InvalidOperationException($"Test setup login failed: {error}");
+		if (await auth.LoginAsync("headwiz", "password") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"Test setup login failed: {loginFailure.Message}");
 
 		Services.AddSingleton(auth);
 		_connection = Substitute.For<IConnectionStateService>();
@@ -185,11 +192,12 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		=> Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 
 	[Test]
-	public async Task Switching_from_the_panel_moves_the_connected_terminal_to_the_new_character()
+	public async Task Switching_from_the_panel_moves_the_connected_terminals()
 	{
 		var terminal = RegisterTerminal();
-		terminal.First.IsConnected.Returns(true);
 		var playTerminal = RegisterPlayTerminal();
+		terminal.First.IsConnected.Returns(true);
+		playTerminal.First.IsConnected.Returns(true);
 		var auth = await CreateLoggedInAuthAsync();
 
 		var cut = RenderNavMenu();
@@ -201,12 +209,15 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 				throw new InvalidOperationException("switch not applied yet");
 		});
 
-		// The connected command terminal quits as Alpha and connects as Beta with the switch's OTT; the
-		// play terminal was never connected, so the Play page connects it as Beta when it opens.
-		cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
+		// The terminal and the Play page follow the switch: both connections quit the previous
+		// character and connect again as Beta.
+		var beta = new TerminalIdentity("headwiz", "#2:2");
+		cut.WaitForAssertion(() => playTerminal.Second.Received(1)
+			.ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", beta));
+		cut.WaitForAssertion(() => terminal.Second.Received(1)
+			.ConnectWithOttAsync(Arg.Any<string>(), "command-ott", beta));
 		await terminal.First.Received(1).SendAsync("QUIT");
-		await terminal.First.Received(1).DisposeAsync();
-		await playTerminal.First.DidNotReceive().DisposeAsync();
+		await playTerminal.First.Received(1).SendAsync("QUIT");
 	}
 
 	[Test]

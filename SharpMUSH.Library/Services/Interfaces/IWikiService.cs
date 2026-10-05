@@ -63,6 +63,13 @@ public interface IWikiService
 	Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts);
 
 	/// <summary>
+	/// Every page counted by state (published, draft, protected) without reading a page. As with
+	/// <see cref="CountPagesAsync"/>, <paramref name="includeDrafts"/> has no default: false counts drafts as
+	/// zero and leaves them out of the protected count.
+	/// </summary>
+	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
+
+	/// <summary>
 	/// Lists pages with the given category (case-insensitive), ordered by title.
 	/// </summary>
 	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
@@ -231,6 +238,13 @@ public interface IWikiService
 	/// ints, and the compiler would not complain.
 	/// </remarks>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take);
+
+	/// <summary>
+	/// The cursor form of <see cref="GetRevisionsForLocaleAsync"/>: the revisions of one stream numbered
+	/// below <paramref name="beforeRevisionNumber"/>, newest first, at most <paramref name="take"/>. Pass the
+	/// last number of the previous page to get the next one.
+	/// </summary>
+	Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeForLocaleAsync(string pageId, string locale, int beforeRevisionNumber, int take);
 
 	/// <summary>
 	/// Returns one revision snapshot from a single <c>(pageId, locale)</c> stream.

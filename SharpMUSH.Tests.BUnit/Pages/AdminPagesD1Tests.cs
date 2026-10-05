@@ -436,4 +436,53 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("input.mud-input-slot")[1].GetAttribute("value") ?? string.Empty).IsEqualTo(string.Empty);
 	}
+
+	/// <summary>
+	/// The applications page always has one selected while any are registered: the first on load, and
+	/// whichever card is clicked after that (<c>AdminRecordList</c> with <c>AdminReselect.First</c>).
+	/// </summary>
+	[Test]
+	public async Task Applications_SelectsTheFirstOnLoad_AndTheClickedCardAfter()
+	{
+		_api.Bodies["api/applications"] = """
+			[{"slug":"alpha","displayName":"Alpha","kind":"Page","schemaUrl":"","minimumRole":"Player","zones":[],"order":0},
+			 {"slug":"beta","displayName":"Beta","kind":"Widget","schemaUrl":"","minimumRole":"Player","zones":[],"order":1}]
+			""";
+		var cut = RenderPage(typeof(AdminApplications));
+
+		cut.WaitForAssertion(() => cut.Find(".aa-detail-name"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".aa-detail-name").TextContent).IsEqualTo("Alpha");
+		await Assert.That(cut.Find(".aa-card--on .aa-card-name").TextContent).IsEqualTo("Alpha");
+
+		cut.FindAll(".aa-card")[1].Click();
+
+		await Assert.That(cut.Find(".aa-detail-name").TextContent).IsEqualTo("Beta");
+		await Assert.That(cut.Find(".aa-card--on .aa-card-name").TextContent).IsEqualTo("Beta");
+	}
+
+	/// <summary>
+	/// The roles page starts with nothing selected; clicking a role selects it and fills the editor
+	/// from it (<c>AdminRecordList</c> with <c>AdminReselect.Nothing</c> and a selection callback).
+	/// </summary>
+	[Test]
+	public async Task Roles_SelectsNothingOnLoad_AndFillsTheEditorFromTheClickedRole()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"builder","name":"Builder","color":"#123456","priority":10,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
+			 {"slug":"admin","name":"Admin","color":"#654321","priority":90,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".ra-card--on").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".ra-empty-detail").Count).IsEqualTo(1);
+
+		// Sorted by priority, highest first: Admin, then Builder.
+		cut.FindAll(".ra-card")[1].Click();
+
+		await Assert.That(cut.Find(".ra-card--on .ra-card-name").TextContent).IsEqualTo("Builder");
+		await Assert.That(cut.Find(".ra-detail-slug").TextContent).IsEqualTo("builder");
+		await Assert.That(cut.Find("input.ra-input").GetAttribute("value")).IsEqualTo("Builder");
+		await Assert.That(cut.FindAll(".ra-btn--danger").Count).IsEqualTo(1);
+	}
 }

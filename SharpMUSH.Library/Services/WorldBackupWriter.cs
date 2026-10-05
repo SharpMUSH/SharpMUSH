@@ -33,7 +33,7 @@ public sealed partial class WorldBackupWriter(
 	}
 
 	/// <summary>Prefix for a copy still being written. Hidden, and never matched by <see cref="NameRegex"/>.</summary>
-	private const string IncomingPrefix = ".incoming-";
+	public const string IncomingPrefix = ".incoming-";
 
 	/// <summary>Name of the pointer at the newest copy.</summary>
 	private const string LatestName = "latest";
@@ -49,6 +49,21 @@ public sealed partial class WorldBackupWriter(
 	/// </summary>
 	private readonly SemaphoreSlim _oneAtATime = new(1, 1);
 
+	/// <summary>
+	/// The size the next copy is expected to be, for the free-space check a run makes before it writes
+	/// anything. Unset, a run skips the check and relies on the copy failing cleanly if the disk fills.
+	/// </summary>
+	public Func<long>? EstimateCopyBytes { get; init; }
+
+	/// <summary>Free bytes on the filesystem holding a path, or -1 when unknown. Replaceable for tests.</summary>
+	public Func<string, long> FreeBytes { get; init; } = DiskSpace.FreeBytes;
+
+	/// <summary>
+	/// What a run must find free before it starts: the copy itself and a margin — a tenth of it, and never
+	/// less than 16 MiB — for the estimate being low and for whatever else shares the disk.
+	/// </summary>
+	public static long RequiredFreeBytes(long copyBytes) => copyBytes + Math.Max(copyBytes / 10, 16L << 20);
+
 	public string Root => options.Root;
 
 	public int Keep => Math.Max(options.Keep, 1);
@@ -60,17 +75,30 @@ public sealed partial class WorldBackupWriter(
 		await _oneAtATime.WaitAsync(ct);
 		try
 		{
-			var staging = Path.Combine(options.Root, IncomingPrefix + Guid.NewGuid().ToString("N")[..8]);
+			var staging = Path.Join(options.Root, IncomingPrefix + Guid.NewGuid().ToString("N")[..8]);
+			// Taken once, at the check, and reused to explain a failure: asking again then would ask a
+			// store that may be the very thing that failed.
+			var required = -1L;
 			try
 			{
 				// Inside the handler: an unwritable or unreachable root is a failure to report like any
 				// other, not an exception thrown out of the command a wizard just typed.
 				Directory.CreateDirectory(options.Root);
+
+				// Before anything is written: the existing copies are only pruned once the new one is
+				// complete, so the new copy has to fit beside all of them.
+				required = EstimateCopyBytes is { } estimate ? RequiredFreeBytes(estimate()) : -1;
+				if (required >= 0 && InsufficientSpace(required) is { Length: > 0 } shortfall)
+				{
+					logger.LogWarning("World backup into {Root} not started: {Reason}", options.Root, shortfall);
+					return new Error<string>(shortfall);
+				}
+
 				Directory.CreateDirectory(staging);
 				logger.LogInformation("Writing a world backup into {Path}", staging);
 				await writePayload(staging, ct);
 
-				var final = Path.Combine(options.Root, NextName());
+				var final = Path.Join(options.Root, NextName());
 				Directory.Move(staging, final);
 				PointLatestAt(final);
 				Prune();
@@ -87,15 +115,29 @@ public sealed partial class WorldBackupWriter(
 			}
 			catch (Exception ex)
 			{
+				// The half-written copy goes; the copies already on disk were never touched, because pruning
+				// only follows a complete one.
 				TryDelete(staging);
 				logger.LogError(ex, "World backup into {Root} failed", options.Root);
-				return new Error<string>(ex.Message);
+				var shortfall = required >= 0 ? InsufficientSpace(required) : string.Empty;
+				return new Error<string>(shortfall.Length > 0 ? $"{ex.Message} ({shortfall})" : ex.Message);
 			}
 		}
 		finally
 		{
 			_oneAtATime.Release();
 		}
+	}
+
+	/// <summary>Why <paramref name="required"/> bytes will not fit in the backup root, or empty when they
+	/// will (or when free space cannot be read).</summary>
+	private string InsufficientSpace(long required)
+	{
+		var free = FreeBytes(options.Root);
+		return free >= 0 && free < required
+			? $"not enough disk for a new copy: it needs about {required} bytes free in {options.Root}, and {free} are. "
+				+ $"Free space there, or keep fewer copies (currently {Keep})"
+			: string.Empty;
 	}
 
 	public IReadOnlyList<WorldBackup> List() =>
@@ -153,7 +195,7 @@ public sealed partial class WorldBackupWriter(
 	private void PointLatestAt(string target)
 	{
 		var name = Path.GetFileName(target);
-		var link = Path.Combine(options.Root, LatestName);
+		var link = Path.Join(options.Root, LatestName);
 		try
 		{
 			var existing = new DirectoryInfo(link);
@@ -168,7 +210,7 @@ public sealed partial class WorldBackupWriter(
 				LatestFallbackName);
 			try
 			{
-				File.WriteAllText(Path.Combine(options.Root, LatestFallbackName), name);
+				File.WriteAllText(Path.Join(options.Root, LatestFallbackName), name);
 			}
 			catch (Exception fallback) when (fallback is IOException or UnauthorizedAccessException)
 			{

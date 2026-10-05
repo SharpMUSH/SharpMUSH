@@ -82,12 +82,12 @@ public class PennMUSHChannelImportTests
 		await Assert.That(await MembersAsync(staff)).IsEqualTo("#1:");
 
 		// The locks are live: Secret's join lock lets Alice and Bob in and keeps Carol out.
-		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
-		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
-		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), @public)).IsTrue();
+		await Assert.That(await world.ChannelPermissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
+		await Assert.That(await world.ChannelPermissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
+		await Assert.That(await world.ChannelPermissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), @public)).IsTrue();
 		// Its speak lock too.
-		await Assert.That(await world.Permissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
-		await Assert.That(await world.Permissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
+		await Assert.That(await world.ChannelPermissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
+		await Assert.That(await world.ChannelPermissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
 
 		// A member finds the channel from its side too.
 		var carolsChannels = await world.Mediator

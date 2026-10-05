@@ -100,19 +100,16 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbInsufficientArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbInsuf");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService,
+			"VerbInsuf");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@verb {verbObj}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@verb me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]",
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
+			.Contains("Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
 	}
 
 	[Test]

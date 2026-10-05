@@ -90,7 +90,9 @@ internal static class EngineRegistration
 		services.AddSingleton<SharpMUSH.Library.Reality.RealityPolicy>();
 		services.AddSingleton<SharpMUSH.Library.Reality.RealityAdministration>();
 		services.AddSingleton<SharpMUSH.Library.Reality.IRealityPolicy>(sp => sp.GetRequiredService<SharpMUSH.Library.Reality.RealityPolicy>());
-		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<PermissionService>();
+		services.AddSingleton<IPermissionService>(sp => sp.GetRequiredService<PermissionService>());
+		services.AddSingleton<IChannelPermissionService>(sp => sp.GetRequiredService<PermissionService>());
 		services.AddSingleton<QueueDiagnosticsRecorder>();
 		services.AddSingleton<IQueueDiagnosticsRecorder>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
 		services.AddSingleton<ITelemetryInvocationObserver>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
@@ -114,8 +116,16 @@ internal static class EngineRegistration
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
-		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
-		services.AddSingleton<ITaskScheduler, TaskScheduler>();
+		services.AddSingleton<IRelationshipCycleChecker, RelationshipCycleChecker>();
+		services.AddSingleton<IObjectNameService, ObjectNameService>();
+		services.AddSingleton<IFlagAndPowerService, FlagAndPowerService>();
+		services.AddSingleton<IObjectRelationshipService, ObjectRelationshipService>();
+		// One scheduler, seen through the four questions callers ask of it.
+		services.AddSingleton<TaskScheduler>();
+		services.AddSingleton<ITaskScheduler>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ISemaphoreQueue>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ITaskQueueControl>(sp => sp.GetRequiredService<TaskScheduler>());
+		services.AddSingleton<ITaskQueueReader>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
@@ -172,7 +182,11 @@ internal static class EngineRegistration
 		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
 			new FileSystemPluginUiAssemblyProvider(
 				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
+		// One process-wide lock every package operation holds from its registry read to its last write (#1484).
+		services.AddSingleton<IPackageOperationGate, PackageOperationGate>();
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
+		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
+		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
 			new Services.GitPackageSourceService(sp.GetRequiredService<IPackageManifestService>()));
@@ -190,6 +204,10 @@ internal static class EngineRegistration
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
 		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
+		// Portal commands (POST api/commands): run as the session's character, its output copied back.
+		services.AddSingleton<ICommandOutputCapture, CommandOutputCapture>();
+		services.Configure<PortalCommandOptions>(configuration.GetSection(PortalCommandOptions.Section));
+		services.AddSingleton<IPortalCommandService, PortalCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IPageLogService, PageLogService>();
@@ -212,6 +230,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
 		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
+		services.AddHttpContextAccessor();
 		services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, FreshPermissionClaimsTransformation>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 

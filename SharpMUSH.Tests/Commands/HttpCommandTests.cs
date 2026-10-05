@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -87,7 +88,7 @@ public class HttpCommandTests
 		parser.CurrentState.Returns(state);
 		var notifications = Substitute.For<INotifyService>();
 		var notices = 0;
-		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>())
+		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
 		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<SharpMessage>(),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce)
@@ -123,9 +124,21 @@ public class HttpCommandTests
 			var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
 			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
-			await notifications.Received(reason == QueueRejectionReason.InvalidTarget ? 0 : 1)
-				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
-			await Assert.That(notices).IsEqualTo(1);
+			// A quota refusal is reported by the runaway notice to the owner instead (pay_queue, src/cque.c:304).
+			var runaway = reason == QueueRejectionReason.OwnerLimit;
+			await notifications.Received(reason == QueueRejectionReason.InvalidTarget || runaway ? 0 : 1)
+				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>());
+			if (runaway)
+			{
+				for (var deadline = DateTime.UtcNow.AddSeconds(10); !RunawayNoticed() && DateTime.UtcNow < deadline;)
+					await Task.Delay(20);
+				await Assert.That(RunawayNoticed()).IsTrue();
+			}
+			else await Assert.That(notices).IsEqualTo(1);
+
+			bool RunawayNoticed() => notifications.ReceivedCalls().Count(call =>
+				call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized)
+				&& call.GetArguments() is [_, nameof(ErrorMessages.Notifications.RunawayObjectFormat), ..]) == 1;
 			await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(0);
 			clients.DidNotReceive().CreateClient(Arg.Any<string>());
 		}
@@ -144,33 +157,7 @@ public class HttpCommandTests
 	{
 		var context = new HttpResponseContext();
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var httpParser = Parser.Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			ExecutionStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: executor,
-			Enactor: executor,
-			Caller: executor,
-			Handle: null,
-			ParseMode: ParseMode.Default,
-			HttpResponse: context,
-			CallDepth: new InvocationCounter(),
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag())
-		{
-			MoveDepth = new InvocationCounter()
-		});
+		var httpParser = Parser.Push(ParserState.RootFor(executor) with { HttpResponse = context });
 
 		await httpParser.CommandListParse(MarkupText.Plain(commandList));
 		return context;

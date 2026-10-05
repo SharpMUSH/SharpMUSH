@@ -9,7 +9,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -18,16 +17,28 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> CopyAttributeAsync(parser, "@cpattr", move: false);
+
+	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
+	public ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> CopyAttributeAsync(parser, "@mvattr", move: true);
+
+	/// <summary>
+	/// The one body of <c>@cpattr</c> and <c>@mvattr</c>, as PennMUSH's <c>do_cpattr</c> (src/attrib.c) is
+	/// for both: copy the source attribute to every destination, then, for <c>@mvattr</c>, remove the
+	/// source once at least one copy landed.
+	/// </summary>
+	private async ValueTask<Option<CallState>> CopyAttributeAsync(IMUSHCodeParser parser, string commandName, bool move)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@cpattr");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, commandName);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -42,13 +53,13 @@ public partial class Commands
 		executor, executor, sourceDbref, LocateFlags.All) switch
 		{
 			AnySharpObject sourceObject => await CopyAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
-				sourceAttr),
+				sourceAttr, move),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
+		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr, bool move)
 	{
 		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
@@ -88,6 +99,14 @@ public partial class Commands
 				continue;
 			}
 
+			// PennMUSH do_cpattr (src/set.c:751-753) skips a destination that is the source attribute itself:
+			// counting it would let @mvattr clear the only copy.
+			if (destObject.Object().DBRef == sourceObject.Object().DBRef
+				&& targetAttrName.Equals(sourceAttr, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
 			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{
@@ -115,138 +134,31 @@ public partial class Commands
 			copiedCount++;
 		}
 
-		if (copiedCount > 0)
+		if (copiedCount == 0)
 		{
-			var destWord = copiedCount == 1 ? "destination" : "destinations";
+			await NotifyService.NotifyLocalized(executor, move
+				? nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny)
+				: nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
+			return new CallState(move ? ErrorMessages.Returns.MoveFailed : ErrorMessages.Returns.CopyFailed);
+		}
+
+		var destWord = copiedCount == 1 ? "destination" : "destinations";
+		if (!move)
+		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
-			return new CallState(ErrorMessages.Returns.CopyFailed);
+			return new CallState(string.Empty);
 		}
 
-		return new CallState(string.Empty);
-	}
-
-	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
-
-		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@mvattr");
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var sourceText = sourceArg.Message!.ToPlainText();
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(sourceText) is not { Object: var sourceDbref, Attribute: { } sourceAttr })
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState(ErrorMessages.Returns.InvalidSource);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, sourceDbref, LocateFlags.All) switch
-		{
-			AnySharpObject sourceObject => await MoveAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
-				sourceAttr),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> MoveAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
-	{
-		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
-				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-
-		var sourceLeaf = sourceAttribute.Last();
-		var attrValue = sourceLeaf.Value;
-		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
-
-		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
-		// starting at index 1. Collect all destination args in order.
-		var destinations = args
-			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
-			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => kvp.Value.Message!.ToPlainText().Trim())
-			.Where(d => !string.IsNullOrEmpty(d));
-
-		int copiedCount = 0;
-
-		foreach (var dest in destinations)
-		{
-			if (HelperFunctions.SplitDbRefAndOptionalAttr(dest) is not { Object: var destDbref, Attribute: var destAttr })
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
-				continue;
-			}
-
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
-
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
-				continue;
-			}
-
-			var canSet = await PermissionService.CanSet(executor, destObject);
-			if (!canSet)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
-				continue;
-			}
-
-			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
-
-			if (setResult is Error<string> error)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, error.Value);
-				continue;
-			}
-
-			if (copyFlags && attrFlagNames.Count > 0)
-			{
-				// One batch, not one call per flag: applying flags one at a time re-checks permission
-				// after each mutation, so a source attribute carrying both SAFE and (say) WIZARD would
-				// have WIZARD silently fail to copy once SAFE landed first - Penn's copy_attrib_flags
-				// checks once and applies the whole mask.
-				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
-			}
-
-			copiedCount++;
-		}
-
-		if (copiedCount > 0)
-		{
-			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+		var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact);
 
-			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			if (clearResult is Error<string> error)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, error.Value);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
-			}
+		if (clearResult is Error<string> clearError)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearError.Value);
 		}
 		else
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
-			return new CallState(ErrorMessages.Returns.MoveFailed);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
 		}
 
 		return new CallState(string.Empty);
@@ -430,7 +342,8 @@ public partial class Commands
 		var objAttrArg = args.ElementAtOrDefault(0).Value;
 		if (objAttrArg == null || objAttrArg.Message == null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
+			// src/set.c:971
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -464,7 +377,8 @@ public partial class Commands
 		var searchArg = args.ElementAtOrDefault(1).Value;
 		var replaceArg = args.ElementAtOrDefault(2).Value;
 
-		if (searchArg == null || searchArg.Message == null)
+		// src/set.c:985 — an empty search string is nothing to do, as is a missing one.
+		if (searchArg?.Message is not { Length: > 0 })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditMustSpecifySearchAndReplace), executor);
 			return new CallState(ErrorMessages.Returns.MissingArguments);
@@ -473,19 +387,29 @@ public partial class Commands
 		var search = searchArg.Message.ToPlainText();
 		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
 
+		// src/set.c do_edit_regexp: the pattern is compiled before any attribute is read, so a bad one is
+		// reported once instead of leaving every attribute "Unchanged".
+		if (switches.Contains("REGEXP"))
+		{
+			try
+			{
+				SoftcodeRegex.Create(search, switches.Contains("NOCASE") ? RegexOptions.IgnoreCase : RegexOptions.None);
+			}
+			catch (ArgumentException ex)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidRegexpFormat), executor, ex.Message);
+				return new CallState(ErrorMessages.Returns.InvalidRegexp);
+			}
+		}
+
 		return await AttributeService.GetAttributePatternAsync(
 			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard) switch
 		{
 			SharpAttribute[] attributes => await EditMatchedAttributesAsync(parser, executor, targetObject, switches,
 				attributes.ToList(), search, replace),
-			Error<string> error => await NotifyAndReturnAsync(executor, error.Value)
+			Error<string> error => await NotifyService.NotifyAndReturn(executor.Object().DBRef, error.Value, error.Value,
+				shouldNotify: true)
 		};
-	}
-
-	private async ValueTask<Option<CallState>> NotifyAndReturnAsync(AnySharpObject executor, string message)
-	{
-		await NotifyService.Notify(executor, message, executor);
-		return new CallState(message);
 	}
 
 	/// <summary>Applies the edit to each attribute the pattern matched.</summary>
@@ -508,133 +432,66 @@ public partial class Commands
 		var isQuiet = switches.Contains("QUIET");
 		var isAll = switches.Contains("ALL");
 		var isNoCase = switches.Contains("NOCASE");
+		// do_edit's "- Set" line also needs !AreQuiet(player, thing) (src/set.c:936, :1163); the
+		// /check preview does not, since nothing was set.
+		var areQuiet = await targetObject.Object().AreQuietAsync(executor);
 
 		foreach (var attr in attrList)
 		{
 			var attrName = attr.LongName!;
 			var attrValue = attr.Value;
 			var originalText = attrValue.ToPlainText();
-			string newText;
+			AttributeEdit edit;
 
 			if (isRegexp)
 			{
-				var edited = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
-				newText = edited.Message!.ToPlainText();
-				hadErrors |= edited.HadErrors;
+				(edit, var regexHadErrors) = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				hadErrors |= regexHadErrors;
 			}
 			else
 			{
-				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
+				edit = AttributeEdit.Simple(originalText, search, replace, isFirst);
 			}
 
-			if (newText == originalText)
+			// edit_helper (src/set.c:917): an attribute counts as edited when the search matched, even if the
+			// replacement leaves it as it was, and one that did not match is reported unless /quiet.
+			if (!edit.Matched)
 			{
 				unchangedCount++;
+				if (!isQuiet)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeUnchangedFormat), executor, attrName);
+				}
+
 				continue;
 			}
 
 			modifiedCount++;
 
-			if (!isQuiet && !isCheck)
+			if (!isQuiet && !isCheck && !areQuiet)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName);
+				await NotifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, MarkupText.Plain(attrName), edit.Shown);
 			}
 			else if (!isQuiet && isCheck)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditWouldChangeToFormat), executor, attrName, newText);
+				// src/set.c:943 — /check shows the same line it would have set, and sets nothing.
+				await NotifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, MarkupText.Plain(attrName), edit.Shown);
 			}
 
 			if (!isCheck)
 			{
-				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(newText));
+				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(edit.Text));
 			}
 		}
 
-		if (isQuiet || (modifiedCount + unchangedCount > 1))
+		// src/set.c:1003 — only /quiet ends with a count, and it says the same under /check.
+		if (isQuiet)
 		{
-			var checkPrefix = isCheck ? "Would edit" : "Edited";
-			await NotifyService.Notify(executor,
-				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditQuietSummaryFormat), executor,
+				modifiedCount, unchangedCount);
 		}
 
 		return new CallState(string.Empty) { HadErrors = hadErrors };
-	}
-
-	/// <summary>
-	/// Split search/replace text by comma, respecting curly brace escaping
-	/// </summary>
-	private string[] SplitSearchReplace(string text)
-	{
-		var parts = new List<string>();
-		var current = new StringBuilder();
-		int braceDepth = 0;
-
-		for (int i = 0; i < text.Length; i++)
-		{
-			char c = text[i];
-
-			if (c == '{')
-			{
-				braceDepth++;
-				current.Append(c);
-			}
-			else if (c == '}')
-			{
-				braceDepth--;
-				current.Append(c);
-			}
-			else if (c == ',' && braceDepth == 0)
-			{
-				parts.Add(current.ToString());
-				current.Clear();
-			}
-			else
-			{
-				current.Append(c);
-			}
-		}
-
-		parts.Add(current.ToString());
-
-		for (int i = 0; i < parts.Count; i++)
-		{
-			var part = parts[i].Trim();
-			if (part.StartsWith('{') && part.EndsWith('}'))
-			{
-				part = part[1..^1];
-			}
-			parts[i] = part;
-		}
-
-		return [.. parts];
-	}
-
-	/// <summary>
-	/// Perform simple string replacement
-	/// </summary>
-	private string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
-	{
-		if (search == "^")
-		{
-			return replace + text;
-		}
-		else if (search == "$")
-		{
-			return text + replace;
-		}
-		else if (firstOnly)
-		{
-			int index = text.IndexOf(search);
-			if (index >= 0)
-			{
-				return text[..index] + replace + text[(index + search.Length)..];
-			}
-			return text;
-		}
-		else
-		{
-			return text.Replace(search, replace);
-		}
 	}
 
 	/// <summary>
@@ -642,7 +499,7 @@ public partial class Commands
 	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
 	/// text is never pasted into the replacement.
 	/// </summary>
-	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
+	private async ValueTask<(AttributeEdit Edit, bool HadErrors)> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		var hadErrors = false;
@@ -675,56 +532,34 @@ public partial class Commands
 					firstEvaluated = i;
 				}
 
-				text = SpliceReplacements(text, matches, replacements, firstEvaluated);
+				return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 			}
 			else
 			{
 				var match = regex.Match(text);
-				if (match.Success)
+				if (!match.Success)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
-					hadErrors |= replacement.HadErrors;
-					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
+					return (AttributeEdit.Unmatched(text), hadErrors);
 				}
-			}
 
-			return new CallState(text) { HadErrors = hadErrors };
+				var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
+				hadErrors |= replacement.HadErrors;
+				return (AttributeEdit.Spliced(text, [match], [replacement.Message!.ToPlainText()], 0), hadErrors);
+			}
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
 			// Same answer as an unusable pattern: the text keeps only the replacements evaluated before the failure.
-			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+			return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 		}
 		catch (ArgumentException)
 		{
-			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+			return (AttributeEdit.Spliced(text, matches, replacements, firstEvaluated), hadErrors);
 		}
 		finally
 		{
 			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
-	}
-
-	/// <summary>
-	/// Builds <paramref name="text"/> with <c>matches[from..]</c> replaced by the matching
-	/// <paramref name="replacements"/>, copying each unchanged stretch once.
-	/// </summary>
-	private static string SpliceReplacements(string text, Match[] matches, string[] replacements, int from)
-	{
-		if (from >= matches.Length)
-		{
-			return text;
-		}
-
-		var builder = new StringBuilder(text.Length);
-		var position = 0;
-		for (var i = from; i < matches.Length; i++)
-		{
-			builder.Append(text, position, matches[i].Index - position).Append(replacements[i]);
-			position = matches[i].Index + matches[i].Length;
-		}
-
-		return builder.Append(text, position, text.Length - position).ToString();
 	}
 
 	/// <summary>

@@ -26,6 +26,11 @@
       "lookup": "compatibility parser evaluation stops at the first limit"
     },
     {
+      "id": "call-limit-counts-calls-not-parser-recursion",
+      "heading": "`call_limit` counts calls, not parser recursion",
+      "lookup": "compatibility parser call limit counts calls not parser recursion"
+    },
+    {
       "id": "in-iter-is-data-not-code",
       "heading": "`##` in `iter()` is data, not code",
       "lookup": "compatibility parser in iter is data not code"
@@ -142,6 +147,26 @@ every call that had already started and counts the result, answering 86 here; Sh
 > &RECURSE me=[u(me/RECURSE)]x
 > think strlen(u(me/RECURSE))
 #-1 FUNCTION RECURSION LIMIT EXCEEDED
+```
+
+## `call_limit` counts calls, not parser recursion
+
+**A choice.**
+
+**PennMUSH** counts every recursive call of its expression parser against `call_limit` — each
+bracket, function argument and attribute body (`src/parse.c:2128`) — and ships it at 100.<br>
+**SharpMUSH** counts function calls and attribute evaluations, about a third as many for the same
+code, and starts a new game at 1000.<br>
+**Why.** At 100 the call limit would trip before `function_recursion_limit` (50) on ordinary
+self-recursion, so `&X me=[u(me/X)]` would report `CALL LIMIT EXCEEDED` where PennMUSH reports
+`FUNCTION RECURSION LIMIT EXCEEDED`. 1000 keeps the recursion limit the one that answers.<br>
+**Workaround.** None needed. A game that wants a tighter bound can lower it with `@config/set`.
+
+PennMUSH answers `100`:
+
+```sharp
+> think config(call_limit)
+1000
 ```
 
 ## `##` in `iter()` is data, not code

@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
@@ -23,9 +24,7 @@ public partial class Functions
 	public ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var val)
-			? val.Message!.ToPlainText().ToLowerInvariant()
-			: "soundex";
+		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg1 switch
 		{
@@ -41,9 +40,7 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val)
-			? val.Message!.ToPlainText().ToLowerInvariant()
-			: "soundex";
+		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg2 switch
 		{
@@ -207,12 +204,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var category = args["0"].Message!.ToPlainText();
 		var word = args["1"].Message!.ToPlainText();
-		var separator = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : " ";
+		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var limit = 20;
 
 		if (args.ContainsKey("3"))
 		{
-			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
+			// fun_suggest reads its limit with is_integer and refuses anything else with e_int
+			// (src/help.c:1843-1847).
+			if (!ArgHelpers.TryInteger(parser, args["3"].Message!.ToPlainText(), out limit))
+			{
+				return new CallState(ErrorMessages.Returns.Integer);
+			}
+
+			if (limit < 1)
 			{
 				return new CallState(ErrorMessages.Returns.Integers);
 			}

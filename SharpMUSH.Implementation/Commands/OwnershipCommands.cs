@@ -51,26 +51,38 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
+						var result = await ObjectRelationshipService.SetOwner(executor, obj, newOwnerPlayer, true);
+
+						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
+						// @chown leaves the object as it was.
+						if (result.Message?.ToPlainText() == ErrorMessages.Returns.PermissionDenied)
+						{
+							return result;
+						}
 
 						if (!preserve)
 						{
-							if (await obj.HasFlag("WIZARD"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-							}
-							if (await obj.HasFlag("ROYALTY"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-							}
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
+							await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
 						}
 
+						// do_chown (src/set.c:238): every successful @chown says so, QUIET or not.
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerChanged), executor);
 						return result;
 					}
 				);
 			}
 		);
+	}
+
+	/// <summary>
+	/// The non-<c>/preserve</c> half of PennMUSH's <c>chown_object</c> (<c>src/set.c:332-340</c>): the
+	/// privilege strip, HALT, and then <c>do_halt</c>, which tells the new owner
+	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> unless they are QUIET and wipes what the object had queued.
+	/// </summary>
+	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
+	{
+		await PrivilegeHelpers.ResetForNewOwnerAsync(FlagAndPowerService, executor, obj);
+		await HaltQueuesAsync(obj, newOwner);
 	}
 
 	/// <remarks>
@@ -108,8 +120,9 @@ public partial class Commands
 	/// <summary>Binds this command instance's services to <see cref="ZoneHelpers.ChangeZoneAsync"/>.</summary>
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
-		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
-			DidItService, ManipulateSharpObjectService, Configuration, executor, target, zone, preserve, noisy);
+		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
+			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target, zone, preserve,
+			noisy);
 
 	/// <summary>
 	/// <c>do_chzone</c> reports its own refusals and returns 0; the command turns that into the error
@@ -131,10 +144,10 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var preserve = switches.Contains("PRESERVE");
 
-		if (args.Count < 1)
+		if (await RejectIfTooFewArguments(parser, 1, executor,
+				nameof(ErrorMessages.Notifications.ChownAllUsage), ErrorMessages.Returns.InvalidArguments) is { } usage)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return usage;
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
@@ -168,19 +181,35 @@ public partial class Commands
 		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
 		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
 
-		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
+		// The old owner's objects of the chosen types, from the owner index in ascending dbref order rather
+		// than a world scan. Read before anything is chowned, since each chown rewrites that index; each
+		// object's owner is asked again when its turn comes, as the scan asked it then.
+		var types = new List<string>(3);
+		if (chownThings) types.Add("THING");
+		if (chownRooms) types.Add("ROOM");
+		if (chownExits) types.Add("EXIT");
+		var candidates = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter
+		{
+			Owner = oldOwner.Object.DBRef,
+			Types = [.. types]
+		}))
+			.Select(found => found.DBRef)
+			.ToArrayAsync();
 		var count = 0;
 
-		await foreach (var obj in objects)
+		foreach (var candidate in candidates)
 		{
+			if (await Mediator.Send(new GetObjectNodeQuery(candidate)) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
 			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != oldOwner.Object.DBRef.Number)
 			{
 				continue;
 			}
-
-			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 
 			var shouldChown = (chownThings && obj.IsThing) ||
 												(chownRooms && obj.IsRoom) ||
@@ -201,25 +230,13 @@ public partial class Commands
 
 			if (!preserve && !obj.IsPlayer)
 			{
-				if (await obj.HasFlag("WIZARD"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-				}
-				if (await obj.HasFlag("ROYALTY"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-				}
-				if (await obj.HasFlag("TRUST"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
-				}
-				await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
-
-				await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
+				await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
 			}
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
+		// do_chownall: `notify_format(player, T("Ownership changed for %d objects."), count)` (src/wiz.c:1002),
+		// to the executor alone, whatever the count.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count);
 
 		return CallState.Empty;
 	}
@@ -293,8 +310,19 @@ public partial class Commands
 	{
 		var count = 0;
 
-		await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		// From the owner index in ascending dbref order rather than a world scan, read before any zone
+		// changes (do_chzone can reset flags and run softcode); each owner is asked again in turn.
+		var candidates = await Mediator.CreateStream(new GetFilteredObjectsQuery(
+				new ObjectSearchFilter { Owner = owner.Object().DBRef }))
+			.Select(found => found.DBRef)
+			.ToArrayAsync();
+		foreach (var candidate in candidates)
 		{
+			if (await Mediator.Send(new GetObjectNodeQuery(candidate)) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
 			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 			if (objOwner.Object.DBRef.Number != owner.Object().DBRef.Number)
 			{

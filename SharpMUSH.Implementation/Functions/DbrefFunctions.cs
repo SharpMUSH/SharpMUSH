@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Frozen;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -99,9 +100,14 @@ public partial class Functions
 			? null
 			: (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, owner, [new SearchSpecEngine.SearchPair("PARENT", arg0)], useRegex: false);
+		// A PARENT-only spec has no START or COUNT, so nothing can reject it.
+		if (await SearchSpecEngine.ExecuteResultAsync(
+					parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+					executor, owner, [new SearchSpecEngine.SearchPair("PARENT", arg0)], useRegex: false)
+				is not SearchSpecEngine.SearchResult search)
+		{
+			return new CallState(ErrorMessages.Returns.Nothing);
+		}
 
 		if (search.Matches.Count == 0)
 		{
@@ -183,6 +189,12 @@ public partial class Functions
 		}
 	}
 
+	/// <summary>An <c>entrances()</c> bound: a strict integer or a dbref (<c>src/wiz.c:1809-1812</c>).</summary>
+	private static int? EntranceBound(string text)
+		=> ArgHelpers.TryStrictInteger(text, out int number) ? number
+			: HelperFunctions.ParseDbRef(text) is DBRef dbref ? dbref.Number
+			: null;
+
 	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -207,22 +219,29 @@ public partial class Functions
 			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
 		}
 
+		// fun_entrances takes each bound as a strict integer or a dbref and refuses anything else with
+		// e_ints (src/wiz.c:1808-1827); a bound that names no object (negative here) falls back to the
+		// whole database (:1828-1833).
 		var beginFilter = 0;
 		if (args.TryGetValue("2", out var beginArg))
 		{
-			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			if (EntranceBound(beginArg.Message!.ToPlainText()) is not { } begin)
 			{
-				beginFilter = begin;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			beginFilter = begin < 0 ? 0 : begin;
 		}
 
 		var endFilter = int.MaxValue;
 		if (args.TryGetValue("3", out var endArg))
 		{
-			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			if (EntranceBound(endArg.Message!.ToPlainText()) is not { } end)
 			{
-				endFilter = end;
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
+
+			endFilter = end < 0 ? int.MaxValue : end;
 		}
 
 		var entrances = Mediator.CreateStream(new GetEntrancesQuery(target.Object().DBRef))
@@ -262,14 +281,18 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var targetDbref = found.Object().DBRef.ToString();
+				// PennMUSH's fun_followers reads the leader's own FOLLOWERS list, which add_follower and
+				// del_follower keep beside each follower's FOLLOWING (MovementCommands does the same), in
+				// the order they began following; it does not scan every object's FOLLOWING. Read as GOD,
+				// as MovementCommands reads it: FOLLOWERS carries the wizard attribute flag.
+				var followers = await AttributeService.GetAttributeAsync(
+					await HelperFunctions.GetGod(Mediator), found, "FOLLOWERS",
+					IAttributeService.AttributeMode.Read, parent: false);
 
-				var followers = Mediator.CreateStream(new GetAllObjectsQuery())
-					.Where(async (obj, _) => await obj.Attributes.Value
-						.AnyAsync(attr => attr.LongName == "FOLLOWING" && attr.Value.Text == targetDbref))
-					.Select(obj => obj.DBRef.ToString());
-
-				return new CallState(string.Join(" ", await followers.ToArrayAsync()));
+				return followers is SharpAttribute[] chain
+					? new CallState(string.Join(" ", chain.Last().Value.ToPlainText()
+						.Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+					: new CallState(string.Empty);
 			});
 	}
 
@@ -455,35 +478,8 @@ public partial class Functions
 		{
 			// ' ' is skipped rather than reported; every other unrecognised letter is fun_locate's
 			// "I don't understand switch '%c'.".
-			if (c != ' ' && !KnownLocateSwitches.Contains(c)) (unknown ??= []).Add(c);
-
-			flags |= c switch
-			{
-				'N' => LocateFlags.NoTypePreference,
-				'E' => LocateFlags.ExitsPreference,
-				'P' => LocateFlags.PlayersPreference,
-				'R' => LocateFlags.RoomsPreference,
-				'T' => LocateFlags.ThingsPreference,
-				'L' => LocateFlags.PreferLockPass,
-				'F' => LocateFlags.OnlyMatchTypePreference,
-				'X' => LocateFlags.UseLastIfAmbiguous,
-				'*' => LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName |
-							 LocateFlags.ExitsInsideOfLooker,
-				'a' => LocateFlags.AbsoluteMatch,
-				'c' => LocateFlags.ExitsInsideOfLooker,
-				'e' => LocateFlags.ExitsInTheRoomOfLooker,
-				'h' => LocateFlags.MatchHereForLookerLocation,
-				'i' => LocateFlags.MatchObjectsInLookerInventory,
-				'l' => LocateFlags.MatchAgainstLookerLocationName,
-				'm' => LocateFlags.MatchMeForLooker,
-				'n' => LocateFlags.MatchObjectsInLookerLocation,
-				'y' => LocateFlags.MatchOptionalWildCardForPlayerName,
-				'p' => LocateFlags.MatchWildCardForPlayerName,
-				'z' => LocateFlags.EnglishStyleMatching,
-				'x' => LocateFlags.NoPartialMatches,
-				's' => LocateFlags.OnlyMatchLookerControlledObjects,
-				_ => default
-			};
+			if (LocateSwitches.TryGetValue(c, out var flag)) flags |= flag;
+			else if (c != ' ') (unknown ??= []).Add(c);
 		}
 
 		// NOTYPE is the absence of a preference, not a flag anyone sets alongside one.
@@ -493,9 +489,32 @@ public partial class Functions
 		return (flags, (IReadOnlyList<char>?)unknown ?? []);
 	}
 
-	/// <summary>Every letter the switch above answers to, in fundb.c's order.</summary>
-	private static readonly System.Buffers.SearchValues<char> KnownLocateSwitches =
-		System.Buffers.SearchValues.Create("NEPRTLFX*acehilmnypzxs");
+	/// <summary><c>fun_locate</c>'s switch letters (src/fundb.c), in its order, to the match flags each adds.</summary>
+	private static readonly FrozenDictionary<char, LocateFlags> LocateSwitches = new Dictionary<char, LocateFlags>
+	{
+		['N'] = LocateFlags.NoTypePreference,
+		['E'] = LocateFlags.ExitsPreference,
+		['P'] = LocateFlags.PlayersPreference,
+		['R'] = LocateFlags.RoomsPreference,
+		['T'] = LocateFlags.ThingsPreference,
+		['L'] = LocateFlags.PreferLockPass,
+		['F'] = LocateFlags.OnlyMatchTypePreference,
+		['X'] = LocateFlags.UseLastIfAmbiguous,
+		['*'] = LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker,
+		['a'] = LocateFlags.AbsoluteMatch,
+		['c'] = LocateFlags.ExitsInsideOfLooker,
+		['e'] = LocateFlags.ExitsInTheRoomOfLooker,
+		['h'] = LocateFlags.MatchHereForLookerLocation,
+		['i'] = LocateFlags.MatchObjectsInLookerInventory,
+		['l'] = LocateFlags.MatchAgainstLookerLocationName,
+		['m'] = LocateFlags.MatchMeForLooker,
+		['n'] = LocateFlags.MatchObjectsInLookerLocation,
+		['y'] = LocateFlags.MatchOptionalWildCardForPlayerName,
+		['p'] = LocateFlags.MatchWildCardForPlayerName,
+		['z'] = LocateFlags.EnglishStyleMatching,
+		['x'] = LocateFlags.NoPartialMatches,
+		['s'] = LocateFlags.OnlyMatchLookerControlledObjects
+	}.ToFrozenDictionary();
 
 	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -573,13 +592,40 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, classObj?.Object().DBRef, pairs, useRegex);
+		Result<SearchSpecEngine.SearchResult> outcome;
+		try
+		{
+			outcome = await SearchSpecEngine.ExecuteResultAsync(
+				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+				executor, classObj?.Object().DBRef, pairs, useRegex);
+		}
+		catch (System.Text.RegularExpressions.RegexParseException) when (useRegex)
+		{
+			// lsearchr()'s name pattern is a regular expression the provider compiles; one that does not
+			// compile, or cannot finish a match in SoftcodeRegex.MatchTimeout, is an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException) when (useRegex)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 
-		var finalResults = search.Matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
+		return outcome switch
+		{
+			SearchSpecEngine.SearchResult search => Matched(search),
+			Error<string> rejected => await Rejected(rejected.Value)
+		};
 
-		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
+		// fun_lsearch (src/wiz.c) writes each match with safe_dbref: plain #N, never an objid (#1409).
+		static CallState Matched(SearchSpecEngine.SearchResult search)
+			=> new(string.Join(" ", search.Matches.Select(obj => $"#{obj.Key}"))) { HadErrors = search.HadErrors };
+
+		// fun_lsearch: fill_search_spec has told the searcher why, and the function returns #-1.
+		async ValueTask<CallState> Rejected(string notification)
+		{
+			await NotifyService.NotifyLocalized(executor, notification, executor);
+			return new CallState(ErrorMessages.Returns.Nothing);
+		}
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
@@ -717,11 +763,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg1, LocateFlags.All,
-			async x =>
-			{
-				var children = x.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
-				return await children.CountAsync();
-			});
+			async x => await Mediator.Send(new GetChildCountQuery(x.Object().DBRef)));
 	}
 
 	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -732,16 +774,18 @@ public partial class Functions
 	public async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// One past the highest key, or #0 for an empty database.
-		var maxKey = await Mediator.CreateStream(new GetAllObjectsQuery())
-			.Select(o => o.Key)
-			.DefaultIfEmpty(-1)
-			.MaxAsync();
+		var maxKey = await Mediator.Send(new GetHighestDbrefQuery()) switch
+		{
+			int highest => highest,
+			NotFound => -1
+		};
 
 		// The next dbref with timestamp 0 (set when created)
 		return new CallState($"#{maxKey + 1}:0");
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
+	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public async ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var result = await ListSearch(parser, _2);
@@ -757,12 +801,6 @@ public partial class Functions
 			: resultStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
 		return new CallState(count);
-	}
-
-	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
-	public ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return NumberOfListSearch(parser, _2);
 	}
 
 	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -847,11 +885,11 @@ public partial class Functions
 
 			if (newParent is null)
 			{
-				await ManipulateSharpObjectService.UnsetParent(executor, target, true);
+				await ObjectRelationshipService.UnsetParent(executor, target, true);
 			}
 			else
 			{
-				await ManipulateSharpObjectService.SetParent(executor, target, newParent, true);
+				await ObjectRelationshipService.SetParent(executor, target, newParent, true);
 			}
 		}
 	}
@@ -875,13 +913,9 @@ public partial class Functions
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
-		{
-			return new CallState(ErrorMessages.Returns.InvalidLevel);
-		}
-
-		// fun_rloc (src/fundb.c:1569) climbs at most 20 levels.
-		levels = Math.Min(levels, 20);
+		// fun_rloc (src/fundb.c:1563-1572) reads the depth with parse_integer, which never fails, and
+		// clamps it to 0..20: a depth that is not a number, or is negative, climbs no levels at all.
+		var levels = Math.Clamp(ArgHelpers.ParseInteger(levelsArg), 0, 20);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -1008,26 +1042,15 @@ public partial class Functions
 						return ErrorMessages.Returns.PermissionDenied;
 					}
 
-					if (!await HelperFunctions.SafeToAddZone(Mediator, Database, target, zone))
+					if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
 					{
 						return ErrorMessages.Returns.ZoneLoop;
 					}
 
-					// Handle flag/power stripping (simplified - no /preserve in function)
+					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
 					if (!target.IsPlayer)
 					{
-						if (await target.HasFlag("WIZARD"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!WIZARD", false);
-						}
-						if (await target.HasFlag("ROYALTY"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!ROYALTY", false);
-						}
-						if (await target.HasFlag("TRUST"))
-						{
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, target, "!TRUST", false);
-						}
+						await PrivilegeHelpers.StripPrivilegeAsync(FlagAndPowerService, executor, target);
 					}
 
 					await Mediator.Send(new SetObjectZoneCommand(target, zone));
@@ -1115,7 +1138,9 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<bool?> FlagLetterCheck(AnySharpObject obj, string flagStr, bool orMode)
 	{
-		var allFlags = await Mediator.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
+		// Both read on the first letter that needs them: a list of type letters and 'c' reads neither.
+		List<SharpObjectFlag>? allFlags = null;
+		ObjectFlagSet? objectFlags = null;
 
 		var ret = !orMode; // AND starts true, OR starts false
 		int i = 0;
@@ -1172,8 +1197,13 @@ public partial class Functions
 				continue;
 			}
 
-			// Look up flag by symbol (case-sensitive in PennMUSH)
-			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString());
+			// Look up flag by symbol (case-sensitive in PennMUSH). Letters are shared across types (A is
+			// ABODE on a room and ANSI on a player, x CLOUDY on an exit and TERSE on a thing), so Penn's
+			// letter_to_flagptr takes the flag whose type covers the object's.
+			var type = obj.Object().Type;
+			allFlags ??= await Mediator.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
+			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString()
+				&& (f.TypeRestrictions.Length == 0 || f.TypeRestrictions.Contains(type, StringComparer.OrdinalIgnoreCase)));
 			if (flagDef == null)
 			{
 				// For AND: unknown required flag → false; negated unknown → true (not set)
@@ -1190,7 +1220,8 @@ public partial class Functions
 				continue;
 			}
 
-			bool hasIt = await obj.HasFlag(flagDef.Name);
+			objectFlags ??= await obj.ReadFlagsAsync();
+			bool hasIt = objectFlags.Has(flagDef.Name);
 			bool effective = negate ? !hasIt : hasIt;
 			if (orMode)
 			{
@@ -1217,6 +1248,7 @@ public partial class Functions
 			return null;
 
 		var ret = !orMode;
+		ObjectFlagSet? objectFlags = null;
 		foreach (var token in tokens)
 		{
 			bool negate = token.StartsWith('!');
@@ -1234,7 +1266,7 @@ public partial class Functions
 					"THING" => obj.IsThing,
 					"EXIT" => obj.IsExit,
 					"CONNECTED" => await ConnectionService.IsOnline(obj),
-					_ => await obj.HasFlag(name)
+					_ => (objectFlags ??= await obj.ReadFlagsAsync()).Has(name)
 				};
 
 			bool effective = negate ? !hasIt : hasIt;

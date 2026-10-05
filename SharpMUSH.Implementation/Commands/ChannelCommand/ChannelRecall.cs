@@ -42,7 +42,7 @@ public static class ChannelRecall
 	/// access gate, take the window and drop the See_All-only lines the viewer may not read.
 	/// </summary>
 	public static async ValueTask<RecallSelection> SelectAsync(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
@@ -101,14 +101,14 @@ public static class ChannelRecall
 	/// channel may read its history, which is what makes recall usable for deciding whether to join. A
 	/// Guest who is not a member may not, whatever the join lock says.
 	/// </remarks>
-	public static async ValueTask<bool> MayRecallAsync(IPermissionService permissionService, AnySharpObject viewer,
-		SharpChannel channel)
-		=> await ChannelHelper.IsMemberOfChannel(viewer, channel)
+	public static async ValueTask<bool> MayRecallAsync(IChannelPermissionService permissionService, IMediator mediator,
+		AnySharpObject viewer, SharpChannel channel)
+		=> await ChannelHelper.IsMemberOfChannel(mediator, viewer, channel)
 			|| (!await viewer.IsGuest() && await permissionService.ChannelCanJoin(viewer, channel));
 
 	/// <summary>Applies the access gate to the resolved channel and takes the window of its buffer.</summary>
 	private static async ValueTask<RecallSelection> SelectWindowAsync(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
@@ -118,7 +118,7 @@ public static class ChannelRecall
 		bool hasStart,
 		bool notify)
 	{
-		if (!await MayRecallAsync(permissionService, executor, channel))
+		if (!await MayRecallAsync(permissionService, mediator, executor, channel))
 		{
 			return await Refuse(notifyService, executor, notify,
 				ErrorMessages.Notifications.ChatMustBeAbleToJoinToRecall, ErrorMessages.Returns.NotAMember);
@@ -147,7 +147,7 @@ public static class ChannelRecall
 	}
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName,
 		MString lines, MString start, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

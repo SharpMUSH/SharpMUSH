@@ -37,7 +37,7 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> QueueControlCore(IMUSHCodeParser parser, AnySharpObject executor)
 	{
-		var switches = parser.CurrentState.Switches.ToHashSet(StringComparer.Ordinal);
+		var switches = parser.CurrentState.Switches;
 		var pause = switches.Contains("PAUSE");
 		var resume = switches.Contains("RESUME");
 		var owner = switches.Contains("OWNER");
@@ -65,8 +65,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 		var service = parser.ServiceProvider.GetRequiredService<IQueueControlService>();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		IEnumerable<QueueEntrySnapshot> entries = pause || resume ? scheduler.GetQueueEntries() : await service.ListAsync(actor, ct);
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
+		IEnumerable<QueueEntrySnapshot> entries = pause || resume ? queueReader.GetQueueEntries() : await service.ListAsync(actor, ct);
 		if (owner || source)
 		{
 			// Bulk selection uses only inspectable records; each mutation independently rechecks control.
@@ -179,135 +179,36 @@ public partial class Commands
 		return new Success();
 	}
 
-	/// <summary>
-	/// Helper method to execute attribute content with recursion tracking.
-	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
-	/// </summary>
-	private async ValueTask<CallState> ExecuteAttributeWithTracking(
-		IMUSHCodeParser parser,
-		string attributeLongName,
-		Func<Task<CallState>> executeFunc)
-	{
-		var callDepth = parser.CurrentState.CallDepth;
-		var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
-		var limitExceeded = parser.CurrentState.LimitExceeded;
-
-		if (callDepth == null || recursionDepths == null || limitExceeded == null)
-		{
-			return await executeFunc();
-		}
-
-		callDepth.Increment();
-		if (!recursionDepths.TryGetValue(attributeLongName, out var depth))
-		{
-			depth = 0;
-		}
-		recursionDepths[attributeLongName] = ++depth;
-
-		if (depth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
-		{
-			limitExceeded.IsExceeded = true;
-			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
-			callDepth.Decrement();
-			recursionDepths[attributeLongName] = depth - 1;
-			return new CallState(ErrorMessages.Returns.Recursion);
-		}
-
-		try
-		{
-			return await executeFunc();
-		}
-		finally
-		{
-			callDepth.Decrement();
-			if (recursionDepths.TryGetValue(attributeLongName, out var currentDepth) && currentDepth > 0)
-			{
-				recursionDepths[attributeLongName] = currentDepth - 1;
-			}
-		}
-	}
-
+	/// <remarks>
+	/// PennMUSH <c>cmd_halt</c> (<c>src/cmds.c:661-669</c>): <c>/all</c> is <c>do_allhalt</c>, <c>/pid</c>
+	/// is <c>do_haltpid</c>, anything else <c>do_halt1</c> (<c>src/cque.c:2236-2280</c>). Every queue wipe
+	/// goes through <see cref="HaltQueuesAsync"/>, which is <c>do_halt</c> and carries its report to the
+	/// victim's owner.
+	/// </remarks>
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
-			{
-				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHalted), executor);
-			return CallState.Empty;
+			return await HaltWorldAsync(executor);
 		}
 
 		if (switches.Contains("PID"))
 		{
-			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
-			if (string.IsNullOrEmpty(pidStr))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid), executor);
-				return new CallState(ErrorMessages.Returns.NoPidSpecified);
-			}
-
-			if (!long.TryParse(pidStr, out var pid))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
-				return new CallState(ErrorMessages.Returns.InvalidPid);
-			}
-
-			if (!TryGetQueueEntry(scheduler, pid, out var entry)) return await QueueInspectionUnsupported(executor);
-			if (entry is null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), executor, pid);
-				return new CallState(ErrorMessages.Returns.NotFound);
-			}
-			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
-				.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			var halted = await Mediator.Send(new HaltByPidRequest(pid), ExecutionBudget.CurrentToken);
-			if (halted)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltTaskHaltedFormat), executor, pid);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), executor, pid);
-				return new CallState(ErrorMessages.Returns.NotFound);
-			}
-
-			return CallState.Empty;
+			return await HaltPidAsync(parser, executor, args.GetValueOrDefault("0")?.Message?.ToPlainText());
 		}
 
-		// @halt with no arguments - clear executor's queue without setting HALT flag
-		if (args.Count == 0)
-		{
-			await Mediator.Send(new HaltObjectQueueRequest(executor.Object().DBRef));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Halted), executor);
-			return CallState.Empty;
-		}
-
-		var targetName = args["0"].Message?.ToPlainText();
+		// do_halt1 (src/cque.c:2239-2240): no object halts the enactor, and leaves its HALT flag alone.
+		var targetName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyTarget), executor);
-			return new CallState(ErrorMessages.Returns.NoTargetSpecified);
+			await HaltQueuesAsync(executor);
+			return CallState.Empty;
 		}
 
 		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(
@@ -322,73 +223,193 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		var hasHaltPower = await executor.HasPower("HALT");
-		var canHalt = await PermissionService.Controls(executor, target) ||
-									await executor.IsWizard() || hasHaltPower;
-
-		if (!canHalt)
+		var controls = await PermissionService.Controls(executor, target);
+		if (!controls && !await HaltsAnything(executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var targetObject = target.Object();
-		var hasReplacementActions = args.Count >= 2;
-		var replacementActions = hasReplacementActions ? args["1"].Message : null;
-
 		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
 		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
-		if (replacementActions is not null)
-			replacementActions = HelperFunctions.StripOuterBraces(replacementActions);
+		var replacementActions = args.GetValueOrDefault("1")?.Message is { } actions
+			? HelperFunctions.StripOuterBraces(actions)
+			: null;
+		var hasReplacementActions = replacementActions is not null && replacementActions.Length > 0;
+
+		if (hasReplacementActions && !controls)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltCommandNotAllowed), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var targetObject = target.Object();
+		var executorObject = executor.Object();
+		await HaltQueuesAsync(target);
+
+		if (hasReplacementActions)
+		{
+			await Mediator.Send(new AdmitCommandListRequest(
+				replacementActions!,
+				parser.CurrentState,
+				new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
+				-1), ExecutionBudget.CurrentToken);
+		}
 
 		if (target.IsPlayer)
 		{
-			await Mediator.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			if (targetObject.DBRef.Number == executorObject.DBRef.Number)
 			{
-				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef == targetObject.DBRef)
-				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-				}
-			}
-
-			if (hasReplacementActions)
-			{
-				await Mediator.Send(new AdmitCommandListRequest(
-					replacementActions!,
-					parser.CurrentState,
-					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
-					-1), ExecutionBudget.CurrentToken);
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedPlayerAndObjectsFormat), executor, targetObject.Name);
-		}
-		else
-		{
-			await Mediator.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-
-			if (hasReplacementActions)
-			{
-				await Mediator.Send(new AdmitCommandListRequest(
-					replacementActions!,
-					parser.CurrentState,
-					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
-					-1), ExecutionBudget.CurrentToken);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectWithActionsFormat), executor, targetObject.Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllYourObjectsHalted), executor);
 			}
 			else
 			{
-				var haltFlag = await Mediator.Send(new GetObjectFlagQuery("HALT"));
-				if (haltFlag != null)
-				{
-					await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
-				}
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectFormat), executor, targetObject.Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsForPlayerHaltedFormat),
+					executor, targetObject.Name);
+				await NotifyService.NotifyLocalized(target, nameof(ErrorMessages.Notifications.AllYourObjectsHaltedByFormat),
+					executor, executorObject.Name);
+			}
+
+			return CallState.Empty;
+		}
+
+		// src/cque.c:2267-2275 compares the owner with the enactor itself, not with the enactor's owner.
+		var owner = (await targetObject.Owner.WithCancellation(CancellationToken.None)).Object;
+		if (owner.DBRef.Number != executorObject.DBRef.Number)
+		{
+			var dbref = $"#{targetObject.DBRef.Number}";
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedOthersObjectFormat),
+				executor, owner.Name, targetObject.Name, dbref);
+			await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedObjectByFormat),
+				sender: executor, targetObject.Name, dbref, executorObject.Name);
+		}
+
+		// src/cque.c:2277-2278: only a halt without replacement actions leaves the object HALTed.
+		if (!hasReplacementActions)
+		{
+			var haltFlag = await Mediator.Send(new GetObjectFlagQuery("HALT"));
+			if (haltFlag != null)
+			{
+				await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
 			}
 		}
 
+		return CallState.Empty;
+	}
+
+	/// <summary>PennMUSH <c>HaltAny</c> (<c>hdrs/mushdb.h:38</c>): a wizard, or the HALT power.</summary>
+	private static async ValueTask<bool> HaltsAnything(AnySharpObject executor)
+		=> await executor.IsWizard() || await executor.HasPower("HALT");
+
+	/// <summary>
+	/// PennMUSH <c>do_halt</c> (<c>src/cque.c:2160-2220</c>): tells the victim's owner
+	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> unless that owner is QUIET, then wipes every queue
+	/// entry the victim runs — and, for a player, every entry an object they own runs.
+	/// </summary>
+	private async ValueTask HaltQueuesAsync(AnySharpObject victim)
+		=> await HaltQueuesAsync(victim, (await victim.Object().Owner.WithCancellation(CancellationToken.None)).Object);
+
+	/// <inheritdoc cref="HaltQueuesAsync(AnySharpObject)"/>
+	/// <param name="victim">The object whose queue is wiped.</param>
+	/// <param name="owner">Its owner, given by a caller that has just changed it (<c>chown_object</c>).</param>
+	private async ValueTask HaltQueuesAsync(AnySharpObject victim, SharpObject owner)
+	{
+		var victimObject = victim.Object();
+		if (!await owner.HasQuietFlagAsync())
+		{
+			await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedNoticeFormat),
+				sender: null, victimObject.Name, $"#{victimObject.DBRef.Number}");
+		}
+
+		await Mediator.Send(new HaltObjectQueueRequest(victimObject.DBRef));
+		if (!victim.IsPlayer) return;
+
+		// The owner index names the player's objects; the world is not scanned for them. Halting changes
+		// no ownership, so the stream is read as it goes.
+		await foreach (var obj in Mediator.CreateStream(new GetFilteredObjectsQuery(
+			new ObjectSearchFilter { Owner = victimObject.DBRef })))
+		{
+			if (obj.DBRef.Number == victimObject.DBRef.Number) continue;
+			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_allhalt</c> (<c>src/cque.c:2343-2358</c>), for <c>@halt/all</c> and <c>@allhalt</c>:
+	/// every player is told who halted the world, then halted as <c>do_halt</c> halts them. The enactor
+	/// hears nothing else.
+	/// </summary>
+	private async ValueTask<CallState> HaltWorldAsync(AnySharpObject executor)
+	{
+		if (!await HaltsAnything(executor))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltWorldPowerDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var executorName = executor.Object().Name;
+		await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		{
+			var objObject = obj.Object();
+			if (obj.IsPlayer)
+			{
+				await NotifyService.NotifyLocalized(obj, nameof(ErrorMessages.Notifications.GloballyHaltedByFormat),
+					executor, executorName);
+				if (!await objObject.HasQuietFlagAsync())
+				{
+					await NotifyService.NotifyLocalized(obj, nameof(ErrorMessages.Notifications.HaltedNoticeFormat),
+						sender: null, objObject.Name, $"#{objObject.DBRef.Number}");
+				}
+			}
+
+			// A player's do_halt also wipes what everything they own has queued; one pass over every
+			// object reaches the same entries.
+			await Mediator.Send(new HaltObjectQueueRequest(objObject.DBRef));
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>PennMUSH <c>do_haltpid</c> (<c>src/cque.c:2287-2337</c>).</summary>
+	private async ValueTask<Option<CallState>> HaltPidAsync(IMUSHCodeParser parser, AnySharpObject executor, string? pidStr)
+	{
+		// is_strict_uinteger (src/cque.c:2293): an empty argument is not a pid either. Penn has no return
+		// value to give; the error returns stay SharpMUSH's own.
+		if (string.IsNullOrEmpty(pidStr))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPid), executor);
+			return new CallState(ErrorMessages.Returns.NoPidSpecified);
+		}
+
+		if (!long.TryParse(pidStr, NumberStyles.None, CultureInfo.InvariantCulture, out var pid))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPid), executor);
+			return new CallState(ErrorMessages.Returns.InvalidPid);
+		}
+
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
+		if (!TryGetQueueEntry(queueReader, pid, out var entry)) return await QueueInspectionUnsupported(executor);
+		if (entry is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPid), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!await Mediator.Send(new HaltByPidRequest(pid), ExecutionBudget.CurrentToken))
+		{
+			// It ran or left the queue between the lookup and the halt: it is no longer a pid.
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPid), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltPidHaltedFormat), executor, pid);
 		return CallState.Empty;
 	}
 
@@ -452,7 +473,7 @@ public partial class Commands
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
-		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().EnterSemaphoreMutationAsync();
 		var attributeContents = await AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
 
@@ -468,10 +489,10 @@ public partial class Commands
 		{
 			// With CB.RSArgs, each comma-separated value becomes a separate argument
 			// So @notify/setq obj=0,val1,1,val2 becomes: args[0]=obj, args[1]=0, args[2]=val1, args[3]=1, args[4]=val2
-			if (args.Count < 3)
+			if (await RejectIfTooFewArguments(parser, 3, executor,
+					nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments), ErrorMessages.Returns.MissingQregAssignments) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments), executor);
-				return new CallState(ErrorMessages.Returns.MissingQregAssignments);
+				return usage;
 			}
 
 			var qregArgCount = args.Count - 1;
@@ -503,11 +524,11 @@ public partial class Commands
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
 		if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var semaphores = parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>();
 		return await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false) switch
 		{
-			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, scheduler, dbRefAttribute, notifyType,
+			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, semaphores, dbRefAttribute, notifyType,
 				notifyCount, qRegisters, counted),
 			Error<string> accountingError => await ReportSemaphoreCommandError(executor, accountingError.Value),
 		};
@@ -517,23 +538,21 @@ public partial class Commands
 	/// The half of <c>@notify</c> that releases the waiting tasks, once the semaphore's count has been accounted for.
 	/// </summary>
 	private async ValueTask<Option<CallState>> NotifySemaphoreAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		ITaskScheduler scheduler, DbRefAttribute dbRefAttribute, string notifyType, int notifyCount,
+		ISemaphoreQueue semaphores, DbRefAttribute dbRefAttribute, string notifyType, int notifyCount,
 		Dictionary<string, MString>? qRegisters, SemaphoreAccounting counted)
 	{
-		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
+		var changed = await semaphores.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			counted.Persist, counted.Reconcile, qRegisters);
-		if (notifyType == "SETQ")
+		if (notifyType == "SETQ" && changed == 0)
 		{
-			if (changed == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore), executor);
-				return new CallState(ErrorMessages.Returns.NoWaitingTask);
-			}
-			return new None();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore), executor);
+			return new CallState(ErrorMessages.Returns.NoWaitingTask);
 		}
 
-		if (!parser.CurrentState.Switches.Contains("QUIET"))
+		// cmd_notify_drain says "Notified." through quiet_notify, which an executor that is QUIET, or
+		// whose owner is, does not hear (src/cque.c:1509, :1541; hdrs/notify.h:153-155) — /setq too.
+		if (!parser.CurrentState.Switches.Contains("QUIET") && !await executor.Object().IsQuietAsync())
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Notified), executor);
 		}
@@ -736,7 +755,7 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
-		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskScheduler>(), pid, out var maybeFoundPid))
+		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskQueueReader>(), pid, out var maybeFoundPid))
 			return await QueueInspectionUnsupported(executor);
 
 		if (maybeFoundPid is null || maybeFoundPid.RemainingDelay is null || maybeFoundPid.ReleasePending)
@@ -849,7 +868,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidCombination);
 		}
 
-		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().EnterSemaphoreMutationAsync();
 		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
@@ -864,7 +883,7 @@ public partial class Commands
 
 		async ValueTask<CallState?> DrainCounted(DbRefAttribute target, SemaphoreAccounting counted)
 		{
-			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
+			await parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, counted.Persist, counted.Reconcile);
 			return null;
 		}
@@ -883,6 +902,12 @@ public partial class Commands
 		else
 		{
 			if (await DrainAttribute(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)) is { } error) return error;
+		}
+
+		// cmd_notify_drain: `quiet_notify(executor, T("Drained."))` (src/cque.c:1539).
+		if (!await executor.Object().IsQuietAsync())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Drained), executor);
 		}
 
 		return CallState.Empty;
@@ -941,59 +966,31 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var hasLocalize = switches.Contains("LOCALIZE");
 		var hasClearRegs = switches.Contains("CLEARREGS");
 
-		// Implement /LOCALIZE: save Q-registers so forced code cannot permanently change
-		// the caller's Q-registers. /CLEARREGS: start with empty Q-registers.
-		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var forceTopRegs))
-		{
-			if (hasLocalize)
-			{
-				savedRegisters = new Dictionary<string, MString>(forceTopRegs);
-			}
+		// /LOCALIZE: forced code cannot permanently change the caller's Q-registers.
+		// /CLEARREGS: it starts with empty Q-registers.
+		using var registers = RegisterScope.Enter(parser.CurrentState.Registers, hasLocalize, hasClearRegs);
 
-			if (hasClearRegs)
+		// Note: Queue infrastructure available via AdmitCommandListRequest if needed
+		// Currently executes inline for immediate response (default PennMUSH behavior)
+		var nestedResult = await parser.With(
+			state => state with
 			{
-				forceTopRegs.Clear();
-			}
-		}
-
-		CallState? nestedResult = null;
-		try
-		{
-			// Note: Queue infrastructure available via AdmitCommandListRequest if needed
-			// Currently executes inline for immediate response (default PennMUSH behavior)
-			nestedResult = await parser.With(
-				state => state with
-				{
-					Executor = found.Object().DBRef,
-					Caller = state.Executor
-				},
-				async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
-		}
-		finally
-		{
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
-		}
+				Executor = found.Object().DBRef,
+				Caller = state.Executor
+			},
+			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	private static bool TryGetQueueEntry(ITaskScheduler scheduler, long pid,
+	private static bool TryGetQueueEntry(ITaskQueueReader queue, long pid,
 		out SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot? entry)
 	{
-		try { entry = scheduler.GetQueueEntry(pid); return true; }
+		try { entry = queue.GetQueueEntry(pid); return true; }
 		catch (NotSupportedException) { entry = null; return false; }
 	}
 
@@ -1010,8 +1007,8 @@ public partial class Commands
 		if (parser.CurrentState.Switches.Contains("HISTORY")) return await QueueHistory(parser);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var switches = parser.CurrentState.Switches;
+		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
 
 		if (switches.Contains("DEBUG"))
 		{
@@ -1028,7 +1025,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			if (!TryGetQueueEntry(scheduler, pid, out var queued)) return await QueueInspectionUnsupported(executor);
+			if (!TryGetQueueEntry(queueReader, pid, out var queued)) return await QueueInspectionUnsupported(executor);
 			if (queued is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
@@ -1102,7 +1099,7 @@ public partial class Commands
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
 			// Usage is an optional extension; legacy schedulers still provide the queue listing.
 			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
-			try { usage = scheduler.GetQueueUsage(); }
+			try { usage = queueReader.GetQueueUsage(); }
 			catch (NotSupportedException) { usage = null; }
 			if (usage is not null)
 			{
@@ -1134,12 +1131,13 @@ public partial class Commands
 			return await QueueInspectionUnsupported(executor);
 		}
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
-		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
+		// Only the command queue's size is reported, so it is counted rather than collected.
+		var enqueueCount = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).CountAsync();
 
 		if (switches.Contains("SUMMARY"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSummaryHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
@@ -1149,7 +1147,7 @@ public partial class Commands
 		if (switches.Contains("QUICK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQuickHeader), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 			return CallState.Empty;
@@ -1157,7 +1155,7 @@ public partial class Commands
 
 		var targetName = target.Object().DBRef.ToString();
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, targetName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 
@@ -1194,7 +1192,7 @@ public partial class Commands
 			}
 		}
 		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot>? entries;
-		try { entries = scheduler.GetQueueEntries(); }
+		try { entries = queueReader.GetQueueEntries(); }
 		catch (NotSupportedException) { entries = null; }
 		if (entries is not null)
 		{
@@ -1270,7 +1268,6 @@ public partial class Commands
 
 		var attribute = attributeChain.Last();
 		var attributeText = attribute.Value.ToPlainText();
-		var attributeLongName = attribute.LongName!.ToUpper();
 
 		// With /match, the first argument (index 1) is the test string. Refused before the notice below, so a
 		// refusal is never also reported as a trigger.
@@ -1359,41 +1356,26 @@ public partial class Commands
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via AdmitCommandListRequest if needed for future enhancements.
 
-		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
+		// Runs in place, so it is bounded by the in-place nesting depth (ParserState.MaxInplaceDepth),
+		// not by function_recursion_limit, which PennMUSH applies to functions alone.
+		var stateWithRegisters = parser.CurrentState with
 		{
-			var stateWithRegisters = parser.CurrentState with
-			{
-				Executor = targetObject.Object().DBRef,
-				Enactor = executionEnactor,
-				Caller = parser.CurrentState.Executor,
-				Registers = registerStack,
-				EnvironmentRegisters = envRegisters
-			};
+			Executor = targetObject.Object().DBRef,
+			Enactor = executionEnactor,
+			Caller = parser.CurrentState.Executor,
+			Registers = registerStack,
+			EnvironmentRegisters = envRegisters
+		};
 
-			var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
-				async p => await p.CommandListParseVisitor(attribute.Value)()));
+		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
+			async p => await p.CommandListParseVisitor(attribute.Value)()));
 
-			return CallState.Empty with { HadErrors = result?.HadErrors == true };
-		});
+		return CallState.Empty with { HadErrors = result?.HadErrors == true };
 	}
 
+	/// <remarks>PennMUSH <c>cmd_allhalt</c> (<c>src/cmds.c:79</c>) is <c>do_allhalt</c>, as <c>@halt/all</c> is.</remarks>
 	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",
 		MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-
-		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
-		var haltedCount = 0;
-
-		await foreach (var obj in objects)
-		{
-			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-			haltedCount++;
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, haltedCount);
-		return CallState.Empty;
-	}
+		=> await HaltWorldAsync(await parser.CurrentState.KnownExecutorObject(Mediator));
 }

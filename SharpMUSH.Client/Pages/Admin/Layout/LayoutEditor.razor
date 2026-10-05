@@ -1,5 +1,6 @@
 @page "/admin/layout/{Scope}"
 @using System.Text.Json
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "layout.admin")]
 @inject IStringLocalizer<SharedResource> Loc
@@ -38,7 +39,7 @@
     {
         @* --le-drag-span sizes the drop skeleton to the widget in flight, so the dashed box shows the
            real landing footprint rather than a generic one-column stub. *@
-        <MudDropContainer T="EditItem" @ref="_container" Items="_items"
+        <MudDropContainer T="LayoutEditItem" @ref="_container" Items="_items"
                           ItemsSelector="@((item, zoneId) => item.Zone == zoneId)"
                           ItemsClassSelector="@ItemsClass"
                           ItemDraggingClass="le-item-lifted"
@@ -48,7 +49,7 @@
             <ChildContent>
                 <div class="le-palette">
                     <div class="le-panel-label">@Loc["LayWidgetsPanel"]</div>
-                    <MudDropZone T="EditItem" Identifier="palette" Class="le-palette-zone" AllowReorder="false" />
+                    <MudDropZone T="LayoutEditItem" Identifier="palette" Class="le-palette-zone" AllowReorder="false" />
                     <div class="le-hint">@Loc["LayPaletteHint"]</div>
 
                     <div class="le-panel-label" style="margin-top:1.125rem;">@Loc["LaySidebarsAndFooter"]</div>
@@ -71,7 +72,7 @@
                             @* AllowReorder is what makes a drop land where it was released. Without it
                                MudBlazor's CommitTransaction reports index -1 and every drop lands at the
                                front of the zone — and it renders no drop skeleton either. *@
-                            <MudDropZone T="EditItem" Identifier="@zone.ToString()" AllowReorder="true"
+                            <MudDropZone T="LayoutEditItem" Identifier="@zone.ToString()" AllowReorder="true"
                                          Class="@($"le-zone-drop {(IsGridZone(zone) ? "le-zone-drop--grid" : "")}")" />
                         </div>
                     }
@@ -172,19 +173,6 @@
 @code {
     [Parameter] public string Scope { get; set; } = string.Empty;
 
-    private sealed class EditItem
-    {
-        public string InstanceId { get; init; } = Guid.NewGuid().ToString("N");
-        public string WidgetName { get; init; } = string.Empty;
-        public string DisplayName { get; init; } = string.Empty;
-        public string Zone { get; set; } = "palette";
-        public JsonElement? Config { get; set; }
-        public bool IsTemplate { get; init; }
-
-        /// <summary>Grid width in columns (1–12). Only meaningful in grid zones.</summary>
-        public int Span { get; set; } = 12;
-    }
-
     // A zone is a grid (per-placement column width) exactly where it is rendered as one. The global
     // scope's chrome zones are grids in MainLayout except the horizontal top bar; a page scope renders
     // only its MainContent as a grid and its RightSidebar aside as a plain stack (Grid="false").
@@ -196,23 +184,22 @@
     private bool IsGridZoneName(string zone)
         => Enum.TryParse<WidgetZone>(zone, out var z) && IsGridZone(z);
 
-    private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
+    private static int ClampSpan(int span) => LayoutDraft.ClampSpan(span);
 
-    private string ItemsClass(EditItem item, string dropzoneId)
+    private string ItemsClass(LayoutEditItem item, string dropzoneId)
         => !item.IsTemplate && IsGridZoneName(dropzoneId)
             ? $"le-span-{ClampSpan(item.Span)}"
             : string.Empty;
 
-    /// <summary>Number of columns a grid zone lays out. Mirrors <c>repeat(12, 1fr)</c> in the stylesheet.</summary>
-    private const int GridColumns = 12;
+    private const int GridColumns = LayoutDraft.GridColumns;
 
     /// <summary>Wraps the drop zone so JS can measure the grid without touching MudBlazor's own element id.</summary>
     private string ZoneElementId(WidgetZone zone) => $"le-zone-{Scope}-{zone}";
 
     /// <summary>Identifies the grip to <c>setPointerCapture</c>, which needs a real element.</summary>
-    private static string ResizeGripId(EditItem item) => $"le-grip-{item.InstanceId}";
+    private static string ResizeGripId(LayoutEditItem item) => $"le-grip-{item.InstanceId}";
 
-    private EditItem? _resizing;
+    private LayoutEditItem? _resizing;
     private int _resizeStartSpan;
     private double _resizeStartX;
     private double _resizeColumnWidth;
@@ -224,10 +211,10 @@
     /// </summary>
     private int _dragSpan = GridColumns;
 
-    private void OnPicked(MudDragAndDropItemTransaction<EditItem> transaction)
+    private void OnPicked(MudDragAndDropItemTransaction<LayoutEditItem> transaction)
         => _dragSpan = transaction.Item is { IsTemplate: false } item ? ClampSpan(item.Span) : GridColumns;
 
-    private async Task BeginResizeAsync(EditItem item, PointerEventArgs e)
+    private async Task BeginResizeAsync(LayoutEditItem item, PointerEventArgs e)
     {
         // Below the narrow-viewport breakpoint the zone collapses to one column, so there is no
         // column width to drag against. The keyboard path still works there; pointer resize does not.
@@ -263,7 +250,7 @@
         }
     }
 
-    private void OnResizeMove(EditItem item, PointerEventArgs e)
+    private void OnResizeMove(LayoutEditItem item, PointerEventArgs e)
     {
         // Pointer capture keeps the moves coming to this grip, but every other grip carries the same
         // handler; ignore anything that is not the gesture in progress.
@@ -273,8 +260,7 @@
             return;
         }
 
-        var span = Math.Clamp(
-            _resizeStartSpan + (int)Math.Round((e.ClientX - _resizeStartX) / _resizeColumnWidth), 1, GridColumns);
+        var span = LayoutDraft.DraggedSpan(_resizeStartSpan, e.ClientX - _resizeStartX, _resizeColumnWidth);
 
         // Re-render only when a column boundary is crossed. Pointer moves arrive far faster than the
         // grid can meaningfully change, and rendering each one is what made the old slider thrash.
@@ -301,18 +287,10 @@
         InvalidatePreview();
     }
 
-    private void ResizeByKey(EditItem item, KeyboardEventArgs e)
+    private void ResizeByKey(LayoutEditItem item, KeyboardEventArgs e)
     {
-        var step = e.ShiftKey ? 3 : 1;
-        var delta = e.Key switch
-        {
-            "ArrowRight" => step,
-            "ArrowLeft" => -step,
-            _ => 0
-        };
-
-        var span = Math.Clamp(ClampSpan(item.Span) + delta, 1, GridColumns);
-        if (delta == 0 || span == ClampSpan(item.Span))
+        var span = LayoutDraft.KeyedSpan(item.Span, e.Key, e.ShiftKey);
+        if (span == ClampSpan(item.Span))
         {
             _skipRender = true;
             return;
@@ -344,39 +322,28 @@
     /// </summary>
     private void ApplySpans() => _container?.Refresh();
 
-    private bool CanMove(EditItem item, int delta)
-    {
-        if (!_zones.TryGetValue(item.Zone, out var list))
-        {
-            return false;
-        }
+    private bool CanMove(LayoutEditItem item, int delta) => _draft?.CanMove(item, delta) == true;
 
-        var index = list.IndexOf(item);
-        return index >= 0 && index + delta >= 0 && index + delta < list.Count;
-    }
-
-    private void MoveBy(EditItem item, int delta)
+    private void MoveBy(LayoutEditItem item, int delta)
     {
-        if (!CanMove(item, delta) || !_zones.TryGetValue(item.Zone, out var list))
+        if (_draft?.MoveBy(item, delta) != true)
         {
             return;
         }
 
-        var index = list.IndexOf(item);
-        (list[index], list[index + delta]) = (list[index + delta], list[index]);
         _dirty = true;
         RebuildItems();
     }
 
     private LayoutScope? _scopeInfo;
-    private MudDropContainer<EditItem>? _container;
+    private MudDropContainer<LayoutEditItem>? _container;
     private bool _loading = true;
     private bool _saving;
     private bool _dirty;
 
-    private List<EditItem> _palette = [];
-    private Dictionary<string, List<EditItem>> _zones = [];
-    private List<EditItem> _items = [];
+    private List<LayoutEditItem> _palette = [];
+    private LayoutDraft? _draft;
+    private readonly List<LayoutEditItem> _items = [];
 
     private LayoutConfiguration? _preview;
 
@@ -427,23 +394,12 @@
 
         _palette = Registry.GetAllWidgets()
             .Where(w => w.AllowedZones.Any(z => _scopeInfo!.Zones.Contains(z)))
-            .Select(w => new EditItem { WidgetName = w.Name, DisplayName = WidgetLabel(w), Zone = "palette", IsTemplate = true })
+            .Select(w => new LayoutEditItem { WidgetName = w.Name, DisplayName = WidgetLabel(w), Zone = LayoutDraft.Palette, IsTemplate = true })
             .OrderBy(i => i.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        _zones = _scopeInfo!.Zones.ToDictionary(
-            z => z.ToString(),
-            z => (layout.Zones.TryGetValue(z, out var list) ? list : [])
-                .OrderBy(p => p.Order)
-                .Select(p => new EditItem
-                {
-                    WidgetName = p.WidgetName,
-                    DisplayName = Registry.GetWidget(p.WidgetName) is { } w ? WidgetLabel(w) : p.WidgetName,
-                    Zone = z.ToString(),
-                    Config = p.Config,
-                    Span = ClampSpan(p.Span)
-                })
-                .ToList());
+        _draft = new LayoutDraft(_scopeInfo!.Zones, layout,
+            name => Registry.GetWidget(name) is { } w ? WidgetLabel(w) : name);
 
         RebuildItems();
         _dirty = false;
@@ -457,78 +413,36 @@
         // it a fresh list here would have the zones rebuild their indices from the *old* order, and the
         // reordering would be discarded on the next render (MudBlazor#7191).
         _items.Clear();
-        _items.AddRange(_palette.Concat(_scopeInfo!.Zones.SelectMany(z => _zones[z.ToString()])));
+        _items.AddRange(_palette.Concat(_draft!.Placed));
         InvalidatePreview();
         // Refresh clears each zone's internal reorder indices, so display order is re-derived from
         // _items — keeping what the editor shows and what Publish writes the same thing.
         _container?.Refresh();
     }
 
-    private void OnDropped(MudItemDropInfo<EditItem> info)
+    private void OnDropped(MudItemDropInfo<LayoutEditItem> info)
     {
         if (info.Item is not { } item)
         {
             return;
         }
 
-        var target = info.DropzoneIdentifier;
-
-        if (item.IsTemplate)
+        if (_draft!.Drop(item, info.DropzoneIdentifier, info.IndexInZone))
         {
-            // Adding a fresh placement; the template stays in the palette.
-            if (target != "palette" && _zones.TryGetValue(target, out var list))
-            {
-                var clone = new EditItem
-                {
-                    WidgetName = item.WidgetName,
-                    DisplayName = item.DisplayName,
-                    Zone = target
-                };
-                InsertAt(list, clone, info.IndexInZone);
-                _dirty = true;
-            }
-        }
-        else
-        {
-            RemoveFromZones(item);
-            if (target == "palette")
-            {
-                // Dragged back to the palette → removed.
-                _dirty = true;
-            }
-            else if (_zones.TryGetValue(target, out var list))
-            {
-                item.Zone = target;
-                InsertAt(list, item, info.IndexInZone);
-                _dirty = true;
-            }
+            _dirty = true;
         }
 
         RebuildItems();
     }
 
-    private static void InsertAt(List<EditItem> list, EditItem item, int index)
+    private void Remove(LayoutEditItem item)
     {
-        index = Math.Clamp(index, 0, list.Count);
-        list.Insert(index, item);
-    }
-
-    private void RemoveFromZones(EditItem item)
-    {
-        foreach (var list in _zones.Values)
-        {
-            list.Remove(item);
-        }
-    }
-
-    private void Remove(EditItem item)
-    {
-        RemoveFromZones(item);
+        _draft!.Remove(item);
         _dirty = true;
         RebuildItems();
     }
 
-    private async Task EditConfigAsync(EditItem item)
+    private async Task EditConfigAsync(LayoutEditItem item)
     {
         var parameters = new DialogParameters<WidgetConfigDialog>
         {
@@ -556,15 +470,8 @@
         StateHasChanged();
     }
 
-    private LayoutConfiguration BuildPreviewLayout()
-    {
-        var zones = _scopeInfo!.Zones.ToDictionary(
-            z => z,
-            z => _zones[z.ToString()]
-                .Select((it, idx) => new WidgetPlacement(it.WidgetName, idx, it.Config, ClampSpan(it.Span)))
-                .ToList());
-        return new LayoutConfiguration(zones, new LayoutSettings(_leftOn, _rightOn, _footerOn, _leftWidth, _rightWidth));
-    }
+    private LayoutConfiguration BuildPreviewLayout() =>
+        _draft!.ToLayout(new LayoutSettings(_leftOn, _rightOn, _footerOn, _leftWidth, _rightWidth));
 
     private async Task SaveAsync()
     {
@@ -574,10 +481,10 @@
         }
 
         _saving = true;
-        var ok = await LayoutService.SaveLayoutAsync(Scope, BuildPreviewLayout());
+        var saved = await LayoutService.SaveLayoutAsync(Scope, BuildPreviewLayout());
         _saving = false;
 
-        if (ok)
+        if (saved is Success)
         {
             _dirty = false;
             Snackbar.Add(Loc["LayPublished", ScopeLabel], Severity.Success);
@@ -606,10 +513,10 @@
         }
 
         _saving = true;
-        var ok = await LayoutService.ResetLayoutAsync(Scope);
+        var reset = await LayoutService.ResetLayoutAsync(Scope);
         _saving = false;
 
-        if (ok)
+        if (reset is Success)
         {
             await LoadAsync();
             Snackbar.Add(Loc["LayResetDone", ScopeLabel], Severity.Success);

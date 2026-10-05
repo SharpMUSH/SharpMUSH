@@ -82,12 +82,19 @@ Key environment variables:
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
 - `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
+- `SHARPMUSH_BACKUP_PACKAGE_KEEP` — how many automatic copies taken before a portal package apply/rollback/uninstall stay, in `<backup path>/pre-package`, counted apart from the others (default: 2; `0` turns them off)
 - `SHARPMUSH_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
 - `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)
 - `SHARPMUSH_LIGHTNING_SYNC` — how hard each LMDB commit pushes on the disk: `full` (default; every commit fsynced, nothing lost on power failure), `nometasync` (one fsync per commit instead of two; power failure can lose the last transaction), or `periodic` (no sync on commit; a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS`, default 1000, and power failure can lose at most that window). The file stays consistent in every mode.
+- `SHARPMUSH_LIGHTNING_COMPACT_ON_START` — Lightning only; `true` replaces the world's file with a compacted copy before the server opens it, keeping the original at `<path>.precompact` (never deleted automatically; compaction is refused while one is there)
+- `SHARPMUSH_HISTORY_<KIND>_KEEP` / `SHARPMUSH_HISTORY_<KIND>_MAX_AGE` — history retention per kind (`WIKI`, `SCENE_EDITS`; `SCENE_DELETED` takes `_MAX_AGE` only); `SHARPMUSH_HISTORY_INTERVAL` schedules a pass, `SHARPMUSH_HISTORY_ARCHIVE_PATH` archives purged records first, `SHARPMUSH_HISTORY_BATCH` bounds one write. Every default keeps everything (see `deploy/README.md`, "History retention")
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
+- `SHARPMUSH_NATS_MAX_BYTES` — byte budget of each bus stream (`SHARPMUSH-CS`, `SHARPMUSH-MS`); a full stream refuses new publications (default: 512 MiB)
+- `SHARPMUSH_NATS_MAX_AGE` — how long unconsumed bus messages wait for their consumer, e.g. `30m` (default: `1h`). Browser replay is configured apart: `Replay:RetentionHours`, `Replay:MaxBytes`, `Replay:MaxFrames` on the ConnectionServer. See `docs/design/messaging-retention.md`
 
 Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
+
+`@storage` (wizard-only) reports the map limit, file length, allocated disk and live data apart, the backup run's peak and free-space need, and leftover worlds; the same figures are the `sharpmush_storage_*` gauges (`IStorageCapacityService`). A backup run checks free space before it writes (`WorldBackupWriter.EstimateCopyBytes`). `@storage/history` and `/purge` cover every registered `IHistoryStore` (the provider's wiki revisions, the Scene plugin's pose edits and deleted poses) through `IHistoryRetentionService`; a store judges candidates again inside its write job.
 
 Under `lightning`, `@backup` (wizard-only) copies the live world into a timestamped directory using LMDB's own copy routine, so an external snapshot tool has a consistent one to read without the server stopping. `@backup/list` shows what is on disk. Nothing else copies a live `data.mdb` — see `deploy/README.md`.
 
@@ -166,6 +173,7 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 - `ApplicationCatalog` — the Dynamic Applications snapshot; loads alongside the first render, so a reader that needs the whole list awaits `Loaded`
 - `IThemeService` — built-in MudTheme accent presets, the choice persisted in localStorage (the CSS variables in `wwwroot/css/tokens.css` are static; see `docs/design/ui-patterns.md` §13)
 - `WikiService` / `SceneService` — HTTP clients for the server's wiki and scene APIs (scene writes go through game commands)
+- `GameCommandService` — runs a game command as the acting character (`POST api/commands`) and returns its output
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
 - `AccountAuthService` — account-session token stored in WASM memory; mints per-character OTTs for the terminal
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
@@ -177,8 +185,16 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 **SignalR real-time flow:**
 - Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
-- Client calls `SendCommand` → NATS → engine → NATS → `ReceiveOutput` back to client
 - Room events broadcast to `room:{dbref}` group
+- The hub carries no commands. A command the portal issues itself goes through `POST api/commands`
+  (`GameCommandService` → `CommandsController` → `PortalCommandService`): one line run as the account
+  session's bound character — whatever the terminal is playing — on the engine's queue as typed input
+  (`$`-commands in place), answered with the output that character was told while it ran (copied by
+  `ICommandOutputCapture`; still delivered to its connections) and, when the request names one, a
+  `Result` expression evaluated right after in the same queue entry, under the character's own output
+  limit. A request naming a `Character` (objid) is refused 409 unless the session is still bound to it;
+  an account may have `PortalCommands:MaxPendingPerAccount` (default 4) commands queued or running,
+  and is answered 429 past that
 
 ### Widget System
 
@@ -312,6 +328,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - `url-strategy.md` — canonical route map (public, authenticated, admin, API)
 - `engine-data-trunk.md` — engine reads/writes through the Mediator, stores, cache coherence, single-process assumptions
 - `guided-input-ordering.md` — per-handle publication order; guided-input prompts and lifecycle notices display in commit order
+- `messaging-retention.md` — bus vs replay retention, stream byte budgets, handler retry/terminate semantics, bounded replay reads
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 

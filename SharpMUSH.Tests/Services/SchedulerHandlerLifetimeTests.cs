@@ -91,7 +91,7 @@ public class SchedulerHandlerLifetimeTests
 	[Arguments(true)]
 	public async Task StreamHandlerCarriesCancellationAfterTheFirstYield(bool enumerationToken)
 	{
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var cleanup = new CancellationTokenSource();
 		async IAsyncEnumerable<long> Rows([EnumeratorCancellation] CancellationToken token = default)

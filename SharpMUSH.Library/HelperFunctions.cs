@@ -11,14 +11,11 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library;
 
 /// <summary>
-/// Outcome of <see cref="HelperFunctions.SafeToAddRelationship"/>: whether adding a parent/zone
-/// relationship is safe and, if not, which of PennMUSH's two distinct <c>do_parent</c> guards it
-/// would violate (<c>src/set.c:1432</c> self-reference vs. <c>:1477</c> a cycle reachable through
-/// the existing chain) - the two produce different player-facing text and callers that show that
-/// text need to tell them apart. <see cref="HelperFunctions.SafeToAddZone"/> collapses this back
-/// to a single bool: <c>do_chzone</c> (<c>src/set.c:421-444</c>) has its own, differently-worded
-/// self/cycle messages, so a zone caller reusing parent wording here would be wrong, not just
-/// imprecise - see the zone note on <see cref="HelperFunctions.SafeToAddZone"/>.
+/// Outcome of <see cref="Services.Interfaces.IRelationshipCycleChecker"/>: whether adding a parent or
+/// zone relationship is safe and, if not, which guard it would violate — a self-reference or a cycle
+/// reachable through the existing chain. Both <c>do_parent</c> (<c>src/set.c:1432</c>, <c>:1477</c>)
+/// and <c>do_chzone</c> (<c>src/set.c:421-444</c>) word the two differently, so callers that report
+/// the refusal need to tell them apart.
 /// </summary>
 public enum RelationshipSafety
 {
@@ -88,6 +85,10 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj)
 		=> await IsPriv(obj) || await obj.HasPower("See_All");
+
+	/// <summary><see cref="IsSee_All(AnySharpObject)"/> with the object's flags already read.</summary>
+	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj, ObjectFlagSet flags)
+		=> flags.IsPriv || await obj.HasPower("See_All");
 
 	public static async ValueTask<bool> IsGuest(this AnySharpObject obj)
 		=> await obj.HasPower("Guest");
@@ -350,6 +351,22 @@ public static partial class HelperFunctions
 									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
+	/// Reads the object's flags once, for a caller that asks several flag questions about it. See
+	/// <see cref="ObjectFlagSet"/>: each of its questions answers as the per-read helper here does.
+	/// </summary>
+	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
+		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken));
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
+		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this AnySharpObject obj, CancellationToken cancellationToken)
+		=> obj.Object().ReadFlagsAsync(cancellationToken);
+
+	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this AnySharpObject obj)
+		=> obj.Object().ReadFlagsAsync(ExecutionBudget.CurrentToken);
+
+	/// <summary>
 	/// <see cref="HasFlag(SharpObject,string)"/> plus the letter fallback of Penn's <c>flag_hash_lookup</c>
 	/// (<c>src/flags.c:162-189</c>): a single character that names no flag is looked up as a flag
 	/// letter, compared exactly (<c>letter_to_flagptr</c>: <c>f-&gt;letter == c</c>), so <c>h</c> is HALT
@@ -431,11 +448,22 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer || await obj.Inheritable(await obj.ReadFlagsAsync(cancellationToken), cancellationToken);
+	}
+
+	/// <summary>
+	/// <see cref="Inheritable(AnySharpObject, CancellationToken)"/> with the object's own flags already
+	/// read; only the owner's TRUST flag is read here, and only when the object's own flags do not decide.
+	/// </summary>
+	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, ObjectFlagSet flags,
+		CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return obj.IsPlayer
-			|| await obj.HasFlag("Trust", cancellationToken)
+			|| flags.IsTrust
+			|| flags.IsWizard
 			|| await (await obj.Object().Owner.WithCancellation(cancellationToken))
-				.Object.HasFlag("Trust", cancellationToken)
-			|| await obj.IsWizard(cancellationToken);
+				.Object.HasFlag("Trust", cancellationToken);
 	}
 
 	public static ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what)
@@ -502,57 +530,6 @@ public static partial class HelperFunctions
 			? null
 			: new AttributeWithOptionalObject(string.IsNullOrEmpty(obj) ? null : obj, attr);
 	}
-
-	/// <summary>
-	/// Detects self-reference and cycles when combining parent and zone chains. Checks whether
-	/// adding a relationship would create a cycle by following both parent and zone links from the
-	/// new relationship target.
-	/// </summary>
-	/// <param name="start">The object that will have a new relationship set</param>
-	/// <param name="newRelated">The object being set as parent or zone</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>
-	/// <see cref="RelationshipSafety.Safe"/> if adding the relationship is safe;
-	/// <see cref="RelationshipSafety.SelfReference"/> if <paramref name="start"/> and
-	/// <paramref name="newRelated"/> are the same object; <see cref="RelationshipSafety.Cycle"/> if
-	/// <paramref name="start"/> is otherwise reachable from <paramref name="newRelated"/>.
-	/// </returns>
-	public static async ValueTask<RelationshipSafety> SafeToAddRelationship(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
-	{
-		var startDbRef = start.Object().DBRef;
-		var newRelatedDbRef = newRelated.Object().DBRef;
-
-		if (startDbRef.Number == newRelatedDbRef.Number)
-		{
-			return RelationshipSafety.SelfReference;
-		}
-
-		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
-		// would complete a cycle: start -> newRelated -> ... -> start
-		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
-
-		return isReachable ? RelationshipSafety.Cycle : RelationshipSafety.Safe;
-	}
-
-	/// <summary>
-	/// Detects self-reference and cycles in the parent chain. Distinguishes the two
-	/// (<see cref="RelationshipSafety"/>) because PennMUSH's <c>do_parent</c> notifies the player
-	/// with different text for each (<c>src/set.c:1432,1477</c>).
-	/// </summary>
-	public static async ValueTask<RelationshipSafety> SafeToAddParent(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
-		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
-
-	/// <summary>
-	/// Detects cycles in the zone chain. Collapsed to a bool - unlike <see cref="SafeToAddParent"/>,
-	/// no caller here needs to tell self-reference from a cycle apart: PennMUSH's <c>do_chzone</c>
-	/// (<c>src/set.c:421-444</c>) has its own self ("You shouldn't zone objects to themselves!") and
-	/// cycle ("You can't make circular zones!") messages, both worded differently from
-	/// <c>do_parent</c>'s and neither currently reproduced here, so there is nothing parent-specific
-	/// to route to. If zone messaging is split to match Penn later, wire it from
-	/// <see cref="SafeToAddRelationship"/> directly rather than reusing the parent-flavoured keys.
-	/// </summary>
-	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
-		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
 	/// <summary>
 	/// Takes the pattern of 'Object[/attribute]' and splits it out if possible.

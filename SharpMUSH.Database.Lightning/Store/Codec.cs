@@ -8,6 +8,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.Unspecified,
 	DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = false)]
 [JsonSerializable(typeof(ObjectRecord))]
+[JsonSerializable(typeof(ObjectHeaderRecord))]
 [JsonSerializable(typeof(LockRecord))]
 [JsonSerializable(typeof(AttrMetaRecord))]
 [JsonSerializable(typeof(FlagRecord))]
@@ -17,6 +18,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(ChannelRecord))]
 [JsonSerializable(typeof(ChannelMemberRecord))]
 [JsonSerializable(typeof(MailRecord))]
+[JsonSerializable(typeof(MailSummaryRecord))]
 [JsonSerializable(typeof(MailAliasRecord))]
 [JsonSerializable(typeof(AccountRecord))]
 [JsonSerializable(typeof(SessionRecord))]

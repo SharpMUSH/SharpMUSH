@@ -32,6 +32,14 @@ public static class SharpObjectExtensions
 			&& (await thing.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == player.Object().DBRef;
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>IsQuiet(&lt;x&gt;)</c> (<c>hdrs/dbdefs.h:197</c>): the object or its owner is
+	/// QUIET. It is the test <c>quiet_notify</c> makes (<c>hdrs/notify.h:153-155</c>).
+	/// </summary>
+	public static async Task<bool> IsQuietAsync(this SharpObject thing)
+		=> await thing.HasQuietFlagAsync()
+			|| await (await thing.Owner.WithCancellation(CancellationToken.None)).Object.HasQuietFlagAsync();
+
 	/// <summary>Check if an object has the QUIET flag set.</summary>
 	/// <remarks>See <see cref="HasNoWarnFlagAsync"/> for why this goes through <c>HasFlag</c>.</remarks>
 	public static async Task<bool> HasQuietFlagAsync(this SharpObject obj)

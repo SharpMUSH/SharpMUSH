@@ -242,9 +242,10 @@ public static class TestHelpers
 	/// Creates the <see cref="INotifyService"/> substitute used by the test factories. The real
 	/// <see cref="SharpMUSH.Library.Services.NotifyService"/> consults
 	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpOutputCapture"/> before delivering to
-	/// connections (inbound-HTTP output becomes the response body); tests replace INotifyService
-	/// with a mock, so the mock must mirror that one behavior or HTTP integration tests would see
-	/// empty bodies. Received()-style assertions are unaffected — When/Do does not change call
+	/// connections (inbound-HTTP output becomes the response body), and offers the same output to
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.ICommandOutputCapture"/> (a portal command's
+	/// answer); tests replace INotifyService with a mock, so the mock must mirror both or HTTP and
+	/// portal-command integration tests would see empty bodies. Received()-style assertions are unaffected — When/Do does not change call
 	/// recording, and capture state lives in an AsyncLocal so non-HTTP test flows are no-ops.
 	/// </summary>
 	/// <param name="recorder">
@@ -254,6 +255,8 @@ public static class TestHelpers
 	public static INotifyService CreateNotifyServiceSubstitute(NotificationRecorder? recorder = null)
 	{
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
+		// The portal command route's copy of a character's output (POST api/commands), also mirrored.
+		var commandCapture = new SharpMUSH.Library.Services.CommandOutputCapture();
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
@@ -263,6 +266,7 @@ public static class TestHelpers
 			AnySharpObject? sender = null,
 			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
+			commandCapture.Offer(recipient.Number, message);
 			capture.TryCapture(recipient.Number, message);
 			recorder?.Record(recipient, message);
 			recorder?.RecordDelivery(recipient, message, sender, type);
@@ -277,6 +281,7 @@ public static class TestHelpers
 			INotifyService.NotificationType type)
 		{
 			var text = PlainText(message);
+			commandCapture.Offer(recipient.Number, text);
 			capture.TryCapture(recipient.Number, text);
 			recorder?.Record(recipient, text);
 			recorder?.RecordRaw(recipient, message);
@@ -306,30 +311,12 @@ public static class TestHelpers
 				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
-		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<DBRef>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
-
+		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale. The
+		// shorthand forms are extension methods that arrive here, so these two hooks see every call.
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
-				call.ArgAt<AnySharpObject?>(2)));
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
 				call.ArgAt<AnySharpObject?>(2)));
 
@@ -340,13 +327,6 @@ public static class TestHelpers
 			.When(x => x.NotifyLocalizedMarkup(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0),
-				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
-				call.ArgAt<AnySharpObject?>(2)));
-
-		notifier
-			.When(x => x.NotifyLocalizedMarkup(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
-			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
 				call.ArgAt<AnySharpObject?>(2)));
 
@@ -370,12 +350,6 @@ public static class TestHelpers
 					DeliverToHandle(handle, text);
 				}
 			});
-
-		notifier
-			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<object[]>()))
-			.Do(call => DeliverToHandle(
-				call.ArgAt<long>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))

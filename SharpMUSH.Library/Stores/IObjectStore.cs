@@ -81,6 +81,22 @@ public interface IObjectStore
 	ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// How many objects have <paramref name="parent"/> as their parent — <c>nchildren()</c> — counted from the
+	/// parent index without loading a child.
+	/// </summary>
+	ValueTask<int> GetChildCountAsync(DBRef parent, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// How many rooms, exits, things and players there are: in the whole database when <paramref name="owner"/>
+	/// is null, otherwise among the objects <paramref name="owner"/> owns (the owner itself included, as a
+	/// player owns itself). Counted from the type and owner indexes, not by loading the objects.
+	/// </summary>
+	ValueTask<ObjectTypeCounts> GetObjectTypeCountsAsync(DBRef? owner, CancellationToken cancellationToken = default);
+
+	/// <summary>The highest dbref number any object holds, or <see cref="NotFound"/> when there are no objects.</summary>
+	ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new room.
 	/// </summary>
 	/// <param name="name">Room Name</param>
@@ -386,6 +402,13 @@ public interface IObjectStore
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// The full object ids of the players named or aliased <paramref name="name"/> (case-insensitive), paged and
+	/// read from the headers only. The cached <c>GetPlayerQuery</c> resolves each through the object node cache,
+	/// so a miss builds each player once rather than once here and again there.
+	/// </summary>
+	IAsyncEnumerable<DBRef> GetPlayerRefsByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get all objects in the database as a streaming AsyncEnumerable.

@@ -174,12 +174,9 @@
             return;
         }
         _busy = true;
-        var (success, error, characters) = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
+        var result = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
         _busy = false;
-        if (success)
-            Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
-        else
-            _error = error ?? Loc["AuthLoginFailed"];
+        SignedIn(result);
     }
 
     private async Task RegisterAsync()
@@ -192,12 +189,23 @@
         }
         _busy = true;
         // A fresh account never has a character, so registration always continues into onboarding.
-        var (success, error, characters) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
+        var result = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
         _busy = false;
-        if (success)
-            Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
-        else
-            _error = error ?? Loc["AuthRegistrationFailed"];
+        SignedIn(result);
+    }
+
+    /// <summary>On to onboarding when the account has no character yet, else where the visitor was headed.</summary>
+    private void SignedIn(ApiResult<IReadOnlyList<AccountAuthService.CharacterSummary>> result)
+    {
+        switch (result)
+        {
+            case IReadOnlyList<AccountAuthService.CharacterSummary> characters:
+                Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)

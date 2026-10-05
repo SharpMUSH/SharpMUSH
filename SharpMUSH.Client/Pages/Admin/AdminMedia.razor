@@ -1,6 +1,7 @@
 @page "/admin/media"
 @attribute [Authorize(Policy = "media.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using Microsoft.AspNetCore.Components.Forms
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar
@@ -216,8 +217,8 @@
                         info.ContentType, info.SizeBytes, string.Empty, "me", DateTimeOffset.UtcNow));
                     Snackbar.Add(Loc["WkAssetUploaded", info.FileName], Severity.Success);
                     break;
-                case string err:
-                    Snackbar.Add(Loc["WkUploadFailed", err], Severity.Error);
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["WkUploadFailed", failure.Message], Severity.Error);
                     break;
             }
         }
@@ -243,8 +244,7 @@
         var target = _deleteTarget;
         _showDeleteConfirm = false;
         _deleteTarget = null;
-        var ok = await AssetService.DeleteAsync(target.Id);
-        if (ok)
+        if (await AssetService.DeleteAsync(target.Id) is Success)
         {
             _assets.RemoveAll(a => a.Id == target.Id);
             Snackbar.Add(Loc["WkAssetDeleted", target.FileName], Severity.Success);

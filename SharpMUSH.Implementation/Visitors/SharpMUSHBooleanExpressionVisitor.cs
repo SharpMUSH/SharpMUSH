@@ -233,9 +233,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (unlockerObj.IsContainer)
 					{
-						var searchDbRef = targetDbRef.Value;
-						return await med.CreateStream(new GetContentsQuery(unlockerObj.AsContainer), ExecutionBudget.CurrentToken)
-							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), ExecutionBudget.CurrentToken);
+						return await CarriesAsync(unlockerObj, targetDbRef.Value);
 					}
 				}
 				catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
@@ -402,6 +400,28 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override LockPredicate VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 		=> BuildObjectPredicate(context.@string().GetText(), allowCarry: true);
 
+	/// <summary>
+	/// PennMUSH <c>member(thing, Contents(container))</c>, asked of the one object rather than by reading
+	/// the container's whole inventory. A container's contents are exactly the objects whose location
+	/// edge names it, rooms excepted (a room's location edge is its drop-to): <c>GetContentRefsAsync</c>
+	/// reads <c>Location.Reverse</c> and drops rooms. So the key is carried exactly when it exists, is the
+	/// object the reference names (an objid's stamp must agree, as <see cref="DBRef.Matches"/> asks), is
+	/// not a room, and its location is the container — an exit's location being its source room, which is
+	/// where a room's contents list it too.
+	/// </summary>
+	private async ValueTask<bool> CarriesAsync(AnySharpObject container, DBRef key)
+	{
+		if (await med.Send(new GetObjectNodeQuery(key), ExecutionBudget.CurrentToken) is not AnySharpObject found
+				|| !found.Object().DBRef.Matches(key)
+				|| found.IsRoom)
+		{
+			return false;
+		}
+
+		var location = await found.AsContent.Location();
+		return location.Object().Key == container.Object().Key;
+	}
+
 	private LockPredicate BuildObjectPredicate(string target, bool allowCarry)
 	{
 		var targetDbRef = ParsedAtCompileTime(target);
@@ -426,8 +446,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (unlockerObj.IsContainer)
 					{
-						return await med.CreateStream(new GetContentsQuery(unlockerObj.AsContainer), ExecutionBudget.CurrentToken)
-							.AnyAsync(item => item.Object().DBRef.Matches(lockDbRef), ExecutionBudget.CurrentToken);
+						return await CarriesAsync(unlockerObj, lockDbRef);
 					}
 				}
 				catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)

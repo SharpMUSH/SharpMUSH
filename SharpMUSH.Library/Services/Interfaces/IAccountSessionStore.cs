@@ -54,4 +54,13 @@ public interface IAccountSessionStore
 	/// that exist without one.
 	/// </remarks>
 	Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default);
+
+	/// <summary>
+	/// Deletes sessions that expired without being presented again, at most <paramref name="maxCount"/>
+	/// in this call, and reports how many went and how many expired ones are still waiting.
+	/// </summary>
+	Task<SessionSweep> SweepExpiredAsync(int maxCount, CancellationToken ct = default);
+
+	/// <summary>One <see cref="SweepExpiredAsync"/> step: sessions deleted, and the expired backlog left behind.</summary>
+	public readonly record struct SessionSweep(int Deleted, long Remaining);
 }

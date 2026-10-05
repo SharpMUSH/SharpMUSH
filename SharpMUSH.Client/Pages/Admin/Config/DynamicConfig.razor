@@ -4,9 +4,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Configuration
 @using SharpMUSH.Library.API
-@using System.Text.Json
-@using SharpMUSH.Configuration.Generated
-@using SharpMUSH.Library.DiscriminatedUnions
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
@@ -70,7 +67,7 @@
                     <KitCard>
                         @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
                         {
-                            @RenderFieldRow(prop)
+                            <ConfigFieldRow Property="prop" Draft="_draft" OnChanged="OnDraftChanged" />
                         }
                     </KitCard>
                 </div>
@@ -81,12 +78,12 @@
                 {
                     var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
 
-                    <div class="cfg-group" id="@GroupAnchor(group.Name)">
+                    <div class="cfg-group" id="@ConfigNaming.GroupAnchor(group.Name)">
                         <SectionLabel>@group.DisplayName</SectionLabel>
                         <KitCard>
                             @foreach (var prop in groupProperties)
                             {
-                                @RenderFieldRow(prop)
+                                <ConfigFieldRow Property="prop" Draft="_draft" OnChanged="OnDraftChanged" />
                             }
                         </KitCard>
                     </div>
@@ -94,13 +91,13 @@
             }
         </div>
 
-        @if (_hasChanges)
+        @if (_draft.HasChanges)
         {
             <BottomBar Class="cfg-unsaved">
                 <div class="cfg-unsaved-row">
                     <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" Class="cfg-unsaved-icon" />
                     <span class="cfg-unsaved-text"><strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]</span>
-                    <span class="cfg-count">@Loc.Plural("ResChangeCount", "count", _changedCount)</span>
+                    <span class="cfg-count">@Loc.Plural("ResChangeCount", "count", _draft.ChangedCount)</span>
                     <span class="cfg-unsaved-spacer"></span>
                     <CapsuleButton Class="cfg-reset" OnClick="ResetChanges" Disabled="_saving">@Loc["ResetChanges"]</CapsuleButton>
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" OnClick="SaveChanges" Disabled="_saving">
@@ -119,7 +116,7 @@
                     @foreach (var group in NonEmptyGroups)
                     {
                         var count = GetPropertiesInGroup(group.Name).Count();
-                        var anchor = GroupAnchor(group.Name);
+                        var anchor = ConfigNaming.GroupAnchor(group.Name);
                         var current = anchor == _currentAnchor;
                         @* The path is spelt out: a bare "#anchor" resolves against <base href="/"> and leaves the page.
                            The click marks the link current itself, since a hash-only change raises no LocationChanged. *@
@@ -143,13 +140,9 @@
 
     private bool _loading = true;
     private bool _saving = false;
-    private bool _hasChanges = false;
-    private int _changedCount = 0;
     private CategoryMetadata? _categoryMetadata;
     private Dictionary<string, PropertyMetadata> _categoryProperties = new();
-    private Dictionary<string, object?> _currentValues = new();
-    private Dictionary<string, object?> _originalValues = new();
-    private readonly Dictionary<string, string> _validationErrors = new();
+    private readonly ConfigDraft _draft = new();
 
     private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -159,7 +152,7 @@
         "sitelockrules"
     };
 
-    private string CategoryTitle => _categoryMetadata?.DisplayName ?? FormatCategoryName(Category);
+    private string CategoryTitle => _categoryMetadata?.DisplayName ?? ConfigNaming.CategoryTitle(Category);
 
     /// <summary>The "#group-…" anchor in the address, so the table of contents can mark it current.</summary>
     private string? _currentAnchor;
@@ -224,57 +217,18 @@
     private async Task LoadConfigurationAsync()
     {
         _loading = true;
-        _hasChanges = false;
-        _validationErrors.Clear();
-        _dictDrafts.Clear();
-        _listDrafts.Clear();
-        
+        _draft.Clear();
+
         try
         {
-            var schemaResult = await SchemaService.GetSchemaAsync();
-            var (schema, schemaError) = schemaResult switch
+            switch (await SchemaService.GetSchemaAsync())
             {
-                ConfigurationSchema found => (found, null),
-                ApiFailure failure => ((ConfigurationSchema?)null, failure.Message)
-            };
-            if (schema is null)
-            {
-                Snackbar.Add($"{Loc["FailedToLoadSchema"]}: {schemaError}", Severity.Error);
-                return;
-            }
-
-            var categoryName = MapCategoryName(Category);
-            
-            _categoryMetadata = schema.Categories.FirstOrDefault(c => 
-                c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
-
-            if (_categoryMetadata == null)
-            {
-                Snackbar.Add(string.Format(Loc["CategoryNotFoundShort"], categoryName), Severity.Warning);
-                return;
-            }
-
-            _categoryProperties = schema.Properties
-                .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-            var configResult = await AdminConfigService.FetchConfigurationFromServer();
-            var (configResponse, configError) = configResult switch
-            {
-                ConfigurationResponse found => (found, null),
-                ApiFailure failure => ((ConfigurationResponse?)null, failure.Message)
-            };
-            if (configResponse is null)
-            {
-                Snackbar.Add($"{Loc["FailedToLoadValues"]}: {configError}", Severity.Error);
-                return;
-            }
-
-            foreach (var prop in _categoryProperties.Values)
-            {
-                var value = ConfigAccessor.GetValue(configResponse.Configuration, prop.Name);
-                _currentValues[prop.Path] = value;
-                _originalValues[prop.Path] = value;
+                case ConfigurationSchema schema:
+                    await LoadCategoryAsync(schema);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add($"{Loc["FailedToLoadSchema"]}: {failure.Message}", Severity.Error);
+                    break;
             }
         }
         catch (Exception ex)
@@ -287,355 +241,43 @@
         }
     }
 
-    private RenderFragment RenderFieldRow(PropertyMetadata prop) => __builder =>
+    /// <summary>Picks this page's category out of <paramref name="schema"/> and loads its values.</summary>
+    private async Task LoadCategoryAsync(ConfigurationSchema schema)
     {
-        var displayName = string.IsNullOrEmpty(prop.DisplayName) ||
-                         prop.DisplayName.Contains('_') ||
-                         prop.DisplayName == prop.Name
-            ? FormatPropertyName(prop.DisplayName ?? prop.Name)
-            : prop.DisplayName;
+        var categoryName = ConfigNaming.CategoryName(Category);
 
-        var hasError = _validationErrors.TryGetValue(prop.Path, out var errorText);
-        var isChanged = IsPropertyChanged(prop.Path);
-        var stacked = prop.Component is "stringlist" or "dictionary";
-        var helpId = string.IsNullOrEmpty(prop.Description) ? null : "cfg-help-" + Slug(prop.Path);
-        var errorId = hasError ? "cfg-error-" + Slug(prop.Path) : null;
-        var describedBy = string.Join(' ', new[] { helpId, errorId }.Where(id => id is not null));
-        if (describedBy.Length == 0) describedBy = null;
+        _categoryMetadata = schema.Categories.FirstOrDefault(c =>
+            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
 
-        <div class="cfg-row @(stacked ? "cfg-row--stacked" : "cfg-row--inline")">
-            <div class="cfg-row-text">
-                <div class="cfg-row-name">
-                    <span>@displayName</span>
-                    <code class="cfg-row-key">@prop.Path</code>
-                    @if (isChanged)
-                    {
-                        <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", prop.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
-                    }
-                </div>
-                @if (helpId is not null)
-                {
-                    <div class="cfg-row-help" id="@helpId">@prop.Description</div>
-                }
-                @if (errorId is not null)
-                {
-                    <div class="cfg-row-error" id="@errorId">@errorText</div>
-                }
-            </div>
-            <div class="cfg-row-control @(stacked ? "cfg-row-control--full" : "")">
-                @if (prop.Component == "switch")
-                {
-                    var on = GetBoolValue(prop);
-                    <button type="button" role="switch" aria-checked="@(on ? "true" : "false")" aria-label="@displayName" aria-describedby="@describedBy"
-                            class="cfg-switch @(on ? "cfg-switch--on" : "")"
-                            disabled="@prop.ReadOnly"
-                            @onclick="@(() => UpdateValue(prop, !on))">
-                        <span class="cfg-switch-knob"></span>
-                    </button>
-                }
-                else if (prop.Component == "select" && prop.Options is { Count: > 0 })
-                {
-                    var current = GetStringValue(prop);
-                    <div class="cfg-pills" role="group" aria-label="@displayName" aria-describedby="@describedBy">
-                        @foreach (var opt in prop.Options)
-                        {
-                            var option = opt;
-                            var selected = current == option.Key;
-                            <button type="button" class="cfg-pill @(selected ? "cfg-pill--on" : "")" aria-pressed="@(selected ? "true" : "false")"
-                                    @onclick="@(() => UpdateValue(prop, option.Key))">
-                                @option.Value
-                            </button>
-                        }
-                    </div>
-                }
-                else if (prop.Component == "numeric")
-                {
-                    var range = RangeText(prop);
-                    @if (range is not null)
-                    {
-                        <span class="cfg-range">@range</span>
-                    }
-                    <input class="cfg-num" type="number" inputmode="numeric" aria-label="@displayName" aria-describedby="@describedBy"
-                           value="@GetNumericString(prop)"
-                           min="@(GetIntMin(prop)?.ToString())"
-                           max="@(GetIntMax(prop)?.ToString())"
-                           readonly="@prop.ReadOnly"
-                           @onchange="@(e => UpdateNumeric(prop, e.Value?.ToString()))" />
-                }
-                else if (prop.Component == "stringlist")
-                {
-                    var items = GetStringListValue(prop);
-                    <div class="cfg-chips">
-                        @if (items.Count == 0)
-                        {
-                            <span class="cfg-empty">@Loc["NoItems"]</span>
-                        }
-                        @for (var i = 0; i < items.Count; i++)
-                        {
-                            var index = i;
-                            <span class="cfg-chip @(isChanged ? "cfg-chip--changed" : "")">
-                                @items[index]
-                                <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {items[index]}")"
-                                        @onclick="@(() => RemoveListItemAt(prop, index))">×</button>
-                            </span>
-                        }
-                    </div>
-                    <input class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
-                           value="@GetListDraft(prop)"
-                           @oninput="@(e => SetListDraft(prop, e.Value?.ToString() ?? string.Empty))"
-                           @onkeydown="@(e => OnListDraftKeyDown(prop, e))" />
-                }
-                else if (prop.Component == "dictionary")
-                {
-                    var entries = GetDictDraft(prop);
-                    <div class="cfg-dict">
-                        @if (entries.Count == 0)
-                        {
-                            <span class="cfg-empty">@Loc["NoEntries"]</span>
-                        }
-                        @for (var e = 0; e < entries.Count; e++)
-                        {
-                            var entryIndex = e;
-                            var entry = entries[entryIndex];
-                            <div class="cfg-dict-entry" @key="@($"{prop.Path}-entry-{entryIndex}")">
-                                <div class="cfg-dict-head">
-                                    <input class="cfg-text" placeholder="@Loc["Key"]" aria-label="@Loc["Key"]"
-                                           value="@entry.Key"
-                                           @onchange="@(ev => UpdateDictKey(prop, entryIndex, ev.Value?.ToString() ?? string.Empty))" />
-                                    <button type="button" class="cfg-icon-btn cfg-icon-btn--danger"
-                                            aria-label="@Loc["RemoveEntry"]" title="@Loc["RemoveEntry"]"
-                                            @onclick="@(() => RemoveDictEntry(prop, entryIndex))">
-                                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
-                                    </button>
-                                </div>
-                                <div class="cfg-chips">
-                                    @if (entry.Values.Count == 0)
-                                    {
-                                        <span class="cfg-empty">@Loc["NoItems"]</span>
-                                    }
-                                    @for (var v = 0; v < entry.Values.Count; v++)
-                                    {
-                                        var valueIndex = v;
-                                        <span class="cfg-chip">
-                                            @entry.Values[valueIndex]
-                                            <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {entry.Values[valueIndex]}")"
-                                                    @onclick="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))">×</button>
-                                        </span>
-                                    }
-                                </div>
-                                <input class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
-                                       value="@entry.ValueDraft"
-                                       @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"
-                                       @onkeydown="@(ev => OnDictValueDraftKeyDown(prop, entryIndex, ev))" />
-                            </div>
-                        }
-                        <button type="button" class="cfg-add" @onclick="@(() => AddDictEntry(prop))">
-                            <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["AddEntry"]
-                        </button>
-                    </div>
-                }
-                else
-                {
-                    var single = IsSingleChar(prop);
-                    <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@displayName" aria-describedby="@describedBy"
-                           maxlength="@(single ? 1 : null)"
-                           value="@GetStringValue(prop)"
-                           readonly="@prop.ReadOnly"
-                           @onchange="@(e => UpdateValue(prop, e.Value?.ToString()))" />
-                }
-            </div>
-        </div>
-    };
-
-    /// <summary>The schema has no single-character flag; README §6.4 keys the narrow input on this pattern.</summary>
-    private static bool IsSingleChar(PropertyMetadata prop) => prop.Pattern == "^.$";
-
-    /// <summary>"min–max", or the one bound the schema gives; null when it gives neither.</summary>
-    private string? RangeText(PropertyMetadata prop)
-    {
-        var min = GetIntMin(prop);
-        var max = GetIntMax(prop);
-        return (min, max) switch
+        if (_categoryMetadata == null)
         {
-            (null, null) => null,
-            ({ } lo, { } hi) => $"{lo}–{hi}",
-            ({ } lo, null) => $"≥{lo}",
-            (null, { } hi) => $"≤{hi}",
-        };
-    }
-
-    private static string GroupAnchor(string groupName) => "group-" + Slug(groupName);
-
-    private static string Slug(string text) =>
-        System.Text.RegularExpressions.Regex.Replace(text.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
-
-    private string GetNumericString(PropertyMetadata prop) =>
-        ConfigValues.NumericString(_currentValues, prop);
-
-    private void UpdateNumeric(PropertyMetadata prop, string? raw)
-    {
-        // A value only when the text parses; a mid-edit "-" must leave the stored number alone.
-        if (ConfigValues.ParseNumeric(prop, raw, out var value))
-            UpdateValue(prop, value);
-    }
-
-    private bool IsPropertyChanged(string path)
-    {
-        if (!_currentValues.TryGetValue(path, out var current)) return false;
-        if (!_originalValues.TryGetValue(path, out var original)) return false;
-        return !Equals(current, original);
-    }
-
-    private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
-    {
-        return _categoryProperties.Values.Where(p => 
-            (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool GetBoolValue(PropertyMetadata prop) => ConfigValues.Bool(_currentValues, prop);
-
-    private int? GetNullableIntValue(PropertyMetadata prop) =>
-        ConfigValues.NullableInt(_currentValues, prop);
-
-    private double? GetNullableDoubleValue(PropertyMetadata prop) =>
-        ConfigValues.NullableDouble(_currentValues, prop);
-
-    private string GetStringValue(PropertyMetadata prop) => ConfigValues.String(_currentValues, prop);
-
-    private List<string> GetStringListValue(PropertyMetadata prop) =>
-        ConfigValues.StringList(_currentValues, prop);
-
-
-    private readonly Dictionary<string, string> _listDrafts = new();
-
-    private string GetListDraft(PropertyMetadata prop) =>
-        _listDrafts.GetValueOrDefault(prop.Path, string.Empty);
-
-    private void SetListDraft(PropertyMetadata prop, string value) =>
-        _listDrafts[prop.Path] = value;
-
-    private void CommitListDraft(PropertyMetadata prop)
-    {
-        var draft = GetListDraft(prop).Trim();
-        _listDrafts[prop.Path] = string.Empty;
-        if (draft.Length == 0) return;
-
-        var list = GetStringListValue(prop);
-        if (list.Contains(draft)) return;
-
-        list.Add(draft);
-        UpdateValue(prop, list.ToArray());
-    }
-
-    private void OnListDraftKeyDown(PropertyMetadata prop, KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-            CommitListDraft(prop);
-    }
-
-    private void RemoveListItemAt(PropertyMetadata prop, int index)
-    {
-        var list = GetStringListValue(prop);
-        if (index >= 0 && index < list.Count)
-            list.RemoveAt(index);
-        UpdateValue(prop, list.ToArray());
-    }
-
-    // A draft list preserves entry order and allows in-progress (blank) keys while editing;
-    // it is synced back to _currentValues as a Dictionary on every change.
-
-
-    private readonly Dictionary<string, List<ConfigDictEntry>> _dictDrafts = new();
-
-    private List<ConfigDictEntry> GetDictDraft(PropertyMetadata prop)
-    {
-        if (!_dictDrafts.TryGetValue(prop.Path, out var draft))
-        {
-            draft = ConfigValues.BuildDictEntries(_currentValues.GetValueOrDefault(prop.Path));
-            _dictDrafts[prop.Path] = draft;
+            Snackbar.Add(string.Format(Loc["CategoryNotFoundShort"], categoryName), Severity.Warning);
+            return;
         }
-        return draft;
-    }
 
-    private void SyncDictDraft(PropertyMetadata prop) =>
-        UpdateValue(prop, ConfigValues.ToDictionary(_dictDrafts[prop.Path]));
+        _categoryProperties = schema.Properties
+            .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-    private void UpdateDictKey(PropertyMetadata prop, int entryIndex, string newKey)
-    {
-        var draft = GetDictDraft(prop);
-        if (entryIndex >= 0 && entryIndex < draft.Count)
-            draft[entryIndex].Key = newKey;
-        SyncDictDraft(prop);
-    }
-
-    private void AddDictEntry(PropertyMetadata prop)
-    {
-        GetDictDraft(prop).Add(new ConfigDictEntry());
-        SyncDictDraft(prop);
-    }
-
-    private void RemoveDictEntry(PropertyMetadata prop, int entryIndex)
-    {
-        var draft = GetDictDraft(prop);
-        if (entryIndex >= 0 && entryIndex < draft.Count)
-            draft.RemoveAt(entryIndex);
-        SyncDictDraft(prop);
-    }
-
-    private void CommitDictValueDraft(PropertyMetadata prop, int entryIndex)
-    {
-        var draft = GetDictDraft(prop);
-        if (entryIndex < 0 || entryIndex >= draft.Count) return;
-
-        var entry = draft[entryIndex];
-        var value = entry.ValueDraft.Trim();
-        entry.ValueDraft = string.Empty;
-        if (value.Length == 0 || entry.Values.Contains(value)) return;
-
-        entry.Values.Add(value);
-        SyncDictDraft(prop);
-    }
-
-    private void OnDictValueDraftKeyDown(PropertyMetadata prop, int entryIndex, KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-            CommitDictValueDraft(prop, entryIndex);
-    }
-
-    private void RemoveDictValueItem(PropertyMetadata prop, int entryIndex, int valueIndex)
-    {
-        var draft = GetDictDraft(prop);
-        if (entryIndex >= 0 && entryIndex < draft.Count &&
-            valueIndex >= 0 && valueIndex < draft[entryIndex].Values.Count)
-            draft[entryIndex].Values.RemoveAt(valueIndex);
-        SyncDictDraft(prop);
-    }
-
-    private int? GetIntMin(PropertyMetadata prop) => ConfigValues.IntBound(prop.Min);
-
-    private int? GetIntMax(PropertyMetadata prop) => ConfigValues.IntBound(prop.Max);
-
-    private void UpdateValue(PropertyMetadata prop, object? newValue)
-    {
-        _currentValues[prop.Path] = newValue;
-        _validationErrors.Remove(prop.Path);
-        RecalculateChanges();
-    }
-
-    private void RecalculateChanges()
-    {
-        _changedCount = ConfigValues.Changes(_currentValues, _originalValues).Count;
-        _hasChanges = _changedCount > 0;
+        switch (await AdminConfigService.FetchConfigurationFromServer())
+        {
+            case ConfigurationResponse response:
+                _draft.Load(_categoryProperties.Values, response.Configuration);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add($"{Loc["FailedToLoadValues"]}: {failure.Message}", Severity.Error);
+                break;
+        }
     }
 
     private async Task SaveChanges()
     {
         _saving = true;
-        _validationErrors.Clear();
+        _draft.ClearErrors();
 
         try
         {
-            var changes = ConfigValues.Changes(_currentValues, _originalValues);
+            var changes = _draft.Changes();
 
             if (changes.Count == 0)
             {
@@ -643,55 +285,19 @@
                 return;
             }
 
-            var result = await AdminConfigService.UpdateConfigAsync(changes);
-            switch (result)
+            switch (await AdminConfigService.UpdateConfigAsync(changes))
             {
                 case ConfigurationResponse:
-                    Snackbar.Add(
-                        Loc.Plural("ConfigSavedCount", "count", changes.Count),
-                        Severity.Success);
-
-                    foreach (var kvp in changes)
-                    {
-                        _originalValues[kvp.Key] = _currentValues[kvp.Key];
-                    }
-                    _hasChanges = false;
-                    _changedCount = 0;
+                    Snackbar.Add(Loc.Plural("ConfigSavedCount", "count", changes.Count), Severity.Success);
+                    _draft.MarkSaved(changes.Keys);
                     break;
-                case Error<string> error:
-                    try
-                    {
-                        var errorDoc = JsonDocument.Parse(error.Value);
-                        if (errorDoc.RootElement.TryGetProperty("errors", out var errorsElement))
-                        {
-                            if (errorsElement.ValueKind == JsonValueKind.Object)
-                            {
-                                foreach (var prop in errorsElement.EnumerateObject())
-                                {
-                                    if (prop.Name == "_global")
-                                    {
-                                        Snackbar.Add(prop.Value.GetString() ?? Loc["ResValidationFailed"].Value, Severity.Error);
-                                    }
-                                    else
-                                    {
-                                        _validationErrors[prop.Name] = prop.Value.GetString() ?? Loc["ResInvalid"].Value;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                Snackbar.Add(errorsElement.GetString() ?? Loc["ResSaveFailedShort"].Value, Severity.Error);
-                            }
-                        }
-                        else
-                        {
-                            Snackbar.Add(error.Value, Severity.Error);
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        Snackbar.Add(string.Format(Loc["SaveFailed"].Value, error.Value), Severity.Error);
-                    }
+                case ConfigSaveRefusal refusal:
+                    _draft.SetErrors(refusal.Fields, Loc["ResInvalid"].Value);
+                    foreach (var message in refusal.Messages)
+                        Snackbar.Add(message ?? Loc["ResValidationFailed"].Value, Severity.Error);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["SaveFailed"].Value, failure.Message), Severity.Error);
                     break;
             }
         }
@@ -705,81 +311,22 @@
         }
     }
 
-    private void ResetChanges()
-    {
-        foreach (var kvp in _originalValues)
-        {
-            _currentValues[kvp.Key] = kvp.Value;
-        }
-        _dictDrafts.Clear();
-        _listDrafts.Clear();
-        _hasChanges = false;
-        _changedCount = 0;
-        _validationErrors.Clear();
-    }
+    private void ResetChanges() => _draft.ResetChanges();
 
     private void ResetToDefaults()
     {
-        foreach (var prop in _categoryProperties.Values)
-        {
-            _currentValues[prop.Path] = ConfigValues.DefaultOf(prop);
-        }
-        _dictDrafts.Clear();
-        _listDrafts.Clear();
-        RecalculateChanges();
+        _draft.ResetToDefaults(_categoryProperties.Values);
         Snackbar.Add(Loc["DefaultsRestored"].Value, Severity.Info);
     }
 
-    private string MapCategoryName(string urlCategory)
+    private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
     {
-        return urlCategory.ToLower() switch
-        {
-            "net" or "network" => "Net",
-            "database" => "Database",
-            "limit" or "limits" => "Limit",
-            "command" or "commands" => "Command",
-            "chat" => "Chat",
-            "log" or "logging" => "Log",
-            "message" or "messages" => "Message",
-            "cosmetic" => "Cosmetic",
-            "cost" or "costs" => "Cost",
-            "attribute" or "attributes" => "Attribute",
-            "flag" or "flags" => "Flag",
-            "compatibility" => "Compatibility",
-            "alias" or "aliases" => "Alias",
-            "debug" => "Debug",
-            "function" or "functions" => "Function",
-            "warning" or "warnings" => "Warning",
-            "restriction" or "restrictions" => "Restriction",
-            "bannednames" => "BannedNames",
-            "sitelock" or "sitelockrules" => "SitelockRules",
-            "dump" => "Dump",
-            "file" or "files" => "File",
-            "textfile" or "textfiles" => "TextFile",
-            _ => char.ToUpper(urlCategory[0]) + urlCategory.Substring(1)
-        };
+        return _categoryProperties.Values.Where(p =>
+            (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string FormatCategoryName(string category)
+    /// <summary>A row's edit landed in the draft; redraw the unsaved bar.</summary>
+    private void OnDraftChanged()
     {
-        return System.Text.RegularExpressions.Regex.Replace(category, "([A-Z])", " $1").Trim();
-    }
-
-    private string FormatPropertyName(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return name;
-        
-        if (name.Contains('_'))
-        {
-            return string.Join(" ", name.Split('_')
-                .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
-        }
-        
-        if (name.All(char.IsLower))
-        {
-            return char.ToUpper(name[0]) + name.Substring(1);
-        }
-        
-        return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
     }
 }

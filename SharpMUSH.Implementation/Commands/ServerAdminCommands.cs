@@ -275,7 +275,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 		var silent = switches.Contains("SILENT");
 
@@ -578,7 +578,8 @@ public partial class Commands
 
 		return await StoreConfigValueAsync(parser, property, parsed) switch
 		{
-			SharpMUSHOptions => await ConfigSetAsync(executor, name, value, save),
+			SharpMUSHOptions updated => await ConfigSetAsync(executor, name, AppliedText(updated, property, parsed, value),
+				save),
 			Error<string> error => await ConfigRefusedAsync(executor, name, value, error.Value)
 		};
 	}
@@ -647,13 +648,23 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// The option's value as stored: <paramref name="given"/> as typed, unless the declared range moved it.
+	/// </summary>
+	private static string AppliedText(SharpMUSHOptions updated, string property, object? parsed, string given)
+		=> ConfigGenerated.ConfigAccessor.GetValue(updated, property) is var applied && Equals(applied, parsed)
+			? given
+			: Convert.ToString(applied, System.Globalization.CultureInfo.InvariantCulture) ?? given;
+
+	/// <summary>
 	/// Writes one option into the stored configuration — the document every service reads its options
 	/// from, and the one the portal's configuration page edits — after the registered validators accept
 	/// the whole result, then signals the reload that makes it live.
 	/// </summary>
 	private async ValueTask<Result<SharpMUSHOptions>> StoreConfigValueAsync(IMUSHCodeParser parser, string property, object? value)
 	{
-		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value);
+		var corrections = new List<ConfigBoundCorrection>();
+		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value,
+			corrections.Add);
 
 		var failures = parser.ServiceProvider.GetServices<IValidateOptions<SharpMUSHOptions>>()
 			.Select(validator => validator.Validate(Options.DefaultName, updated))
@@ -667,6 +678,12 @@ public partial class Commands
 
 		await ObjectDataService.SetExpandedServerDataAsync(updated);
 		ConfigReloadService.SignalChange();
+		// Logged once stored: a correction the validators refused never took effect.
+		foreach (var correction in corrections)
+		{
+			Logger.LogWarning("Config option clamped to its declared range: {Correction}", correction.ToString());
+		}
+
 		return updated;
 	}
 
@@ -748,42 +765,56 @@ public partial class Commands
 		}
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>cmd_restart</c> (<c>src/cmds.c:1355-1361</c>): <c>/all</c> is <c>do_allrestart</c>
+	/// (<c>src/cque.c:2366-2386</c>), anything else <c>do_restart_com</c> (<c>src/cque.c:2408-2449</c>).
+	/// A restart is <c>do_halt</c> (<see cref="HaltQueuesAsync"/>) followed by <c>@STARTUP</c>.
+	/// </remarks>
 	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Restart(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
+			if (!await HaltsAnything(executor))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartWorldPowerDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
+			// do_allrestart is do_allhalt, announcement and all, and then the restart.
+			await HaltWorldAsync(executor);
+
+			// Penn queues each STARTUP and tells each player in the same pass, so every player hears
+			// of the restart before any STARTUP has run. These run in place, so the notices go first.
+			var executorName = executor.Object().Name;
 			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
 			{
-				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
+				if (obj.IsPlayer)
+				{
+					await NotifyService.NotifyLocalized(obj, nameof(ErrorMessages.Notifications.GloballyRestartedByFormat),
+						executor, executorName);
+				}
 			}
 
 			// Then run @STARTUP on every object — the same pass used at boot, so global
 			// @function registrations etc. re-establish identically. Errors are swallowed.
 			await StartupAttributeRunner.RunAllAsync(parser, Mediator, AttributeService, executor);
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted), executor);
 			return CallState.Empty;
 		}
 
-		if (args.Count == 0)
+		// do_restart_com (src/cque.c:2412-2414): no object restarts the enactor, without a word of its own.
+		var targetName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		if (string.IsNullOrEmpty(targetName))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartMustSpecifyObject), executor);
-			return new CallState(ErrorMessages.Returns.NoObjectSpecified);
+			await HaltQueuesAsync(executor);
+			await RunStartupsAsync(parser, executor, executor);
+			return CallState.Empty;
 		}
-
-		var targetName = args["0"].Message!.ToPlainText();
 
 		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(
 			parser,
@@ -797,52 +828,90 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		if (!await PermissionService.Controls(executor, target))
+		if (!await PermissionService.Controls(executor, target) && !await HaltsAnything(executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var targetObject = target.Object();
+		var executorObject = executor.Object();
+		var owner = (await targetObject.Owner.WithCancellation(CancellationToken.None)).Object;
+		var dbref = $"#{targetObject.DBRef.Number}";
 
-		await Mediator.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-
-		if (target.IsPlayer)
+		// src/cque.c:2423-2445, which compares the owner with the enactor itself.
+		if (owner.DBRef.Number != executorObject.DBRef.Number)
 		{
-			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+			if (target.IsPlayer)
 			{
-				var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef == targetObject.DBRef)
-				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
-
-					// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-					try
-					{
-						await AttributeService.EvaluateAttributeFunctionAsync(
-							parser, executor, obj, "STARTUP",
-							new Dictionary<string, CallState>(),
-							evalParent: false);
-					}
-					catch
-					{
-						// Ignore @STARTUP errors - they're non-fatal
-					}
-				}
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsForPlayerRestartingFormat),
+					executor, targetObject.Name);
+				await NotifyService.NotifyLocalized(target, nameof(ErrorMessages.Notifications.AllYourObjectsRestartingByFormat),
+					executor, executorObject.Name);
 			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, targetObject.Name);
+			else
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartingOthersObjectFormat),
+					executor, owner.Name, targetObject.Name, dbref);
+				await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.RestartingObjectByFormat),
+					sender: executor, targetObject.Name, dbref, executorObject.Name);
+			}
+		}
+		else if (targetObject.DBRef.Number == executorObject.DBRef.Number)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllYourObjectsRestarting), executor);
 		}
 		else
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor, targetObject.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartingObjectFormat),
+				executor, targetObject.Name, dbref);
 		}
 
-		// Trigger @STARTUP attribute if it exists (never inherited per PennMUSH spec)
+		await HaltQueuesAsync(target);
+		await RunStartupsAsync(parser, executor, target);
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_raw_restart</c> (<c>src/cque.c:2389-2403</c>): a player's restart runs the
+	/// <c>@STARTUP</c> of everything they own, themselves included; anything else runs its own. Never
+	/// inherited, and errors are non-fatal.
+	/// </summary>
+	private async ValueTask RunStartupsAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject victim)
+	{
+		var victimRef = victim.Object().DBRef;
+		if (!victim.IsPlayer)
+		{
+			await RunStartupAsync(parser, executor, victim);
+			return;
+		}
+
+		// Seeded from the owner index rather than a world scan, in the same ascending dbref order. Read
+		// before any @STARTUP runs, since one may change ownership; each object's owner is asked again
+		// when its turn comes, as the scan asked it then.
+		var owned = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = victimRef }))
+			.Select(obj => obj.DBRef)
+			.ToArrayAsync();
+		foreach (var dbref in owned)
+		{
+			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject obj) continue;
+			var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+			if (owner.Object.DBRef.Number == victimRef.Number)
+			{
+				await RunStartupAsync(parser, executor, obj);
+			}
+		}
+	}
+
+	private async ValueTask RunStartupAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj)
+	{
+		// do_raw_restart skips a HALTed object (src/cque.c:2394, :2399).
+		if (await obj.HasFlag("HALT")) return;
+
 		try
 		{
 			await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, target, "STARTUP",
+				parser, executor, obj, "STARTUP",
 				new Dictionary<string, CallState>(),
 				evalParent: false);
 		}
@@ -850,8 +919,6 @@ public partial class Commands
 		{
 			// Ignore @STARTUP errors - they're non-fatal
 		}
-
-		return CallState.Empty;
 	}
 
 	/// <summary>
@@ -1044,7 +1111,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var useLowercase = switches.Contains("LOWERCASE");
 
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();

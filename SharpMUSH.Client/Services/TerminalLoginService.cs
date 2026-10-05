@@ -6,8 +6,8 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// Connects the command terminal as a specific character at initial login (the single-character
 /// auto-login and the <c>?as=</c> new-tab entry). Mints the character's OTT, commits it as the active
-/// character, and opens the terminal socket. <see cref="CharacterSwitchService"/> is the switch made
-/// later, from the account panel, which also moves whichever terminals are already connected.
+/// character, and opens the terminal socket. Separate from <see cref="CharacterSwitchService"/>, which
+/// moves a tab that is already playing: it ends the connected terminals' sessions and reconnects them.
 /// </summary>
 public class TerminalLoginService(
 	ITerminalService terminal, AccountAuthService accountAuth, NavigationManager navigation,
@@ -19,8 +19,7 @@ public class TerminalLoginService(
 		// tab starts life holding a COPY of its opener's token — bound to the OPENER's character. The
 		// switch mints a token bound to this character and the tab adopts it, so the portal half of the
 		// new tab is this character too, not just the terminal socket.
-		var ott = await accountAuth.SwitchCharacterAsync(character);
-		if (ott is null) return false;
+		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
 		// The hub authenticates with the session token; it holds the pre-switch one until it
 		// reconnects, so without this the portal half would keep acting as the previous character

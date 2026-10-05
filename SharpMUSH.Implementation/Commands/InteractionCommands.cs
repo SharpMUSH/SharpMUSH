@@ -933,8 +933,9 @@ public partial class Commands
 		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
+		var flagView = await FlagView.ForAsync(executor, ConnectionService);
 		var items = await contents
-			.Select((AnySharpContent item, CancellationToken _) => MessageFormatting.FormatObjectWithDbref(item.Object()))
+			.Select((AnySharpContent item, CancellationToken _) => MessageFormatting.FormatObjectWithDbref(item.Object(), flagView))
 			.ToListAsync(ExecutionBudget.CurrentToken);
 
 		if (items.Count == 0)

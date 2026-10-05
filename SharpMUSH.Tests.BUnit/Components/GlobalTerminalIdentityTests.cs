@@ -128,9 +128,8 @@ public class GlobalTerminalIdentityTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(factory);
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
-		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
-		if (!success)
-			throw new InvalidOperationException($"Test setup login failed: {error}");
+		if (await auth.LoginAsync("headwiz", "password") is ApiFailure loginFailure)
+			throw new InvalidOperationException($"Test setup login failed: {loginFailure.Message}");
 
 		Services.AddSingleton(auth);
 		return auth;

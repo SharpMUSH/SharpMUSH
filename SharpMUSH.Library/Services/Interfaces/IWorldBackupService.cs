@@ -47,4 +47,22 @@ public interface IWorldBackupService
 
 	/// <summary>The copies currently on disk, newest first. Empty when unsupported.</summary>
 	IReadOnlyList<WorldBackup> List();
+
+	/// <summary>
+	/// How many automatic copies taken before a portal package operation are kept, in a directory of
+	/// their own so they never evict the copies <see cref="CreateAsync"/> keeps. Zero means none is
+	/// taken, as does an unsupported provider.
+	/// </summary>
+	int PackageOperationKeep { get; }
+
+	/// <summary>
+	/// Copies the world before a portal package apply, rollback or uninstall (#1333), into the
+	/// pre-package directory under <see cref="Root"/> and with <see cref="PackageOperationKeep"/> as its
+	/// retention. Otherwise the same as <see cref="CreateAsync"/>. Covers the world only: a managed
+	/// package's <c>plugins/</c> directory is not in it.
+	/// </summary>
+	ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default);
+
+	/// <summary>The pre-package-operation copies currently on disk, newest first.</summary>
+	IReadOnlyList<WorldBackup> ListPackageOperationBackups();
 }

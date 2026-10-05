@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -17,15 +18,16 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 		var executor = request.Executor;
 		if (await database.GetObjectNodeAsync(request.Target.DBRef, cancellationToken) is not AnySharpObject target)
 			return new Error<string>("No such object.");
-		if (await lockService.ResolveWriteNameAsync(target, request.LockName, cancellationToken) is not string name)
-			return new Error<string>("Unknown lock type.");
+		var resolved = await lockService.ResolveWriteNameAsync(target, request.LockName, cancellationToken);
+		if (resolved is not string name)
+			return resolved is Error<string> unresolved ? unresolved : new Error<string>(ErrorMessages.Notifications.UnknownLockType);
 		target.Object().Locks.TryGetValue(name, out var old);
 		var flags = request.Flags ?? old?.Flags ?? lockService.SystemLocks.GetValueOrDefault(name);
 		var data = new SharpLockData(request.LockString, flags, request.PreserveCreator ? request.Creator : executor.Object().DBRef);
 		if (!await lockService.CanWriteAsync(executor, target, old ?? data) || !await lockService.CanWriteAsync(executor, target, data))
-			return new Error<string>("Permission denied.");
+			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		if (await booleanParser.BindAsync(request.LockString, executor, cancellationToken) is not string bound)
-			return new Error<string>("I don't understand that key.");
+			return new Error<string>(ErrorMessages.Notifications.DontUnderstandThatKey);
 		data = data with { LockString = bound };
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
 		if (old is not null) booleanParser.InvalidateCache(old.LockString);
@@ -43,9 +45,11 @@ public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionPa
 		var executor = request.Executor;
 		if (await database.GetObjectNodeAsync(request.Target.DBRef, cancellationToken) is not AnySharpObject target)
 			return new Error<string>("No such object.");
-		if (await lockService.ResolveWriteNameAsync(target, request.LockName, cancellationToken) is not string name) return new Error<string>("Unknown lock type.");
+		var resolved = await lockService.ResolveWriteNameAsync(target, request.LockName, cancellationToken);
+		if (resolved is not string name)
+			return resolved is Error<string> unresolved ? unresolved : new Error<string>(ErrorMessages.Notifications.UnknownLockType);
 		target.Object().Locks.TryGetValue(name, out var old);
-		if (!await lockService.CanWriteAsync(executor, target, old ?? new SharpLockData())) return new Error<string>("Permission denied.");
+		if (!await lockService.CanWriteAsync(executor, target, old ?? new SharpLockData())) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		if (old is null) return new Success();
 		await database.UnsetLockAsync(target.Object(), name, cancellationToken);
 		booleanParser.InvalidateCache(old.LockString);
@@ -63,10 +67,10 @@ public class SetLockFlagsCommandHandler(IObjectStore database, ILockService lock
 		if (await database.GetObjectNodeAsync(request.Target.DBRef, cancellationToken) is not AnySharpObject target)
 			return new Error<string>("No such object.");
 		var name = LockNames.Canonical(request.LockName);
-		if (!target.Object().Locks.TryGetValue(name, out var data)) return new Error<string>("No such lock.");
-		if (!await lockService.CanWriteAsync(request.Executor, target, data)) return new Error<string>("Permission denied.");
+		if (!target.Object().Locks.TryGetValue(name, out var data)) return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
+		if (!await lockService.CanWriteAsync(request.Executor, target, data)) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		if (request.Flags.HasFlag(Library.Services.LockService.LockFlags.Wizard) && !await request.Executor.IsSee_All())
-			return new Error<string>("Permission denied.");
+			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		data = data with { Flags = request.Clear ? data.Flags & ~request.Flags : data.Flags | request.Flags };
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
 		target.Object().WithLock(name, data);
@@ -83,14 +87,14 @@ public class CopyLockCommandHandler(IObjectStore database, ILockService lockServ
 		if (await database.GetObjectNodeAsync(request.Source.DBRef, cancellationToken) is not AnySharpObject source ||
 			await database.GetObjectNodeAsync(request.Target.DBRef, cancellationToken) is not AnySharpObject target)
 			return new Error<string>("No such object.");
-		if (!await permissions.Controls(request.Executor, source)) return new Error<string>("Permission denied.");
+		if (!await permissions.Controls(request.Executor, source)) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		var name = LockNames.Canonical(request.LockName);
-		if (!source.Object().Locks.TryGetValue(name, out var data)) return new Error<string>("No such lock.");
+		if (!source.Object().Locks.TryGetValue(name, out var data)) return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
 		if (data.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone)) return new Success();
 		data = data with { Creator = request.Executor.Object().DBRef };
 		target.Object().Locks.TryGetValue(name, out var old);
 		if (!await lockService.CanWriteAsync(request.Executor, target, old ?? data) || !await lockService.CanWriteAsync(request.Executor, target, data))
-			return new Error<string>("Permission denied.");
+			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
 		// Persisted invalid expressions remain invalid and fail closed on the clone.
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
 		if (old is not null) booleanParser.InvalidateCache(old.LockString);

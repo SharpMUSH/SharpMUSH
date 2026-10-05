@@ -23,11 +23,15 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize, bool ownerQueues = false, Func<bool>? ownerQueuesNow = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst } });
+		options.CurrentValue.Returns(_ => config with
+		{
+			Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst },
+			Command = config.Command with { OwnerQueues = ownerQueuesNow?.Invoke() ?? ownerQueues }
+		});
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
@@ -387,32 +391,160 @@ public class QueueAdmissionTests
 
 	}
 
+	/// <summary>
+	/// PennMUSH reports an entry that runs out of <c>queue_entry_cpu_time</c> to its ENACTOR, as
+	/// "CPU usage exceeded." (<c>src/parse.c:2083-2084</c>), and the notice has its own bounded budget
+	/// here so it is not cancelled with the work it reports on.
+	/// </summary>
 	[Test]
 	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
 	{
-		var connections = Substitute.For<IConnectionService>();
-		connections.Get(Arg.Any<DBRef>()).Returns(new[]
-		{
-			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
-				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
-		}.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
-		var reported = new TaskCompletionSource<(bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
-		notifications.Notify(12L, Arg.Any<SharpMessage>(), null, INotifyService.NotificationType.Announce)
-			.Returns(_ =>
+		var reported = new TaskCompletionSource<(DBRef Who, bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
+			.Returns(call =>
 			{
-				reported.TrySetResult((ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
+				reported.TrySetResult((call.ArgAt<DBRef>(0),
+					ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
 				return ValueTask.CompletedTask;
 			});
-		await using var queue = Create(milliseconds: 10, connections: connections, notifications: notifications);
-		await queue.AdmitWork(async () =>
+		await using var queue = Create(milliseconds: 10, notifications: notifications);
+		await Assert.That((await queue.AdmitWork(async () =>
 		{
 			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
 			return CallState.Empty;
-		}, "expired", "test", new DBRef(10, 1));
+		}, "expired", "test", new DBRef(10, 1))).Accepted).IsTrue();
 		var result = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result.Who.Number).IsEqualTo(10);
 		await Assert.That(result.Cancelled).IsFalse();
 		await Assert.That(result.Remaining > TimeSpan.Zero && result.Remaining <= TimeSpan.FromSeconds(1)).IsTrue();
+		await notifications.DidNotReceive().Notify(Arg.Any<long>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	/// <summary>
+	/// The notice goes to the queue entry's enactor rather than to its executor's owner, and an enactor
+	/// that is QUIET does not hear it: <c>if (GoodObject(enactor) &amp;&amp; !Quiet(enactor))</c>
+	/// (<c>src/parse.c:2083</c>).
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ExecutionLimitNoticeGoesToTheEnactorUnlessQuiet(bool quiet)
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var dbRef = call.Arg<GetObjectNodeQuery>().DBRef;
+			var flags = quiet && dbRef.Number == 12
+				? new[] { new SharpObjectFlag { Name = "QUIET", Symbol = "Q", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }
+				: [];
+			var player = new SharpPlayer
+			{
+				Object = new SharpObject
+				{
+					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => flags.ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+				},
+				Location = null!, Home = null!, PasswordHash = "", Quota = 0
+			};
+			player.Object.Owner = new(_ => Task.FromResult(player));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		static async ValueTask<CallState?> Spin()
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return null;
+		}
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => Spin());
+		var notifications = Substitute.For<INotifyService>();
+		var finished = Signal();
+		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications);
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
+			.Returns(_ => { finished.TrySetResult(); return ValueTask.CompletedTask; });
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("spin"),
+			ParserState.RootFor(new DBRef(10)) with { Enactor = new DBRef(12) })).Accepted).IsTrue();
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(5));
+		if (!quiet) await finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+		var told = notifications.ReceivedCalls()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized)
+				&& call.GetArguments()[1] as string == "CpuUsageExceeded")
+			.Select(call => ((DBRef)call.GetArguments()[0]!).Number)
+			.ToList();
+		await Assert.That(told).IsEquivalentTo(quiet ? Array.Empty<int>() : [12]);
+	}
+
+	/// <summary>
+	/// A delayed entry (<c>@wait</c>) and an attribute callback (<c>@http</c>, <c>@mapsql</c>) keep the
+	/// enactor they were queued with, so the notice reaches it rather than the executor.
+	/// </summary>
+	[Test]
+	[Arguments("delayed")]
+	[Arguments("attribute")]
+	public async Task ExecutionLimitNoticeKeepsTheEnactorOnEveryAdmissionPath(string path)
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var dbRef = call.Arg<GetObjectNodeQuery>().DBRef;
+			var player = new SharpPlayer
+			{
+				Object = new SharpObject
+				{
+					Key = dbRef.Number, CreationTime = 1, Name = $"P{dbRef.Number}", Type = "PLAYER", Locks = null!, Owner = null!,
+					Powers = new(() => Array.Empty<SharpPower>().ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => Array.Empty<SharpObjectFlag>().ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
+				},
+				Location = null!, Home = null!, PasswordHash = "", Quota = 0
+			};
+			player.Object.Owner = new(_ => Task.FromResult(player));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		static async ValueTask<CallState?> Spin()
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return null;
+		}
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => Spin());
+		var notifications = Substitute.For<INotifyService>();
+		var told = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var quartz = Substitute.For<IScheduler>();
+		long generation = 0;
+		quartz.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				generation = (long)call.Arg<IJobDetail>().JobDataMap["Generation"];
+				return Task.FromResult(call.Arg<ITrigger>().StartTimeUtc);
+			});
+		await using var queue = Create(milliseconds: 10, mediator: mediator, parser: parser, notifications: notifications, scheduler: quartz);
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
+			.Returns(call => { told.TrySetResult(call.ArgAt<DBRef>(0).Number); return ValueTask.CompletedTask; });
+		var state = ParserState.RootFor(new DBRef(10)) with { Enactor = new DBRef(12) };
+
+		if (path == "delayed")
+		{
+			var delayed = await queue.AdmitCommandList(MarkupText.Plain("spin"), state, TimeSpan.FromHours(1));
+			await Assert.That(delayed.Accepted).IsTrue();
+			// What Quartz's DelayedTask does when the trigger fires.
+			await queue.ReleaseScheduledWork(delayed.Pid!.Value, false, generation);
+		}
+		else
+		{
+			var admission = await queue.AdmitAsyncAttribute(async () =>
+			{
+				await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+				return state;
+			}, new DbRefAttribute(new DBRef(10), ["CALLBACK"]), new DBRef(10), new DBRef(12));
+			await Assert.That(admission.Accepted).IsTrue();
+		}
+
+		await Assert.That(await told.Task.WaitAsync(TimeSpan.FromSeconds(10))).IsEqualTo(12);
 	}
 
 	[Test]
@@ -486,7 +618,7 @@ public class QueueAdmissionTests
 		}.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
 		var entered = Signal(); var release = Signal();
-		notifications.NotifyLocalized(Arg.Any<long>(), "QueueRejected", Arg.Any<object[]>()).Returns(_ =>
+		notifications.NotifyLocalized(Arg.Any<long>(), "QueueRejected", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()).Returns(_ =>
 		{
 			entered.TrySetResult();
 			return new ValueTask(release.Task);
@@ -2357,6 +2489,117 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// Every object answers as a player owned by #5, so two executors share one owner.
+	/// </summary>
+	private static IMediator SharedOwnerMediator()
+	{
+		var mediator = Substitute.For<IMediator>();
+		SharpPlayer Player(int number) => new()
+		{
+			Object = new SharpObject
+			{
+				Key = number, CreationTime = 1, Name = $"Obj{number}", Type = "PLAYER", Locks = null!, Owner = null!,
+				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
+			},
+			Location = null!, Home = null!, PasswordHash = "", Quota = 0
+		};
+		var owner = Player(5);
+		owner.Object.Owner = new(_ => Task.FromResult(owner));
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var number = call.Arg<GetObjectNodeQuery>().DBRef.Number;
+			if (number == 5) return ValueTask.FromResult<AnyOptionalSharpObject>(owner);
+			var player = Player(number);
+			player.Object.Owner = new(_ => Task.FromResult(owner));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
+		return mediator;
+	}
+
+	/// <summary>
+	/// <c>player_queue_limit</c> counts each object's own entries: <c>pay_queue</c> charges
+	/// <c>queue_limit(QUEUE_PER_OWNER ? Owner(player) : player)</c> (<c>src/cque.c:303</c>), and
+	/// <c>owner_queues</c> ships off. Two objects of one owner each get the whole limit.
+	/// </summary>
+	[Test]
+	public async Task PlayerQueueLimitCountsEachObjectOnItsOwn()
+	{
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator());
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think eleven"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Accepted)
+			.IsTrue().Because("#11 has a count of its own, though #10 has the same owner and has used its one");
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten again"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("#10's own count is full");
+	}
+
+	/// <summary>With <c>owner_queues</c> on, objects share their owner's count (<c>src/cque.c:303</c>).</summary>
+	[Test]
+	public async Task OwnerQueuesPoolsAnOwnersObjectsIntoOneCount()
+	{
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator(), ownerQueues: true);
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think eleven"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("#11 is charged to #5, whose count #10 has filled");
+	}
+
+	/// <summary>
+	/// <c>owner_queues</c> can be set while entries are pending; each pending entry still counts under
+	/// whichever grouping admission reads next, so turning the option over frees no quota.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task TurningOwnerQueuesOverKeepsPendingEntriesCounted(bool pooledFirst)
+	{
+		var pooled = pooledFirst;
+		await using var queue = Create(global: 10, owner: 1, mediator: SharedOwnerMediator(), ownerQueuesNow: () => pooled);
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think ten"), ParserState.RootFor(new DBRef(10)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		pooled = !pooledFirst;
+
+		// Pooled now: #11 shares #5's count, which #10 filled. Unpooled now: #10's own count is full.
+		var next = pooled ? new DBRef(11) : new DBRef(10);
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think next"), ParserState.RootFor(next), TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("the entry admitted before the change still counts");
+		await AssertTalliesMatchLedger(queue, "both groupings follow the ledger");
+	}
+
+	/// <summary>
+	/// The owner of a runaway hears <c>pay_queue</c>'s notice and then <c>do_halt</c>'s, each naming the
+	/// object by its plain dbref (<c>src/cque.c:304,2176-2178</c>), and nothing else: the refused entry
+	/// gets no admission notice of its own.
+	/// </summary>
+	[Test]
+	public async Task ARunawaysOwnerHearsTheRunawayAndHaltedNoticesOnly()
+	{
+		var (mediator, _) = RunawayMediator();
+		var notifications = Substitute.For<INotifyService>();
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(new[]
+		{
+			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
+		}.ToAsyncEnumerable());
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, notifications: notifications, connections: connections);
+		var state = ParserState.RootFor(new DBRef(10));
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		var notices = notifications.ReceivedCalls()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized))
+			.Select(call => call.GetArguments())
+			.Select(args => $"{args[1]}:{string.Join(",", (object[])args[3]!)}")
+			.ToArray();
+		await Assert.That(notices).IsEquivalentTo(["RunawayObjectFormat:Semaphore,#10", "HaltedNoticeFormat:Semaphore,#10"]);
+	}
+
+	/// <summary>
 	/// <c>pay_queue</c> ends with <c>set_flag_internal(player, "HALT")</c> (<c>src/cque.c:312</c>) —
 	/// no type test, so a runaway player is halted exactly as a runaway object is. The flag does not
 	/// silence them: the queue exempts players (<c>insert_que</c>, <c>src/cque.c:530</c>) and
@@ -2412,23 +2655,23 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
-	/// The rejection notice is best-effort — it walks the owner's connections, and that can throw when
-	/// the transport is down. Telling nobody about a runaway is survivable; leaving one running is not,
-	/// so the halt is scheduled before the notice rather than after it.
+	/// The owner's runaway notices are best-effort — a transport that is down can make them throw.
+	/// Telling nobody about a runaway is survivable; leaving one running is not, so the wipe and the
+	/// HALT come before the notices, and the refusal itself sends none.
 	/// </summary>
 	[Test]
-	public async Task TheRunawayHaltIsScheduledEvenWhenTheRejectionNoticeFails()
+	public async Task TheRunawayIsHaltedEvenWhenItsNoticeFails()
 	{
 		var (mediator, halted) = RunawayMediator();
-		var connections = Substitute.For<IConnectionService>();
-		connections.Get(Arg.Any<DBRef>()).Returns(_ => throw new InvalidOperationException("transport down"));
-		await using var queue = Create(global: 4, owner: 1, mediator: mediator, connections: connections,
-			notifications: Substitute.For<INotifyService>());
+		var notifications = Substitute.For<INotifyService>();
+		notifications.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
+			.Returns(_ => throw new InvalidOperationException("transport down"));
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, notifications: notifications);
 		var state = ParserState.RootFor(new DBRef(10));
 
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
-		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-			await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1)));
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
 
 		await halted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 	}
@@ -2657,5 +2900,108 @@ public class QueueAdmissionTests
 
 		await Assert.That(queuedRan).IsFalse().Because("@halt <object> wipes what the object had queued");
 		await Assert.That(typedRan).IsTrue().Because("do_halt never reaches a line the player already typed");
+	}
+
+	private static async Task AssertTalliesMatchLedger(Scheduler queue, string because)
+	{
+		var (tallied, recounted) = queue.AdmissionTalliesAgainstLedger();
+		await Assert.That(tallied).IsEqualTo(recounted).Because(because);
+	}
+
+	/// <summary>
+	/// Admission reads the owner quota and the typed-line burst from tallies kept beside the ledger
+	/// rather than counting the ledger on every admission (#1336). The tallies must say what a count of
+	/// the ledger would at every step: after admission, after a halt by pid, an <c>@halt</c> of the
+	/// object, an abandoned reservation, and once everything has run.
+	/// </summary>
+	[Test]
+	public async Task AdmissionTalliesFollowAdmitHaltCancelAndCompletion()
+	{
+		await using var queue = Create(global: 20, owner: 10, burst: 5);
+		var target = new DBRef(10);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var charged = new List<long>();
+			for (var i = 0; i < 3; i++)
+			{
+				var admitted = await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), $"charged{i}", Scheduler.EnqueueGroup, target);
+				await Assert.That(admitted.Accepted).IsTrue();
+				charged.Add(admitted.Pid!.Value);
+			}
+			for (var i = 0; i < 2; i++)
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			using var reserved = await queue.ReserveCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(target));
+			await Assert.That(reserved.Admission.Accepted).IsTrue();
+
+			var (admittedTallies, _) = queue.AdmissionTalliesAgainstLedger();
+			await Assert.That(admittedTallies).Contains("=4").Because("three admitted and one reserved entry are charged to the owner");
+			await Assert.That(admittedTallies).Contains("#20/=2").Because("two lines typed on handle 20 are pending");
+			await AssertTalliesMatchLedger(queue, "after admission");
+
+			await queue.HaltByPid(charged[0]);
+			await AssertTalliesMatchLedger(queue, "after a halt by pid");
+
+			reserved.Dispose();
+			await AssertTalliesMatchLedger(queue, "after an abandoned reservation");
+
+			await queue.Halt(target);
+			await AssertTalliesMatchLedger(queue, "after @halt of the object");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+		var (tallied, recounted) = queue.AdmissionTalliesAgainstLedger();
+		await Assert.That(recounted).IsEqualTo("");
+		await Assert.That(tallied).IsEqualTo("").Because("every entry has completed, been halted or been cancelled");
+	}
+
+	/// <summary>
+	/// The limits read from those tallies still refuse at the configured count and admit again once
+	/// what was pending has run: the quota and the burst are given back, not leaked. The work here has
+	/// no executor, so it is charged to the system bucket and a refusal halts nothing.
+	/// </summary>
+	[Test]
+	public async Task OwnerQuotaAndBurstAreGivenBackWhenEntriesComplete()
+	{
+		await using var queue = Create(global: 20, owner: 3, burst: 2);
+		var ran = 0;
+		ValueTask<CallState?> Work()
+		{
+			Interlocked.Increment(ref ran);
+			return ValueTask.FromResult<CallState?>(null);
+		}
+
+		for (var round = 0; round < 2; round++)
+		{
+			var blocked = Signal(); var release = Signal();
+			// The blocker is the first of the system bucket's three.
+			await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+			await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			try
+			{
+				await Assert.That((await queue.AdmitWork(Work, "one", "test")).Accepted).IsTrue();
+				await Assert.That((await queue.AdmitWork(Work, "two", "test")).Accepted).IsTrue()
+					.Because($"round {round}: the quota is back to three");
+				await Assert.That((await queue.AdmitWork(Work, "three", "test")).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
+					.Because($"round {round}: the burst is back to two");
+				await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+					.IsEqualTo(QueueRejectionReason.ConnectionLimit);
+				await AssertTalliesMatchLedger(queue, $"round {round}, loaded");
+			}
+			finally { release.TrySetResult(); }
+
+			await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+			await AssertTalliesMatchLedger(queue, $"round {round}, drained");
+			await Assert.That(queue.AdmissionTalliesAgainstLedger().Tallied).IsEqualTo("");
+		}
+
+		await Assert.That(ran).IsEqualTo(4).Because("the admitted work ran rather than being dropped");
 	}
 }

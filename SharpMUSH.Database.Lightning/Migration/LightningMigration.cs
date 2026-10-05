@@ -1,7 +1,9 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Seed;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using System.Text.Json;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -12,6 +14,7 @@ public partial class LightningDatabase
 	internal const string ExitSourceIndexMigrationId = "0003_exit_source_index";
 	internal const string MailFolderCountMigrationId = "0004_mail_folder_count";
 	internal const string PlayerAliasIndexMigrationId = "0005_player_alias_index";
+	internal const string MailFolderNumberMigrationId = "0010_mail_folder_numbers";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
@@ -19,7 +22,7 @@ public partial class LightningDatabase
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
 	/// 3. apply pending core repairs, including the atomic exit source-index, mail folder-count and
-	///    player-alias index rebuilds;
+	///    player-alias index rebuilds, and the numbering of mail folders that predate folder numbers;
 	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 6. ensure the singleton server-state row exists.
@@ -30,6 +33,7 @@ public partial class LightningDatabase
 		try
 		{
 			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
+			InvalidateDefinitions();
 
 			var initialSeedApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialSeedMigrationId), out _));
 			if (!initialSeedApplied)
@@ -50,6 +54,8 @@ public partial class LightningDatabase
 			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
+			await RebuildReadIndexesAsync(cancellationToken);
+			await Store.WriteAsync(tx => NumberMailFolders(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -71,8 +77,13 @@ public partial class LightningDatabase
 		}
 		finally
 		{
+			// A plugin step may have written definition rows of its own; whatever the copies held was read
+			// before the seed or before that step.
+			InvalidateDefinitions();
 			MigrateLock.Release();
 		}
+
+		ReloadDefinitions();
 	}
 
 	/// <summary>Repairs both derived source indexes from stored exits and their authoritative Location edge.</summary>
@@ -124,7 +135,7 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>Counts every recipient's box entries per folder into <see cref="Tables.MailCount"/>, once,
-	/// for worlds whose mail predates the table. Counts the same entries <see cref="RangeMailBox"/> yields:
+	/// for worlds whose mail predates the table. Counts the same entries <see cref="GetAllIncomingMailsAsync"/> yields:
 	/// a box entry whose mail row is missing is not held mail.</summary>
 	internal void RebuildMailFolderCounts(ITx tx, CancellationToken cancellationToken)
 	{
@@ -152,6 +163,71 @@ public partial class LightningDatabase
 		}));
 	}
 
+	/// <summary>
+	/// Gives every mail folder a PennMUSH folder number, once, for worlds whose folders were kept by name alone:
+	/// each player's folders that hold mail, and those its <see cref="ExpandedMailData"/> lists or makes current
+	/// (whether or not the player holds any mail), are numbered by
+	/// <see cref="ExpandedMailData.WithFolders"/> into its <see cref="ExpandedMailData.FolderNumbers"/>. Messages
+	/// stay under the names they are stored under, so no mail row changes.
+	/// </summary>
+	internal void NumberMailFolders(ITx tx, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var marker = Keys.Str("mig:" + MailFolderNumberMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+
+		var folders = new Dictionary<long, SortedSet<string>>();
+		foreach (var (key, _) in tx.Range(Tables.MailBox, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var recipient = Keys.ReadDbref(key.AsSpan(0, 8));
+			var mailId = Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
+			if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
+			var folder = Codec.Deserialize<MailRecord>(bytes).Folder;
+			if (!folders.TryGetValue(recipient, out var held))
+			{
+				folders[recipient] = held = new SortedSet<string>(StringComparer.Ordinal);
+			}
+
+			held.Add(folder);
+		}
+
+		// A player can have folders and a current folder with no mail in them; their data numbers those.
+		var dataType = nameof(ExpandedMailData);
+		foreach (var (key, _) in tx.Range(Tables.ExpandedObj, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (key.Length <= 8) continue;
+			var owner = Keys.ReadDbref(key.AsSpan(0, 8));
+			if (!folders.ContainsKey(owner) && key.AsSpan().SequenceEqual(Keys.Composite(owner, dataType)))
+			{
+				folders[owner] = new SortedSet<string>(StringComparer.Ordinal);
+			}
+		}
+
+		foreach (var (recipient, held) in folders)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var key = Keys.Composite(recipient, nameof(ExpandedMailData));
+			var existing = tx.TryGet(Tables.ExpandedObj, key, out var stored) ? stored : null;
+			var data = existing is null
+				? new ExpandedMailData()
+				: JsonSerializer.Deserialize<ExpandedMailData>(existing, ExpandedDataJsonOptions) ?? new ExpandedMailData();
+			var numbered = data.WithFolders([.. held, .. data.Folders ?? [], .. data.ActiveFolder is { } active ? [active] : Array.Empty<string>()]);
+			if (numbered.FolderNumbers is null || numbered == data) continue;
+
+			var update = JsonSerializer.SerializeToUtf8Bytes(
+				new Dictionary<string, object> { [nameof(ExpandedMailData.FolderNumbers)] = numbered.FolderNumbers },
+				ExpandedDataJsonOptions);
+			tx.Put(Tables.ExpandedObj, key, existing is null ? update : MergeExpandedData(existing, update));
+		}
+
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = MailFolderNumberMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
+	}
+
 	private async ValueTask RecordMigrationAsync(string id, CancellationToken cancellationToken)
 		=> await Store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("mig:" + id),
 			Codec.Serialize(new MigrationRecord { Id = id, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() })),
@@ -164,6 +240,9 @@ public partial class LightningDatabase
 		{
 			UpsertFlag(tx, name, symbol, aliases ?? [], setPerms, unsetPerms, typeRestrictions, system: true);
 		}
+
+		MergeRenamedFlag(tx, "ON_VACATION", "ON-VACATION");
+		MoveHoldersByType(tx, "CLOUDY", "TERSE", ["PLAYER", "THING"]);
 
 		foreach (var flag in _pluginFlags)
 		{
@@ -251,6 +330,77 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
+	/// TERSE used to be an alias of CLOUDY, so setting it stored a CLOUDY edge. Now that TERSE is its own
+	/// flag and CLOUDY is an exit flag (#1404), a player or thing holding CLOUDY set TERSE: its edge
+	/// moves to TERSE, and an exit keeps CLOUDY.
+	/// </summary>
+	private static void MoveHoldersByType(ITx tx, string fromName, string toName, string[] types)
+	{
+		var fromKey = Keys.Upper(fromName);
+		var toKey = Keys.Upper(toName);
+		if (!tx.TryGet(Tables.Flag, toKey, out _))
+		{
+			return;
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, fromKey)
+			.Select(value => Keys.ReadDbref(value))
+			.Where(holder => tx.TryGet(Tables.Obj, Keys.Dbref(holder), out var bytes)
+				&& types.Contains(Codec.Deserialize<ObjectRecord>(bytes).Type, StringComparer.OrdinalIgnoreCase))
+			.ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), toKey);
+			tx.Put(Tables.ObjFlag.Reverse, toKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), fromKey);
+			tx.Delete(Tables.ObjFlag.Reverse, fromKey, Keys.Dbref(holder));
+		}
+	}
+
+	/// <summary>
+	/// <see cref="MergeRenamedPower"/> for a flag: a seeded flag whose canonical name changed (ON_VACATION
+	/// to PennMUSH's ON-VACATION, #1405). Holders are edges keyed by the flag's name, so they move onto the
+	/// new key, the new record keeps the old one's <c>Disabled</c> state, and the old record is dropped.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private static void MergeRenamedFlag(ITx tx, string oldName, string newName)
+	{
+		var oldKey = Keys.Upper(oldName);
+		if (!tx.TryGet(Tables.Flag, oldKey, out var oldRecord))
+		{
+			return;
+		}
+
+		// A flag an administrator created under the old name is not the seed's to move.
+		var old = Codec.Deserialize<FlagRecord>(oldRecord);
+		if (!old.System)
+		{
+			return;
+		}
+
+		var newKey = Keys.Upper(newName);
+		if (old.Disabled && tx.TryGet(Tables.Flag, newKey, out var newRecord))
+		{
+			tx.Put(Tables.Flag, newKey, Codec.Serialize(Codec.Deserialize<FlagRecord>(newRecord) with { Disabled = true }));
+		}
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjFlag.Reverse, oldKey).Select(value => Keys.ReadDbref(value)).ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjFlag.Forward, Keys.Dbref(holder), newKey);
+			tx.Put(Tables.ObjFlag.Reverse, newKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjFlag.Forward, Keys.Dbref(holder), oldKey);
+			tx.Delete(Tables.ObjFlag.Reverse, oldKey, Keys.Dbref(holder));
+		}
+
+		tx.Delete(Tables.Flag, oldKey);
+	}
+
+	/// <summary>
 	/// Writes one flag definition, keeping the row's <c>Disabled</c> state. A definition the seed owns
 	/// (<paramref name="system"/>) never overwrites a row an administrator created with
 	/// <c>@flag/add</c>, which is always <c>System = false</c>: PennMUSH's own built-in add path stops
@@ -306,6 +456,7 @@ public partial class LightningDatabase
 				Locks = new Dictionary<string, LockRecord>()
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(seedObject.Name), Keys.Dbref(dbref));
+			IndexObjectType(tx, seedObject.Type, dbref);
 
 			SetSingleEdge(tx, Tables.Location, dbref, seedObject.Location);
 			SetSingleEdge(tx, Tables.Home, dbref, seedObject.Home);

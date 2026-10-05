@@ -152,6 +152,23 @@ public class UtilityFunctionUnitTests
 		await Assert.That(functions.Split(' ')).Contains("ADD");
 	}
 
+	/// <summary>
+	/// A second spelling of a function is listed under its own name, beside the one it shares an
+	/// implementation with.
+	/// </summary>
+	[Test]
+	[Arguments("INSERT")]
+	[Arguments("LINSERT")]
+	[Arguments("NSEARCH")]
+	[Arguments("NLSEARCH")]
+	[Arguments("NCAND")]
+	[Arguments("CNAND")]
+	public async Task Functions_ListsEverySpelling(string name)
+	{
+		var functions = (await Parser.FunctionParse(MarkupText.Plain("functions(builtin)")))!.Message!.ToPlainText();
+		await Assert.That(functions.Split(' ')).Contains(name);
+	}
+
 	[Test]
 	public async Task Functions_Local_ExcludesBuiltins()
 	{
@@ -453,7 +470,8 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_TwoDice()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("die(2,6)")))?.Message!;
+		// Every roll only when the third argument asks for it (src/funmisc.c:848-849, :855-862).
+		var result = (await Parser.FunctionParse(MarkupText.Plain("die(2,6,1)")))?.Message!;
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsEqualTo(2);
 		foreach (var roll in rolls)

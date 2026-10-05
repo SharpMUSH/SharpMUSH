@@ -13,6 +13,8 @@ public static class Tables
 	public static readonly TableDef Meta = TableDef.Node("meta");
 	public static readonly TableDef Obj = TableDef.Node("obj");
 	public static readonly TableDef ObjName = TableDef.Index("obj.name", duplicates: true, fixedDuplicates: true);
+	/// <summary>Object type + 0x00 → dbref, so enumerating one type (every player) reads only that type's rows.</summary>
+	public static readonly TableDef ObjType = TableDef.Index("obj.type", duplicates: true, fixedDuplicates: true);
 	public static readonly TableDef AttrMeta = TableDef.Node("attr.meta");
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");
@@ -39,6 +41,10 @@ public static class Tables
 	public static readonly TableDef MailBox = TableDef.Index("mail.box");
 	public static readonly TableDef MailSent = TableDef.Index("mail.sent");
 	public static readonly TableDef MailCount = TableDef.Node("mail.count");
+	/// <summary>Recipient + folder + 0x00 + mail id → empty: one folder of one mailbox as a contiguous, id-ordered range.</summary>
+	public static readonly TableDef MailFolder = TableDef.Index("mail.folder");
+	/// <summary>Sender + recipient + mail id → empty: what one sender sent one recipient, id-ordered.</summary>
+	public static readonly TableDef MailSentTo = TableDef.Index("mail.sent.to");
 	public static readonly TableDef MailAlias = TableDef.Node("malias");
 	public static readonly TableDef Account = TableDef.Node("account");
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
@@ -47,6 +53,8 @@ public static class Tables
 	public static readonly TableDef Session = TableDef.Node("session");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);
+	/// <summary>Expiry-ordered session index: big-endian expiry millis + token → empty. The expired-session sweep reads its head.</summary>
+	public static readonly TableDef SessionExpiry = TableDef.Index("session.exp");
 	public static readonly TableDef ReadMarker = TableDef.Node("read.marker");
 	public static readonly TableDef PageLog = TableDef.Node("page.log");
 	public static readonly TableDef PageConversation = TableDef.Node("page.conv");
@@ -59,6 +67,14 @@ public static class Tables
 	public static readonly TableDef WikiSlug = TableDef.Index("wiki.slug");
 	public static readonly TableDef WikiRev = TableDef.Node("wiki.rev");
 	public static readonly TableDef WikiTr = TableDef.Node("wiki.tr");
+	/// <summary>Wiki list indexes; each value is the page's visibility (published byte + author), so a listing
+	/// filters and pages without decoding a page row. See <c>LightningDatabase.Wiki.cs</c> for the key shapes.</summary>
+	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
+	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
+	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
+	public static readonly TableDef WikiByTag = TableDef.Index("wiki.tag");
+	/// <summary>Page key → visibility, for protected pages only, so the protected count reads no page row.</summary>
+	public static readonly TableDef WikiProtected = TableDef.Index("wiki.protected");
 	public static readonly TableDef Layout = TableDef.Node("layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");

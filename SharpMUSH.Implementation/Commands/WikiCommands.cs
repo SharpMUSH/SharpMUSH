@@ -30,7 +30,7 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		MString? arg0, arg1;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// NOEVAL, SOURCE, DRAFT and MD are modifiers, not actions: leaving any of them in this set would

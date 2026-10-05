@@ -176,6 +176,13 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("mid(hello world,6,5)", "world")]
+	// fun_mid (pennmush src/funstr.c:266-295)
+	[Arguments("mid(abcde,1,2x)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("mid(abcde,-1,2)", "#-1 OUT OF RANGE")]
+	[Arguments("mid(abcde,3,-2)", "cd")]
+	[Arguments("mid(abcde,1,-5)", "abcde")]
+	[Arguments("mid(abcde,3,10)", "de")]
+	[Arguments("mid(abcde,5,1)", "")]
 	public async Task Mid(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -443,11 +450,9 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	// TODO: Fix decomposeweb, and then fix this test.
-	// hr is bright red, which resolves through the xterm palette to #FF5555 rather than to a
-	// System.Drawing named colour.
-	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:#FF5555;background-color:inherit;text-decoration:inherit"">red</span>")]
-	// TODO: decompsoe is not matching 'b' correctly it seems.
+	// decomposeweb() is the HTML render (#1513): text is escaped, colour is the renderer's own markup.
+	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color: #ff5555"">red</span>")]
+	[Arguments("decomposeweb(a<b>&c)", "a&lt;b&gt;&amp;c")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -512,6 +517,16 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("accent(e,')", "é")]
+	[Arguments("accent(AEIOUaeiou,``````````)", "ÀÈÌÒÙàèìòù")]
+	[Arguments("accent(AEIOUYaeiouy,'''''''''''')", "ÁÉÍÓÚÝáéíóúý")]
+	[Arguments("accent(ANOano,~~~~~~)", "ÃÑÕãñõ")]
+	[Arguments("accent(AEIOUaeiou,^^^^^^^^^^)", "ÂÊÎÔÛâêîôû")]
+	[Arguments("accent(AEIOUaeiouy,:::::::::::)", "ÄËÏÖÜäëïöüÿ")]
+	[Arguments("accent(Aa,oo)", "Åå")]
+	[Arguments("accent(Cc,\\,\\,)", "Çç")]
+	[Arguments("accent(?!<>sPpDo,uu\"\"B||-&)", "¿¡«»ßÞþÐð")]
+	[Arguments("accent(Zz Yy,`` ^^)", "Zz Yy")]
+	[Arguments("accent(abc,`)", "#-1 ARGUMENT OUT OF RANGE")]
 	public async Task Accent(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

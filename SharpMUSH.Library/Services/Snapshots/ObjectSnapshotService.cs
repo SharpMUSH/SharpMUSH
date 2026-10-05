@@ -23,7 +23,7 @@ namespace SharpMUSH.Library.Services.Snapshots;
 public sealed partial class ObjectSnapshotService(
 	IObjectStore objects, IAttributeStore attributes, IExpandedDataStore expanded,
 	IAdministrativeCapabilityService capabilities, IPermissionService permissions,
-	IAttributeService attributeService, IManipulateSharpObjectService manipulation,
+	IAttributeService attributeService, IFlagAndPowerService flagsAndPowers, IObjectNameService objectNames,
 	ILockService locks, IMediator mediator) : IObjectSnapshotService
 {
 	public const string StorageKey = "sharpmush.object-snapshots.v1";
@@ -406,18 +406,15 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var name in snapshot.AbsentLocks)
 				mutations.Add(async () =>
 				{
-					if (await mediator.Send(new UnsetLockCommand(obj.Object(), name, executor), ct) is Error<string> error)
+					if (await locks.UnsetAsync(executor, obj, name, ct) is Error<string> error)
 						throw Error("write-failed", error.Value);
 				});
 			foreach (var (name, saved) in snapshot.Locks)
 				mutations.Add(async () =>
 				{
-					if (await mediator.Send(new SetLockCommand(obj.Object(), locks.SystemLocks.ContainsKey(LockNames.Canonical(name)) ? name : "user:" + name, saved.Expression, executor)
-					{
-						Flags = (LockService.LockFlags)saved.Flags,
-						Creator = DBRef.TryParse(saved.Creator, out var creator) ? creator : null,
-						PreserveCreator = true
-					}, ct) is Error<string> error) throw Error("write-failed", error.Value);
+					if (await locks.RestoreAsync(executor, obj, name, new SharpLockData(saved.Expression, (LockService.LockFlags)saved.Flags,
+						DBRef.TryParse(saved.Creator, out var creator) ? creator : null), ct) is Error<string> error)
+						throw Error("write-failed", error.Value);
 				});
 		}
 		if (selection.Flags)
@@ -426,14 +423,14 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var change in current.Except(snapshot.Flags).Select(f => "!" + f).Concat(snapshot.Flags.Except(current)))
 				mutations.Add(async () =>
 				{
-					if ((await manipulation.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
+					if ((await flagsAndPowers.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
 						throw Error("write-failed", "Flag change was rejected: " + change);
 				});
 		}
 		if (selection.Name)
 			mutations.Add(async () =>
 			{
-				var result = await manipulation.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
+				var result = await objectNames.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
 				if (result.Message?.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
 			});
 		foreach (var mutation in mutations)

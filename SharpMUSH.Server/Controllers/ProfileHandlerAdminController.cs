@@ -33,7 +33,8 @@ namespace SharpMUSH.Server.Controllers;
 /// the handler that the package does not manage are left alone. Reset refuses (409) unless the
 /// installed version is the one this build ships, from the bundled source, and every recorded
 /// baseline on the configured handler already holds this build's value; otherwise the write would land
-/// where the registry does not track it.</para>
+/// where the registry does not track it. It holds <see cref="IPackageOperationGate"/> throughout, so no
+/// other package operation can move the baselines under it.</para>
 ///
 /// Routes:
 ///   GET  api/admin/profile-handler        — handler dbref/name + presence of each package attribute
@@ -47,6 +48,7 @@ public class ProfileHandlerAdminController(
 	IPackageInstallService installer,
 	IPackageRegistryService registry,
 	IBundledPackageBootstrap bundled,
+	IPackageOperationGate gate,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<ProfileHandlerAdminController> logger) : ControllerBase
 {
@@ -104,6 +106,15 @@ public class ProfileHandlerAdminController(
 			return NotFound(new ApiErrorDto($"The configured http_handler #{number} does not exist."));
 		}
 
+		// From the first registry read to the last write, and the plan between them, no other package
+		// operation may run (#1484): an upgrade advancing the baselines mid-reset would have the reset
+		// put the old values back under the new baselines. The bundled install below re-enters the gate.
+		return await gate.RunAsync(() => ResetExclusiveAsync(number, ct), ct);
+	}
+
+	/// <summary>The part of <see cref="Reset"/> that reads the registry and writes, inside the package-operation gate.</summary>
+	private async Task<ActionResult<ResetResultDto>> ResetExclusiveAsync(int number, CancellationToken ct)
+	{
 		// A profile-handler from a configured remote or a fork is someone else's package, whatever its
 		// version: its record and baselines describe that package's softcode, not this build's. Refuse
 		// before bootstrap runs, which would otherwise upgrade an older one in place under the bundled

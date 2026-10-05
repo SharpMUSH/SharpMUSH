@@ -19,7 +19,7 @@ Two entry points, pick one based on how you terminate TLS:
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
-| `../nats.conf` | NATS server config (repo root, shared with the dev stack). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file. Both compose files bind-mount it. |
+| `../nats.conf` | NATS server config (repo root, shared with the dev stack). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file — and JetStream's total storage budget (`max_file_store`, 6 GB). Both compose files bind-mount it. Stream budgets: `docs/design/messaging-retention.md`. |
 | `README.md` | This file |
 
 ## First-time setup
@@ -303,11 +303,17 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 |---|---|---|
 | `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
 | `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
+| `SHARPMUSH_BACKUP_PACKAGE_KEEP` | `2` | How many of the copies taken automatically before a portal package apply, rollback or uninstall stay on disk. They go in `pre-package/` under the backup path, counted separately, so they never push out the copies above. `0` turns them off. |
 | `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
 `@backup/list`.
+
+The portal takes one into `pre-package/<timestamp>` before every package apply, rollback or
+uninstall, and refuses the operation if that copy fails. It is the restore point for a crash part
+way through the operation (`docs/design/world-transactions.md` §0). It copies the world only:
+a managed package's `plugins/<id>/` directory is not in it.
 
 Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
 construction.
@@ -361,11 +367,195 @@ docker volume rm restore    # once the game is up and you are satisfied
 
 A restored copy carries no `lock.mdb` — LMDB writes a fresh one on open — and no
 `lightning.previous`, which is a superseded world from a staging promotion and never part of a
-copy.
+copy. See [Earlier worlds](#earlier-worlds) for cleaning one up.
 
 The server does **not** need to stop for the nightly run: what restic reads is a finished copy,
 and a copy still being written is named `.incoming-*` and excluded until it is moved into place
 complete.
+
+## Disk capacity
+
+The world's disk use is easy to misread. Four numbers describe it, and `@storage` (wizard-only)
+reports each of them:
+
+| Figure | What it is | Where else to see it |
+|---|---|---|
+| **Map limit** | `SHARPMUSH_LIGHTNING_MAPSIZE`, the most `data.mdb` may ever grow to. A ceiling, not an allocation: it costs neither disk nor RAM until it is used. | `sharpmush_storage_bytes{kind="map"}` |
+| **File length** | How far `data.mdb` has grown, which is what `ls -l` shows. | `kind="file"` |
+| **Allocated on disk** | What the filesystem actually holds for it, which is what `du` shows. It can be less than the length, because the file is sparse. | `kind="allocated"` |
+| **Live data** | Pages holding records now. The rest of the file is **free pages**, which later writes reuse. | `kind="live"`, `kind="free_pages"` |
+
+Two rules follow from this:
+
+- **Deleting records never shrinks the file.** LMDB puts the freed pages on its free list and the
+  next writes reuse them, so the file stops growing but stays the same size. The only way to give the
+  space back is to replace the file with a compacted copy (see [Compacting the world](#compacting-the-world)).
+- **A long reader makes the file grow.** LMDB cannot reuse a page that an open read transaction can
+  still see. A backup holds one read transaction for as long as the copy takes. Every write in that
+  time lands on new pages, so the file grows by roughly the volume of writes made during the copy.
+  That space becomes free pages once the copy ends. It is reused, not returned to the disk.
+- **A dead reader pins pages until it is cleared.** A process that dies while holding a read
+  transaction leaves its slot in `lock.mdb` occupied, and that slot pins pages the same way. The server
+  frees such slots (`mdb_reader_check`) when it opens the world and every five minutes after that, and
+  logs a warning when it frees any. `@storage` and `sharpmush_storage_stale_readers_cleared_total`
+  count them. A slot only outlives its process when another process was attached at the time, such
+  as an `mdb_stat` run against the live world.
+
+### What a backup run needs
+
+A run writes its new copy **beside** the copies it keeps, and deletes the oldest only after the new
+one is complete. So at the height of a run the volume holds:
+
+```
+live world (data.mdb at its file length)
++ SHARPMUSH_BACKUP_KEEP finished copies
++ the copy being written (.incoming-*)
++ <world>.previous, if a staged import was ever promoted
++ any <world>.staging-* left by an import that never finished
+```
+
+With the shipped settings (`KEEP=2`, compacting copies) that is the world's file plus three copies of
+its live data. `@storage` prints the backup directory's peak and the free space a run needs, and says
+when the backups share a disk with the world.
+
+Before writing anything, a run checks that the backup disk has room for the new copy plus a margin: a
+tenth of the copy, and never less than 16 MiB. If there is not enough room, the run does not start.
+`@backup` reports why, the scheduled run logs it, and `sharpmush_storage_backup_fits` drops to 0. If
+the disk fills during a copy anyway, the partial `.incoming-*` copy is deleted and the copies already
+kept are left as they were.
+
+Suggested alerts, on the server's `/metrics`:
+
+```
+sharpmush_storage_backup_fits == 0                                     # next backup will refuse to start
+sharpmush_storage_bytes{kind="map_headroom"} < ignoring(kind) 2 * sharpmush_storage_bytes{kind="live"}   # raise MAPSIZE
+sharpmush_storage_bytes{kind="world_disk_free"} < ignoring(kind) sharpmush_storage_bytes{kind="backup_required_free"}
+sharpmush_storage_bytes{kind="leftover_worlds"} > 0                    # a .previous or .precompact world to clean up
+```
+
+A PennMUSH import is checked the same way before it starts. It is refused with `507 Insufficient
+Storage` when the map or the disk clearly cannot hold three times the size of the uploaded files.
+Nothing is written in that case.
+
+### Earlier worlds
+
+Promoting a staged import moves the world it replaces to `<world>.previous`. That world is **never
+deleted automatically**, because it is the way back if the import turns out wrong. Delete it once the
+promoted world has been verified. `@storage` lists it, along with any `.staging-*` world an import left
+and any `.incoming-*` copy an interrupted backup left:
+
+```bash
+docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /app/data/*'
+docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
+```
+
+The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`) and the
+backup directory. NATS keeps its JetStream state in its own `nats-data` volume. That state is
+transient, but it is on the same disk:
+
+```bash
+docker system df -v | grep -E 'app-data|nats-data'
+```
+
+### Compacting the world
+
+To give the disk back what deleted records freed, have the server replace the world's file with a
+compacted copy of itself when it starts. Nothing else has the file open at that point, so no write
+can land between the copy and the swap:
+
+```bash
+# 1. Check there is room: the copy needs about the live data (see @storage) plus a margin, free.
+# 2. Set SHARPMUSH_LIGHTNING_COMPACT_ON_START=true on sharpmush-server, then restart it:
+docker compose up -d sharpmush-server
+# 3. Check the log, then @storage in-game, and play-test.
+docker compose logs sharpmush-server | grep -i compact
+# 4. Remove SHARPMUSH_LIGHTNING_COMPACT_ON_START again and restart, then delete the original:
+docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.precompact'
+```
+
+On each start the server:
+
+1. Copies the world, compacting it, into `lightning.compacting`.
+2. Opens the copy and checks that every table holds as many records as the original.
+3. Moves the original to `lightning.precompact` and the copy into its place.
+
+What a failure leaves behind:
+
+- A failure or crash during the copy leaves the world untouched. The next start deletes the partial copy.
+- A crash between the two moves leaves no world, but the next start moves the original back.
+- If `lightning.precompact` is already there, compaction is refused and the server starts on the
+  world as it is, because an earlier original is never deleted automatically.
+- If there is not enough disk, compaction is refused in the same way.
+
+The LMDB command-line tools from Linux distributions (`mdb_copy`, `mdb_stat`) are LMDB 0.9. The
+server runs LMDB 1.0, whose file format they cannot read, so do not use them on the world.
+
+### Container logs
+
+Both compose files rotate container logs (`x-logging`: `json-file`, 3 files of 10 MB per container).
+Without rotation, Docker's default driver keeps every line forever on the same disk as the world. If
+you run the images some other way, set the equivalent in `/etc/docker/daemon.json`:
+
+```json
+{ "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "3" } }
+```
+
+## History retention
+
+Several things are kept after they stop being what the game shows:
+
+- **Wiki revisions.** Every edit of every page and translation keeps the full Markdown of the
+  revision before it, so that history and rollback work.
+- **Scene pose edits.** Every version of every pose is kept, so that undo and redo work.
+- **Deleted poses.** Deleting a pose hides it. Its content and edit history stay stored.
+
+All three grow without bound by default. Each one makes the live world larger, and so every backup.
+`@storage/history` counts them.
+
+**The default keeps everything.** Unless an operator sets a policy, nothing is ever purged. That
+is permanent archival in the live world. Three different things can happen to a record:
+
+| | The game shows it | Still in the live world | Still in backups taken before |
+|---|---|---|---|
+| **Soft deletion** (deleting a pose) | no, except struck through to its owner in the portal | yes | yes |
+| **Archival** (a purge with `SHARPMUSH_HISTORY_ARCHIVE_PATH` set) | no | no. It is in the archive's JSON lines. | yes |
+| **Physical removal** (a purge) | no | no. The rows, and every index entry pointing at them, are deleted. | yes |
+
+A purge frees pages inside the file for reuse. It does not shrink the file (see
+[Disk capacity](#disk-capacity)).
+
+| Setting on `sharpmush-server` | Default | What it does |
+|---|---|---|
+| `SHARPMUSH_HISTORY_WIKI_KEEP` | unset | Keep at least this many of the newest revisions of each page, and of each translation. |
+| `SHARPMUSH_HISTORY_WIKI_MAX_AGE` | unset | Purge revisions older than this, for example `365d`. |
+| `SHARPMUSH_HISTORY_SCENE_EDITS_KEEP` | unset | Keep at least this many of the newest versions of each pose. |
+| `SHARPMUSH_HISTORY_SCENE_EDITS_MAX_AGE` | unset | Purge pose versions older than this. |
+| `SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` | unset | Purge a deleted pose (its content and all its versions) once it has been deleted this long. |
+| `SHARPMUSH_HISTORY_INTERVAL` | unset, so no scheduled pass | How often a pass runs, for example `1d`. `@storage/purge` runs one at any time. |
+| `SHARPMUSH_HISTORY_BATCH` | `256` | The most records one write transaction deletes. |
+| `SHARPMUSH_HISTORY_ARCHIVE_PATH` | unset, so no archive | Purged records are appended here as `<kind>-<date>.jsonl`, and flushed to disk, before they are deleted. |
+
+When a kind has both a count and an age set, a version is purged only when it is outside the newest
+*N* **and** older than the age. An unreadable setting is logged and treated as unset, so a typo keeps
+more, never less. A purge never removes:
+
+- the revision a wiki page or translation shows now.
+- anything on a protected wiki page.
+- the version a pose shows now, or any version after it that `redo` can still reach.
+
+Undo stops at the oldest version that survives. A wiki rollback can only go back to a revision that
+survives. Revision and version numbers are never reused, because the next one is numbered from the
+page or pose, not from what is left of its history.
+
+A pass reads in bounded slices and deletes each slice in its own write transaction, so the game's own
+writes go between them. Each candidate is checked again inside the write, so an edit or undo made in
+the meantime is respected. If an archive cannot be written, the pass stops for that kind before
+anything unarchived is deleted.
+
+**Mail** has no retention policy. A message stays until its recipient deletes and purges it.
+`mail_limit` (and a player's `MAILQUOTA`) limits the folder new mail arrives in. It is a per-folder
+admission check, not a ceiling on everything a player stores: mail filed into other folders does not
+count toward it.
 
 ## Updating
 

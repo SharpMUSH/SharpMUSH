@@ -20,7 +20,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelDecompile
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
 		IConnectionService ConnectionService, MString channelName, MString brief, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -34,7 +34,7 @@ public static class ChannelDecompile
 		};
 	}
 
-	private static async ValueTask<CallState> DecompileAsync(IPermissionService PermissionService,
+	private static async ValueTask<CallState> DecompileAsync(IChannelPermissionService PermissionService,
 		INotifyService NotifyService, IConnectionService ConnectionService, AnySharpObject executor, SharpChannel channel,
 		string[] switches)
 	{

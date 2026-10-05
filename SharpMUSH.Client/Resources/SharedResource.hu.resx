@@ -3190,6 +3190,14 @@
     <value>A jelenet nem található.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>A jelenet nem indult el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>A jelenet elindult, de nem sikerült privátra állítani.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Keressen egy fiókot a szerepköreinek kezeléséhez.</value>
     <comment>MT</comment>
@@ -3236,14 +3244,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Bárki nézheti</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>A lap terminálja ezzel a karakterrel játszik: {0}, nem ezzel: {1}. Indítsd a jelenetet egy olyan lapról, amely ezzel játszik: {1}, vagy válts vissza erre: {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Nem sikerült megállapítani, melyik karakterrel játszik a lap terminálja. Próbáld újra egy pillanat múlva.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -5052,6 +5052,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>Jelenetben</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Ezt a jelenetet nézed. Csatlakozz, hogy itt pózolhass.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>A pózaid egy másik jelenetbe kerülnek. Csatlakozz ehhez, hogy itt pózolhass.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Csatlakozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Jelenet elhagyása</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Csatornák</value>

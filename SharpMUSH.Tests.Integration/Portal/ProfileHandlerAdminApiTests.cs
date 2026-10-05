@@ -320,4 +320,46 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 			await ResetAsync(http);
 		}
 	}
+
+	/// <summary>
+	/// Reset reads the registry, plans and writes as one package operation (#1484): while another
+	/// operation holds the gate it neither reads nor writes, and once that ends it runs.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Reset_WaitsForAPackageOperationInProgress()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		await Mediator.Send(new ClearAttributeCommand(Handler, Damaged.Split('`')));
+
+		var gate = factory.Services.GetRequiredService<IPackageOperationGate>();
+		var holding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var holder = gate.RunAsync(async () =>
+		{
+			holding.TrySetResult();
+			await release.Task;
+			return 0;
+		});
+		Task<HttpResponseMessage>? reset = null;
+		try
+		{
+			await holding.Task.WaitAsync(TimeSpan.FromSeconds(30));
+			reset = http.PostAsync("api/admin/profile-handler/reset", null);
+			await Task.Delay(TimeSpan.FromMilliseconds(500));
+
+			await Assert.That(reset.IsCompleted).IsFalse();
+			await Assert.That(await ReadAsync(Damaged)).IsNull().Because("a reset waiting for the gate has written nothing");
+		}
+		finally
+		{
+			release.TrySetResult();
+			await holder;
+		}
+
+		using var response = await reset!.WaitAsync(TimeSpan.FromSeconds(60));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await response.Content.ReadFromJsonAsync<ResetResult>())!.Written).IsEqualTo(1);
+		await Assert.That(await ReadAsync(Damaged)).IsNotNull();
+	}
 }

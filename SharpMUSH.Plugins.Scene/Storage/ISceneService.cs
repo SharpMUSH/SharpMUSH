@@ -83,6 +83,14 @@ public interface ISceneService
 		string? authorDbref = null, int? count = null);
 
 	/// <summary>
+	/// At most <paramref name="take"/> of a scene's poses in <c>pose_next</c> order, starting after
+	/// <paramref name="after"/> (a previous page's <see cref="ScenePosePage.Next"/>; null for the first page),
+	/// read in one storage transaction. Pages are separate reads, not one snapshot: a pose edited between two
+	/// pages shows the version current when its page was read. <c>NotFound</c> if the scene is missing.
+	/// </summary>
+	Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take);
+
+	/// <summary>
 	/// Sets one pose metadata key (<c>showas</c>, <c>authorname</c>, <c>author</c>,
 	/// <c>origin</c>, <c>originname</c>, <c>source</c>, <c>tags</c>, or custom →
 	/// <see cref="ScenePose.Meta"/>). Not for content — use <see cref="EditPoseAsync"/>.
@@ -109,10 +117,16 @@ public interface ISceneService
 	/// </summary>
 	Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId);
 
-	/// <summary>Soft-deletes a pose (the slot remains in the chain). <c>NotFound</c> if missing.</summary>
+	/// <summary>
+	/// Soft-deletes a pose (the slot remains in the chain, its content and history stay stored). Only the
+	/// deleted-pose retention rule, when one is configured, removes it for good. <c>NotFound</c> if missing.
+	/// </summary>
 	Task<Found<ScenePose>> DeletePoseAsync(string poseId);
 
-	/// <summary>Returns a pose's content-version history (oldest first). <c>NotFound</c> if the pose is missing.</summary>
+	/// <summary>
+	/// Returns a pose's content-version history (oldest first): every version retention has kept, which by
+	/// default is all of them. <c>NotFound</c> if the pose is missing.
+	/// </summary>
 	Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId);
 
 	/// <summary>

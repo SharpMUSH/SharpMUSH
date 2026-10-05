@@ -30,7 +30,8 @@ public static partial class MailDelivery
 		IDidItService DidIt,
 		IAttributeService Attributes,
 		IExpandedObjectDataService ObjectData,
-		IOptionsWrapper<SharpMUSHOptions> Configuration);
+		IOptionsWrapper<SharpMUSHOptions> Configuration,
+		IConnectionService Connections);
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
 	/// <param name="Body">The text as the sender wrote it, which is what the <c>clear</c> check reads.</param>
@@ -45,17 +46,6 @@ public static partial class MailDelivery
 		Filed,
 		NoSuchFolder
 	}
-
-	/// <summary>
-	/// Serializes reading a player's folder list with replacing it, since <c>SetExpandedDataAsync</c> stores
-	/// the whole array and two deliveries filing into different new folders would otherwise each keep only
-	/// their own. Admission needs no gate: the store counts and writes in one step. Striped by recipient so
-	/// unrelated mailboxes do not wait on each other. Nothing that can deliver mail runs while a gate is held.
-	/// </summary>
-	private static readonly SemaphoreSlim[] MailboxGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
-
-	private static SemaphoreSlim GateFor(SharpPlayer target)
-		=> MailboxGates[(int)((uint)target.Object.DBRef.Number % MailboxGates.Length)];
 
 	/// <summary><c>is_objid</c> (<c>src/parse.c:351</c>): what a forward list may name.</summary>
 	[GeneratedRegex(@"^#-?\d+(?::\d+)?$")]
@@ -240,19 +230,23 @@ public static partial class MailDelivery
 
 		// extmail.c:1695 — filter_mail runs on the stored message, so a refused one never filters, and files
 		// it by id rather than by the number, which the filter's own side effects may have moved.
-		var (folder, filtered) = await FolderForAsync(parser, services, sender, target, letter);
+		// filter_mail files with do_mail_file(player, "0:<number>", folder), so it says what do_mail_file says.
+		var (folderSpec, filtered) = await FolderForAsync(parser, services, sender, target, letter);
 		switch (filtered)
 		{
-			case FilterOutcome.Filed:
-				if (folder != Inbox)
+			case FilterOutcome.Filed
+				when await MailFolders.FileIntoAsync(services.ObjectData, target, folderSpec, async filed =>
 				{
-					mail.Id = admission.Id;
-					await FileAsync(services, target, mail, folder);
-				}
-
-				await services.Notify.Notify(target, $"MAIL: Msg {admission.Number} filed in folder {folder}.");
+					if (filed.Number != 0)
+					{
+						mail.Id = admission.Id;
+						await services.Mediator.Send(new MoveMailFolderCommand(mail, filed.Name));
+					}
+				}) is MailFolder folder:
+				await services.Notify.Notify(target,
+					$"MAIL: Msg 0:{admission.Number} filed in folder {folder.Number} [{folder.DisplayName}]");
 				break;
-			case FilterOutcome.NoSuchFolder:
+			case FilterOutcome.Filed or FilterOutcome.NoSuchFolder:
 				await services.Notify.Notify(target, "MAIL: Invalid folder specification");
 				break;
 		}
@@ -266,29 +260,6 @@ public static partial class MailDelivery
 		}
 
 		return true;
-	}
-
-	/// <summary>
-	/// Moves a delivered message into <paramref name="folder"/> and, as <c>@mail/file</c> does, makes that one of
-	/// the player's folders.
-	/// </summary>
-	private static async ValueTask FileAsync(Services services, SharpPlayer target, SharpMail mail, string folder)
-	{
-		await services.Mediator.Send(new MoveMailFolderCommand(mail, folder));
-
-		var gate = GateFor(target);
-		await gate.WaitAsync();
-		try
-		{
-			var known = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
-			await services.ObjectData.SetExpandedDataAsync(
-				new ExpandedMailData(Folders: [.. (known?.Folders ?? []).Append(folder).Distinct()]),
-				target.Object, ignoreNull: true);
-		}
-		finally
-		{
-			gate.Release();
-		}
 	}
 
 	/// <summary><c>extmail.c:1547</c> — the hard cap a MAILQUOTA cannot exceed.</summary>

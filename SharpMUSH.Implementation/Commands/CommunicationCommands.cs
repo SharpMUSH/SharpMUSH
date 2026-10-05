@@ -18,7 +18,7 @@ public partial class Commands
 		EmitScope scope, bool noSpoof)
 	{
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var ports = scope == EmitScope.Private && switches.Contains("PORT");
 		var contents = scope == EmitScope.Private && !ports && switches.Contains("CONTENTS");
 		if (contents) scope = EmitScope.Room;
@@ -185,11 +185,10 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (args.Count < 2)
+		if (await RejectIfTooFewArguments(parser, 2, executor,
+				nameof(ErrorMessages.Notifications.VerbUsage), ErrorMessages.Returns.CantSeeThat) is { } usage)
 		{
-			await NotifyService.Notify(executor,
-				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]", executor);
-			return new CallState(ErrorMessages.Returns.CantSeeThat);
+			return usage;
 		}
 
 		// ElementAtOrDefault past the end yields a default KeyValuePair whose Value is a null CallState,
@@ -209,6 +208,8 @@ public partial class Commands
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
 			.ToDictionary();
 
+		// The notifying locate has already told the executor why a name did not match; the failure is
+		// only the command's return, not a second line of output.
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, victimName, LocateFlags.All) switch
 		{
@@ -217,17 +218,10 @@ public partial class Commands
 			{
 				AnySharpObject actor => await VerbAsync(parser, executor, enactor, victim, actor, what, whatd, owhat, owhatd,
 					awhat, stackArgs),
-				Error<CallState> error => await NotifyAndReturnAsync(executor, error.Value)
+				Error<CallState> error => error.Value
 			},
-			Error<CallState> error => await NotifyAndReturnAsync(executor, error.Value)
+			Error<CallState> error => error.Value
 		};
-	}
-
-	/// <summary>Tells the executor why a lookup failed, and answers with that failure.</summary>
-	private async ValueTask<Option<CallState>> NotifyAndReturnAsync(AnySharpObject executor, CallState failure)
-	{
-		await NotifyService.Notify(executor, failure.Message!, executor);
-		return failure;
 	}
 
 	/// <summary>PennMUSH <c>do_verb</c> once both objects are known: the permission gate, then the three messages.</summary>

@@ -1,7 +1,9 @@
-﻿using SharpMUSH.Implementation.Commands.MailCommand;
+﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -14,7 +16,10 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// Parse message specification (e.g. "123" or "INBOX:5") into folder and message index
+	/// PennMUSH's <c>parse_message_spec</c> (<c>src/extmail.c:3153</c>): <c>&lt;message&gt;</c> in the current
+	/// folder, or <c>&lt;folder&gt;:&lt;message&gt;</c>, the folder a number as <c>maillist()</c> writes it or one of
+	/// the player's folder names. Answers the folder the message is stored under and its 0-based index, -1 when
+	/// the specification names no message.
 	/// </summary>
 	private async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
 		IMUSHCodeParser parser,
@@ -27,8 +32,15 @@ public partial class Functions
 
 		if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
 		{
-			folder = parts[0].Trim().ToUpper();
-			if (!int.TryParse(parts[1].Trim(), out messageIndex) || messageIndex < 1)
+			if (player is not SharpPlayer mailbox
+					|| MailFolders.Resolve(await MailFolders.LoadAsync(ObjectDataService, mailbox), parts[0]) is not MailFolder named)
+			{
+				return (ExpandedMailData.Inbox, -1);
+			}
+
+			folder = named.Name;
+			// parse_message_spec reads a message number with is_integer (src/extmail.c:3171-3174).
+			if (!ArgHelpers.TryInteger(parser, parts[1], out messageIndex) || messageIndex < 1)
 			{
 				return (folder, -1);
 			}
@@ -36,7 +48,7 @@ public partial class Functions
 		else
 		{
 			folder = await MessageListHelper.CurrentMailFolder(parser, ObjectDataService, player);
-			if (!int.TryParse(messageSpec.Trim(), out messageIndex) || messageIndex < 1)
+			if (!ArgHelpers.TryInteger(parser, messageSpec, out messageIndex) || messageIndex < 1)
 			{
 				return (folder, -1);
 			}
@@ -163,7 +175,7 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Check if a string is a valid message number (e.g., "123" or "INBOX:5")
+	/// Check if a string is a valid message number (e.g., "123", "1:5" or "INBOX:5")
 	/// </summary>
 	private bool IsMessageNumber(string arg)
 	{
@@ -225,31 +237,27 @@ public partial class Functions
 
 		return filteredList switch
 		{
-			Error<string> error => new CallState(string.Format(ErrorMessages.Returns.ReasonFormat, error.Value)),
+			// parse_msglist tells the mailbox's owner what was wrong, and fun_maillist answers e_range.
+			Error<string> error => await MailListRefused(mailbox, error.Value),
 			IAsyncEnumerable<SharpMail> mailList => await MailPositions(mailbox, mailList)
 		};
 	}
 
-	/// <summary>Each message's <c>folder:position</c>, which is how <c>@mail</c> names it.</summary>
+	private async ValueTask<CallState> MailListRefused(SharpPlayer mailbox, string error)
+	{
+		await NotifyService.Notify(new AnySharpObject(mailbox), error);
+		return new CallState(ErrorMessages.Returns.OutOfRange);
+	}
+
+	/// <summary>
+	/// Each message's <c>&lt;folder number&gt;:&lt;position&gt;</c> (<c>fun_maillist</c>, <c>src/extmail.c:844</c>),
+	/// which <c>mail()</c> and <c>@mail</c> take back.
+	/// </summary>
 	private async ValueTask<CallState> MailPositions(SharpPlayer mailbox, IAsyncEnumerable<SharpMail> mailList)
 	{
-		var results = new List<string>();
-		await foreach (var mail in mailList)
-		{
-			// The message's 1-based position within its folder, which is how @mail names it.
-			var position = await Mediator.CreateStream(new GetMailListQuery(mailbox, mail.Folder))
-				.Select((m, index) => (m.Id, Position: index + 1))
-				.Where(x => x.Id == mail.Id)
-				.Select(x => x.Position)
-				.FirstOrDefaultAsync();
-
-			if (position > 0)
-			{
-				results.Add($"{mail.Folder}:{position}");
-			}
-		}
-
-		return new CallState(string.Join(" ", results));
+		var folders = await MailFolders.LoadAsync(ObjectDataService, mailbox);
+		var positions = await MessageListHelper.WithPositionsAsync(Mediator, mailbox, folders, mailList);
+		return new CallState(string.Join(" ", positions));
 	}
 	[SharpFunction(Name = "mailfrom", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -278,7 +286,7 @@ public partial class Functions
 
 		await SendMail.Handle(parser, LocateService, Mediator, NotifyService,
 			new MailDelivery.Services(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
-			Configuration),
+			Configuration, ConnectionService),
 			args["0"].Message!, args["1"].Message!, ["SILENT"]);
 
 		// do_mail_send notifies the sender about a bad recipient, so the function returns nothing.
@@ -404,7 +412,7 @@ public partial class Functions
 			.Select(arg => arg.Value.Message?.ToPlainText() ?? string.Empty)
 			.ToArray();
 
-		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService),
+		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService, ConnectionService),
 			executor, args));
 	}
 }

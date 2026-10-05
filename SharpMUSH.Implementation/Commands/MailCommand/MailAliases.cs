@@ -22,7 +22,8 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 /// </remarks>
 public static class MailAliases
 {
-	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions);
+	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions,
+		IConnectionService Connections);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
 	public sealed record Recipients(SharpPlayer[] Members, bool Silent);
@@ -94,8 +95,8 @@ public static class MailAliases
 		var bare = name[1..];
 		await foreach (var alias in AllAsync(services))
 		{
-			if ((who is null || await MayUseAsync(alias, who))
-					&& alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase))
+			if (alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase)
+					&& (who is null || await MayUseAsync(alias, who)))
 			{
 				return alias;
 			}
@@ -770,17 +771,27 @@ public static class MailAliases
 		return await LookupPlayerAsync(services, entry);
 	}
 
-	/// <summary><c>lookup_player</c>: a player by exact name or alias, a leading <c>*</c> ignored.</summary>
+	/// <summary>
+	/// <c>lookup_player</c> (<c>src/plyrlist.c:163</c>): a <c>#dbref</c> is tested on the name as given,
+	/// and only then is one leading <c>*</c> dropped before the exact name or alias lookup. So
+	/// <c>*#42</c> asks for a player named <c>#42</c>, and <c>**God</c> for one named <c>*God</c>.
+	/// </summary>
 	private static async ValueTask<SharpPlayer?> LookupPlayerAsync(Services services, string name)
 	{
-		var bare = name.TrimStart('*');
-		if (bare.StartsWith('#'))
+		if (name.Length == 0)
 		{
-			return DBRef.TryParse(bare, out var dbref) && dbref is { } reference
+			return null;
+		}
+
+		if (name[0] == '#')
+		{
+			return DBRef.TryParse(name, out var dbref) && dbref is { } reference
 					&& await services.Mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject and SharpPlayer byDbref
 				? byDbref
 				: null;
 		}
+
+		var bare = name[0] == '*' ? name[1..] : name;
 
 		return bare.Length == 0
 			? null
@@ -789,7 +800,7 @@ public static class MailAliases
 
 	/// <summary><c>unparse_object(player, target, AN_SYS)</c>: the name, with dbref and flags when the viewer may see them.</summary>
 	private static ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
-		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target));
+		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target), services.Connections);
 
 	/// <summary>get_shortprivs: the Use and See columns of the list, <c>E</c> for everyone.</summary>
 	private static string ShortPrivileges(SharpMailAlias alias)

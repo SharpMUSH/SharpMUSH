@@ -60,6 +60,7 @@ public partial class LightningDatabase
 				Locks = new Dictionary<string, LockRecord>()
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+			IndexObjectType(tx, DatabaseConstants.TypePlayer, dbref);
 
 			// A player owns itself, as in the migration seed.
 			SetSingleEdge(tx, Tables.Owner, dbref, dbref);
@@ -122,6 +123,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeRoom, dbref);
 
 		// Rooms carry no location/home edge of their own; LinkRoomAsync sets a drop-to later.
 		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
@@ -186,6 +188,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeThing, dbref);
 
 		SetSingleEdge(tx, Tables.Location, dbref, locKey);
 		SetSingleEdge(tx, Tables.Home, dbref, homeKey);
@@ -248,6 +251,7 @@ public partial class LightningDatabase
 			Locks = new Dictionary<string, LockRecord>()
 		}));
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		IndexObjectType(tx, DatabaseConstants.TypeExit, dbref);
 		foreach (var alias in aliases)
 		{
 			tx.Put(Tables.ObjName, Keys.Lower(alias), Keys.Dbref(dbref));
@@ -377,6 +381,57 @@ public partial class LightningDatabase
 	public ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult((int)Store.Count(Tables.Obj));
 
+	public ValueTask<int> GetChildCountAsync(DBRef parent, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(CountEdges(Tables.Parent.Reverse, Keys.Dbref(parent.Number), $"Child count for {parent}"));
+
+	public async ValueTask<ObjectTypeCounts> GetObjectTypeCountsAsync(DBRef? owner, CancellationToken cancellationToken = default)
+	{
+		if (owner is not { } ownerRef)
+		{
+			// The type index holds one entry per object under its type, so each figure is one duplicate count.
+			return Store.Read(tx =>
+			{
+				int Count(string type) => CountEdges(tx, Tables.ObjType, ObjTypeKey(type), $"{type} count");
+				return new ObjectTypeCounts(Count(DatabaseConstants.TypeRoom), Count(DatabaseConstants.TypeExit),
+					Count(DatabaseConstants.TypeThing), Count(DatabaseConstants.TypePlayer));
+			});
+		}
+
+		// One owner's objects come from the owner index, each checked against its forward edge as the owner
+		// search filter does, and paged like it.
+		var ownerNumber = (long)ownerRef.Number;
+		int rooms = 0, exits = 0, things = 0, players = 0;
+		await foreach (var (_, record) in IndexedObjectsAsync(Tables.Owner.Reverse, Keys.Dbref(ownerNumber), null, null,
+			(tx, dbref, _) => GetSingleEdge(tx, Tables.Owner.Forward, dbref) == ownerNumber, cancellationToken))
+		{
+			switch (record.Type)
+			{
+				case DatabaseConstants.TypeRoom: rooms++; break;
+				case DatabaseConstants.TypeExit: exits++; break;
+				case DatabaseConstants.TypeThing: things++; break;
+				case DatabaseConstants.TypePlayer: players++; break;
+			}
+		}
+
+		return new ObjectTypeCounts(rooms, exits, things, players);
+	}
+
+	public ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read(tx => HighestKey(tx, Tables.Obj)) switch
+		{
+			< 0 => (Found<int>)new NotFound(),
+			var highest => (Found<int>)(int)highest
+		});
+
+	private int CountEdges(TableDef table, byte[] key, string what) => Store.Read(tx => CountEdges(tx, table, key, what));
+
+	/// <summary>A duplicate count, or the failure LMDB reported, thrown: a count that could not be taken is not zero.</summary>
+	private static int CountEdges(ITx tx, TableDef table, byte[] key, string what) => tx.CountDups(table, key) switch
+	{
+		long count => (int)count,
+		Error<string> error => throw new InvalidOperationException($"{what} failed: {error.Value}")
+	};
+
 	#endregion
 
 	#region Object Retrieval
@@ -440,6 +495,15 @@ public partial class LightningDatabase
 		}
 	}
 
+	public IAsyncEnumerable<DBRef> GetPlayerRefsByNameOrAliasAsync(string name, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.ObjName, Keys.Lower(name), (tx, value) =>
+		{
+			var dbref = Keys.ReadDbref(value);
+			return ReadObjectHeader(tx, dbref) is { } header && header.Type == DatabaseConstants.TypePlayer
+				? new DBRef((int)dbref, header.CreationTime)
+				: (DBRef?)null;
+		}, ct: ct));
+
 	public IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpObject>(ct => GetAllObjectsCoreAsync(ct));
 
@@ -470,31 +534,12 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<SharpObject> GetFilteredObjectsCoreAsync(ObjectSearchFilter filter,
 		[EnumeratorCancellation] CancellationToken ct)
 	{
-		var entries = filter.MinDbRef.HasValue
-			? Store.RangeFromKeyAsync(Tables.Obj, Keys.Dbref(filter.MinDbRef.Value), ct: ct)
-			: Store.RangeAsync(Tables.Obj, [], ct: ct);
-
 		var skip = filter.Skip ?? 0;
 		var skipped = 0;
 		var yielded = 0;
-		// The row itself answers the type and name predicates; only the edge and flag/power ones need a
-		// transaction, so a search on name alone opens none per row.
-		var needsEdges = NeedsEdgePredicates(filter);
 
-		await foreach (var (key, value) in entries.WithCancellation(ct))
+		await foreach (var (dbref, record) in FilteredCandidatesAsync(filter, ct).WithCancellation(ct))
 		{
-			var dbref = Keys.ReadDbref(key);
-			if (filter.MaxDbRef.HasValue && dbref > filter.MaxDbRef.Value)
-			{
-				yield break;
-			}
-
-			var record = Codec.Deserialize<ObjectRecord>(value);
-			if (!MatchesRecord(record, filter) || (needsEdges && !Store.Read(tx => MatchesEdges(tx, dbref, record, filter))))
-			{
-				continue;
-			}
-
 			if (skipped < skip)
 			{
 				skipped++;
@@ -512,25 +557,238 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
+	/// Every object <paramref name="filter"/> matches, in ascending dbref order, inside its dbref bounds.
+	/// When the filter names an owner, zone or parent, or exactly one type, the candidates come from the
+	/// matching reverse index (<see cref="Tables.Owner"/>, <see cref="Tables.Zone"/>,
+	/// <see cref="Tables.Parent"/> reversed, or <see cref="Tables.ObjType"/>) — the smallest of them — so the
+	/// work follows that relationship's size rather than the world's. The name pattern, flag and power
+	/// predicates have no index; they are tested on each candidate, and a filter with nothing else scans
+	/// <see cref="Tables.Obj"/> in its key range as before. Every candidate is tested against the whole
+	/// filter, the seeding predicate included, so the seed only narrows where to look.
+	/// </summary>
+	private IAsyncEnumerable<(long Dbref, ObjectRecord Record)> FilteredCandidatesAsync(ObjectSearchFilter filter,
+		CancellationToken ct)
+	{
+		var needsEdges = NeedsEdgePredicates(filter);
+		bool Matches(ITx tx, long dbref, ObjectRecord record)
+			=> MatchesRecord(record, filter) && (!needsEdges || MatchesEdges(tx, dbref, record, filter));
+
+		return Store.Read(tx => ChooseFilterSeed(tx, filter)) is { } seed
+			? IndexedObjectsAsync(seed.Table, seed.Key, filter.MinDbRef, filter.MaxDbRef, Matches, ct)
+			: ScannedObjectsAsync(filter, ct);
+	}
+
+	/// <summary>The reverse index with the fewest entries among those the filter's predicates can seed from;
+	/// null when none of them applies.</summary>
+	private (TableDef Table, byte[] Key)? ChooseFilterSeed(ITx tx, ObjectSearchFilter filter)
+	{
+		var seeds = new List<(TableDef Table, byte[] Key)>();
+		if (filter.Owner is { } owner) seeds.Add((Tables.Owner.Reverse, Keys.Dbref(owner.Number)));
+		if (filter.Zone is { } zone) seeds.Add((Tables.Zone.Reverse, Keys.Dbref(zone.Number)));
+		if (filter.Parent is { } parent) seeds.Add((Tables.Parent.Reverse, Keys.Dbref(parent.Number)));
+		if (filter.Types is [var type]) seeds.Add((Tables.ObjType, ObjTypeKey(type)));
+		if (FlagIndexSeed(tx, filter.HasFlag) is { } flagKey) seeds.Add((Tables.ObjFlag.Reverse, flagKey));
+		if (PowerIndexSeed(tx, filter.HasPower) is { } powerKey) seeds.Add((Tables.ObjPower.Reverse, powerKey));
+		if (seeds.Count == 0) return null;
+
+		return seeds.MinBy(seed => tx.CountDups(seed.Table, seed.Key) switch
+		{
+			long count => count,
+			Error<string> => long.MaxValue
+		});
+	}
+
+	/// <summary>
+	/// The <see cref="Tables.ObjFlag"/> reverse key a <c>HasFlag</c> predicate can seed from: the one definition
+	/// whose name or alias it is, or — when no definition answers to it — the name itself, under which no current
+	/// flag is filed. Null (no seed) when the predicate is absent, when it names an object type (the type-named
+	/// flag every object carries is not an edge), or when several definitions answer to it.
+	/// </summary>
+	private byte[]? FlagIndexSeed(ITx tx, string? hasFlag)
+	{
+		if (string.IsNullOrEmpty(hasFlag) || IsObjectTypeName(hasFlag))
+		{
+			return null;
+		}
+
+		var answering = FlagDefinitions(tx).Ordered
+			.Where(flag => string.Equals(flag.Name, hasFlag, StringComparison.OrdinalIgnoreCase)
+				|| flag.Aliases.Any(alias => string.Equals(alias, hasFlag, StringComparison.OrdinalIgnoreCase)))
+			.Take(2)
+			.ToList();
+		return answering switch
+		{
+			[] => Keys.Upper(hasFlag),
+			[var only] => Keys.Upper(only.Name),
+			_ => null
+		};
+	}
+
+	private static bool IsObjectTypeName(string name)
+		=> name.Equals(DatabaseConstants.TypePlayer, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeRoom, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeThing, StringComparison.OrdinalIgnoreCase)
+			|| name.Equals(DatabaseConstants.TypeExit, StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>As <see cref="FlagIndexSeed"/>, for <c>HasPower</c> over <see cref="Tables.ObjPower"/>.</summary>
+	private byte[]? PowerIndexSeed(ITx tx, string? hasPower)
+	{
+		if (string.IsNullOrEmpty(hasPower))
+		{
+			return null;
+		}
+
+		var answering = PowerDefinitions(tx).Ordered
+			.Where(power => string.Equals(power.Name, hasPower, StringComparison.OrdinalIgnoreCase)
+				|| power.AllAliases.Any(alias => string.Equals(alias, hasPower, StringComparison.OrdinalIgnoreCase)))
+			.Take(2)
+			.ToList();
+		return answering switch
+		{
+			[] => Keys.Upper(hasPower),
+			[var only] => Keys.Upper(only.Name),
+			_ => null
+		};
+	}
+
+	/// <summary>
+	/// The unseeded path: <see cref="Tables.Obj"/> from <c>MinDbRef</c> to <c>MaxDbRef</c>, a page of rows per read
+	/// transaction. Each row is decoded, and its type and edge predicates tested, inside the page's transaction;
+	/// the name predicate — softcode text, possibly a regex — is tested when the consumer reaches the row, so it
+	/// answers to the evaluation's budget at that moment and never runs inside a transaction. Pages are separate
+	/// snapshots, as in <see cref="IndexedObjectsAsync"/>.
+	/// </summary>
+	private async IAsyncEnumerable<(long Dbref, ObjectRecord Record)> ScannedObjectsAsync(ObjectSearchFilter filter,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		const int pageSize = 256;
+		var needsEdges = NeedsEdgePredicates(filter);
+		byte[]? after = null;
+		while (true)
+		{
+			ct.ThrowIfCancellationRequested();
+			var resume = after;
+			var (page, last, read, pastMax) = Store.Read(tx =>
+			{
+				var found = new List<(long, ObjectRecord)>();
+				byte[]? lastKey = null;
+				var count = 0;
+				var entries = resume is not null
+					? tx.RangeFrom(Tables.Obj, [], resume, null)
+					: filter.MinDbRef is { } min
+						? tx.RangeFromKey(Tables.Obj, Keys.Dbref(min))
+						: tx.Range(Tables.Obj, []);
+				foreach (var (key, value) in entries.Take(pageSize))
+				{
+					count++;
+					lastKey = key;
+					var dbref = Keys.ReadDbref(key);
+					if (filter.MaxDbRef.HasValue && dbref > filter.MaxDbRef.Value) return (found, lastKey, count, true);
+					var record = Codec.Deserialize<ObjectRecord>(value);
+					if (MatchesType(record, filter) && (!needsEdges || MatchesEdges(tx, dbref, record, filter))) found.Add((dbref, record));
+				}
+
+				return (found, lastKey, count, false);
+			});
+
+			foreach (var (dbref, record) in page)
+			{
+				if (MatchesName(record, filter))
+				{
+					yield return (dbref, record);
+				}
+			}
+
+			if (pastMax || read < pageSize || last is null) yield break;
+			after = last;
+		}
+	}
+
+	/// <summary>
+	/// The objects a duplicate index lists under <paramref name="indexKey"/>, ascending, inside
+	/// [<paramref name="min"/>, <paramref name="max"/>], that <paramref name="matches"/> admits. Paged like
+	/// <see cref="LightningStore.RangeAsync"/>: each page of index entries is read, with the rows it names, in
+	/// one transaction, and the next page resumes after the last entry, so no transaction is held across the
+	/// consumer's awaits. An index entry whose object is gone is skipped.
+	/// </summary>
+	internal async IAsyncEnumerable<(long Dbref, ObjectRecord Record)> IndexedObjectsAsync(TableDef index, byte[] indexKey,
+		long? min, long? max, Func<ITx, long, ObjectRecord, bool> matches, [EnumeratorCancellation] CancellationToken ct)
+	{
+		const int pageSize = 256;
+		// A negative lower bound encodes above every dbref, which is where the table scan starts too.
+		if (min is < 0)
+		{
+			yield break;
+		}
+
+		var after = min is > 0 ? Keys.Dbref(min.Value - 1) : null;
+		while (true)
+		{
+			ct.ThrowIfCancellationRequested();
+			var (page, last, read, pastMax) = Store.Read(tx =>
+			{
+				var found = new List<(long, ObjectRecord)>();
+				byte[]? lastValue = null;
+				var count = 0;
+				var entries = after is null ? tx.Range(index, indexKey) : tx.RangeFrom(index, indexKey, indexKey, after);
+				foreach (var (key, value) in entries.Take(pageSize))
+				{
+					// Range matches keys by prefix; only this exact key's duplicates are the seed.
+					if (!key.AsSpan().SequenceEqual(indexKey)) return (found, lastValue, count, true);
+					count++;
+					lastValue = value;
+					var dbref = Keys.ReadDbref(value);
+					if (max.HasValue && dbref > max.Value) return (found, lastValue, count, true);
+					if (ReadObject(tx, dbref) is { } row && matches(tx, dbref, row.Record)) found.Add((dbref, row.Record));
+				}
+
+				return (found, lastValue, count, false);
+			});
+
+			foreach (var entry in page) yield return entry;
+			if (pastMax || read < pageSize || last is null) yield break;
+			after = last;
+		}
+	}
+
+	/// <summary>
 	/// The predicates of <paramref name="filter"/> that one already-decoded row answers on its own — type and
 	/// name — inside <c>GetFilteredObjectsAsync</c> predicate-for-predicate; see that method and the doc
 	/// comment on <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
 	/// </summary>
 	private static bool MatchesRecord(ObjectRecord record, ObjectSearchFilter filter)
-	{
-		if (filter.Types is { Length: > 0 } types && !types.Contains(record.Type))
-		{
-			return false;
-		}
+		=> MatchesType(record, filter) && MatchesName(record, filter);
 
+	/// <summary>The type predicate of <see cref="MatchesRecord"/>.</summary>
+	private static bool MatchesType(ObjectRecord record, ObjectSearchFilter filter)
+		=> filter.Types is not { Length: > 0 } types || types.Contains(record.Type);
+
+	/// <summary>The name predicate of <see cref="MatchesRecord"/>.</summary>
+	private static bool MatchesName(ObjectRecord record, ObjectSearchFilter filter)
+	{
 		if (string.IsNullOrEmpty(filter.NamePattern))
 		{
 			return true;
 		}
 
 		return filter.UseRegex
-			? Regex.IsMatch(record.Name, filter.NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+			? RegexNameMatches(record.Name, filter.NamePattern)
 			: record.Name.Contains(filter.NamePattern, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// A regex name search's predicate for one row. The pattern is softcode text, so it is built through
+	/// <see cref="SharpMUSH.Library.Utilities.SoftcodeRegex"/> — compiled once and shared by every row (and every later search with the
+	/// same text), each match bounded by <see cref="SharpMUSH.Library.Utilities.SoftcodeRegex.MatchTimeout"/> — and every row first
+	/// checks what is left of the ambient <see cref="SharpMUSH.Library.ParserInterfaces.ExecutionBudget"/>, so a pattern slow on every name
+	/// ends the scan when the evaluation's time is up rather than after a fresh timeout per row. An invalid
+	/// pattern throws <see cref="RegexParseException"/>, a match that times out
+	/// <see cref="RegexMatchTimeoutException"/>; <c>lsearchr()</c> and <c>@search</c> report both.
+	/// </summary>
+	private static bool RegexNameMatches(string name, string pattern)
+	{
+		SharpMUSH.Library.ParserInterfaces.ExecutionBudget.Current?.ThrowIfExceeded();
+		return SharpMUSH.Library.Utilities.SoftcodeRegex.Create(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).IsMatch(name);
 	}
 
 	private static bool NeedsEdgePredicates(ObjectSearchFilter filter)
@@ -538,7 +796,7 @@ public partial class LightningDatabase
 			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower);
 
 	/// <summary>The remaining predicates — owner, zone, parent, flag, power — each of which reads an edge table.</summary>
-	private static bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	private bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
 	{
 		if (filter.Owner.HasValue && GetSingleEdge(tx, Tables.Owner.Forward, dbref) != filter.Owner.Value.Number)
 		{
@@ -584,18 +842,19 @@ public partial class LightningDatabase
 
 	private async IAsyncEnumerable<SharpPlayer> GetAllPlayersCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		await foreach (var (key, value) in Store.RangeAsync(Tables.Obj, [], ct: ct))
+		// The type index lists exactly the players; the row is still checked, so a stale entry yields nothing.
+		await foreach (var (dbref, record) in IndexedObjectsAsync(Tables.ObjType, ObjTypeKey(DatabaseConstants.TypePlayer),
+			null, null, (_, _, record) => record.Type == DatabaseConstants.TypePlayer, ct).WithCancellation(ct))
 		{
-			var record = Codec.Deserialize<ObjectRecord>(value);
-			if (record.Type != DatabaseConstants.TypePlayer)
-			{
-				continue;
-			}
-
-			var dbref = Keys.ReadDbref(key);
 			yield return HydratePlayer(dbref, record);
 		}
 	}
+
+	/// <summary>The <see cref="Tables.ObjType"/> key for one type: the type name and a separator, so no type's
+	/// key is a prefix of another's.</summary>
+	internal static byte[] ObjTypeKey(string type) => Keys.Concat(Keys.Str(type), Keys.Sep);
+
+	internal static void IndexObjectType(ITx tx, string type, long dbref) => tx.Put(Tables.ObjType, ObjTypeKey(type), Keys.Dbref(dbref));
 
 	#endregion
 
@@ -739,6 +998,7 @@ public partial class LightningDatabase
 				{
 					var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
 					tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
+					tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
 				}
 
 				tx.Delete(Tables.Mail, mailIdKey);
@@ -746,6 +1006,8 @@ public partial class LightningDatabase
 			}
 
 			tx.DeletePrefix(Tables.MailSent, key);
+			tx.DeletePrefix(Tables.MailSentTo, key);
+			tx.DeletePrefix(Tables.MailFolder, key);
 			tx.DeletePrefix(Tables.MailCount, key);
 
 			// Channel membership.
@@ -776,6 +1038,7 @@ public partial class LightningDatabase
 				tx.DeletePrefix(reverse, key);
 			}
 
+			tx.Delete(Tables.ObjType, ObjTypeKey(record.Type), key);
 			tx.Delete(Tables.Obj, key);
 
 			_logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", n, record.Name);
@@ -853,6 +1116,25 @@ public partial class LightningDatabase
 		=> tx.TryGet(Tables.Obj, Keys.Dbref(dbref), out var bytes) ? (dbref, Codec.Deserialize<ObjectRecord>(bytes)) : null;
 
 	/// <summary>
+	/// Point read of an object's row decoding only its <see cref="ObjectHeaderRecord"/> (type and creation
+	/// time), for a ref projection that needs no object. Null when no such dbref exists.
+	/// </summary>
+	internal static ObjectHeaderRecord? ReadObjectHeader(ITx tx, long dbref)
+		=> tx.TryGet(Tables.Obj, Keys.Dbref(dbref), out var bytes) ? Codec.Deserialize<ObjectHeaderRecord>(bytes) : null;
+
+	/// <summary>The full object id (number and creation time) of <paramref name="dbref"/>, or null when it is gone.</summary>
+	internal static DBRef? HeaderRef(ITx tx, long dbref)
+		=> ReadObjectHeader(tx, dbref) is { } header ? new DBRef((int)dbref, header.CreationTime) : null;
+
+	/// <summary>
+	/// Whether <paramref name="subject"/> still names the stored object: always for a bare number, and for a
+	/// full object id only while the stored creation time matches it, so a recycled number reads as gone.
+	/// </summary>
+	private static bool IsSubject(ITx tx, DBRef subject)
+		=> subject.CreationMilliseconds is null
+			|| ReadObjectHeader(tx, subject.Number)?.CreationTime == subject.CreationMilliseconds;
+
+	/// <summary>
 	/// Builds the typed Library model for an object already read from <see cref="Tables.Obj"/>. Every
 	/// relation to another object (owner, location, home, parent, zone, flags, powers, children) is a
 	/// lazy loader that opens its own <see cref="LightningStore.Read{T}"/> when a caller actually asks
@@ -887,6 +1169,9 @@ public partial class LightningDatabase
 
 	private SharpObject MapToSharpObject(long dbref, ObjectRecord record)
 	{
+		// Every hydration path (Hydrate, HydratePlayer, HydrateExit, the base-object reads) builds its
+		// SharpObject here, so this is the one place a full hydration is counted.
+		ObjectStats.Hydrated(dbref);
 		var type = record.Type;
 
 		return new SharpObject
@@ -1049,21 +1334,8 @@ public partial class LightningDatabase
 			: Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	});
 
-	private async IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
-	{
-		var children = Store.Read(tx => tx.Dups(Tables.Parent.Reverse, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadDbref(v))
-			.Select(child => ReadObject(tx, child))
-			.Where(found => found is not null)
-			.Select(found => MapToSharpObject(found!.Value.Dbref, found.Value.Record))
-			.ToList());
-
-		foreach (var child in children)
-		{
-			ct.ThrowIfCancellationRequested();
-			yield return child;
-		}
-	}
+	private IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);
 
 	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(()
 		=> new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetFlagsCoreAsync(dbref, type, ct)));
@@ -1100,7 +1372,14 @@ public partial class LightningDatabase
 	/// names were canonical loads with one entry per lock under the spelling the gates read. See
 	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
 	/// </summary>
+	/// <remarks>Most objects carry no lock; they share one empty map (with the canonical comparer) rather than
+	/// each building its own.</remarks>
 	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
+		=> locks.Count == 0 ? NoLocks : FoldLocks(locks);
+
+	private static readonly IImmutableDictionary<string, SharpLockData> NoLocks = FoldLocks([]);
+
+	private static IImmutableDictionary<string, SharpLockData> FoldLocks(Dictionary<string, LockRecord> locks)
 		=> LockNames.FoldToImmutable(locks,
 			record => new SharpLockData(record.LockString,
 				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default,

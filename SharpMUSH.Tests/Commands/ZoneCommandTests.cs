@@ -176,7 +176,7 @@ public class ZoneCommandTests
 	/// A refused zone change must not have written anything first. <c>do_chzone</c>'s self-zone guard
 	/// (<c>src/set.c:421-426</c>) comes before the flag strip and before <c>check_zone_lock</c>, and
 	/// SharpMUSH refuses the self-zone to privileged players too, because
-	/// <c>ManipulateSharpObjectService.SetZone</c> rejects a self-loop as well — exempting a wizard in
+	/// <c>ObjectRelationshipService.SetZone</c> rejects a self-loop as well — exempting a wizard in
 	/// the helper would have stripped the object and installed a zone lock on the way to a refusal it
 	/// could not avoid.
 	/// </summary>
@@ -239,7 +239,7 @@ public class ZoneCommandTests
 	/// <summary>
 	/// PennMUSH src/wiz.c do_chzone: zoning a non-player strips its privileged flags and every
 	/// power, unless /preserve is given. @CHZONE gets this from the same
-	/// ManipulateSharpObjectService.ClearAllPowers that @CHZONEALL uses.
+	/// FlagAndPowerService.ClearAllPowers that @CHZONEALL uses.
 	/// </summary>
 	[Test]
 	public async ValueTask ChzoneStripsPowers()
@@ -449,7 +449,8 @@ public class ZoneCommandTests
 		// lock.c:968-971 reports the install, naming the zone through unparse_object.
 		var ownerNode = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 		var unparsed = await MessageFormatting.UnparseObjectAsync(
-			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(), ownerNode, zoneNode);
+			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(), ownerNode, zoneNode,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>());
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
 			nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat),
 			$"Unlocked zone {unparsed} - automatically zone-locking to itself", owner.DbRef)).IsTrue();

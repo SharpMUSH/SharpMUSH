@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -26,23 +27,14 @@ public static class SearchSpecEngine
 {
 	public readonly record struct SearchPair(string ClassType, string Restriction);
 
-	public static async ValueTask<IReadOnlyList<SharpObject>> ExecuteAsync(
-		IMUSHCodeParser parser,
-		IMediator mediator,
-		ILocateService locateService,
-		IAttributeService attributeService,
-		IBooleanExpressionParser booleanExpressionParser,
-		IPermissionService permissionService,
-		AnySharpObject executor,
-		DBRef? ownerFilter,
-		IReadOnlyList<SearchPair> pairs,
-		bool useRegex)
-		=> (await ExecuteResultAsync(parser, mediator, locateService, attributeService, booleanExpressionParser,
-			permissionService, executor, ownerFilter, pairs, useRegex)).Matches;
-
 	public readonly record struct SearchResult(IReadOnlyList<SharpObject> Matches, bool HadErrors);
 
-	public static async ValueTask<SearchResult> ExecuteResultAsync(
+	/// <summary>
+	/// Runs the search, or names the notification that rejects its spec — a START or COUNT below one,
+	/// as PennMUSH's <c>fill_search_spec</c> rejects them (<c>src/wiz.c:2388-2399</c>). The caller sends
+	/// that notification to the searcher; <c>@search</c> then stops and the functions return <c>#-1</c>.
+	/// </summary>
+	public static async ValueTask<Result<SearchResult>> ExecuteResultAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
 		ILocateService locateService,
@@ -63,7 +55,7 @@ public static class SearchSpecEngine
 		DBRef? parent = null;
 		string? hasFlag = null;
 		string? hasPower = null;
-		int? start = null;
+		var start = 1;
 		int? count = null;
 
 		var appLevelCriteria = new List<(string key, string value)>();
@@ -111,11 +103,14 @@ public static class SearchSpecEngine
 				case "MAXDB":
 					if (int.TryParse(restriction, out var max)) maxDbRef = max;
 					break;
+				// START is 1-based: the first match is result 1 (init_search_spec, src/wiz.c:2270).
 				case "START":
-					if (int.TryParse(restriction, out var startVal)) start = startVal;
+					start = LeadingInteger(restriction);
+					if (start < 1) return new Error<string>(nameof(ErrorMessages.Notifications.SearchInvalidStart));
 					break;
 				case "COUNT":
-					if (int.TryParse(restriction, out var countVal)) count = countVal;
+					count = LeadingInteger(restriction);
+					if (count < 1) return new Error<string>(nameof(ErrorMessages.Notifications.SearchInvalidCount));
 					break;
 				case "ZONE":
 					var maybeZone = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
@@ -148,6 +143,7 @@ public static class SearchSpecEngine
 		// This avoids re-compiling the same lock string or expression for every object in the result set
 		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, ValueTask<bool>>>();
 		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		var hasEvaluatingLock = false;
 
 		foreach (var (key, value) in appLevelCriteria)
 		{
@@ -162,6 +158,7 @@ public static class SearchSpecEngine
 					else
 					{
 						compiledLocks.Add(booleanExpressionParser.Compile(value));
+						hasEvaluatingLock = true;
 					}
 					break;
 
@@ -217,7 +214,7 @@ public static class SearchSpecEngine
 			HasFlag = hasFlag,
 			HasPower = hasPower,
 			Owner = ownerFilter,
-			Skip = needsPerObjectEvaluation ? null : start,  // Only skip at DB level if no app-level filtering
+			Skip = needsPerObjectEvaluation ? null : start - 1,  // Only skip at DB level if no app-level filtering
 			Limit = needsPerObjectEvaluation ? null : count  // Only limit at DB level if no app-level filtering
 		};
 
@@ -232,9 +229,24 @@ public static class SearchSpecEngine
 		// permissions must be judged against the canonical cached object, and the full objid check drops
 		// a row recycled since the scan. A row destroyed or recycled in between no longer resolves and is
 		// skipped, as @find skips it.
-		var finalResults = new List<SharpObject>();
+		//
+		// PennMUSH's raw_search (src/wiz.c:2612-2618) keeps evaluating after the page is full: a match
+		// past START+COUNT is counted and skipped with `continue`, never `break`. While an EVAL, a
+		// lock that is not #TRUE, or the visibility check is present, every candidate is evaluated here
+		// too — each can run softcode (visibility is Can_Examine, which evaluates Control, Zone and
+		// Examine locks; src/wiz.c:2542, hdrs/mushdb.h:80), and its side effects and its HadErrors
+		// belong to the whole search, not to the page. Without one, what remains ($-/^-patterns,
+		// @listen) reads and never writes, so once the page is full nothing a later candidate does can
+		// be observed, and the scan stops there. Either way only the requested window is stored.
+		var window = new ResultWindow(start, count);
+		var pageEndsScan = compiledEvals.Count == 0 && !hasEvaluatingLock && !visOnly;
 		await foreach (var obj in filteredObjects)
 		{
+			if (pageEndsScan && window.IsFull)
+			{
+				break;
+			}
+
 			if (await mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject typedObj)
 			{
 				continue;
@@ -285,9 +297,13 @@ public static class SearchSpecEngine
 				}
 			}
 
+			// LISTEN and COMMAND both test the object's visible attributes; read them at most once, and
+			// only when an earlier restriction has not already ruled the object out.
+			SharpAttributesOrError? visibleAttributes = null;
+
 			if (matches && hasListenCriteria)
 			{
-				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingListen = attributes.Any(attr =>
@@ -308,7 +324,7 @@ public static class SearchSpecEngine
 
 			if (matches && hasCommandCriteria)
 			{
-				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingCommand = attributes.Any(attr =>
@@ -327,19 +343,67 @@ public static class SearchSpecEngine
 
 			if (matches)
 			{
-				finalResults.Add(typedObj.Object());
+				window.Offer(typedObj.Object());
 			}
 		}
 
-		// This ensures pagination happens AFTER all runtime filters are applied
-		if (start.HasValue || count.HasValue)
+		return new SearchResult(window.Results, hadErrors);
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>parse_integer</c> (<c>strtol</c>, <c>src/parse.c:674</c>): leading whitespace,
+	/// an optional sign and the digits that follow; anything else ends the number, and a string with
+	/// no digits is 0. Out-of-range values clamp to the <see cref="int"/> bounds.
+	/// </summary>
+	internal static int LeadingInteger(string text)
+	{
+		var span = text.AsSpan().TrimStart();
+		var negative = false;
+		if (span.Length > 0 && span[0] is '+' or '-')
 		{
-			var skipCount = start ?? 0;
-			var takeCount = count ?? int.MaxValue;
-			finalResults = [.. finalResults.Skip(skipCount).Take(takeCount)];
+			negative = span[0] == '-';
+			span = span[1..];
 		}
 
-		return new SearchResult(finalResults, hadErrors);
+		long value = 0;
+		foreach (var c in span)
+		{
+			if (!char.IsAsciiDigit(c)) break;
+			value = Math.Min(value * 10 + (c - '0'), (long)int.MaxValue + 1);
+		}
+
+		return (int)Math.Clamp(negative ? -value : value, int.MinValue, int.MaxValue);
+	}
+
+	/// <summary>
+	/// START/COUNT applied to the matches as they arrive, after every runtime restriction, as
+	/// PennMUSH's <c>raw_search</c> applies them (<c>src/wiz.c:2612-2618</c>): matches before the
+	/// 1-based <paramref name="start"/>th are counted and dropped, the next <paramref name="count"/> kept
+	/// (all of them when there is no COUNT), the rest dropped. Both are at least one; the spec parse
+	/// rejects anything lower.
+	/// </summary>
+	internal sealed class ResultWindow(int start, int? count)
+	{
+		/// <summary>The most a window reserves up front; a larger page grows as its matches arrive.</summary>
+		private const int InitialCapacityCeiling = 64;
+
+		private readonly int _skip = start - 1;
+		private readonly int _take = count ?? int.MaxValue;
+		private int _seen;
+
+		public List<SharpObject> Results { get; } = new(Math.Min(count ?? int.MaxValue, InitialCapacityCeiling));
+
+		/// <summary>Whether the page holds every match it asked for, so no later match can be kept.</summary>
+		public bool IsFull => Results.Count >= _take;
+
+		public void Offer(SharpObject match)
+		{
+			var position = _seen++;
+			if (position >= _skip && Results.Count < _take)
+			{
+				Results.Add(match);
+			}
+		}
 	}
 
 	/// <summary>

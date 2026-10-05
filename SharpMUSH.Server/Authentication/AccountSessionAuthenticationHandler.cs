@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Hubs;
 
@@ -12,7 +12,7 @@ namespace SharpMUSH.Server.Authentication;
 
 /// <summary>
 /// Authenticates REST and SignalR requests bearing an account-session token, resolving
-/// role/permission claims server-side (so bans/role changes take effect on the next request)
+/// the role claim server-side (permission scopes come from <see cref="FreshPermissionClaimsTransformation"/>) (so bans/role changes take effect on the next request)
 /// and emitting the <see cref="GameHub.CharacterDbrefClaim"/> the hub authorizes on.
 /// </summary>
 /// <remarks>
@@ -44,6 +44,29 @@ public class AccountSessionAuthenticationHandler(
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
 	public const string SchemeName = "AccountSession";
+
+	/// <summary>Present (value <c>true</c>) when the account must change its password before anything else.</summary>
+	public const string MustChangePasswordClaim = "must_change_password";
+
+	/// <summary>
+	/// The account this scheme authenticated <paramref name="user"/> as: the session was validated, the
+	/// account found and active, on this request. False for any other scheme (DebugAuth in Development),
+	/// whose callers fall back to validating the bearer themselves.
+	/// </summary>
+	public static bool TryGetAccount(ClaimsPrincipal user, out string accountId, out bool mustChangePassword)
+	{
+		accountId = string.Empty;
+		mustChangePassword = false;
+		if (user.Identity is not { IsAuthenticated: true, AuthenticationType: SchemeName }
+			|| user.FindFirstValue(ClaimTypes.NameIdentifier) is not { Length: > 0 } id) return false;
+		accountId = id;
+		mustChangePassword = user.HasClaim(MustChangePasswordClaim, "true");
+		return true;
+	}
+
+	/// <summary>The acting character this scheme resolved for <paramref name="user"/>, as its dbref claim.</summary>
+	public static DBRef? ActingCharacter(ClaimsPrincipal user)
+		=> DBRef.TryParse(user.FindFirstValue(GameHub.CharacterDbrefClaim) ?? string.Empty, out var dbref) ? dbref : null;
 
 	/// <summary>
 	/// Set when this request was refused for sitelock rather than for a bad credential, so the
@@ -77,8 +100,9 @@ public class AccountSessionAuthenticationHandler(
 		if (account is null || !account.IsActive)
 			return AuthenticateResult.Fail("Account not found or not active.");
 
+		// Permission-scope claims are not added here: FreshPermissionClaimsTransformation replaces them
+		// from the account's current authority after every successful authenticate.
 		var role = await accountClaims.ComputeAccountRoleAsync(accountId);
-		var scopes = await accountClaims.ComputeGrantedScopesAsync(accountId, role);
 
 		var claims = new List<Claim>
 		{
@@ -86,7 +110,7 @@ public class AccountSessionAuthenticationHandler(
 			new(ClaimTypes.Name, account.Username),
 			new(ClaimTypes.Role, role.ToString()),
 		};
-		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
+		if (account.MustChangePassword) claims.Add(new Claim(MustChangePasswordClaim, "true"));
 
 		var characters = await accountService.GetCharactersAsync(accountId);
 		var acting = ActingCharacterResolver.Resolve(session.Value, characters);

@@ -59,7 +59,7 @@ public class FlagWildcardMatchingTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=!no_com"));
 
-		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
+		// Pattern B: FlagAndPowerService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - NO_COMMAND reset." is globally unique due to the generated name.
 		await Assert.That(ToldBySystem(executor, $"{uniqueName} - NO_COMMAND reset.")).IsEqualTo(1);
 	}
@@ -96,7 +96,7 @@ public class FlagWildcardMatchingTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=!vis"));
 
-		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
+		// Pattern B: FlagAndPowerService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - VISUAL reset." is globally unique due to the generated name.
 		await Assert.That(ToldBySystem(executor, $"{uniqueName} - VISUAL reset.")).IsEqualTo(1);
 	}

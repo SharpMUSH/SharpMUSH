@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelDescribe
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString description)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString description)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -29,7 +29,7 @@ public static class ChannelDescribe
 		};
 	}
 
-	private static async ValueTask<CallState> DescribeAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> DescribeAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, SharpChannel channel, MString description)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))

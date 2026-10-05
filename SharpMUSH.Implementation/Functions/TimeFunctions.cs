@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -7,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -72,7 +74,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var secs = args.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
-		var timezone = args.TryGetValue("1", out var value1) ? value1.Message!.ToPlainText() : TimeZoneInfo.Utc.Id;
+		var timezone = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, TimeZoneInfo.Utc.Id).ToPlainText();
 
 		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
 		{
@@ -493,40 +495,46 @@ public partial class Functions
 		}
 
 		var result = TimeFmtPattern().Replace(format, match =>
-		{
-			var code = match.Groups["code"].Value[0];
-			return code switch
-			{
-				'$' => "$",
-				'a' => dt.ToString("ddd"),
-				'A' => dt.ToString("dddd"),
-				'b' => dt.ToString("MMM"),
-				'B' => dt.ToString("MMMM"),
-				'c' => dt.ToString("f"),
-				'd' => dt.ToString("dd"),
-				'H' => dt.ToString("HH"),
-				'I' => dt.ToString("hh"),
-				'j' => dt.DayOfYear.ToString("D3"),
-				'm' => dt.ToString("MM"),
-				'M' => dt.ToString("mm"),
-				'p' or 'P' => dt.ToString("tt"),
-				'S' => dt.ToString("ss"),
-				'U' => CalculateWeekOfYearFromSunday(dt),
-				'w' => ((int)dt.DayOfWeek).ToString(),
-				'W' => CalculateWeekOfYearFromMonday(dt),
-				'x' => dt.ToString("d"),
-				'X' => dt.ToString("T"),
-				'y' => dt.ToString("yy"),
-				'Y' => dt.ToString("yyyy"),
-				'Z' => dt.ToString("zzz"),
-				_ => ErrorMessages.Returns.InvalidEscapeCode
-			};
-		});
+			TimeFmtCodes.TryGetValue(match.Groups["code"].Value[0], out var render)
+				? render(dt)
+				: ErrorMessages.Returns.InvalidEscapeCode);
 
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	private string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
+	/// <summary>
+	/// <c>timefmt()</c>'s <c>$</c>-escapes, each to what it writes. A code missing here is
+	/// <see cref="ErrorMessages.Returns.InvalidEscapeCode"/>.
+	/// </summary>
+	private static readonly FrozenDictionary<char, Func<DateTimeOffset, string>> TimeFmtCodes =
+		new Dictionary<char, Func<DateTimeOffset, string>>
+		{
+			['$'] = _ => "$",
+			['a'] = dt => dt.ToString("ddd"),
+			['A'] = dt => dt.ToString("dddd"),
+			['b'] = dt => dt.ToString("MMM"),
+			['B'] = dt => dt.ToString("MMMM"),
+			['c'] = dt => dt.ToString("f"),
+			['d'] = dt => dt.ToString("dd"),
+			['H'] = dt => dt.ToString("HH"),
+			['I'] = dt => dt.ToString("hh"),
+			['j'] = dt => dt.DayOfYear.ToString("D3"),
+			['m'] = dt => dt.ToString("MM"),
+			['M'] = dt => dt.ToString("mm"),
+			['p'] = dt => dt.ToString("tt"),
+			['P'] = dt => dt.ToString("tt"),
+			['S'] = dt => dt.ToString("ss"),
+			['U'] = CalculateWeekOfYearFromSunday,
+			['w'] = dt => ((int)dt.DayOfWeek).ToString(),
+			['W'] = CalculateWeekOfYearFromMonday,
+			['x'] = dt => dt.ToString("d"),
+			['X'] = dt => dt.ToString("T"),
+			['y'] = dt => dt.ToString("yy"),
+			['Y'] = dt => dt.ToString("yyyy"),
+			['Z'] = dt => dt.ToString("zzz")
+		}.ToFrozenDictionary();
+
+	private static string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;
@@ -535,7 +543,7 @@ public partial class Functions
 		return weekNumber.ToString("D2");
 	}
 
-	private string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
+	private static string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;
@@ -556,9 +564,7 @@ public partial class Functions
 		}
 
 		var secsStr = args["0"].Message!.ToPlainText();
-		var padFlag = args.TryGetValue("1", out var padArg)
-			? padArg.Message!.ToPlainText()
-			: "0";
+		var padFlag = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "0").ToPlainText();
 
 		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
@@ -572,9 +578,13 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
-		if (!int.TryParse(padFlag, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var pad))
+		// fun_timestring refuses a pad that is_uinteger does not accept with e_uints
+		// (src/funtime.c:494-497) rather than quietly not padding. An empty pad ahead of a precision,
+		// which PennMUSH's two-argument form cannot have, is an omitted one, as etime()'s width is.
+		var pad = 0;
+		if (!(padFlag.Length == 0 && args.ContainsKey("2")) && !ArgHelpers.TryUnsignedInteger(parser, padFlag, out pad))
 		{
-			pad = 0;
+			return new ValueTask<CallState>(ErrorMessages.Returns.UIntegers);
 		}
 
 		// Divided out rather than handed to TimeSpan, which overflows past ~9.2e11 seconds and made
@@ -761,13 +771,20 @@ public partial class Functions
 		// An empty width argument is an omitted one. It is reachable whenever a caller skips the
 		// slot to reach precision — etime(<secs>,,ms) — and treating it as a malformed width would
 		// make the third argument unreachable without inventing a width.
-		var maxWidth = string.IsNullOrWhiteSpace(width)
-			? int.MaxValue
-			: int.TryParse(width, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var w) ? w : -1;
-
-		if (maxWidth < 0)
+		// A width is read as fun_etime reads it, with is_integer, and a negative one is out of range
+		// (src/funtime.c:375-383).
+		var maxWidth = int.MaxValue;
+		if (!string.IsNullOrWhiteSpace(width))
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.WidthMustBeANumber);
+			if (!ArgHelpers.TryInteger(parser, width, out maxWidth))
+			{
+				return new ValueTask<CallState>(ErrorMessages.Returns.WidthMustBeANumber);
+			}
+
+			if (maxWidth < 0)
+			{
+				return new ValueTask<CallState>(ErrorMessages.Returns.OutOfRange);
+			}
 		}
 
 		var years = totalSecs / (365L * 86400L);

@@ -319,6 +319,11 @@ public static partial class ReadPennMushConfig
 			)
 		};
 
+		// A value that parses but sits outside its option's declared range is held to the bound, as
+		// PennMUSH's cf_int clamps and logs it, and reported with the lines that were not carried over
+		// as written (#1335).
+		work = ConfigBounds.ClampAll(work, correction => skipped.Add(correction.ToString()));
+
 		// Only who may call a function is applied (ConfiguredFunctionRestrictions.PermissionWords, which
 		// this project cannot reference); a word that changes how it runs is kept but does nothing.
 		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)

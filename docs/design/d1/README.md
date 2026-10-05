@@ -358,6 +358,13 @@ A compact banner, then Story. Here and Exits move into a bottom **Room** sheet w
 keycaps. The bottom tabs are **Scene · Room · #Channels · Pages**, with unread badges on the last two. The
 global bottom nav stays suppressed on `/play` as today, and these tabs are Play's own.
 
+A phone held sideways (`sharpmushLayout.shortScreenQuery`: landscape and at most 32rem tall) is wider than
+the narrow tier, so it keeps the tablet layout and the aside, but Play marks it `play--short` and gives
+height back (#1506): the page's edges follow the safe-area insets, the card header is one line with the room
+or scene beside the name, focus mode goes edge to edge as on an upright phone, and a composer at least 40rem
+wide puts the chips, the field and Send on one line. The terminal's fitted font grows past its base size only
+while the output keeps 16 rows (`terminalMetrics.js`), so a short card keeps more lines instead of bigger ones.
+
 ---
 
 ## 6. Other pages

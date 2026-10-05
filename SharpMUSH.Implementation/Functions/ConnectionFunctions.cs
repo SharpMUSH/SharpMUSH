@@ -170,6 +170,12 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.InvalidSpecType);
 			}
 
+			// fun_connlog takes a before/after time only as a strict integer (src/connlog.c:635, :656).
+			if (specType is "after" or "before" && !ArgHelpers.TryStrictInteger(specValue, out int _))
+			{
+				return new CallState(ErrorMessages.Returns.Integer);
+			}
+
 			specs.Add((specType, specValue));
 		}
 
@@ -206,7 +212,7 @@ public partial class Functions
 				{
 					switch (type)
 					{
-						case "after" when long.TryParse(value, out var afterTime):
+						case "after" when ArgHelpers.TryStrictInteger(value, out int afterTime):
 							{
 								if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
 								{
@@ -215,7 +221,7 @@ public partial class Functions
 
 								break;
 							}
-						case "before" when long.TryParse(value, out var beforeTime):
+						case "before" when ArgHelpers.TryStrictInteger(value, out int beforeTime):
 							{
 								if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
 								{
@@ -269,9 +275,7 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var connectionId = args["0"].Message!.ToPlainText();
-		var osep = (args.TryGetValue("1", out var osepArg) && osepArg?.Message != null)
-			? osepArg.Message.ToPlainText()
-			: " ";
+		var osep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidConnectionId);
@@ -354,7 +358,9 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (long.TryParse(arg0, out _))
+		// lookup_desc takes a descriptor only from a strict integer (src/bsd.c:6634); anything else,
+		// a number past an int included, is a player name.
+		if (ArgHelpers.TryStrictInteger(arg0, out int _))
 		{
 			// "No descriptor" and "not yours to see" are one answer: whether the descriptor exists is
 			// itself the thing a caller without See_All must not learn.
@@ -797,18 +803,28 @@ public partial class Functions
 		=> await DescriptorDimensionAsync(parser, "WIDTH",
 			ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78"));
 
+	/// <summary>
+	/// <c>fun_xwho</c>'s window (<c>src/bsd.c:6455-6466</c>): both numbers strict integers, or
+	/// <c>#-1 ARGUMENT MUST BE INTEGER</c>; a start or a count below 1 is then out of range.
+	/// </summary>
+	private static bool TryWhoWindow(string startText, string countText, out int start, out int count)
+	{
+		count = 0;
+		return ArgHelpers.TryStrictInteger(startText, out start) && ArgHelpers.TryStrictInteger(countText, out count);
+	}
+
 	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
 	public async ValueTask<CallState> NumberRangeMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
+		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
-			return new CallState(ErrorMessages.Returns.Integers);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		if (start < 1 || count < 0)
+		if (start < 1 || count < 1)
 		{
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
@@ -826,12 +842,12 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
+		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
-			return new CallState(ErrorMessages.Returns.Integers);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		if (start < 1 || count < 0)
+		if (start < 1 || count < 1)
 		{
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
@@ -863,22 +879,20 @@ public partial class Functions
 
 			(looker, powered) = (resolved, resolvedPowered);
 
-			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
-					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
+			if (!TryWhoWindow(args["1"].Message!.ToPlainText(), args["2"].Message!.ToPlainText(), out start, out count))
 			{
-				return new CallState(ErrorMessages.Returns.Integers);
+				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 		else
 		{
-			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
-					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
+			if (!TryWhoWindow(args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), out start, out count))
 			{
-				return new CallState(ErrorMessages.Returns.Integers);
+				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 
-		if (start < 1 || count < 0)
+		if (start < 1 || count < 1)
 		{
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
@@ -910,22 +924,20 @@ public partial class Functions
 
 			(looker, powered) = (resolved, resolvedPowered);
 
-			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
-					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
+			if (!TryWhoWindow(args["1"].Message!.ToPlainText(), args["2"].Message!.ToPlainText(), out start, out count))
 			{
-				return new CallState(ErrorMessages.Returns.Integers);
+				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 		else
 		{
-			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
-					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
+			if (!TryWhoWindow(args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), out start, out count))
 			{
-				return new CallState(ErrorMessages.Returns.Integers);
+				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 
-		if (start < 1 || count < 0)
+		if (start < 1 || count < 1)
 		{
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
@@ -1086,7 +1098,8 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (long.TryParse(arg0, out var port))
+		// fun_hidden asks for a descriptor only with a strict integer (src/bsd.c:6600).
+		if (ArgHelpers.TryStrictInteger(arg0, out int port))
 		{
 			var data = ConnectionService.Get(port);
 			if (data is null || data.Ref is null)

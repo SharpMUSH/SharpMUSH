@@ -128,6 +128,30 @@ public class OptionsValidationTests
 		await Assert.That(service.Create(Options.DefaultName)).IsEqualTo(stored);
 	}
 
+	/// <summary>
+	/// A document stored before the ranges were enforced is held to them on load and stored again, so a
+	/// queue limit of 0 does not refuse every queue entry after an upgrade (#1335).
+	/// </summary>
+	[Test]
+	public async Task AStoredValueOutOfRangeIsClampedAndStoredAgain()
+	{
+		var stored = SomeStoredConfiguration();
+		stored = stored with { Limit = stored.Limit with { GlobalQueueLimit = 0, PlayerQueueLimit = 0 } };
+		var store = StoreWith(stored);
+		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Success)]);
+
+		var options = service.Create(Options.DefaultName);
+
+		await Assert.That(options.Limit.GlobalQueueLimit).IsEqualTo(1u);
+		await Assert.That(options.Limit.PlayerQueueLimit).IsEqualTo(1u);
+		await store.Received(1).SetExpandedServerData(nameof(SharpMUSHOptions),
+			Arg.Is<object>(saved => IsClampedToOne(saved)),
+			Arg.Any<CancellationToken>());
+	}
+
+	private static bool IsClampedToOne(object saved)
+		=> saved is SharpMUSHOptions options && options.Limit is { GlobalQueueLimit: 1, PlayerQueueLimit: 1 };
+
 	[Test]
 	public async Task AValidConfigurationIsReturned()
 	{

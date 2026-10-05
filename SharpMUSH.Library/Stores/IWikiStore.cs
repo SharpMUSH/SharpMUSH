@@ -40,6 +40,12 @@ public interface IWikiStore
 	/// <summary>A page whose stored published flag is absent counts as published.</summary>
 	Task<int> CountPagesAsync(string? ns, bool includeDrafts);
 
+	/// <summary>
+	/// Every page counted by state, across namespaces. With <paramref name="includeDrafts"/> false, drafts
+	/// count as zero and are left out of the protected count too.
+	/// </summary>
+	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
+
 	/// <summary>Pages in <paramref name="category"/>, case-insensitively, ordered by title.</summary>
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);
@@ -71,6 +77,13 @@ public interface IWikiStore
 
 	/// <summary>One locale's revisions, by revision number descending.</summary>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take);
+
+	/// <summary>
+	/// One locale's revisions numbered below <paramref name="beforeRevisionNumber"/>, by revision number
+	/// descending, at most <paramref name="take"/>: the cursor form of <see cref="GetRevisionsAsync"/>, whose
+	/// cost does not grow with how far into the history the page is.
+	/// </summary>
+	Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeAsync(string pageId, string locale, int beforeRevisionNumber, int take);
 
 	Task<Found<WikiRevision>> GetRevisionAsync(string pageId, string locale, int revisionNumber);
 

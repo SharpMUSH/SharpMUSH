@@ -154,16 +154,22 @@ public static class ChannelHelper
 	private static readonly ReadOnlyDictionary<char, string?> ChannelPrivilegesReverse =
 		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
 
-	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
-		=> await channel.Members
-			.Value
-			.AnyAsync(x =>
-				x.Member.Id() == member.Id()
-				);
+	/// <summary>Whether <paramref name="member"/> is on <paramref name="channel"/>: one point read of its membership
+	/// row (see <see cref="GetChannelMemberStatusQuery"/>).</summary>
+	public static async ValueTask<bool> IsMemberOfChannel(IMediator mediator, AnySharpObject member, SharpChannel channel)
+		=> await ChannelMemberStatus(mediator, member, channel) is not null;
 
-	public static async ValueTask<SharpChannel.MemberAndStatus?> ChannelMemberStatus(
-		AnySharpObject member, SharpChannel channel) =>
-		await channel.Members.Value.FirstOrDefaultAsync(x => x.Member.Id() == member.Id());
+	/// <summary>
+	/// <paramref name="member"/>'s membership of <paramref name="channel"/>, or null when it is not on it. Matched
+	/// by dbref number alone, as the member listing compared ids; a membership whose object is gone is not one.
+	/// </summary>
+	public static async ValueTask<SharpChannel.MemberAndStatus?> ChannelMemberStatus(IMediator mediator,
+		AnySharpObject member, SharpChannel channel)
+		=> await mediator.Send(new GetChannelMemberStatusQuery(channel, new DBRef(member.Object().DBRef.Number))) switch
+		{
+			SharpChannelStatus status => new SharpChannel.MemberAndStatus(member, status),
+			NotFound => null
+		};
 
 	/// <summary>
 	/// PennMUSH <c>string_to_privs(table, str, origprivs)</c> (<c>src/privtab.c:36</c>): applies a
@@ -272,10 +278,10 @@ public static class ChannelHelper
 	/// <c>Chan_Can_See</c> requires a member to also pass <c>Chan_Can_Speak</c>, so without it a gagged or
 	/// speak-locked member would be told their own channel does not exist.</para>
 	/// </summary>
-	public static async ValueTask<bool> CanSeeChannel(IPermissionService permissionService, AnySharpObject viewer,
-		SharpChannel channel)
+	public static async ValueTask<bool> CanSeeChannel(IChannelPermissionService permissionService, IMediator mediator,
+		AnySharpObject viewer, SharpChannel channel)
 		=> await permissionService.ChannelCanSeeAsync(viewer, channel)
-			 || await IsMemberOfChannel(viewer, channel);
+			 || await IsMemberOfChannel(mediator, viewer, channel);
 
 	/// <summary>
 	/// Which channels a name is allowed to resolve against. PennMUSH keeps three near-identical copies of
@@ -329,12 +335,12 @@ public static class ChannelHelper
 			: name;
 
 	/// <summary>Whether a channel is a candidate for this scope at all.</summary>
-	private static async ValueTask<bool> InScope(IPermissionService permissionService, AnySharpObject viewer,
-		SharpChannel channel, ChannelMatchScope scope)
+	private static async ValueTask<bool> InScope(IChannelPermissionService permissionService, IMediator mediator,
+		AnySharpObject viewer, SharpChannel channel, ChannelMatchScope scope)
 		=> scope switch
 		{
-			ChannelMatchScope.Member => await IsMemberOfChannel(viewer, channel),
-			ChannelMatchScope.NonMember => !await IsMemberOfChannel(viewer, channel)
+			ChannelMatchScope.Member => await IsMemberOfChannel(mediator, viewer, channel),
+			ChannelMatchScope.NonMember => !await IsMemberOfChannel(mediator, viewer, channel)
 																		 && await permissionService.ChannelCanSeeAsync(viewer, channel),
 			_ => true
 		};
@@ -344,9 +350,9 @@ public static class ChannelHelper
 	/// <see cref="ChannelMatchScope.Any"/> still has a test left to make; the other two scopes already
 	/// established visibility (or membership, which implies it) in <see cref="InScope"/>.
 	/// </summary>
-	private static async ValueTask<bool> VisibleInScope(IPermissionService permissionService, AnySharpObject viewer,
-		SharpChannel channel, ChannelMatchScope scope)
-		=> scope != ChannelMatchScope.Any || await CanSeeChannel(permissionService, viewer, channel);
+	private static async ValueTask<bool> VisibleInScope(IChannelPermissionService permissionService, IMediator mediator,
+		AnySharpObject viewer, SharpChannel channel, ChannelMatchScope scope)
+		=> scope != ChannelMatchScope.Any || await CanSeeChannel(permissionService, mediator, viewer, channel);
 
 	/// <summary>
 	/// PennMUSH's channel matcher (<c>src/extchat.c:943-1160</c>): an exact, case-insensitive name match
@@ -364,7 +370,7 @@ public static class ChannelHelper
 	/// membership.</para>
 	/// </summary>
 	public static async ValueTask<ChannelMatch> MatchChannel(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		AnySharpObject viewer,
 		MString channelName,
@@ -379,9 +385,9 @@ public static class ChannelHelper
 
 		if (await mediator.Send(new GetChannelQuery(name)) is { } stored
 				&& stored.Name.ToPlainText().Equals(name, StringComparison.OrdinalIgnoreCase)
-				&& await InScope(permissionService, viewer, stored, scope))
+				&& await InScope(permissionService, mediator, viewer, stored, scope))
 		{
-			return await VisibleInScope(permissionService, viewer, stored, scope)
+			return await VisibleInScope(permissionService, mediator, viewer, stored, scope)
 				? new ChannelMatch(ChannelMatchKind.Exact, stored, [])
 				: ChannelMatch.NoMatch;
 		}
@@ -395,19 +401,19 @@ public static class ChannelHelper
 			// Name first: InScope reads the membership store, and there is no reason to pay for that on a
 			// channel whose name cannot match either way.
 			if (!candidateName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-					|| !await InScope(permissionService, viewer, channel, scope))
+					|| !await InScope(permissionService, mediator, viewer, channel, scope))
 			{
 				continue;
 			}
 
 			if (candidateName.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
-				return await VisibleInScope(permissionService, viewer, channel, scope)
+				return await VisibleInScope(permissionService, mediator, viewer, channel, scope)
 					? new ChannelMatch(ChannelMatchKind.Exact, channel, [])
 					: ChannelMatch.NoMatch;
 			}
 
-			if (await VisibleInScope(permissionService, viewer, channel, scope))
+			if (await VisibleInScope(permissionService, mediator, viewer, channel, scope))
 			{
 				candidates.Add(channel);
 			}
@@ -467,7 +473,7 @@ public static class ChannelHelper
 	/// edit that wants to explain a not-found here has to keep the two cases sharing an answer.</para>
 	/// </summary>
 	public static async ValueTask<ChannelOrError> GetVisibleChannelOrError(
-		IPermissionService permissionService,
+		IChannelPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject viewer,
@@ -507,14 +513,14 @@ public static class ChannelHelper
 	/// <see cref="GetVisibleChannelOrError"/>; enumerating them has to apply the same rule or
 	/// <c>@channel/hide</c> with no argument becomes a way to list what that gate hides.
 	/// </summary>
-	public static async ValueTask<SharpChannel[]> VisibleChannels(IPermissionService permissionService,
-		AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
+	public static async ValueTask<SharpChannel[]> VisibleChannels(IChannelPermissionService permissionService,
+		IMediator mediator, AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
 	{
 		var visible = new List<SharpChannel>();
 
 		await foreach (var channel in channels)
 		{
-			if (await CanSeeChannel(permissionService, viewer, channel))
+			if (await CanSeeChannel(permissionService, mediator, viewer, channel))
 			{
 				visible.Add(channel);
 			}
@@ -527,7 +533,7 @@ public static class ChannelHelper
 	/// PennMUSH <c>Chan_Ok_Type</c> (hdrs/extchat.h:196) with the refusal <c>src/extchat.c:1533</c>
 	/// prints. Returns <see langword="null"/> when the object is of a type the channel accepts.
 	/// </summary>
-	public static string? WrongTypeRefusal(IPermissionService permissionService, AnySharpObject who,
+	public static string? WrongTypeRefusal(IChannelPermissionService permissionService, AnySharpObject who,
 		SharpChannel channel)
 		=> permissionService.ChannelOkType(who, channel)
 			? null
@@ -548,7 +554,7 @@ public static class ChannelHelper
 	/// (<c>src/extchat.c:1261-1268</c>): a wizard actor who fails the check is warned rather than
 	/// refused. The override is the ACTOR's privilege, not the victim's.
 	/// </summary>
-	public static async ValueTask<JoinCheck> JoinRefusal(IPermissionService permissionService,
+	public static async ValueTask<JoinCheck> JoinRefusal(IChannelPermissionService permissionService,
 		AnySharpObject actor, AnySharpObject victim, SharpChannel channel)
 	{
 		if (WrongTypeRefusal(permissionService, victim, channel) is not null)
@@ -575,7 +581,7 @@ public static class ChannelHelper
 	/// <c>LOUD</c> bypasses. A speaker who cannot even see the channel is told it does not exist rather
 	/// than that they may not speak on it.
 	/// </summary>
-	public static async ValueTask<string?> SpeechRefusal(IPermissionService permissionService, AnySharpObject who,
+	public static async ValueTask<string?> SpeechRefusal(IChannelPermissionService permissionService, AnySharpObject who,
 		SharpChannel channel)
 	{
 		if (WrongTypeRefusal(permissionService, who, channel) is { } wrongType)
@@ -609,7 +615,7 @@ public static class ChannelHelper
 	/// Otherwise the type gate and <c>Chan_Can_Cemit</c> apply. Note <c>LOUD</c> does NOT bypass this —
 	/// Penn only consults it in <c>do_chat</c>.
 	/// </summary>
-	public static async ValueTask<CemitCheck> CemitRefusal(IPermissionService permissionService,
+	public static async ValueTask<CemitCheck> CemitRefusal(IChannelPermissionService permissionService,
 		AnySharpObject who, SharpChannel channel)
 	{
 		if (await who.IsSee_All() && await who.HasPower("Pemit_All"))

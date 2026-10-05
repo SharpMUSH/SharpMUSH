@@ -3190,6 +3190,14 @@
     <value>Scenen blev ikke fundet.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>Scenen blev ikke startet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>Scenen blev startet, men den kunne ikke gøres privat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>Søg efter en konto for at administrere dens roller.</value>
     <comment>MT</comment>
@@ -3236,14 +3244,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Lad alle se med</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Terminalen i denne fane spiller {0}, ikke {1}. Start scenen fra en fane, der spiller {1}, eller skift tilbage til {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Kunne ikke bekræfte, hvilken karakter terminalen i denne fane spiller. Prøv igen om et øjeblik.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -5052,6 +5052,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scene</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Du ser denne scene. Deltag for at posere her.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Dine poses går til en anden scene. Deltag i denne for at posere her.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Deltag i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Forlad scenen</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>

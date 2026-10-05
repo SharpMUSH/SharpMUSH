@@ -20,6 +20,10 @@ namespace SharpMUSH.Library.Services;
 /// state for the pure plan engine, executes reviewed changesets, and records
 /// baselines plus revision snapshots. All created objects are owned by the
 /// Package Manager wizard (config <c>package_manager</c>, default the seeded #7).
+///
+/// <para>Apply, uninstall and rollback each hold <see cref="IPackageOperationGate"/> from their first
+/// registry read to their last write, so no two package operations interleave (#1484). An apply's
+/// lifecycle hooks run after it lets the gate go.</para>
 /// </summary>
 public partial class PackageInstallService(
 	IObjectStore database,
@@ -32,7 +36,9 @@ public partial class PackageInstallService(
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IPackageLifecycleRunner lifecycle,
 	IManagedPackageInstaller managedInstaller,
-	IMediator mediator) : IPackageInstallService
+	IMediator mediator,
+	IPackageOperationGate gate,
+	ILockService locks) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -40,7 +46,7 @@ public partial class PackageInstallService(
 
 	/// <summary>Opens the undo log one package operation writes through; see <see cref="PackageWriteTransaction"/>.</summary>
 	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>
-		new(mediator, database, attributeStore, flags, registry, applications, packageManager);
+		new(mediator, database, attributeStore, flags, registry, applications, locks, packageManager);
 
 	private async Task MarkGoingAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)

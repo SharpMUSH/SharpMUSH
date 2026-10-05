@@ -114,9 +114,9 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 
 		var notified = 0;
 		service.AuthStateChanged += () => notified++;
-		var (success, _, _) = await service.CreateCharacterAsync("Ash", "pass");
+		var created = await service.CreateCharacterAsync("Ash", "pass");
 
-		await Assert.That(success).IsTrue();
+		await Assert.That(created.Expect<AccountAuthService.CharacterSummary>().Name).IsEqualTo("Ash");
 		await Assert.That(service.Role).IsEqualTo("Player");
 		await Assert.That(service.Permissions).Contains("softcode.use");
 		await Assert.That(notified).IsGreaterThanOrEqualTo(1).Because("gated controls re-check when the auth state changes");

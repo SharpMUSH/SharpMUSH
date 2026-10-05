@@ -512,13 +512,13 @@ public class ChannelMatchRecallTests
 			string.Format(ErrorMessages.Notifications.ChatYourTitleOnIs, name, "the Bold"));
 
 		// The title survived being asked about.
-		var status = await ChannelHelper.ChannelMemberStatus(
+		var status = await ChannelHelper.ChannelMemberStatus(Mediator,
 			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(status!.Status.Title?.ToPlainText()).IsEqualTo("the Bold");
 
 		await Run(mortal, $"@channel/title {name}=");
-		var cleared = await ChannelHelper.ChannelMemberStatus(
+		var cleared = await ChannelHelper.ChannelMemberStatus(Mediator,
 			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(cleared!.Status.Title?.ToPlainText() ?? string.Empty).IsEmpty();

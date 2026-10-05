@@ -7,6 +7,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Immutable;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Buffers;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -82,18 +83,18 @@ public partial class Commands
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await RetractMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService,
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
-			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
-											 (arg1?.Length ?? 0) != 0
+			// cmds.c:1041 — FWD and FORWARD are the same switch, and take a message list (extmail.c:1235).
+			[.., "FWD"] or [.., "FORWARD"] when executor.IsPlayer
 				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService, MailDeliveryServices,
-					number, arg1!.ToPlainText()),
+					arg0, arg1?.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,
 					switches),
-			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
-															int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, Math.Max(0, number - 1),
-					switches),
+			[.., "READ"] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
+				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0, switches),
+			[] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && ReadsMessages(arg0)
+				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0!, switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0, arg1, switches),
 			_ => await NotifyAndReturnBadMailArguments(executor)
@@ -102,9 +103,16 @@ public partial class Commands
 		return new CallState(response);
 	}
 
+	/// <summary>
+	/// <c>do_mail</c> (<c>extmail.c:2028</c>): a bare <c>@mail &lt;list&gt;</c> reads when the list starts with a digit
+	/// and names no range, so <c>@mail 3</c> and <c>@mail 1:3</c> read while <c>@mail 1:</c> and <c>@mail 1-3</c> list.
+	/// </summary>
+	private static bool ReadsMessages(MString? arg0)
+		=> arg0?.ToPlainText() is [>= '0' and <= '9', ..] list && !list.Contains('-') && !list.EndsWith(':');
+
 	private MailDelivery.Services MailDeliveryServices
 		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
-			Configuration);
+			Configuration, ConnectionService);
 
 	private async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
 	{
@@ -129,5 +137,5 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private MailAliases.Services MailAliasServices => new(Mediator, NotifyService, PermissionService);
+	private MailAliases.Services MailAliasServices => new(Mediator, NotifyService, PermissionService, ConnectionService);
 }

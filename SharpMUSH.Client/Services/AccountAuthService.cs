@@ -1,153 +1,86 @@
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.JSInterop;
 using SharpMUSH.Library.DiscriminatedUnions;
+using static SharpMUSH.Client.Services.AccountApiClient;
 
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Client-side service for Account-based authentication and management.
-/// Stores the account session token and display name in sessionStorage
-/// (tab-scoped — cleared when the browser tab is closed).
-/// Passwords are never stored.
+/// The tab's account session: signing in and out, the session's authority, and the character the tab
+/// acts as. Passwords are never stored.
 /// </summary>
+/// <remarks>
+/// <para>It composes three narrower parts rather than doing their work itself:
+/// <see cref="AccountApiClient"/> (the wire — every call answers with an <see cref="ApiResult{T}"/>),
+/// <see cref="AccountSessionStorage"/> (the tab-scoped <c>sessionStorage</c> keys) and
+/// <see cref="ActiveCharacterState"/> (the roster and the acting character). What is left here is the
+/// ordering between them — persist before adopting, end the session's other holders before forgetting
+/// it — which is what the rest of the portal depends on. The game-side teardown at sign-out belongs to
+/// whoever registers an <see cref="IAccountSessionEndingHandler"/>.</para>
+///
+/// <para>The constructor is unchanged from before the split, and the parts are built here rather
+/// than injected: they have no other consumer, and the tests construct this type directly.</para>
+/// </remarks>
 public class AccountAuthService(
 	IHttpClientFactory httpClientFactory,
 	IJSRuntime js,
 	ILogger<AccountAuthService> logger,
 	IEnumerable<IAccountSessionEndingHandler> sessionEndingHandlers) : IAccountAuthState
 {
-	private const string SessionTokenKey = "sharpmush.account.sessionToken";
-	private const string UsernameKey = "sharpmush.account.username";
-	private const string MustChangePasswordKey = "sharpmush.account.mustChangePassword";
-	private const string RoleKey = "sharpmush.account.role";
-	private const string PermissionsKey = "sharpmush.account.permissions";
-	private const string LoggedOutKey = "sharpmush.account.loggedOut";
-
 	private const string SessionNotSavedMessage =
 		"This browser tab could not save your session. Allow this site to store data, then sign in again.";
+
+	private const string NotLoggedInMessage = "Not logged in.";
+
+	private readonly AccountApiClient _api = new(httpClientFactory);
+	private readonly AccountSessionStorage _storage = new(js);
+	private readonly ActiveCharacterState _roster = new(logger);
 
 	/// <summary><paramref name="IsActing"/> is the server's answer to "who is this tab?" — the acting
 	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false);
 
-	private record AccountLoginRequest(string UsernameOrEmail, string Password);
-	private record AccountRegisterRequest(string Username, string? Email, string Password);
-	private record AccountLoginResponse(
-		string AccountId,
-		string Username,
-		IReadOnlyList<CharacterSummary> Characters,
-		string AccountSessionToken,
-		bool MustChangePassword,
-		string? Role,
-		IReadOnlyList<string>? Permissions);
-	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
-	private record MushTokenResponse(string Token, int ExpiresIn);
-	private record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
-	private record SwitchCharacterResponse(string Ott, int ExpiresIn, string AccountSessionToken);
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
-	private record CreateCharacterRequest(string Name, string Password);
-	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime, string? Flags = null);
-	private record ChangePasswordRequest(string OldPassword, string NewPassword);
-	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
-	private record ChangeUsernameRequest(string NewUsername);
-	private record SetupStatusResponse(bool NeedsSetup);
-	private record SessionStateResponse(string Username, bool MustChangePassword, string? Role, IReadOnlyList<string>? Permissions);
-	private record SetupCompleteRequest(string Username, string Password);
+
+	/// <summary>A first-run claim that went through.</summary>
+	/// <param name="SignedIn">
+	/// Whether this tab is now signed in as the new administrator. The claim stands either way; a
+	/// server that could not mint the session, or a tab that could not keep it, only loses the
+	/// automatic sign-in.
+	/// </param>
+	public sealed record SetupClaimed(bool SignedIn);
+
+	/// <summary>An unlink that went through.</summary>
+	/// <param name="Advisory">
+	/// Set when the unlink landed but something after it did not — the session could not be rebound to
+	/// another character — and the player has to know to pick one. Not a failure: the character is gone.
+	/// </param>
+	public sealed record CharacterUnlinked(string? Advisory);
 
 	public string? AccountSessionToken { get; private set; }
 	public string? Username { get; private set; }
-	public IReadOnlyList<CharacterSummary> Characters { get; private set; } = [];
+	public IReadOnlyList<CharacterSummary> Characters => _roster.Characters;
 	public bool MustChangePassword { get; private set; }
 	public bool IsLoggedIn => AccountSessionToken is not null;
 	public string? Role { get; private set; }
 	public IReadOnlyList<string> Permissions { get; private set; } = [];
 
 	/// <summary>
-	/// The character this tab is currently acting as. Defaults to the first character on the
-	/// roster when a session hydrates, and is reassigned by <see cref="SwitchCharacterAsync"/>.
-	/// Null when the account holds no characters.
+	/// The character this tab is currently acting as: the one the server's roster marks, reassigned by
+	/// <see cref="SwitchCharacterAsync"/>. Null when the account holds no characters or the session is
+	/// bound to none. See <see cref="ActiveCharacterState"/>.
 	/// </summary>
-	/// <remarks>
-	/// Blazor WASM gives each browser tab its own DI container, so this singleton field is
-	/// already tab-scoped — two tabs may hold different active characters on one account.
-	/// </remarks>
-	public CharacterSummary? ActiveCharacter { get; private set; }
+	public CharacterSummary? ActiveCharacter => _roster.ActiveCharacter;
 
 	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
-	public event Action? ActiveCharacterChanged;
-
-	/// <summary>
-	/// Sets the active character and raises <see cref="ActiveCharacterChanged"/> if it actually
-	/// changed. Idempotent: re-setting the same character raises nothing, so callers may set
-	/// defensively without causing render storms.
-	/// </summary>
-	public void SetActiveCharacter(CharacterSummary? character)
+	public event Action? ActiveCharacterChanged
 	{
-		if (ActiveCharacter?.DbrefNumber == character?.DbrefNumber
-				&& ActiveCharacter?.CreationTime == character?.CreationTime)
-			return;
-
-		ActiveCharacter = character;
-		RaiseActiveCharacterChanged();
+		add => _roster.Changed += value;
+		remove => _roster.Changed -= value;
 	}
 
-	/// <summary>
-	/// Raises <see cref="ActiveCharacterChanged"/> defensively — mirrors
-	/// <see cref="RaiseAuthStateChanged"/>: a subscriber's render exception must never propagate
-	/// back into the caller mid-switch.
-	/// </summary>
-	private void RaiseActiveCharacterChanged()
-	{
-		try
-		{
-			ActiveCharacterChanged?.Invoke();
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "An ActiveCharacterChanged subscriber threw; swallowed");
-		}
-	}
-
-	/// <summary>
-	/// Assigns the roster and defaults <see cref="ActiveCharacter"/> to its first entry whenever
-	/// nothing is active, OR whatever was active is no longer IN this roster. First-character-is-
-	/// the-default is correct at hydrate; the original bug this replaced was re-deriving the default
-	/// on every render, which froze it forever after a switch — fixed by only defaulting when null.
-	/// That "only-when-null" guard was itself incomplete: every public method that mutates the
-	/// roster (including <see cref="UnlinkCharacterAsync"/>) routes through here, and unlinking the
-	/// ACTIVE character produced a new roster that still satisfied "ActiveCharacter is not null"
-	/// while no longer containing it — ActiveCharacter kept naming a character the account no
-	/// longer owns. Re-validating membership on every assignment closes that gap: a still-present
-	/// active character is left alone (regardless of its new position in the roster); an absent one
-	/// is reseated exactly like the null case.
-	/// </summary>
-	private void SetCharacters(IReadOnlyList<CharacterSummary> characters)
-	{
-		Characters = characters;
-
-		// The server marks which entry this tab's token is bound to, and that answer is the whole
-		// answer: an unbound token (or one naming a character the account no longer owns) comes back
-		// with no marker, and the server acts as nobody for it. Picking a character here anyway would
-		// show an identity the server will not honour — the exact drift this design removes.
-		var marked = characters.FirstOrDefault(c => c.IsActing);
-		if (marked is null)
-		{
-			SetActiveCharacter(null);
-			return;
-		}
-
-		// SetActiveCharacter no-ops when the identity matches, which would leave a drifted name or
-		// flag set on screen after a rename, so assign directly when only the details moved.
-		if (marked != ActiveCharacter)
-		{
-			ActiveCharacter = marked;
-			RaiseActiveCharacterChanged();
-		}
-	}
+	/// <inheritdoc cref="ActiveCharacterState.SetActive"/>
+	public void SetActiveCharacter(CharacterSummary? character) => _roster.SetActive(character);
 
 	/// <summary>
 	/// True once the user has explicitly logged out in this tab (sessionStorage-latched).
@@ -164,7 +97,7 @@ public class AccountAuthService(
 	private Task<DebugOttResponse?>? _debugOttTask;
 
 	/// <summary>Keyed by session token, so a sign-in mid-request never joins the previous session's roster read.</summary>
-	private readonly SingleFlight<string, ServerResult<IReadOnlyList<CharacterSummary>>> _charactersFlight = new(StringComparer.Ordinal);
+	private readonly SingleFlight<string, ApiResult<IReadOnlyList<CharacterSummary>>> _charactersFlight = new(StringComparer.Ordinal);
 
 	/// <summary>
 	/// Single-flight, idempotent hydration: the first caller kicks off <see cref="InitCoreAsync"/>
@@ -214,23 +147,21 @@ public class AccountAuthService(
 
 	private async Task HydrateFromStorageAsync()
 	{
-		var loggedOutFlag = await js.GetItemAsync(BrowserStore.Session, LoggedOutKey);
-		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
+		ExplicitlyLoggedOut = await _storage.IsLoggedOutAsync();
 
-		AccountSessionToken = await js.GetItemAsync(BrowserStore.Session, SessionTokenKey);
-		if (AccountSessionToken is null || ExplicitlyLoggedOut)
+		if (ExplicitlyLoggedOut || await _storage.ReadAsync() is not AccountSessionStorage.StoredSession stored)
 		{
 			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
-			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
-			// otherwise get a phantom identity with no live session. Nothing in the portal
-			// pre-fills the login form from Username, so there's no UX reason to keep it around.
+			// Permissions — a returning user in a new tab would otherwise get a phantom identity with
+			// no live session. Nothing in the portal pre-fills the login form from Username, so
+			// there's no UX reason to keep it around.
 			ClearSessionState();
 			return;
 		}
 
-		Username = await js.GetItemAsync(BrowserStore.Session, UsernameKey);
-		var mustChangePassword = await js.GetItemAsync(BrowserStore.Session, MustChangePasswordKey);
-		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
+		AccountSessionToken = stored.Token;
+		Username = stored.Username;
+		MustChangePassword = stored.MustChangePassword;
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
@@ -254,42 +185,42 @@ public class AccountAuthService(
 	public TimeSpan SessionAuthorityRetryLimit { get; set; } = TimeSpan.FromMinutes(10);
 
 	/// <summary>Loads the current role, grants and name for <paramref name="token"/> from the server.</summary>
-	private async Task<SessionAuthorityLoad> LoadSessionAuthorityAsync(string? token)
+	private async Task<SessionAuthorityLoad> LoadSessionAuthorityAsync(string token)
 	{
-		try
+		// Authentication-state queries share the bootstrap task; a stalled refresh must not hold
+		// public rendering for the named client's much longer default timeout.
+		using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		var result = await _api.SessionAsync(token, refresh.Token);
+		if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
+
+		return result switch
 		{
-			// Authentication-state queries share the bootstrap task; a stalled refresh must not hold
-			// public rendering for the named client's much longer default timeout.
-			using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
-			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
-			// recursively waiting on this same initialization task.
-			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-			using var response = await httpClientFactory.CreateClient("api")
-				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
-			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
-			if (response.StatusCode == HttpStatusCode.Unauthorized)
-			{
-				ClearSessionState();
-				return SessionAuthorityLoad.SignedOut;
-			}
-			if (!response.IsSuccessStatusCode) return SessionAuthorityLoad.Failed;
-			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
-			refresh.Token.ThrowIfCancellationRequested();
-			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
-			if (current is null) return SessionAuthorityLoad.Failed;
-			Username = current.Username;
-			MustChangePassword = current.MustChangePassword;
-			Role = current.Role;
-			Permissions = current.Permissions ?? [];
-			return SessionAuthorityLoad.Loaded;
+			SessionStateResponse current => AdoptAuthority(current),
+			ApiFailure { Kind: ApiFailureKind.Unauthenticated } => SignedOut(),
+			ApiFailure failure => Failed(failure),
+		};
+
+		SessionAuthorityLoad SignedOut()
+		{
+			ClearSessionState();
+			return SessionAuthorityLoad.SignedOut;
 		}
-		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+
+		SessionAuthorityLoad Failed(ApiFailure failure)
 		{
 			// No stored role or grant has been restored, so permission-gated controls stay closed.
-			logger.LogWarning(ex, "Could not refresh account session permissions");
+			logger.LogWarning("Could not refresh account session permissions: {Message}", failure.Message);
 			return SessionAuthorityLoad.Failed;
 		}
+	}
+
+	private SessionAuthorityLoad AdoptAuthority(SessionStateResponse current)
+	{
+		Username = current.Username;
+		MustChangePassword = current.MustChangePassword;
+		Role = current.Role;
+		Permissions = current.Permissions ?? [];
+		return SessionAuthorityLoad.Loaded;
 	}
 
 	/// <summary>Bumped whenever the tab's authority is replaced wholesale — a sign-in, a sign-out, a
@@ -346,131 +277,79 @@ public class AccountAuthService(
 		SetActiveCharacter(null);
 	}
 
-	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
-		string identifier, string password)
+	/// <summary>Signs in with a name or email and a password; answers with the account's roster.</summary>
+	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> LoginAsync(string identifier, string password) =>
+		await _api.LoginAsync(identifier, password) switch
+		{
+			LoginResponse session => await SignedInAsync(session),
+			ApiFailure failure => Logged(failure, "Account login"),
+		};
+
+	/// <summary>Creates an account and signs in to it; answers with its (empty) roster.</summary>
+	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> RegisterAsync(
+		string username, string? email, string password) =>
+		await _api.RegisterAsync(username, email, password) switch
+		{
+			LoginResponse session => await SignedInAsync(session),
+			ApiFailure failure => Logged(failure, "Account registration"),
+		};
+
+	/// <summary>
+	/// Adopts a session the server minted for a sign-in. A session this tab cannot keep is refused
+	/// outright, so the tab never runs as an account a reload would not bring back.
+	/// </summary>
+	private async Task<ApiResult<IReadOnlyList<CharacterSummary>>> SignedInAsync(LoginResponse session)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/auth/account-login",
-				new AccountLoginRequest(identifier, password));
-
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync(), []);
-
-			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
-			if (result is null) return (false, "Unexpected server response.", []);
-
-			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
-				return (false, SessionNotSavedMessage, []);
-			SetCharacters(result.Characters);
-			return (true, null, result.Characters);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Account login failed");
-			return (false, ex.Message, []);
-		}
-	}
-
-	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> RegisterAsync(
-		string username, string? email, string password)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/auth/account-register",
-				new AccountRegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password));
-
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync(), []);
-
-			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
-			if (result is null) return (false, "Unexpected server response.", []);
-
-			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
-				return (false, SessionNotSavedMessage, []);
-			SetCharacters(result.Characters);
-			return (true, null, result.Characters);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Account registration failed");
-			return (false, ex.Message, []);
-		}
+		if (!await TryPersistSessionAsync(session.AccountSessionToken, session.Username, session.MustChangePassword, session.Role, session.Permissions))
+			return SessionNotSaved();
+		_roster.SetRoster(session.Characters);
+		return new ApiResult<IReadOnlyList<CharacterSummary>>(session.Characters);
 	}
 
 	/// <summary>
-	/// Whether the game still needs first-run setup, or <see cref="Error"/> when the server could
-	/// not be reached or its answer could not be parsed.
+	/// Whether the game still needs first-run setup, or the <see cref="ApiFailure"/> that stopped the
+	/// question being answered.
 	/// </summary>
 	/// <remarks>
 	/// The failed arm is load-bearing, not decoration: a transient error mistaken for "setup already
 	/// done" permanently hides the first-run wizard for the session, which is the bug this shape
-	/// exists to prevent. It is a discriminated union rather than the <c>bool?</c> it started as
-	/// because "we could not ask" is a third answer a caller has to handle, and a null that a caller
-	/// may silently coalesce to false is exactly how the original defect got in.
+	/// exists to prevent. "We could not ask" is a third answer a caller has to handle, and a null that
+	/// a caller may silently coalesce to false is exactly how the original defect got in. A body that
+	/// is not JSON at all — the SPA fallback page, from a server without the route — is a failure too.
 	/// </remarks>
-	public async Task<ServerResult<bool>> NeedsSetupAsync()
+	public async Task<ApiResult<bool>> NeedsSetupAsync() =>
+		await _api.SetupStatusAsync() switch
+		{
+			SetupStatusResponse status => status.NeedsSetup,
+			ApiFailure failure => Logged(failure, "Setup status check"),
+		};
+
+	/// <summary>
+	/// Claims the pre-generated administrator. The claim and the automatic sign-in are reported
+	/// separately; see <see cref="SetupClaimed"/>.
+	/// </summary>
+	public async Task<ApiResult<SetupClaimed>> CompleteSetupAsync(string username, string password) =>
+		await _api.CompleteSetupAsync(username, password) switch
+		{
+			LoginResponse session => new SetupClaimed(await TrySignInAfterClaimAsync(session)),
+			ApiFailure failure => Logged(failure, "Setup completion"),
+		};
+
+	private async Task<bool> TrySignInAfterClaimAsync(LoginResponse session)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.GetAsync("api/setup/status");
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogError("Setup status check returned {Status}", response.StatusCode);
-				return new Error();
-			}
+		// The claim itself succeeded whenever we get here. api/setup/complete normally mints a session
+		// exactly like account-login (auto-login as the new administrator) — but if post-claim
+		// enrichment failed server-side, it degrades to an empty token instead of a 500 so the claim
+		// isn't lost. Don't persist an empty/missing session, or one missing its name or roster: that
+		// would leave IsLoggedIn true with a session the tab cannot use.
+		if (!AccountApiClient.IsComplete(session))
+			return false;
 
-			var result = await response.Content.ReadFromJsonAsync<SetupStatusResponse>();
-			if (result is null)
-			{
-				logger.LogError("Setup status check returned an unparseable response");
-				return new Error();
-			}
-
-			return result.NeedsSetup;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Failed to check setup status");
-			return new Error();
-		}
-	}
-
-	public async Task<(bool Success, string? Error, bool AutoLoggedIn)> CompleteSetupAsync(string username, string password)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/setup/complete",
-				new SetupCompleteRequest(username, password));
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync(), false);
-
-			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
-			if (result is null) return (false, "Unexpected server response.", false);
-
-			// The claim itself succeeded whenever we get here. api/setup/complete normally mints
-			// a session exactly like account-login (auto-login as the new administrator) — but if
-			// post-claim enrichment failed server-side, it degrades to an empty token instead of a
-			// 500 so the claim isn't lost. Don't persist an empty/missing session: that would leave
-			// IsLoggedIn true with a token that can't authenticate anything.
-			if (string.IsNullOrEmpty(result.AccountSessionToken))
-				return (true, null, false);
-
-			// Same for a session this tab cannot store: the claim stands, only the automatic sign-in is lost.
-			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
-				return (true, null, false);
-			SetCharacters(result.Characters);
-			return (true, null, true);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Setup completion failed");
-			return (false, ex.Message, false);
-		}
+		// Same for a session this tab cannot store: the claim stands, only the automatic sign-in is lost.
+		if (!await TryPersistSessionAsync(session.AccountSessionToken, session.Username, session.MustChangePassword, session.Role, session.Permissions))
+			return false;
+		_roster.SetRoster(session.Characters);
+		return true;
 	}
 
 	/// <summary>
@@ -530,72 +409,41 @@ public class AccountAuthService(
 			return null;
 		}
 
-		try
+		if (await _api.DebugOttAsync() is not DebugOttResponse result)
 		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.GetAsync("api/auth/debug-ott");
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
-				_debugOttTask = null;
-				return null;
-			}
-			var result = await response.Content.ReadFromJsonAsync<DebugOttResponse>();
-			if (result is null)
-			{
-				_debugOttTask = null;
-				return null;
-			}
-
-			if (result.AccountSessionToken is not null && result.AccountUsername is not null
-				&& !await TryPersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null))
-			{
-				_debugOttTask = null;
-				return null;
-			}
-
-			// Only a successful response is cached for the app lifetime; _debugOttTask stays set.
-			return result;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Debug OTT request threw an exception");
-			// Server unreachable this time doesn't mean it always will be — clear so a later call retries.
+			// Server unreachable (or the endpoint absent) this time doesn't mean it always will be —
+			// clear so a later call retries.
+			logger.LogWarning("Debug OTT request failed");
 			_debugOttTask = null;
 			return null;
 		}
+
+		if (result.AccountSessionToken is not null && result.AccountUsername is not null
+			&& !await TryPersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null))
+		{
+			_debugOttTask = null;
+			return null;
+		}
+
+		// Only a successful response is cached for the app lifetime; _debugOttTask stays set.
+		return result;
 	}
 
 	/// <summary>
-	/// Exchange an account session token + character selection for a MUSH OTT.
+	/// Exchange the account session + a character for a single-use MUSH login token.
 	/// </summary>
-	public async Task<string?> GetOttForCharacterAsync(CharacterSummary character)
+	public async Task<ApiResult<string>> GetOttForCharacterAsync(CharacterSummary character)
 	{
 		// AccountSessionToken is only populated by InitAsync/TryPersistSessionAsync; hydrate first so
 		// a pre-init caller doesn't misread a real stored session as "not logged in".
 		await InitAsync();
-		if (AccountSessionToken is null) return null;
+		if (AccountSessionToken is not { } session) return NotLoggedIn(NotLoggedInMessage);
 
-		try
+		return await _api.MushTokenAsync(session, character) switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
-				new MushTokenWithAccountRequest(AccountSessionToken, character.DbrefNumber, character.CreationTime));
-
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("OTT via account session failed: {Status}", response.StatusCode);
-				return null;
-			}
-
-			var result = await response.Content.ReadFromJsonAsync<MushTokenResponse>();
-			return result?.Token;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "OTT via account session threw an exception");
-			return null;
-		}
+			MushTokenResponse token => token.Token,
+			ApiFailure failure => Logged(failure, "OTT via account session"),
+		};
 	}
 
 	/// <summary>
@@ -604,51 +452,40 @@ public class AccountAuthService(
 	/// <c>jwt-switch-character</c> flow: the same account session stays active — this
 	/// mints no new token family, just a fresh single-use OTT for the target character.
 	/// </summary>
-	public async Task<string?> SwitchCharacterAsync(CharacterSummary character)
+	public async Task<ApiResult<string>> SwitchCharacterAsync(CharacterSummary character)
 	{
 		// AccountSessionToken is only populated by InitAsync/TryPersistSessionAsync; hydrate first so
 		// a pre-init caller doesn't misread a real stored session as "not logged in".
 		await InitAsync();
-		if (AccountSessionToken is null) return null;
+		if (AccountSessionToken is null) return NotLoggedIn(NotLoggedInMessage);
 
-		try
+		return await _api.SwitchCharacterAsync(character) switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/auth/switch-character",
-				new SwitchCharacterRequest(character.DbrefNumber, character.CreationTime));
+			SwitchCharacterResponse { Ott: not null, AccountSessionToken: { Length: > 0 } } switched
+				=> await SwitchedAsync(character, switched),
+			SwitchCharacterResponse => Logged(
+				new ApiFailure(ApiFailureKind.Unexpected, "The server returned no token for that character."), "Switch character"),
+			ApiFailure failure => Logged(failure, "Switch character"),
+		};
+	}
 
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Switch character failed: {Status}", response.StatusCode);
-				return null;
-			}
+	private async Task<ApiResult<string>> SwitchedAsync(CharacterSummary character, SwitchCharacterResponse switched)
+	{
+		// Adopt the freshly minted token: it is bound to the target character server-side, so from
+		// here on every request — including after a reload, since sessionStorage is tab-scoped —
+		// is that character without the client asserting anything. The old token is left to lapse
+		// on its own TTL rather than revoked, because a tab opened from this one may still hold a
+		// copy of it.
+		if (!await TryAdoptSessionTokenAsync(switched.AccountSessionToken))
+			return Logged(SessionNotSaved(), "Switch character");
 
-			var result = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
-			if (result?.Ott is null || string.IsNullOrEmpty(result.AccountSessionToken)) return null;
-
-			// Adopt the freshly minted token: it is bound to the target character server-side, so from
-			// here on every request — including after a reload, since sessionStorage is tab-scoped —
-			// is that character without the client asserting anything. The old token is left to lapse
-			// on its own TTL rather than revoked, because a tab opened from this one may still hold a
-			// copy of it.
-			if (!await TryAdoptSessionTokenAsync(result.AccountSessionToken))
-			{
-				logger.LogWarning("Switch character failed: this tab could not store the new session");
-				return null;
-			}
-			SetActiveCharacter(character);
-			return result.Ott;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Switch character threw an exception");
-			return null;
-		}
+		SetActiveCharacter(character);
+		return switched.Ott;
 	}
 
 	/// <summary>
-	/// This account's roster, or <see cref="Error"/> when the request failed. An anonymous tab is
-	/// the empty roster, not a failure — there is nothing to ask for and no session to ask with.
+	/// This account's roster, or the <see cref="ApiFailure"/> that stopped the read. An anonymous tab
+	/// is the empty roster, not a failure — there is nothing to ask for and no session to ask with.
 	/// </summary>
 	/// <remarks>
 	/// "This account owns no character" and "we could not find out" are different facts. A failed
@@ -661,142 +498,146 @@ public class AccountAuthService(
 	/// "roster still empty" guards all pass before any answer lands, so concurrent calls on one
 	/// session share a request. A call after it finishes (after a mutation, say) asks again.
 	/// </para>
-	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
+	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is not { } session) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
+		if (AccountSessionToken is not { } session) return new ApiResult<IReadOnlyList<CharacterSummary>>([]);
 
 		return await _charactersFlight.RunAsync(session, FetchCharactersAsync);
 	}
 
-	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchCharactersAsync()
+	private async Task<ApiResult<IReadOnlyList<CharacterSummary>>> FetchCharactersAsync() =>
+		await _api.CharactersAsync() switch
+		{
+			IReadOnlyList<CharacterSummary> characters => Roster(characters),
+			ApiFailure failure => Logged(failure, "GetCharacters"),
+		};
+
+	private ApiResult<IReadOnlyList<CharacterSummary>> Roster(IReadOnlyList<CharacterSummary> characters)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
-			SetCharacters(characters ?? []);
-			return new ServerResult<IReadOnlyList<CharacterSummary>>(Characters);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetCharacters failed");
-			return new Error();
-		}
+		_roster.SetRoster(characters);
+		return new ApiResult<IReadOnlyList<CharacterSummary>>(Characters);
 	}
 
-	public async Task<(bool Success, string? Error, CharacterSummary? Character)> CreateCharacterAsync(
-		string name, string password)
+	/// <summary>Creates a character on this account; it joins the roster without becoming the acting one.</summary>
+	public async Task<ApiResult<CharacterSummary>> CreateCharacterAsync(string name, string password)
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return (false, "Not logged in to account.", null);
+		if (AccountSessionToken is null) return NotLoggedIn("Not logged in to account.");
 
-		try
+		return await _api.CreateCharacterAsync(name, password) switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PostAsJsonAsync("api/account/characters",
-				new CreateCharacterRequest(name, password));
+			CreateCharacterResponse created => await AddedAsync(new CharacterSummary(created.DbrefNumber, created.CreationTime ?? 0, name, created.Flags ?? "")),
+			ApiFailure failure => Logged(failure, "CreateCharacter"),
+		};
 
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync(), null);
-
-			var result = await response.Content.ReadFromJsonAsync<CreateCharacterResponse>();
-			if (result is null) return (false, "Unexpected server response.", null);
-
-			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, result.Flags ?? "");
-			SetCharacters([.. Characters, character]);
+		async Task<CharacterSummary> AddedAsync(CharacterSummary character)
+		{
+			_roster.Add(character);
 			// An account's role comes from its characters: a fresh account is a Guest until its first
 			// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.
 			await ReloadAuthorityAsync();
-			return (true, null, character);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "CreateCharacter failed");
-			return (false, ex.Message, null);
+			return character;
 		}
 	}
 
-	public async Task<(bool Success, string? Error)> UnlinkCharacterAsync(int dbrefNumber)
+	/// <summary>Unlinks a character from this account; see <see cref="CharacterUnlinked"/> for the advisory.</summary>
+	public async Task<ApiResult<CharacterUnlinked>> UnlinkCharacterAsync(int dbrefNumber)
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return (false, "Not logged in to account.");
+		if (AccountSessionToken is null) return NotLoggedIn("Not logged in to account.");
 
-		try
+		return await _api.UnlinkCharacterAsync(dbrefNumber) switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync());
+			Success => await UnlinkedAsync(dbrefNumber),
+			ApiFailure failure => Logged(failure, "UnlinkCharacter"),
+		};
+	}
 
-			var unlinkedTheActing = ActiveCharacter?.DbrefNumber == dbrefNumber;
-			var remaining = Characters.Where(c => c.DbrefNumber != dbrefNumber).ToList();
+	private async Task<CharacterUnlinked> UnlinkedAsync(int dbrefNumber)
+	{
+		var unlinkedTheActing = ActiveCharacter?.DbrefNumber == dbrefNumber;
+		var remaining = _roster.Without(dbrefNumber);
 
-			// Unlinking the character this tab acts as leaves the session bound to a character the
-			// account no longer owns, which the server treats as acting-as-nobody. Rebind to a
-			// remaining character so the tab comes back with a usable identity instead of a dead one;
-			// switching is the only thing that can, since only the server may mint the binding.
-			if (unlinkedTheActing && remaining.FirstOrDefault() is { } replacement)
+		// Unlinking the character this tab acts as leaves the session bound to a character the
+		// account no longer owns, which the server treats as acting-as-nobody. Rebind to a
+		// remaining character so the tab comes back with a usable identity instead of a dead one;
+		// switching is the only thing that can, since only the server may mint the binding.
+		if (unlinkedTheActing && remaining.FirstOrDefault() is { } replacement)
+		{
+			var rebound = await SwitchCharacterAsync(replacement) is string;
+
+			// Re-read the roster either way: the unlink itself succeeded, so the list must reflect
+			// it, and the server is the only thing that can say what the session is bound to now.
+			await GetCharactersAsync();
+			await ReloadAuthorityAsync();
+
+			if (!rebound)
 			{
-				var rebound = await SwitchCharacterAsync(replacement) is not null;
-
-				// Re-read the roster either way: the unlink itself succeeded, so the list must reflect
-				// it, and the server is the only thing that can say what the session is bound to now.
-				await GetCharactersAsync();
-				await ReloadAuthorityAsync();
-
-				if (!rebound)
-				{
-					// The unlink stands, but this tab is acting as nobody until something switches it.
-					// Reported rather than swallowed — the caller cannot tell "rebound to a fresh
-					// character" from "left with no identity" by looking at Success alone.
-					logger.LogWarning("Unlinked the acting character but could not rebind the session; acting as nobody until the next switch");
-					return (true, "Character unlinked, but switching to another character failed. Pick a character to continue.");
-				}
-
-				return (true, null);
+				// The unlink stands, but this tab is acting as nobody until something switches it.
+				// Reported rather than swallowed — the caller cannot tell "rebound to a fresh
+				// character" from "left with no identity" otherwise.
+				logger.LogWarning("Unlinked the acting character but could not rebind the session; acting as nobody until the next switch");
+				return new CharacterUnlinked("Character unlinked, but switching to another character failed. Pick a character to continue.");
 			}
 
-			SetCharacters(remaining);
-			// The role the unlinked character gave the account goes with it.
-			await ReloadAuthorityAsync();
-			return (true, null);
+			return new CharacterUnlinked(Advisory: null);
 		}
-		catch (Exception ex)
+
+		_roster.SetRoster(remaining);
+		// The role the unlinked character gave the account goes with it.
+		await ReloadAuthorityAsync();
+		return new CharacterUnlinked(Advisory: null);
+	}
+
+	public async Task<ApiResult<Success>> ChangePasswordAsync(string oldPassword, string newPassword)
+	{
+		await InitAsync();
+		if (AccountSessionToken is null) return NotLoggedIn(NotLoggedInMessage);
+
+		return await _api.ChangePasswordAsync(oldPassword, newPassword) switch
 		{
-			logger.LogError(ex, "UnlinkCharacter failed");
-			return (false, ex.Message);
-		}
+			Success => await PasswordChangedAsync(),
+			ApiFailure failure => Logged(failure, "Change password"),
+		};
 	}
 
-	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string oldPassword, string newPassword)
+	private async Task<Success> PasswordChangedAsync()
 	{
-		await InitAsync();
-		if (AccountSessionToken is null) return (false, "Not logged in.");
-		var (success, error) = await PutAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
-		if (success)
-			await SetMustChangePasswordAsync(false);
-		return (success, error);
+		MustChangePassword = false;
+		await _storage.WriteMustChangePasswordAsync(false);
+		return new Success();
 	}
 
-	public async Task<(bool Success, string? Error)> ChangeEmailAsync(string? newEmail, string currentPassword)
+	public async Task<ApiResult<Success>> ChangeEmailAsync(string? newEmail, string currentPassword)
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return (false, "Not logged in.");
-		return await PutAsync("api/account/email", new ChangeEmailRequest(newEmail, currentPassword));
-	}
+		if (AccountSessionToken is null) return NotLoggedIn(NotLoggedInMessage);
 
-	public async Task<(bool Success, string? Error)> ChangeUsernameAsync(string newUsername)
-	{
-		await InitAsync();
-		if (AccountSessionToken is null) return (false, "Not logged in.");
-		var (success, error) = await PutAsync("api/account/username", new ChangeUsernameRequest(newUsername));
-		if (success)
+		return await _api.ChangeEmailAsync(newEmail, currentPassword) switch
 		{
-			Username = newUsername;
-			await js.SetItemAsync(BrowserStore.Session, UsernameKey, newUsername);
-		}
-		return (success, error);
+			Success success => success,
+			ApiFailure failure => Logged(failure, "Change email"),
+		};
+	}
+
+	public async Task<ApiResult<Success>> ChangeUsernameAsync(string newUsername)
+	{
+		await InitAsync();
+		if (AccountSessionToken is null) return NotLoggedIn(NotLoggedInMessage);
+
+		return await _api.ChangeUsernameAsync(newUsername) switch
+		{
+			Success => await RenamedAsync(newUsername),
+			ApiFailure failure => Logged(failure, "Change username"),
+		};
+	}
+
+	private async Task<Success> RenamedAsync(string newUsername)
+	{
+		Username = newUsername;
+		await _storage.WriteUsernameAsync(newUsername);
+		return new Success();
 	}
 
 	public async Task LogoutAsync()
@@ -805,15 +646,11 @@ public class AccountAuthService(
 		// already logged out, skip the server-side logout call, but still latch ExplicitlyLoggedOut
 		// and wipe storage under the caller's feet.
 		await InitAsync();
+
+		// Best-effort: the server-side session lapses on its own TTL if this does not land, and the
+		// local sign-out below must happen either way.
 		if (AccountSessionToken is not null)
-		{
-			try
-			{
-				var http = httpClientFactory.CreateClient("api");
-				using var response = await http.PostAsync("api/account/logout", null);
-			}
-			catch { /* best-effort */ }
-		}
+			await _api.LogoutAsync();
 
 		// Finish whatever the session was holding open — the game-side terminals above all — while
 		// there is still a session to finish it with. Logout is the single chokepoint every entry
@@ -835,24 +672,18 @@ public class AccountAuthService(
 		_authorityGeneration++;
 		AccountSessionToken = null;
 		Username = null;
-		SetCharacters([]);
+		_roster.SetRoster([]);
 		MustChangePassword = false;
 		Role = null;
 		Permissions = [];
-		SetActiveCharacter(null);
 		// A fresh intentional login later must mint (and redeem) its own token, not resurrect the
 		// previous boot's cached debug-OTT response.
 		_debugOttTask = null;
-		await js.RemoveItemAsync(BrowserStore.Session, SessionTokenKey);
-		await js.RemoveItemAsync(BrowserStore.Session, UsernameKey);
-		await js.RemoveItemAsync(BrowserStore.Session, MustChangePasswordKey);
-		await js.RemoveItemAsync(BrowserStore.Session, RoleKey);
-		await js.RemoveItemAsync(BrowserStore.Session, PermissionsKey);
 
 		// Explicit-logout latch: sticks until the next successful login/register/setup in this
 		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
 		ExplicitlyLoggedOut = true;
-		await js.SetItemAsync(BrowserStore.Session, LoggedOutKey, bool.TrueString);
+		await _storage.ClearAndLatchLoggedOutAsync();
 
 		// Every storage mutation above (session/role/permission removal and the loggedOut latch
 		// write) is complete before the event fires. This ordering is load-bearing: the event
@@ -872,7 +703,7 @@ public class AccountAuthService(
 		// Storage first. A write that fails leaves the in-memory token where it was, and the caller
 		// reports the switch as failed; otherwise the tab would be acting as the new character while
 		// the caller believes it isn't, and a reload would restore the old one.
-		if (!await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token))
+		if (!await _storage.TryWriteTokenAsync(token))
 			return false;
 		AccountSessionToken = token;
 		return true;
@@ -888,22 +719,8 @@ public class AccountAuthService(
 		string token, string username, bool mustChangePassword, string? role, IReadOnlyList<string>? permissions)
 	{
 		permissions ??= [];
-		var persisted = await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token)
-			&& await js.SetItemAsync(BrowserStore.Session, UsernameKey, username)
-			&& await js.SetItemAsync(BrowserStore.Session, MustChangePasswordKey, mustChangePassword.ToString())
-			&& (role is null
-				? await js.RemoveItemAsync(BrowserStore.Session, RoleKey)
-				: await js.SetItemAsync(BrowserStore.Session, RoleKey, role))
-			&& await js.SetItemAsync(BrowserStore.Session, PermissionsKey, JsonSerializer.Serialize(permissions))
-			// Any successful login/register/setup clears a prior explicit logout.
-			&& await js.RemoveItemAsync(BrowserStore.Session, LoggedOutKey);
-
-		if (!persisted)
-		{
-			// Hydration ignores every other key without a token, so dropping it abandons the partial write.
-			await js.RemoveItemAsync(BrowserStore.Session, SessionTokenKey);
+		if (!await _storage.TryWriteAsync(token, username, mustChangePassword, role, permissions))
 			return false;
-		}
 
 		_authorityGeneration++;
 		AccountSessionToken = token;
@@ -934,26 +751,13 @@ public class AccountAuthService(
 		}
 	}
 
-	private async Task SetMustChangePasswordAsync(bool value)
-	{
-		MustChangePassword = value;
-		await js.SetItemAsync(BrowserStore.Session, MustChangePasswordKey, value.ToString());
-	}
+	private static ApiFailure NotLoggedIn(string message) => new(ApiFailureKind.Unauthenticated, message);
 
-	private async Task<(bool Success, string? Error)> PutAsync<T>(string path, T body)
+	private static ApiFailure SessionNotSaved() => new(ApiFailureKind.Unexpected, SessionNotSavedMessage);
+
+	private ApiFailure Logged(ApiFailure failure, string operation)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			using var response = await http.PutAsJsonAsync(path, body);
-			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync());
-			return (true, null);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "PUT {Path} failed", path);
-			return (false, ex.Message);
-		}
+		logger.LogWarning("{Operation} failed: {Message}", operation, failure.Message);
+		return failure;
 	}
 }

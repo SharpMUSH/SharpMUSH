@@ -140,8 +140,9 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 - `@mail/unfolder <folder#|foldername>`
 * This command removes a folder's name
 
-- `@mail/file <msg-list>=<folder#>`
+- `@mail/file <msg-list>=<folder#|foldername>`
 * This command moves all messages in *<msg-list>* from the current folder to a new folder, *<folder#>*.
+* A name none of your folders has yet makes a new folder of that name, with the lowest folder number not in use.
 
 
 **See Also:**

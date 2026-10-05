@@ -8,6 +8,7 @@ using SharpMUSH.Library.Services;
 using MarkupString;
 using SharpMUSH.Library.Markup;
 using System.Drawing;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 

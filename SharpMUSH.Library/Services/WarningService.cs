@@ -81,13 +81,17 @@ public class WarningService(
 		var warningCount = 0;
 		var ownerObj = owner.Object();
 
-		// Use GetAllTypedObjectsQuery to get fully-typed objects directly, avoiding a secondary
-		// per-object GetObjectNodeQuery call inside the loop (which would route through the
-		// FusionCache per-key lock and contend with active player commands).
-		var allObjects = mediator.CreateStream(new GetAllTypedObjectsQuery());
+		// The owner index names the owner's objects, in ascending dbref order, so only those are typed
+		// and checked; the world is not scanned. Checking writes nothing, so the stream is read as it goes.
+		var owned = mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = ownerObj.DBRef }));
 
-		await foreach (var obj in allObjects)
+		await foreach (var found in owned)
 		{
+			if (await mediator.Send(new GetObjectNodeQuery(found.DBRef)) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
 			SharpPlayer objectOwner;
 			try
 			{

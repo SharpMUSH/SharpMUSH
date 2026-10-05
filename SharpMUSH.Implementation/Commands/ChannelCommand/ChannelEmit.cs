@@ -22,22 +22,24 @@ public static class ChannelEmit
 {
 	public static async ValueTask<CallState> Handle(
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		MString channelName,
 		MString message,
 		bool spoof)
-		=> await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+		=> await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator,
 				notifyService, executor, channelName, notify: true) switch
 		{
-			SharpChannel channel => await EmitAsync(permissionService, mediator, notifyService, executor, channel, message,
+			SharpChannel channel => await EmitAsync(permissionService, channelPermissions, mediator, notifyService, executor, channel, message,
 				spoof),
 			Error<CallState> error => error.Value
 		};
 
 	private static async ValueTask<CallState> EmitAsync(
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
@@ -45,14 +47,14 @@ public static class ChannelEmit
 		MString message,
 		bool spoof)
 	{
-		var check = await ChannelHelper.CemitRefusal(permissionService, executor, channel);
+		var check = await ChannelHelper.CemitRefusal(channelPermissions, executor, channel);
 		if (check.Refused)
 		{
 			await notifyService.Notify(executor, check.Refusal!, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var membership = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		var membership = await ChannelHelper.ChannelMemberStatus(mediator, executor, channel);
 
 		// extchat.c:1667 — the open-channel rule applies to @cemit exactly as it does to @chat, and the
 		// same bypass skips it. Membership is not required outright: that is what lets a wizard or a

@@ -54,7 +54,9 @@ public class ControlAuthorizationCancellationTests
 		var flagReads = 0;
 		async IAsyncEnumerable<SharpObjectFlag> Flags([EnumeratorCancellation] CancellationToken token = default)
 		{
-			var skip = stage switch { "mistrust-flags" or "shared-flags" => 1, "target-royalty" => 2, _ => 0 };
+			// Controls reads each object's flags once (wizard, royalty and mistrust all come from that one
+			// read), so only the owner's SHARED read follows an earlier read of the same flags (its TRUST).
+			var skip = stage switch { "shared-flags" => 1, _ => 0 };
 			if (++flagReads > skip) await Block<bool>(token);
 			yield break;
 		}

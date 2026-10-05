@@ -67,7 +67,7 @@ public class WikiControllerPagingTests
 	private static async Task<List<string>> SlugsAsync(Task<IActionResult> listing)
 	{
 		var ok = (await listing) as OkObjectResult;
-		return ((IEnumerable<WikiPageDto>)ok!.Value!).Select(p => p.Slug).ToList();
+		return ((IEnumerable<WikiPageSummaryDto>)ok!.Value!).Select(p => p.Slug).ToList();
 	}
 
 	/// <summary>Pages through a listing until it returns an empty page, as a client does.</summary>

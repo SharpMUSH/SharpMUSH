@@ -1135,7 +1135,13 @@ You say, "90 degrees is 1.570796 radians"
 # DECOMPOSEWEB()
 `decomposeweb(<string>)`
 
-  Works like [DECOMPOSE()], but reconstructs the string for a web client: angle brackets in the text are encoded so that the result can be placed in HTML without being read as markup, while any colour on the string is rebuilt as an [ansi()] call.
+  Returns `<string>` as HTML, ready to place in a web page. Characters such as `<` and `&` in the text are encoded, and colour, links, tags and other markup are written as the HTML the web portal uses for them.
+
+  Example:
+```sharp
+think decomposeweb(a<b> [ansi(hr,red)])
+a&lt;b&gt; <span style="color: #ff5555">red</span>
+```
 
   This is a SharpMUSH function; PennMUSH has no decomposeweb().
 

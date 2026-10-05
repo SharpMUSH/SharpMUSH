@@ -14,6 +14,7 @@ using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Softcode;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -71,7 +72,7 @@ public partial class Commands
 				continue;
 			}
 
-			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node), executor);
+			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node, ConnectionService), executor);
 			count++;
 		}
 
@@ -167,6 +168,7 @@ public partial class Commands
 		// heading, or one of do_scan's four "Matched <where>:" one-liners.
 		async ValueTask Report(string key, List<(AnySharpObject Obj, List<string> Attributes)> matches)
 		{
+			var flagView = await FlagView.ForAsync(executor, ConnectionService);
 			foreach (var (obj, attributes) in matches)
 			{
 				var dbref = obj.Object().DBRef.Number;
@@ -175,7 +177,7 @@ public partial class Commands
 				var attributeList = string.Concat(attributes.Select(attribute => $" #{dbref}/{attribute}"));
 
 				await NotifyService.NotifyLocalizedMarkup(executor, key, executor,
-					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object()),
+					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object(), flagView),
 					MarkupText.Plain(attributes.Count.ToString()),
 					MarkupText.Plain(attributeList));
 			}
@@ -347,9 +349,24 @@ public partial class Commands
 			ownerFilter = owner.Object().DBRef;
 		}
 
-		var search = await SearchSpecEngine.ExecuteResultAsync(
-			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-			executor, ownerFilter, pairs, useRegex: false);
+		return await SearchSpecEngine.ExecuteResultAsync(
+				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+				executor, ownerFilter, pairs, useRegex: false) switch
+		{
+			SearchSpecEngine.SearchResult search => await ReportSearchResultAsync(executor, search),
+			Error<string> rejected => await RejectSearchAsync(executor, rejected.Value)
+		};
+	}
+
+	/// <summary>do_search when fill_search_spec rejects the spec: the searcher is told why, and nothing is searched.</summary>
+	private async ValueTask<Option<CallState>> RejectSearchAsync(AnySharpObject executor, string notification)
+	{
+		await NotifyService.NotifyLocalized(executor, notification, executor);
+		return new CallState(ErrorMessages.Returns.Nothing);
+	}
+
+	private async ValueTask<Option<CallState>> ReportSearchResultAsync(AnySharpObject executor, SearchSpecEngine.SearchResult search)
+	{
 		var matches = search.Matches;
 
 		if (matches.Count == 0)
@@ -381,7 +398,7 @@ public partial class Commands
 		}
 
 		async ValueTask<string> Header(AnySharpObject obj)
-			=> await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj);
+			=> await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService);
 
 		async ValueTask<string> HeaderOrNowhere(DBRef? dbref)
 			=> dbref is { } where && await Mediator.Send(new GetObjectNodeQuery(where)) is AnySharpObject node
@@ -576,8 +593,9 @@ public partial class Commands
 
 		var targetObject = target.Object();
 
-		var isUnfindable = await targetObject.Flags.Value
-			.AnyAsync(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
+		// Unfind(x) is has_flag_by_name(x, "UNFINDABLE", NOTYPE) (hdrs/dbdefs.h:160): by name or alias,
+		// never by letter.
+		var isUnfindable = await targetObject.HasFlag("UNFINDABLE");
 
 		if (isUnfindable)
 		{
@@ -605,7 +623,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -855,7 +873,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		AnySharpObject targetObject;
 
@@ -924,12 +942,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
 
-		var entrances = await Mediator.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
-
-		if (filterTypes.Count > 0 && !filterTypes.Contains("exits"))
-		{
-			entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
-		}
+		// GetEntrancesQuery only returns exits, so a type filter without exits needs no read at all.
+		var entrances = filterTypes.Count > 0 && !filterTypes.Contains("exits")
+			? []
+			: await Mediator.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
@@ -1003,14 +1019,14 @@ public partial class Commands
 		// not a separate matching mode - it is the attribute-name wildcard that is allowed to
 		// cross "`" (wild.c:89-107, real_atr_wild). That distinction lives in the wildcard-to-regex
 		// translation in the database providers, so every pattern here is Wildcard.
-		return await AttributeService.GetAttributePatternAsync(
+		return await AttributeService.LazilyGetAttributePatternAsync(
 			executor,
 			targetObject,
 			attributePattern,
 			checkParents,
 			IAttributeService.AttributePatternMode.Wildcard) switch
 		{
-			SharpAttribute[] attributes => await GrepAttributesAsync(parser, executor, attributes, switches, pattern),
+			IAsyncEnumerable<LazySharpAttribute> attributes => await GrepAttributesAsync(parser, executor, attributes, switches, pattern),
 			Error<string> error => await GrepUnreadableAsync(executor, error.Value)
 		};
 	}
@@ -1021,20 +1037,28 @@ public partial class Commands
 		return new CallState($"#-1 {error}");
 	}
 
-	/// <summary>Reports the attributes whose value matches <paramref name="pattern"/>, the way the switches ask.</summary>
+	/// <summary>
+	/// Reports the attributes whose value matches <paramref name="pattern"/>, the way the switches ask.
+	/// The attributes arrive with their values unread, already past the read gate; each body is read for
+	/// its test and released unless it matched, so the scan holds only the matches it will report
+	/// (<see cref="LazySharpAttributeExtensions.ReadValueOnceAsync"/>).
+	/// </summary>
 	private async ValueTask<Option<CallState>> GrepAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		SharpAttribute[] attributes, IEnumerable<string> switches, string pattern)
+		IAsyncEnumerable<LazySharpAttribute> attributes, IEnumerable<string> switches, string pattern)
 	{
 		var isWild = switches.Contains("WILD");
 		var isRegexp = switches.Contains("REGEXP");
 		var isNoCase = switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT");
 		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
 
-		var matchingAttributes = new List<SharpAttribute>();
+		var matchingAttributes = new List<(LazySharpAttribute Attribute, MString Value)>();
+		var token = ExecutionBudget.CurrentToken;
 
-		foreach (var attr in attributes)
+		await foreach (var attr in attributes.WithCancellation(token))
 		{
-			var attrValue = attr.Value.ToPlainText();
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var value = await attr.ReadValueOnceAsync(token);
+			var attrValue = value.ToPlainText();
 			bool matches = false;
 
 			if (isRegexp)
@@ -1083,7 +1107,7 @@ public partial class Commands
 
 			if (matches)
 			{
-				matchingAttributes.Add(attr);
+				matchingAttributes.Add((attr, value));
 			}
 		}
 
@@ -1098,7 +1122,7 @@ public partial class Commands
 			// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
 			int? width = null;
 
-			foreach (var attr in matchingAttributes)
+			foreach (var (attr, value) in matchingAttributes)
 			{
 				var parseType = attr.SyntaxParseType();
 
@@ -1111,12 +1135,12 @@ public partial class Commands
 					// covering all existing traffic.
 					if (isRegexp || isWild)
 					{
-						displayValue = attr.Value;
+						displayValue = value;
 					}
 					else
 					{
 						// Highlight the matching parts using Span to avoid allocations
-						var plainValue = attr.Value.ToPlainText();
+						var plainValue = value.ToPlainText();
 						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 						var index = plainValue.IndexOf(pattern, comparison);
 
@@ -1131,7 +1155,7 @@ public partial class Commands
 						}
 						else
 						{
-							displayValue = attr.Value;
+							displayValue = value;
 						}
 					}
 				}
@@ -1147,16 +1171,16 @@ public partial class Commands
 					// summary the formatter appends beneath it.
 					int codeLength;
 
-					if (attr.Value.Length == 0)
+					if (value.Length == 0)
 					{
-						formatted = attr.Value;
+						formatted = value;
 						codeLength = 0;
 					}
 					else
 					{
 						width ??= await ExecutorFormatWidthAsync(executor);
 
-						var source = attr.Value;
+						var source = value;
 						var tokens = parser.Tokenize(source);
 						var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
 						var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
@@ -1203,7 +1227,7 @@ public partial class Commands
 		}
 		else
 		{
-			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Name));
+			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Attribute.Name));
 			await NotifyService.Notify(executor, attrNames, executor);
 		}
 
@@ -1214,7 +1238,7 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["flags"])]
 	public async ValueTask<Option<CallState>> Sweep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var switches = parser.CurrentState.Switches.ToHashSet();
+		var switches = parser.CurrentState.Switches;
 		var connectFlag = switches.Contains("CONNECTED");
 		var hereFlag = switches.Contains("HERE");
 		var inventoryFlag = switches.Contains("INVENTORY");
@@ -1267,7 +1291,6 @@ public partial class Commands
 			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
@@ -1278,6 +1301,8 @@ public partial class Commands
 						}
 						else
 						{
+							// The owner is read only for the line that names it.
+							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}
@@ -1322,7 +1347,6 @@ public partial class Commands
 				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
@@ -1333,6 +1357,8 @@ public partial class Commands
 						}
 						else
 						{
+							// The owner is read only for the line that names it.
+							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}

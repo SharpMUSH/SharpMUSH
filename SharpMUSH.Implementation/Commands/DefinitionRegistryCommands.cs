@@ -1434,7 +1434,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("DECOMPILE"))
 		{
@@ -1504,10 +1504,10 @@ public partial class Commands : ICommandRestrictionApplier
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags), ErrorMessages.Returns.NoFlagsSpecified) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags), executor);
-				return new CallState(ErrorMessages.Returns.NoFlagsSpecified);
+				return usage;
 			}
 
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
@@ -1583,10 +1583,10 @@ public partial class Commands : ICommandRestrictionApplier
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (args.Count < 2)
+			if (await RejectIfTooFewArguments(parser, 2, executor,
+					nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), ErrorMessages.Returns.NoNewNameSpecified) is { } usage)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
-				return new CallState(ErrorMessages.Returns.NoNewNameSpecified);
+				return usage;
 			}
 
 			var newName = args["1"].Message?.ToPlainText();
@@ -1810,7 +1810,7 @@ public partial class Commands : ICommandRestrictionApplier
 				return CallState.Empty;
 			}
 
-			var namedPower = await ManipulateSharpObjectService.FindPower(objectArg);
+			var namedPower = await FlagAndPowerService.FindPower(objectArg);
 			if (namedPower is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor);
@@ -1843,7 +1843,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return CallState.Empty;
 		}
 
-		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, target, powerArg, true);
+		await FlagAndPowerService.SetOrUnsetPowers(executor, target, powerArg, true);
 		return CallState.Empty;
 	}
 
@@ -2313,7 +2313,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (!await executor.IsWizard())
 		{

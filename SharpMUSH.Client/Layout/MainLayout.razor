@@ -317,14 +317,11 @@
 
         _pendingHintStrip = uri.GetLeftPart(UriPartial.Path);
 
-        var parts = hint.Split('-');
-        if (parts.Length != 2
-            || !int.TryParse(parts[0], out var dbref)
-            || !long.TryParse(parts[1], out var creationTime))
+        if (ShellRouting.ParseCharacterHint(hint) is not CharacterHint parsed)
             return;
 
         var target = AccountAuth.Characters
-            .FirstOrDefault(c => c.DbrefNumber == dbref && c.CreationTime == creationTime);
+            .FirstOrDefault(c => c.DbrefNumber == parsed.Dbref && c.CreationTime == parsed.CreationTime);
         if (target is null) return;
 
         await ConnectAsHintedCharacterAsync(target);
@@ -344,9 +341,8 @@
 
     private void UpdateConfigRouteState()
     {
-        _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
-        _isPlayRoute = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/')
-            .Equals("/play", StringComparison.OrdinalIgnoreCase);
+        _isConfigRoute = ShellRouting.IsConfigRoute(NavigationManager.Uri);
+        _isPlayRoute = ShellRouting.IsPlayRoute(NavigationManager.Uri);
     }
 
     // Bottom-nav tab: a link that highlights when its route is active.
@@ -356,14 +352,7 @@
             <span class="phosphor-bottomtab-label">@label</span>
         </a>;
 
-    private bool IsNavActive(string href, bool exact)
-    {
-        var path = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/');
-        if (string.IsNullOrEmpty(path)) path = "/";
-        if (exact) return path == "/";
-        return path.Equals(href, StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
-    }
+    private bool IsNavActive(string href, bool exact) => ShellRouting.IsNavActive(NavigationManager.Uri, href, exact);
 
     private void ToggleMobileNav()
     {
@@ -382,7 +371,7 @@
 
     /// <param name="setupStatus">A status request already in flight (the first call, from
     /// initialisation, starts it before session restore); later navigations ask afresh.</param>
-    private async Task EnsureAccountRoutingAsync(Task<ServerResult<bool>>? setupStatus = null)
+    private async Task EnsureAccountRoutingAsync(Task<ApiResult<bool>>? setupStatus = null)
     {
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
 
@@ -394,7 +383,8 @@
         // them to /setup. That's the correct destination — on an unclaimed game there's no
         // "anonymous portal" to fall back to, since onboarding is the only meaningful place to
         // send anyone. Do not special-case _isDebugAuth further to try to keep them off /setup.
-        if (_needsSetup != false && !_isDebugAuth)
+        var setupPending = false;
+        if (ShellRouting.ShouldCheckSetup(_needsSetup, _isDebugAuth))
         {
             // The failed arm means the status check couldn't reach or parse the server (transient
             // error, cold server, stale proxy, etc.) — leave _needsSetup as-is so the next
@@ -403,19 +393,11 @@
             if (await (setupStatus ?? AccountAuth.NeedsSetupAsync()) is bool needsSetup)
                 _needsSetup = needsSetup;
 
-            if (_needsSetup == true)
-            {
-                if (!string.Equals(currentPath, "/setup", StringComparison.OrdinalIgnoreCase))
-                    NavigationManager.NavigateTo("/setup");
-                return;
-            }
+            setupPending = _needsSetup == true;
         }
 
-        if (AccountAuth.IsLoggedIn && AccountAuth.MustChangePassword)
-        {
-            if (!string.Equals(currentPath, "/account", StringComparison.OrdinalIgnoreCase))
-                NavigationManager.NavigateTo("/account");
-        }
+        if (ShellRouting.Redirect(currentPath, setupPending, AccountAuth.IsLoggedIn && AccountAuth.MustChangePassword) is string target)
+            NavigationManager.NavigateTo(target);
     }
 
     /// <summary>The backdrop closes whichever touch-chrome panel is open.</summary>

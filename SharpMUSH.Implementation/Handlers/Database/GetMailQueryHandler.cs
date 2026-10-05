@@ -27,6 +27,19 @@ public class GetAllMailListQueryHandler(IMailStore database)
 		=> database.GetAllIncomingMailsAsync(query.Player, cancellationToken);
 }
 
+public class GetMailSummaryListQueryHandler(IMailStore database)
+	: IStreamQueryHandler<GetMailSummaryListQuery, MailSummary>
+{
+	public IAsyncEnumerable<MailSummary> Handle(GetMailSummaryListQuery query, CancellationToken cancellationToken)
+		=> database.GetIncomingMailSummariesAsync(query.Player, query.Folder, cancellationToken);
+}
+
+public class GetMailFoldersQueryHandler(IMailStore database) : IQueryHandler<GetMailFoldersQuery, string[]>
+{
+	public ValueTask<string[]> Handle(GetMailFoldersQuery query, CancellationToken cancellationToken)
+		=> database.GetMailFoldersAsync(query.Player, cancellationToken);
+}
+
 public class GetSentMailQueryHandler(IMailStore database) : IQueryHandler<GetSentMailQuery, SharpMail?>
 {
 	public async ValueTask<SharpMail?> Handle(GetSentMailQuery query, CancellationToken cancellationToken) =>

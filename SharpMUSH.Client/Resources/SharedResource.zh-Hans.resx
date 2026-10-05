@@ -3190,6 +3190,14 @@
     <value>未找到场景。</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>场景未能开始。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>场景已开始，但无法设为私密。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSearchAccountPrompt" xml:space="preserve">
     <value>搜索账号以管理其权限组。</value>
     <comment>MT</comment>
@@ -3236,14 +3244,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>允许任何人观看</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>此标签页的终端正以 {0} 的身份游戏，而不是 {1}。请在以 {1} 游戏的标签页中开始场景，或切换回 {0}。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>无法确认此标签页的终端正以哪个角色游戏。请稍后再试。</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -5052,6 +5052,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>场景中</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>你正在观看此场景。加入后即可在此发表姿态。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>你的姿态会发往另一个场景。加入此场景即可在此发表姿态。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>加入场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>离开场景</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>频道</value>

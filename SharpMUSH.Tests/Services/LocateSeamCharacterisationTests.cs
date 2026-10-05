@@ -53,24 +53,7 @@ public class LocateSeamCharacterisationTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 
 		// The noisy entry points read parser.CurrentState to name the notification's sender.
-		_parser.CurrentState.Returns(new ParserState(
-			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			ExecutionStack: [],
-			EnvironmentRegisters: [],
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-			Switches: [],
-			Arguments: [],
-			Executor: null,
-			Enactor: null,
-			Caller: null,
-			Handle: null));
+		_parser.CurrentState.Returns(ParserState.ForTrackedEvaluation(null));
 	}
 
 	/// <summary>Contents of one container; anything else stays empty.</summary>

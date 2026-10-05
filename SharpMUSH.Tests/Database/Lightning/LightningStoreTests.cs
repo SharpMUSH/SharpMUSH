@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -255,5 +256,76 @@ public class LightningStoreTests
 	{
 		await store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str(key), "1"u8));
 		await Assert.That(store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str(key), out _))).IsTrue();
+	}
+
+	[Test]
+	public async Task CheckStaleReadersFreesTheSlotOfAProcessThatDiedMidRead()
+	{
+		using var store = Open();
+		await DeadReader.LeaveAsync(store.Path);
+
+		await Assert.That(store.CheckStaleReaders()).IsEqualTo(1);
+		await Assert.That(store.CheckStaleReaders()).IsEqualTo(0);
+		await Assert.That(store.StaleReadersCleared).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task OpeningAWorldNobodyElseHoldsFindsNoStaleReaders()
+	{
+		using var store = Open();
+		await Assert.That(store.CheckStaleReaders()).IsEqualTo(0);
+		await Assert.That(store.StaleReadersCleared).IsEqualTo(0);
+	}
+}
+
+/// <summary>
+/// Leaves a real stale reader slot in a world's <c>lock.mdb</c>: a second process opens the world
+/// read-only, starts a read transaction and dies without ending it, as an <c>mdb_stat</c> killed mid-run
+/// would. The slot stays until <c>mdb_reader_check</c> frees it. Skips the test where the linux-x64
+/// liblmdb or python3 is missing.
+/// </summary>
+internal static class DeadReader
+{
+	private const string Script = """
+		import ctypes, os, sys
+		lib = ctypes.CDLL(sys.argv[1])
+		env = ctypes.c_void_p()
+		txn = ctypes.c_void_p()
+		assert lib.mdb_env_create(ctypes.byref(env)) == 0
+		assert lib.mdb_env_set_maxdbs(env, 128) == 0
+		assert lib.mdb_env_set_maxreaders(env, 256) == 0
+		# MDB_NOTLS | MDB_RDONLY, as a read-only tool opens a live world.
+		assert lib.mdb_env_open(env, sys.argv[2].encode(), 0x200000 | 0x20000, 0o664) == 0
+		assert lib.mdb_txn_begin(env, None, 0x20000, ctypes.byref(txn)) == 0
+		os._exit(0)
+		""";
+
+	public static async Task LeaveAsync(string worldPath)
+	{
+		var native = Path.Join(AppContext.BaseDirectory, "runtimes", "linux-x64", "native", "liblmdb.so");
+		Skip.Unless(OperatingSystem.IsLinux() && File.Exists(native), "needs the linux-x64 liblmdb");
+
+		var start = new ProcessStartInfo("python3") { RedirectStandardError = true };
+		start.ArgumentList.Add("-c");
+		start.ArgumentList.Add(Script);
+		start.ArgumentList.Add(native);
+		start.ArgumentList.Add(worldPath);
+		Process reader;
+		try
+		{
+			reader = Process.Start(start)!;
+		}
+		catch (System.ComponentModel.Win32Exception)
+		{
+			Skip.Test("python3 is not installed");
+			throw;
+		}
+
+		using (reader)
+		{
+			var error = await reader.StandardError.ReadToEndAsync();
+			await reader.WaitForExitAsync();
+			await Assert.That(reader.ExitCode).IsEqualTo(0).Because(error);
+		}
 	}
 }

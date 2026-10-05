@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -44,7 +45,7 @@ public partial class Functions
 			executor, executor, objectStr!, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
 					attrsPattern ?? "*", checkParents,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -55,9 +56,8 @@ public partial class Functions
 				return attributes switch
 				{
 					Error<string> error => error,
-					SharpAttribute[] matched => string.Join(" ", matched
-						.Where(attr => attr.Value.ToPlainText().Contains(substring, comparison))
-						.Select(attr => attr.LongName))
+					IAsyncEnumerable<LazySharpAttribute> matched => string.Join(" ", await MatchingValuesAsync(matched,
+						value => value.Contains(substring, comparison), static attr => attr.LongName))
 				};
 			});
 	}
@@ -100,21 +100,20 @@ public partial class Functions
 				parser, executor, executor, objectStr, LocateFlags.All,
 				async found =>
 				{
-					var attributes = await AttributeService.GetAttributePatternAsync(
+					var attributes = await AttributeService.LazilyGetAttributePatternAsync(
 						executor,
 						found,
 						attrsPattern,
 						false,
 						IAttributeService.AttributePatternMode.Wildcard);
 
-					if (attributes is not SharpAttribute[] matched)
+					if (attributes is not IAsyncEnumerable<LazySharpAttribute> matched)
 					{
 						return CallState.Empty;
 					}
 
-					var matchingAttributes = matched
-						.Where(attr => attr.Value.ToPlainText() is { Length: > 0 } value && regex.IsMatch(value))
-						.Select(attr => attr.Name);
+					var matchingAttributes = await MatchingValuesAsync(matched,
+						value => value is { Length: > 0 } && regex.IsMatch(value), static attr => attr.Name);
 
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
@@ -163,16 +162,15 @@ public partial class Functions
 				executor, executor, objectStr!, LocateFlags.All,
 				async found =>
 				{
-					var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
+					var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
 						attrsPattern ?? "*", false,
 						IAttributeService.AttributePatternMode.Wildcard);
 
 					return attributes switch
 					{
 						Error<string> error => error,
-						SharpAttribute[] matched => string.Join(" ", matched
-							.Where(attr => regex.IsMatch(attr.Value.ToPlainText()))
-							.Select(attr => attr.LongName))
+						IAsyncEnumerable<LazySharpAttribute> matched => string.Join(" ", await MatchingValuesAsync(matched,
+							value => regex.IsMatch(value), static attr => attr.LongName))
 					};
 				});
 		}
@@ -183,25 +181,50 @@ public partial class Functions
 		}
 	}
 
+	/// <summary>
+	/// The content half of the grep family: the permitted attributes whose plain-text value passes
+	/// <paramref name="matches"/>, named by <paramref name="nameOf"/>, in the order the pattern read
+	/// sorted them. The attributes arrive with their values unread; each body is read for its one test
+	/// and released (<see cref="LazySharpAttributeExtensions.ReadValueOnceAsync"/>), so a scan never holds
+	/// more than the body it is testing, and no body is read for an attribute the read gate refused. The
+	/// evaluation's deadline is checked before every body, so a long scan stops when its time is up.
+	/// </summary>
+	private static async ValueTask<List<string>> MatchingValuesAsync(IAsyncEnumerable<LazySharpAttribute> attributes,
+		Func<string, bool> matches, Func<LazySharpAttribute, string> nameOf)
+	{
+		var token = ExecutionBudget.CurrentToken;
+		var names = new List<string>();
+		await foreach (var attr in attributes.WithCancellation(token))
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (matches((await attr.ReadValueOnceAsync(token)).ToPlainText()))
+			{
+				names.Add(nameOf(attr));
+			}
+		}
+
+		return names;
+	}
+
 	[SharpFunction(Name = "reglattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionListAttribute(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Regex,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "reglattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionListAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Regex,
-			matched => string.Join(AttributeListSeparator(parser, "1"), matched.Select(x => x.LongName)));
+			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
 	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Regex,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Regex,
-			matched => matched.Length);
+			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)

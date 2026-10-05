@@ -203,8 +203,8 @@ public class SearchFunctionUnitTests
 	/// The dbref numbers lsearch actually returned, parsed rather than substring-matched.
 	/// </summary>
 	/// <remarks>
-	/// lsearch emits objids — <c>#12:1787882979973</c> — so <c>Contains("#12")</c> also matches
-	/// <c>#120</c>. That cuts both ways: the presence assertion could pass on the wrong object, and
+	/// <c>Contains("#12")</c> also matches <c>#120</c>. That cuts both ways: the presence assertion
+	/// could pass on the wrong object, and
 	/// the absence assertion fails outright once the shared session database reaches a dbref that has
 	/// the control's number as a prefix. These tests exist to stop filters passing by accident; they
 	/// should not themselves pass, or fail, by accident.
@@ -215,6 +215,16 @@ public class SearchFunctionUnitTests
 			.Select(entry => DBRef.TryParse(entry, out var parsed) ? parsed!.Value.Number : (int?)null)
 			.Where(number => number.HasValue)
 			.Select(number => number!.Value)];
+
+	/// <summary>PennMUSH's <c>fun_lsearch</c> writes <c>safe_dbref</c>: <c>#N</c>, never an objid (#1409).</summary>
+	[Test]
+	public async Task Lsearch_ReturnsPlainDbrefsNotObjids()
+	{
+		var result = await SearchAsync("lsearch(all,mindb,0,maxdb,2)");
+
+		await Assert.That(result).StartsWith("#0 #1");
+		await Assert.That(result).DoesNotContain(":");
+	}
 
 	[Test]
 	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
@@ -340,13 +350,13 @@ public class SearchFunctionUnitTests
 		// 1. Once as an argument to lsearch()
 		// 2. Again for each object with ## replaced by the dbref
 		// Correct syntax uses commas, not equals: lsearch(all,eval,\[...\])
-		// Using strmatch to match dbref format with timestamp: #1:*
-		var result = (await Parser.FunctionParse(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,#1:*\)\])")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,*1\)\],maxdb,9)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		if (!string.IsNullOrEmpty(resultText))
 		{
-			await Assert.That(resultText).Contains("#1:");
+			await Assert.That(resultText).Contains("#1");
+			await Assert.That(resultText).DoesNotContain(":");
 		}
 	}
 
@@ -384,12 +394,40 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Lsearch_StartFilter_SkipsResults()
 	{
-		// START is pagination: skip the first N results; start at 1 skips object #0
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,1,maxdb,2)")))?.Message!;
+		// START is 1-based, as in PennMUSH (init_search_spec, src/wiz.c:2270): start 2 skips object #0
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,2,maxdb,2)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("#0");
 		await Assert.That(resultText).Contains("#1");
+	}
+
+	[Test]
+	public async Task Lsearch_StartOfOneIsTheFirstResult()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,1,count,1,maxdb,2)")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("#0");
+	}
+
+	/// <summary>fun_lsearch: when fill_search_spec refuses a START or COUNT below 1 (src/wiz.c:2388-2399)
+	/// the searcher is told why and the function returns #-1; nlsearch() passes the #-1 through.</summary>
+	[Test]
+	[Arguments("lsearch(all,start,0)", "Invalid start index")]
+	[Arguments("lsearch(all,start,-2,count,1)", "Invalid start index")]
+	[Arguments("lsearch(all,count,0)", "Invalid count index")]
+	[Arguments("lsearchr(all,count,none)", "Invalid count index")]
+	[Arguments("nlsearch(all,start,0)", "Invalid start index")]
+	public async Task Lsearch_StartOrCountBelowOne_ReturnsNothingAndSaysWhy(string expression, string notification)
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+		var searcher = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator,
+			TestIsolationHelpers.GenerateUniqueName("LSearchStart"));
+
+		var result = (await WebAppFactoryArg.FunctionParserFor(searcher).FunctionParse(MarkupText.Plain(expression)))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(WebAppFactoryArg.Notifications.For(searcher)).Contains(notification);
 	}
 
 	[Test]
@@ -407,8 +445,8 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Lsearch_StartAndCount_PaginatesResults()
 	{
-		// Start at 1 (skip #0), count 2 (return #1 and #2)
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,1,count,2,maxdb,2)")))?.Message!;
+		// Start at the 2nd result (skip #0), count 2 (return #1 and #2)
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,2,count,2,maxdb,2)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("#0");

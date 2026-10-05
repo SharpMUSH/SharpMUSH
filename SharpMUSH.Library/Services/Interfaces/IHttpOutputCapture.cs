@@ -30,4 +30,10 @@ public interface IHttpOutputCapture
 	/// as failed instead of appending a partial message.
 	/// </summary>
 	bool TryCapture(int dbref, string text);
+
+	/// <summary>
+	/// Whether the active capture frame is for <paramref name="dbref"/>: exactly when
+	/// <see cref="TryCapture"/> would return <c>true</c>, without offering anything.
+	/// </summary>
+	bool Captures(int dbref);
 }

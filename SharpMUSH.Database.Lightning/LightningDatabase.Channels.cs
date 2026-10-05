@@ -70,41 +70,24 @@ public partial class LightningDatabase
 			: throw new InvalidOperationException($"The owner of channel '{channelName}' is not a player");
 	});
 
-	private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersCoreAsync(byte[] key,
-		[EnumeratorCancellation] CancellationToken ct)
-	{
-		var prefix = ChanMemberPrefix(key);
-
-		var members = Store.Read(tx => tx.Range(Tables.ChanMember, prefix)
-			.Select(entry =>
-			{
-				var memberDbref = Keys.ReadDbref(entry.Key.AsSpan(entry.Key.Length - 8, 8));
-				var found = ReadObject(tx, memberDbref);
-				if (found is null)
-				{
-					return null;
-				}
-
-				var memberRecord = Codec.Deserialize<ChannelMemberRecord>(entry.Value);
-				var status = new SharpChannelStatus(
-					Combine: memberRecord.Combine,
-					Gagged: memberRecord.Gagged,
-					Hide: memberRecord.Hide,
-					Mute: memberRecord.Mute,
-					Title: MarkupTextSerializer.Deserialize(memberRecord.Title));
-
-				return new SharpChannel.MemberAndStatus(Hydrate(found.Value.Dbref, found.Value.Record), status);
-			})
-			.Where(entry => entry is not null)
-			.Select(entry => entry!)
-			.ToList());
-
-		foreach (var member in members)
+	/// <summary>Every member of the channel keyed <paramref name="key"/>, in dbref order, paged. A membership row
+	/// whose object is gone is not a member.</summary>
+	private IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersCoreAsync(byte[] key, CancellationToken ct)
+		=> Store.RangeMapAsync(Tables.ChanMember, ChanMemberPrefix(key), (tx, memberKey, value) =>
 		{
-			ct.ThrowIfCancellationRequested();
-			yield return member;
-		}
-	}
+			var found = ReadObject(tx, Keys.ReadDbref(memberKey.AsSpan(memberKey.Length - 8, 8)));
+			return found is null
+				? null
+				: new SharpChannel.MemberAndStatus(Hydrate(found.Value.Dbref, found.Value.Record),
+					MapChannelStatus(Codec.Deserialize<ChannelMemberRecord>(value)));
+		}, ct: ct);
+
+	private static SharpChannelStatus MapChannelStatus(ChannelMemberRecord memberRecord) => new(
+		Combine: memberRecord.Combine,
+		Gagged: memberRecord.Gagged,
+		Hide: memberRecord.Hide,
+		Mute: memberRecord.Mute,
+		Title: MarkupTextSerializer.Deserialize(memberRecord.Title));
 
 	public IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpChannel>(ct => GetAllChannelsCoreAsync(ct));
@@ -144,23 +127,39 @@ public partial class LightningDatabase
 	public IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpChannel>(ct => GetMemberChannelsCoreAsync((long)obj.Object().Key, ct));
 
-	private async IAsyncEnumerable<SharpChannel> GetMemberChannelsCoreAsync(long dbref,
-		[EnumeratorCancellation] CancellationToken ct)
+	public ValueTask<Found<SharpChannelStatus>> GetChannelMemberStatusAsync(SharpChannel channel, DBRef member,
+		CancellationToken cancellationToken = default)
 	{
-		var channels = Store.Read(tx => tx.Dups(Tables.RevChanMember, Keys.Dbref(dbref))
-			.Select(upperNameBytes => tx.TryGet(Tables.Chan, upperNameBytes, out var chanBytes)
-				? Codec.Deserialize<ChannelRecord>(chanBytes)
-				: null)
-			.Where(record => record is not null)
-			.Select(record => MapRecordToChannel(record!))
-			.ToList());
-
-		foreach (var channel in channels)
+		var memberKey = ChanMemberKey(channel.Name.ToPlainText().ToUpperInvariant(), member.Number);
+		return ValueTask.FromResult(Store.Read<Found<SharpChannelStatus>>(tx =>
 		{
-			ct.ThrowIfCancellationRequested();
-			yield return channel;
-		}
+			if (!tx.TryGet(Tables.ChanMember, memberKey, out var bytes)
+				|| ReadObject(tx, member.Number) is not { } found
+				|| (member.CreationMilliseconds is { } created && found.Record.CreationTime != created))
+			{
+				return new NotFound();
+			}
+
+			return MapChannelStatus(Codec.Deserialize<ChannelMemberRecord>(bytes));
+		}));
 	}
+
+	public ValueTask<int> GetChannelMemberCountAsync(SharpChannel channel, CancellationToken cancellationToken = default)
+	{
+		var prefix = ChanMemberPrefix(ChanKey(channel.Name.ToPlainText()));
+		// No member is decoded or hydrated, but this is still a cursor walk over the channel's membership rows
+		// (ChanMember is not a duplicate table, so there is no O(1) count), plus a point read of each member's
+		// object row: a membership is counted only when its object is there, as the member listing requires.
+		return ValueTask.FromResult(Store.Read(tx => tx.Range(Tables.ChanMember, prefix)
+			.Count(entry => tx.TryGet(Tables.Obj, entry.Key.AsSpan(entry.Key.Length - 8, 8), out _))));
+	}
+
+	private IAsyncEnumerable<SharpChannel> GetMemberChannelsCoreAsync(long dbref, CancellationToken ct)
+		=> Store.DupsMapAsync(Tables.RevChanMember, Keys.Dbref(dbref),
+			(tx, upperNameBytes) => tx.TryGet(Tables.Chan, upperNameBytes, out var chanBytes)
+				? MapRecordToChannel(Codec.Deserialize<ChannelRecord>(chanBytes))
+				: null,
+			ct: ct);
 
 	public async ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner,
 		CancellationToken cancellationToken = default)

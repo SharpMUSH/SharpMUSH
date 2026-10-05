@@ -251,7 +251,7 @@ public class InputSessionCommandTests
 			{
 				await Assert.That((await Input(player.Handle, reply)).Accepted).IsTrue();
 				var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-				await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
+				await Scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
 				await drained.Task.WaitAsync(QueueDeadline);
 				await Assert.That(await Read(player.DbRef, "SET")).IsEqualTo($"||{reply}|{reply}|LOCAL OTHER")
 					.Because("no register carries over from the previous reply, and each is readable as it is set");

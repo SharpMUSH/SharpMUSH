@@ -60,11 +60,12 @@ public class MailController(
 		folder = string.IsNullOrWhiteSpace(folder) ? DefaultFolder : folder;
 		var list = new List<MailSummaryDto>();
 		var number = 1;
-		await foreach (var mail in mediator.CreateStream(new GetMailListQuery(player, folder)).WithCancellation(ct))
+		// The summaries leave the bodies undecoded and name the sender without hydrating it.
+		await foreach (var mail in mediator.CreateStream(new GetMailSummaryListQuery(player, folder)).WithCancellation(ct))
 		{
 			list.Add(new MailSummaryDto(
 				number++,
-				await FromNameAsync(mail),
+				mail.SenderName ?? UnknownSender,
 				mail.Subject.ToPlainText(),
 				mail.DateSent,
 				mail.Read,
@@ -80,11 +81,10 @@ public class MailController(
 		var player = await ResolvePlayerAsync(ct);
 		if (player is null) return Unauthorized();
 
+		// Read from the folder index (one seek per folder) instead of decoding the whole mailbox. The index
+		// lists only non-empty names, so a message filed under "" no longer adds an empty entry here.
 		var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DefaultFolder };
-		await foreach (var mail in mediator.CreateStream(new GetAllMailListQuery(player)).WithCancellation(ct))
-		{
-			folders.Add(mail.Folder);
-		}
+		folders.UnionWith(await mediator.Send(new GetMailFoldersQuery(player), ct));
 		return folders.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
 	}
 
@@ -199,8 +199,10 @@ public class MailController(
 
 	private static int? FolderIndex(int number) => number >= 1 ? number - 1 : null;
 
+	private const string UnknownSender = "(unknown)";
+
 	private static async Task<string> FromNameAsync(SharpMail mail)
-		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";
+		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? UnknownSender;
 
 	/// <summary>
 	/// Resolves the character this request acts as, re-checked against its current account link.

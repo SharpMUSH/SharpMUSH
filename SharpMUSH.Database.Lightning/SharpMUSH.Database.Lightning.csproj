@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="SharpMUSH.Tests" />
+    <InternalsVisibleTo Include="SharpMUSH.Benchmarks" />
   </ItemGroup>
 
   <ItemGroup>

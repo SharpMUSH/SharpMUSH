@@ -75,7 +75,8 @@ public partial class Functions
 		{
 			var arg = args["0"].Message!.ToPlainText();
 
-			if (int.TryParse(arg, out var folderNum) && folderNum >= 0 && folderNum <= 15)
+			// A folder number is a strict integer (src/extmail.c:2057).
+			if (ArgHelpers.TryStrictInteger(arg, out int folderNum) && folderNum >= 0 && folderNum <= 15)
 			{
 				folderSpec = arg;
 			}
@@ -126,8 +127,14 @@ public partial class Functions
 		}
 
 		// Only a player has a mailbox; anything else holds no mail.
+		// A folder is named by its number, as count_mail takes it, or by one of the player's names for it.
 		var tally = targetPlayer is SharpPlayer mailbox
-			? await TallyMail(Mediator.CreateStream(new GetMailListQuery(mailbox, folderSpec ?? "INBOX")))
+			? await TallyMail(Mediator.CreateStream(new GetMailListQuery(mailbox,
+				Implementation.Commands.MailCommand.MailFolders.Resolve(
+					await Implementation.Commands.MailCommand.MailFolders.LoadAsync(ObjectDataService, mailbox),
+					folderSpec ?? "0") is Implementation.Commands.MailCommand.MailFolder folder
+					? folder.Name
+					: folderSpec ?? "INBOX")))
 			: new MailTally();
 
 		return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
@@ -160,17 +167,16 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
 
-		if (!long.TryParse(pidStr, out var pid))
+		// fun_pidinfo refuses anything but a strict unsigned integer with e_uint (src/cque.c:1747-1749).
+		if (!ArgHelpers.TryStrictUnsignedLong(pidStr, out var pid))
 		{
-			return new CallState(ErrorMessages.Returns.InvalidPid);
+			return new CallState(ErrorMessages.Returns.UInteger);
 		}
 
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message!.ToPlainText().ToLowerInvariant()
 			: null;
-		var delimiter = args.TryGetValue("2", out var delimArg)
-			? delimArg.Message!.ToPlainText()
-			: " ";
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 
 		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 		if (task is null) return new CallState(ErrorMessages.Returns.NoSuchPid);
@@ -389,7 +395,7 @@ public partial class Functions
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 						parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
 						async found =>
-							await ManipulateSharpObjectService.SetOrUnsetPowers(executor, found,
+							await FlagAndPowerService.SetOrUnsetPowers(executor, found,
 								power!.Message!.ToPlainText(), true));
 				}
 		}
@@ -625,7 +631,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			async found => await ManipulateSharpObjectService.SetName(executor, found, newName.Message!, true));
+			async found => await ObjectNameService.SetName(executor, found, newName.Message!, true));
 	}
 
 	[SharpFunction(Name = "moniker", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -753,9 +759,7 @@ public partial class Functions
 
 		var classArg = args["0"].Message!.ToPlainText();
 		var pattern = args["1"].Message!.ToPlainText();
-		var attributePattern = args.TryGetValue("2", out var attrArg)
-			? attrArg.Message!.ToPlainText()
-			: "*";
+		var attributePattern = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "*").ToPlainText();
 
 		AnySharpObject? classObj = null;
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
@@ -768,7 +772,12 @@ public partial class Functions
 			classObj = classFound;
 		}
 
-		var results = Mediator.CreateStream(new GetAllObjectsQuery())
+		// A class is an owner: its objects come from the owner index (ascending dbref order, as the
+		// world scan returned them), and the owner is still compared exactly per object.
+		var candidates = classObj is null
+			? Mediator.CreateStream(new GetAllObjectsQuery())
+			: Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = classObj.Object().DBRef }));
+		var results = candidates
 			.Where(async (obj, _) => classObj is null
 				|| (await obj.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == classObj.Object().DBRef)
 			.Where(async (obj, _) => await obj.Attributes.Value.AnyAsync(attr =>
@@ -1307,10 +1316,15 @@ public partial class Functions
 
 		var code = args["0"].Message!;
 
-		if (!int.TryParse((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var iterations) || iterations <= 0)
+		// fun_benchmark reads the count with is_number/parse_number, truncates it, and refuses one below
+		// 1 with e_uint (src/funmisc.c:1492-1501).
+		if (!ArgHelpers.TryNumber(parser, (args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var count)
+			|| !(count >= 1 && count <= int.MaxValue))
 		{
-			return new CallState(ErrorMessages.Returns.Numbers);
+			return new CallState(ErrorMessages.Returns.UInteger);
 		}
+
+		var iterations = (int)count;
 
 		var outputFormat = "ms";
 		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))

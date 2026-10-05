@@ -21,8 +21,8 @@ public static class ChannelList
 		$"{"Name".PadRight(ChannelHelper.MaxChannelNameLength)} {"Users",-5} {"Msgs",8} {"Chan Type",-16} {"Status",-9} {"Buf",-3}";
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
-		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
-		IConnectionService ConnectionService, MString arg0, MString arg1, string[] switches)
+		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
+		MString arg0, MString arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -58,7 +58,7 @@ public static class ChannelList
 				continue;
 			}
 
-			var status = await ChannelHelper.ChannelMemberStatus(executor, channel);
+			var status = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 
 			if ((onSwitch && status is null) || (offSwitch && status is not null))
 			{
@@ -71,7 +71,9 @@ public static class ChannelList
 				continue;
 			}
 
-			var members = await ChannelHelper.ChannelMembers(ConnectionService, channel);
+			// The Users column is the population, connected or not: a count of the membership rows, not a read
+			// of every member and its connections.
+			var users = await Mediator.Send(new GetChannelMemberCountQuery(channel));
 			var messageCount = await Mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 			// The owner is read only to decide one character, so an unresolvable one costs the '*' and not
 			// the listing — see ChannelHelper.TryResolveOwner.
@@ -83,7 +85,7 @@ public static class ChannelList
 				channel.Name,
 				MarkupText.Plain(new string(' ',
 					Math.Max(ChannelHelper.MaxChannelNameLength - channelName.Length, 0))),
-				MarkupText.Plain($" {members.Count,5} {messageCount,8}"
+				MarkupText.Plain($" {users,5} {messageCount,8}"
 												 + $" [{ChannelTypeColumn(channel)} {LockColumn(channel, owned)}]"
 												 + $" [{StatusColumn(status)}] {channel.Buffer,3}")
 			]));

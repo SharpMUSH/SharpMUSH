@@ -219,7 +219,7 @@ public partial class PackageInstallService
 		}
 
 		var hasContents = checkContents
-			&& await navigation.GetContentsAsync(dbref, cancellationToken).AnyAsync(cancellationToken);
+			&& await navigation.GetContentRefsAsync(dbref, cancellationToken).AnyAsync(cancellationToken);
 
 		// Full live object structure for the three-way structure merge.
 		var sharpObject = known.Object();

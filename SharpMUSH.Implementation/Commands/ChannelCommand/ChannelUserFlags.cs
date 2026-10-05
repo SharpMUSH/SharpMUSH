@@ -39,7 +39,7 @@ public static class ChannelUserFlags
 		Combine
 	}
 
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, IPermissionService PermissionService,
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, IChannelPermissionService PermissionService,
 		IMediator Mediator, INotifyService NotifyService, MString? channelName, MString? yesNo, UserFlag flag,
 		bool forceOff)
 	{
@@ -115,7 +115,7 @@ public static class ChannelUserFlags
 	/// Sets or clears <paramref name="flag"/> on each channel the executor is on; <paramref name="silent"/> is
 	/// the bulk form, which has already said what it did.
 	/// </summary>
-	private static async ValueTask<CallState> SetFlagAsync(IPermissionService PermissionService, IMediator Mediator,
+	private static async ValueTask<CallState> SetFlagAsync(IChannelPermissionService PermissionService, IMediator Mediator,
 		INotifyService NotifyService, AnySharpObject executor, SharpChannel[] channels, UserFlag flag, bool setting,
 		bool silent)
 	{
@@ -123,7 +123,7 @@ public static class ChannelUserFlags
 
 		foreach (var channel in channels)
 		{
-			var membership = await ChannelHelper.ChannelMemberStatus(executor, channel);
+			var membership = await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel);
 
 			if (membership is null)
 			{

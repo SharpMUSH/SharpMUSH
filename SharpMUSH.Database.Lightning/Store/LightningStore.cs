@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using LightningDB;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
@@ -39,11 +40,19 @@ public sealed partial class LightningStore : IDisposable
 	/// not take the last one.</summary>
 	private volatile Exception? _flushFailure;
 
+	private readonly ILogger? _logger;
+	/// <summary>Runs <see cref="CheckStaleReaders"/> every <see cref="LightningStoreOptions.ReaderCheckInterval"/>;
+	/// null when that interval is zero.</summary>
+	private readonly Timer? _readerCheckTimer;
+	private long _staleReadersCleared;
+
 	/// <summary>Top-level write transactions committed so far. Observable batching: a burst of N jobs that
 	/// queued behind one in-flight commit shows up here as one commit, not N.</summary>
 	internal long CommitCount => Interlocked.Read(ref _commits);
 	/// <summary>Forced syncs the periodic timer has run.</summary>
 	internal long FlushCount => Interlocked.Read(ref _flushes);
+	/// <summary>Reader slots <see cref="CheckStaleReaders"/> has freed since this store was constructed.</summary>
+	public long StaleReadersCleared => Interlocked.Read(ref _staleReadersCleared);
 
 	/// <summary>Tables opened through <see cref="OpenTable"/> rather than declared in <see cref="Tables"/>
 	/// — a plugin's own. Kept across <see cref="Close"/> so <see cref="Open"/> reopens them too: after a
@@ -51,10 +60,18 @@ public sealed partial class LightningStore : IDisposable
 	/// has to keep resolving to a live handle.</summary>
 	private ImmutableDictionary<string, TableDef> _pluginTables = ImmutableDictionary<string, TableDef>.Empty;
 
+	/// <summary>Bumped each time the environment is reopened over a different directory (a swap or a wipe), while
+	/// the gate's write lock is still held: anything kept in memory about the data stamps the epoch it was read
+	/// in, and a reader that starts after the reopen already sees the new number.</summary>
+	private long _epoch;
+
+	/// <summary>See <see cref="_epoch"/>.</summary>
+	internal long Epoch => Interlocked.Read(ref _epoch);
+
 	public string Path => _options.Path;
 	internal ReaderWriterLockSlim Gate => _gate;
 
-	public LightningStore(LightningStoreOptions options)
+	public LightningStore(LightningStoreOptions options, ILogger? logger = null)
 	{
 		// Reject bad options before anything is acquired: a throw after Open would leave the environment
 		// mapped and its lock file held, with no store handed back to dispose them.
@@ -68,12 +85,77 @@ public sealed partial class LightningStore : IDisposable
 			throw new ArgumentOutOfRangeException(nameof(options), options.FlushInterval, "FlushInterval must be positive under Periodic sync.");
 		}
 
+		if (options.ReaderCheckInterval < TimeSpan.Zero)
+		{
+			throw new ArgumentOutOfRangeException(nameof(options), options.ReaderCheckInterval, "ReaderCheckInterval cannot be negative.");
+		}
+
 		_options = options;
+		_logger = logger;
 		Open();
 		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch);
 		if (options.Sync == LightningSyncMode.Periodic)
 		{
 			_flushTimer = new Timer(_ => FlushIfDirty(), null, options.FlushInterval, options.FlushInterval);
+		}
+
+		if (options.ReaderCheckInterval > TimeSpan.Zero)
+		{
+			_readerCheckTimer = new Timer(_ => CheckStaleReadersOnTick(), null, options.ReaderCheckInterval,
+				options.ReaderCheckInterval);
+		}
+	}
+
+	/// <summary>
+	/// LMDB's <c>mdb_reader_check</c>: frees every reader slot in <c>lock.mdb</c> whose process has died
+	/// while holding a read transaction, and returns how many it freed. A dead process's slot otherwise
+	/// stays occupied, and writers cannot reuse any page it pins, so the file grows until it is cleared
+	/// (lmdb.h, "Caveats"). An environment opened with no other process attached starts with a clean
+	/// table, so a slot survives only when another process (an <c>mdb_stat</c>, a second host) was attached
+	/// when one of them died. Runs on open and then every <see cref="LightningStoreOptions.ReaderCheckInterval"/>.
+	/// </summary>
+	public int CheckStaleReaders()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			return Cleared(_env.CheckStaleReaders());
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
+	private int Cleared(int cleared)
+	{
+		if (cleared > 0)
+		{
+			Interlocked.Add(ref _staleReadersCleared, cleared);
+			_logger?.LogWarning("Cleared {Count} stale LMDB reader slot(s) in {Path}: a process holding the world open died mid-read",
+				cleared, _options.Path);
+		}
+
+		return cleared;
+	}
+
+	/// <summary>The timer's tick. Skips rather than blocks when the environment is mid-swap: the reopen
+	/// checks on its own. A failure is logged, never thrown: a timer callback has no caller, and an
+	/// unhandled exception there is process death.</summary>
+	private void CheckStaleReadersOnTick()
+	{
+		if (_disposed || !_gate.TryEnterReadLock(0)) return;
+		try
+		{
+			Cleared(_env.CheckStaleReaders());
+		}
+		catch (LightningException ex)
+		{
+			_logger?.LogError(ex, "Checking {Path} for stale LMDB reader slots failed", _options.Path);
+		}
+		finally
+		{
+			_gate.ExitReadLock();
 		}
 	}
 
@@ -120,6 +202,7 @@ public sealed partial class LightningStore : IDisposable
 			PageSize = _options.PageSize
 		});
 		_env.Open(FlagsFor(_options.Sync));
+		Cleared(_env.CheckStaleReaders());
 
 		using var tx = _env.BeginTransaction();
 		var tables = new Dictionary<TableDef, LmdbDb>();
@@ -391,6 +474,7 @@ public sealed partial class LightningStore : IDisposable
 				finally
 				{
 					Open();
+					Interlocked.Increment(ref _epoch);
 				}
 
 				// Reported only now, with a live environment behind the gate again: the pages that flush
@@ -428,12 +512,67 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// How full the environment is, from LMDB's own statistics: the map ceiling, how many pages the file has
+	/// reached, and how many hold live data. Cheap — no data is read, only each table's B-tree header — and
+	/// a read-side operation like <see cref="CopyTo"/>, so writes continue.
+	/// </summary>
+	/// <remarks>
+	/// Pages on LMDB's own free list are not counted as used: they are exactly the space the file holds
+	/// for reuse. Neither is a table this process has not opened, which the provider never leaves behind.
+	/// </remarks>
+	public LightningEnvironmentUsage Usage()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			var info = _env.Info;
+			var main = _env.EnvironmentStats;
+			// The two meta pages, then the main database (which holds the named tables' catalogue).
+			var used = 2L + main.BranchPages + main.LeafPages + main.OverflowPages;
+			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+			used += _tables.Values.Select(tx.GetStats).Sum(stats => stats.BranchPages + stats.LeafPages + stats.OverflowPages);
+
+			return new LightningEnvironmentUsage(info.MapSize, main.PageSize, (long)info.LastPageNumber + 1, used);
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
+	/// <summary>
+	/// Every open table's entry count, plus the main database's (one entry per named table, plugins' too):
+	/// what a compacted copy has to match before it may replace this environment.
+	/// </summary>
+	internal IReadOnlyDictionary<string, long> EntryCounts()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+			var counts = _tables.ToDictionary(t => t.Key.Name, t => tx.GetEntriesCount(t.Value), StringComparer.Ordinal);
+			counts[string.Empty] = _env.EnvironmentStats.Entries;
+			return counts;
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
 	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
 	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()
 	{
 		if (_disposed) return;
 		_disposed = true;
+		if (_readerCheckTimer is not null)
+		{
+			using var checkedReaders = new ManualResetEvent(false);
+			if (_readerCheckTimer.Dispose(checkedReaders)) checkedReaders.WaitOne();
+		}
+
 		if (_flushTimer is not null)
 		{
 			// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
@@ -559,6 +698,23 @@ public sealed partial class LightningStore : IDisposable
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			var positioned = PrefixSuccessor(prefix) is { } past && cursor.SetRange(past) == MDBResultCode.Success
+				? cursor.Previous().resultCode
+				: cursor.Last().resultCode;
+			if (positioned != MDBResultCode.Success) yield break;
+			do
+			{
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
+			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+		}
+
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			// The first key at or past beforeKey, then one step back; with nothing at or past it, the last key.
+			var positioned = cursor.SetRange(beforeKey) == MDBResultCode.Success
 				? cursor.Previous().resultCode
 				: cursor.Last().resultCode;
 			if (positioned != MDBResultCode.Success) yield break;

@@ -89,6 +89,35 @@ public class StagingTests
 	}
 
 	/// <summary>
+	/// The live provider keeps its flag, power and attribute-flag definitions in memory; a promotion replaces the
+	/// world they were read from, so the definitions the staged world holds are what the live one answers with.
+	/// </summary>
+	[Test]
+	public async Task PromoteReplacesTheDefinitionsTheLiveProviderHolds()
+	{
+		var path = TempPath();
+		var live = Create(path);
+		try
+		{
+			await live.Migrate();
+			await live.CreateObjectFlagAsync("LIVE_ONLY_FLAG", null, "l", false, [], [], ["THING"]);
+			await Assert.That(await live.GetObjectFlagAsync("LIVE_ONLY_FLAG")).IsNotNull();
+
+			var staging = await live.CreateStagingAsync();
+			await staging.CreateObjectFlagAsync("STAGED_FLAG", null, "s", false, [], [], ["THING"]);
+			await staging.PromoteToLiveAsync();
+
+			await Assert.That(await live.GetObjectFlagAsync("STAGED_FLAG")).IsNotNull();
+			await Assert.That(await live.GetObjectFlagAsync("LIVE_ONLY_FLAG")).IsNull();
+			await Assert.That(await live.GetObjectFlagsAsync().AnyAsync(flag => flag.Name == "LIVE_ONLY_FLAG")).IsFalse();
+		}
+		finally
+		{
+			await Cleanup(live, path);
+		}
+	}
+
+	/// <summary>
 	/// Objects are not the only thing a world allocates ids for. Promotion inherits the staged world's
 	/// <c>Meta</c> rows along with its data, so a staging database built through the provider needs no
 	/// help — but an importer that bulk-loads rows and never maintains the allocators leaves counters

@@ -127,9 +127,12 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                /// <summary>
 		                /// Returns a copy of <paramref name="options"/> with one property replaced, rebuilding only the
 		                /// records on the path to it. <paramref name="propertyName"/> must be canonical — resolve it with
-		                /// <see cref="ResolvePropertyName"/> first.
+		                /// <see cref="ResolvePropertyName"/> first. A numeric value outside the option's declared
+		                /// <c>Min</c>/<c>Max</c> is clamped to the bound (<see cref="ConfigBounds"/>), and
+		                /// <paramref name="corrected"/> is told so the caller can log it.
 		                /// </summary>
-		                public static SharpMUSHOptions WithValue(SharpMUSHOptions options, string propertyName, object? value)
+		                public static SharpMUSHOptions WithValue(SharpMUSHOptions options, string propertyName, object? value,
+		                    Action<ConfigBoundCorrection>? corrected = null)
 		                {
 		                    return propertyName switch
 		                    {
@@ -151,7 +154,7 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		var property = p.Property.Name;
 		var type = GetTypeName(p.Property.Type);
 
-		return $"\"{property}\" => options with {{ {category} = options.{category} with {{ {property} = ({type})value! }} }},";
+		return $"\"{property}\" => options with {{ {category} = options.{category} with {{ {property} = ({type})ConfigBounds.Clamp(\"{property}\", value, corrected)! }} }},";
 	}
 
 	private static IParameterSymbol? PrimaryConstructorParameter(IPropertySymbol category, IPropertySymbol property)

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -20,7 +21,7 @@ public class ZoneParentCycleTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IManipulateSharpObjectService ManipulateService => WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
+	private IObjectRelationshipService RelationshipService => WebAppFactoryArg.Services.GetRequiredService<IObjectRelationshipService>();
 
 	[Test]
 	public async ValueTask DirectParentCycle_ShouldFail()
@@ -36,11 +37,25 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new SetObjectParentCommand(obj1, obj2));
 
 		// Try to set obj2's parent to obj1 (would create a cycle)
-		var result = await ManipulateService.SetParent(obj1, obj2, obj1, false);
+		var result = await RelationshipService.SetParent(obj1, obj2, obj1, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
+	}
+
+	[Test]
+	public async ValueTask UnsetParent_WithoutNotify_RefusesSilently()
+	{
+		var outsiderRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "UnsetParentOutsider");
+		var outsider = (await Mediator.Send(new GetObjectNodeQuery(outsiderRef))).Expect<AnySharpObject>();
+		var targetResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "UnsetParentTarget");
+		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(targetResult.Message!.ToPlainText()!)))).Expect<AnySharpObject>();
+
+		var result = await RelationshipService.UnsetParent(outsider, target, false);
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(WebAppFactoryArg.Notifications.For(outsiderRef)).IsEmpty();
 	}
 
 	[Test]
@@ -57,7 +72,7 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new SetObjectZoneCommand(zone1, zone2));
 
 		// Try to set zone2's zone to zone1 (would create a cycle)
-		var result = await ManipulateService.SetZone(zone1, zone2, zone1, false);
+		var result = await RelationshipService.SetZone(zone1, zone2, zone1, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -78,7 +93,7 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new SetObjectParentCommand(objA, objB));
 
 		// Try to set objB's zone to objA (would create a cycle: A -> parent B -> zone A)
-		var result = await ManipulateService.SetZone(objA, objB, objA, false);
+		var result = await RelationshipService.SetZone(objA, objB, objA, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -99,7 +114,7 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new SetObjectZoneCommand(objX, objY));
 
 		// Try to set objY's parent to objX (would create a cycle: X -> zone Y -> parent X)
-		var result = await ManipulateService.SetParent(objX, objY, objX, false);
+		var result = await RelationshipService.SetParent(objX, objY, objX, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -126,7 +141,7 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new SetObjectZoneCommand(obj2, obj3));
 
 		// Try to set obj3 -> parent obj1 (would create a cycle: 1 -> parent 2 -> zone 3 -> parent 1)
-		var result = await ManipulateService.SetParent(obj1, obj3, obj1, false);
+		var result = await RelationshipService.SetParent(obj1, obj3, obj1, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -148,10 +163,10 @@ public class ZoneParentCycleTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
-		var parentResult2 = await ManipulateService.SetParent(obj, obj, parent, false);
+		var parentResult2 = await RelationshipService.SetParent(obj, obj, parent, false);
 		await Assert.That(parentResult2.Message).IsNotNull();
 
-		var zoneResult2 = await ManipulateService.SetZone(obj, obj, zone, false);
+		var zoneResult2 = await RelationshipService.SetZone(obj, obj, zone, false);
 		await Assert.That(zoneResult2.Message).IsNotNull();
 
 		var updated = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
@@ -172,7 +187,7 @@ public class ZoneParentCycleTests
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// Try to set object as its own parent
-		var result = await ManipulateService.SetParent(obj, obj, obj, false);
+		var result = await RelationshipService.SetParent(obj, obj, obj, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
@@ -187,7 +202,7 @@ public class ZoneParentCycleTests
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// Try to set object as its own zone
-		var result = await ManipulateService.SetZone(obj, obj, obj, false);
+		var result = await RelationshipService.SetZone(obj, obj, obj, false);
 
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;

@@ -2017,6 +2017,14 @@
   <data name="RolSceneNotFound" xml:space="preserve">
     <value>Scène introuvable.</value>
   </data>
+  <data name="RolSceneNotStarted" xml:space="preserve">
+    <value>La scène n'a pas été lancée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNotPrivate" xml:space="preserve">
+    <value>La scène a été lancée, mais elle n’a pas pu être rendue privée.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
   </data>
@@ -2046,14 +2054,6 @@
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Ouvert à tous les spectateurs</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalIsAnotherCharacter" xml:space="preserve">
-    <value>Le terminal de cet onglet joue {0}, pas {1}. Lancez la scène depuis un onglet qui joue {1}, ou revenez à {0}.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolSceneTerminalUnconfirmed" xml:space="preserve">
-    <value>Impossible de confirmer quel personnage joue le terminal de cet onglet. Réessayez dans un instant.</value>
     <comment>MT</comment>
   </data>
   <data name="RolStartScene" xml:space="preserve">
@@ -4307,6 +4307,22 @@
   </data>
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En scène</value>
+  </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Vous regardez cette scène. Rejoignez-la pour poser ici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Vos poses vont dans une autre scène. Rejoignez celle-ci pour poser ici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Rejoindre la scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Quitter la scène</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Canaux</value>

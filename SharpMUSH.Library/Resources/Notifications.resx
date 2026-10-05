@@ -614,16 +614,46 @@
   <data name="LockFlagsUnset" xml:space="preserve">
     <value>{0}/{1} - lock flags unset.</value>
   </data>
+  <data name="CantLockThat" xml:space="preserve">
+    <value>You can't lock that!</value>
+  </data>
+  <data name="UnknownLockType" xml:space="preserve">
+    <value>Unknown lock type.</value>
+  </data>
+  <data name="InvalidLockName" xml:space="preserve">
+    <value>That is not a valid lock name.</value>
+  </data>
+  <data name="LockNameHasPipe" xml:space="preserve">
+    <value>The character '|' may not be used in lock names.</value>
+  </data>
+  <data name="UnrecognizedLockFlag" xml:space="preserve">
+    <value>Unrecognized lock flag.</value>
+  </data>
+  <data name="NoSuchLock" xml:space="preserve">
+    <value>No such lock.</value>
+  </data>
 
   <!-- Link/Unlink messages -->
   <data name="LinkedExitToRoom" xml:space="preserve">
     <value>Linked exit #{0} to #{1}</value>
   </data>
+  <data name="LinkedExitToObject" xml:space="preserve">
+    <value>Linked exit #{0} to {1}</value>
+  </data>
   <data name="UnlinkedExit" xml:space="preserve">
-    <value>Unlinked exit #{0}.</value>
+    <value>Unlinked exit #{0} (Used to lead to {1}).</value>
   </data>
   <data name="UnlinkWhat" xml:space="preserve">
     <value>Unlink what?</value>
+  </data>
+  <data name="OpenFromWhere" xml:space="preserve">
+    <value>Open from where?</value>
+  </data>
+  <data name="NotAValidObject" xml:space="preserve">
+    <value>That is not a valid object.</value>
+  </data>
+  <data name="RoomBeingDestroyed" xml:space="preserve">
+    <value>That room is being destroyed. Sorry.</value>
   </data>
   <data name="OpenedExit" xml:space="preserve">
     <value>Opened exit {0}</value>
@@ -795,12 +825,6 @@
   <data name="FloorDisappearsNothingness" xml:space="preserve">
     <value>The floor disappears under your feet, you fall through NOTHINGness and then:</value>
   </data>
-  <data name="LinkedToHome" xml:space="preserve">
-    <value>Linked to home.</value>
-  </data>
-  <data name="LinkedToVariable" xml:space="preserve">
-    <value>Linked to variable.</value>
-  </data>
   <data name="HomeSet" xml:space="preserve">
     <value>Home set.</value>
   </data>
@@ -815,9 +839,6 @@
   </data>
   <data name="SparedFromDestructionFormat" xml:space="preserve">
     <value>Spared from destruction: {0}</value>
-  </data>
-  <data name="SourceMustBeARoom" xml:space="preserve">
-    <value>Source must be a room.</value>
   </data>
   <data name="ExitsOnlyFromRooms" xml:space="preserve">
     <value>You can only make exits out of rooms.</value>
@@ -915,14 +936,11 @@
   <data name="HuhTypeHelp" xml:space="preserve">
     <value>Huh?  (Type "help" for help.)</value>
   </data>
-  <data name="AllObjectsHalted" xml:space="preserve">
-    <value>All objects halted.</value>
-  </data>
-  <data name="Halted" xml:space="preserve">
-    <value>Halted.</value>
-  </data>
   <data name="Notified" xml:space="preserve">
     <value>Notified.</value>
+  </data>
+  <data name="Drained" xml:space="preserve">
+    <value>Drained.</value>
   </data>
   <data name="YouDoNotHavePermissionToSpoofEmits" xml:space="preserve">
     <value>You do not have permission to spoof emits.</value>
@@ -938,9 +956,6 @@
   </data>
   <data name="YouMustSpecifyObjectToDecompile" xml:space="preserve">
     <value>You must specify an object to decompile.</value>
-  </data>
-  <data name="AllObjectsRestarted" xml:space="preserve">
-    <value>All objects restarted.</value>
   </data>
   <data name="YouMustSpecifyObjectToRestart" xml:space="preserve">
     <value>You must specify an object to restart.</value>
@@ -1095,9 +1110,6 @@
   </data>
 
   <!-- Wizard admin - flag management -->
-  <data name="AllObjectsHaltedWithCountFormat" xml:space="preserve">
-    <value>All objects halted. {0} objects processed.</value>
-  </data>
   <data name="FlagAddRequiresNameAndSymbol" xml:space="preserve">
     <value>@FLAG/ADD requires flag name and symbol.</value>
   </data>
@@ -1389,26 +1401,11 @@
   <data name="HaltInvalidPidFormat" xml:space="preserve">
     <value>Invalid process ID format.</value>
   </data>
-  <data name="HaltTaskHaltedFormat" xml:space="preserve">
-    <value>Task {0} halted.</value>
-  </data>
-  <data name="HaltNoTaskWithPidFormat" xml:space="preserve">
-    <value>No task found with PID {0}.</value>
-  </data>
-  <data name="HaltMustSpecifyTarget" xml:space="preserve">
-    <value>You must specify a target object.</value>
-  </data>
-  <data name="HaltedPlayerAndObjectsFormat" xml:space="preserve">
-    <value>Halted {0} and all their objects.</value>
-  </data>
-  <data name="HaltedObjectWithActionsFormat" xml:space="preserve">
-    <value>Halted {0} with replacement actions.</value>
-  </data>
-  <data name="HaltedObjectFormat" xml:space="preserve">
-    <value>Halted {0}.</value>
-  </data>
   <data name="RunawayObjectFormat" xml:space="preserve">
     <value>Runaway object: {0}({1}). Commands halted.</value>
+  </data>
+  <data name="HaltedNoticeFormat" xml:space="preserve">
+    <value>Halted: {0}({1})</value>
   </data>
   <data name="HaltedObjectCommandRefusedFormat" xml:space="preserve">
     <value>Attempt to execute command by halted object #{0}</value>
@@ -1778,26 +1775,26 @@
   </data>
 
   <!-- @edit command -->
-  <data name="EditInvalidArguments" xml:space="preserve">
-    <value>Invalid arguments to @edit.</value>
-  </data>
   <data name="EditInvalidFormat" xml:space="preserve">
-    <value>Invalid format. Use: object/attribute=search,replace</value>
+    <value>I need to know what you want to edit.</value>
   </data>
   <data name="EditMustSpecifySearchAndReplace" xml:space="preserve">
-    <value>You must specify search and replace strings.</value>
+    <value>Nothing to do.</value>
   </data>
   <data name="EditNoMatchingAttributesFound" xml:space="preserve">
-    <value>No matching attributes found.</value>
+    <value>No matching attributes.</value>
   </data>
   <data name="EditAttributeSetFormat" xml:space="preserve">
-    <value>{0} - Set.</value>
+    <value>{0} - Set: {1}</value>
   </data>
-  <data name="EditWouldChangeToFormat" xml:space="preserve">
-    <value>{0} - Would change to: {1}</value>
+  <data name="EditAttributeUnchangedFormat" xml:space="preserve">
+    <value>{0} - Unchanged.</value>
   </data>
-  <data name="EditSummaryFormat" xml:space="preserve">
-    <value>{0} {1} attribute{2}. {3} unchanged.</value>
+  <data name="EditQuietSummaryFormat" xml:space="preserve">
+    <value>{0} attributes edited, {1} skipped.</value>
+  </data>
+  <data name="EditInvalidRegexpFormat" xml:space="preserve">
+    <value>Invalid regexp: {0}</value>
   </data>
 
   <!-- @function command -->
@@ -1967,15 +1964,6 @@
   </data>
 
   <!-- @restart command -->
-  <data name="RestartMustSpecifyObject" xml:space="preserve">
-    <value>You must specify an object to restart.</value>
-  </data>
-  <data name="RestartedPlayerAndObjectsFormat" xml:space="preserve">
-    <value>Restarted {0} and all their objects.</value>
-  </data>
-  <data name="RestartedObjectFormat" xml:space="preserve">
-    <value>Restarted {0}.</value>
-  </data>
 
   <!-- @scan command -->
   <data name="ScanMatchesOnRoomContents" xml:space="preserve">
@@ -2220,6 +2208,12 @@
   </data>
   <data name="SearchNothingFound" xml:space="preserve">
     <value>Nothing found.</value>
+  </data>
+  <data name="SearchInvalidStart" xml:space="preserve">
+    <value>Invalid start index</value>
+  </data>
+  <data name="SearchInvalidCount" xml:space="preserve">
+    <value>Invalid count index</value>
   </data>
 
   <!-- @listmotd command -->
@@ -2509,7 +2503,7 @@
     <value>Usage: @chownall &lt;player&gt;[=&lt;new owner&gt;]</value>
   </data>
   <data name="ChownAllCompleteFormat" xml:space="preserve">
-    <value>Changed ownership of {0} object(s) from {1} to {2}.</value>
+    <value>Ownership changed for {0} objects.</value>
   </data>
 
   <data name="CommandUnknownSwitchFormat" xml:space="preserve">
@@ -2545,6 +2539,65 @@
   </data>
   <data name="BackupListEmpty" xml:space="preserve">
     <value>No backups have been taken yet.</value>
+  </data>
+
+  <!-- @storage -->
+  <data name="StorageWorldFormat" xml:space="preserve">
+    <value>World {0}: map limit {1}, file length {2}, allocated on disk {3}.</value>
+  </data>
+  <data name="StoragePagesFormat" xml:space="preserve">
+    <value>Live data {0}; reusable free space inside the file {1}; the file can grow {2} more before the map is full.</value>
+  </data>
+  <data name="StorageDiskFreeFormat" xml:space="preserve">
+    <value>Disk free beside the world: {0}.</value>
+  </data>
+  <data name="StorageStaleReadersFormat" xml:space="preserve">
+    <value>{0} reader slot(s) freed since startup: a process holding the world open died while reading it, and its slot kept writers from reusing pages until it was freed. Another tool attached to the live world is the usual cause (deploy/README.md).</value>
+  </data>
+  <data name="StorageCompactionNote" xml:space="preserve">
+    <value>Deleting records frees pages inside the file for reuse; it never shrinks the file. To shrink it, replace it with a compacted copy (deploy/README.md).</value>
+  </data>
+  <data name="StorageBackupFormat" xml:space="preserve">
+    <value>Backups in {0}: {1} on disk ({2}), keeping {3}. The next copy is about {4}; a run needs {5} free and {6} is. At its peak, before pruning, the directory holds {7}.</value>
+  </data>
+  <data name="StorageBackupSharesDisk" xml:space="preserve">
+    <value>The backups are on the same disk as the world, so each eats into the other's headroom.</value>
+  </data>
+  <data name="StorageBackupWontFit" xml:space="preserve">
+    <value>The next backup run will refuse to start: there is not enough free disk for a new copy beside the ones kept.</value>
+  </data>
+  <data name="StorageBackupUnavailable" xml:space="preserve">
+    <value>This provider cannot take backups.</value>
+  </data>
+  <data name="StorageLeftoverFormat" xml:space="preserve">
+    <value>Left over: {0} ({1}, {2}). Delete it once you no longer need it.</value>
+  </data>
+  <data name="StorageHistoryHeader" xml:space="preserve">
+    <value>History kept in the live world:</value>
+  </data>
+  <data name="StorageHistoryRowFormat" xml:space="preserve">
+    <value>  {0} ({1}): {2} records, {3}, in {4} streams. Policy: {5}.</value>
+  </data>
+  <data name="StorageHistoryNone" xml:space="preserve">
+    <value>No kind of history is installed.</value>
+  </data>
+  <data name="StorageHistoryArchiveFormat" xml:space="preserve">
+    <value>Purged records are archived to {0} before they are deleted.</value>
+  </data>
+  <data name="StorageHistoryNoArchive" xml:space="preserve">
+    <value>No archive is configured: a purged record survives only in backups taken before it was purged.</value>
+  </data>
+  <data name="StoragePurgeStarted" xml:space="preserve">
+    <value>Running a history retention pass. The game keeps running; it works in small batches.</value>
+  </data>
+  <data name="StoragePurgedFormat" xml:space="preserve">
+    <value>  {0}: purged {1} records ({2}) in {3} batches.</value>
+  </data>
+  <data name="StoragePurgeKeptFormat" xml:space="preserve">
+    <value>  {0}: keeps everything; nothing purged.</value>
+  </data>
+  <data name="StoragePurgeFailedFormat" xml:space="preserve">
+    <value>  {0}: stopped after {1} records ({2}): {3}</value>
   </data>
 
   <!-- @pcreate -->
@@ -2748,6 +2801,7 @@
     <value>Invalid descriptor.</value>
   </data>
   <data name="QueueRejected" xml:space="preserve"><value>Queue admission rejected: {0}.</value></data>
+  <data name="CpuUsageExceeded" xml:space="preserve"><value>CPU usage exceeded.</value></data>
   <data name="QueueUsage" xml:space="preserve"><value>Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.</value></data>
   <data name="QueueRejections" xml:space="preserve"><value>Queue rejections ({0}): {1}.</value></data>
   <data name="InputSessionCancelled" xml:space="preserve">
@@ -2843,5 +2897,62 @@ PLAYERS:</value>
   </data>
   <data name="PlayerNameTooManyAliases" xml:space="preserve">
     <value>Too many aliases.</value>
+  </data>
+  <data name="HaltedOthersObjectFormat" xml:space="preserve">
+    <value>Halted: {0}'s {1}({2})</value>
+  </data>
+  <data name="HaltedObjectByFormat" xml:space="preserve">
+    <value>Halted: {0}({1}), by {2}</value>
+  </data>
+  <data name="AllYourObjectsHalted" xml:space="preserve">
+    <value>All of your objects have been halted.</value>
+  </data>
+  <data name="AllObjectsForPlayerHaltedFormat" xml:space="preserve">
+    <value>All objects for {0} have been halted.</value>
+  </data>
+  <data name="AllYourObjectsHaltedByFormat" xml:space="preserve">
+    <value>All of your objects have been halted by {0}.</value>
+  </data>
+  <data name="HaltCommandNotAllowed" xml:space="preserve">
+    <value>You may not use @halt obj=command on this object.</value>
+  </data>
+  <data name="HaltInvalidPid" xml:space="preserve">
+    <value>That is not a valid pid!</value>
+  </data>
+  <data name="HaltPidHaltedFormat" xml:space="preserve">
+    <value>Queue entry with pid {0} halted.</value>
+  </data>
+  <data name="HaltWorldPowerDenied" xml:space="preserve">
+    <value>You do not have the power to bring the world to a halt.</value>
+  </data>
+  <data name="GloballyHaltedByFormat" xml:space="preserve">
+    <value>Your objects have been globally halted by {0}</value>
+  </data>
+  <data name="RestartWorldPowerDenied" xml:space="preserve">
+    <value>You do not have the power to restart the world.</value>
+  </data>
+  <data name="GloballyRestartedByFormat" xml:space="preserve">
+    <value>Your objects are being globally restarted by {0}</value>
+  </data>
+  <data name="AllObjectsForPlayerRestartingFormat" xml:space="preserve">
+    <value>All objects for {0} are being restarted.</value>
+  </data>
+  <data name="AllYourObjectsRestartingByFormat" xml:space="preserve">
+    <value>All of your objects are being restarted by {0}.</value>
+  </data>
+  <data name="RestartingOthersObjectFormat" xml:space="preserve">
+    <value>Restarting: {0}'s {1}({2})</value>
+  </data>
+  <data name="RestartingObjectByFormat" xml:space="preserve">
+    <value>Restarting: {0}({1}), by {2}</value>
+  </data>
+  <data name="AllYourObjectsRestarting" xml:space="preserve">
+    <value>All of your objects are being restarted.</value>
+  </data>
+  <data name="RestartingObjectFormat" xml:space="preserve">
+    <value>Restarting: {0}({1})</value>
+  </data>
+  <data name="OwnerChanged" xml:space="preserve">
+    <value>Owner changed.</value>
   </data>
 </root>

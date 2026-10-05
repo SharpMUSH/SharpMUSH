@@ -14,23 +14,24 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private IMediator Mediator { get; }
 	/// <summary>
-	/// The object store, and only that: the cycle guards in <see cref="HelperFunctions"/> are the
-	/// sole reason a function reaches a store at all, and they take an <see cref="IObjectStore"/>.
-	/// Holding the whole <see cref="ISharpDatabase"/> composite here would hand every function a
-	/// write surface that bypasses the Mediator (engine data trunk §1, §2).
+	/// The parent/zone cycle guard — the one thing a function needed a store for. It is the guard, not
+	/// the store, so no function holds a write surface that bypasses the Mediator (engine data trunk §1, §2).
 	/// </summary>
-	private IObjectStore Database { get; }
+	private IRelationshipCycleChecker RelationshipCycles { get; }
 	private ILocateService LocateService { get; }
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
 	private IPermissionService PermissionService { get; }
+	private IChannelPermissionService ChannelPermissions { get; }
 	private ICommandDiscoveryService CommandDiscoveryService { get; }
 	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
 	private IOptionsWrapper<ColorsOptions> ColorConfiguration { get; }
 	private IPasswordService PasswordService { get; }
 	private IConnectionService ConnectionService { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
-	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private IObjectNameService ObjectNameService { get; }
+	private IFlagAndPowerService FlagAndPowerService { get; }
+	private IObjectRelationshipService ObjectRelationshipService { get; }
 	private ICommunicationService CommunicationService { get; }
 	private IValidateService ValidateService { get; }
 	private ISortService SortService { get; }
@@ -55,17 +56,20 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ILogger<Functions> logger,
 		IMediator mediator,
 		IMessageBus messageBus,
-		IObjectStore database,
+		IRelationshipCycleChecker relationshipCycles,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		ICommandDiscoveryService commandDiscoveryService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IOptionsWrapper<ColorsOptions> colorOptions,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectNameService objectNameService,
+		IFlagAndPowerService flagAndPowerService,
+		IObjectRelationshipService objectRelationshipService,
 		IExpandedObjectDataService objectDataService,
 		ISortService sortService,
 		IValidateService validateService,
@@ -82,17 +86,20 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		Logger = logger;
 		Mediator = mediator;
 		MessageBus = messageBus;
-		Database = database;
+		RelationshipCycles = relationshipCycles;
 		LocateService = locateService;
 		AttributeService = attributeService;
 		NotifyService = notifyService;
 		PermissionService = permissionService;
+		ChannelPermissions = channelPermissions;
 		CommandDiscoveryService = commandDiscoveryService;
 		Configuration = configuration;
 		ColorConfiguration = colorOptions;
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
+		ObjectNameService = objectNameService;
+		FlagAndPowerService = flagAndPowerService;
+		ObjectRelationshipService = objectRelationshipService;
 		ObjectDataService = objectDataService;
 		SortService = sortService;
 		ValidateService = validateService;

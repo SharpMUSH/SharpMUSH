@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -24,7 +26,8 @@ public class PackagesController(
 	IPackageSourceService source,
 	IPackageManifestService manifests,
 	IPackageInstallService installer,
-	IPackageAuthoringService authoring) : ControllerBase
+	IPackageAuthoringService authoring,
+	IPackageOperationRunner operations) : ControllerBase
 {
 	/// <summary>The canonical official repo, used when no official remote is configured yet.</summary>
 	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
@@ -163,14 +166,18 @@ public class PackagesController(
 	public async Task<ActionResult<IReadOnlyList<InstalledPackageDto>>> GetInstalled()
 	{
 		var installed = await registry.GetInstalledPackagesAsync();
+		// One read of every edge, grouped once, rather than a whole-table scan per package.
+		var dependents = (await registry.GetAllPackageDependenciesAsync())
+			.OrderBy(d => d.PackageId, StringComparer.Ordinal)
+			.ToLookup(d => d.DependsOnId, d => d.PackageId);
 		var result = new List<InstalledPackageDto>();
 		foreach (var package in installed)
 		{
 			result.Add(new InstalledPackageDto(
 				package,
-				(await registry.GetManagedAttributesAsync(package.Id)).Count,
-				(await registry.GetPackageObjectsAsync(package.Id)).Count,
-				(await registry.GetPackageDependentsAsync(package.Id)).Select(d => d.PackageId).ToList()));
+				await registry.CountManagedAttributesAsync(package.Id),
+				await registry.CountPackageObjectsAsync(package.Id),
+				dependents[package.Id].ToList()));
 		}
 
 		return Ok(result);
@@ -187,17 +194,32 @@ public class PackagesController(
 			.ToList());
 	}
 
-	/// <summary>Rolls back to a prior revision (recorded as a NEW revision, decision 20.13).</summary>
+	/// <summary>
+	/// Rolls back to a prior revision (recorded as a NEW revision, decision 20.13), as a queue entry
+	/// after a pre-operation backup; see <see cref="IPackageOperationRunner"/>.
+	/// </summary>
 	[HttpPost("{id}/rollback/{revision:int}")]
 	[Authorize]
 	public async Task<ActionResult<PackageRollbackResult>> Rollback(string id, int revision, CancellationToken cancellationToken)
-	{
-		return await installer.RollbackAsync(id, revision, cancellationToken) switch
+		=> await operations.RunAsync("rollback", token => installer.RollbackAsync(id, revision, token), cancellationToken) switch
 		{
-			PackageRollbackResult ok => Ok(ok),
-			Error<string> error => BadRequest(error.Value)
+			PackageOperationRan<Result<PackageRollbackResult>> ran => RolledBack(ran.Result, ran.Backup),
+			PackageOperationRefused refused => Unavailable(refused)
 		};
-	}
+
+	private ActionResult<PackageRollbackResult> RolledBack(Result<PackageRollbackResult> result, WorldBackup? backup) => result switch
+	{
+		PackageRollbackResult ok => Ok(ok with { Notes = WithBackupNote(ok.Notes, backup) }),
+		Error<string> error => BadRequest(error.Value)
+	};
+
+	/// <summary>A package operation that never ran: the queue refused it, or its backup failed.</summary>
+	private ObjectResult Unavailable(PackageOperationRefused refused) =>
+		StatusCode(StatusCodes.Status503ServiceUnavailable, refused.Reason);
+
+	/// <summary>Puts the pre-operation backup first among an operation's notes, so the admin knows where it is.</summary>
+	private static IReadOnlyList<string> WithBackupNote(IReadOnlyList<string> notes, WorldBackup? backup) =>
+		backup is null ? notes : [$"The world was backed up to {backup.Path} first.", .. notes];
 
 	/// <summary>
 	/// Uninstalls a package; 409 when dependents exist and force is not set. A bundled package that
@@ -208,10 +230,14 @@ public class PackagesController(
 	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, [FromServices] GameFeatureService features,
 		CancellationToken cancellationToken)
 	{
-		return await installer.UninstallAsync(id, force, cancellationToken) switch
+		return await operations.RunAsync("uninstall", token => installer.UninstallAsync(id, force, token), cancellationToken) switch
 		{
-			Success => await UninstalledAsync(),
-			Error<string> error => Conflict(error.Value)
+			PackageOperationRan<Result<Success>> { Result: var result } => result switch
+			{
+				Success => await UninstalledAsync(),
+				Error<string> error => Conflict(error.Value)
+			},
+			PackageOperationRefused refused => Unavailable(refused)
 		};
 
 		async Task<IActionResult> UninstalledAsync()
@@ -440,19 +466,26 @@ public class PackagesController(
 		// the two routes producing one identity, so update checks and uninstall cannot tell them apart.
 		var applyPath = isCatalogue ? manifest.Name : request.Path;
 
-		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
+		var applyRequest = new PackageApplyRequest(
 			new PackageApplySource(remote.Url, applyPath, manifestSource.Commit, remote.Branch),
 			request.ConfigureAnswers ?? new Dictionary<string, string>(),
 			request.Decisions ?? [],
 			request.KeepRevisions,
-			request.AllowManagedCode), cancellationToken, binarySource);
+			request.AllowManagedCode);
 
-		return result switch
+		return await operations.RunAsync("apply",
+				token => installer.ApplyAsync(manifest, applyRequest, token, binarySource), cancellationToken) switch
 		{
-			PackageApplyResult ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, ok.Notes)),
-			Error<string> error => BadRequest(error.Value)
+			PackageOperationRan<Result<PackageApplyResult>> ran => Applied(ran.Result, ran.Backup),
+			PackageOperationRefused refused => Unavailable(refused)
 		};
 	}
+
+	private ActionResult<ApplyResponse> Applied(Result<PackageApplyResult> result, WorldBackup? backup) => result switch
+	{
+		PackageApplyResult ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, WithBackupNote(ok.Notes, backup))),
+		Error<string> error => BadRequest(error.Value)
+	};
 
 	/// <summary>A parsed manifest, the warnings its parse raised, and where it was read from.</summary>
 	private readonly record struct FetchedManifest(

@@ -32,16 +32,22 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	private sealed class Served
 	{
 		public string Json { get; set; } = ConfigLayoutTests.RealConfigurationJson();
+
+		/// <summary>What a save (PATCH) answers; null answers it as a read, with <see cref="Json"/>.</summary>
+		public (HttpStatusCode Status, string Body)? Save { get; set; }
 	}
 
 	private readonly Served _served = new();
 
 	public DynamicConfigPageTests()
 	{
-		var client = Track(new HttpClient(new RouteHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(_served.Json, Encoding.UTF8, "application/json")
-		}))
+		var client = Track(new HttpClient(new RouteHandler((method, _) =>
+			method == HttpMethod.Patch && _served.Save is var (status, body)
+				? new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") }
+				: new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(_served.Json, Encoding.UTF8, "application/json")
+				}))
 		{ BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
@@ -119,6 +125,23 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		await Assert.That(row.QuerySelector(".cfg-row-changed")).IsNotNull();
 		await Assert.That(cut.Find(".cfg-unsaved .cfg-count").TextContent).Contains("1");
 		await Assert.That(cut.Find(".cfg-unsaved button.kit-capsule--primary").TextContent).Contains("Save");
+	}
+
+	[Test]
+	public async Task ARefusedSave_PutsTheServersReasonUnderItsField_AndKeepsTheEdit()
+	{
+		_served.Save = (HttpStatusCode.BadRequest, """{ "errors": { "Chat.NoisyCEmit": "sharp-refusal-reason" } }""");
+		var cut = RenderChat();
+		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.Click();
+
+		cut.Find(".cfg-unsaved button.kit-capsule--primary").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".cfg-row-error"), TimeSpan.FromSeconds(5));
+		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
+		var error = row.QuerySelector(".cfg-row-error")!;
+		await Assert.That(error.TextContent).IsEqualTo("sharp-refusal-reason");
+		await Assert.That(row.QuerySelector("button[role=switch]")!.GetAttribute("aria-describedby")).Contains(error.Id!);
+		await Assert.That(cut.Find(".cfg-unsaved .cfg-count").TextContent).Contains("1");
 	}
 
 	[Test]

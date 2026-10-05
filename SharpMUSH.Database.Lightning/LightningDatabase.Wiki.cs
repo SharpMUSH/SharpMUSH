@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
@@ -26,6 +27,20 @@ namespace SharpMUSH.Database.Lightning;
 /// own rather than a filter over everything. <see cref="Tables.WikiTr"/> is keyed
 /// <c>(pageId, locale)</c>, which makes "the translations of this page, ordered by locale" a prefix
 /// range and gives the <c>(pageId, locale)</c> uniqueness the contract asks for for free.
+/// </para>
+/// <para>
+/// Four list indexes answer the listings without reading page rows, whose Markdown, HTML and plain
+/// text dwarf what a listing filters and sorts on. Each value is the page's visibility (a published byte
+/// and the author dbref), and each key ends with the page key, the deterministic tie-break:
+/// <see cref="Tables.WikiRecent"/> is <c>(UpdatedAt UTC ticks, page)</c>, read backwards;
+/// <see cref="Tables.WikiByNamespace"/> is <c>(namespace, slug, page)</c>; <see cref="Tables.WikiByCategory"/>
+/// and <see cref="Tables.WikiByTag"/> are <c>(upper-cased category or tag, title, page)</c>. The ordered
+/// strings (namespace, slug, title) are written UTF-16 big-endian with a two-byte zero separator, so the
+/// key order is exactly <see cref="StringComparer.Ordinal"/>'s; the matched strings are upper-cased
+/// invariantly, which is how <see cref="StringComparison.OrdinalIgnoreCase"/> compares. A listing reads
+/// index entries up to <c>skip + take</c> admitted ones and decodes only the <c>take</c> pages it returns.
+/// Every write that changes an indexed field drops the page's old entries and writes its new ones in the
+/// same job.
 /// </para>
 /// <para>
 /// Every mutation is one write job on the single writer thread, so <c>WriteTranslationAsync</c>'s
@@ -78,6 +93,100 @@ public partial class LightningDatabase : IWikiStore
 
 	private static byte[] WikiTranslationKey(string pageId, string locale) => Keys.Composite(pageId, locale);
 
+	private static readonly byte[] OrdinalSep = [0x00, 0x00];
+
+	/// <summary>A string as UTF-16 big-endian code units, whose byte order is <see cref="StringComparer.Ordinal"/>'s.</summary>
+	private static byte[] OrdinalBytes(string value) => Encoding.BigEndianUnicode.GetBytes(value);
+
+	/// <summary>The stored visibility of a page: one published byte, then the author dbref.</summary>
+	private static byte[] WikiVisibilityValue(WikiPageRecord r) => Keys.Concat([(r.Published ?? true) ? (byte)1 : (byte)0], Keys.Str(r.AuthorDbref));
+
+	private static bool WikiVisibilityAdmits(WikiVisibility visibility, byte[] value)
+		=> visibility.Admits(value[0] == 1, Keys.ReadStr(value.AsSpan(1)));
+
+	private static long WikiIndexPageKey(byte[] key) => Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
+
+	private static byte[] WikiRecentKey(long pageKey, WikiPageRecord r)
+		=> Keys.Concat(Keys.Dbref(ParseWikiTimestamp(r.UpdatedAt).UtcTicks), Keys.Dbref(pageKey));
+
+	private static byte[] WikiNamespaceKey(long pageKey, WikiPageRecord r)
+		=> Keys.Concat(OrdinalBytes(r.Namespace), OrdinalSep, OrdinalBytes(r.Slug), OrdinalSep, Keys.Dbref(pageKey));
+
+	private static byte[] WikiLabelPrefix(string label) => Keys.Concat(Keys.Upper(label), Keys.Sep);
+
+	private static byte[] WikiLabelKey(string label, long pageKey, WikiPageRecord r)
+		=> Keys.Concat(WikiLabelPrefix(label), OrdinalBytes(r.Title), OrdinalSep, Keys.Dbref(pageKey));
+
+	/// <summary>The tags a page is listed under, once each however many case variants it carries.</summary>
+	private static IEnumerable<string> WikiIndexTags(WikiPageRecord r)
+		=> (r.Tags ?? []).DistinctBy(tag => tag.ToUpperInvariant());
+
+	/// <summary>Writes (<paramref name="add"/>) or removes every list-index entry <paramref name="r"/> holds.</summary>
+	private static void WikiListIndexes(ITx tx, long pageKey, WikiPageRecord r, bool add)
+	{
+		var value = WikiVisibilityValue(r);
+		Apply(Tables.WikiRecent, WikiRecentKey(pageKey, r));
+		Apply(Tables.WikiByNamespace, WikiNamespaceKey(pageKey, r));
+		// MapWikiPage turns an empty category into none, and no listing matches none.
+		if (!string.IsNullOrEmpty(r.Category)) Apply(Tables.WikiByCategory, WikiLabelKey(r.Category, pageKey, r));
+		foreach (var tag in WikiIndexTags(r)) Apply(Tables.WikiByTag, WikiLabelKey(tag, pageKey, r));
+		if (r.IsProtected) Apply(Tables.WikiProtected, WikiPageKey(pageKey));
+
+		void Apply(TableDef table, byte[] key)
+		{
+			if (add) tx.Put(table, key, value);
+			else tx.Delete(table, key);
+		}
+	}
+
+	/// <summary>Replaces a page row and moves its list-index entries from <paramref name="old"/> to <paramref name="updated"/>.</summary>
+	private static void PutWikiPage(ITx tx, long pageKey, WikiPageRecord? old, WikiPageRecord updated)
+	{
+		if (old is not null) WikiListIndexes(tx, pageKey, old, add: false);
+		tx.Put(Tables.WikiPage, WikiPageKey(pageKey), Codec.Serialize(updated));
+		WikiListIndexes(tx, pageKey, updated, add: true);
+	}
+
+	/// <summary>
+	/// The namespaces stored in <see cref="Tables.WikiByNamespace"/>, in ordinal order, one seek each: after
+	/// a namespace's first key the cursor jumps past every key under it.
+	/// </summary>
+	private static IEnumerable<byte[]> WikiNamespacePrefixes(ITx tx)
+	{
+		var next = tx.Range(Tables.WikiByNamespace, []).Select(e => e.Key).FirstOrDefault();
+		while (next is not null)
+		{
+			var end = 0;
+			while (end + 1 < next.Length && (next[end] != 0 || next[end + 1] != 0)) end += 2;
+			var prefix = next[..end];
+			yield return Keys.Concat(prefix, OrdinalSep);
+			next = tx.RangeFromKey(Tables.WikiByNamespace, Keys.Concat(prefix, [0x00, 0x01])).Select(e => e.Key).FirstOrDefault();
+		}
+	}
+
+	/// <summary>The namespace index entries a listing reads: all of them, or those of the namespaces equal to
+	/// <paramref name="ns"/> ignoring case, in (namespace, slug, page) order either way.</summary>
+	private static IEnumerable<(byte[] Key, byte[] Value)> WikiNamespaceEntries(ITx tx, string? ns)
+		=> ns is null
+			? tx.Range(Tables.WikiByNamespace, [])
+			: WikiNamespacePrefixes(tx)
+				.Where(prefix => Encoding.BigEndianUnicode.GetString(prefix.AsSpan(0, prefix.Length - 2))
+					.Equals(ns, StringComparison.OrdinalIgnoreCase))
+				.ToList()
+				.SelectMany(prefix => tx.Range(Tables.WikiByNamespace, prefix));
+
+	/// <summary>The admitted entries of an ordered index, paged, each resolved to its page row.</summary>
+	private static List<WikiPage> WikiPagesFromIndex(ITx tx, IEnumerable<(byte[] Key, byte[] Value)> entries,
+		WikiVisibility visibility, int skip, int take)
+		=> entries
+			.Where(entry => WikiVisibilityAdmits(visibility, entry.Value))
+			.Skip(skip)
+			.Take(take)
+			.Select(entry => WikiIndexPageKey(entry.Key))
+			.Select(key => TryReadWikiPage(tx, key) is { } record ? MapWikiPage(key, record) : null)
+			.OfType<WikiPage>()
+			.ToList();
+
 	/// <summary>Reads and increments the <c>next_wiki</c> counter inside a write job, mirroring <see cref="AllocateDbref"/>.</summary>
 	private static long AllocateWikiId(ITx tx)
 	{
@@ -106,17 +215,6 @@ public partial class LightningDatabase : IWikiStore
 	private static IEnumerable<(long Key, WikiPageRecord Record)> AllWikiPages(ITx tx)
 		=> tx.Range(Tables.WikiPage, [])
 			.Select(entry => (Keys.ReadDbref(entry.Key), Codec.Deserialize<WikiPageRecord>(entry.Value)));
-
-	/// <summary>
-	/// The pages <paramref name="visibility"/> admits, tested on the stored record before it is mapped.
-	/// There is no index on the published flag or the author to seek instead: every listing here is one
-	/// scan of the page table, and this keeps the rows it drops from being mapped at all.
-	/// </summary>
-	private static IEnumerable<WikiPage> VisibleWikiPagesMapped(ITx tx, WikiVisibility visibility)
-		=> AllWikiPages(tx)
-			// `Published ?? true`, as CountPagesAsync reads it: a row written before the field existed is published.
-			.Where(page => visibility.Admits(page.Record.Published ?? true, page.Record.AuthorDbref))
-			.Select(page => MapWikiPage(page.Key, page.Record));
 
 	private static WikiPage MapWikiPage(long key, WikiPageRecord r) => new(
 		Id: WikiPageId(key),
@@ -204,10 +302,6 @@ public partial class LightningDatabase : IWikiStore
 		tx.Put(Tables.WikiRev, WikiRevKey(pageId, locale, revisionNumber), Codec.Serialize(record));
 	}
 
-	private static IEnumerable<WikiRevision> RangeWikiRevisions(ITx tx, string pageId, string locale)
-		=> tx.Range(Tables.WikiRev, WikiRevPrefix(pageId, locale))
-			.Select(entry => MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(entry.Value)));
-
 	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string category, string slug)
 		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 		{
@@ -222,45 +316,42 @@ public partial class LightningDatabase : IWikiStore
 			TryReadWikiPage(tx, id) is { } found ? MapWikiPage(found.Key, found.Record) : new NotFound()));
 
 	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
-			.OrderByDescending(p => p.UpdatedAt)
-			// Id descending as the tie-break so two pages written inside one timestamp tick still order
-			// newest-first rather than by whatever the key scan happened to yield.
-			.ThenByDescending(p => TryParseWikiPageId(p.Id, out var key) ? key : 0)
-			.Take(count)
-			.ToList()));
+		// Backwards over (UpdatedAt, page): newest first, and within one timestamp tick the newest-created
+		// page first, so two pages written together still order deterministically.
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
+			WikiPagesFromIndex(tx, tx.RangeReverse(Tables.WikiRecent, []), visibility, 0, count)));
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
-			.Where(p => ns is null || p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(p => p.Namespace, StringComparer.Ordinal)
-			.ThenBy(p => p.Slug, StringComparer.Ordinal)
-			.Skip(skip)
-			.Take(take)
-			.ToList()));
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
+			WikiPagesFromIndex(tx, WikiNamespaceEntries(tx, ns), visibility, skip, take)));
 
 	// `Published ?? true` rather than `== true`, so a row written before the field existed counts the
-	// same way it displays. Defence in depth: every write path here sets it.
+	// same way it displays; the index value already carries it that way.
 	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
-		=> Task.FromResult(Store.Read(tx => AllWikiPages(tx)
-			.Count(p => (ns is null || p.Record.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
-				&& (includeDrafts || (p.Record.Published ?? true)))));
+		=> Task.FromResult(Store.Read(tx => WikiNamespaceEntries(tx, ns)
+			.Count(entry => includeDrafts || entry.Value[0] == 1)));
+
+	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+		=> Task.FromResult(Store.Read(tx =>
+		{
+			int published = 0, drafts = 0;
+			foreach (var (_, value) in tx.Range(Tables.WikiByNamespace, []))
+			{
+				if (value[0] == 1) published++;
+				else if (includeDrafts) drafts++;
+			}
+
+			var isProtected = tx.Range(Tables.WikiProtected, []).Count(entry => includeDrafts || entry.Value[0] == 1);
+			return new WikiPageCounts(published, drafts, isProtected);
+		}));
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
-			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(p => p.Title, StringComparer.Ordinal)
-			.Skip(skip)
-			.Take(take)
-			.ToList()));
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
+			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => VisibleWikiPagesMapped(tx, visibility)
-			.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
-			.OrderBy(p => p.Title, StringComparer.Ordinal)
-			.Skip(skip)
-			.Take(take)
-			.ToList()));
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
+			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByTag, WikiLabelPrefix(tag)), visibility, skip, take)));
 
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page)
 	{
@@ -296,7 +387,7 @@ public partial class LightningDatabase : IWikiStore
 			}
 
 			var key = AllocateWikiId(tx);
-			tx.Put(Tables.WikiPage, WikiPageKey(key), Codec.Serialize(record));
+			PutWikiPage(tx, key, null, record);
 			tx.Put(Tables.WikiSlug, slugKey, Keys.Dbref(key));
 
 			var stored = MapWikiPage(key, record);
@@ -322,7 +413,7 @@ public partial class LightningDatabase : IWikiStore
 				RevisionNumber = revision
 			};
 
-			tx.Put(Tables.WikiPage, WikiPageKey(found.Key), Codec.Serialize(updated));
+			PutWikiPage(tx, found.Key, found.Record, updated);
 
 			var page = MapWikiPage(found.Key, updated);
 			AppendWikiRevision(tx, page.Id, string.Empty, revision, body.Markdown, editorDbref, editSummary, at);
@@ -341,6 +432,7 @@ public partial class LightningDatabase : IWikiStore
 			tx.DeletePrefix(Tables.WikiRev, WikiPagePrefix(pageId));
 			tx.DeletePrefix(Tables.WikiTr, WikiPagePrefix(pageId));
 			tx.Delete(Tables.WikiSlug, WikiSlugKey(found.Record.Namespace, found.Record.Category, found.Record.Slug));
+			WikiListIndexes(tx, found.Key, found.Record, add: false);
 			tx.Delete(Tables.WikiPage, WikiPageKey(found.Key));
 			return new None();
 		});
@@ -350,8 +442,7 @@ public partial class LightningDatabase : IWikiStore
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
-			tx.Put(Tables.WikiPage, WikiPageKey(found.Key),
-				Codec.Serialize(found.Record with { IsProtected = isProtected }));
+			PutWikiPage(tx, found.Key, found.Record, found.Record with { IsProtected = isProtected });
 			return new None();
 		});
 
@@ -384,17 +475,33 @@ public partial class LightningDatabase : IWikiStore
 				tx.Put(Tables.WikiSlug, newSlugKey, Keys.Dbref(found.Key));
 			}
 
-			tx.Put(Tables.WikiPage, WikiPageKey(found.Key), Codec.Serialize(updated));
+			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});
 
+	/// <summary>The stream read backwards: its keys end with the big-endian revision number, so key order is
+	/// revision order and a page costs <c>skip + take</c> entries with only <c>take</c> decoded.</summary>
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take)
 		=> Task.FromResult<IReadOnlyList<WikiRevision>>(Store.Read(tx =>
-			RangeWikiRevisions(tx, CanonicalWikiPageId(pageId), locale)
-				.OrderByDescending(r => r.RevisionNumber)
+			tx.RangeReverse(Tables.WikiRev, WikiRevPrefix(CanonicalWikiPageId(pageId), locale))
 				.Skip(skip)
 				.Take(take)
+				.Select(entry => MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(entry.Value)))
 				.ToList()));
+
+	/// <summary>The cursor form: one seek to <paramref name="beforeRevisionNumber"/>, then <paramref name="take"/> entries.</summary>
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsBeforeAsync(string pageId, string locale, int beforeRevisionNumber, int take)
+		=> Task.FromResult<IReadOnlyList<WikiRevision>>(beforeRevisionNumber <= 0
+			? []
+			: Store.Read(tx =>
+			{
+				var canonical = CanonicalWikiPageId(pageId);
+				return tx.RangeReverseBefore(Tables.WikiRev, WikiRevPrefix(canonical, locale),
+						WikiRevKey(canonical, locale, beforeRevisionNumber))
+					.Take(take)
+					.Select(entry => MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(entry.Value)))
+					.ToList();
+			}));
 
 	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, string locale, int revisionNumber)
 		=> Task.FromResult(Store.Read<Found<WikiRevision>>(tx =>

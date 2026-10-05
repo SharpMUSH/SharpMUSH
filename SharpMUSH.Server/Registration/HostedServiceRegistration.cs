@@ -88,9 +88,12 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
+		services.AddHostedService<Services.HistoryRetentionScheduleService>();
+		services.AddHostedService<Services.StorageCapacityMetrics>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
+		services.AddHostedService<Services.ExpiredSessionSweepService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection

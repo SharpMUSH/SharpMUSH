@@ -89,6 +89,38 @@
     font-size: 13px;
 }
 
+/* The Story's footer while the viewer is not focused on the room's scene: say so, and offer to join. */
+.play-join {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.play-join-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.play-join-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-on);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.play-join-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* column-reverse keeps the story anchored at its newest pose as poses arrive. */
 .play-story-scroll {
     flex: 1;
@@ -508,6 +540,75 @@
     }
     .play-story-scroll {
         padding: 6px 10px;
+    }
+}
+
+/* Short (#1506): a phone held sideways (layout.js shortScreenQuery; Play sets play--short). It is wider than the
+   narrow tier, so it keeps the tablet layout and the aside, but it has about 390px of height, so everything that
+   stacks gives some back. The page's edges follow the safe-area insets, because the notch is now at a side, not
+   the top. A class rather than a query: a page stylesheet asks its container, and the container is not a size
+   container (ResponsiveConventionsTests). Stated after the tiers, so it wins where they also apply. */
+.play--short {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    gap: 8px;
+}
+
+.play--short .play-main,
+.play--short .play-aside {
+    gap: 8px;
+}
+
+/* Focus mode goes edge to edge, clear of the notch and the home indicator, as it does on an upright phone. */
+.play--short.play--focus {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    gap: 0;
+}
+
+.play--short.play--focus ::deep .scene-card {
+    border-width: 0;
+    border-radius: 0;
+}
+
+/* The header on one line: the room (or scene) beside the name instead of under it, and nothing wraps. */
+.play--short ::deep .scene-card-head {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.play--short ::deep .scene-card-titles {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.play--short ::deep .scene-card-title,
+.play--short ::deep .scene-card-sub {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.play--short ::deep .sharp-terminal-input {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.play--short .play-story-scroll {
+    padding: 6px 12px;
+}
+
+.play--short ::deep .scene-card-foot {
+    padding: 0 8px 8px;
+}
+
+/* The composer on one line once it is wide enough for the field to keep its room (focus mode, mostly): the
+   chips, the field, the tools and Send. Not while expanded: the field is the screen then. The composer is its
+   own size container (PlayComposer.razor.css), so this asks its width. */
+@container (min-width: 40rem) {
+    .play--short ::deep .composer:not(.composer--expanded) .composer-grid {
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "chips input tools send";
     }
 }
 

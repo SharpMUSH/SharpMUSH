@@ -40,9 +40,9 @@ public class QueueDiagnosticsCommandTests
 		capabilities.GetGameActorAsync(full, Arg.Any<CancellationToken>()).Returns(actor);
 		capabilities.GetGrantedScopesAsync(actor, Arg.Any<CancellationToken>()).Returns(
 			new HashSet<string>(allowed ? [PortalPermission.QueueInspect, PortalPermission.DiagnosticsProfile] : []));
-		var scheduler = Substitute.For<ITaskScheduler>();
+		var scheduler = Substitute.For<ITaskQueueReader>();
 		scheduler.EnumerateQueueEntries().Returns(_ => throw new NotSupportedException("legacy scheduler"));
-		var queues = new QueueControlService(scheduler, capabilities, mediator, Factory.Services.GetRequiredService<IPermissionService>());
+		var queues = new QueueControlService(scheduler, Substitute.For<ITaskQueueControl>(), capabilities, mediator, Factory.Services.GetRequiredService<IPermissionService>());
 		var recorder = new QueueDiagnosticsRecorder();
 		var diagnostics = new QueueDiagnosticsService(recorder, queues, NullLogger<QueueDiagnosticsService>.Instance);
 		if (path.StartsWith("http", StringComparison.Ordinal))

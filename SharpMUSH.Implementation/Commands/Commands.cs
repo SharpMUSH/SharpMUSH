@@ -17,17 +17,15 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 {
 	private IMediator Mediator { get; }
 	/// <summary>
-	/// The object store, and only that: the cycle guards in <see cref="HelperFunctions"/> are the
-	/// sole reason a command reaches a store at all, and they take an <see cref="IObjectStore"/>.
-	/// Holding the whole <see cref="ISharpDatabase"/> composite here would hand every command a
-	/// write surface that bypasses the Mediator (engine data trunk §1, §2) — which is exactly what
-	/// the sitelock and LOCALE paths used it for.
+	/// The parent/zone cycle guard — the one thing a command needed a store for. It is the guard, not
+	/// the store, so no command holds a write surface that bypasses the Mediator (engine data trunk §1, §2).
 	/// </summary>
-	private IObjectStore Database { get; }
+	private IRelationshipCycleChecker RelationshipCycles { get; }
 	private ILocateService LocateService { get; }
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
 	private IPermissionService PermissionService { get; }
+	private IChannelPermissionService ChannelPermissions { get; }
 	private ICommandDiscoveryService CommandDiscoveryService { get; }
 	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
 	private IPasswordService PasswordService { get; }
@@ -36,7 +34,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
-	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private IObjectNameService ObjectNameService { get; }
+	private IFlagAndPowerService FlagAndPowerService { get; }
+	private IObjectRelationshipService ObjectRelationshipService { get; }
 	private IHttpClientFactory HttpClientFactory { get; }
 
 	private ICommunicationService CommunicationService { get; }
@@ -83,6 +83,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
+	private IStorageCapacityService StorageCapacity { get; }
+
+	private IHistoryRetentionService HistoryRetention { get; }
+
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
 
 	private IPageLogService PageLog { get; }
@@ -98,11 +102,12 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	public IReadOnlyDictionary<string, CommandDefinition> Builtins { get; }
 
 	public Commands(IMediator mediator,
-		IObjectStore database,
+		IRelationshipCycleChecker relationshipCycles,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		IChannelPermissionService channelPermissions,
 		ICommandDiscoveryService commandDiscoveryService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IPasswordService passwordService,
@@ -111,7 +116,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IAccountService accountService,
 		IAccountSessionStore accountSessionStore,
 		IExpandedObjectDataService objectDataService,
-		IManipulateSharpObjectService manipulateSharpObjectService,
+		IObjectNameService objectNameService,
+		IFlagAndPowerService flagAndPowerService,
+		IObjectRelationshipService objectRelationshipService,
 		IHttpClientFactory httpClientFactory,
 		ICommunicationService communicationService,
 		IValidateService validateService,
@@ -135,16 +142,19 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
+		IStorageCapacityService storageCapacity,
+		IHistoryRetentionService historyRetention,
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
-		Database = database;
+		RelationshipCycles = relationshipCycles;
 		LocateService = locateService;
 		AttributeService = attributeService;
 		NotifyService = notifyService;
 		PermissionService = permissionService;
+		ChannelPermissions = channelPermissions;
 		CommandDiscoveryService = commandDiscoveryService;
 		Configuration = configuration;
 		PasswordService = passwordService;
@@ -154,7 +164,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
+		ObjectNameService = objectNameService;
+		FlagAndPowerService = flagAndPowerService;
+		ObjectRelationshipService = objectRelationshipService;
 		CommunicationService = communicationService;
 		ValidateService = validateService;
 		SqlService = sqlService;
@@ -177,6 +189,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
+		StorageCapacity = storageCapacity;
+		HistoryRetention = historyRetention;
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;
 		Functions = functions;
@@ -224,5 +238,29 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		await NotifyService.Notify(executor, message, executor);
 		return new CallState(message);
+	}
+
+	/// <summary>
+	/// Rejects an invocation carrying fewer than <paramref name="minimum"/> arguments with the command's
+	/// own usage message rather than the generic arity one. This is the shape for a guard that belongs to
+	/// one switch (<c>@suggest/add</c>, <c>@quota/set</c>) or that PennMUSH words specifically
+	/// (<c>@dolist</c>'s "What do you want to do with the list?").
+	/// </summary>
+	/// <param name="parser">The parser whose current arguments are counted.</param>
+	/// <param name="minimum">The fewest arguments the command (or switch) accepts.</param>
+	/// <param name="notified">Who is told; the executor, as PennMUSH's <c>notify(executor, ...)</c>.</param>
+	/// <param name="usageKey">The localized notification key, as <c>nameof(ErrorMessages.Notifications.X)</c>.</param>
+	/// <param name="errorReturn">The value the command returns when rejected.</param>
+	/// <returns>The rejection to return, or <c>null</c> when the arity is satisfied.</returns>
+	private async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser, int minimum,
+		AnySharpObject notified, string usageKey, string errorReturn)
+	{
+		if (parser.CurrentState.Arguments.Count >= minimum)
+		{
+			return null;
+		}
+
+		await NotifyService.NotifyLocalized(notified, usageKey, notified);
+		return new CallState(errorReturn);
 	}
 }
