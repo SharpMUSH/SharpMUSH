@@ -146,7 +146,7 @@ public class AdminWikiCoverageTests : TrackingBunitContext
 			TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("[data-stat='published'] .adm-stat-value").TextContent).IsEqualTo("2");
 		await Assert.That(cut.Find("[data-stat='drafts'] .adm-stat-value").TextContent).IsEqualTo("1");
-		await Assert.That(cut.Find("[data-stat='protected'] .adm-stat-value").TextContent).IsEqualTo("1");
+		await Assert.That(cut.Find("[data-stat='restricted'] .adm-stat-value").TextContent).IsEqualTo("1");
 		await Assert.That(_handler!.Requests.Any(u => u.AbsolutePath == "/api/wiki/counts")).IsTrue();
 		await Assert.That(_handler.Requests.Any(u => u.Query.Contains("take=2000", StringComparison.Ordinal))).IsFalse()
 			.Because("the stats tiles no longer page through the whole wiki to count it");

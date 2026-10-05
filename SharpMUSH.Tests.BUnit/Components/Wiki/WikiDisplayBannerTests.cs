@@ -92,6 +92,8 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 			AvailableLocales = ["en", "de"],
 			LastEditedBy = "Ilsa Varn",
 			UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-12),
+			// What the server says this reader may do; the Edit button follows it.
+			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: true, Delete: false, Manage: false),
 		};
 
 	private IRenderedComponent<WikiDisplay> RenderWard(string? image = "/api/wiki-assets/h/ward.jpg", bool embedded = false) =>
