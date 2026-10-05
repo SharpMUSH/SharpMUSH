@@ -35,7 +35,8 @@ namespace SharpMUSH.Client.Services;
 /// marked.</para>
 /// <para><b>Page log.</b> When the game keeps one (<c>page_log</c>), the feed lists the viewer's conversations
 /// from it once the markers are read, so a reload keeps them, and pulls those whose last page is past their
-/// marker, so their unread counts survive too; a conversation is pulled again on <see cref="LoadHistoryAsync"/>.
+/// marker, back to the marker, so their unread counts survive too, and those with no marker, as far back as
+/// the server gives; a conversation is pulled again on <see cref="LoadHistoryAsync"/>.
 /// <see cref="PageLogging"/> says whether the game keeps one, for the view to say so.</para>
 /// <para><b>Clearing.</b> The store raises <see cref="IOobChannelStore.ChannelUpdated"/> for each package
 /// it drops, with nothing left to read (a new connection, or a character switch through
@@ -202,8 +203,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			return;
 
 		var generation = _generation;
-		// As many as a conversation keeps: the server composes each line's text, so asking for more is waste.
-		var pulled = await server.ConversationRecallAsync(others, HistoryLimit);
+		// Back to where the viewer last read, and at least as many as a conversation keeps; with no marker to go
+		// back to, as many as the server gives.
+		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
+			? await server.ConversationRecallAsync(others, HistoryLimit, seen)
+			: await server.ConversationRecallAsync(others, 0);
 		if (generation != _generation || pulled is not PageRecall recall) return;
 
 		if (!recall.Logging)
@@ -381,8 +385,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	/// <summary>
 	/// Lists the viewer's page conversations from the server's page log, so a reload keeps them, and pulls
-	/// those whose last page is past the viewer's marker, so their unread counts survive too. One already read
-	/// to its end, or never marked, is pulled when it is opened.
+	/// those whose last page is past the viewer's marker, so their unread counts survive too, and those never
+	/// marked, so pages read on another machine are here. One already read to its end is pulled when it is
+	/// opened.
 	/// </summary>
 	private async Task RebuildConversationsAsync(ICommHistory server, string viewer, int generation)
 	{
@@ -422,7 +427,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				_listedOnly.Add(key);
 			}
 
-			if (_markers.TryGetValue(key, out var marker) && marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
+			if (!_markers.TryGetValue(key, out var marker) || marker.IsBefore(new Marker(summary.LastId, summary.LastAt)))
 				behind.Add(key);
 		}
 

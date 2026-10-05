@@ -231,16 +231,17 @@ of a missing `v` and of any malformed member):
 - When the game keeps a page log (the `page_log` option, a SharpMUSH
   extension, on by default), the feed also lists the character's page
   conversations from it (`GET api/comm/conversations`, the latest 100), so a reload keeps
-  them, and pulls those whose last page is past the conversation's marker, so
-  their unread counts survive too. Opening a conversation pulls its pages
-  (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
+  them, and pulls those whose last page is past the conversation's marker, back
+  to the marker (`?lines=200&after=<marker id>`), so their unread counts
+  survive too, and those with no marker, as far back as the server gives
+  (`?lines=0`, the latest 500), so pages read on another machine are there.
+  Opening a conversation pulls its pages the same way (`GET api/comm/conversations/<objids>/recall`, the others' objids joined
   with spaces). Each character reads only their own copy; there is no staff
   read. With `page_log` off both answer `"logging": false` and nothing else,
   and the conversation view says the game keeps no page history. The feed
   then drops what it pulled from the log (pages pushed live stay, and a
   conversation known only from the listing goes). Opening a conversation asks
-  again, since the option can be turned on at any time. A conversation pull
-  asks for 200 pages, as many as the feed keeps. Conversations are ordered,
+  again, since the option can be turned on at any time. Conversations are ordered,
   and the least recent dropped past 100, by their latest page's id. A
   conversation with more than 32 other people is not marked. As
   for channels, a failed read of the markers lists and pulls no conversation,

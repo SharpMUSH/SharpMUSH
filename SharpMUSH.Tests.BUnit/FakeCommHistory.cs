@@ -46,13 +46,23 @@ public sealed class FakeCommHistory : ICommHistory
 	/// <summary>How many lines each conversation pull asked for.</summary>
 	public List<int> PageRecallLines { get; } = [];
 
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines)
+	/// <summary>The marker id each conversation pull reached back to, or null.</summary>
+	public List<long?> PageRecallAfter { get; } = [];
+
+	/// <summary>Answers as the server does: the last <paramref name="lines"/> (all for 0), reaching back to the page after <paramref name="after"/>.</summary>
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null)
 	{
 		PageRecallLines.Add(lines);
+		PageRecallAfter.Add(after);
 		var key = string.Join(' ', with.Order(StringComparer.Ordinal));
 		PageRecalled.Add(key);
-		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging,
-			PageLogging && PageLog.TryGetValue(key, out var logged) ? logged.ToArray() : []));
+		if (!PageLogging || !PageLog.TryGetValue(key, out var logged))
+			return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging, []));
+
+		var from = lines == 0 ? 0 : Math.Max(0, logged.Count - lines);
+		var unseen = after is { } seen ? logged.FindIndex(line => line.Id > seen) : -1;
+		var start = unseen < 0 ? from : Math.Min(unseen, from);
+		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(true, logged.Skip(start).ToArray()));
 	}
 
 	/// <summary>The line limit each channel recall asked for (0 for the whole buffer).</summary>
