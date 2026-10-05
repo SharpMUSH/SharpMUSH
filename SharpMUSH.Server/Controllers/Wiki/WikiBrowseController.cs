@@ -26,6 +26,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
 ///   GET  /api/wiki/counts          — page counts by state (published, draft, protected)
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
+///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -115,6 +116,16 @@ public class WikiBrowseController(
 		var pages = await Wiki.GetByCategoryAsync(category, skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
+
+	/// <summary>
+	/// GET /api/wiki/category-names?lang=fr
+	/// Each category's name, keyed by category key: the title of its published page in the category
+	/// namespace, translated into <c>lang</c> where that page has a published translation. A category
+	/// with no page is absent; the client shows its key.
+	/// </summary>
+	[HttpGet("category-names")]
+	public async Task<IActionResult> GetCategoryNames([FromQuery] string? lang = null) =>
+		Ok(await Localization.GetCategoryNamesAsync(lang));
 
 	/// <summary>
 	/// POST /api/wiki/exists

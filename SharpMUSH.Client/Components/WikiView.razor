@@ -35,6 +35,7 @@ else
               SourceLocale="@_sourceLocale"
               SelectedLocale="@_selectedLocale"
               AvailableLocales="@_availableLocales"
+              CategoryNames="@_categoryNames"
               OnLocaleChanged="@HandleLocaleChanged"
               OnSaved="@HandleSave"
               OnCancel="@HandleCancel" />
@@ -96,6 +97,9 @@ else
 
     private string _sourceLocale = "en";
     private string _selectedLocale = "en";
+
+    /// <summary>Each category's name in the edited language, for the editor's category chips.</summary>
+    private IReadOnlyDictionary<string, string>? _categoryNames;
     private IReadOnlyList<string> _availableLocales = [];
 
     /// <summary>
@@ -108,6 +112,7 @@ else
 
     public async Task ActivateEditMode()
     {
+        _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
         _editDraft = BuildEditDraft();
         _saveError = null;
         Mode = WikiMode.Edit;
@@ -325,6 +330,7 @@ else
         {
             // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
             // itself or WikiEdit's `Article is not null` guard renders nothing.
+            _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
             _editDraft = BuildEditDraft();
         }
 

@@ -12,6 +12,7 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 ## Evaluation rules (get these wrong and code silently breaks)
 
 - **A function after literal text needs `[brackets]`** to evaluate: `think Kept: [filter(...)]`. A bare leading function evaluates on its own: `&F obj=add(%0,1)` is fine; `&F obj=ibreak()add(%0,1)` is NOT — write `ibreak()[add(%0,1)]`.
+- **Booleans: `cand()`/`cor()`, not `and()`/`or()`.** The `c` forms stop at the first argument that settles the answer and never evaluate the rest, so a costly test placed last runs only when it matters, and a later argument can rely on the earlier ones: `` cand(isdbref(%0), u(me/FN`ISMEMBER, %0)) `` never calls the predicate on a non-object. Same for the negations: `ncand()`/`ncor()` over `nand()`/`nor()`. `and()`/`or()` evaluate every argument; reach for them only when each argument has a side effect that must run.
 - **Never bracket a bare %-substitution.** `%0`, `%q<name>`, `%#` — as-is. `[%0]` does nothing.
 - **Player-typed input is single-command mode**: a `;` typed at the client is literal text. Command lists (`;`-separated) exist only inside stored attributes and command arguments. Brace `{}` a segment whose own `;` must not split the list.
 - **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (``examine obj/BRANCH`**``).
@@ -121,5 +122,6 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | Nested `@switch` validation ladder | `@assert` chain, one error per guard |
 | Keying records by dbref number or player name | Key by objid |
 | `@assert %#` to detect system events | `%#` is `#1` for system events; gate on event args |
+| `and(…)`/`or(…)` as the default boolean | `cand()`/`cor()` stop at the first deciding argument; `and()`/`or()` evaluate everything |
 | `ibreak()add(…)` trailing function unevaluated | `ibreak()[add(…)]` |
 | Flagging the event handler wizard "so it can act" | Seeded `#9` already is; only custom handlers need it |

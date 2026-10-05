@@ -24,7 +24,7 @@
             <nav class="wiki-cat-subs">
                 @foreach (var sub in _subcategories)
                 {
-                    <a class="wiki-catlink" href="@WikiCategories.Route(sub.Slug)">@WikiHelpers.CategoryLabel(sub.Slug)</a>
+                    <a class="wiki-catlink" href="@WikiCategories.Route(sub.Slug)">@(string.IsNullOrEmpty(sub.Title) ? WikiHelpers.CategoryLabel(sub.Slug) : sub.Title)</a>
                 }
             </nav>
         }

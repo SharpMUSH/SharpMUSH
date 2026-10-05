@@ -113,7 +113,7 @@
             </TemplateColumn>
             <PropertyColumn Property="p => p.Namespace" Title="@Loc["WikiNamespace"]" Sortable="false" />
             <TemplateColumn Title="@Loc["NavWikiCategories"]" Sortable="false">
-                <CellTemplate>@string.Join(", ", context.Item.Categories.Select(WikiHelpers.CategoryLabel))</CellTemplate>
+                <CellTemplate>@string.Join(", ", context.Item.Categories.Select(c => WikiHelpers.CategoryLabel(c, _categoryNames)))</CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
                 <CellTemplate>
@@ -216,7 +216,7 @@
                 <MudStack Row="true" Spacing="1" Style="flex-wrap:wrap;">
                     @foreach (var category in _metaCategories)
                     {
-                        <MudChip T="string" Text="@WikiHelpers.CategoryLabel(category)" Size="Size.Small" Color="Color.Info"
+                        <MudChip T="string" Text="@WikiHelpers.CategoryLabel(category, _categoryNames)" Size="Size.Small" Color="Color.Info"
                                  Variant="Variant.Outlined" OnClose="@(() => _metaCategories.Remove(category))" />
                     }
                 </MudStack>
@@ -286,9 +286,14 @@
     private int _drafts;
     private int _protected_;
 
+    /// <summary>Each category's name (its category page's title); a category with no page shows its key.</summary>
+    private IReadOnlyDictionary<string, string>? _categoryNames;
+
     protected override async Task OnInitializedAsync()
     {
+        var names = Wiki.GetCategoryNamesAsync().AsTask();
         await LoadStatsAsync();
+        _categoryNames = await names;
     }
 
     private async Task LoadStatsAsync()

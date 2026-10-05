@@ -86,6 +86,16 @@ public static class WikiHelpers
 	}
 
 	/// <summary>
+	/// The display name of a category in the reader's language: the title of its page in the category
+	/// namespace, translated where that page is, from <paramref name="names"/> (keyed by category key);
+	/// <see cref="CategoryLabel(string)"/> when the category has no page.
+	/// </summary>
+	public static string CategoryLabel(string category, IReadOnlyDictionary<string, string>? names) =>
+		names is not null && names.TryGetValue(CategoryKey(category), out var name) && name.Length > 0
+			? name
+			: CategoryLabel(category);
+
+	/// <summary>
 	/// Canonical form of a locale tag, or <see cref="Error{T}"/> when it is not a locale at all.
 	/// Canonical means <see cref="CultureInfo"/>'s own casing — <c>pt-br</c> and <c>PT-BR</c> both become
 	/// <c>pt-BR</c> — so the unique (PageId, Locale) index cannot be defeated by casing.

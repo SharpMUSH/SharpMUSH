@@ -105,7 +105,11 @@ public static class ViewWiki
 
 		var line = MarkupText.Plain("-").Repeat(RenderWidth);
 		var markers = $"{(published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
-		var categories = page.Categories.Count > 0 ? string.Join(", ", page.Categories.Select(WikiHelpers.CategoryLabel)) : "-";
+		// A category's name is its category page's title, in the reader's language where it is translated.
+		var categoryNames = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var categories = page.Categories.Count > 0
+			? string.Join(", ", page.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)))
+			: "-";
 
 		// An unpublished body is opt-in even for a wizard: reading a draft is a deliberate act, not the
 		// default a stray @wiki on a half-written page should perform. The gate is the same whether the

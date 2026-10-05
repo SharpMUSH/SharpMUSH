@@ -345,9 +345,16 @@ list of the category's members. A category page that is itself in the Setting
 category is a subcategory of Setting. `[[Category:Lore]]` in a page's text is
 an ordinary link to that page.
 
+A translation is in the same categories as its page; only a category's name
+is translated. The name shown is the title of the category's page, so giving
+`Category:Lore` a French translation in the portal shows French readers its
+French title wherever the category appears. A category with no page is shown
+by its name as typed.
+
 `@wiki/category <name>` lists a category's subcategories and pages. Category
 names are matched as titles are: case and spaces versus underscores do not
-matter.
+matter. From softcode, `wikicategory(<name>)` returns a category's pages and
+`wiki(<page>, categories)` a page's categories.
 
 ```sharp
 > @wiki/category combat_primer=Rules, Combat

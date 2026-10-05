@@ -1,3 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -53,6 +56,27 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 		await Assert.That(dto).IsNotNull();
 		await Assert.That(dto!.Slug).IsEqualTo("home");
+	}
+
+	/// <summary>
+	/// A category's name is its category page's title, in the language asked for; the portal shows it in
+	/// place of the key wherever the category appears.
+	/// </summary>
+	[Test]
+	public async Task GetCategoryNames_GivesEachCategoryPagesTitleInTheAskedLanguage()
+	{
+		var http = factory.CreateHttpClient();
+		var wiki = factory.Services.GetRequiredService<IWikiService>();
+		var title = $"Shoals {Guid.NewGuid():N}"[..14];
+		var page = (await wiki.CreateAsync(title, "Shallow water.", "#1", WikiNamespace.Category, "en")).Expect<WikiPage>();
+		await wiki.UpsertTranslationAsync(page.Id, "fr", "Hauts-fonds", "Eaux peu profondes.", "#1", null,
+			published: true, expectedRevisionNumber: null);
+
+		var english = await http.GetFromJsonAsync<Dictionary<string, string>>("api/wiki/category-names?lang=en");
+		var french = await http.GetFromJsonAsync<Dictionary<string, string>>("api/wiki/category-names?lang=fr");
+
+		await Assert.That(english![page.Slug]).IsEqualTo(title);
+		await Assert.That(french![page.Slug]).IsEqualTo("Hauts-fonds");
 	}
 
 	[Test]

@@ -37,7 +37,7 @@ else if (Article is null && IsCategoryPage)
        without one still lists its members, as MediaWiki's does. *@
     <div class="wiki-page">
         <div class="wiki-page-main">
-            <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug)">
+            <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
                 <Actions>
                     <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
                     <AuthorizeView Policy="wiki.create">
@@ -195,7 +195,7 @@ else
                 }
                 @if (_more.Count > 0)
                 {
-                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], WikiHelpers.CategoryLabel(_moreLoadedFor!))">
+                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], WikiHelpers.CategoryLabel(_moreLoadedFor!, _categoryNames))">
                         <Controls>
                             <a class="wiki-more-all" href="@WikiCategories.Route(_moreLoadedFor!)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
                         </Controls>
@@ -307,7 +307,7 @@ else
     private string Kicker =>
         WikiHelpers.ParseNamespace(Namespace) is { } ns and not SharpMUSH.Library.Models.Wiki.WikiNamespace.Main
             ? ns is SharpMUSH.Library.Models.Wiki.WikiNamespace.Category ? Loc["NavWikiCategoryKicker"] : WikiHelpers.CategoryLabel(ns.ToString())
-            : Article?.Categories.FirstOrDefault() is { } category ? WikiHelpers.CategoryLabel(category) : Loc["Wiki"];
+            : Article?.Categories.FirstOrDefault() is { } category ? WikiHelpers.CategoryLabel(category, _categoryNames) : Loc["Wiki"];
 
     /// <summary>The page's categories under its body, each linking to its category page (MediaWiki's catlinks).</summary>
     private RenderFragment CategoryBar => __builder =>
@@ -318,7 +318,7 @@ else
                 <span class="wiki-catlinks-label">@Loc["NavWikiCategories"]</span>
                 @foreach (var category in Article.Categories)
                 {
-                    <a class="wiki-catlink" href="@WikiCategories.Route(category)">@WikiHelpers.CategoryLabel(category)</a>
+                    <a class="wiki-catlink" href="@WikiCategories.Route(category)">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
                 }
             </nav>
         }
@@ -459,6 +459,11 @@ else
     private string? _markedFrom;
     private Task<string>? _marking;
 
+    // Each category's name in the language the page is shown in: its category page's title, translated.
+    // Categories are the page's, the same in every translation; only their names change.
+    private IReadOnlyDictionary<string, string>? _categoryNames;
+    private string? _categoryNamesFor;
+
     protected override async Task OnParametersSetAsync()
     {
         // The server renders the article; the Markdig pipeline is only for the rare page that arrives
@@ -496,8 +501,26 @@ else
             _segments = SplitOnDirectives(marked);
         }
 
+        await LoadCategoryNamesAsync();
         await LoadMoreAsync();
         await LoadMentionImagesAsync();
+    }
+
+    private async Task LoadCategoryNamesAsync()
+    {
+        if (Article is not { Categories.Count: > 0 } && !IsCategoryPage)
+        {
+            return;
+        }
+
+        var lang = Article?.Locale ?? Locale ?? string.Empty;
+        if (_categoryNames is not null && lang == _categoryNamesFor)
+        {
+            return;
+        }
+
+        _categoryNamesFor = lang;
+        _categoryNames = await Wiki.GetCategoryNamesAsync(lang.Length == 0 ? null : lang);
     }
 
     /// <summary>

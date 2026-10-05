@@ -58,8 +58,10 @@ public static class TerminalServiceCollectionExtensions
 		// package pushes to every connection a player has, and only the play connection is the one to
 		// count. Built by AttachPlayTerminalFeeds, not on first use — see there. The server's history and read
 		// markers come through ICommHistory, which Program registers; without it the feed counts on its own.
+		// The play connection too: a reconnect logs in again without replaying what was missed, so the feed pulls
+		// it from the server.
 		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
-			history: sp.GetService<ICommHistory>()));
+			history: sp.GetService<ICommHistory>(), connection: sp.GetRequiredService<PlayTerminalServiceHost>()));
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();

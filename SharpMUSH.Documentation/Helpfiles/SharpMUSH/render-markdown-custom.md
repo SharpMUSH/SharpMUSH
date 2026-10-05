@@ -149,7 +149,7 @@ The function looks for attributes on `<object>` with specific names that define 
   for a link with no display text, which renders as nothing
   - `%0` - The display text, plain
   - `%1` - The `@wiki` page reference, always fully qualified as
-    `<namespace>:<category>:<slug>`
+    `<namespace>:<slug>`
   - `%2` - The target page's title
   
 - ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering. Not

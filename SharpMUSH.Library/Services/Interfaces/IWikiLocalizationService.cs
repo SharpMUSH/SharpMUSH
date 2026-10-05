@@ -58,4 +58,13 @@ public interface IWikiLocalizationService
 	/// visible translation's locale. Drives the language chip row and <c>hreflang</c>.
 	/// </summary>
 	Task<IReadOnlyList<string>> GetVisibleLocalesAsync(WikiPage page, bool includeDrafts);
+
+	/// <summary>
+	/// Each category's name in <paramref name="requestedLocale"/>, keyed by category key: the title of the
+	/// category's published page in the category namespace, from its published translation where there is
+	/// one. Categories belong to a page, not to a translation, so only their names are translated. A category
+	/// with no page is absent; <see cref="WikiHelpers.CategoryLabel(string, IReadOnlyDictionary{string, string}?)"/>
+	/// falls back to the key for it.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale);
 }

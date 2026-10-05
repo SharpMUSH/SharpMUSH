@@ -56,7 +56,7 @@
                 @foreach (var group in FilteredGroups)
                 {
                     var g = group;
-                    var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"]);
+                    var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
                     <div class="wiki-cat-card">
                         @if (ImageUrlPolicy.IsRenderable(g.Cover))
                         {
@@ -115,12 +115,17 @@
 
     private static string NewPageHref => "/wiki/main/new-page/edit";
 
+    /// <summary>Each category's name in the reader's language; a category with no page shows its key.</summary>
+    private IReadOnlyDictionary<string, string>? _names;
+
     protected override async Task OnInitializedAsync()
     {
         Nav.LocationChanged += OnLocationChanged;
         ReadQuery();
 
+        var names = Wiki.GetCategoryNamesAsync().AsTask();
         var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
+        _names = await names;
         _pages = items;
         _loading = false;
 
@@ -166,7 +171,7 @@
             if (!string.IsNullOrWhiteSpace(_search))
             {
                 q = q.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
-                                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c).Contains(_search, StringComparison.OrdinalIgnoreCase)));
+                                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase)));
             }
 
             return WikiCategories.Group(q);

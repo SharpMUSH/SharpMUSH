@@ -119,6 +119,7 @@ public static class EditWiki
 		IMUSHCodeParser parser,
 		IMediator mediator,
 		IWikiService wikiService,
+		IWikiLocalizationService localization,
 		INotifyService notifyService,
 		MString targetArg,
 		MString? categoriesArg)
@@ -145,7 +146,8 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		var labels = string.Join(", ", updated.Categories.Select(WikiHelpers.CategoryLabel));
+		var categoryNames = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor));
+		var labels = string.Join(", ", updated.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)));
 		await notifyService.Notify(executor, updated.Categories.Count == 0
 			? $"WIKI: '{updated.Title}' is in no category."
 			: $"WIKI: '{updated.Title}' categories: {labels}.", executor);
