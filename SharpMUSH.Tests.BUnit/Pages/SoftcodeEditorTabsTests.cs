@@ -127,6 +127,16 @@ public class SoftcodeEditorTabsTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task SaveAndDeleteAreIconsThatStillSayWhatTheyDo()
+	{
+		var cut = await RenderWithOneOpenTabAsync();
+
+		await Assert.That(cut.Find(".sc-save").GetAttribute("aria-label")).IsEqualTo("Save");
+		await Assert.That(cut.Find(".sc-delete").GetAttribute("aria-label")).IsEqualTo("Delete");
+		await Assert.That(cut.Find(".sc-save").TextContent.Trim()).IsEmpty();
+	}
+
+	[TUnit.Core.Test]
 	public async Task ClosingATabRemovesIt()
 	{
 		var cut = await RenderWithOneOpenTabAsync();
@@ -235,6 +245,13 @@ public class SoftcodeEditorTabsTests : BunitContext
 		await Assert.That(cut.Find(".sc-tab-ref").TextContent).IsEqualTo("#8/FN`");
 		await Assert.That(string.Concat(cut.Find(".sc-crumbs").TextContent.Where(c => !char.IsWhiteSpace(c))))
 			.IsEqualTo("&FN`GREET");
+
+		// On a narrow screen the pane switcher gives the open attribute's name the width; the other
+		// two panes are icons that still say what they are.
+		await Assert.That(string.Concat(cut.Find(".sc-mobiletab--editor").TextContent.Where(c => !char.IsWhiteSpace(c))))
+			.IsEqualTo("&FN`GREET");
+		await Assert.That(cut.FindAll(".sc-mobiletab--icon").Select(e => e.GetAttribute("aria-label")).ToList())
+			.IsEquivalentTo(["TermObjects", "Attributes · #8"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
 		// The branch in the breadcrumb is an attribute of its own, and opens as one.
 		cut.Find(".sc-crumb-link").Click();

@@ -453,6 +453,19 @@
     background: rgba(var(--glow), 0.1);
 }
 .sc-mobiletab:disabled { opacity: 0.4; cursor: default; }
+.sc-mobiletab--icon {
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+}
+.sc-mobiletab--editor {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    padding: 0 0.625rem;
+}
 
 /* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
    a real height so Monaco lays out; panes scroll internally rather than the page. */

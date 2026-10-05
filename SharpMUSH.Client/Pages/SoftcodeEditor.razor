@@ -23,16 +23,32 @@
     @* Mobile-only pane switcher: the three IDE panes can't coexist on a phone, so show one at
        a time. Selecting an object/attribute drills forward automatically (see handlers). *@
     <div class="sc-mobilebar">
-        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
-                @onclick="@(() => _mobilePane = MobilePane.Objects)">@Loc["TermObjects"]</button>
-        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
-                @onclick="@(() => _mobilePane = MobilePane.Attrs)">
-            @Loc["Attributes"]@(_selectedObject is not null ? $" · #{_selectedObject.Dbref}" : "")
+        @* Objects and Attributes are icons so the open attribute's name gets the width. *@
+        <button type="button" class="sc-mobiletab sc-mobiletab--icon @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
+                title="@Loc["TermObjects"]" aria-label="@Loc["TermObjects"]"
+                @onclick="@(() => _mobilePane = MobilePane.Objects)">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Style="font-size:1.125rem;" />
         </button>
-        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
+        <button type="button" class="sc-mobiletab sc-mobiletab--icon @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
+                title="@AttributesPaneLabel" aria-label="@AttributesPaneLabel"
+                @onclick="@(() => _mobilePane = MobilePane.Attrs)">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Style="font-size:1.125rem;" />
+        </button>
+        <button type="button" class="sc-mobiletab sc-mobiletab--editor @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
+                title="@(ActiveTab is not null ? $"#{ActiveTab.Obj.Dbref}/{ActiveTab.Attr.Name}" : Loc["TermEditor"].Value)"
                 @onclick="@(() => _mobilePane = MobilePane.Editor)"
                 disabled="@(ActiveTab is null)">
-            @Loc["TermEditor"]@(ActiveTab is not null ? $" · &{SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)}" : "")
+            <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:1rem;flex-shrink:0;" />
+            @if (ActiveTab is null)
+            {
+                <span>@Loc["TermEditor"]</span>
+            }
+            else
+            {
+                @* The whole name, clipped from its outermost branch when short of room. *@
+                <span class="sc-crumb-trail">&amp;@TabBranch(ActiveTab)</span>
+                <span class="sc-crumb-leaf">@SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)</span>
+            }
         </button>
     </div>
 
@@ -292,18 +308,18 @@
                     @Loc["TermTest"]
                 </MudButton>
             </MudTooltip>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Save"
-                       OnClick="SaveAsync"
-                       Disabled="@(ActiveTab is null)">
-                @Loc["Save"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Delete"
-                       OnClick="DeleteAsync"
-                       Disabled="@(ActiveTab is null)">
-                @Loc["Delete"]
-            </MudButton>
+            @* Icons alone: a floppy and a bin need no label, and the toolbar's width belongs to
+               the attribute's name. The tooltip and aria-label still name them. *@
+            <MudTooltip Text="@Loc["Save"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Save" Variant="Variant.Filled" Color="Color.Primary"
+                               Size="Size.Small" OnClick="SaveAsync" Disabled="@(ActiveTab is null)"
+                               aria-label="@Loc["Save"]" Class="sc-save" />
+            </MudTooltip>
+            <MudTooltip Text="@Loc["Delete"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Variant="Variant.Outlined" Color="Color.Error"
+                               Size="Size.Small" OnClick="DeleteAsync" Disabled="@(ActiveTab is null)"
+                               aria-label="@Loc["Delete"]" Class="sc-delete" />
+            </MudTooltip>
             <MudTooltip Text="@Loc["TermMushHelp"]">
                 <MudIconButton Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small"
                                OnClick="@(() => _helpDrawer?.Open())" />
@@ -464,6 +480,10 @@
     private MobilePane _mobilePane = MobilePane.Objects;
 
     private string _attrSearch = string.Empty;
+
+    private string AttributesPaneLabel => _selectedObject is null
+        ? Loc["Attributes"].Value
+        : $"{Loc["Attributes"].Value} · #{_selectedObject.Dbref}";
 
     // The selected object's attributes arranged by name, rebuilt only when a read replaces them.
     private List<MushAttribute>? _treeSource;
