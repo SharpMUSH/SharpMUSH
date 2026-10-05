@@ -13,9 +13,8 @@ The optional second argument selects a field:
 * `markdown` - the raw Markdown source
 * `title` - the display title
 * `locale` - the locale actually served (see below)
-* `category` - the category, or an empty string
-* `tags` - space-separated tag list
-* `namespace` - main, help, character, or system
+* `categories` - the categories the page is in, space-separated
+* `namespace` - main, help, character, system, or category
 * `revision` - the current revision number in the served locale
 * `updated` - the last-edit time as a Unix timestamp (secs)
 * `author` - the dbref of the page's creator

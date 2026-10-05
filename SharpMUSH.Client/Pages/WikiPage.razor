@@ -1,4 +1,4 @@
-@page "/wiki/{Ns}/{Category}/{Slug}"
+@page "/wiki/{Ns}/{Slug}"
 @layout WikiLayout
 @using SharpMUSH.Client.Components
 @inject NavigationManager Nav
@@ -7,14 +7,13 @@
 {
     <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-    <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+    <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
               Locale="@Lang" Mode="WikiView.WikiMode.View" />
 }
 
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
-    [Parameter] public required string Category { get; set; }
 
     /// <summary>
     /// The locale from <c>?lang=</c>. Part of the <c>WikiView</c> <c>@key</c> above: without it a language
@@ -34,10 +33,10 @@
     // is bounced straight forward again, trapping the user on the profile.
     protected override void OnParametersSet()
     {
-        _redirecting = WikiRoutes.IsCharacterProfile(Ns, Category);
+        _redirecting = WikiRoutes.IsCharacterProfile(Ns);
         if (_redirecting)
         {
-            Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug), replace: true);
+            Nav.NavigateTo(WikiRoutes.PathFor(Ns, Slug), replace: true);
         }
     }
 }

@@ -289,7 +289,7 @@ think rendermarkdowncustom(See %[%[Help:Markdown Guide%]%] first., #123)
 ```
 Output:
 ```markdown
-See Markdown Guide (@wiki help:general:markdown_guide) first.
+See Markdown Guide (@wiki help:markdown_guide) first.
 ```
 `%1` arrives fully qualified, so the command it builds resolves whatever
 namespace the link was written in. Under `@wiki` itself a wiki link is already

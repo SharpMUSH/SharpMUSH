@@ -29,10 +29,11 @@
         <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
     }
     <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
-        @foreach (var group in _groups)
+        @* Uncategorized pages have no category page to go to, so the strip lists named categories only. *@
+        @foreach (var group in _groups.Where(g => !g.IsUncategorized))
         {
             var g = group;
-            var label = WikiCategories.Label(g.Key, Loc["ResCategoryGeneral"]);
+            var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"]);
             var route = WikiCategories.Route(g.Key);
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
         }
@@ -70,7 +71,7 @@
     private IReadOnlyList<WikiCategoryGroup> _groups = [];
     private string _path = "/wiki";
     private bool _newOpen;
-    private static string NewPageHref => $"/wiki/main/{WikiHelpers.DefaultCategory}/new-page/edit";
+    private static string NewPageHref => "/wiki/main/new-page/edit";
     private string _newTitle = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -107,7 +108,7 @@
         if (title.Length == 0) return;
         _newOpen = false;
         _newTitle = string.Empty;
-        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}");
+        Nav.NavigateTo($"/wiki/main/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}");
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

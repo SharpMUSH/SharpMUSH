@@ -20,7 +20,7 @@ public partial class Commands
 		Switches =
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
-			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH",
+			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH",
 			"NOEVAL", "SOURCE", "DRAFT", "MD"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
@@ -100,19 +100,20 @@ public partial class Commands
 			"TRANSLATE" when hasArg0 && hasArg1
 				=> await EditWiki.Translate(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1!),
 			"DELETE" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Delete),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Delete),
 			"PROTECT" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Protect),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Protect),
 			"UNPROTECT" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Unprotect),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Unprotect),
 			"PUBLISH" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Publish),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Publish),
 			"UNPUBLISH" when hasArg0 && !hasArg1
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Unpublish),
+				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Unpublish),
+			// "page=list" sets a page's categories ("page=" clears them); a bare name lists a category.
+			"CATEGORY" when hasArg0 && arg1CallState is not null
+				=> await EditWiki.SetCategories(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			"CATEGORY" when hasArg0
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Category),
-			"TAG" when hasArg0
-				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1, ManageWiki.Operation.Tag),
+				=> await ListWiki.Category(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource),
 			"VIEW" when hasArg0 && !hasArg1
 				=> await ViewWiki.Handle(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource, showDraft, showRaw),
 			_ => MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand),

@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Wiki;
 using System.Globalization;
 
 namespace SharpMUSH.Library.Services;
@@ -15,42 +16,74 @@ public static class WikiHelpers
 	public static string Slugify(string text) =>
 		text.ToLowerInvariant().Replace(' ', '_');
 
-	/// <summary>
-	/// The category assigned to a page when none is supplied. Category is part of a page's
-	/// identity (Namespace, Category, Slug), so every page must have one.
-	/// </summary>
-	public const string DefaultCategory = "general";
+	/// <summary>The lower-case spelling of a namespace, as stored and routed.</summary>
+	public static string NamespaceName(WikiNamespace ns) => ns.ToString().ToLowerInvariant();
+
+	/// <summary>The namespace a stored or routed spelling names, or null when it names none.</summary>
+	public static WikiNamespace? ParseNamespace(string? ns) =>
+		Enum.TryParse<WikiNamespace>(ns?.Trim(), ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
+			? parsed
+			: null;
 
 	/// <summary>
-	/// Returns the normalised string key for the slug index: "{namespace}:{category}:{slug}".
-	/// Category is part of page identity, so it participates in the key.
+	/// Splits a page title as typed in a link or a command — <c>Getting Started</c>,
+	/// <c>Help:Getting Started</c>, <c>Category:Lore</c> — into its namespace and the title within it.
+	/// Only a known namespace counts as a prefix; any other colon is part of a Main-namespace title, as in
+	/// MediaWiki.
 	/// </summary>
-	public static string SlugKey(string nsStr, string? category, string slug) =>
-		$"{nsStr.ToLowerInvariant()}:{NormalizeCategory(category)}:{slug}";
-
-	/// <summary>
-	/// Normalises a category for storage: trimmed, lower-cased; null/whitespace →
-	/// <see cref="DefaultCategory"/> (category is required because it is part of page identity).
-	/// </summary>
-	public static string NormalizeCategory(string? category)
+	public static (WikiNamespace Namespace, string Title) SplitTitle(string title)
 	{
-		var trimmed = category?.Trim().ToLowerInvariant();
-		return string.IsNullOrEmpty(trimmed) ? DefaultCategory : trimmed;
+		var trimmed = title.Trim();
+		var colon = trimmed.IndexOf(':');
+		return colon > 0 && !int.TryParse(trimmed[..colon], out _) && ParseNamespace(trimmed[..colon]) is { } ns
+			? (ns, trimmed[(colon + 1)..].Trim())
+			: (WikiNamespace.Main, trimmed);
+	}
+
+	/// <summary>The (namespace, slug) identity a typed title names; see <see cref="SplitTitle"/>.</summary>
+	public static (WikiNamespace Namespace, string Slug) ResolveTitle(string title)
+	{
+		var (ns, inner) = SplitTitle(title);
+		return (ns, Slugify(inner));
 	}
 
 	/// <summary>
-	/// Normalises a tag list for storage: trimmed, lower-cased, blanks removed,
-	/// de-duplicated, sorted for stable comparisons.
+	/// Returns the normalised string key for the slug index: "{namespace}:{slug}". A page is identified
+	/// by its namespace and slug alone, as in MediaWiki; categories are labels the page carries.
 	/// </summary>
-	public static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags) =>
-		tags is null
+	public static string SlugKey(string nsStr, string slug) =>
+		$"{nsStr.ToLowerInvariant()}:{slug}";
+
+	/// <summary>
+	/// The key a category is stored and routed under: its name slugified, so <c>Places of Note</c>,
+	/// <c>places of note</c> and <c>places_of_note</c> are one category. Empty when the name is blank.
+	/// </summary>
+	public static string CategoryKey(string? category) =>
+		string.IsNullOrWhiteSpace(category) ? string.Empty : Slugify(category.Trim());
+
+	/// <summary>
+	/// Normalises a page's category list for storage: each name keyed by <see cref="CategoryKey"/>,
+	/// blanks removed, de-duplicated, sorted for stable comparisons.
+	/// </summary>
+	public static IReadOnlyList<string> NormalizeCategories(IEnumerable<string>? categories) =>
+		categories is null
 			? []
-			: tags
-				.Select(t => t.Trim().ToLowerInvariant())
-				.Where(t => t.Length > 0)
+			: categories
+				.Select(CategoryKey)
+				.Where(c => c.Length > 0)
 				.Distinct()
-				.OrderBy(t => t, StringComparer.Ordinal)
+				.OrderBy(c => c, StringComparer.Ordinal)
 				.ToList();
+
+	/// <summary>
+	/// The display name of a category key: underscores become spaces and the first letter is
+	/// upper-cased, the way MediaWiki shows a title.
+	/// </summary>
+	public static string CategoryLabel(string category)
+	{
+		var key = CategoryKey(category);
+		return key.Length == 0 ? string.Empty : char.ToUpperInvariant(key[0]) + key[1..].Replace('_', ' ');
+	}
 
 	/// <summary>
 	/// Canonical form of a locale tag, or <see cref="Error{T}"/> when it is not a locale at all.

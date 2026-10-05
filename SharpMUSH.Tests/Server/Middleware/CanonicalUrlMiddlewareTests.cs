@@ -185,21 +185,21 @@ public class CanonicalUrlMiddlewareTests
 	}
 
 	// --- Character biography aliasing -------------------------------------------------
-	// /wiki/character/general/{slug} is the storage route; /character/{slug} is the one the
+	// /wiki/character/{slug} is the storage route; /character/{slug} is the one the
 	// portal serves. The middleware aliases the former to the latter so bookmarks and external
 	// links land on the canonical page.
 
 	[Test]
 	public async Task BuildCanonical_CharacterViewRoute_AliasedToProfile()
 	{
-		await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/mercutio"))
+		await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/mercutio"))
 				.IsEqualTo("/character/mercutio");
 	}
 
 	[Test]
 	public async Task BuildCanonical_CharacterViewRouteWithSpaces_AliasedAndSlugified()
 	{
-		await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/Mannaz Byron"))
+		await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/Mannaz Byron"))
 				.IsEqualTo("/character/mannaz_byron");
 	}
 
@@ -213,25 +213,15 @@ public class CanonicalUrlMiddlewareTests
 	[Arguments("edit")]
 	public async Task BuildCanonical_CharacterSubRoutes_NotAliased(string subRoute)
 	{
-		var path = $"/wiki/character/general/mercutio/{subRoute}";
+		var path = $"/wiki/character/mercutio/{subRoute}";
 
 		await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(path);
 	}
 
-	/// <summary>
-	/// /character/{slug} carries no category segment, so a character page filed elsewhere
-	/// cannot round-trip through it and keeps its wiki path.
-	/// </summary>
 	[Test]
-	public async Task BuildCanonical_CharacterPageInOtherCategory_NotAliased()
-	{
-		await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/wiki/character/npcs/mercutio"))
-				.IsEqualTo("/wiki/character/npcs/mercutio");
-	}
-
-	[Test]
-	[Arguments("/wiki/main/general/mercutio")]
-	[Arguments("/wiki/help/general/markdown_guide")]
+	[Arguments("/wiki/main/mercutio")]
+	[Arguments("/wiki/help/markdown_guide")]
+	[Arguments("/wiki/category/lore")]
 	public async Task BuildCanonical_OtherNamespaces_NotAliased(string path)
 	{
 		await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(path);
@@ -241,7 +231,7 @@ public class CanonicalUrlMiddlewareTests
 	[Test]
 	public async Task BuildCanonical_ProfileAlias_IsAFixedPoint()
 	{
-		var once = CanonicalUrlMiddleware.BuildCanonical("/wiki/character/general/mercutio");
+		var once = CanonicalUrlMiddleware.BuildCanonical("/wiki/character/mercutio");
 
 		await Assert.That(CanonicalUrlMiddleware.BuildCanonical(once)).IsEqualTo(once);
 	}
@@ -255,7 +245,7 @@ public class CanonicalUrlMiddlewareTests
 			BaseAddress = new Uri("http://localhost")
 		};
 
-		var response = await client.GetAsync("/wiki/character/general/mercutio");
+		var response = await client.GetAsync("/wiki/character/mercutio");
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(301);
 		await Assert.That(response.Headers.Location?.ToString()).IsEqualTo("/character/mercutio");
@@ -270,8 +260,35 @@ public class CanonicalUrlMiddlewareTests
 			BaseAddress = new Uri("http://localhost")
 		};
 
-		var response = await client.GetAsync("/wiki/character/general/mercutio/history");
+		var response = await client.GetAsync("/wiki/character/mercutio/history");
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+	}
+
+	// --- Links from before categories left page identity -------------------------------
+	// /wiki/{ns}/{category}/{slug} was the page route; a category is now a tag in the text,
+	// so the middle segment is dropped.
+
+	[Test]
+	[Arguments("/wiki/help/general/markdown_guide", "/wiki/help/markdown_guide")]
+	[Arguments("/wiki/main/lore/dragons", "/wiki/main/dragons")]
+	[Arguments("/wiki/main/lore/dragons/edit", "/wiki/main/dragons/edit")]
+	[Arguments("/wiki/main/lore/dragons/history", "/wiki/main/dragons/history")]
+	[Arguments("/wiki/character/general/mercutio", "/character/mercutio")]
+	[Arguments("/wiki/character/general/mercutio/history", "/wiki/character/mercutio/history")]
+	public async Task BuildCanonical_OldCategoryRoute_DropsTheCategory(string path, string expected)
+	{
+		await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(expected);
+	}
+
+	/// <summary>A page's own sub-routes are four segments under /wiki and are not mistaken for an old route.</summary>
+	[Test]
+	[Arguments("/wiki/main/dragons/edit")]
+	[Arguments("/wiki/main/dragons/history")]
+	[Arguments("/wiki/main/dragons/diff")]
+	[Arguments("/wiki/recent")]
+	public async Task BuildCanonical_CurrentRoutes_Unchanged(string path)
+	{
+		await Assert.That(CanonicalUrlMiddleware.BuildCanonical(path)).IsEqualTo(path);
 	}
 }

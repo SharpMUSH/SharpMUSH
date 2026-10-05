@@ -1006,12 +1006,6 @@
   <data name="WikiNamespace" xml:space="preserve">
     <value>Namespace</value>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Category</value>
-  </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Published</value>
   </data>
@@ -1058,9 +1052,6 @@
   </data>
   <data name="WikiMetadataSaveFailed" xml:space="preserve">
     <value>Metadata save failed: {0}</value>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Press Enter or the + to add a tag</value>
   </data>
   <data name="WikiNamespaceFilter" xml:space="preserve">
     <value>Namespace filter</value>
@@ -2179,9 +2170,6 @@
   <data name="LayCfgWikiBodyNamespace" xml:space="preserve">
     <value>Wiki namespace the page lives in. Only applies alongside a slug.</value>
   </data>
-  <data name="LayCfgWikiBodyCategory" xml:space="preserve">
-    <value>Category segment of the page's identity.</value>
-  </data>
   <data name="LayCfgWikiBodyLocale" xml:space="preserve">
     <value>Locale to render. Unset, each reader gets their own preference.</value>
   </data>
@@ -2659,9 +2647,6 @@
   <data name="WkInsertImage" xml:space="preserve">
     <value>Insert image</value>
   </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>add tag…</value>
-  </data>
   <data name="WkSummaryPlaceholder" xml:space="preserve">
     <value>Summarize your change (e.g. 'fixed a typo')…</value>
   </data>
@@ -2689,9 +2674,6 @@
   </data>
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Category: {0}</value>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
   </data>
   <data name="WkNoAssets" xml:space="preserve">
     <value>No assets uploaded yet.</value>
@@ -3243,9 +3225,6 @@
   </data>
   <data name="ResOnThisPage" xml:space="preserve">
     <value>On this page</value>
-  </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>General</value>
   </data>
   <data name="ResScenesSubtitle" xml:space="preserve">
     <value>Browse and watch roleplay sessions.</value>
@@ -5073,5 +5052,20 @@
   </data>
   <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
     <value>Cannot be killed.</value>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Describe this category</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Add a category</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategory} other {# subcategories}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# page in this category} other {# pages in this category}}</value>
   </data>
 </root>

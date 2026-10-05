@@ -98,30 +98,30 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 	public async Task ProfileContext_FetchesCharacterBiography()
 	{
 		var path = RenderInProfileAndCapture("Gandalf", config: null);
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/general/Gandalf");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/Gandalf");
 	}
 
 	[TUnit.Core.Test]
 	public async Task CharacterShorthand_FetchesCharacterBiography()
 	{
 		var path = RenderAndCapture(p => p.Add(x => x.Config, BuildConfig(new { Character = "Frodo" })));
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/general/Frodo");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/Frodo");
 	}
 
 	[TUnit.Core.Test]
 	public async Task Slug_FetchesArbitraryPageFromMainNamespace()
 	{
 		var path = RenderAndCapture(p => p.Add(x => x.Config, BuildConfig(new { Slug = "house-rules" })));
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/house-rules");
 	}
 
 	[TUnit.Core.Test]
-	public async Task SlugWithNamespaceAndCategory_FetchesThatPage()
+	public async Task SlugWithNamespace_FetchesThatPage()
 	{
 		var path = RenderAndCapture(p => p.Add(x => x.Config,
-			BuildConfig(new { Slug = "combat", Namespace = "help", Category = "systems" })));
+			BuildConfig(new { Slug = "combat", Namespace = "help" })));
 
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/help/systems/combat");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/help/combat");
 	}
 
 	[TUnit.Core.Test]
@@ -130,17 +130,17 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 		var path = RenderAndCapture(p => p.Add(x => x.Config,
 			BuildConfig(new { Slug = "house-rules", Locale = "fr" })));
 
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules?lang=fr");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/house-rules?lang=fr");
 	}
 
 	[TUnit.Core.Test]
-	public async Task BlankNamespaceAndCategory_FallBackToTheWikiDefaults()
+	public async Task BlankNamespace_FallsBackToTheWikiDefault()
 	{
 		// WikiService defaults on null only, so a blank must not reach it as "".
 		var path = RenderAndCapture(p => p.Add(x => x.Config,
-			BuildConfig(new { Slug = "house-rules", Namespace = "", Category = "   " })));
+			BuildConfig(new { Slug = "house-rules", Namespace = "   " })));
 
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/house-rules");
 	}
 
 	[TUnit.Core.Test]
@@ -149,14 +149,14 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 		var path = RenderAndCapture(p => p.Add(x => x.Config,
 			BuildConfig(new { Slug = " house-rules ", Namespace = " main " })));
 
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/house-rules");
 	}
 
 	[TUnit.Core.Test]
 	public async Task BlankSlug_FallsBackToTheProfileContext()
 	{
 		var path = RenderInProfileAndCapture("Gandalf", BuildConfig(new { Slug = "  " }));
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/general/Gandalf");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/character/Gandalf");
 	}
 
 	[TUnit.Core.Test]
@@ -164,7 +164,7 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 	{
 		// An admin who configures a page means it, even on a profile page.
 		var path = RenderInProfileAndCapture("Gandalf", BuildConfig(new { Slug = "house-rules" }));
-		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/general/house-rules");
+		await Assert.That(path).IsEqualTo("/api/wiki/ns/main/house-rules");
 	}
 
 	/// <summary>

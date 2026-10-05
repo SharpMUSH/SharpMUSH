@@ -2855,10 +2855,6 @@
     <value>任何人都可编辑</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>常规</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, other {# 项更改}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
@@ -4008,10 +4004,6 @@
     <value>按命名空间浏览</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>分类</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} 还没有传记。</value>
     <comment>MT</comment>
@@ -4107,14 +4099,6 @@
     <value>修订版</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>标签</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>按回车键或点击 + 添加标签</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>标题</value>
     <comment>MT</comment>
@@ -4133,10 +4117,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>已更新</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>添加标签…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4285,10 +4265,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>暂无页面。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>标签：{0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5287,5 +5263,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>已保存 {0} 的例外。</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>未分类</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>描述此分类</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>添加分类</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, other {# 个子分类}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, other {此分类中有 # 个页面}}</value>
   </data>
 </root>

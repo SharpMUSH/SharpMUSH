@@ -2855,10 +2855,6 @@
     <value>всеки може да редактира</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Общи</value>
-    <comment>MT — assumed a settings category label</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# промяна} other {# промени}}</value>
     <comment>MT — verbatim from the locale sheet; two categories only</comment>
@@ -4008,10 +4004,6 @@
     <value>Преглед по namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Категория</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} все още няма биография.</value>
     <comment>MT</comment>
@@ -4107,14 +4099,6 @@
     <value>Версия</value>
     <comment>MT — per sheet, revision → версия</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Етикети</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Натиснете Enter или +, за да добавите етикет</value>
-    <comment>MT — key name «Enter» and the + sign kept as-is</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Заглавие</value>
     <comment>MT</comment>
@@ -4134,10 +4118,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Обновена</value>
     <comment>MT — assumed a page-status/last-changed column referring to «страница» (feminine); if it labels a bare timestamp, neuter «Обновено» would be better</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>добавяне на етикет…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Добавяне на превод…</value>
@@ -4285,10 +4265,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Все още няма страници.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Етикет: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5287,5 +5263,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Изключението за {0} е запазено.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Без категория</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Опишете тази категория</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Добавяне на категория</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# подкатегория} other {# подкатегории}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# страница в тази категория} other {# страници в тази категория}}</value>
   </data>
 </root>

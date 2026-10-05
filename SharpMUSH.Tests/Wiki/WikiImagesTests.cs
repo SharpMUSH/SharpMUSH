@@ -37,7 +37,7 @@ public class WikiImagesTests
 
 	[Test]
 	public async Task FirstImageUrl_NoImage_IsNull()
-		=> await Assert.That(WikiImages.FirstImageUrl("<h1>Title</h1><p>Just <a href=\"/wiki/main/general/x\">a link</a>.</p>")).IsNull();
+		=> await Assert.That(WikiImages.FirstImageUrl("<h1>Title</h1><p>Just <a href=\"/wiki/main/x\">a link</a>.</p>")).IsNull();
 
 	[Test]
 	public async Task FirstImageUrl_EmptyOrNull_IsNull()
@@ -75,4 +75,24 @@ public class WikiImagesTests
 		const string html = "<p><img src=\"/two.jpg\"></p>";
 		await Assert.That(WikiImages.StripFirstImage(html, "/one.jpg")).IsEqualTo(html);
 	}
+
+	// --- LeadImageUrl: only an image that opens the page becomes its banner -----------------
+
+	[Test]
+	[Arguments("<p><img src=\"/one.jpg\" alt=\"\"></p><p>text</p>")]
+	[Arguments("<img src=\"/one.jpg\"><p>text</p>")]
+	[Arguments("\n<p>\n<img src=\"/one.jpg\"></p>")]
+	public async Task LeadImageUrl_ImageOpeningThePage_IsTheLead(string html)
+		=> await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/one.jpg");
+
+	/// <summary>The Application Schema Guide's mock-up sits halfway down; it illustrates the text it follows.</summary>
+	[Test]
+	[Arguments("<p>Intro.</p><p><img src=\"/one.jpg\"></p>")]
+	[Arguments("<h2>Heading</h2><p><img src=\"/one.jpg\"></p>")]
+	[Arguments("<p>Look: <img src=\"/one.jpg\"></p>")]
+	[Arguments("<p>no images</p>")]
+	[Arguments("")]
+	[Arguments(null)]
+	public async Task LeadImageUrl_ImageAfterText_IsNotTheLead(string? html)
+		=> await Assert.That(WikiImages.LeadImageUrl(html)).IsNull();
 }

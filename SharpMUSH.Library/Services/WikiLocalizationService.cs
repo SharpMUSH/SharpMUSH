@@ -14,9 +14,9 @@ public sealed class WikiLocalizationService(
 	public string DefaultLocale => resolver.DefaultLocale;
 
 	public async Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
-		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
+		string slug, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
 	{
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page) return new NotFound();
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page) return new NotFound();
 
 		return await LocalizeAsync(page, requestedLocale, includeDrafts);
 	}

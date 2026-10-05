@@ -18,8 +18,8 @@ file sealed class WikiListHandler : HttpMessageHandler
 {
 	private const string Pages = """
 	[
-	  {"id":"1","slug":"intro","title":"Getting Started","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"category":"guides","tags":[],"published":true},
-	  {"id":"2","slug":"lore","title":"World Lore","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"category":null,"published":true}
+	  {"id":"1","slug":"intro","title":"Getting Started","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"categories":["guides","house_rules"],"published":true},
+	  {"id":"2","slug":"lore","title":"World Lore","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"categories":[],"published":true}
 	]
 	""";
 
@@ -33,8 +33,8 @@ file sealed class WikiListHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// Confirms the Wiki Index widget renders the category grid from the REST page list: a named category,
-/// the "General" fallback for an uncategorized page, and the page titles.
+/// Confirms the Wiki Index widget renders the category grid from the REST page list: a card for every
+/// category a page names, the "Uncategorized" card for a page in none, and the page titles.
 /// </summary>
 public class WikiIndexWidgetTests : TrackingBunitContext
 {
@@ -72,6 +72,11 @@ public class WikiIndexWidgetTests : TrackingBunitContext
 		await Assert.That(markup).Contains("Getting Started");
 		await Assert.That(markup).Contains("World Lore");
 		await Assert.That(markup).Contains("Guides");
-		await Assert.That(markup).Contains("General");
+		await Assert.That(markup).Contains("NavWikiUncategorized");
+
+		var names = cut.FindAll(".wiki-cat-name").Select(n => n.TextContent.Trim()).ToList();
+		await Assert.That(names).IsEquivalentTo(["Guides", "House rules", "NavWikiUncategorized"])
+			.Because("a page in two categories is listed under each, and pages in none come last");
+		await Assert.That(names[^1]).IsEqualTo("NavWikiUncategorized");
 	}
 }

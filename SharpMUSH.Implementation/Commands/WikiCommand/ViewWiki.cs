@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
@@ -78,9 +79,9 @@ public static class ViewWiki
 		bool showRaw = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
+		var (ns, slug) = WikiHelpers.ResolveTitle(target.ToPlainText());
 
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
@@ -104,7 +105,7 @@ public static class ViewWiki
 
 		var line = MarkupText.Plain("-").Repeat(RenderWidth);
 		var markers = $"{(published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
-		var tags = page.Tags.Count > 0 ? string.Join(", ", page.Tags) : "-";
+		var categories = page.Categories.Count > 0 ? string.Join(", ", page.Categories.Select(WikiHelpers.CategoryLabel)) : "-";
 
 		// An unpublished body is opt-in even for a wizard: reading a draft is a deliberate act, not the
 		// default a stray @wiki on a half-written page should perform. The gate is the same whether the
@@ -131,7 +132,7 @@ public static class ViewWiki
 		var output = MarkupText.Join(MarkupText.NewLine, [
 			line,
 			MarkupText.Plain($"Wiki: {title} [{page.Namespace}]{markers}"),
-			MarkupText.Plain($"Category: {page.Category ?? "-"}   Tags: {tags}   Rev {revision}{localeMarker} — {page.UpdatedAt:yyyy-MM-dd HH:mm}"),
+			MarkupText.Plain($"Categories: {categories}   Rev {revision}{localeMarker} — {page.UpdatedAt:yyyy-MM-dd HH:mm}"),
 			line,
 			rendered,
 			line,
@@ -160,9 +161,9 @@ public static class ViewWiki
 		bool showDraft = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
+		var (ns, slug) = WikiHelpers.ResolveTitle(target.ToPlainText());
 
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);

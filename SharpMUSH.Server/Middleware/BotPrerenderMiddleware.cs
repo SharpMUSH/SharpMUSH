@@ -74,18 +74,17 @@ public sealed class BotPrerenderMiddleware(
 		if (path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
 		{
 			var segments = path["/wiki/".Length..].Trim('/').Split('/');
-			if (segments.Length >= 3)
+			if (segments.Length == 2)
 			{
 				var ns = ParseNamespace(segments[0]);
-				var category = segments[1];
-				var slug = string.Join('/', segments[2..]);
+				var slug = segments[1];
 				// Published gate: a prerender is anonymous, bot-facing output, so a draft page must not
 				// be reachable by any crawler that asks for it.
-				if (await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage { Published: true } page)
+				if (await wikiService.GetBySlugAsync(slug, ns) is WikiPage { Published: true } page)
 				{
 					html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
-						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}",
+						$"{canonicalBase}{WikiRoutes.WikiPathFor(page.Namespace, page.Slug)}",
 						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
 						localization.DefaultLocale);
 				}
@@ -96,7 +95,7 @@ public sealed class BotPrerenderMiddleware(
 			var name = path["/character/".Length..].Trim('/');
 			if (!string.IsNullOrEmpty(name))
 			{
-				if (await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character)
+				if (await wikiService.GetBySlugAsync(name, WikiNamespace.Character)
 					is WikiPage { Published: true } page)
 				{
 					html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(

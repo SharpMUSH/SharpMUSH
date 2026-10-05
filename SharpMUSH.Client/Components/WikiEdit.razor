@@ -53,13 +53,6 @@
             <input class="wiki-edit-title" value="@Article.Title"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
                    placeholder="@Loc["WkPageTitlePlaceholder"]" />
-            <div class="wiki-edit-cat">
-                <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:0.875rem;color:var(--text-faint);" />
-                <input value="@Article.Category"
-                       disabled="@IsTranslation"
-                       @oninput="@(e => Article.Category = e.Value?.ToString())"
-                       placeholder="@Loc["WikiCategory"]" />
-            </div>
         </div>
 
         <div class="wiki-edit-toolbar">
@@ -102,18 +95,19 @@
         </div>
 
         <div class="wiki-edit-tags">
-            <span class="wiki-edit-taglabel">@Loc["WikiTags"]</span>
-            @foreach (var tag in Article.Tags)
+            @* Categories are held by the page, not written in its text; a translation inherits them. *@
+            <span class="wiki-edit-taglabel">@Loc["NavWikiCategories"]</span>
+            @foreach (var category in Article.Categories)
             {
-                var t = tag;
-                <span class="wiki-edit-tag">@t
-                    <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveTag(t))">×</button>
+                var c = category;
+                <span class="wiki-edit-tag">@WikiHelpers.CategoryLabel(c)
+                    <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveCategory(c))">×</button>
                 </span>
             }
-            <input class="wiki-edit-taginput" value="@_tagEntry"
+            <input class="wiki-edit-taginput" value="@_categoryEntry"
                    disabled="@IsTranslation"
-                   @oninput="@(e => _tagEntry = e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="OnTagKeyDown" placeholder="@Loc["WkAddTagPlaceholder"]" />
+                   @oninput="@(e => _categoryEntry = e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="OnCategoryKeyDown" placeholder="@Loc["WkAddCategory"]" />
             <div style="flex:1;"></div>
             <label class="wiki-edit-pub">
                 <input type="checkbox" checked="@Article.Published"
@@ -160,7 +154,7 @@
 
         <div class="wiki-edit-foot">
             <span>@Loc["WkPublishNotice"]</span>
-            <a href="/wiki/help/general/markdown_guide" target="_blank">@Loc["WkFormattingHelp"]</a>
+            <a href="/wiki/help/markdown_guide" target="_blank">@Loc["WkFormattingHelp"]</a>
         </div>
     </div>
 }
@@ -192,8 +186,8 @@
 
     /// <summary>
     /// True when the selected locale is a different language from the source, i.e. we are editing an
-    /// overlay row rather than the page. Category, tags and protection are inherited in that case, and
-    /// <c>WikiTranslation</c> has no field for them — the disabled inputs make that visible.
+    /// overlay row rather than the page. Categories and protection are inherited in that case, and
+    /// <c>WikiTranslation</c> has no field for them — the disabled controls make that visible.
     /// </summary>
     private bool IsTranslation => !WikiHelpers.SameLanguage(SelectedLocale, SourceLocale);
 
@@ -232,7 +226,7 @@
     private bool _saving;
     private bool _showAssetPicker;
     private string? _errorMessage;
-    private string _tagEntry = string.Empty;
+    private string _categoryEntry = string.Empty;
     private string _summary = string.Empty;
     private bool _minor;
     private int _initialBytes;
@@ -261,20 +255,20 @@
         }
     }
 
-    private void AddTag()
+    private void AddCategory()
     {
         if (Article is null) return;
-        var tag = _tagEntry.Trim().ToLowerInvariant();
-        if (tag.Length > 0 && !Article.Tags.Contains(tag))
-            Article.Tags.Add(tag);
-        _tagEntry = string.Empty;
+        var category = WikiHelpers.CategoryKey(_categoryEntry);
+        if (category.Length > 0 && !Article.Categories.Contains(category))
+            Article.Categories.Add(category);
+        _categoryEntry = string.Empty;
     }
 
-    private void RemoveTag(string tag) => Article?.Tags.Remove(tag);
+    private void RemoveCategory(string category) => Article?.Categories.Remove(category);
 
-    private void OnTagKeyDown(KeyboardEventArgs args)
+    private void OnCategoryKeyDown(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter") AddTag();
+        if (args.Key == "Enter") AddCategory();
     }
 
     private void InsertAssetMarkdown(string snippet)

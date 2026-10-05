@@ -1429,3 +1429,36 @@
 	.kit-capsule--icon { min-width: 44px; }
 	.kit-portrait, .kit-tile { min-height: 44px; }
 }
+
+/* Wiki categories: a page's category bar (MediaWiki's catlinks) and a category page's subcategories.
+   Global rather than scoped because WikiDisplay and WikiCategoryMembers both render the links. */
+.wiki-catlinks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.wiki-catlinks-label {
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.wiki-catlink {
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 13px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.wiki-catlink:hover,
+.wiki-catlink:focus-visible {
+    background: var(--border);
+    outline: none;
+}

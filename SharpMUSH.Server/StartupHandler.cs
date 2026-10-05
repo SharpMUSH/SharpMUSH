@@ -98,7 +98,6 @@ public class StartupHandler(
 				""",
 			authorDbref: "#1",
 			ns: WikiNamespace.Main,
-			category: "general",
 			sourceLocale: "en");
 		switch (homeResult)
 		{
@@ -118,8 +117,8 @@ public class StartupHandler(
 			markdown: SeededWikiPages.MarkdownGuide,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general",
-			sourceLocale: "en");
+			sourceLocale: "en",
+			categories: ["Help"]);
 		switch (guideResult)
 		{
 			case WikiPage page:
@@ -138,8 +137,8 @@ public class StartupHandler(
 			markdown: SeededWikiPages.ApplicationSchemaGuide,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general",
-			sourceLocale: "en");
+			sourceLocale: "en",
+			categories: ["Help"]);
 		switch (appSchemaResult)
 		{
 			case WikiPage page:

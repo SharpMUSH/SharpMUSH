@@ -23,7 +23,8 @@ public partial class LightningDatabase
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
 	/// 3. apply pending core repairs, including the atomic exit source-index, mail folder-count and
-	///    player-alias index rebuilds, and the numbering of mail folders that predate folder numbers;
+	///    player-alias index rebuilds, the numbering of mail folders that predate folder numbers, and the
+	///    move of wiki categories and tags into page text;
 	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 6. ensure the singleton server-state row exists.
@@ -58,6 +59,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 			await Store.WriteAsync(tx => RebuildPlayerAliases(tx, cancellationToken), cancellationToken);
 			await RebuildReadIndexesAsync(cancellationToken);
+			await MoveWikiCategoriesIntoTextAsync(cancellationToken);
 			await Store.WriteAsync(tx => NumberMailFolders(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)

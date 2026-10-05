@@ -38,7 +38,7 @@ public interface IWikiLocalizationService
 	/// <param name="includeDrafts">True when the caller may see unpublished translations, i.e. may edit
 	/// the page. Ordinary readers pass false and fall back as though drafts were absent.</param>
 	Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
-		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts);
+		string slug, WikiNamespace ns, string? requestedLocale, bool includeDrafts);
 
 	/// <summary>Resolves an already-loaded page. Never fails.</summary>
 	Task<LocalizedWikiPage> LocalizeAsync(WikiPage page, string? requestedLocale, bool includeDrafts);

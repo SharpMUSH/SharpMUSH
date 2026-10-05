@@ -56,7 +56,7 @@
                 @foreach (var group in FilteredGroups)
                 {
                     var g = group;
-                    var label = WikiCategories.Label(g.Key, Loc["ResCategoryGeneral"]);
+                    var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"]);
                     <div class="wiki-cat-card">
                         @if (ImageUrlPolicy.IsRenderable(g.Cover))
                         {
@@ -75,7 +75,7 @@
                                 @foreach (var page in g.Pages.Take(TopPages))
                                 {
                                     var p = page;
-                                    <a class="wiki-cat-page" href="@WikiRoutes.PathFor(p.Namespace, p.Category, p.Slug)">
+                                    <a class="wiki-cat-page" href="@WikiRoutes.PathFor(p.Namespace, p.Slug)">
                                         <span class="wiki-cat-page-title">@p.Title</span>
                                         @if (!p.Published)
                                         {
@@ -88,7 +88,10 @@
                                     </a>
                                 }
                             </div>
-                            <a class="wiki-cat-all" href="@WikiCategories.Route(g.Key)">@Loc.Plural("NavWikiAllPages", "count", g.Pages.Count)</a>
+                            @if (!g.IsUncategorized)
+                            {
+                                <a class="wiki-cat-all" href="@WikiCategories.Route(g.Key)">@Loc.Plural("NavWikiAllPages", "count", g.Pages.Count)</a>
+                            }
                         </div>
                     </div>
                 }
@@ -110,7 +113,7 @@
     private string? _heroImage;
     private IReadOnlyList<WikiPageSummary> _pages = [];
 
-    private static string NewPageHref => $"/wiki/main/{WikiHelpers.DefaultCategory}/new-page/edit";
+    private static string NewPageHref => "/wiki/main/new-page/edit";
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,7 +125,7 @@
         _loading = false;
 
         // The hero shows the home page's own image when it has one; nothing else in the data names one.
-        if (await Wiki.GetWikiArticle("home", "general", "main") is WikiArticle home)
+        if (await Wiki.GetWikiArticle("home", "main") is WikiArticle home)
         {
             _heroImage = home.Image;
         }
@@ -163,7 +166,7 @@
             if (!string.IsNullOrWhiteSpace(_search))
             {
                 q = q.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
-                                 || WikiCategories.Key(p.Category).Contains(_search, StringComparison.OrdinalIgnoreCase));
+                                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c).Contains(_search, StringComparison.OrdinalIgnoreCase)));
             }
 
             return WikiCategories.Group(q);

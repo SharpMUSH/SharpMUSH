@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
@@ -27,18 +28,9 @@ public static class EditWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		// The title may carry namespace/category prefixes ("Help:Guides:Some Topic" or
-		// "Help:Some Topic"); the remainder is the human title (the slug is derived from it).
-		var rawTitle = titleArg.ToPlainText().Trim();
-		var (ns, category, _) = WikiCommandHelper.ResolveTarget(rawTitle);
-		var parts = rawTitle.Split(':', 3);
-		var title = parts.Length == 3
-				&& Enum.TryParse<SharpMUSH.Library.Models.Wiki.WikiNamespace>(parts[0].Trim(), ignoreCase: true, out _)
-			? parts[2].Trim()
-			: parts.Length == 2
-				&& Enum.TryParse<SharpMUSH.Library.Models.Wiki.WikiNamespace>(parts[0].Trim(), ignoreCase: true, out _)
-				? parts[1].Trim()
-				: rawTitle;
+		// The title may carry a namespace prefix ("Help:Some Topic"); the remainder is the human title
+		// (the slug is derived from it).
+		var (ns, title) = WikiHelpers.SplitTitle(titleArg.ToPlainText());
 
 		if (title.Length == 0)
 		{
@@ -51,7 +43,7 @@ public static class EditWiki
 		// This is the second and last create path in the codebase.
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 		var result = await wikiService.CreateAsync(
-			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns, category,
+			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns,
 			localization.DefaultLocale);
 
 		var (message, returned) = result switch
@@ -75,7 +67,7 @@ public static class EditWiki
 		MString revisionArg)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+		var (ns, slug) = WikiHelpers.ResolveTitle(targetArg.ToPlainText());
 
 		if (!int.TryParse(revisionArg.ToPlainText().Trim(), out var revisionNumber) || revisionNumber < 1)
 		{
@@ -83,7 +75,7 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
@@ -118,6 +110,48 @@ public static class EditWiki
 		return MarkupText.Plain(updated.Slug);
 	}
 
+	/// <summary>
+	/// <c>@wiki/category &lt;page&gt;=&lt;name&gt;, &lt;name&gt;…</c> — replace the categories a page is in. An empty
+	/// list takes it out of every category. Categories are page metadata, not text, so this is no revision.
+	/// The same edit rule as <c>@wiki/edit</c> applies.
+	/// </summary>
+	public static async ValueTask<MString> SetCategories(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IWikiService wikiService,
+		INotifyService notifyService,
+		MString targetArg,
+		MString? categoriesArg)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var (ns, slug) = WikiHelpers.ResolveTitle(targetArg.ToPlainText());
+
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		if (!await WikiCommandHelper.CanEdit(executor, page))
+		{
+			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var names = (categoriesArg?.ToPlainText() ?? string.Empty).Split(',');
+		if (await wikiService.SetMetadataAsync(page.Id, names, page.Published) is not WikiPage updated)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var labels = string.Join(", ", updated.Categories.Select(WikiHelpers.CategoryLabel));
+		await notifyService.Notify(executor, updated.Categories.Count == 0
+			? $"WIKI: '{updated.Title}' is in no category."
+			: $"WIKI: '{updated.Title}' categories: {labels}.", executor);
+		return MarkupText.Plain(string.Join(' ', updated.Categories));
+	}
+
 	public static async ValueTask<MString> Edit(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -128,9 +162,9 @@ public static class EditWiki
 		bool append)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+		var (ns, slug) = WikiHelpers.ResolveTitle(targetArg.ToPlainText());
 
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
@@ -202,9 +236,9 @@ public static class EditWiki
 		MString contentArg)
 	{
 		var (pageTarget, locale) = target;
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(pageTarget);
+		var (ns, slug) = WikiHelpers.ResolveTitle(pageTarget);
 
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {pageTarget}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
