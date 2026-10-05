@@ -5060,6 +5060,10 @@
     <value>Alătură-te scenei</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Jocul nu te-a lăsat să te alături acestei scene.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Părăsește scena</value>
     <comment>MT</comment>

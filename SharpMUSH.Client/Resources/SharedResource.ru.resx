@@ -5060,6 +5060,10 @@
     <value>Присоединиться</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Игра не позволила вам присоединиться к этой сцене.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Покинуть сцену</value>
     <comment>MT</comment>

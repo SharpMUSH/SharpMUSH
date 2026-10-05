@@ -5060,6 +5060,10 @@
     <value>Meedoen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Het spel liet je niet meedoen aan deze scène.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Scène verlaten</value>
     <comment>MT</comment>

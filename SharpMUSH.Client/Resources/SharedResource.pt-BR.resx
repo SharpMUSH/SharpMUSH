@@ -5060,6 +5060,10 @@
     <value>Participar da cena</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>O jogo não deixou você entrar nesta cena.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Sair da cena</value>
     <comment>MT</comment>

@@ -5060,6 +5060,10 @@
     <value>Unirse a la escena</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>El juego no te dejó unirte a esta escena.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Salir de la escena</value>
     <comment>MT</comment>

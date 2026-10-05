@@ -5060,6 +5060,10 @@
     <value>Csatlakozás</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>A játék nem engedte, hogy csatlakozz ehhez a jelenethez.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Jelenet elhagyása</value>
     <comment>MT</comment>

@@ -5060,6 +5060,10 @@
     <value>Gå med i scenen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Spelet lät dig inte gå med i den här scenen.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Lämna scenen</value>
     <comment>MT</comment>

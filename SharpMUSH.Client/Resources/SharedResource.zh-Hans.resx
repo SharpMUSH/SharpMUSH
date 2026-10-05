@@ -5060,6 +5060,10 @@
     <value>加入场景</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>游戏未允许你加入此场景。</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>离开场景</value>
     <comment>MT</comment>

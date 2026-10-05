@@ -4316,6 +4316,10 @@
     <value>Rejoindre la scène</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Le jeu ne vous a pas laissé rejoindre cette scène.</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Quitter la scène</value>
     <comment>MT</comment>

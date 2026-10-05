@@ -4399,6 +4399,9 @@
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
   </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>The game did not let you join this scene.</value>
+  </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
   </data>
