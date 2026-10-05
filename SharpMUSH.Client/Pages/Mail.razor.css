@@ -56,20 +56,36 @@
 	padding: 6px;
 }
 
+/* MudBlazor's button reset centres a button's content (inline-flex, align-items and justify-content
+   center); a row lays out its own grid instead: the sender's avatar at the inline start, then the
+   sender and date over the subject, aligned to the start in either writing direction. */
 .mail-row {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-rows: auto auto;
+	column-gap: 10px;
+	row-gap: 2px;
+	align-items: center;
+	justify-content: stretch;
+	justify-items: stretch;
 	width: 100%;
+	min-width: 0;
 	padding: 8px 10px;
 	border: 0;
 	border-radius: var(--radius-row);
 	background: transparent;
 	color: var(--text-dim);
 	font: inherit;
-	text-align: left;
+	text-align: start;
 	cursor: pointer;
 	transition: background var(--motion-pop);
+}
+
+.mail-row-avatar {
+	grid-row: 1 / span 2;
+	width: 32px;
+	height: 32px;
+	font-size: 11px;
 }
 
 .mail-row:hover {
@@ -90,6 +106,7 @@
 }
 
 .mail-row-top {
+	grid-column: 2;
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -121,6 +138,7 @@
 }
 
 .mail-row-subject {
+	grid-column: 2;
 	font-size: 12px;
 	color: var(--text-dim);
 	overflow: hidden;
@@ -147,15 +165,18 @@
 	flex-shrink: 0;
 }
 
-.mail-reading-avatar {
-	width: 40px;
-	height: 40px;
+.mail-avatar {
 	flex-shrink: 0;
 	display: grid;
 	place-items: center;
 	border-radius: 50%;
-	font-size: 13px;
 	font-weight: 700;
+}
+
+.mail-reading-avatar {
+	width: 40px;
+	height: 40px;
+	font-size: 13px;
 }
 
 .mail-reading-meta {

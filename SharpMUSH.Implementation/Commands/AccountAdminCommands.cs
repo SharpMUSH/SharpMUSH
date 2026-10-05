@@ -74,6 +74,7 @@ public partial class Commands
 			if (result is Success)
 			{
 				await AccountSessionStore.RevokeAllForAccountAsync(account.Id!);
+				await Audit.RecordAsync(executor, AuditActions.AccountPassword, AuditTargets.Of(account));
 			}
 			await NotifyService.Notify(executor, result switch
 			{
@@ -86,6 +87,8 @@ public partial class Commands
 		if (switches.Contains("DISABLE"))
 		{
 			var result = await AccountService.DisableAccountAsync(account.Id!);
+			if (result is Success)
+				await Audit.RecordAsync(executor, AuditActions.AccountStatus, AuditTargets.Of(account), nameof(AccountStatus.Disabled));
 			await NotifyService.Notify(executor, result switch
 			{
 				Success => $"Account '{account.Username}' disabled; active sessions revoked.",
@@ -97,6 +100,8 @@ public partial class Commands
 		if (switches.Contains("ENABLE"))
 		{
 			var result = await AccountService.EnableAccountAsync(account.Id!);
+			if (result is Success)
+				await Audit.RecordAsync(executor, AuditActions.AccountStatus, AuditTargets.Of(account), nameof(AccountStatus.Active));
 			await NotifyService.Notify(executor, result switch
 			{
 				Success => $"Account '{account.Username}' enabled.",
@@ -114,6 +119,7 @@ public partial class Commands
 			}
 			else
 			{
+				await Audit.RecordAsync(executor, AuditActions.AccountStatus, AuditTargets.Of(account), nameof(AccountStatus.Closed));
 				await NotifyService.NotifyLocalized(executor,
 					nameof(ErrorMessages.Notifications.AccountClosedFormat), executor, account.Username);
 			}
@@ -130,6 +136,7 @@ public partial class Commands
 			}
 			else
 			{
+				await Audit.RecordAsync(executor, AuditActions.AccountStatus, AuditTargets.Of(account), nameof(AccountStatus.Deleted));
 				await NotifyService.NotifyLocalized(executor,
 					nameof(ErrorMessages.Notifications.AccountMarkedDeletedFormat), executor, account.Username);
 			}

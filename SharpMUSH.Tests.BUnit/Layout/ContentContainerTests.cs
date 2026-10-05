@@ -25,27 +25,21 @@ public class ContentContainerTests
 	[Test]
 	public async Task FullHeightPagesKeepADefiniteHeightThroughTheWrapper()
 	{
-		var bleed = Regex.Match(Shell(), @"\.phosphor-page:has\(\.full-bleed\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
-		await Assert.That(bleed.Success).IsTrue().Because("full-bleed pages need a selector that lifts the reading-width cap");
-		await Assert.That(bleed.Groups["body"].Value).Contains("max-width: none")
-			.Because("full-bleed removes the max-width cap and nothing else");
-
 		// A descendant, not a child: a section's page sits inside SectionShell's .kit-section-body.
 		var height = Regex.Match(Shell(), @"\.phosphor-page:has\(\.full-height\)\s*\{(?<body>[^}]*)\}", RegexOptions.Singleline);
 		await Assert.That(height.Success).IsTrue().Because("full-height pages need a selector that passes a definite height through the wrapper");
-		await Assert.That(height.Groups["body"].Value).Contains("height: 100%")
-			.Because("full-height opts in to a definite height without forcing the width cap open too");
+		await Assert.That(height.Groups["body"].Value).Contains("height: 100%");
 	}
 
 	[Test]
-	public async Task WideViewportsCapTheReadingWidth()
+	public async Task ThePageFillsTheContentColumnAtEveryWidth()
 	{
-		var wide = Regex.Match(Shell(), @"@media\s*\(min-width:\s*1601px\)\s*\{(?<body>.*?)\n\}", RegexOptions.Singleline);
-		await Assert.That(wide.Success).IsTrue().Because("the ultrawide tier must exist");
-		await Assert.That(wide.Groups["body"].Value).Contains("--content-max")
-			.Because("the cap reads a token rather than hardcoding a width");
-		await Assert.That(wide.Groups["body"].Value).Contains("margin-inline: auto")
-			.Because("capped content is centred, not left-aligned against the sidebar");
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, @"\.phosphor-page(?![-\w])[^{]*\{[^}]*max-width", RegexOptions.Singleline)).IsFalse()
+			.Because("a capped page floats away from the sidebar on a wide screen; a page that reads better "
+				+ "narrower caps its own block instead");
+		await Assert.That(Regex.IsMatch(shell, @"\.phosphor-page(?![-\w])[^{]*\{[^}]*margin-inline:\s*auto", RegexOptions.Singleline)).IsFalse()
+			.Because("the page starts against the sidebar, not centred in the column");
 	}
 
 	[Test]

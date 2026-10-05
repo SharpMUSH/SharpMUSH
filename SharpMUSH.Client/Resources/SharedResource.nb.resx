@@ -156,10 +156,6 @@
     <value>Vis karakterer</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Karakteradministrasjon kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Site-konfig</value>
     <comment>MT — 'site' kept as the MUSH term of art, matching the sitelock strings; abbreviated to stay short on a dashboard card.</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Passordet for «{0}» er tilbakestilt til: {1} — del det på en sikker måte; de må bytte det ved neste innlogging.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Spillerdetaljer kommer snart.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">

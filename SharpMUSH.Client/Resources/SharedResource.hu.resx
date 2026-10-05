@@ -156,10 +156,6 @@
     <value>Karakterek megtekintése</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>A karakteradminisztráció hamarosan elérhető.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Oldalbeállítások</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>A(z) „{0}” jelszava visszaállítva a következőre: {1} — ossza meg biztonságosan; a következő bejelentkezéskor meg kell változtatnia.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>A játékos részletes adatai hamarosan elérhetők.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">

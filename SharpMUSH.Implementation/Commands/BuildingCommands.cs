@@ -326,6 +326,11 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
+			if (obj.IsPlayer)
+			{
+				await Audit.RecordAsync(executor, AuditActions.PlayerDestroy, AuditTargets.Of(obj), "destroyed");
+			}
+
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 			return CallState.Empty;
 		}
@@ -351,6 +356,10 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, destroyKey, executor, destroyed);
 
 		await PreDestroyAsync(parser, executor, obj.Object().DBRef, []);
+		if (obj.IsPlayer)
+		{
+			await Audit.RecordAsync(executor, AuditActions.PlayerDestroy, AuditTargets.Of(obj), "scheduled");
+		}
 
 		return CallState.Empty;
 	}

@@ -156,10 +156,6 @@
     <value>Преглед на персонажите</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Администрирането на персонажи предстои.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Конфигурация на сайта</value>
     <comment>MT</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Паролата за „{0}“ е нулирана на: {1} — споделете я по сигурен начин; тя трябва да бъде сменена при следващото влизане.</value>
     <comment>MT — English «they must change it» made impersonal passive to avoid gendering the account holder</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Подробностите за играча предстоят.</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Администриране · Играч</value>

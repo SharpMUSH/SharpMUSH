@@ -262,6 +262,29 @@ public class SoftcodeEditorTabsTests : BunitContext
 		await Assert.That(cut.Find(".sc-tab--on .sc-tab-label").TextContent.Trim()).IsEqualTo("#8/FN");
 	}
 
+	[TUnit.Core.Test]
+	public async Task ClosingATabUnfoldsTheBranchesAboveTheTabLeftActive()
+	{
+		var cut = await RenderWithObjectSelectedAsync();
+		cut.Find(".sc-tree-toggle").Click();
+		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
+		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
+		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("DESCRIBE")).Click();
+		await cut.WaitForAssertionAsync(
+			async () => await Assert.That(cut.FindAll(".sc-tab")).Count().IsEqualTo(2),
+			TimeSpan.FromSeconds(5));
+
+		// Fold FN while DESCRIBE is active, then close DESCRIBE: FN`GREET becomes active and must show.
+		cut.Find(".sc-tree-toggle").Click();
+		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		cut.FindAll(".sc-tab").Single(e => e.TextContent.Contains("DESCRIBE")).QuerySelector(".sc-tab-close")!.Click();
+
+		await cut.WaitForAssertionAsync(
+			async () => await Assert.That(cut.Find(".sc-tab--on .sc-tab-label").TextContent.Trim()).IsEqualTo("#8/FN`GREET"),
+			TimeSpan.FromSeconds(5));
+		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	/// <summary>Disposes the HttpClient this fixture owns; the handler goes with it.</summary>
 	[After(Test)]
 	public void DisposeApiClient() => _api.Dispose();

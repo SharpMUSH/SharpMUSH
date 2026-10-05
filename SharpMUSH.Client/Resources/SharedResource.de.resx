@@ -156,10 +156,6 @@
     <value>Charaktere anzeigen</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Charakterverwaltung folgt in Kürze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Site-Konfiguration</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Passwort für '{0}' zurückgesetzt auf: {1} — geben Sie es sicher weiter; es muss bei der nächsten Anmeldung geändert werden.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Spielerdetails folgen in Kürze.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
