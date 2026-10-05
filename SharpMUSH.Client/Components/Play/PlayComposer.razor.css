@@ -88,9 +88,14 @@
 	outline-offset: 2px;
 }
 
-.composer-input {
+/* The field (FormattedInput) renders the textarea, so the rules reach it through ::deep. */
+.composer-grid ::deep .composer-field {
 	grid-area: input;
 	align-self: end;
+	min-width: 0;
+}
+
+.composer-grid ::deep .composer-input {
 	min-width: 0;
 	min-height: 40px;
 	max-height: 160px;
@@ -107,17 +112,17 @@
 }
 
 /* Expanded: the field takes most of the screen, so a long post can be read whole while writing it. */
-.composer--expanded .composer-input {
+.composer--expanded .composer-grid ::deep .composer-input {
 	min-height: 40vh;
 	max-height: 60vh;
 	field-sizing: fixed;
 }
 
-.composer-input::placeholder {
+.composer-grid ::deep .composer-input::placeholder {
 	color: var(--text-faint);
 }
 
-.composer-input--command {
+.composer-grid ::deep .composer-input--command {
 	font-family: var(--font-mono);
 	font-size: 14px;
 }

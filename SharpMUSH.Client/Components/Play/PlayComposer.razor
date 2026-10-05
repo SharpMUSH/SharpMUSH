@@ -13,7 +13,10 @@
    (DraftKey), so neither switching to the terminal nor a reload loses a half-written post; the expand
    button gives the field most of the screen for a long one. The %r toggle (on by default, kept per browser)
    decides what a line break is: on, it travels as %r inside the one post or command; off, every line is sent
-   as a post or command of its own. *@
+   as a post or command of its own. The field is a FormattedInput: Say, OOC and Emit are written as styled text
+   (the format menu colours a selection) and sent as decompose() writes them, so what is shown is what is posed,
+   brackets and percent signs included; the menu's softcode switch (kept per browser) sends what is typed as
+   softcode instead, as Command always does, and there the menu wraps the selection in [ansi()]. *@
 <BottomBar Class="@($"composer {(_expanded ? "composer--expanded" : null)}")">
     <div class="composer-scope">
         <div class="composer-grid">
@@ -21,6 +24,10 @@
                 <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
             </div>
             <div class="composer-tools">
+                @if (_field is not null)
+                {
+                    <FormatMenu Target="_field" ButtonClass="composer-tool" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
+                }
                 <button type="button" class="composer-tool composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
                         aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
                     <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" />
@@ -30,9 +37,10 @@
                     <MudIcon Icon="@(_expanded ? Icons.Material.Outlined.CloseFullscreen : Icons.Material.Outlined.OpenInFull)" Size="Size.Small" />
                 </button>
             </div>
-            <textarea class="composer-input @(_type == Command ? "composer-input--command" : null)" rows="1" @ref="_input"
-                      aria-label="@Loc["NavPlayMessageType"]: @Label(_type)" placeholder="@Placeholder"
-                      value="@_text" @oninput="OnInput" @onkeydown="OnKeyDownAsync"></textarea>
+            <FormattedInput @ref="_field" Draft="_draft" Class="composer-field"
+                            InputClass="@($"composer-input {(_type == Command ? "composer-input--command" : null)}")"
+                            AriaLabel="@($"{Loc["NavPlayMessageType"]}: {Label(_type)}")" Placeholder="@Placeholder"
+                            OnKeyDown="OnKeyDownAsync" OnRawRequested="@(_type == Command ? default : EventCallback.Factory.Create(this, () => SetRawAsync(true)))" />
             <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendAsync">@Loc["Send"]</button>
         </div>
     </div>
@@ -58,8 +66,13 @@
 
     private IReadOnlyList<(string Key, string Label)> _types = [];
     private string _type = Say;
-    private string _text = string.Empty;
-    private ElementReference _input;
+    private readonly ComposerDraft _draft = new();
+    private FormattedInput? _field;
+    private bool _walking;
+    // Reading a character's kept draft must not save it back first: an empty field saved under the new key
+    // would delete the very draft about to be read.
+    private bool _reading;
+    private bool _rawPreferred;
     private bool _focusInput;
     private bool _expanded;
     private string? _loadedKey;
@@ -68,13 +81,28 @@
     private bool _breaksLoaded;
 
     private const string BreaksKey = "play.composer.breaks";
+    private const string RawKey = "play.composer.raw";
 
-    private bool CanSend => Connected && !string.IsNullOrWhiteSpace(_text);
+    private bool CanSend => Connected && !_draft.IsEmpty;
+
+    /// <summary>Whether the field is softcode as typed: always for Command, else when the player switched to it.</summary>
+    private bool Raw => _rawPreferred || _type == Command;
 
     private string ExpandLabel => _expanded ? Loc["NavPlayComposerShrink"] : Loc["NavPlayComposerExpand"];
 
-    protected override void OnInitialized() =>
+    protected override void OnInitialized()
+    {
         _types = [(Say, Label(Say)), (Ooc, Label(Ooc)), (Emit, Label(Emit)), (Command, Label(Command))];
+        _draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged()
+    {
+        if (!_walking) _historyWalk.Reset();
+        if (!_reading) _ = SaveDraftAsync();
+        // Send's state follows the draft, which the field changes without this component rendering.
+        _ = InvokeAsync(StateHasChanged);
+    }
 
     private string Label(string type) => type switch
     {
@@ -96,15 +124,30 @@
     {
         _type = type;
         _historyWalk.Reset();
+        _draft.SetRaw(Raw);
         return SaveDraftAsync();
     }
 
-    private Task OnInput(ChangeEventArgs e)
+    /// <summary>The menu's softcode switch, or the field's offer to send what looks like softcode as softcode.</summary>
+    private async Task SetRawAsync(bool raw)
     {
-        _text = e.Value?.ToString() ?? string.Empty;
-        _historyWalk.Reset();
-        return SaveDraftAsync();
+        _rawPreferred = raw;
+        _draft.SetRaw(Raw);
+        _focusInput = true;
+        await JS.SetItemAsync(BrowserStore.Local, RawKey, raw ? "on" : "off");
     }
+
+    private async Task LoadRawAsync()
+    {
+        if (_rawLoaded) return;
+        _rawLoaded = true;
+        if (await JS.GetItemAsync(BrowserStore.Local, RawKey) is not "on") return;
+        _rawPreferred = true;
+        _draft.SetRaw(Raw);
+        StateHasChanged();
+    }
+
+    private bool _rawLoaded;
 
     private string BreaksHint => _breaksAsR ? Loc["NavPlayComposerBreaksOn"] : Loc["NavPlayComposerBreaksOff"];
 
@@ -130,18 +173,20 @@
         _focusInput = true;
     }
 
-    private sealed record Draft(string Type, string Text);
+    /// <summary>A kept draft: its text, and when it was styled, the styled text (a serialized MString) too.</summary>
+    private sealed record Draft(string Type, string Text, string? Markup = null);
 
     /// <summary>Keeps the draft and the mode for this character, so a reload or the terminal view loses neither.</summary>
     private async Task SaveDraftAsync()
     {
         if (DraftKey is not { } key) return;
-        if (_text.Length == 0 && _type == Say)
+        if (_draft.Value.Length == 0 && _type == Say)
         {
             await JS.RemoveItemAsync(BrowserStore.Local, key);
             return;
         }
-        await JS.SetItemAsync(BrowserStore.Local, key, JsonSerializer.Serialize(new Draft(_type, _text)));
+        var markup = !_draft.Raw && !_draft.Text.Runs.IsDefaultOrEmpty ? MarkupTextSerializer.Serialize(_draft.Text) : null;
+        await JS.SetItemAsync(BrowserStore.Local, key, JsonSerializer.Serialize(new Draft(_type, _draft.Value, markup)));
     }
 
     /// <summary>
@@ -157,11 +202,11 @@
         if (switched)
         {
             _type = Say;
-            _text = string.Empty;
+            Quietly(() => _draft.Load(MarkupText.Empty, Raw));
             _historyWalk.Reset();
             StateHasChanged();
         }
-        else if (_text.Length > 0)
+        else if (_draft.Value.Length > 0)
         {
             return;
         }
@@ -170,7 +215,7 @@
         {
             if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
             _type = _types.Any(t => t.Key == draft.Type) ? draft.Type : Say;
-            _text = draft.Text ?? string.Empty;
+            Quietly(() => _draft.Load(Styled(draft) ?? MarkupText.Plain(draft.Text ?? string.Empty), Raw));
             StateHasChanged();
         }
         catch (JsonException)
@@ -179,12 +224,40 @@
         }
     }
 
+    private void Quietly(Action load)
+    {
+        _reading = true;
+        try
+        {
+            load();
+        }
+        finally
+        {
+            _reading = false;
+        }
+    }
+
+    /// <summary>The kept styled text, when there is one and it still reads.</summary>
+    private static MarkupText? Styled(Draft draft)
+    {
+        if (draft.Markup is not { Length: > 0 } markup) return null;
+        try
+        {
+            var text = MarkupTextSerializer.Deserialize(markup);
+            return text.Text == draft.Text ? text : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Starts a page to someone (the character sheet's Page): Command, with the page prefilled.</summary>
     /// <param name="command">The row's own Page action (<c>page #312=</c>, which survives a rename), when it has one.</param>
     public Task StartPageAsync(string name, string? command = null)
     {
         _type = Command;
-        _text = command ?? $"page {name}=";
+        _draft.Load(MarkupText.Plain(command ?? $"page {name}="), raw: true);
         _focusInput = true;
         StateHasChanged();
         return SaveDraftAsync();
@@ -201,16 +274,29 @@
             await SendAsync();
             return;
         }
-        if (_type != Command || _text.Contains('\n')) return;
+        if (_type != Command || _draft.Value.Contains('\n')) return;
         switch (e.Key)
         {
             case "ArrowUp":
                 await History.LoadAsync();
-                if (_historyWalk.Older(History.Entries, _text) is { } older) _text = older;
+                if (_historyWalk.Older(History.Entries, _draft.Value) is { } older) Walk(older);
                 break;
             case "ArrowDown":
-                if (_historyWalk.Newer(History.Entries) is { } newer) _text = newer;
+                if (_historyWalk.Newer(History.Entries) is { } newer) Walk(newer);
                 break;
+        }
+    }
+
+    private void Walk(string line)
+    {
+        _walking = true;
+        try
+        {
+            _draft.Load(line);
+        }
+        finally
+        {
+            _walking = false;
         }
     }
 
@@ -223,31 +309,35 @@
             foreach (var line in lines) await History.AddAsync(line);
         }
         _historyWalk.Reset();
-        _text = string.Empty;
+        _draft.Clear();
         await SaveDraftAsync();
         foreach (var line in lines) await OnSend.InvokeAsync(line);
     }
 
     /// <summary>
     /// What Send puts on the wire: one line with the breaks as <c>%r</c>, or, with the toggle off, one per line
-    /// of the draft (blank lines skipped). Command text is otherwise sent as typed.
+    /// of the draft (blank lines skipped). Say, OOC and Emit send the draft as <see cref="ComposerDraft.ToSoftcode"/>
+    /// writes it; Command text is sent as typed.
     /// </summary>
     private IEnumerable<string> Lines()
     {
-        var text = _text.Replace("\r\n", "\n").Replace('\r', '\n');
-        IEnumerable<string> parts = _breaksAsR
-            ? [_type == Command ? text.Trim().Replace("\n", "%r") : text]
-            : text.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l));
-        foreach (var part in parts)
+        if (_type == Command)
         {
-            yield return _type switch
-            {
-                Say => $"say {MushComposeEncoder.Encode(part)}",
-                Ooc => $"ooc {MushComposeEncoder.Encode(part)}",
-                Emit => $"@emit {MushComposeEncoder.Encode(part)}",
-                _ => part.Trim(),
-            };
+            var text = _draft.Value;
+            IEnumerable<string> commands = _breaksAsR
+                ? [text.Trim().Replace("\n", "%r")]
+                : text.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l));
+            foreach (var command in commands) yield return command.Trim();
+            yield break;
         }
+
+        var verb = _type switch
+        {
+            Say => "say",
+            Ooc => "ooc",
+            _ => "@emit",
+        };
+        foreach (var part in _draft.ToSoftcode(splitLines: !_breaksAsR)) yield return $"{verb} {part}";
     }
 
     private DotNetObjectReference<PlayComposer>? _self;
@@ -264,35 +354,33 @@
     {
         await LoadDraftAsync();
         await LoadBreaksAsync();
+        await LoadRawAsync();
         if (firstRender)
         {
             _self = DotNetObjectReference.Create(this);
             try
             {
-                await JS.InvokeVoidAsync("sharpmushLayout.composerEnter", _input, _self);
+                if (_field is not null) await JS.InvokeVoidAsync("sharpmushLayout.composerEnter", _field.Input, _self);
             }
             catch (JSException)
             {
                 // No layout script: Ctrl+Enter and the Send button still send.
             }
+            // The format menu needs the field, which exists from this render on.
+            StateHasChanged();
         }
-        if (!_focusInput) return;
+        if (!_focusInput || _field is null) return;
         _focusInput = false;
-        try
-        {
-            await _input.FocusAsync();
-        }
-        catch (InvalidOperationException)
-        {
-        }
+        await _field.FocusAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_self is null) return;
+        _draft.Changed -= OnDraftChanged;
+        if (_self is null || _field is null) return;
         try
         {
-            await JS.InvokeVoidAsync("sharpmushLayout.uncomposerEnter", _input);
+            await JS.InvokeVoidAsync("sharpmushLayout.uncomposerEnter", _field.Input);
         }
         catch (Exception e) when (e is JSException or JSDisconnectedException)
         {
