@@ -3303,7 +3303,7 @@
       ]
     },
     "and": {
-      "helpFull": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.\n\n\n**See Also:**\n- [boolean values]\n- [NAND()]\n- [OR()]\n- [XOR()]\n- [NOT()]\n- [LMATH()]",
+      "helpFull": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.\n\n  Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.\n\n\n**See Also:**\n- [boolean values]\n- [NAND()]\n- [OR()]\n- [XOR()]\n- [NOT()]\n- [LMATH()]",
       "helpPreview": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\nThese functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.",
       "maxArgs": 2147483647,
       "minArgs": 2,
@@ -3567,7 +3567,7 @@
       ]
     },
     "cand": {
-      "helpFull": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.\n\n\n**See Also:**\n- [boolean values]\n- [NAND()]\n- [OR()]\n- [XOR()]\n- [NOT()]\n- [LMATH()]",
+      "helpFull": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.\n\n  Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.\n\n\n**See Also:**\n- [boolean values]\n- [NAND()]\n- [OR()]\n- [XOR()]\n- [NOT()]\n- [LMATH()]",
       "helpPreview": "`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`\nThese functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.",
       "maxArgs": 2147483647,
       "minArgs": 2,
@@ -3910,7 +3910,7 @@
       ]
     },
     "cor": {
-      "helpFull": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.\n\n\n**See Also:**\n- [boolean values]\n- [AND()]\n- [NOR()]\n- [FIRSTOF()]\n- [ALLOF()]\n- [LMATH()]",
+      "helpFull": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.\n\n  Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.\n\n\n**See Also:**\n- [boolean values]\n- [AND()]\n- [NOR()]\n- [FIRSTOF()]\n- [ALLOF()]\n- [LMATH()]",
       "helpPreview": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\nThese functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.",
       "maxArgs": 2147483647,
       "minArgs": 2,
@@ -6559,7 +6559,7 @@
       "parameterNames": []
     },
     "or": {
-      "helpFull": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.\n\n\n**See Also:**\n- [boolean values]\n- [AND()]\n- [NOR()]\n- [FIRSTOF()]\n- [ALLOF()]\n- [LMATH()]",
+      "helpFull": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\n\n  These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.\n\n  Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.\n\n\n**See Also:**\n- [boolean values]\n- [AND()]\n- [NOR()]\n- [FIRSTOF()]\n- [ALLOF()]\n- [LMATH()]",
       "helpPreview": "`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>\n`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`\nThese functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.",
       "maxArgs": 2147483647,
       "minArgs": 2,
