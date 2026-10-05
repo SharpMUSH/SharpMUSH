@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Egna behörigheter är sådana som ditt spel definierar för sin egen softcode, till exempel scene.close. Tillåt en i en roll som vilken behörighet som helst; softcode kontrollerar den med permission(%#,scene.close) eller ett PERM^scene.close-lås. I spelet: @role/define.</value>
+    <value>Egna behörigheter är sådana som ditt spel definierar för sin egen softcode, till exempel scene.close. Tillåt en i en roll som vilken behörighet som helst; softcode kontrollerar den med permission(%#,scene.close) eller ett PERM^scene.close-lås. I spelet: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Roller och egna behörigheter har var sin lista med kategorier, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category och @role/category/.../permission.</value>
+    <value>Roller och egna behörigheter har var sin lista med kategorier, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category och @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

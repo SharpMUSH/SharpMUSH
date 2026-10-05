@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Az egyéni jogosultságokat a játék a saját softcode-ja számára határozza meg, például scene.close. Engedélyezze egy szerepkörön, mint bármely más jogosultságot; a softcode a permission(%#,scene.close) függvénnyel vagy PERM^scene.close zárral ellenőrzi. Játékban: @role/define.</value>
+    <value>Az egyéni jogosultságokat a játék a saját softcode-ja számára határozza meg, például scene.close. Engedélyezze egy szerepkörön, mint bármely más jogosultságot; a softcode a permission(%#,scene.close) függvénnyel vagy PERM^scene.close zárral ellenőrzi. Játékban: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>A szerepköröknek és az egyéni jogosultságoknak külön kategórialistájuk van, és ez az oldal aszerint csoportosítja őket. Hozz létre egy kategóriát, mielőtt bármit beleteszel. Az a kategória, amely még tartalmaz valamit, nem törölhető. A játékban: @role/category és @role/category/.../permission.</value>
+    <value>A szerepköröknek és az egyéni jogosultságoknak külön kategórialistájuk van, és ez az oldal aszerint csoportosítja őket. Hozz létre egy kategóriát, mielőtt bármit beleteszel. Az a kategória, amely még tartalmaz valamit, nem törölhető. A játékban: @role/category és @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

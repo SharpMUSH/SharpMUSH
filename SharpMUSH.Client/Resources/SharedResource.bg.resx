@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Собствените разрешения са тези, които играта определя за собствения си софткод, например scene.close. Разрешете го в роля като всяко друго разрешение; софткодът го проверява с permission(%#,scene.close) или ключалка PERM^scene.close. В играта: @role/define.</value>
+    <value>Собствените разрешения са тези, които играта определя за собствения си софткод, например scene.close. Разрешете го в роля като всяко друго разрешение; софткодът го проверява с permission(%#,scene.close) или ключалка PERM^scene.close. В играта: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Ролите и потребителските разрешения имат всяко свой списък с категории и тази страница ги групира по него. Създайте категория, преди да поставите нещо в нея. Категория, която още съдържа нещо, не може да бъде изтрита. В играта: @role/category и @role/category/.../permission.</value>
+    <value>Ролите и потребителските разрешения имат всяко свой списък с категории и тази страница ги групира по него. Създайте категория, преди да поставите нещо в нея. Категория, която още съдържа нещо, не може да бъде изтрита. В играта: @role/category и @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

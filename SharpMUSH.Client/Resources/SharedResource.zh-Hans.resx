@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@role/define。</value>
+    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@permission/define。</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @role/category/.../permission。</value>
+    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @permission/category。</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

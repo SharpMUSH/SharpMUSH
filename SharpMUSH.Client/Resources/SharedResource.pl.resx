@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Własne uprawnienia to te, które gra definiuje dla swojego softcode'u, np. scene.close. Zezwól na nie w roli jak na każde inne uprawnienie; softcode sprawdza je przez permission(%#,scene.close) lub blokadę PERM^scene.close. W grze: @role/define.</value>
+    <value>Własne uprawnienia to te, które gra definiuje dla swojego softcode'u, np. scene.close. Zezwól na nie w roli jak na każde inne uprawnienie; softcode sprawdza je przez permission(%#,scene.close) lub blokadę PERM^scene.close. W grze: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Role i własne uprawnienia mają osobne listy kategorii, według których ta strona je grupuje. Utwórz kategorię, zanim coś do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category i @role/category/.../permission.</value>
+    <value>Role i własne uprawnienia mają osobne listy kategorii, według których ta strona je grupuje. Utwórz kategorię, zanim coś do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category i @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

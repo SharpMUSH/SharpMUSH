@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Egne tillatelser er de spillet ditt definerer for sin egen softcode, for eksempel scene.close. Gi den til en rolle på samme måte som enhver annen tillatelse; softcode sjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @role/define.</value>
+    <value>Egne tillatelser er de spillet ditt definerer for sin egen softcode, for eksempel scene.close. Gi den til en rolle på samme måte som enhver annen tillatelse; softcode sjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Roller og egne tillatelser har hver sin liste med kategorier, og denne siden grupperer dem etter den. Opprett en kategori før du legger noe i den. En kategori som fortsatt inneholder noe, kan ikke slettes. I spillet: @role/category og @role/category/.../permission.</value>
+    <value>Roller og egne tillatelser har hver sin liste med kategorier, og denne siden grupperer dem etter den. Opprett en kategori før du legger noe i den. En kategori som fortsatt inneholder noe, kan ikke slettes. I spillet: @role/category og @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

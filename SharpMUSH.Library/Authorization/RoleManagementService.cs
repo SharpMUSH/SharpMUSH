@@ -43,7 +43,7 @@ public sealed record RoleDraft(
 	IReadOnlyDictionary<string, PermissionState> Permissions);
 
 /// <summary>
-/// Every change to roles, assignments and overrides, from the portal and from the game (<c>@role</c>,
+/// Every change to roles, assignments and overrides, from the portal and from the game (<c>@role</c>, <c>@permission</c>,
 /// and <c>@set</c>/<c>@power</c> on WIZARD, ROYALTY and the powers), goes through here so all of them
 /// apply the same rules (<see cref="RoleHierarchy"/>):
 /// <list type="bullet">
@@ -283,11 +283,11 @@ public sealed partial class RoleManagementService(
 	/// <summary>Why a role or permission cannot go in <paramref name="name"/>: there is no such category yet.</summary>
 	private static RoleRefusal MissingCategory(CategoryKind kind, string name)
 		=> new(RoleRefusalKind.Invalid, name.Trim().Length == 0
-			? $"A {Categories.Noun(kind)} is required. See @role/categories for the categories there are."
-			: $"No {Categories.Noun(kind)} named '{name.Trim()}'. Create the category first: @role/category/create{(kind == CategoryKind.Permission ? "/permission" : "")} {name.Trim()}=<description>, or the portal's Categories tab.");
+			? $"A {Categories.Noun(kind)} is required. See {(kind == CategoryKind.Role ? "@role" : "@permission")}/categories for the categories there are."
+			: $"No {Categories.Noun(kind)} named '{name.Trim()}'. Create the category first: {(kind == CategoryKind.Role ? "@role" : "@permission")}/category/create {name.Trim()}=<description>, or the portal's Categories tab.");
 
 	private static RoleOutcome<T> NoSuchCategory<T>(CategoryKind kind, string name)
-		=> Refuse<T>(RoleRefusalKind.NotFound, $"No {Categories.Noun(kind)} named '{name.Trim()}'. See @role/categories.");
+		=> Refuse<T>(RoleRefusalKind.NotFound, $"No {Categories.Noun(kind)} named '{name.Trim()}'. See {(kind == CategoryKind.Role ? "@role" : "@permission")}/categories.");
 
 	private static RoleOutcome<RoleCategory> NoSuchCategory(CategoryKind kind, string name) => NoSuchCategory<RoleCategory>(kind, name);
 

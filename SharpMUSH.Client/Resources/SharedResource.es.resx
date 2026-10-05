@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Los permisos personalizados son los que tu juego define para su propio softcode, como scene.close. Permite uno en un rol como cualquier otro permiso; el softcode lo comprueba con permission(%#,scene.close) o un bloqueo PERM^scene.close. En el juego: @role/define.</value>
+    <value>Los permisos personalizados son los que tu juego define para su propio softcode, como scene.close. Permite uno en un rol como cualquier otro permiso; el softcode lo comprueba con permission(%#,scene.close) o un bloqueo PERM^scene.close. En el juego: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Los roles y los permisos personalizados tienen cada uno su propia lista de categorías, y esta página los agrupa por ella. Crea una categoría antes de poner algo en ella. Una categoría que aún contiene algo no se puede eliminar. En el juego: @role/category y @role/category/.../permission.</value>
+    <value>Los roles y los permisos personalizados tienen cada uno su propia lista de categorías, y esta página los agrupa por ella. Crea una categoría antes de poner algo en ella. Una categoría que aún contiene algo no se puede eliminar. En el juego: @role/category y @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

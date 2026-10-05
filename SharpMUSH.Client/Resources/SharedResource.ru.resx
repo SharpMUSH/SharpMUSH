@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @role/define.</value>
+    <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>У ролей и собственных разрешений свои отдельные списки категорий, и эта страница группирует их по ним. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category и @role/category/.../permission.</value>
+    <value>У ролей и собственных разрешений свои отдельные списки категорий, и эта страница группирует их по ним. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category и @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

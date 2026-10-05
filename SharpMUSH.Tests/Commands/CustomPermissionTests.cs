@@ -6,8 +6,8 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// A permission the game defines for itself with <c>@role/define</c>: granted through a role, read by
-/// <c>permission()</c>, <c>PERM^</c> locks and function restrictions, and gone again with <c>@role/undefine</c>.
+/// A permission the game defines for itself with <c>@permission/define</c>: granted through a role, read by
+/// <c>permission()</c>, <c>PERM^</c> locks and function restrictions, and gone again with <c>@permission/undefine</c>.
 /// </summary>
 public class CustomPermissionTests : ServerTestBase
 {
@@ -34,7 +34,7 @@ public class CustomPermissionTests : ServerTestBase
 	public async Task Cleanup()
 	{
 		await Heard(_wizard, $"@role/delete {_role}");
-		await Heard(_wizard, $"@role/undefine {_scope}");
+		await Heard(_wizard, $"@permission/undefine {_scope}");
 		foreach (var player in new[] { _wizard, _helper, _mortal })
 			await ConnectionService.Disconnect(player.Handle);
 	}
@@ -55,8 +55,8 @@ public class CustomPermissionTests : ServerTestBase
 	{
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("#-1 NO SUCH PERMISSION");
 
-		await Assert.That(await Heard(_wizard, $"@role/define {_scope}=Staff/Finish any scene")).Contains($"Permission {_scope} defined");
-		await Assert.That(await Heard(_wizard, "@role/scopes")).Contains($"{_scope}  Finish any scene");
+		await Assert.That(await Heard(_wizard, $"@permission/define {_scope}=Staff/Finish any scene")).Contains($"Permission {_scope} defined");
+		await Assert.That(await Heard(_wizard, "@permission")).Contains($"{_scope}  Finish any scene");
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("0");
 		await Assert.That(await AsWizard($"permission(#1,{_scope})")).IsEqualTo("1");
 
@@ -74,26 +74,26 @@ public class CustomPermissionTests : ServerTestBase
 	[Test]
 	public async Task OverrideTakesACustomPermission()
 	{
-		await Heard(_wizard, $"@role/define {_scope}=Staff");
-		await Assert.That(await Heard(_wizard, $"@role/allow/object {Ref(_mortal)}={_scope}")).DoesNotContain("Unknown permission");
+		await Heard(_wizard, $"@permission/define {_scope}=Staff");
+		await Assert.That(await Heard(_wizard, $"@permission/allow {Ref(_mortal)}={_scope}")).DoesNotContain("Unknown permission");
 		await Assert.That(await AsWizard($"permission({Ref(_mortal)},{_scope})")).IsEqualTo("1");
 	}
 
 	[Test]
 	public async Task UndefiningTakesItFromEveryHolder()
 	{
-		await Heard(_wizard, $"@role/define {_scope}=Staff");
+		await Heard(_wizard, $"@permission/define {_scope}=Staff");
 		await Heard(_wizard, $"@role/create {_role}=Staff");
 		await Heard(_wizard, $"@role/allow {_role}={_scope}");
 		await Heard(_wizard, $"@role/assign {Ref(_helper)}={_role}");
-		await Heard(_wizard, $"@role/allow/object {Ref(_mortal)}={_scope}");
+		await Heard(_wizard, $"@permission/allow {Ref(_mortal)}={_scope}");
 
-		await Assert.That(await Heard(_wizard, $"@role/undefine {_scope}")).Contains("removed");
+		await Assert.That(await Heard(_wizard, $"@permission/undefine {_scope}")).Contains("removed");
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("#-1 NO SUCH PERMISSION");
 		await Assert.That(await Heard(_wizard, $"@role {_role}")).DoesNotContain(_scope);
 
 		// Defining the name again starts from nothing: the old settings went with it.
-		await Heard(_wizard, $"@role/define {_scope}=Staff");
+		await Heard(_wizard, $"@permission/define {_scope}=Staff");
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("0");
 		await Assert.That(await AsWizard($"permission({Ref(_mortal)},{_scope})")).IsEqualTo("0");
 	}
@@ -101,8 +101,8 @@ public class CustomPermissionTests : ServerTestBase
 	[Test]
 	public async Task CommandRestrictionTakesAPermissionByName()
 	{
-		await Heard(_wizard, $"@role/define {_scope}=Staff");
-		await Heard(_wizard, $"@role/allow/object {Ref(_helper)}={_scope}");
+		await Heard(_wizard, $"@permission/define {_scope}=Staff");
+		await Heard(_wizard, $"@permission/allow {Ref(_helper)}={_scope}");
 		var command = "CP" + _role.ToUpperInvariant();
 		await Heard(_wizard, $"@command/clone think={command}");
 
@@ -123,30 +123,31 @@ public class CustomPermissionTests : ServerTestBase
 		await Assert.That(await Heard(_wizard, $"@role {_role}")).Contains($"Category: {category}");
 
 		// Permissions have a list of their own.
-		await Assert.That(await Heard(_wizard, $"@role/define {_scope}")).Contains("Usage: @role/define <permission>=<category>");
-		await Assert.That(await Heard(_wizard, $"@role/define {_scope}={category}/Finish any scene")).Contains($"No permission category named '{category}'. Create the category first: @role/category/create/permission {category}=");
-		await Assert.That(await Heard(_wizard, $"@role/category/create/permission {category}=Scene permissions")).Contains($"Permission category {category} created");
-		await Heard(_wizard, $"@role/define {_scope}=Staff/Finish any scene");
-		await Assert.That(await Heard(_wizard, $"@role/category {_scope}={category}")).Contains($"{_scope} is now in {category}");
-		await Assert.That(await Heard(_wizard, "@role/scopes")).Contains($" {category}\n  {_scope}  Finish any scene");
-		await Assert.That(await Heard(_wizard, $"@role/category wiki.read={category}")).Contains("built-in");
+		await Assert.That(await Heard(_wizard, $"@permission/define {_scope}")).Contains("Usage: @permission/define <permission>=<category>");
+		await Assert.That(await Heard(_wizard, $"@permission/define {_scope}={category}/Finish any scene")).Contains($"No permission category named '{category}'. Create the category first: @permission/category/create {category}=");
+		await Assert.That(await Heard(_wizard, $"@permission/category/create {category}=Scene permissions")).Contains($"Permission category {category} created");
+		await Heard(_wizard, $"@permission/define {_scope}=Staff/Finish any scene");
+		await Assert.That(await Heard(_wizard, $"@permission/category {_scope}={category}")).Contains($"{_scope} is now in {category}");
+		await Assert.That(await Heard(_wizard, "@permission")).Contains($" {category}\n  {_scope}  Finish any scene");
+		await Assert.That(await Heard(_wizard, $"@permission/category wiki.read={category}")).Contains("built-in");
 
-		var listed = await Heard(_wizard, "@role/categories");
-		await Assert.That(listed).Contains("Role categories:").And.Contains("Permission categories:");
-		await Assert.That(listed).Contains("People who close scenes").And.Contains("Scene permissions");
+		await Assert.That(await Heard(_wizard, "@role/categories")).Contains("Role categories:").And.Contains("People who close scenes").And.DoesNotContain("Scene permissions");
+		await Assert.That(await Heard(_wizard, "@permission/categories")).Contains("Permission categories:").And.Contains("Scene permissions");
+		await Assert.That(await Heard(_wizard, $"@permission {_scope}")).Contains($"Category: {category}").And.Contains($"Allowed by: none");
 		await Assert.That(await Heard(_wizard, $"@role/category/delete {category}")).Contains($"still holds {_role}");
-		await Assert.That(await Heard(_wizard, $"@role/category/delete/permission {category}")).Contains($"still holds {_scope}");
+		await Assert.That(await Heard(_wizard, $"@permission/category/delete {category}")).Contains($"still holds {_scope}");
 
 		await Assert.That(await Heard(_wizard, $"@role/category/describe {category}=Closers")).Contains($"Role category {category}: Closers");
 		var renamed = category + "x";
 		await Assert.That(await Heard(_wizard, $"@role/category/rename {category}={renamed}")).Contains($"is now {renamed}");
 		await Assert.That(await Heard(_wizard, $"@role {_role}")).Contains($"Category: {renamed}");
-		await Assert.That(await Heard(_wizard, "@role/scopes")).Contains($" {category}\n  {_scope}");
+		await Assert.That(await Heard(_wizard, "@permission")).Contains($" {category}\n  {_scope}");
 		await Assert.That(await Heard(_wizard, $"@role/category {_role}=Staff")).Contains("is now in Staff");
 		await Assert.That(await Heard(_wizard, $"@role/category/delete {renamed}")).Contains("deleted");
-		await Heard(_wizard, $"@role/category {_scope}=Staff");
-		await Assert.That(await Heard(_wizard, $"@role/category/delete/permission {category}")).Contains($"Permission category {category} deleted");
+		await Heard(_wizard, $"@permission/category {_scope}=Staff");
+		await Assert.That(await Heard(_wizard, $"@permission/category/delete {category}")).Contains($"Permission category {category} deleted");
 		await Assert.That(await Heard(_wizard, "@role/categories")).DoesNotContain(category);
+		await Assert.That(await Heard(_wizard, "@permission/categories")).DoesNotContain(category);
 	}
 
 	[Test]
@@ -173,9 +174,9 @@ public class CustomPermissionTests : ServerTestBase
 	[Test]
 	public async Task OnlyARolesAdminDefinesOne()
 	{
-		await Assert.That(await Heard(_mortal, $"@role/define {_scope}=Staff")).Contains("roles.admin");
+		await Assert.That(await Heard(_mortal, $"@permission/define {_scope}=Staff")).Contains("roles.admin");
 		await Assert.That(await AsWizard($"permission(#1,{_scope})")).IsEqualTo("#-1 NO SUCH PERMISSION");
-		await Assert.That(await Heard(_wizard, "@role/define wiki.read=Staff")).Contains("built-in");
-		await Assert.That(await Heard(_wizard, "@role/define game.nope=Staff")).Contains("not under");
+		await Assert.That(await Heard(_wizard, "@permission/define wiki.read=Staff")).Contains("built-in");
+		await Assert.That(await Heard(_wizard, "@permission/define game.nope=Staff")).Contains("not under");
 	}
 }

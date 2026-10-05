@@ -308,8 +308,8 @@ public class SceneWebComposeIntegrationTests
 
 		try
 		{
-			await God1("@role/define scene.close=Staff/Finish any scene");
-			await God1($"@role/allow/object {helper}=scene.close");
+			await God1("@permission/define scene.close=Staff/Finish any scene");
+			await God1($"@permission/allow {helper}=scene.close");
 
 			var finished = await RunAs(helperHandle, $"+scene/finish {sceneId}");
 			await Assert.That(finished.Any(m => m.Contains($"Scene {sceneId} finished.", StringComparison.Ordinal)))
@@ -318,7 +318,7 @@ public class SceneWebComposeIntegrationTests
 		}
 		finally
 		{
-			await God1("@role/undefine scene.close");
+			await God1("@permission/undefine scene.close");
 		}
 	}
 

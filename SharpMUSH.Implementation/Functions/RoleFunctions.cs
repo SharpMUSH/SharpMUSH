@@ -36,7 +36,7 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>permission(&lt;object&gt;, &lt;permission&gt;)</c>: 1 when the object holds the permission, else 0.
-	/// <c>#-1 NO SUCH PERMISSION</c> for a permission that is neither built in nor defined with <c>@role/define</c>.
+	/// <c>#-1 NO SUCH PERMISSION</c> for a permission that is neither built in nor defined with <c>@permission/define</c>.
 	/// </summary>
 	[SharpFunction(Name = "permission", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "permission"])]
 	public async ValueTask<CallState> Permission(IMUSHCodeParser parser, SharpFunctionAttribute _2)

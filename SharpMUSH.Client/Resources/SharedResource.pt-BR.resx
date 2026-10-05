@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Permissões personalizadas são as que seu jogo define para o próprio softcode, como scene.close. Permita uma em um cargo como qualquer outra permissão; o softcode a verifica com permission(%#,scene.close) ou uma trava PERM^scene.close. No jogo: @role/define.</value>
+    <value>Permissões personalizadas são as que seu jogo define para o próprio softcode, como scene.close. Permita uma em um cargo como qualquer outra permissão; o softcode a verifica com permission(%#,scene.close) ou uma trava PERM^scene.close. No jogo: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Cargos e permissões personalizadas têm cada um sua própria lista de categorias, e esta página os agrupa por ela. Crie uma categoria antes de colocar algo nela. Uma categoria que ainda contém algo não pode ser excluída. No jogo: @role/category e @role/category/.../permission.</value>
+    <value>Cargos e permissões personalizadas têm cada um sua própria lista de categorias, e esta página os agrupa por ela. Crie uma categoria antes de colocar algo nela. Uma categoria que ainda contém algo não pode ser excluída. No jogo: @role/category e @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

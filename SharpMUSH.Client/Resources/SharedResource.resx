@@ -2902,7 +2902,7 @@
     <value>Permissions</value>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Custom permissions are ones your game defines for its own softcode to check, such as scene.close. Once defined, allow one on a role like any other permission; softcode asks permission(%#,scene.close) or locks with PERM^scene.close. In game: @role/define.</value>
+    <value>Custom permissions are ones your game defines for its own softcode to check, such as scene.close. Once defined, allow one on a role like any other permission; softcode asks permission(%#,scene.close) or locks with PERM^scene.close. In game: @permission/define.</value>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
     <value>Permission name</value>
@@ -2920,7 +2920,7 @@
     <value>Categories</value>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Roles and custom permissions each have their own list of categories, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category and @role/category/.../permission.</value>
+    <value>Roles and custom permissions each have their own list of categories, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category and @permission/category.</value>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
     <value>What belongs in it</value>

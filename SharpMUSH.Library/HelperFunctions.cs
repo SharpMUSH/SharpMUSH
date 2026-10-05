@@ -159,7 +159,7 @@ public static partial class HelperFunctions
 				"noguest" => !await executor.IsGuest(),
 				"nogagged" => !await OwnerHasFlag(executor, "GAGGED"),
 				"nofixed" => !await OwnerHasFlag(executor, "FIXED"),
-				// A permission, built in (players.moderate) or defined with @role/define (scene.close): the
+				// A permission, built in (players.moderate) or defined with @permission/define (scene.close): the
 				// executor holds it. A dotted word nobody defined is held by God alone, so a typo fails closed.
 				_ when keyword.Contains('.') => await executor.Can(keyword),
 				// Unknown keywords are treated permissively (ignored) so that unsupported PennMUSH

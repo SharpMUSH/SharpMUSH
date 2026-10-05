@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @role/define.</value>
+    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @role/category/.../permission.</value>
+    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

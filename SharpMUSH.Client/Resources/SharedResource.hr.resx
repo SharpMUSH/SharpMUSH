@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @role/define.</value>
+    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @role/category/.../permission.</value>
+    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">

@@ -3231,7 +3231,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @role/define.</value>
+    <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Rollen und eigene Berechtigungen haben jeweils eine eigene Liste von Kategorien, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category und @role/category/.../permission.</value>
+    <value>Rollen und eigene Berechtigungen haben jeweils eine eigene Liste von Kategorien, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category und @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
