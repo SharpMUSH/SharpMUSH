@@ -3226,6 +3226,122 @@
     <value>Toewijzingen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Rechten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Naam van het recht</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Wat het iemand laat doen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Een categorie is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Wat erin hoort</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Nog geen categorieën.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Categorie {0} aangemaakt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Categorie {0} opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Categorie verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>{0} verwijderen? Alleen een categorie zonder rollen en rechten kan worden verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Categorie {0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rol} other {# rollen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# recht} other {# rechten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rolcategorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Rechtencategorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Kies een categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Maak categorieën aan op het tabblad Categorieën.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Een categorie heeft een naam en een beschrijving nodig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definiëren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Nog geen eigen rechten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Recht {0} gedefinieerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Recht verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>{0} verwijderen? Elke rol en elke uitzondering die het instelt, verliest het.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Recht {0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Rollen</value>
     <comment>MT</comment>

@@ -1893,6 +1893,122 @@
   <data name="RolTabAssignments" xml:space="preserve">
     <value>Attributions</value>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permissions</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Les permissions personnalisées sont celles que votre jeu définit pour son propre softcode, comme scene.close. Autorisez-en une sur un rôle comme toute autre permission ; le softcode la vérifie avec permission(%#,scene.close) ou un verrou PERM^scene.close. En jeu : @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Nom de la permission</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Ce qu'elle permet de faire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Une catégorie est requise.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Catégories</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Les rôles et les permissions personnalisées ont chacun leur propre liste de catégories, selon laquelle cette page les regroupe. Créez une catégorie avant d’y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category et @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Ce qu'elle contient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Créer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Aucune catégorie pour l'instant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Catégorie {0} créée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Catégorie {0} enregistrée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Supprimer la catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Supprimer {0} ? Seule une catégorie sans rôle ni permission peut être supprimée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Catégorie {0} supprimée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rôle} other {# rôles}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permission} other {# permissions}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Catégories de rôles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Catégories de permissions</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Choisir une catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Créez les catégories dans l'onglet Catégories.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Une catégorie a besoin d'un nom et d'une description.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Définir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Aucune permission personnalisée pour l'instant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permission {0} définie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Supprimer la permission</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Supprimer {0} ? Chaque rôle et chaque dérogation qui la définit la perd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permission {0} supprimée.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolNewRole" xml:space="preserve">
     <value>Nouveau rôle</value>
   </data>

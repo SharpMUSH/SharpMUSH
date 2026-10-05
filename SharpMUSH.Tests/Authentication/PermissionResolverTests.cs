@@ -164,4 +164,50 @@ public class PermissionResolverTests
 		var permissions = new Dictionary<string, PermissionState> { ["WIKI.EDIT"] = PermissionState.Allow };
 		await Assert.That(PermissionResolver.StateOf(permissions, PortalPermission.WikiEdit)).IsEqualTo(PermissionState.Allow);
 	}
+
+	[Test]
+	public async ValueTask CustomPermission_ResolvesOnlyWhileDefined()
+	{
+		var helper = Role("helper", 12, Allow("scene.close"));
+		var defined = Context(helper) with { CustomScopes = new HashSet<string>(["scene.close"]) };
+		await Assert.That(Resolver.Resolve(defined)).Contains("scene.close");
+		await Assert.That(Resolver.Explain(defined, "scene.close").Reason).IsEqualTo("role-allow");
+
+		// A role still naming a permission the game no longer defines grants nothing.
+		await Assert.That(Resolver.Resolve(Context(helper))).DoesNotContain("scene.close");
+		await Assert.That(Resolver.Explain(Context(helper), "scene.close").Reason).IsEqualTo("unknown-scope");
+	}
+
+	[Test]
+	public async ValueTask CustomPermission_IsHeldByTheOwnerOnceDefined()
+	{
+		var owner = new PermissionContext([], NoOverrides, true) { CustomScopes = new HashSet<string>(["scene.close"]) };
+		await Assert.That(Resolver.Resolve(owner)).Contains("scene.close");
+	}
+
+	[Test]
+	public async ValueTask CustomPermission_WizardMayGrantIt()
+	{
+		await Assert.That(RoleHierarchy.CanGrant(new HashSet<string>([PortalPermission.GameWizard]), "scene.close")).IsTrue();
+		await Assert.That(RoleHierarchy.CanGrant(new HashSet<string>([PortalPermission.RolesAdmin]), "scene.close")).IsFalse();
+		await Assert.That(RoleHierarchy.CanGrant(new HashSet<string>(["scene.close"]), "scene.close")).IsTrue();
+	}
+
+	[Test]
+	[Arguments("scene.close", true)]
+	[Arguments("jobs.approve_all", true)]
+	[Arguments("a.b.c", true)]
+	[Arguments("scene", false)]
+	[Arguments("Scene.Close", false)]
+	[Arguments("scene..close", false)]
+	[Arguments("1scene.close", false)]
+	[Arguments("wiki.read", false)]
+	[Arguments("game.see_all", false)]
+	[Arguments("game.newthing", false)]
+	[Arguments("control.extra", false)]
+	[Arguments("protect.extra", false)]
+	public async ValueTask CustomPermission_Names(string scope, bool valid)
+	{
+		await Assert.That(CustomPermissions.IsValidName(scope)).IsEqualTo(valid);
+	}
 }

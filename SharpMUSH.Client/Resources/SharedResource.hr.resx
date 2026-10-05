@@ -3226,6 +3226,122 @@
     <value>Dodjele</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Naziv dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Što omogućuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategorija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategorija je obavezna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategorije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Što pripada u nju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Stvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Još nema kategorija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Kategorija {0} stvorena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Kategorija {0} spremljena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Izbriši kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Izbrisati {0}? Može se izbrisati samo kategorija bez uloga i dopuštenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Kategorija {0} izbrisana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# uloga} few {# uloge} many {# uloga} other {# uloga}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# dopuštenje} few {# dopuštenja} many {# dopuštenja} other {# dopuštenja}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Kategorije uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Kategorije dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Odaberite kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Kategorije se stvaraju na kartici Kategorije.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Kategorija treba naziv i opis.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Još nema vlastitih dopuštenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Dopuštenje {0} definirano.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Ukloni dopuštenje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Ukloniti {0}? Svaka uloga i svako nadjačavanje koje ga postavlja izgubit će ga.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Dopuštenje {0} uklonjeno.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Uloge</value>
     <comment>MT</comment>

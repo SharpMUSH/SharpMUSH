@@ -24,6 +24,13 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/roles/account/{accountId}/{slug}        — assign a role to an account
 ///   DELETE /api/roles/account/{accountId}/{slug}        — remove a role from an account
 ///   PUT    /api/roles/account/{accountId}/overrides     — set one per-account override
+///   GET    /api/roles/permissions                       — the custom permissions the game defines
+///   PUT    /api/roles/permissions                       — define one, or change its description
+///   DELETE /api/roles/permissions/{scope}               — remove one and every setting of it
+///   GET    /api/roles/categories                        — the categories of roles and permissions
+///   POST   /api/roles/categories                        — create one
+///   PUT    /api/roles/categories/{name}                 — change its description, or rename it
+///   DELETE /api/roles/categories/{name}                 — delete one that holds nothing
 /// </summary>
 [ApiController]
 [Route("api/roles")]
@@ -37,6 +44,7 @@ public class RolesController(
 	public record RoleDto(
 		string Slug,
 		string Name,
+		string Category,
 		string? Color,
 		int Priority,
 		bool IsSystem,
@@ -53,6 +61,10 @@ public class RolesController(
 		Dictionary<string, string> Overrides);
 
 	public record OverrideDto(string Scope, string State);
+
+	public record CustomPermissionDto(string Scope, string Category, string Description);
+
+	public record CategoryDto(string Name, string Description);
 
 	[HttpGet("effective")]
 	public async Task<IActionResult> Effective()
@@ -84,7 +96,7 @@ public class RolesController(
 			permissions[scope] = state;
 		}
 
-		var draft = new RoleDraft(dto.Slug ?? string.Empty, dto.Name ?? string.Empty, dto.Color, dto.Priority, permissions);
+		var draft = new RoleDraft(dto.Slug ?? string.Empty, dto.Name ?? string.Empty, dto.Category ?? string.Empty, dto.Color, dto.Priority, permissions);
 		return await management.SaveRoleAsync(actor, draft, HttpContext.RequestAborted) switch
 		{
 			SharpRole role => Ok(ToDto(role)),
@@ -166,6 +178,96 @@ public class RolesController(
 		};
 	}
 
+	[HttpGet("permissions")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<ActionResult<IReadOnlyList<CustomPermission>>> ListPermissions()
+		=> Ok(await roles.GetCustomPermissionsAsync(HttpContext.RequestAborted));
+
+	[HttpPut("permissions")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> DefinePermission([FromBody] CustomPermissionDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.DefinePermissionAsync(actor, dto.Scope ?? string.Empty, dto.Category ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		{
+			CustomPermission permission => Ok(permission),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	[HttpDelete("permissions/{scope}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> RemovePermission(string scope)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		return await management.RemovePermissionAsync(actor, scope, HttpContext.RequestAborted) switch
+		{
+			Success => Ok(new { deleted = true }),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	/// <summary>The category list <paramref name="kind"/> (<c>role</c> or <c>permission</c>).</summary>
+	[HttpGet("categories/{kind}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<ActionResult<IReadOnlyList<RoleCategory>>> ListCategories(string kind)
+		=> ParseKind(kind) is { } list
+			? Ok(await roles.GetCategoriesAsync(list, HttpContext.RequestAborted))
+			: NotFound();
+
+	[HttpPost("categories/{kind}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> CreateCategory(string kind, [FromBody] CategoryDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		if (ParseKind(kind) is not { } list) return NotFound();
+		return await management.CreateCategoryAsync(actor, list, dto.Name ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		{
+			RoleCategory category => Ok(category),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	/// <summary>Sets the description, then the name when <see cref="CategoryDto.Name"/> differs from the route's.</summary>
+	[HttpPut("categories/{kind}/{name}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> UpdateCategory(string kind, string name, [FromBody] CategoryDto dto)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		if (ParseKind(kind) is not { } list) return NotFound();
+		var ct = HttpContext.RequestAborted;
+		if (await management.DescribeCategoryAsync(actor, list, name, dto.Description ?? string.Empty, ct) is RoleRefusal refusal)
+			return Refused(refusal);
+		var newName = dto.Name?.Trim() ?? string.Empty;
+		if (newName.Length == 0 || newName == name.Trim()) return Ok();
+		return await management.RenameCategoryAsync(actor, list, name, newName, ct) switch
+		{
+			RoleCategory category => Ok(category),
+			RoleRefusal renameRefusal => Refused(renameRefusal)
+		};
+	}
+
+	[HttpDelete("categories/{kind}/{name}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> DeleteCategory(string kind, string name)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		if (ParseKind(kind) is not { } list) return NotFound();
+		return await management.DeleteCategoryAsync(actor, list, name, HttpContext.RequestAborted) switch
+		{
+			Success => Ok(new { deleted = true }),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	/// <summary>The category list a route names: <c>role</c> or <c>permission</c>.</summary>
+	private static CategoryKind? ParseKind(string kind) => kind.ToLowerInvariant() switch
+	{
+		"role" => CategoryKind.Role,
+		"permission" => CategoryKind.Permission,
+		_ => null
+	};
+
 	/// <summary>Portal role authority is account-wide, as in every other HTTP policy gate.</summary>
 	private CapabilityActor? Actor()
 		=> User.FindFirstValue(ClaimTypes.NameIdentifier) is { } id ? new CapabilityActor(id) : null;
@@ -180,6 +282,7 @@ public class RolesController(
 	private static RoleDto ToDto(SharpRole role) => new(
 		role.Slug,
 		role.Name,
+		role.Category,
 		role.Color,
 		role.Priority,
 		role.IsSystem,
