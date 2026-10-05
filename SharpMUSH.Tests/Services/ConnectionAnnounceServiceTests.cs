@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -69,6 +70,7 @@ public class ConnectionAnnounceServiceTests
 				Type = "Room",
 				Locks = System.Collections.Immutable.ImmutableDictionary<string, SharpLockData>.Empty,
 				Owner = new(async _ => { await Task.CompletedTask; return null!; }),
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -96,6 +98,7 @@ public class ConnectionAnnounceServiceTests
 				await Task.CompletedTask;
 				return playerRef ?? null!;
 			}),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),

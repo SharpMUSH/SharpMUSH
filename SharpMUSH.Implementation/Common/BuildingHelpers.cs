@@ -4,6 +4,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -900,7 +901,7 @@ public static class BuildingHelpers
 			}
 		}
 
-		await CopyFlagsAsync(flagAndPowerService, executor, target, clonedObj, preserve);
+		await CopyFlagsAsync(flagAndPowerService, executor, target, clonedObj);
 		await CopyPrivilegesAsync(mediator, flagAndPowerService, notifyService, executor, target, clonedObj,
 			preserve);
 
@@ -1150,8 +1151,9 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
-	/// <c>Flags(clone) = clone_flag_bitmask("FLAG", Flags(thing))</c> (create.c:638), with WIZARD and
-	/// ROYALTY cleared again unless preserving (<c>:640-644</c>).
+	/// <c>Flags(clone) = clone_flag_bitmask("FLAG", Flags(thing))</c> (create.c:638). WIZARD and ROYALTY
+	/// are roles, not stored flags, so they are not among these; <see cref="CopyPrivilegesAsync"/> carries
+	/// them only when preserving (<c>:640-644</c>).
 	/// </summary>
 	/// <remarks>
 	/// Synchronised to the source, not unioned with it. The clone is created through the same path as
@@ -1164,11 +1166,9 @@ public static class BuildingHelpers
 		IFlagAndPowerService flagAndPowerService,
 		AnySharpObject executor,
 		AnySharpObject target,
-		AnySharpObject clonedObj,
-		bool preserve)
+		AnySharpObject clonedObj)
 	{
 		var copyable = await target.Object().Flags.Value
-			.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 			.Select(flag => flag.Name)
 			.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
@@ -1206,6 +1206,10 @@ public static class BuildingHelpers
 			return;
 		}
 
+		// The roles and overrides: WIZARD, ROYALTY and the built-in powers.
+		await mediator.Send(new CopyObjectGrantsCommand(target, clonedObj));
+
+		// Powers added with @power/add, which are still stored on the object.
 		await foreach (var power in target.Object().Powers.Value)
 		{
 			await flagAndPowerService.SetPower(executor, clonedObj, power.Name, false);
@@ -1217,7 +1221,9 @@ public static class BuildingHelpers
 		}
 
 		// create.c:652-656 — the notice fires on what the clone ended up with, not on what was asked for.
-		if (await clonedObj.HasFlag("WIZARD") || await clonedObj.HasFlag("ROYALTY")
+		var clonedGrants = await clonedObj.Object().Grants.WithCancellation(ExecutionBudget.CurrentToken);
+		if (clonedGrants.Roles.Any(held => held.Source == RoleSource.Object)
+			|| clonedGrants.Context.ObjectOverrides.Count > 0
 			|| clonedObj.Object().Warnings != WarningType.None
 			|| await clonedObj.Object().Powers.Value.AnyAsync())
 		{

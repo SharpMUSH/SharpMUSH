@@ -39,8 +39,8 @@ public class AccountSessionRefreshTests
 		});
 		accounts.GetCharactersAsync("account", Arg.Any<CancellationToken>()).Returns((IReadOnlyList<SharpPlayer>)[]);
 		using var cache = new FusionCache(new OptionsWrapper<FusionCacheOptions>(new()));
-		var claims = new AccountClaimsService(accounts, Substitute.For<IRoleDerivationService>(), Substitute.For<IRoleRegistryService>(),
-			Substitute.For<IPermissionResolver>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
+		var claims = new AccountClaimsService(
+			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst") with
 		{

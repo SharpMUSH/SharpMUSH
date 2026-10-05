@@ -16,8 +16,11 @@
     <KitCard>
         <div class="snapshots-body">
             <div class="snapshots-lookup">
-                <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
-                <MudButton OnClick="Load" Disabled="_busy">@Loc["SnapshotsLoad"]</MudButton>
+                @* Immediate, so the buttons below come on as the identity is typed rather than on blur. With no
+                   identity they stay off: the request was sent anyway and came back as "the snapshot
+                   request failed. Reload and try again", which reloading never fixes. *@
+                <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Immediate="true" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
+                <MudButton OnClick="Load" Disabled="@(_busy || NoTarget)">@Loc["SnapshotsLoad"]</MudButton>
             </div>
             @if (_history?.PendingRecoveryId is { } recovery)
             {
@@ -36,7 +39,7 @@
                 <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
                 <MudNumericField T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
                 <div>
-                    <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="_busy">@Loc["SnapshotsCapture"]</MudButton>
+                    <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="@(_busy || NoTarget)">@Loc["SnapshotsCapture"]</MudButton>
                 </div>
             </div>
         </KitCard>
@@ -107,6 +110,7 @@
             ClearPreview();
         }
     }
+    private bool NoTarget => string.IsNullOrWhiteSpace(_target);
     private void ClearTarget() { _history = null; _selected = null; ClearPreview(); }
     private void Select(string id)
     {

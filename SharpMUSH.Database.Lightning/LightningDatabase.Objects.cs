@@ -978,6 +978,9 @@ public partial class LightningDatabase
 			// Expanded per-object data (dbref + 0x00 + type).
 			tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));
 
+			// Permission overrides set on it; its role assignments are an edge pair, cleared below.
+			tx.Delete(Tables.ObjPermission, key);
+
 			// A character's read markers (dbref + 0x00 + scope).
 			tx.DeletePrefix(Tables.ReadMarker, Keys.Composite(n, ""));
 
@@ -1186,6 +1189,7 @@ public partial class LightningDatabase
 			Locks = MapLocks(record.Locks),
 			Flags = FlagsOf(dbref, type),
 			Powers = PowersOf(dbref),
+			Grants = new(ct => GrantsRelation(dbref, type, ct)),
 			// Attributes: the object's own top level, and the whole tree, both streamed from the
 			// dbref-prefixed attr.meta range (see LightningDatabase.Attributes.cs).
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(ct => TopLevelAttributesCoreAsync(dbref, ct))),
@@ -1255,6 +1259,15 @@ public partial class LightningDatabase
 		=> _relations is { } r
 			? r.HomeOf(dbref.ToString(), dbref.ToString(), (int)dbref, ct)
 			: Task.FromResult(GetRequiredContainerRelation(Tables.Home.Forward, dbref));
+
+	/// <summary>Same routing as <see cref="LocationRelation"/>, for the object's grants.</summary>
+	private Task<Library.Authorization.ObjectGrants> GrantsRelation(long dbref, string type, CancellationToken ct)
+	{
+		var isPlayer = string.Equals(type, DatabaseConstants.TypePlayer, StringComparison.OrdinalIgnoreCase);
+		return _relations is { } r
+			? r.GrantsOf((int)dbref, isPlayer, ct)
+			: Library.Authorization.ObjectGrantsReader.ReadAsync(this, this, (int)dbref, isPlayer, ct);
+	}
 
 	/// <summary>Same routing as <see cref="LocationRelation"/>, for the owner edge.</summary>
 	private Task<SharpPlayer> OwnerRelation(long dbref, CancellationToken ct)

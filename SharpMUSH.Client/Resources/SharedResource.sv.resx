@@ -619,6 +619,14 @@
     <value>Koppla loss karaktären</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koppla loss {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} är då inte längre en av kontots karaktärer, och allt den gav kontot (till exempel en personalroll) försvinner med den. För att koppla tillbaka den behövs dess lösenord i spelet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Användarnamn</value>
     <comment>MT</comment>
@@ -3134,10 +3142,6 @@
     <value>{count, plural, one {# pose} other {# poser}}</value>
     <comment>MT</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Högre värde vinner vid konflikt</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritet</value>
     <comment>MT</comment>
@@ -4575,7 +4579,6 @@
     <value>Ahelp-ämnena. Endast för Trollkarlar och Gud, i portalen liksom i spelet.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Den uttryckliga regeln med högst prioritet avgör; avslag vinner vid lika prioritet. Arv används endast utan uttrycklig regel. Utan tillstånd nekas åtkomst. Delegerade administratörer får endast hantera egna behörigheter med lägre prioritet och får inte ändra sina egna roller eller begränsningar.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuell åtkomst: {0}; prioritet {1}; roller {2}; beslut {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Konfigurationen kunde inte importeras: {0}</value>
@@ -5252,5 +5255,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Scensystemet är inte påslaget i det här spelet.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Placering i hierarkin. Du kan bara hantera roller under din högsta roll.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Varje roll du har som tillåter en behörighet ger den, oavsett prioritet; ett Neka blockerar bara det som ingen roll tillåter. Ett kontoundantag går före alla roller, och en roll som tillåter Administratör ger allt. Prioritet avgör bara vem som hanterar vem: du kan bara ändra roller och konton under din högsta roll och bara tillåta det du själv har.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Undantag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Inga undantag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Ta bort undantag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Behörighet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Ett undantag på det här kontot går före alla dess roller.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Undantag för {0} sparat.</value>
+    <comment>MT</comment>
   </data>
 </root>

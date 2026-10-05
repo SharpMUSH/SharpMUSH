@@ -95,7 +95,8 @@
                         </div>
                         <div class="ra-field ra-field--narrow">
                             <div class="ra-field-label">@Loc["RolPriorityLabel"]</div>
-                            <input class="ra-input" type="number" inputmode="numeric" value="@_editPriority"
+                            <input class="ra-input" type="number" inputmode="numeric" value="@_editPriority" disabled="@editing.IsSystem"
+                                   title="@Loc["RolPriorityHelper"]"
                                    @onchange="@(e => OnPriorityChange(e.Value?.ToString()))" />
                         </div>
                     </div>
@@ -216,6 +217,37 @@
                         </div>
                     </div>
 
+                    <div class="ra-section">
+                        <div class="ra-section-label">@Loc["RolOverrides"]</div>
+                        <div class="ra-chips">
+                            @if (_account.Overrides.Count == 0)
+                            {
+                                <span class="ra-empty">@Loc["RolNoOverrides"]</span>
+                            }
+                            @foreach (var (scope, state) in _account.Overrides.OrderBy(o => o.Key, StringComparer.Ordinal))
+                            {
+                                var sc = scope;
+                                <span class="ra-chip">
+                                    @Loc[state == "Allow" ? "RolAllow" : "RolDeny"]: @sc
+                                    <button type="button" class="ra-chip-x" title="@Loc["RolClearOverride"]" aria-label="@Loc["RolClearOverride"]"
+                                            @onclick="@(() => SetOverride(sc, "Inherit"))">×</button>
+                                </span>
+                            }
+                        </div>
+                        <div class="ra-override-add">
+                            <select class="ra-input" aria-label="@Loc["RolOverrideScope"]" value="@_overrideScope"
+                                    @onchange="@(e => _overrideScope = e.Value?.ToString() ?? string.Empty)">
+                                @foreach (var scope in OverridableScopes)
+                                {
+                                    <option value="@scope">@scope</option>
+                                }
+                            </select>
+                            <button type="button" class="ra-btn" @onclick="@(() => SetOverride(_overrideScope, "Allow"))">@Loc["RolAllow"]</button>
+                            <button type="button" class="ra-btn ra-btn--danger" @onclick="@(() => SetOverride(_overrideScope, "Deny"))">@Loc["RolDeny"]</button>
+                        </div>
+                        <div class="ra-field-help">@Loc["RolOverridesHelp"]</div>
+                    </div>
+
                     @if (Assignable.Count > 0)
                     {
                         <div class="ra-section">
@@ -282,7 +314,13 @@
     private List<PortalRoleModel> Assignable =>
         _account is null
             ? []
-            : SortedRoles.Where(r => !_account.RoleSlugs.Contains(r.Slug)).ToList();
+            : SortedRoles.Where(r => !BuiltInRoles.IsImplicit(r.Slug) && !_account.RoleSlugs.Contains(r.Slug)).ToList();
+
+    /// <summary>Every scope but administrator, which only a role can carry.</summary>
+    private static readonly IReadOnlyList<string> OverridableScopes =
+        PortalPermission.AllScopes.Where(s => s != PortalPermission.Administrator).ToList();
+
+    private string _overrideScope = OverridableScopes[0];
 
     private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
 
@@ -428,6 +466,22 @@
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["RolRemoveFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    private async Task SetOverride(string scope, string state)
+    {
+        if (_account is null || string.IsNullOrEmpty(scope)) return;
+
+        switch (await Roles.SetOverrideAsync(_account.AccountId, scope, state))
+        {
+            case Success:
+                Snackbar.Add(Loc["RolOverrideSaved", scope], Severity.Success);
+                _account = await Roles.LookupAccountAsync(_account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
                 break;
         }
     }

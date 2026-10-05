@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+using SharpMUSH.Library.Authorization;
+using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -399,13 +400,16 @@ public class PermissionService(
 		if (target.IsGod())
 			return false;
 
-		// Each object's flags are read once and asked every question below.
+		// Each object's flags and grants are read once and asked every question below. Privilege here
+		// is two scopes read on both sides, never role order: control.all on who (PennMUSH's Wizard(who)),
+		// and on the target protect.wizard (Wizard(what)) or protect.admin against a who without it
+		// (Hasprivs(what) && !Hasprivs(who)).
 		var whoFlags = await who.ReadFlagsAsync(token);
-		if (whoFlags.IsWizard)
+		if (whoFlags.ControlsAll)
 			return true;
 
 		var targetFlags = await target.ReadFlagsAsync(token);
-		if (targetFlags.IsWizard || (targetFlags.IsPriv && !whoFlags.IsPriv))
+		if (targetFlags.IsWizardProtected || (targetFlags.IsAdminProtected && !whoFlags.IsAdminProtected))
 			return false;
 
 		if (whoFlags.IsMistrust)
@@ -610,12 +614,14 @@ public class PermissionService(
 			return true;
 		}
 
-		// Read once for both halves, and only when a half needs it.
-		var flags = await target.ReadFlagsAsync();
-		return (!wizardOnly || flags.IsWizard)
+		// Wizard channels take chat.admin, the part of WIZARD that runs chat; Admin channels also let in
+		// royalty and Chat_Privs, as PennMUSH's do.
+		var chatAdmin = await target.Can(PortalPermission.ChatAdmin);
+		return (!wizardOnly || chatAdmin)
 					 && (!adminOnly
+							 || chatAdmin
 							 || await target.HasPower("CHAT_PRIVS")
-							 || flags.IsPriv);
+							 || await target.IsPriv());
 	}
 
 	/// <summary>
@@ -624,7 +630,7 @@ public class PermissionService(
 	/// current type.
 	/// </summary>
 	public async ValueTask<bool> ChannelCanPriv(AnySharpObject target, string[] channelType)
-		=> await target.IsWizard()
+		=> await target.Can(PortalPermission.ChatAdmin)
 			 || await ChannelStandardCan(target, channelType);
 
 	public async ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel)
@@ -655,7 +661,7 @@ public class PermissionService(
 	/// matches PennMUSH for every channel PennMUSH would have created.</para>
 	/// </summary>
 	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
-		await target.IsWizard()
+		await target.Can(PortalPermission.ChatAdmin)
 		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
 		|| (
 			!await target.HasPower("guest")
@@ -689,7 +695,7 @@ public class PermissionService(
 			 );
 
 	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)
-		=> await target.IsWizard()
+		=> await target.Can(PortalPermission.ChatAdmin)
 			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id ==
 			 (await target.Object().Owner.WithCancellation(CancellationToken.None)).Id;
 

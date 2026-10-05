@@ -181,18 +181,7 @@ public class AttributeRetroactiveTests
 		var name = AttributeName();
 		var factory = new TestObjectFactory();
 		var executor = factory.CreatePlayer(7100 + Random.Shared.Next(100_000), "RetroWiz");
-		executor.Object().Flags = new(() => new[]
-		{
-			new SharpObjectFlag
-			{
-				Name = "WIZARD",
-				Symbol = "W",
-				SetPermissions = [],
-				UnsetPermissions = [],
-				TypeRestrictions = ["PLAYER"],
-				System = true
-			}
-		}.ToAsyncEnumerable());
+		executor.Grant(roles: ["wizard"]);
 
 		var flag = new SharpAttributeFlag { Name = "NO_COMMAND", Symbol = "$", System = true, Inheritable = false };
 		var entry = new SharpAttributeEntry { Name = name, DefaultFlags = ["NO_COMMAND"] };

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
@@ -41,6 +42,8 @@ public class AmbientIdentityHelperTests
 		}
 		actor.Object().Flags = new(() => Flags());
 		actor.Object().Powers = new(() => Powers());
+		// Built-in powers are read through the object's grants.
+		actor.Object().Grants = new(token => Block<ObjectGrants>(token));
 		if (kind == "owner") actor.Object().Owner = new(token => Block<SharpPlayer>(token));
 		if (kind == "inherit") target.Object().Owner = new(token => Block<SharpPlayer>(token));
 		using var cancellation = new CancellationTokenSource();

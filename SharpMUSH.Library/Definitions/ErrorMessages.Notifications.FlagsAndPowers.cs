@@ -30,6 +30,11 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerAlreadyRemoved = "{0} - {1} (already) removed.";
 
+		// Not PennMUSH: WIZARD, ROYALTY and the powers are roles and overrides, and one also held through
+		// the character's account still applies after it is taken off the character.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StillHeldThroughAccount = "{0} still has {1} through its account.";
+
 		// PennMUSH src/wiz.c do_power.
 		public const string OnlyWizardsMayGrantPowers = "Only wizards may grant powers.";
 		public const string GodIsAlreadyAllPowerful = "God is already all-powerful.";

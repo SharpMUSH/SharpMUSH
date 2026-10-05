@@ -61,13 +61,8 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		var loggerDbref = DBRef.Parse(loggerObjid);
 		var node = await factory.Services.GetRequiredService<ISharpDatabase>()
 			.GetObjectNodeAsync(loggerDbref);
-		var flags = new List<string>();
-		await foreach (var flag in node.Expect<AnySharpObject>().Object().Flags.Value)
-		{
-			flags.Add(flag.Name);
-		}
-
-		await Assert.That(flags).Contains("WIZARD");
+		// WIZARD is the wizard role, held through the object's grants rather than a stored flag.
+		await Assert.That(await node.Expect<AnySharpObject>().IsWizard()).IsTrue();
 	}
 
 	[Test]

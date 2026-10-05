@@ -1,5 +1,6 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
@@ -738,6 +739,24 @@ public partial class Commands
 					continue;
 				}
 				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
+			}
+
+			// What is set on the object itself, not what reaches it through an account: WIZARD and
+			// ROYALTY and the Guest and Builder powers are its roles, the other powers its overrides.
+			var grants = await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken);
+			var ownRoles = grants.Roles.Where(held => held.Source == RoleSource.Object).Select(held => held.Role.Slug).ToArray();
+			foreach (var slug in ownRoles)
+			{
+				outputs.Add(RoleFlags.ForRole(slug) is { } roleFlag ? $"{prefix}@set {objectRef}={roleFlag.Name}"
+					: GamePowers.ForRole(slug) is { } rolePower ? $"{prefix}@power {objectRef}={rolePower.Name}"
+					: $"{prefix}@role/assign {objectRef}={slug}");
+			}
+
+			foreach (var (scope, state) in grants.Context.ObjectOverrides.OrderBy(o => o.Key, StringComparer.Ordinal))
+			{
+				outputs.Add(state == PermissionState.Allow && GamePowers.ForScope(scope) is { } power
+					? $"{prefix}@power {objectRef}={power.Name}"
+					: $"{prefix}@role/{(state == PermissionState.Allow ? "allow" : "deny")} {objectRef}={scope}");
 			}
 
 			await foreach (var power in obj.Powers.Value)

@@ -134,12 +134,32 @@ public class AccountController(
 			await accountService.LinkCharacterAsync(accountId!, playerRef);
 
 			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
-			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds });
+			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = await CreatedFlagsAsync(playerRef) });
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
 			return BadRequest(ex.Message);
+		}
+	}
+
+	/// <summary>
+	/// A new character's flags, as the roster carries them: the portal adds the row to the account's list itself,
+	/// and without them it showed the character flagless until the list was refreshed. The character already
+	/// exists and is linked, so failing to read them answers with none rather than failing the creation.
+	/// </summary>
+	private async Task<string> CreatedFlagsAsync(DBRef playerRef)
+	{
+		try
+		{
+			return await mediator.Send(new GetObjectNodeQuery(playerRef)) is AnySharpObject and SharpPlayer player
+				? (await CharacterSummaryMapper.BuildSummariesAsync([player]))[0].Flags
+				: string.Empty;
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Created character #{Key}, but could not read its flags", playerRef.Number);
+			return string.Empty;
 		}
 	}
 

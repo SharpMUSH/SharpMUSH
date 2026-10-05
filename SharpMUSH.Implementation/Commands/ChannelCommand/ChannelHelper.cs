@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Configuration.Options;
@@ -569,7 +570,7 @@ public static class ChannelHelper
 			return new JoinCheck(null, null);
 		}
 
-		return await actor.IsWizard()
+		return await actor.Can(PortalPermission.ChatAdmin)
 			? new JoinCheck(null, actor.Id() == victim.Id()
 				? ErrorMessages.Notifications.ChatJoinOverrideSelf
 				: ErrorMessages.Notifications.ChatJoinOverrideTarget)
@@ -712,7 +713,7 @@ public static class ChannelHelper
 	/// (<c>hdrs/mushtype.h</c>), which is privileged status or the <c>Who</c> power.
 	/// </summary>
 	public static async ValueTask<bool> PrivilegedWho(AnySharpObject viewer)
-		=> await viewer.IsPriv() || await viewer.HasPower("Who");
+		=> await viewer.IsPriv() || await viewer.HasPower("See_All");
 
 	/// <summary>
 	/// The channel's membership with each member's connection state attached, so the callers can apply

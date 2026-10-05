@@ -76,7 +76,7 @@ else
                 @if (BannerShown)
                 {
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls" />
+                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls(SettingsMenu.Banner)" />
                 }
                 @if (_commKey is { } commKey)
                 {
@@ -96,7 +96,7 @@ else
                             <span class="play-head-more">
                                 @if (View == PlayView.Terminal)
                                 {
-                                    @TerminalSettings
+                                    @TerminalSettings(SettingsMenu.Header)
                                 }
                                 else if (SceneHere is { Focus: true })
                                 {
@@ -179,7 +179,7 @@ else
                         @* The room's details, dropped over the page from the header the way a chat app opens a channel's:
                            the banner, with the header's less frequent buttons on it. Its minimise closes it. *@
                         <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                    Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls" />
+                                    Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(SettingsMenu.Sheet)" />
                     }
                     else if (sheet == MobileSheet.Room)
                     {
@@ -542,7 +542,7 @@ else
     /// name does. Focus mode, the terminal settings (or Leave, in a scene's Story) and Disconnect; Connect and Login
     /// stay in the header.
     /// </summary>
-    private RenderFragment BannerControls => __builder =>
+    private RenderFragment BannerControls(SettingsMenu menu) => __builder =>
     {
         <div class="play-banner-more">
             <button type="button" class="play-conn play-banner-focus" aria-label="@Loc["NavFocusMode"]" title="@Loc["NavFocusMode"]"
@@ -551,7 +551,7 @@ else
             </button>
             @if (View == PlayView.Terminal)
             {
-                @TerminalSettings
+                @TerminalSettings(menu)
             }
             else if (SceneHere is { Focus: true })
             {
@@ -600,17 +600,19 @@ else
         Shell?.Open();
     }
 
-    private RenderFragment TerminalSettings => __builder =>
+    private RenderFragment TerminalSettings(SettingsMenu menu) => __builder =>
     {
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+        @* Escape closes it, from the button or from inside: MudMenu does not. *@
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true"
+                 Open="@(_settingsOpen == menu)" OpenChanged="@((bool open) => OnSettingsOpenChanged(menu, open))">
             <ActivatorContent>
-                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync"
+                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync" @onkeydown="CloseSettingsOnEscape"
                         title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
                     <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
                 </button>
             </ActivatorContent>
             <ChildContent>
-                <div class="play-cfg" @onclick:stopPropagation="true">
+                <div class="play-cfg" @onclick:stopPropagation="true" @onkeydown="CloseSettingsOnEscape">
                     <div class="play-cfg-kicker">@Loc["Terminal"]</div>
                     <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
                         <span>@Loc["NavTerminalWidthCols"]</span>
@@ -630,6 +632,25 @@ else
             </ChildContent>
         </MudMenu>
     };
+
+    /// <summary>
+    /// Where the terminal settings are offered: the card's header, the banner's controls row, and the banner on
+    /// the phone's details sheet. Several can be on the page at once, so each menu opens on its own.
+    /// </summary>
+    private enum SettingsMenu { Header, Banner, Sheet }
+
+    private SettingsMenu? _settingsOpen;
+
+    private void OnSettingsOpenChanged(SettingsMenu menu, bool open)
+    {
+        if (open) _settingsOpen = menu;
+        else if (_settingsOpen == menu) _settingsOpen = null;
+    }
+
+    private void CloseSettingsOnEscape(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _settingsOpen = null;
+    }
 
     private void ClearTerminal() => _playTerm?.ClearOutput();
 

@@ -30,6 +30,13 @@ public class LockNormalizationTests
 		=> await Assert.That(BooleanParser.Normalize(expression)).IsEqualTo(expression);
 
 	[Test]
+	[Arguments("role^Wizard", "ROLE^wizard")]
+	[Arguments("perm^Game.See_All", "PERM^game.see_all")]
+	[Arguments("ROLE^moderator|!PERM^wiki.edit", "ROLE^moderator | !PERM^wiki.edit")]
+	public async Task NormalizeLowercasesRoleAndPermissionKeys(string expression, string expected)
+		=> await Assert.That(BooleanParser.Normalize(expression)).IsEqualTo(expected);
+
+	[Test]
 	public async Task Normalize_ExactObjectLock_BareDbRef_PreservedAsIs()
 	{
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObj1)")))?.Message!;

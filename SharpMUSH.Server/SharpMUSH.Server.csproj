@@ -178,7 +178,7 @@
     <EmbeddedResource Include="Resources\Wiki\application-schema-guide.md">
       <LogicalName>SharpMUSH.Server.Resources.Wiki.application-schema-guide.md</LogicalName>
     </EmbeddedResource>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.0.0-preview.1" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>
 

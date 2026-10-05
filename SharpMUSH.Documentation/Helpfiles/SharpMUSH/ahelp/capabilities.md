@@ -30,17 +30,20 @@
 -->
 # Administrative capabilities
 
-Portal roles are the shared source for delegated administrative operations. They use the
-existing account assignments and persist in world backups. Adding capabilities does not
-change Penn-compatible flags, powers, ownership checks or locks.
+Roles are the shared source for delegated administrative operations, in the game and in the
+portal. They use the account role assignments and per-account overrides, and persist in world
+backups. Adding capabilities does not change Penn-compatible flags, powers, ownership checks or
+locks. See help roles for the player-facing description and help @role for the commands.
 
 ## Grant and deny resolution
 
-Each scope has Allow, Deny or Inherit. The highest-priority explicit opinion wins; Deny
-wins a priority tie. A child scope with any resolved explicit opinion uses that opinion.
-Only children without an explicit opinion inherit an allowed parent. Therefore an
-explicit child denial survives even a higher-priority parent grant. A higher-priority
-explicit child Allow can override a lower-priority child Deny. No grant means denied.
+Resolution follows Discord's permission computation, one scope at a time. The owner (the account
+linked to player #1) holds everything. A held role that allows administrator grants everything
+and bypasses overrides. A per-account override (Allow or Deny) decides next. Otherwise any held
+role that allows the scope grants it regardless of priority; failing that, a role that denies it
+refuses it; failing that, the everyone role decides, and a scope nobody allows is denied.
+Priority is never consulted. Within one role or override set, a child scope left on Inherit takes
+the setting of its umbrella scope, so an explicit child setting wins over the umbrella.
 
 ## Capability scopes
 
@@ -53,24 +56,22 @@ where the operation executes, including after waiting in a queue.
 
 ## Actor identity and revocation
 
-Authenticated account-only portal actions retain the existing account role derivation.
+Portal HTTP actions resolve the account as a whole: every linked character's tier counts.
 Game entry points call GetGameActorAsync with the actual executor full objid to resolve
 the linked account; unlinked or disabled accounts have no capability actor.
-Game actions supply the active player's full objid and that same player as executor.
-Another linked character's flags do not elevate that active player. Owned objects,
-foreign characters and privileged callbacks cannot borrow the account's authority.
-The executing service reloads account status, character links and persisted roles on
-every authorization; queue records store identities, never cached grants. Transfer,
-unlink, disable and revocation therefore apply when queued work executes.
+Game actions supply the active player's full objid and that same player as executor, and only
+that character's flags choose its tier roles. Another linked character's flags do not elevate
+it. Owned objects, foreign characters and privileged callbacks cannot borrow the account's
+authority. The executing service reloads account status, character links, roles and overrides on
+every authorization; queue records store identities, never cached grants. Transfer, unlink,
+disable and revocation therefore apply when queued work executes.
 
 ## Delegated role management
 
-Delegated role managers can manage lower-priority grants they already hold. They cannot
-edit assigned roles, change their own assignments, modify system roles or remove deny
-restrictions. The account linked to player #1 administers those changes. The God role
-must retain roles.admin above every explicit roles.admin denial to preserve recovery,
-including roles that might be assigned in the future. Existing roles and assignments are not
-rewritten on upgrade; explicitly grant newly introduced scopes on existing installations.
-The effective-permission API reports the winning priority and role slugs, explicit or
-implied resolution, and default denial. The portal permission matrix uses the same scope
-catalog and localized descriptions.
+Every role change, from @role or the portal, goes through the role management service and needs
+roles.admin. Following Discord's role hierarchy, a manager creates, edits, deletes, assigns and
+removes only roles below their own highest role, changes only accounts whose highest role is below
+theirs, never changes their own account, and allows only scopes they hold. System roles keep their
+slug and priority, are never deleted and are never assigned by hand. The owner is exempt, which
+keeps recovery possible whatever the roles say. The effective-permission API and @role/player
+report which layer decided each scope and the deciding roles.

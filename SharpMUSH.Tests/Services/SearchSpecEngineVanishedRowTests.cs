@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Implementation.Common;
@@ -30,6 +31,7 @@ public class SearchSpecEngineVanishedRowTests
 			Type = "THING",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(async _ => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(AsyncEnumerable.Empty<SharpPower>),
 			Attributes = new(AsyncEnumerable.Empty<SharpAttribute>),
 			LazyAttributes = new(AsyncEnumerable.Empty<LazySharpAttribute>),
@@ -49,21 +51,12 @@ public class SearchSpecEngineVanishedRowTests
 		});
 	}
 
-	private static readonly SharpObjectFlag Wizard = new()
-	{
-		Name = "WIZARD",
-		Symbol = "W",
-		System = true,
-		SetPermissions = [],
-		UnsetPermissions = [],
-		TypeRestrictions = []
-	};
-
 	[Test]
 	public async Task RowThatNoLongerResolvesIsSkipped()
 	{
 		// A wizard searcher, so no visibility filtering; the ELOCK class forces the per-object path.
-		var executor = Thing(1001, "Searcher", Wizard);
+		var executor = Thing(1001, "Searcher");
+		executor.Grant(roles: ["wizard"]);
 		var vanished = Thing(1002, "Vanished");
 		var survivor = Thing(1003, "Survivor");
 

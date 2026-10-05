@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LightningDB" Version="0.23.0" />
+    <PackageReference Include="LightningDB" Version="0.23.1" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>
 

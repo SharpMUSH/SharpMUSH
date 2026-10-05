@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -271,7 +272,7 @@ public class ObjectsController(
 	{
 		var obj = target.Object();
 		var owner = await obj.Owner.WithCancellation(ct);
-		var flags = await obj.Flags.Value.Select(f => f.Name).ToListAsync(ct);
+		var flags = (await obj.ReadFlagsAsync(ct)).Flags.Select(f => f.Name).ToList();
 
 		return new ObjectSummaryDto(
 			$"#{obj.Key}",

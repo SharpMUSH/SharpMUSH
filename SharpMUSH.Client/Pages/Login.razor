@@ -125,6 +125,21 @@
             _tabIndex = RegisterTabIndex;
     }
 
+    /// <summary>
+    /// Someone already signed in has nothing to do here: /login and /register (a bookmark, Back after
+    /// signing in) go on to where they would have landed after signing in.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountAuth.InitAsync();
+        if (!AccountAuth.IsLoggedIn) return;
+
+        // As after signing in: an account with no character yet goes on to make one.
+        var characters = await AccountAuth.GetCharactersAsync();
+        Nav.NavigateTo(characters is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 } ? OnboardingUrl : SuccessUrl(),
+            replace: true);
+    }
+
     private static string? GetQueryParam(string uri, string key)
     {
         var query = new Uri(uri).Query;

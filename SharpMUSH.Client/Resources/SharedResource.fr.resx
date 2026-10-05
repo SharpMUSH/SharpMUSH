@@ -476,6 +476,14 @@
   <data name="AuthUnlinkCharacter" xml:space="preserve">
     <value>Dissocier le personnage</value>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Dissocier {0} ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} ne fera plus partie des personnages de ce compte, et tout ce qu’il apportait au compte (un rôle d’équipe, par exemple) part avec lui. Pour le réassocier, il faut son mot de passe en jeu.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthCreateNewCharacter" xml:space="preserve">
     <value>+ Créer un nouveau personnage</value>
   </data>
@@ -1917,9 +1925,6 @@
   </data>
   <data name="RolColorHelper" xml:space="preserve">
     <value>Couleur CSS, par ex. #6cde9a</value>
-  </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>La valeur la plus élevée l'emporte en cas de conflit</value>
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>Hériter</value>
@@ -3770,7 +3775,6 @@
     <value>Les sujets ahelp. Réservés aux Sorciers et à Dieu, dans le portail comme dans le jeu.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>La règle explicite de priorité la plus élevée décide ; le refus gagne en cas d’égalité. L’héritage s’applique uniquement en l’absence de règle explicite. Sans autorisation, l’accès est refusé. Les administrateurs délégués ne peuvent gérer que leurs autorisations de priorité inférieure, sans modifier leurs propres rôles ni restrictions.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Accès actuel : {0} ; priorité {1} ; rôles {2} ; décision {3}.</value></data>
   <data name="DiagTitle" xml:space="preserve"><value>Diagnostic des files</value></data>
   <data name="DiagDescription" xml:space="preserve"><value>Consultez les tâches autorisées et leurs résultats récents. Historique de 15 minutes, effacé au redémarrage.</value></data>
@@ -4507,5 +4511,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Le système de scènes n'est pas activé sur ce jeu.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Position dans la hiérarchie. Vous ne pouvez gérer que les rôles situés sous votre rôle le plus élevé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Tout rôle que vous détenez et qui autorise une permission l'accorde, quelle que soit sa priorité ; un Refus ne bloque que ce qu'aucun rôle n'autorise. Une exception de compte l'emporte sur tous les rôles, et un rôle qui autorise Administrateur accorde tout. La priorité décide seulement qui gère qui : vous ne pouvez modifier que les rôles et comptes situés sous votre rôle le plus élevé, et n'autoriser que ce que vous détenez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Exceptions</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Aucune exception</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Supprimer l'exception</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Permission</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Une exception sur ce compte l'emporte sur tous ses rôles.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Exception pour {0} enregistrée.</value>
+    <comment>MT</comment>
   </data>
 </root>

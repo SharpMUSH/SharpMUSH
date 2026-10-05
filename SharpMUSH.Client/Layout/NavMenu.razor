@@ -167,6 +167,7 @@
 
     protected override void OnInitialized()
     {
+        ServerInfo.Changed += OnServerInfoChanged;
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
 
@@ -249,5 +250,14 @@
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
+        ServerInfo.Changed -= OnServerInfoChanged;
     }
+
+    /// <summary>A newer server answer (the guest roster or the game's name changed): the brand and the Play link follow it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _gameName = await ServerInfo.GameNameAsync();
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        StateHasChanged();
+    });
 }

@@ -81,6 +81,7 @@ public class MushBasicAuthenticationHandlerTests
 			Type = "Player",
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(SharpMUSH.Library.Authorization.ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),

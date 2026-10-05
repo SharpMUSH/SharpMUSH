@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
 using System.Runtime.CompilerServices;
@@ -341,6 +342,7 @@ public class PuppetRelayOutputTests
 			Type = type,
 			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
 			Owner = new(_ => Task.FromResult<SharpPlayer>(null!)),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(AsyncEnumerable.Empty<SharpPower>),
 			Attributes = new(AsyncEnumerable.Empty<SharpAttribute>),
 			LazyAttributes = new(AsyncEnumerable.Empty<LazySharpAttribute>),

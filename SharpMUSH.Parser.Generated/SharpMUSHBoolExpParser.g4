@@ -36,6 +36,8 @@ lockExpr:
     | indirectExpr
     | bitFlagExpr
     | bitPowerExpr
+    | bitRoleExpr
+    | bitPermExpr
     | bitTypeExpr
     | channelExpr
     | dbRefListExpr
@@ -56,6 +58,8 @@ ownerExpr: OWNER objectOperand;
 carryExpr: CARRY objectOperand;
 bitFlagExpr: BIT_FLAG literal;
 bitPowerExpr: BIT_POWER literal;
+bitRoleExpr: BIT_ROLE literal;
+bitPermExpr: BIT_PERM literal;
 bitTypeExpr: BIT_TYPE objectType;
 
 objectType: STRING;
@@ -81,4 +85,4 @@ objectOperand: string (ATTRIBUTE_COLON string)*;
 // Escaped separators are part of STRING and retain their wildcard meaning.
 literal: (STRING | STAMPED_DBREF | ATTRIBUTE_COLON | EVALUATION | NOT | CARRY
     | OWNER | INDIRECT | EXACTOBJECT | OPEN | TRUE | FALSE | NAME | BIT_FLAG
-    | BIT_POWER | BIT_TYPE | DBREFLIST | CHANNEL | IP | HOSTNAME | LITERAL_CARET)+;
+    | BIT_POWER | BIT_ROLE | BIT_PERM | BIT_TYPE | DBREFLIST | CHANNEL | IP | HOSTNAME | LITERAL_CARET)+;

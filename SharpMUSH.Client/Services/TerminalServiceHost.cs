@@ -29,6 +29,9 @@ public class TerminalServiceHost : ITerminalService
 	public event Action<TerminalLine>? LineReceived;
 	public event Action<bool>? ConnectionStateChanged;
 
+	/// <summary>Raised once a new inner terminal is in place: a new session, whose screen starts empty.</summary>
+	public event Action? Recreated;
+
 	/// <summary>
 	/// Disposes the current inner terminal and builds a fresh one. Subscribers keep their
 	/// subscriptions to this facade and are re-pointed transparently.
@@ -51,6 +54,7 @@ public class TerminalServiceHost : ITerminalService
 		Attach(_inner);
 
 		OnConnectionState(false);
+		Recreated?.Invoke();
 	}
 
 	private void Attach(ITerminalService inner)

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
@@ -30,7 +31,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
+		CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = ["type"])]
 	public async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -88,7 +89,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
+		CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = ["type"])]
 	public async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -106,7 +107,7 @@ public partial class Commands
 	/// same situation as one whose support is not written yet.</para>
 	/// </summary>
 	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Backup(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -174,7 +175,7 @@ public partial class Commands
 		_ => $"{bytes} B"
 	};
 
-	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -189,7 +190,7 @@ public partial class Commands
 	/// <c>@undestroy</c> for a whole purge interval. A special object that somehow got marked is
 	/// spared rather than freed.
 	/// </remarks>
-	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -201,7 +202,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -230,7 +231,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player"])]
+	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = ["player"])]
 	public async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -386,7 +387,7 @@ public partial class Commands
 
 		await NotifyService.Notify(executor, details, executor);
 
-		if (!await executor.IsWizard() || parser.CurrentState.Switches.Contains("MORTAL"))
+		if (!await executor.Can(PortalPermission.ServerOperate) || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
 			return new CallState(details);
 		}
@@ -413,7 +414,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@LOG", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "RECALL"],
-		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type", "message"])]
+		Behavior = CB.Default | CB.NoGagged, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = ["type", "message"])]
 	public async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -485,12 +486,12 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "PERM^config.admin",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await ToggleConfigOptionAsync(parser, enable: true);
 
-	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "PERM^config.admin",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await ToggleConfigOptionAsync(parser, enable: false);
@@ -1055,8 +1056,8 @@ public partial class Commands
 
 		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 		{
-			await Tally(flagSets, obj.Flags.Value.Select(f => f.Name));
-			await Tally(powerSets, obj.Powers.Value.Select(p => p.Name));
+			await Tally(flagSets, (await obj.ReadFlagsAsync(ExecutionBudget.CurrentToken)).Flags.Select(f => f.Name).ToAsyncEnumerable());
+			await Tally(powerSets, (await obj.ReadPowersAsync(ExecutionBudget.CurrentToken)).Select(p => p.Name).ToAsyncEnumerable());
 		}
 
 		await ReportFlagspaceAsync(executor, "FLAG", await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync(), flagSets);
@@ -1130,7 +1131,7 @@ public partial class Commands
 		if (switches.Contains("SET") || switches.Contains("SAVE"))
 		{
 			var save = switches.Contains("SAVE");
-			if (!await executor.IsWizard() || (save && !executor.IsGod()))
+			if (!await executor.Can(PortalPermission.ConfigAdmin) || (save && !executor.IsGod()))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCantRemakeWorld), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -1216,7 +1217,7 @@ public partial class Commands
 		return new CallState(ErrorMessages.Returns.NotFound);
 	}
 
-	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "PERM^server.operate",
 		MinArgs = 0, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

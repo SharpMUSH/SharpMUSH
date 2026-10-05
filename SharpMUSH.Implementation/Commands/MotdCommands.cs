@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Humanizer;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -32,7 +33,7 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.Can(PortalPermission.ChatAdmin))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
@@ -59,7 +60,7 @@ public partial class Commands
 	}
 
 	/// <summary>PennMUSH's <c>@wizmotd</c>: <c>cmd_motd</c> with the type fixed to the wizard MOTD.</summary>
-	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "PERM^chat.admin",
 		MinArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
@@ -68,7 +69,7 @@ public partial class Commands
 			nameof(ErrorMessages.Notifications.WizMotdUsage));
 
 	/// <summary>PennMUSH's <c>@rejectmotd</c>: <c>cmd_motd</c> with the type fixed to the full MOTD.</summary>
-	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "PERM^chat.admin",
 		MinArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
@@ -89,13 +90,13 @@ public partial class Commands
 	{
 		if (motdType == "connect")
 		{
-			if (!await executor.IsWizard() && !await executor.HasPower("ANNOUNCE"))
+			if (!await executor.Can(PortalPermission.ChatAdmin) && !await executor.HasPower("ANNOUNCE"))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedAnnouncePower), executor);
 				return CallState.Empty;
 			}
 		}
-		else if (!await executor.IsWizard())
+		else if (!await executor.Can(PortalPermission.ChatAdmin))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
@@ -184,7 +185,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var isWizard = await executor.IsWizard();
+		var isWizard = await executor.Can(PortalPermission.ChatAdmin);
 
 		var motdFile = Configuration.CurrentValue.Message.MessageOfTheDayFile;
 		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;

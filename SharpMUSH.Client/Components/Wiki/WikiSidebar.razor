@@ -40,9 +40,11 @@
     <SidebarSpacer />
     <AuthorizeView Policy="wiki.create">
         <Authorized>
+            @* The title form has no room in the strip, so the strip's button goes straight to a new page's
+               editor, as the wiki home's own "New page" does; toggling the form here showed nothing. *@
             @if (Collapsed)
             {
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Add" Label="@Loc["NavWikiNewPage"]" OnClick="@(() => _newOpen = !_newOpen)" Collapsed="true" />
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Add" Label="@Loc["NavWikiNewPage"]" Href="@NewPageHref" Collapsed="true" />
             }
             else if (_newOpen)
             {
@@ -68,6 +70,7 @@
     private IReadOnlyList<WikiCategoryGroup> _groups = [];
     private string _path = "/wiki";
     private bool _newOpen;
+    private static string NewPageHref => $"/wiki/main/{WikiHelpers.DefaultCategory}/new-page/edit";
     private string _newTitle = string.Empty;
 
     protected override async Task OnInitializedAsync()

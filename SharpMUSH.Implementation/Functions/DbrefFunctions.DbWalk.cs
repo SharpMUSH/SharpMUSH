@@ -89,7 +89,7 @@ public partial class Functions
 		// ldark = IsPlayer(loc) ? Opaque(loc) : Dark(loc)
 		var locIsDark = loc.IsPlayer ? await loc.IsOpaque() : await loc.IsDark();
 		var locIsLight = await loc.IsLight();
-		var privWho = await executor.IsPriv() || await executor.HasPower("Who");
+		var privWho = await executor.IsPriv() || await executor.HasPower("See_All");
 
 		var matched = new List<AnySharpContent>();
 		var seen = 0;

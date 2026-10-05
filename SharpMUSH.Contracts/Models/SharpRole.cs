@@ -3,10 +3,11 @@ using SharpMUSH.Library.Authorization;
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
-/// A portal role: a named, prioritised bundle of three-state permission grants that can be
-/// assigned to accounts (Discord-style). Built-in roles (God/Wizard/…) carry
-/// <see cref="IsSystem"/> = true and cannot be deleted or re-slugged, though their permissions
-/// and priority may be edited. System data — never visible to softcode; travels with backups.
+/// A role: a named bundle of three-state permission grants that can be assigned to accounts, in the
+/// manner of a Discord server role. System roles (everyone and the flag-derived tiers) carry
+/// <see cref="IsSystem"/> = true and cannot be deleted, re-slugged, re-prioritised or assigned by
+/// hand, though their name, colour and permissions may be edited. Stored as system data and travels
+/// with backups; softcode reads it through <c>roles()</c>, <c>hasrole()</c> and <c>permission()</c>.
 /// </summary>
 public class SharpRole
 {
@@ -22,7 +23,10 @@ public class SharpRole
 	/// <summary>Optional hex color (e.g. "#5aa9ff") for the role chip.</summary>
 	public string? Color { get; set; }
 
-	/// <summary>Resolution priority — higher wins when roles disagree on a scope.</summary>
+	/// <summary>
+	/// Position in the role hierarchy (Discord's role position). A manager can only edit, assign or
+	/// remove roles below their own highest role. It plays no part in resolving a scope.
+	/// </summary>
 	public int Priority { get; set; }
 
 	/// <summary>True for built-in roles that cannot be deleted or re-slugged.</summary>

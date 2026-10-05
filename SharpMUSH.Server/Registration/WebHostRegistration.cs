@@ -93,6 +93,7 @@ internal static class WebHostRegistration
 		services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
 		services.AddSingleton(PortalBuild.For(environment));
+		services.AddSingleton<IGuestAvailability, GuestAvailability>();
 
 		services.AddCors(options =>
 		{
@@ -186,7 +187,6 @@ internal static class WebHostRegistration
 			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
 			.WithTools<MushTools>();
 
-		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
 
 		return services;
 	}

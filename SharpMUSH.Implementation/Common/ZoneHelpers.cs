@@ -121,7 +121,7 @@ public static class ZoneHelpers
 		// method the one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 		if (!preserve && !target.IsPlayer)
 		{
-			await PrivilegeHelpers.StripPrivilegeAsync(flagAndPowerService, executor, target);
+			await PrivilegeHelpers.StripPrivilegeAsync(mediator, flagAndPowerService, executor, target);
 		}
 		else if (noisy)
 		{

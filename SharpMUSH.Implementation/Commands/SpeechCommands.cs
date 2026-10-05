@@ -782,17 +782,17 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
+		CommandLock = "PERM^chat.admin|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> WallCore(parser, _2, WallAudience.Everyone, Configuration.CurrentValue.Cosmetic.WallPrefix);
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
+		CommandLock = "PERM^chat.admin|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> WallCore(parser, _2, WallAudience.RoyaltyAndWizards, Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix);
 
 	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
+		CommandLock = "PERM^chat.admin", MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> WallCore(parser, _2, WallAudience.Wizards, Configuration.CurrentValue.Cosmetic.WizardWallPrefix);
 }

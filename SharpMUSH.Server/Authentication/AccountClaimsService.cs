@@ -22,10 +22,7 @@ namespace SharpMUSH.Server.Authentication;
 /// <see cref="InvalidateAsync"/> call clears both.
 /// </remarks>
 public class AccountClaimsService(
-	IAccountService accountService,
-	IRoleDerivationService roleDerivation,
-	IRoleRegistryService roleRegistry,
-	IPermissionResolver permissionResolver,
+	IAdministrativeCapabilityService capabilities,
 	IFusionCache cache,
 	IAccountClaimsInvalidator invalidator,
 	ILogger<AccountClaimsService> logger)
@@ -38,20 +35,18 @@ public class AccountClaimsService(
 	public static string AccountCacheTag(string accountId) => $"acct:{accountId}";
 
 	/// <summary>
-	/// The account-level flag-derived role: the highest <see cref="PortalRole"/> across every
-	/// character the account owns (so a Wizard on any character lifts the whole account). Falls
-	/// back to the active <paramref name="activeRole"/> if the character list can't be loaded, or
-	/// if the account has no characters at all.
-	/// Characters are resolved by stable key/dbref, so character renames never affect the result.
+	/// The account's coarse portal tier (<see cref="BuiltInRoles.TierOf"/>), from the same context every
+	/// policy gate resolves: the account's roles, every role assigned to one of its characters, and
+	/// <c>player</c> once it has a character. God for the account linked to player #1.
 	/// </summary>
 	// account.Id is a non-secret GUID identifier placed in the standard JWT 'sub' claim
 	// per RFC 7519 §4.1.2. Username in 'unique_name' is a display name, not a password or
 	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
 		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
-	public async Task<PortalRole> ComputeAccountRoleAsync(string accountId, PortalRole activeRole, CancellationToken ct = default)
-		=> await cache.GetOrSetAsync($"account-role:{accountId}:{activeRole}",
-			async token => await ComputeAccountRoleCoreAsync(accountId, activeRole, token),
+	public async Task<PortalRole> ComputeAccountRoleAsync(string accountId, CancellationToken ct = default)
+		=> await cache.GetOrSetAsync($"account-role:{accountId}",
+			async token => await ComputeAccountRoleCoreAsync(accountId, token),
 			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
 			token: ct);
@@ -64,68 +59,32 @@ public class AccountClaimsService(
 	private static readonly FusionCacheEntryOptions ClaimsEntryOptions =
 		CacheEntryProfiles.Tagged.Duplicate(TimeSpan.FromSeconds(30));
 
-	private async Task<PortalRole> ComputeAccountRoleCoreAsync(string accountId, PortalRole activeRole, CancellationToken ct)
+	private async Task<PortalRole> ComputeAccountRoleCoreAsync(string accountId, CancellationToken ct)
 	{
 		try
 		{
-			var characters = await accountService.GetCharactersAsync(accountId, ct);
-			if (characters.Count == 0)
-				return activeRole;
-
-			var perCharacter = await characters.ToAsyncEnumerable()
-				.Select(async (c, innerCt) => (c.Object.Key, (IEnumerable<SharpObjectFlag>)await c.Object.Flags.Value.ToListAsync(innerCt)))
-				.ToListAsync(ct);
-
-			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
-			return accountRole > activeRole ? accountRole : activeRole;
+			return BuiltInRoles.TierOf(await capabilities.GetContextAsync(new CapabilityActor(accountId), ct));
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			logger.LogWarning(ex,
-				"Could not derive account-level role for account {AccountId}; using the active character's role.",
-				Library.Logging.LogSanitizer.Sanitize(accountId));
-			return activeRole;
+			// The exception carries the context; the account id stays out of the log.
+			logger.LogWarning(ex, "Could not derive an account's portal tier; using Guest.");
+			return PortalRole.Guest;
 		}
 	}
 
 	/// <summary>
-	/// Convenience overload for callers with no specific "active character" context (account
-	/// login/register, admin gating): floors at <see cref="PortalRole.Guest"/>, the lowest
-	/// <see cref="PortalRole"/>, so the result is simply the account's highest character-derived
-	/// role, or Guest if it has no characters.
+	/// The account's granted permission scopes, account-wide (no active character), resolved by
+	/// <see cref="IAdministrativeCapabilityService"/> exactly as every policy gate resolves them.
 	/// </summary>
-	public Task<PortalRole> ComputeAccountRoleAsync(string accountId, CancellationToken ct = default) =>
-		ComputeAccountRoleAsync(accountId, PortalRole.Guest, ct);
-
-	/// <summary>
-	/// Computes the granted permission scopes for an account: the account's effective roles are
-	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
-	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
-	/// </summary>
-	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role, CancellationToken ct = default)
+	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, CancellationToken ct = default)
 		// The factory's token, not the caller's: it is the one FusionCache cancels when the hard
 		// timeout expires, and with background completion off that is how the role queries stop.
-		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
-			async token => await ComputeGrantedScopesCoreAsync(accountId, role, token),
+		=> await cache.GetOrSetAsync($"account-scopes:{accountId}",
+			async token => await capabilities.GetGrantedScopesAsync(new CapabilityActor(accountId), token),
 			ClaimsEntryOptions,
 			tags: [AccountCacheTag(accountId)],
 			token: ct);
-
-	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role, CancellationToken ct)
-	{
-		var derivedSlug = BuiltInRoles.SlugFor(role);
-		var derived = (await roleRegistry.GetRolesAsync(ct))
-			.FirstOrDefault(r => string.Equals(r.Slug, derivedSlug, StringComparison.OrdinalIgnoreCase));
-
-		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		if (derived is not null)
-			effective[derived.Slug] = derived;
-		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId, ct))
-			effective[assigned.Slug] = assigned;
-
-		// The resolver includes safe implications; never expand afterward, which would restore denied children.
-		return permissionResolver.Resolve(effective.Values);
-	}
 
 	/// <summary>
 	/// Clears both the cached role and granted-scope entries for <paramref name="accountId"/>

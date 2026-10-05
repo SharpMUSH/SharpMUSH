@@ -619,6 +619,14 @@
     <value>解除角色关联</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>解除与 {0} 的关联？</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} 将不再是此账户的角色，它为账户带来的一切（例如工作人员身份）也会随之移除。重新关联需要该角色的游戏内密码。</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>用户名</value>
     <comment>MT</comment>
@@ -3134,10 +3142,6 @@
     <value>{count, plural, other {# 条姿态}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>冲突时数值较高者优先</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>优先级</value>
     <comment>MT</comment>
@@ -4575,7 +4579,6 @@
     <value>ahelp 主题。仅限巫师和上帝查看，门户与游戏一致。</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>优先级最高的明确规则决定权限；优先级相同时拒绝优先。只有没有明确规则时才继承父级权限。没有授权即拒绝访问。委派管理员只能管理自己拥有的较低优先级权限，不能更改自己的角色或限制。</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>当前访问权限：{0}；优先级：{1}；角色：{2}；判定：{3}。</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>无法导入配置：{0}</value>
@@ -5252,5 +5255,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>本游戏未启用场景系统。</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>在层级中的位置。你只能管理低于你最高角色的角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>你持有的任何允许某项权限的角色都会授予该权限，无论优先级如何；拒绝只会阻止没有任何角色允许的权限。账户例外优先于所有角色，允许“管理员”的角色授予一切权限。优先级只决定谁管理谁：你只能更改低于你最高角色的角色和账户，并且只能授予你自己拥有的权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>例外</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>无例外</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>清除例外</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>此账户上的例外优先于它的所有角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>已保存 {0} 的例外。</value>
+    <comment>MT</comment>
   </data>
 </root>

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -15,7 +16,9 @@ public class GameBroadcastServiceTests
 	private static AnyOptionalSharpObject CreateMockPlayerWithFlags(DBRef dbref, params string[] flagNames)
 	{
 		// Create a SharpObject with appropriate flags
+		// WIZARD and ROYALTY are roles, not stored flags.
 		var flagSet = flagNames
+			.Where(name => RoleFlags.Find(name) is null)
 			.Select((name, idx) => new SharpObjectFlag
 			{
 				Name = name,
@@ -38,6 +41,7 @@ public class GameBroadcastServiceTests
 				Type = "Room",
 				Locks = System.Collections.Immutable.ImmutableDictionary<string, SharpLockData>.Empty,
 				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+				Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -65,6 +69,7 @@ public class GameBroadcastServiceTests
 				await ValueTask.CompletedTask;
 				return playerRef ?? null!;
 			}),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
@@ -89,6 +94,7 @@ public class GameBroadcastServiceTests
 		};
 
 		playerRef = player;
+		new AnySharpObject(player).Grant(roles: flagNames.Select(RoleFlags.Find).OfType<RoleFlags.Flag>().Select(f => f.Role).ToArray());
 		return new AnyOptionalSharpObject(player);
 	}
 

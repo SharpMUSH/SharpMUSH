@@ -91,7 +91,16 @@ public class WebSocketClientService : IWebSocketClientService
 	public event EventHandler? ResumeRefused;
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
-	public bool IsConnected => _webSocket?.State == WebSocketState.Open;
+	/// <summary>
+	/// Open, and its hello/resume frame sent. Before that the socket is not usable by anyone else: the
+	/// server reads anything ahead of the first frame as a login-screen command, and in the browser
+	/// <see cref="ClientWebSocket.State"/> already reads Open while <c>ConnectAsync</c> is still
+	/// finishing, when a send throws "not connected" (the terminal's resize observer hit that window).
+	/// </summary>
+	public bool IsConnected => _webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _greeted);
+
+	/// <summary>The socket whose first frame has gone out; a reconnect's new socket is not it until then.</summary>
+	private ClientWebSocket? _greeted;
 
 	/// <inheritdoc/>
 	public bool Resumed { get; private set; }
@@ -186,7 +195,6 @@ public class WebSocketClientService : IWebSocketClientService
 			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", LogSanitizer.Sanitize(_serverUri));
 			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
 
-			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
 
 			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
@@ -209,6 +217,14 @@ public class WebSocketClientService : IWebSocketClientService
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+
+			_greeted = _webSocket;
+
+			// Announced only now: a listener that reacts by sending (the terminal reports its NAWS on
+			// connect) must not put its frame ahead of the hello/resume, which the server requires
+			// first — anything else is read as a login-screen command ("No such command available
+			// at login.").
+			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 
 			await FlushSendBufferAsync();
 
@@ -233,12 +249,14 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	public async Task SendAsync(string message)
 	{
-		if (_webSocket?.State == WebSocketState.Open)
+		// One read of the socket: the one checked for its greeting is the one written to, even if a reconnect
+		// replaces it meanwhile.
+		if (_webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _greeted))
 		{
 			try
 			{
 				var bytes = Encoding.UTF8.GetBytes(message);
-				await _webSocket.SendAsync(
+				await socket.SendAsync(
 					new ArraySegment<byte>(bytes),
 					WebSocketMessageType.Text,
 					true,

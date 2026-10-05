@@ -619,6 +619,14 @@
     <value>Koble fra karakter</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koble fra {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthUnlinkConfirm" xml:space="preserve">
+    <value>{0} blir ikke lenger en av kontoens karakterer, og alt den ga kontoen (for eksempel en stabsrolle), forsvinner med den. For å koble den til igjen trenger du passordet dens i spillet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthUsername" xml:space="preserve">
     <value>Brukernavn</value>
     <comment>MT</comment>
@@ -3134,10 +3142,6 @@
     <value>{count, plural, one {# pose} other {# poser}}</value>
     <comment>MT</comment>
   </data>
-  <data name="RolPriorityHelper" xml:space="preserve">
-    <value>Høyere verdi vinner ved konflikt</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolPriorityLabel" xml:space="preserve">
     <value>Prioritet</value>
     <comment>MT</comment>
@@ -4575,7 +4579,6 @@
     <value>Ahelp-emnene. Kun for Trollmenn og Gud, i portalen som i spillet.</value>
     <comment>MT</comment>
   </data>
-<data name="RolResolutionExplanation" xml:space="preserve"><value>Den uttrykkelige regelen med høyest prioritet avgjør; avslag vinner ved likhet. Arv brukes bare uten en uttrykkelig regel. Uten tillatelse avvises tilgang. Delegerte administratorer kan bare administrere tillatelser de har med lavere prioritet, uten å endre egne roller eller begrensninger.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Gjeldende tilgang: {0}; prioritet {1}; roller {2}; avgjørelse {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Kunne ikke importere konfigurasjonen: {0}</value>
@@ -5252,5 +5255,37 @@
   </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Scenesystemet er ikke slått på i dette spillet.</value>
+  </data>
+  <data name="RolPriorityHelper" xml:space="preserve">
+    <value>Plassering i hierarkiet. Du kan bare administrere roller under din høyeste rolle.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolResolutionExplanation" xml:space="preserve">
+    <value>Enhver rolle du har som tillater en tillatelse, gir den, uansett prioritet; et Avslå blokkerer bare det ingen rolle tillater. Et kontounntak slår alle roller, og en rolle som tillater Administrator, gir alt. Prioritet avgjør bare hvem som administrerer hvem: du kan bare endre roller og kontoer under din høyeste rolle og bare tillate det du selv har.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrides" xml:space="preserve">
+    <value>Unntak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNoOverrides" xml:space="preserve">
+    <value>Ingen unntak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolClearOverride" xml:space="preserve">
+    <value>Fjern unntak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideScope" xml:space="preserve">
+    <value>Tillatelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverridesHelp" xml:space="preserve">
+    <value>Et unntak på denne kontoen slår alle rollene dens.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideSaved" xml:space="preserve">
+    <value>Unntak for {0} lagret.</value>
+    <comment>MT</comment>
   </data>
 </root>

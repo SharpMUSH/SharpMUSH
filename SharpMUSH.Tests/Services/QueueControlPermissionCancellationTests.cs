@@ -43,6 +43,8 @@ public class QueueControlPermissionCancellationTests
 			yield break;
 		}
 		player.Object().Powers = new(() => Powers());
+		// Built-in powers are read through the object's grants.
+		player.Object().Grants = new(async token => { await Powers(token).ToListAsync(token); return ObjectGrants.None; });
 		var service = new QueueControlService(Substitute.For<ITaskQueueReader>(), Substitute.For<ITaskQueueControl>(), Substitute.For<IAdministrativeCapabilityService>(), mediator, permissions);
 		using var request = new CancellationTokenSource();
 		using var parent = new CancellationTokenSource();

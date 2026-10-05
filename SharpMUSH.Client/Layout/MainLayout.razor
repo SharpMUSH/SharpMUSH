@@ -212,6 +212,7 @@
         Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
         UpdateConfigRouteState();
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
+        ServerInfo.Changed += OnServerInfoChanged;
 
         // None of these depend on who is signed in, so they go out now, alongside session restore,
         // instead of one after another behind it: each is a round trip the shell's zones, the Play
@@ -274,6 +275,9 @@
         StateHasChanged();
     }
 
+    /// <summary>A newer server answer (the guest roster changed): the Play tab follows it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(LoadGuestLoginsEnabledAsync);
+
     private void HandleLayoutChanged(string scope)
     {
         if (!string.Equals(scope, LayoutScopes.Global, StringComparison.OrdinalIgnoreCase))
@@ -335,6 +339,10 @@
             _pagebarOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
+            // A page change is when an aged-out server answer is asked again (a fresh one costs nothing), so
+            // a tab left open follows the guest roster without a reload; a changed answer reaches the menus
+            // through ServerInfo.Changed.
+            _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
             StateHasChanged();
         });
     }
@@ -452,5 +460,6 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
         Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;
+        ServerInfo.Changed -= OnServerInfoChanged;
     }
 }

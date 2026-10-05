@@ -1,5 +1,6 @@
 using NSubstitute;
 using NSubstitute.Core;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -481,5 +482,24 @@ public static class TestHelpers
 				_ => []
 			})
 			.Any(args => localization.Format(key, null, args) == expectedText);
+	}
+
+	/// <summary>
+	/// Gives a hand-built object the grants a role or override would: the named system roles
+	/// (<c>wizard</c>, <c>royalty</c>, ...) and an Allow on each named power (<c>See_All</c>).
+	/// </summary>
+	public static void Grant(this AnySharpObject obj, string[]? roles = null, string[]? powers = null)
+		=> obj.Object().Grants = GrantsFor(obj.Object().Key, obj.IsPlayer, roles, powers);
+
+	/// <summary>
+	/// The grants relation for a hand-built object. A power name that is not a built-in power is
+	/// ignored: those are stored on the object, so they belong in its <c>Powers</c>.
+	/// </summary>
+	public static AsyncRelation<ObjectGrants> GrantsFor(int key, bool isPlayer, string[]? roles = null, string[]? powers = null)
+	{
+		var overrides = (powers ?? []).Select(GamePowers.Find).OfType<GamePowers.Power>()
+			.DistinctBy(p => p.Scope).ToDictionary(p => p.Scope, _ => PermissionState.Allow);
+		var grants = ObjectGrants.For(key, isPlayer, BuiltInRoles.All, roles ?? [], overrides, null);
+		return new(_ => Task.FromResult(grants));
 	}
 }

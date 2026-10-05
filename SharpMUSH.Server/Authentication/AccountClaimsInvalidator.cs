@@ -16,6 +16,13 @@ namespace SharpMUSH.Server.Authentication;
 /// </remarks>
 public sealed class AccountClaimsInvalidator(IFusionCache cache) : IAccountClaimsInvalidator
 {
-	public ValueTask InvalidateAsync(string accountId, CancellationToken ct = default)
-		=> cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId), token: ct);
+	/// <remarks>
+	/// Also expires every object's cached grants: the account's roles and overrides reach each character
+	/// linked to it, and which characters those are is what a link or unlink changes.
+	/// </remarks>
+	public async ValueTask InvalidateAsync(string accountId, CancellationToken ct = default)
+	{
+		await cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId), token: ct);
+		await cache.RemoveByTagAsync(Library.Definitions.CacheTags.Grants, token: ct);
+	}
 }

@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -128,7 +129,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
+		Flags = FunctionFlags.Regular, Restrict = [PortalPermission.PlayersModerate], ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration.CurrentValue.Log.UseConnLog)
@@ -265,7 +266,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "connrecord", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
+		Flags = FunctionFlags.Regular, Restrict = [PortalPermission.PlayersModerate], ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectionRecord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration.CurrentValue.Log.UseConnLog)
@@ -1294,7 +1295,8 @@ public partial class Functions
 	/// works as well as a dbref; resolving it with a dbref parse alone answered
 	/// <c>#-1 NO SUCH PLAYER</c> for every call that named a player.
 	/// </remarks>
-	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		Restrict = [PortalPermission.PlayersModerate],
 		ParameterNames = ["player", "password"])]
 	public async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
