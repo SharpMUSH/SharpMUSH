@@ -56,7 +56,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 		await Assert.That(guides.QuerySelector("img.wiki-cat-cover")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
 		var pages = guides.QuerySelectorAll("a.wiki-cat-page");
 		await Assert.That(pages.Length).IsEqualTo(2);
-		await Assert.That(pages[0].GetAttribute("href")).IsEqualTo("/wiki/main/guides/combat");
+		await Assert.That(pages[0].GetAttribute("href")).IsEqualTo("/wiki/main/combat");
 		await Assert.That(pages[0].QuerySelector(".wiki-cat-tag--draft")).IsNotNull();
 		await Assert.That(guides.QuerySelector("a.wiki-cat-all")!.GetAttribute("href")).IsEqualTo("/wiki/category/guides");
 		await Assert.That(guides.QuerySelector("a.wiki-cat-all")!.TextContent).Contains("2");
@@ -64,9 +64,11 @@ public class WikiHomeD1Tests : TrackingBunitContext
 		var lore = cards[1];
 		await Assert.That(lore.QuerySelector("a.wiki-cat-page .wiki-cat-tag--locked")).IsNotNull();
 
-		var general = cards[2];
-		await Assert.That(general.QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("General");
-		await Assert.That(general.QuerySelector(".wiki-cat-cover-fallback")).IsNotNull();
+		var uncategorized = cards[2];
+		await Assert.That(uncategorized.QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("Uncategorized");
+		await Assert.That(uncategorized.QuerySelector(".wiki-cat-cover-fallback")).IsNotNull();
+		await Assert.That(uncategorized.QuerySelector("a.wiki-cat-all")).IsNull()
+			.Because("pages in no category have no category page to list them all");
 	}
 
 	[Test]

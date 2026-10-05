@@ -29,7 +29,7 @@
         <KitCard Class="wiki-body-card" Title="@CardTitle" Sub="@CardSub" Controls="@(IsHero || _article is null ? null : CardControls)">
             @* Keyed on the address: WikiView fetches once, on init, so a reconfigured widget has to
                remount to go and read the page it now points at. *@
-            <WikiView @key="address" @ref="_view" Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
+            <WikiView @key="address" @ref="_view" Slug="@_slug" Namespace="@_namespace" Locale="@_locale"
                       @bind-Mode="_mode" Embedded="true" ShowTitle="@IsHero"
                       OnLoaded="@(found => HandleLoaded(address, found))"
                       OnArticle="@(article => HandleArticle(address, article))" />
@@ -50,7 +50,6 @@
 
     private string? _slug;
     private string? _namespace;
-    private string? _category;
     private string? _locale;
 
     /// <summary>The page address the current <see cref="_missing"/> answer was measured against.</summary>
@@ -90,31 +89,30 @@
         var cfg = ParseConfig();
 
         // Blank is not the same as absent to WikiService — it defaults on null only, so a config with
-        // "namespace": "" would build /api/wiki/ns//general/{slug}. Normalize before handing it over.
+        // "namespace": "" would build /api/wiki/ns//{slug}. Normalize before handing it over.
         var ns = Blank(cfg?.Namespace);
-        var category = Blank(cfg?.Category);
         var locale = Blank(cfg?.Locale);
         var slug = Blank(cfg?.Slug);
 
         if (slug is not null)
         {
-            SetPage(slug, ns, category, locale);
+            SetPage(slug, ns, locale);
             return;
         }
 
         // No explicit page — fall back to a character biography, from config or from the page context.
         var character = Blank(cfg?.Character) ?? Blank(PageContext?.CharacterName);
 
-        SetPage(character, WikiRoutes.CharacterNamespace, category, locale);
+        SetPage(character, WikiRoutes.CharacterNamespace, locale);
     }
 
     /// <summary>
     /// Points the widget at a page, forgetting the previous page's found/missing answer whenever the
     /// address changes — otherwise a reconfigured widget stays hidden on the strength of the old page.
     /// </summary>
-    private void SetPage(string? slug, string? ns, string? category, string? locale)
+    private void SetPage(string? slug, string? ns, string? locale)
     {
-        var address = string.Join('\u0000', slug, ns, category, locale);
+        var address = string.Join('\u0000', slug, ns, locale);
         if (address != _address)
         {
             _address = address;
@@ -123,7 +121,7 @@
             _mode = WikiView.WikiMode.View;
         }
 
-        (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
+        (_slug, _namespace, _locale) = (slug, ns, locale);
     }
 
     /// <summary>
@@ -150,7 +148,7 @@
     private bool IsHero => string.Equals(_slug, "home", StringComparison.OrdinalIgnoreCase)
         && (_namespace is null || string.Equals(_namespace, "main", StringComparison.OrdinalIgnoreCase));
 
-    private bool IsBiography => WikiRoutes.IsCharacterProfile(_namespace, _category);
+    private bool IsBiography => WikiRoutes.IsCharacterProfile(_namespace);
 
     private string? CardTitle => IsHero ? null : IsBiography ? Loc["NavBiography"].Value : _article?.Title;
 
@@ -159,7 +157,7 @@
         : string.Format(Loc["NavWikiPageEdited"], Loc.Format(edited));
 
     private string HistoryHref =>
-        WikiRoutes.WikiPathFor(_namespace, _article?.Category ?? _category, _article?.Slug ?? _slug ?? string.Empty) + "/history";
+        WikiRoutes.WikiPathFor(_namespace, _article?.Slug ?? _slug ?? string.Empty) + "/history";
 
     /// <summary>
     /// History, and Edit for whoever may edit. Embedded, the page has no header of its own to carry
@@ -195,7 +193,7 @@
     /// empty state ("has not written one yet"), which is a message worth framing.
     /// </summary>
     private bool NothingToShow =>
-        _missing && !_mayCreate && !WikiRoutes.IsCharacterProfile(_namespace, _category);
+        _missing && !_mayCreate && !WikiRoutes.IsCharacterProfile(_namespace);
 
     /// <summary>Trims a config value, mapping blank to null so downstream defaults apply.</summary>
     private static string? Blank(string? value)

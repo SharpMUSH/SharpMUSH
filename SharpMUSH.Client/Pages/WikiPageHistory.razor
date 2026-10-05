@@ -1,4 +1,4 @@
-@page "/wiki/{Ns}/{Category}/{Slug}/history"
+@page "/wiki/{Ns}/{Slug}/history"
 @layout WikiLayout
 @attribute [Authorize(Policy = "wiki.read")]
 @using SharpMUSH.Client.Models
@@ -12,7 +12,7 @@
 <PageTitle>@Loc["WkHistoryPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
 <div class="wikihist">
-    <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Category, Slug))">@_displayTitle</BackLink>
+    <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Slug))">@_displayTitle</BackLink>
     <PlainPageHeader Kicker="@Loc["WkRevisionHistory"]" Title="@_displayTitle">
         <Actions>
             @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
@@ -29,10 +29,10 @@
     {
         <div class="wiki-lang-chips">
             <span class="wiki-lang-chips-label">@Loc["WkHistoryLocale"]</span>
-            <a href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">@Loc["WkSourceLocaleLabel"]</a>
+            <a href="@($"/wiki/{Ns}/{Slug}/history")">@Loc["WkSourceLocaleLabel"]</a>
             @foreach (var t in _translations)
             {
-                <a href="@($"/wiki/{Ns}/{Category}/{Slug}/history?lang={Uri.EscapeDataString(t.Locale)}")">
+                <a href="@($"/wiki/{Ns}/{Slug}/history?lang={Uri.EscapeDataString(t.Locale)}")">
                     @PortalLocales.DisplayName(t.Locale)
                 </a>
             }
@@ -143,7 +143,7 @@
                     <div style="display:flex;gap:0.25rem;align-items:center;justify-content:center;">
                         <MudTooltip Text="@Loc["WkViewRevision"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
-                                           Href="@WithLang($"/wiki/{Ns}/{Category}/{Slug}")" />
+                                           Href="@WithLang($"/wiki/{Ns}/{Slug}")" />
                         </MudTooltip>
                         @if (!isCurrent)
                         {
@@ -165,7 +165,6 @@
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
-    [Parameter] public required string Category { get; set; }
 
     /// <summary>
     /// The revision stream to show, from <c>?lang=</c>. Numbering restarts at 1 per locale, so this is what
@@ -189,9 +188,9 @@
         _loading = true;
         _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
-        var result = await Wiki.GetRevisionsAsync(Slug, skip: 0, take: 50, ns: Ns, category: Category, lang: Lang);
+        var result = await Wiki.GetRevisionsAsync(Slug, skip: 0, take: 50, ns: Ns, lang: Lang);
         _revisions = [.. result];
-        _translations = await Wiki.GetTranslationsAsync(Slug, Ns, Category);
+        _translations = await Wiki.GetTranslationsAsync(Slug, Ns);
         _loading = false;
 
         if (_revisions.Count >= 2)
@@ -216,7 +215,7 @@
     }
 
     private string DiffHref() =>
-        WithLang($"/wiki/{Ns}/{Category}/{Slug}/diff?from={_oldRev}&to={_newRev}");
+        WithLang($"/wiki/{Ns}/{Slug}/diff?from={_oldRev}&to={_newRev}");
 
     /// <summary>Appends the current <c>?lang=</c> so navigating within history never silently changes locale.</summary>
     private string WithLang(string url) =>
@@ -227,13 +226,13 @@
     private async Task RestoreAsync(WikiRevisionInfo rev)
     {
         _restoring = true;
-        var result = await Wiki.RollbackAsync(Slug, rev.RevisionNumber, Ns, Category);
+        var result = await Wiki.RollbackAsync(Slug, rev.RevisionNumber, Ns);
         _restoring = false;
         switch (result)
         {
             case WikiArticle:
                 Snackbar.Add(Loc["WkRestoredToRevision", rev.RevisionNumber], Severity.Success);
-                Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug));
+                Nav.NavigateTo(WikiRoutes.PathFor(Ns, Slug));
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["WkRestoreFailed", failure.Message], Severity.Error);

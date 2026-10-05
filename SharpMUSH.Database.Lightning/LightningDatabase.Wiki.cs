@@ -18,7 +18,7 @@ namespace SharpMUSH.Database.Lightning;
 /// Four tables carry the area. <see cref="Tables.WikiPage"/> holds the page rows, keyed by an id drawn
 /// from the <c>next_wiki</c> counter (its own sequence — wiki ids and dbrefs are unrelated), and
 /// <see cref="Tables.WikiSlug"/> is the unique index over the page's real identity,
-/// <c>(namespace, category, slug)</c>, keyed by <see cref="WikiHelpers.SlugKey"/>'s string so the
+/// <c>(namespace, slug)</c>, keyed by <see cref="WikiHelpers.SlugKey"/>'s string so the
 /// duplicate-create check is a single <c>TryGet</c> rather than a scan.
 /// <para>
 /// <see cref="Tables.WikiRev"/> is keyed <c>(pageId, locale, revisionNumber)</c> with the number in
@@ -29,12 +29,12 @@ namespace SharpMUSH.Database.Lightning;
 /// range and gives the <c>(pageId, locale)</c> uniqueness the contract asks for for free.
 /// </para>
 /// <para>
-/// Four list indexes answer the listings without reading page rows, whose Markdown, HTML and plain
+/// Three list indexes answer the listings without reading page rows, whose Markdown, HTML and plain
 /// text dwarf what a listing filters and sorts on. Each value is the page's visibility (a published byte
 /// and the author dbref), and each key ends with the page key, the deterministic tie-break:
 /// <see cref="Tables.WikiRecent"/> is <c>(UpdatedAt UTC ticks, page)</c>, read backwards;
 /// <see cref="Tables.WikiByNamespace"/> is <c>(namespace, slug, page)</c>; <see cref="Tables.WikiByCategory"/>
-/// and <see cref="Tables.WikiByTag"/> are <c>(upper-cased category or tag, title, page)</c>. The ordered
+/// is <c>(upper-cased category, title, page)</c>, one entry per category the page is in. The ordered
 /// strings (namespace, slug, title) are written UTF-16 big-endian with a two-byte zero separator, so the
 /// key order is exactly <see cref="StringComparer.Ordinal"/>'s; the matched strings are upper-cased
 /// invariantly, which is how <see cref="StringComparison.OrdinalIgnoreCase"/> compares. A listing reads
@@ -77,8 +77,8 @@ public partial class LightningDatabase : IWikiStore
 
 	private static byte[] WikiPageKey(long key) => Keys.Dbref(key);
 
-	private static byte[] WikiSlugKey(string nsStr, string? category, string slug)
-		=> Keys.Lower(WikiHelpers.SlugKey(nsStr, category, slug));
+	private static byte[] WikiSlugKey(string nsStr, string slug)
+		=> Keys.Lower(WikiHelpers.SlugKey(nsStr, slug));
 
 	private static byte[] WikiRevKey(string pageId, string locale, int revisionNumber)
 		=> Keys.Composite(pageId, locale, (uint)revisionNumber);
@@ -117,9 +117,9 @@ public partial class LightningDatabase : IWikiStore
 	private static byte[] WikiLabelKey(string label, long pageKey, WikiPageRecord r)
 		=> Keys.Concat(WikiLabelPrefix(label), OrdinalBytes(r.Title), OrdinalSep, Keys.Dbref(pageKey));
 
-	/// <summary>The tags a page is listed under, once each however many case variants it carries.</summary>
-	private static IEnumerable<string> WikiIndexTags(WikiPageRecord r)
-		=> (r.Tags ?? []).DistinctBy(tag => tag.ToUpperInvariant());
+	/// <summary>The categories a page is listed under, once each however many case variants it carries.</summary>
+	private static IEnumerable<string> WikiIndexCategories(WikiPageRecord r)
+		=> (r.Categories ?? []).DistinctBy(category => category.ToUpperInvariant());
 
 	/// <summary>Writes (<paramref name="add"/>) or removes every list-index entry <paramref name="r"/> holds.</summary>
 	private static void WikiListIndexes(ITx tx, long pageKey, WikiPageRecord r, bool add)
@@ -127,9 +127,7 @@ public partial class LightningDatabase : IWikiStore
 		var value = WikiVisibilityValue(r);
 		Apply(Tables.WikiRecent, WikiRecentKey(pageKey, r));
 		Apply(Tables.WikiByNamespace, WikiNamespaceKey(pageKey, r));
-		// MapWikiPage turns an empty category into none, and no listing matches none.
-		if (!string.IsNullOrEmpty(r.Category)) Apply(Tables.WikiByCategory, WikiLabelKey(r.Category, pageKey, r));
-		foreach (var tag in WikiIndexTags(r)) Apply(Tables.WikiByTag, WikiLabelKey(tag, pageKey, r));
+		foreach (var category in WikiIndexCategories(r)) Apply(Tables.WikiByCategory, WikiLabelKey(category, pageKey, r));
 		if (r.IsProtected) Apply(Tables.WikiProtected, WikiPageKey(pageKey));
 
 		void Apply(TableDef table, byte[] key)
@@ -231,8 +229,7 @@ public partial class LightningDatabase : IWikiStore
 		IsProtected: r.IsProtected,
 		RevisionNumber: r.RevisionNumber)
 	{
-		Category = string.IsNullOrEmpty(r.Category) ? null : r.Category,
-		Tags = r.Tags ?? [],
+		Categories = r.Categories ?? [],
 		Published = r.Published ?? true,
 		// Read straight through: a record the backfill has not reached yields empty, which means
 		// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
@@ -302,10 +299,10 @@ public partial class LightningDatabase : IWikiStore
 		tx.Put(Tables.WikiRev, WikiRevKey(pageId, locale, revisionNumber), Codec.Serialize(record));
 	}
 
-	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string category, string slug)
+	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string slug)
 		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 		{
-			if (!tx.TryGet(Tables.WikiSlug, WikiSlugKey(ns, category, slug), out var idBytes)) return new NotFound();
+			if (!tx.TryGet(Tables.WikiSlug, WikiSlugKey(ns, slug), out var idBytes)) return new NotFound();
 
 			var pageKey = Keys.ReadDbref(idBytes);
 			return TryReadWikiPage(tx, pageKey) is { } record ? MapWikiPage(pageKey, record) : new NotFound();
@@ -349,10 +346,6 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
 			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
 
-	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
-			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByTag, WikiLabelPrefix(tag)), visibility, skip, take)));
-
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page)
 	{
 		var record = new WikiPageRecord
@@ -369,21 +362,20 @@ public partial class LightningDatabase : IWikiStore
 			UpdatedAt = WikiTimestamp(page.UpdatedAt),
 			IsProtected = page.IsProtected,
 			RevisionNumber = 1,
-			Category = page.Category,
-			Tags = [.. page.Tags],
+			Categories = [.. page.Categories],
 			Published = page.Published,
 			SourceLocale = page.SourceLocale
 		};
 
 		// The duplicate check and the insert share one write job, so two creators of the same
-		// (namespace, category, slug) cannot both pass the check.
+		// (namespace, slug) cannot both pass the check.
 		return await Store.WriteAsync<Result<WikiPage>>(tx =>
 		{
-			var slugKey = WikiSlugKey(record.Namespace, record.Category, record.Slug);
+			var slugKey = WikiSlugKey(record.Namespace, record.Slug);
 			if (tx.TryGet(Tables.WikiSlug, slugKey, out _))
 			{
 				return new Error<string>(
-					$"A wiki page with slug '{record.Slug}' already exists in namespace '{record.Namespace}' category '{record.Category}'.");
+					$"A wiki page with slug '{record.Slug}' already exists in namespace '{record.Namespace}'.");
 			}
 
 			var key = AllocateWikiId(tx);
@@ -431,7 +423,7 @@ public partial class LightningDatabase : IWikiStore
 			// this page share the page id as their first key segment.
 			tx.DeletePrefix(Tables.WikiRev, WikiPagePrefix(pageId));
 			tx.DeletePrefix(Tables.WikiTr, WikiPagePrefix(pageId));
-			tx.Delete(Tables.WikiSlug, WikiSlugKey(found.Record.Namespace, found.Record.Category, found.Record.Slug));
+			tx.Delete(Tables.WikiSlug, WikiSlugKey(found.Record.Namespace, found.Record.Slug));
 			WikiListIndexes(tx, found.Key, found.Record, add: false);
 			tx.Delete(Tables.WikiPage, WikiPageKey(found.Key));
 			return new None();
@@ -446,35 +438,12 @@ public partial class LightningDatabase : IWikiStore
 			return new None();
 		});
 
-	public async Task<Found<WikiPage>> SetPageMetadataAsync(string id, string category, IReadOnlyList<string> tags,
-		bool published)
+	public async Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
-			// A row written before categories were stamped reads as the default category, which is the key its
-			// slug index entry was written under.
-			var existingCategory = WikiHelpers.NormalizeCategory(found.Record.Category);
-			var recategorized = !string.Equals(category, existingCategory, StringComparison.OrdinalIgnoreCase);
-			var oldSlugKey = WikiSlugKey(found.Record.Namespace, existingCategory, found.Record.Slug);
-			var newSlugKey = WikiSlugKey(found.Record.Namespace, category, found.Record.Slug);
-
-			// Category is part of page identity, so a recategorization that would collide is refused.
-			if (recategorized && tx.TryGet(Tables.WikiSlug, newSlugKey, out _)) return new NotFound();
-
-			var updated = found.Record with
-			{
-				Category = category,
-				Tags = [.. tags],
-				Published = published
-			};
-
-			if (recategorized)
-			{
-				tx.Delete(Tables.WikiSlug, oldSlugKey);
-				tx.Put(Tables.WikiSlug, newSlugKey, Keys.Dbref(found.Key));
-			}
-
+			var updated = found.Record with { Categories = [.. categories], Published = published };
 			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});

@@ -28,9 +28,9 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			var path = request.RequestUri!.AbsolutePath;
 			string? body = path switch
 			{
-				"/api/wiki/ns/character/general/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
-				"/api/wiki/ns/main/general/rules" => Page("rules", "House Rules", "main"),
-				"/api/wiki/ns/character/general/Home" => Page("home", "Home", "character"),
+				"/api/wiki/ns/character/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
+				"/api/wiki/ns/main/rules" => Page("rules", "House Rules", "main"),
+				"/api/wiki/ns/character/Home" => Page("home", "Home", "character"),
 				"/api/wiki/exists" => "{}",
 				_ => null,
 			};
@@ -40,10 +40,10 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		}
 
 		private static string Page(string slug, string title, string ns) => $$"""
-			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","category":"general",
+			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","categories":[],
 			 "markdownSource":"Lean and quiet.","renderedHtml":"<p>Lean and quiet.</p>","plainText":"Lean and quiet.",
 			 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"{{DateTimeOffset.UtcNow.AddDays(-3):O}}",
-			 "isProtected":false,"revisionNumber":2,"tags":[],"published":true,"lastEditedBy":"Tomas Reyes",
+			 "isProtected":false,"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
 			 "locale":"en","requestedLocale":"en","availableLocales":["en"]}
 			""";
 	}
@@ -75,7 +75,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		await Assert.That(cut.Find(".wiki-body-card .kit-card-title").TextContent).IsEqualTo("Biography");
 		await Assert.That(cut.Find(".wiki-body-card .kit-card-sub").TextContent).StartsWith("Wiki page · edited");
 		await Assert.That(cut.Find(".wiki-body-card a.wiki-body-history").GetAttribute("href"))
-			.IsEqualTo("/wiki/character/general/tomas_reyes/history");
+			.IsEqualTo("/wiki/character/tomas_reyes/history");
 		await Assert.That(cut.Find(".wiki-body-card").TextContent).Contains("Lean and quiet.");
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-article-title").Count).IsEqualTo(0)
 			.Because("the card header names it; a second title inside would repeat it");

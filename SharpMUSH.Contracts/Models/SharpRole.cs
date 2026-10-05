@@ -20,6 +20,9 @@ public class SharpRole
 	/// <summary>Human-readable display name.</summary>
 	public required string Name { get; set; }
 
+	/// <summary>What the role is grouped under on the portal's Roles page (<see cref="Categories"/>).</summary>
+	public string Category { get; set; } = "";
+
 	/// <summary>Optional hex color (e.g. "#5aa9ff") for the role chip.</summary>
 	public string? Color { get; set; }
 

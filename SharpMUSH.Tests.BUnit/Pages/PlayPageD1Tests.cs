@@ -116,9 +116,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null)
+	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false)
 	{
-		var focusJson = focus is { } f ? $$""","role":"participant","focus":{{(f ? "true" : "false")}}""" : string.Empty;
+		var focusJson = focus is { } f
+			? $$""","role":"participant","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
+			: string.Empty;
 		var sceneJson = scene ? $$""","scene":{"id":"{{sceneId}}","title":"Salt Market at Dusk","cast":5{{focusJson}}}""" : string.Empty;
 		_store.Set(OobEntryParser.RoomInfoPackage,
 			$$"""{"v":2,"dbref":"#1201","objid":"#1201:1","name":"Lower Docks","area":"Harbour Ward","image":{"url":"/r/docks.jpg"}{{sceneJson}}}""");
@@ -210,6 +212,63 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		cut.Find("button.play-join-btn").Click();
 		await _play.Received(1).SendAsync("+scene/join 42");
+	}
+
+	/// <summary>
+	/// The join bar says why a pose would miss the story: the viewer has not joined it, or their poses go to
+	/// the scene they are focused on instead.
+	/// </summary>
+	[Test]
+	[Arguments(false, "You haven't joined this scene yet. Join it to pose here.")]
+	[Arguments(true, "Your poses go to another scene. Join this one to pose here.")]
+	public async Task TheJoinBar_SaysWhetherTheViewerIsInAnotherScene(bool elsewhere, string text)
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false, elsewhere: elsewhere);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".play-join-text").TextContent).IsEqualTo(text);
+	}
+
+	/// <summary>
+	/// A refused join prints its reason to the terminal, which the Story view does not show: the join bar
+	/// repeats what the game said, and says the join failed when the game said nothing.
+	/// </summary>
+	[Test]
+	[Arguments("You are not approved to take part in scenes.", "You are not approved to take part in scenes.")]
+	[Arguments(null, "The game did not let you join this scene.")]
+	public async Task ARefusedJoin_SaysWhyInTheJoinBar(string? said, string shown)
+	{
+		_play.When(p => p.SendAsync("+scene/join 42")).Do(_ =>
+		{
+			if (said is not null)
+				_play.LineReceived += Raise.Event<Action<SharpMUSH.Client.Models.TerminalLine>>(
+					new SharpMUSH.Client.Models.TerminalLine(DateTime.UtcNow, said, SharpMUSH.Client.Models.TerminalLineSource.Server));
+		});
+		_play.SendCommandAsync("scenefocus(me)", Arg.Any<int>()).Returns(["#-1 NOT FOUND"]);
+
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-join-btn").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".play-join-refusal"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-join-refusal").TextContent).IsEqualTo(shown);
+	}
+
+	/// <summary>A join that took leaves nothing to say: the room.info that follows brings the composer.</summary>
+	[Test]
+	public async Task AJoinThatTook_ShowsNoRefusal()
+	{
+		_play.SendCommandAsync("scenefocus(me)", Arg.Any<int>()).Returns(["42"]);
+
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-join-btn").Click();
+
+		await _play.Received(1).SendCommandAsync("scenefocus(me)", Arg.Any<int>());
+		await Assert.That(cut.FindAll(".play-join-refusal").Count).IsEqualTo(0);
 	}
 
 	/// <summary>The room.info that follows a join brings the composer back, with a Leave beside it.</summary>
@@ -348,6 +407,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find("button.play-settings-btn").Click();
 		cut.WaitForAssertion(() => cut.Find("button.play-cfg-focus"), TimeSpan.FromSeconds(5));
 		cut.Find("button.play-cfg-focus").Click();
+		// The page re-renders after the click's handler, not inside it: wait for that render.
+		cut.WaitForAssertion(() => cut.Find(".play--focus"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play--focus").Count).IsEqualTo(1);
 	}
 
@@ -709,8 +770,10 @@ public class PlayPageD1Tests : TrackingBunitContext
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find("button.scene-card-sub--action"), TimeSpan.FromSeconds(5));
 		cut.Find("button.scene-card-sub--action").Click();
+		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1);
 		cut.Find("button.kit-banner-minimise").Click();
+		cut.WaitForState(() => cut.FindAll(".kit-banner, .kit-banner-strip").Count == 0, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimise folds it back into the header, not to a strip");
 		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments)
 			.Where(a => (string?)a[0] == "play.banner").Select(a => (string?)a[1]).ToList();
