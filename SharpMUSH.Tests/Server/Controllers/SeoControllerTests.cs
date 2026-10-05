@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Tests.Authentication;
 using SharpMUSH.Configuration.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,7 +28,8 @@ public class SeoControllerTests
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
 		var localization = new WikiLocalizationService(
 			wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
-		var controller = new SeoController(wiki, localization, NullLogger<SeoController>.Instance);
+		var access = new WikiAccessService(wiki, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
+		var controller = new SeoController(wiki, localization, access, NullLogger<SeoController>.Instance);
 
 		var httpContext = new DefaultHttpContext();
 		httpContext.Request.Scheme = "https";

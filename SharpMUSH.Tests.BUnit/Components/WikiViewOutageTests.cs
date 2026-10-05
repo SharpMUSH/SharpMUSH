@@ -28,7 +28,7 @@ internal sealed class RestartingWikiHandler : HttpMessageHandler
 					Id: "home", Slug: "home", Title: "Front Page", Namespace: "main",
 					MarkdownSource: "body", RenderedHtml: "<p>Welcome back</p>", PlainText: "Welcome back",
 					CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
-					IsProtected: false, RevisionNumber: 1, Categories: [], Published: true))
+					IsRestricted: false, RevisionNumber: 1, Categories: [], Published: true))
 			}
 			: new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 }

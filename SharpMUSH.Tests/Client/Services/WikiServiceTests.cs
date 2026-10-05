@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Models;

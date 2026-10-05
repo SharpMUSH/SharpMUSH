@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
@@ -97,35 +98,67 @@ public static class WikiCommandHelper
 	public static string DisplayReference(WikiPage page) =>
 		$"{page.Namespace}:{page.Slug}";
 
-	/// <summary>
-	/// Edit permission mirrors the web rule: protected pages are Wizard-only;
-	/// everything else is editable by any player.
-	/// </summary>
-	public static async ValueTask<bool> CanEdit(AnySharpObject executor, WikiPage page) =>
-		!page.IsProtected || await executor.Can(PortalPermission.WikiAdmin);
+	/// <summary>The one service that decides wiki permissions, shared with the portal and the wiki functions.</summary>
+	public static IWikiAccessService Access(IMUSHCodeParser parser)
+		=> parser.ServiceProvider.GetRequiredService<IWikiAccessService>();
+
+	/// <summary>The executor as a wiki reader: what its roles grant, and its dbref as authors are stored.</summary>
+	public static ValueTask<WikiReader> ReaderAsync(IMUSHCodeParser parser, AnySharpObject executor)
+		=> Access(parser).ForObjectAsync(executor);
+
+	/// <summary>The pages a listing shows the executor, applied by the store before it pages.</summary>
+	public static async ValueTask<WikiVisibility> VisibilityAsync(IMUSHCodeParser parser, AnySharpObject executor)
+		=> await Access(parser).VisibilityAsync(await ReaderAsync(parser, executor));
 
 	/// <summary>
-	/// True when this reader may see unpublished (draft) pages and unpublished translations. The in-game
-	/// counterpart of the portal's <c>wiki.read</c> scope, and the <c>includeDrafts</c> argument every
+	/// The pages softcode run by <paramref name="executor"/> may reach: what it may read, and never a draft,
+	/// its own included. A function result is copied into attributes and messages anywhere, so a draft does
+	/// not leave the page through one.
+	/// </summary>
+	public static async ValueTask<WikiVisibility> SoftcodeVisibilityAsync(IMUSHCodeParser parser, AnySharpObject executor)
+		=> await VisibilityAsync(parser, executor) with { IncludeDrafts = false, AuthorDbref = null };
+
+	/// <summary>
+	/// Whether the executor may take <paramref name="action"/> on <paramref name="page"/>; when not, tells it
+	/// why ("WIKI: You can't edit 'Title': category lore requires lore.edit."), and returns the refusal to
+	/// hand back. A page the executor may not read gets the same answer as a page that does not exist, so
+	/// the refusal does not disclose it.
+	/// </summary>
+	public static async ValueTask<MString?> RefusalAsync(IMUSHCodeParser parser, INotifyService notifyService,
+		AnySharpObject executor, WikiPage page, WikiAction action, string targetText)
+	{
+		var access = Access(parser);
+		var reader = await ReaderAsync(parser, executor);
+		if (!(await access.DecideAsync(reader, page, WikiAction.Read)).Allowed)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetText.Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var decision = await access.DecideAsync(reader, page, action);
+		if (decision.Allowed) return null;
+
+		await notifyService.Notify(executor,
+			$"WIKI: You can't {action.ToString().ToLowerInvariant()} '{page.Title}': {decision.Describe()}.", executor);
+		return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	/// <summary>
+	/// True when this reader may see other people's unpublished (draft) pages and unpublished translations:
+	/// the <c>wiki.drafts</c> permission, which the portal checks too. The <c>includeDrafts</c> argument every
 	/// <c>IWikiLocalizationService</c> read takes.
 	/// </summary>
-	/// <remarks>
-	/// Deliberately <em>not</em> <see cref="CanEdit"/>. That rule grants every player edit rights on every
-	/// unprotected page, so using it here would gate nothing: an unpublished page stays a draft precisely
-	/// because a wizard unpublished it (<c>@wiki/publish</c> and <c>@wiki/unpublish</c> are wizard-only),
-	/// and the wizard bit is therefore the only in-game distinction that tracks who is allowed to know a
-	/// draft exists.
-	/// </remarks>
-	public static ValueTask<bool> CanSeeDrafts(AnySharpObject executor) => executor.IsWizard();
+	public static async ValueTask<bool> CanSeeDrafts(IMUSHCodeParser parser, AnySharpObject executor)
+		=> (await ReaderAsync(parser, executor)).Has(PortalPermission.WikiDrafts);
 
 	/// <summary>The executor's dbref string as stored in wiki author/editor fields.</summary>
 	public static string EditorDbref(AnySharpObject executor) =>
 		$"#{executor.Object().Key}";
 
-	/// <summary>One listing line: "reference — Title (rev N, yyyy-MM-dd)" plus draft/protected markers.</summary>
+	/// <summary>One listing line: "reference — Title (rev N, yyyy-MM-dd)" plus a draft marker.</summary>
 	public static string FormatPageLine(WikiPage page)
 	{
-		var markers = $"{(page.Published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
+		var markers = page.Published ? "" : " (draft)";
 		return $"{DisplayReference(page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
 	}
 
@@ -136,7 +169,7 @@ public static class WikiCommandHelper
 	/// </summary>
 	public static string FormatPageLine(LocalizedWikiPage page)
 	{
-		var markers = $"{(page.Published ? "" : " (draft)")}{(page.Page.IsProtected ? " (protected)" : "")}";
+		var markers = page.Published ? "" : " (draft)";
 		return $"{DisplayReference(page.Page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
 	}
 

@@ -73,9 +73,9 @@ public class WikiMetadataServiceTests
 		await CreatePageAsync(svc, "Two");
 		await CreatePageAsync(svc, "Help One", WikiNamespace.Help);
 
-		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(3);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: true)).IsEqualTo(1);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Character, includeDrafts: true)).IsEqualTo(0);
+		await Assert.That(await svc.CountPagesAsync(null, WikiVisibility.All)).IsEqualTo(3);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, WikiVisibility.All)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Character, WikiVisibility.All)).IsEqualTo(0);
 	}
 
 	[Test]
@@ -92,14 +92,14 @@ public class WikiMetadataServiceTests
 		await svc.SetMetadataAsync(draft.Id, draft.Categories, published: false);
 		await svc.SetMetadataAsync(help[0].Id, help[0].Categories, published: false);
 
-		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(3);
+		await Assert.That(await svc.CountPagesAsync(null, WikiVisibility.PublishedOnly)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(null, WikiVisibility.All)).IsEqualTo(3);
 
 		// Per namespace too: the namespace filter and the draft filter have to compose, not replace.
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: false)).IsEqualTo(0);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, includeDrafts: true)).IsEqualTo(1);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, includeDrafts: true)).IsEqualTo(2);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, WikiVisibility.PublishedOnly)).IsEqualTo(0);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help, WikiVisibility.All)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, WikiVisibility.PublishedOnly)).IsEqualTo(1);
+		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Main, WikiVisibility.All)).IsEqualTo(2);
 	}
 
 	[Test]

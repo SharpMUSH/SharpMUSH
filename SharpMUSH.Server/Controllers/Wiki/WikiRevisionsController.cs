@@ -29,9 +29,10 @@ namespace SharpMUSH.Server.Controllers;
 public class WikiRevisionsController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IPrerenderCacheService prerenderCache,
 	IWikiNameResolver names,
-	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
+	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;lang=&amp;before=
@@ -46,7 +47,7 @@ public class WikiRevisionsController(
 		[FromQuery] string? lang = null, [FromQuery] int? before = null)
 	{
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !await CanSeeAsync(page))
 			return NotFound();
 
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
@@ -75,7 +76,7 @@ public class WikiRevisionsController(
 		[FromQuery] string? lang = null)
 	{
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !await CanSeeAsync(page))
 			return NotFound();
 
 		var stream = await ResolveRevisionStreamAsync(page, lang);
@@ -101,8 +102,8 @@ public class WikiRevisionsController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
-		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
-			return Forbid();
+		if (await RefusalAsync(page, WikiAction.Edit) is { } refusal)
+			return refusal;
 
 		if (await Wiki.GetRevisionAsync(page.Id, request.RevisionNumber) is not WikiRevision revision)
 			return NotFound();

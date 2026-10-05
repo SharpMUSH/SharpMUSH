@@ -20,7 +20,7 @@ public partial class Commands
 		Switches =
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
-			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH",
+			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "REQUIRE", "ACCESS",
 			"NOEVAL", "SOURCE", "DRAFT", "MD"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
@@ -43,7 +43,7 @@ public partial class Commands
 		// same treatment /DRAFT gets on /search.
 		var showRaw = switches.Contains("MD");
 		// /DRAFT is an opt-in to render unpublished content, never a grant: ViewWiki still checks
-		// WikiCommandHelper.CanSeeDrafts, so a mortal passing it gets exactly what they get without it.
+		// wiki.drafts (or authorship), so a mortal passing it gets exactly what they get without it.
 		var showDraft = switches.Contains("DRAFT");
 		if (actions.Length > 1)
 		{
@@ -109,6 +109,10 @@ public partial class Commands
 				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Publish),
 			"UNPUBLISH" when hasArg0 && !hasArg1
 				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Unpublish),
+			"REQUIRE" when hasArg0 && hasArg1
+				=> await AccessWiki.Require(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			"ACCESS" when hasArg0
+				=> await AccessWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			// "page=list" sets a page's categories ("page=" clears them); a bare name lists a category.
 			"CATEGORY" when hasArg0 && arg1CallState is not null
 				=> await EditWiki.SetCategories(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1),

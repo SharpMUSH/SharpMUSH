@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
@@ -144,7 +145,7 @@ public class WikiHistoryRetentionTests
 	{
 		var shielded = await PageWithRevisionsAsync(db, wiki, "Shielded Page", 5);
 		var open = await PageWithRevisionsAsync(db, wiki, "Open Page", 5);
-		(await wiki.SetProtectionAsync(shielded, true)).Expect<None>();
+		(await wiki.ProtectAsync(shielded, true)).Expect<None>();
 
 		await Retention(db, new HistoryRetentionRule { KeepNewest = 1 }).PurgeAsync();
 

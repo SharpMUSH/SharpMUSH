@@ -13,8 +13,7 @@ public class LocalizedWikiPageTests
 		Id: "1", Slug: "dragons", Title: "Dragons", Namespace: "main",
 		MarkdownSource: "en body", RenderedHtml: "<p>en body</p>", PlainText: "en body",
 		AuthorDbref: "#1", LastEditorDbref: "#1",
-		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: false, RevisionNumber: 1);
+		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch, RevisionNumber: 1);
 
 	private static WikiPage BarePage() => UnstampedPage() with
 	{

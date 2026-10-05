@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -420,7 +421,7 @@ public class WikiCommandTests
 			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
 
 		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
@@ -1050,7 +1051,7 @@ public class WikiCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorMortal");
 		var page = await SeedSourcePageAsync("Protected Dragons", "en protected body");
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps interdit"));
@@ -1069,7 +1070,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedSourcePageAsync("Wizard Protected Dragons", "en wiz protected body");
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps autorise"));

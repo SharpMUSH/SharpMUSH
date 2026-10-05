@@ -47,7 +47,7 @@ file sealed class GatedWikiHandler(string gatedSlug, params string[] existingSlu
 		Id: slug, Slug: slug, Title: slug, Namespace: "main",
 		MarkdownSource: "body", RenderedHtml: "<p>body</p>", PlainText: "body",
 		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: false, RevisionNumber: 1,
+		IsRestricted: false, RevisionNumber: 1,
 		Categories: [], Published: true);
 }
 

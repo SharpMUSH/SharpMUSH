@@ -96,7 +96,7 @@ public partial class LightningDatabase
 			if (stream.Count == 0) return [];
 
 			var pageId = Codec.Deserialize<WikiRevisionRecord>(stream[0].Value).PageId;
-			if (TryReadWikiPage(tx, pageId) is { Record.IsProtected: true }) return [];
+			if (WikiPageHasRequirements(tx, pageId)) return [];
 
 			var latest = stream.Count - 1;
 			return HistoryScan.Purgeable(

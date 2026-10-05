@@ -42,7 +42,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","categories":[],
 			 "markdownSource":"Lean and quiet.","renderedHtml":"<p>Lean and quiet.</p>","plainText":"Lean and quiet.",
 			 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"{{DateTimeOffset.UtcNow.AddDays(-3):O}}",
-			 "isProtected":false,"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
+			 "isRestricted":false,"access":{"read":true,"edit":true,"delete":true,"manage":false},"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
 			 "locale":"en","requestedLocale":"en","availableLocales":["en"]}
 			""";
 	}

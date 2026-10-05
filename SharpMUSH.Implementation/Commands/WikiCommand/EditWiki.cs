@@ -38,6 +38,14 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
+		var decision = await WikiCommandHelper.Access(parser).DecideCreateAsync(
+			await WikiCommandHelper.ReaderAsync(parser, executor), WikiHelpers.NamespaceName(ns), []);
+		if (!decision.Allowed)
+		{
+			await notifyService.Notify(executor, $"WIKI: You can't create pages in {WikiHelpers.NamespaceName(ns)}: {decision.Describe()}.", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		// Stamped at birth, exactly as the API create path is: SourceLocale is materialised once and never
 		// re-derived on read, so a page that misses its stamp here would need the migration to rescue it.
 		// This is the second and last create path in the codebase.
@@ -81,11 +89,9 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		if (!await WikiCommandHelper.CanEdit(executor, page))
-		{
-			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
-		}
+		if (await WikiCommandHelper.RefusalAsync(parser, notifyService, executor, page, WikiAction.Edit,
+			targetArg.ToPlainText()) is { } refused)
+			return refused;
 
 		if (await wikiService.GetRevisionAsync(page.Id, revisionNumber) is not WikiRevision revision)
 		{
@@ -133,13 +139,18 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		if (!await WikiCommandHelper.CanEdit(executor, page))
-		{
-			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
-		}
+		if (await WikiCommandHelper.RefusalAsync(parser, notifyService, executor, page, WikiAction.Edit,
+			targetArg.ToPlainText()) is { } refused)
+			return refused;
 
 		var names = (categoriesArg?.ToPlainText() ?? string.Empty).Split(',');
+		var filing = await WikiCommandHelper.Access(parser).DecideCategoriesAsync(
+			await WikiCommandHelper.ReaderAsync(parser, executor), page, names);
+		if (!filing.Allowed)
+		{
+			await notifyService.Notify(executor, $"WIKI: You can't file '{page.Title}' there: {filing.Describe()}.", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+		}
 		if (await wikiService.SetMetadataAsync(page.Id, names, page.Published) is not WikiPage updated)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
@@ -172,11 +183,9 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		if (!await WikiCommandHelper.CanEdit(executor, page))
-		{
-			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
-		}
+		if (await WikiCommandHelper.RefusalAsync(parser, notifyService, executor, page, WikiAction.Edit,
+			targetArg.ToPlainText()) is { } refused)
+			return refused;
 
 		var newContent = append
 			? $"{page.MarkdownSource.TrimEnd()}\n\n{contentArg.ToPlainText()}"
@@ -220,7 +229,7 @@ public static class EditWiki
 		return WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText()) switch
 		{
 			WikiCommandHelper.LocaleTarget target =>
-				await WriteTranslation(wikiService, localization, notifyService, executor, target, contentArg),
+				await WriteTranslation(parser, wikiService, localization, notifyService, executor, target, contentArg),
 			Error<string> splitError => await RefuseTranslateTarget(notifyService, executor, splitError.Value),
 		};
 	}
@@ -230,6 +239,7 @@ public static class EditWiki
 	/// and a canonical locale.
 	/// </summary>
 	private static async ValueTask<MString> WriteTranslation(
+		IMUSHCodeParser parser,
 		IWikiService wikiService,
 		IWikiLocalizationService localization,
 		INotifyService notifyService,
@@ -248,11 +258,8 @@ public static class EditWiki
 
 		// A translation is an edit to the page, gated exactly as one — the same rule the API's
 		// PUT .../translations/{locale} applies, and no new permission of its own.
-		if (!await WikiCommandHelper.CanEdit(executor, page))
-		{
-			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
-		}
+		if (await WikiCommandHelper.RefusalAsync(parser, notifyService, executor, page, WikiAction.Edit, pageTarget) is { } refused)
+			return refused;
 
 		// The store refuses this too ("no row may shadow the source"), but only as a raw Error<string>
 		// naming a page id. Catching it here is what turns it into an instruction.

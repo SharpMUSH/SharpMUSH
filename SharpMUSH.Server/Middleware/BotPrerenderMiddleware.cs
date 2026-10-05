@@ -68,6 +68,10 @@ public sealed class BotPrerenderMiddleware(
 		await using var scope = scopeFactory.CreateAsyncScope();
 		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
 		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
+		// A prerender is anonymous, bot-facing output: it serves what a logged-out reader may see, so neither a
+		// draft nor a page whose read requirements the everyone role does not meet reaches a crawler.
+		var access = scope.ServiceProvider.GetRequiredService<IWikiAccessService>();
+		var anonymous = await access.AnonymousAsync(context.RequestAborted);
 
 		string? html = null;
 
@@ -78,9 +82,8 @@ public sealed class BotPrerenderMiddleware(
 			{
 				var ns = ParseNamespace(segments[0]);
 				var slug = segments[1];
-				// Published gate: a prerender is anonymous, bot-facing output, so a draft page must not
-				// be reachable by any crawler that asks for it.
-				if (await wikiService.GetBySlugAsync(slug, ns) is WikiPage { Published: true } page)
+				if (await wikiService.GetBySlugAsync(slug, ns) is WikiPage { Published: true } page
+					&& await access.CanSeeAsync(anonymous, page))
 				{
 					html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
@@ -96,7 +99,7 @@ public sealed class BotPrerenderMiddleware(
 			if (!string.IsNullOrEmpty(name))
 			{
 				if (await wikiService.GetBySlugAsync(name, WikiNamespace.Character)
-					is WikiPage { Published: true } page)
+					is WikiPage { Published: true } page && await access.CanSeeAsync(anonymous, page))
 				{
 					html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),

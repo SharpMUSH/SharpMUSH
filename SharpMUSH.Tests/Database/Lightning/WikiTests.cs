@@ -209,8 +209,8 @@ public class WikiTests
 		await Assert.That(unpublished.RevisionNumber).IsEqualTo(draft.RevisionNumber);
 		await Assert.That((await wiki.GetBySlugAsync("hidden", WikiNamespace.System)).Expect<WikiPage>().Id).IsEqualTo(draft.Id);
 
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.All)).IsEqualTo(2);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.PublishedOnly)).IsEqualTo(1);
 
 		var listed = await wiki.GetAllPagesAsync(0, 50, WikiNamespace.System);
 		await Assert.That(listed.Select(p => p.Id)).IsEquivalentTo(new[] { published.Id, draft.Id });

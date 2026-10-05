@@ -19,7 +19,7 @@ namespace SharpMUSH.Server.Controllers;
 /// eviction. Everything here is Wizard-level except metadata, which is an edit.
 ///
 /// Routes:
-///   PUT  /api/wiki/{slug}/protection  — set protection flag (Wizard+)
+///   PUT  /api/wiki/{slug}/protection  — require wiki.admin to edit and delete the page, or not (wiki.admin)
 ///   PUT  /api/wiki/{slug}/metadata    — set categories/published (authenticated)
 ///   POST /api/wiki/batch/protect      — batch protection change (Wizard+)
 ///   POST /api/wiki/batch/delete       — batch deletion (Wizard+)
@@ -30,13 +30,14 @@ namespace SharpMUSH.Server.Controllers;
 public class WikiAdminController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IPrerenderCacheService prerenderCache,
 	IWikiNameResolver names,
-	ILogger<WikiAdminController> logger) : WikiControllerBase(wikiService, localization, names, logger)
+	ILogger<WikiAdminController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	/// <summary>
 	/// PUT /api/wiki/{slug}/protection
-	/// Sets or clears the protection flag on a wiki page, identified by slug.
+	/// Protects a page (a page requirement of wiki.admin to edit and delete it) or clears that requirement.
 	/// </summary>
 	[HttpPut("{slug}/protection")]
 	[Authorize(Policy = PortalPermission.WikiAdmin)]
@@ -45,11 +46,20 @@ public class WikiAdminController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
-		if (await Wiki.SetProtectionAsync(page.Id, request.IsProtected) is not None)
-			return NotFound();
-
-		return Ok();
+		return await ProtectAsync(page, request.IsProtected) switch
+		{
+			WikiRequirements => Ok(),
+			Error<string> error => BadRequest(error.Value),
+			_ => NotFound(),
+		};
 	}
+
+	/// <summary>Sets or clears the page requirement of wiki.admin to edit and delete it.</summary>
+	private async Task<FoundResult<WikiRequirements>> ProtectAsync(WikiPage page, bool protect)
+		=> await Access.SetRequirementsAsync(await ReaderAsync(), CallerDbref ?? string.Empty, WikiRuleTarget.ForPage(page.Id),
+			protect
+				? WikiRequirementSet.Protection
+				: new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Edit] = [], [WikiAction.Delete] = [] });
 
 	/// <summary>
 	/// PUT /api/wiki/{slug}/metadata
@@ -63,9 +73,14 @@ public class WikiAdminController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)
 			return NotFound();
 
-		// Protected pages may only have their metadata changed by Wizard-level users,
-		// mirroring the edit restriction in UpdatePage.
-		if (existing.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+		// Metadata is an edit: the page's requirements apply, and filing it in a category is an edit under the
+		// new categories too. Publishing is wiki.admin's.
+		if (await RefusalAsync(existing, WikiAction.Edit) is { } refusal)
+			return refusal;
+		var reader = await ReaderAsync();
+		if (!(await Access.DecideCategoriesAsync(reader, existing, request.Categories ?? [])).Allowed)
+			return Forbid();
+		if (request.Published != existing.Published && !reader.Has(PortalPermission.WikiAdmin))
 			return Forbid();
 
 		if (await Wiki.SetMetadataAsync(existing.Id, request.Categories ?? [], request.Published) is not WikiPage page)
@@ -97,8 +112,8 @@ public class WikiAdminController(
 				continue;
 			}
 
-			var result = await Wiki.SetProtectionAsync(page.Id, request.IsProtected);
-			(result is None ? succeeded : failed).Add(reference);
+			var result = await ProtectAsync(page, request.IsProtected);
+			(result is WikiRequirements ? succeeded : failed).Add(reference);
 		}
 
 		Logger.LogInformation("Wiki batch protect: protected={Protected} ok={Ok} failed={Failed}",
@@ -123,7 +138,7 @@ public class WikiAdminController(
 		foreach (var reference in request.Refs ?? [])
 		{
 			var (ns, slug) = ParseRef(reference);
-			if (await Wiki.GetBySlugAsync(slug, ns) is not WikiPage page)
+			if (await Wiki.GetBySlugAsync(slug, ns) is not WikiPage page || await RefusalAsync(page, WikiAction.Delete) is not null)
 			{
 				failed.Add(reference);
 				continue;

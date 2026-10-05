@@ -50,23 +50,21 @@ public interface IWikiService
 	Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null, WikiVisibility? visibility = null);
 
 	/// <summary>
-	/// Returns the total page count (optionally restricted to one namespace).
+	/// Returns the count of pages <paramref name="visibility"/> admits (optionally restricted to one namespace).
 	/// </summary>
-	/// <param name="includeDrafts">
-	/// True to count unpublished pages as well. There is no default, and <paramref name="ns"/> lost its
-	/// own default so that there cannot be one: a count rendered beside a draft-filtered listing is a
-	/// disclosure channel on its own — differencing "N page(s)" against the visible rows reveals how many
-	/// drafts the window holds — so every call site has to state which population it is counting.
-	/// A page whose stored flag is absent counts as published, matching how every backend reads it back.
+	/// <param name="visibility">
+	/// Which pages count. There is no default, and <paramref name="ns"/> lost its own default so that there
+	/// cannot be one: a count rendered beside a filtered listing is a disclosure channel on its own —
+	/// differencing "N page(s)" against the visible rows reveals how many hidden pages the window holds — so
+	/// every call site has to state which population it is counting.
 	/// </param>
-	Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts);
+	Task<int> CountPagesAsync(WikiNamespace? ns, WikiVisibility visibility);
 
 	/// <summary>
-	/// Every page counted by state (published, draft, protected) without reading a page. As with
-	/// <see cref="CountPagesAsync"/>, <paramref name="includeDrafts"/> has no default: false counts drafts as
-	/// zero and leaves them out of the protected count.
+	/// The pages <paramref name="visibility"/> admits, counted by state (published, draft). As with
+	/// <see cref="CountPagesAsync"/>, <paramref name="visibility"/> has no default.
 	/// </summary>
-	Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts);
+	Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility);
 
 	/// <summary>
 	/// Lists the pages in a category, ordered by title: every page whose category list names it, in any
@@ -114,12 +112,17 @@ public interface IWikiService
 	/// </summary>
 	Task<Found<None>> DeleteAsync(string id, string editorDbref);
 
+	/// <summary>Every namespace, category and page requirement set (see <see cref="WikiRequirements"/>).</summary>
+	Task<WikiRequirements> GetRequirementsAsync();
+
 	/// <summary>
-	/// Sets the protection flag on a page.
-	/// Protected pages can only be edited by admin-level users.
-	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
+	/// Replaces what <paramref name="target"/> requires; actions with no permissions require nothing, and a
+	/// set requiring nothing is removed. Permission names are lowercased and de-duplicated here; whether they
+	/// name a permission is the caller's rule (<c>IWikiAccessService.SetRequirementsAsync</c>).
+	/// Returns <c>NotFound</c> for a page target naming no page.
 	/// </summary>
-	Task<Found<None>> SetProtectionAsync(string id, bool isProtected);
+	Task<Found<None>> SetRequirementsAsync(WikiRuleTarget target, IReadOnlyDictionary<WikiAction, IReadOnlyList<string>> required,
+		string editorDbref);
 
 	/// <summary>
 	/// Sets a page's categories and published flag. Does NOT create a revision — metadata changes are not

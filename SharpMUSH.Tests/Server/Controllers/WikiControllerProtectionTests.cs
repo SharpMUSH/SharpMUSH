@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public class WikiControllerProtectionTests
 		}
 		if (isProtected)
 		{
-			await wiki.SetProtectionAsync(page.Id, true);
+			await wiki.ProtectAsync(page.Id, true);
 		}
 		return (wiki, page.Slug);
 	}

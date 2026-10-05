@@ -44,6 +44,15 @@ public class WikiArticle
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
 
+	/// <summary>When true, the page carries permission requirements of its own.</summary>
+	public bool IsRestricted { get; set; }
+
+	/// <summary>
+	/// What the reader may do with the page, as the server decided it: the page's namespace, categories and
+	/// own requirements included. Null for a page not saved yet.
+	/// </summary>
+	public SharpMUSH.Library.API.WikiAccessDto? Access { get; set; }
+
 	/// <summary>The locale whose content this article actually carries.</summary>
 	public string Locale { get; set; } = string.Empty;
 

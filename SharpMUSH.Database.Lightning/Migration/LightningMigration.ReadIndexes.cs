@@ -6,7 +6,7 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// Builds the read indexes a world written before them lacks: the session expiry order, the object type
-/// index, the wiki list and protected-page indexes and the mail folder and sent-to indexes. Each is derived entirely from rows
+/// index, the wiki list indexes and the mail folder and sent-to indexes. Each is derived entirely from rows
 /// already on disk, built in one write job together with its marker, and skipped once the marker exists;
 /// from then on the writes that touch those rows keep it current.
 /// </summary>
@@ -16,7 +16,6 @@ public partial class LightningDatabase
 	internal const string ObjectTypeIndexMigrationId = "0007_object_type_index";
 	internal const string WikiListIndexMigrationId = "0008_wiki_list_indexes";
 	internal const string MailReadIndexMigrationId = "0009_mail_read_indexes";
-	internal const string WikiProtectedIndexMigrationId = "0011_wiki_protected_index";
 
 	private async ValueTask RebuildReadIndexesAsync(CancellationToken cancellationToken)
 	{
@@ -47,15 +46,6 @@ public partial class LightningDatabase
 					WikiListIndexes(tx, key, record, add: true);
 				}
 			}), cancellationToken);
-
-		await Store.WriteAsync(tx => RebuildIndex(tx, WikiProtectedIndexMigrationId, [Tables.WikiProtected], () =>
-		{
-			foreach (var (key, record) in AllWikiPages(tx))
-			{
-				cancellationToken.ThrowIfCancellationRequested();
-				if (record.IsProtected) tx.Put(Tables.WikiProtected, WikiPageKey(key), WikiVisibilityValue(record));
-			}
-		}), cancellationToken);
 
 		await Store.WriteAsync(tx => RebuildIndex(tx, MailReadIndexMigrationId, [Tables.MailFolder, Tables.MailSentTo], () =>
 		{

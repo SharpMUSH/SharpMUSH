@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
@@ -347,27 +348,49 @@ public class WikiStoreServiceTests
 	}
 
 	[Test]
-	public async Task SetProtectionAsync_SetsIsProtectedFlag()
+	public async Task ProtectAsync_SetsAPageRequirementAndUnprotectClearsIt()
 	{
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc);
-		await Assert.That(created.IsProtected).IsFalse();
+		await Assert.That(await svc.IsRestrictedAsync(created.Id)).IsFalse();
 
-		var protResult = await svc.SetProtectionAsync(created.Id, true);
+		var protResult = await svc.ProtectAsync(created.Id);
 
 		await Assert.That(protResult.Value).IsTypeOf<None>();
-		var fetched = (await svc.GetByIdAsync(created.Id)).Expect<WikiPage>();
-		await Assert.That(fetched.IsProtected).IsTrue();
+		var set = (await svc.GetRequirementsAsync()).For(WikiRuleTarget.ForPage(created.Id));
+		await Assert.That(set!.For(WikiAction.Edit)).IsEquivalentTo([PortalPermission.WikiAdmin]);
+		await Assert.That(set.For(WikiAction.Delete)).IsEquivalentTo([PortalPermission.WikiAdmin]);
+
+		await svc.ProtectAsync(created.Id, protect: false);
+		await Assert.That(await svc.IsRestrictedAsync(created.Id)).IsFalse();
 	}
 
 	[Test]
-	public async Task SetProtectionAsync_MissingId_ReturnsNotFound()
+	public async Task ProtectAsync_MissingId_ReturnsNotFound()
 	{
 		var svc = BuildService();
 
-		var result = await svc.SetProtectionAsync("ghost_id", true);
+		var result = await svc.ProtectAsync("ghost_id");
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
+	}
+
+	/// <summary>The cached requirements follow a write and a page deletion at once.</summary>
+	[Test]
+	public async Task Requirements_FollowWritesAndDeletion()
+	{
+		var svc = BuildService();
+		var created = await CreatePageAsync(svc);
+		var category = WikiRuleTarget.ForCategory("lore");
+
+		await Assert.That((await svc.GetRequirementsAsync()).For(category)).IsNull();
+		(await svc.SetRequirementsAsync(category,
+			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Edit] = [" Lore.Edit ", "lore.edit"] }, "#1")).Expect<None>();
+		await Assert.That((await svc.GetRequirementsAsync()).For(category)!.For(WikiAction.Edit)).IsEquivalentTo(["lore.edit"]);
+
+		await svc.ProtectAsync(created.Id);
+		await svc.DeleteAsync(created.Id, "#1");
+		await Assert.That((await svc.GetRequirementsAsync()).HasPageRules(created.Id)).IsFalse();
 	}
 
 	[Test]

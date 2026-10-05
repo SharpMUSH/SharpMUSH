@@ -290,7 +290,7 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
-| [WIKISEARCH()]   |                  |                  |                  |
+| [WIKISEARCH()]   | [WIKIACCESS()]   |                  |                  |
 
 **See Also:**
 - [wiki]
