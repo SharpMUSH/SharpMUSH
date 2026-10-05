@@ -84,6 +84,11 @@ public static class Tables
 	public static readonly TableDef Layout = TableDef.Node("layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");
+	/// <summary>Custom permissions a game defines, keyed by scope.</summary>
+	public static readonly TableDef CustomPermission = TableDef.Node("perm.def");
+	/// <summary>Categories of roles and custom permissions, keyed by lowercased name.</summary>
+	public static readonly TableDef RoleCategory = TableDef.Node("role.cat");
+	public static readonly TableDef PermissionCategory = TableDef.Node("perm.cat");
 	public static readonly TableDef Pkg = TableDef.Node("pkg");
 	public static readonly TableDef PkgObj = TableDef.Node("pkg.obj");
 	public static readonly TableDef PkgAttr = TableDef.Node("pkg.attr");

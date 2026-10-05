@@ -709,9 +709,10 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd("&FN`T`SCENEWHERE #9=42");
 			await Cmd("&FN`T`SCENE #9=switch(%1,id,42,public,1,title,Salt Market at Dusk)");
 			await Cmd("&FN`T`SCENEMEMBERS #9=#1 #2 #3");
-			// The mortal is a participant focused on the scene; the wizard is neither.
+			// The mortal is a participant focused on the scene; the wizard is neither, and is focused on
+			// another scene.
 			await Cmd($"&FN`T`SCENEMEMBER #9=if(strmatch(num(%1),num({f.Mortal})),participant,#-1 NOT FOUND)");
-			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 NOT FOUND)");
+			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,43)");
 			await Cmd("@function scenewhere=#9,FN`T`SCENEWHERE");
 			await Cmd("@function scene=#9,FN`T`SCENE");
 			await Cmd("@function scenemembers=#9,FN`T`SCENEMEMBERS");
@@ -734,6 +735,7 @@ public class RoomContentsHandlerReferenceTests
 				var scene = member.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("role").GetString()).IsEqualTo("participant");
 				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsTrue();
+				await Assert.That(scene.GetProperty("elsewhere").GetBoolean()).IsFalse();
 			}
 
 			using (var watcher = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
@@ -741,6 +743,22 @@ public class RoomContentsHandlerReferenceTests
 				var scene = watcher.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("role").ValueKind).IsEqualTo(JsonValueKind.Null);
 				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsFalse();
+				await Assert.That(scene.GetProperty("elsewhere").GetBoolean()).IsTrue();
+			}
+
+			// A focus on a scene the causer may not see is still a focus elsewhere; only NOT FOUND is none.
+			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 PERMISSION)");
+			using (var hidden = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			{
+				await Assert.That(hidden.RootElement.GetProperty("scene").GetProperty("elsewhere").GetBoolean()).IsTrue();
+			}
+
+			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 NOT FOUND)");
+			using (var unfocused = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			{
+				var scene = unfocused.RootElement.GetProperty("scene");
+				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsFalse();
+				await Assert.That(scene.GetProperty("elsewhere").GetBoolean()).IsFalse();
 			}
 		}
 		finally

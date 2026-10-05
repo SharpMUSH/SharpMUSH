@@ -55,7 +55,7 @@ public sealed class AdministrativeCapabilityService(
 	}
 
 	public async Task<bool> AuthorizeAsync(CapabilityActor actor, string scope, CancellationToken ct = default)
-		=> PortalPermission.IsKnown(scope) && (await GetGrantedScopesAsync(actor, ct)).Contains(scope);
+		=> (await GetGrantedScopesAsync(actor, ct)).Contains(scope);
 
 	public async Task<IReadOnlySet<string>> GetGrantedScopesAsync(CapabilityActor actor, CancellationToken ct = default)
 		=> resolver.Resolve(await GetContextAsync(actor, ct));
@@ -63,7 +63,7 @@ public sealed class AdministrativeCapabilityService(
 	public async Task<IReadOnlyDictionary<string, PermissionExplanation>> ExplainAsync(CapabilityActor actor, CancellationToken ct = default)
 	{
 		var context = await GetContextAsync(actor, ct);
-		return PortalPermission.AllScopes.ToDictionary(scope => scope, scope => resolver.Explain(context, scope));
+		return PortalPermission.AllScopes.Concat(context.CustomScopes).ToDictionary(scope => scope, scope => resolver.Explain(context, scope));
 	}
 
 	public async Task<ObjectGrants> GetObjectGrantsAsync(AnySharpObject obj, CancellationToken ct = default)
@@ -78,6 +78,7 @@ public sealed class AdministrativeCapabilityService(
 			return PermissionContext.None;
 		var characters = await accounts.GetCharactersAsync(account.Id, ct);
 		var all = await registry.GetRolesAsync(ct);
+		var custom = await registry.GetCustomPermissionsAsync(ct);
 		var accountGrants = new AccountGrants(
 			await registry.GetRolesForAccountAsync(account.Id, ct),
 			await registry.GetAccountOverridesAsync(account.Id, ct));
@@ -91,13 +92,16 @@ public sealed class AdministrativeCapabilityService(
 			return ObjectGrants.For(number, true, all,
 				await registry.GetObjectRolesAsync(number, ct),
 				await registry.GetObjectOverridesAsync(number, ct),
-				accountGrants).Context;
+				accountGrants, custom).Context;
 		}
 
 		var characterRoles = new List<IReadOnlyList<string>>();
 		foreach (var character in characters)
 			characterRoles.Add(await registry.GetObjectRolesAsync(character.Object.Key, ct));
-		return AccountContext(all, accountGrants, characters, characterRoles);
+		return AccountContext(all, accountGrants, characters, characterRoles) with
+		{
+			CustomScopes = custom.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase)
+		};
 	}
 
 	private static PermissionContext AccountContext(IReadOnlyList<SharpRole> all, AccountGrants account,

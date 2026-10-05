@@ -114,15 +114,15 @@ public static class BuiltInRoles
 	/// <summary>Seed templates for the starter roles, written once into a world that has no roles yet.</summary>
 	public static readonly IReadOnlyList<SharpRole> Starters =
 	[
-		Template("helper", "Helper", 12, "#4fc3c8", false, HelperScopes),
-		Template("moderator", "Moderator", 25, "#ff9f6b", false, ModeratorScopes),
+		Template("helper", "Helper", 12, "#4fc3c8", false, HelperScopes, Categories.Staff),
+		Template("moderator", "Moderator", 25, "#ff9f6b", false, ModeratorScopes, Categories.Staff),
 	];
 
 	/// <summary>
 	/// The roles to write so a world has its defaults, given the roles it already has: every missing
 	/// system role; the starter roles too when the world has no roles at all, so a deleted starter stays
 	/// deleted; and, on a system role that already exists, each in-game scope its defaults allow and the
-	/// stored role leaves on Inherit. Those scopes are what the WIZARD and ROYALTY flags and the Guest
+	/// stored role leaves on Inherit, and its category when it has none. Those scopes are what the WIZARD and ROYALTY flags and the Guest
 	/// and Builder powers mean, so a world seeded before they existed gains them; any other edit an
 	/// administrator made is kept.
 	/// </summary>
@@ -141,27 +141,29 @@ public static class BuiltInRoles
 			var missing = template.Permissions
 				.Where(p => PortalPermission.IsGameScope(p.Key) && PermissionResolver.StateOf(role.Permissions, p.Key) == PermissionState.Inherit)
 				.ToArray();
-			if (!role.IsSystem || missing.Length == 0) continue;
+			if (!role.IsSystem || (missing.Length == 0 && role.Category.Length > 0)) continue;
 			var permissions = new Dictionary<string, PermissionState>(role.Permissions);
 			foreach (var (scope, state) in missing) permissions[scope] = state;
-			changes.Add(Stamp(role, permissions, role.CreatedAt, now));
+			changes.Add(Stamp(role, permissions, role.CreatedAt, now, template));
 		}
 
 		return changes;
 	}
 
-	private static SharpRole Stamp(SharpRole role, Dictionary<string, PermissionState> permissions, long created, long updated) => new()
-	{
-		Id = role.Id,
-		Slug = role.Slug,
-		Name = role.Name,
-		Color = role.Color,
-		Priority = role.Priority,
-		IsSystem = role.IsSystem,
-		Permissions = permissions,
-		CreatedAt = created,
-		UpdatedAt = updated
-	};
+	private static SharpRole Stamp(SharpRole role, Dictionary<string, PermissionState> permissions, long created, long updated,
+		SharpRole? template = null) => new()
+		{
+			Id = role.Id,
+			Slug = role.Slug,
+			Name = role.Name,
+			Category = role.Category.Length > 0 ? role.Category : template?.Category ?? Categories.System,
+			Color = role.Color,
+			Priority = role.Priority,
+			IsSystem = role.IsSystem,
+			Permissions = permissions,
+			CreatedAt = created,
+			UpdatedAt = updated
+		};
 
 	private static IReadOnlyList<SharpRole> BuildSystem()
 	{
@@ -183,15 +185,17 @@ public static class BuiltInRoles
 		return roles;
 	}
 
-	private static SharpRole Template(string slug, string name, int priority, string color, bool system, string[] scopes) => new()
-	{
-		Slug = slug,
-		Name = name,
-		Priority = priority,
-		IsSystem = system,
-		Color = color,
-		Permissions = scopes.ToDictionary(s => s, _ => PermissionState.Allow)
-	};
+	private static SharpRole Template(string slug, string name, int priority, string color, bool system, string[] scopes,
+		string category = Categories.System) => new()
+		{
+			Slug = slug,
+			Name = name,
+			Category = category,
+			Priority = priority,
+			IsSystem = system,
+			Color = color,
+			Permissions = scopes.ToDictionary(s => s, _ => PermissionState.Allow)
+		};
 
 	private static string ColorFor(PortalRole role) => role switch
 	{
