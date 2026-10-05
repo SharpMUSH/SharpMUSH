@@ -356,7 +356,8 @@ public class WebSocketClientService : IWebSocketClientService
 		{
 			await relogin();
 		}
-		catch (Exception ex)
+		// A cancellation is not a failed login: it ends this attempt, and the reconnect loop takes it.
+		catch (Exception ex) when (ex is WebSocketException or HttpRequestException or InvalidOperationException)
 		{
 			_logger.LogWarning(ex, "Logging in again after a reconnect failed");
 			ClearSendBuffer();
