@@ -5048,8 +5048,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In der Szene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du siehst diese Szene an. Tritt ihr bei, um hier zu posen.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du bist dieser Szene noch nicht beigetreten. Tritt ihr bei, um hier zu posen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">

@@ -510,7 +510,7 @@ else
                so the footer offers to join instead. Joining focuses the viewer, and the room.info that follows
                brings the composer back. *@
             <div class="play-join" role="status">
-                <span class="play-join-text">@(scene.Role is null ? Loc["NavPlaySceneWatching"] : Loc["NavPlaySceneFocusedElsewhere"])</span>
+                <span class="play-join-text">@(scene.Elsewhere ? Loc["NavPlaySceneFocusedElsewhere"] : Loc["NavPlaySceneNotJoined"])</span>
                 <button type="button" class="play-join-btn" disabled="@(!PlayTerminal.IsConnected)" @onclick="() => JoinSceneAsync(scene)">
                     @Loc["NavPlaySceneJoin"]
                 </button>

@@ -5048,8 +5048,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>În scenă</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Urmărești această scenă. Alătură-te pentru a poza aici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Nu te-ai alăturat încă acestei scene. Alătură-te pentru a poza aici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">

@@ -116,9 +116,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null)
+	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false)
 	{
-		var focusJson = focus is { } f ? $$""","role":"participant","focus":{{(f ? "true" : "false")}}""" : string.Empty;
+		var focusJson = focus is { } f
+			? $$""","role":"participant","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
+			: string.Empty;
 		var sceneJson = scene ? $$""","scene":{"id":"{{sceneId}}","title":"Salt Market at Dusk","cast":5{{focusJson}}}""" : string.Empty;
 		_store.Set(OobEntryParser.RoomInfoPackage,
 			$$"""{"v":2,"dbref":"#1201","objid":"#1201:1","name":"Lower Docks","area":"Harbour Ward","image":{"url":"/r/docks.jpg"}{{sceneJson}}}""");
@@ -210,6 +212,22 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		cut.Find("button.play-join-btn").Click();
 		await _play.Received(1).SendAsync("+scene/join 42");
+	}
+
+	/// <summary>
+	/// The join bar says why a pose would miss the story: the viewer has not joined it, or their poses go to
+	/// the scene they are focused on instead.
+	/// </summary>
+	[Test]
+	[Arguments(false, "You haven't joined this scene yet. Join it to pose here.")]
+	[Arguments(true, "Your poses go to another scene. Join this one to pose here.")]
+	public async Task TheJoinBar_SaysWhetherTheViewerIsInAnotherScene(bool elsewhere, string text)
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false, elsewhere: elsewhere);
+		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".play-join-text").TextContent).IsEqualTo(text);
 	}
 
 	/// <summary>The room.info that follows a join brings the composer back, with a Leave beside it.</summary>
@@ -348,6 +366,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find("button.play-settings-btn").Click();
 		cut.WaitForAssertion(() => cut.Find("button.play-cfg-focus"), TimeSpan.FromSeconds(5));
 		cut.Find("button.play-cfg-focus").Click();
+		// The page re-renders after the click's handler, not inside it: wait for that render.
+		cut.WaitForAssertion(() => cut.Find(".play--focus"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play--focus").Count).IsEqualTo(1);
 	}
 

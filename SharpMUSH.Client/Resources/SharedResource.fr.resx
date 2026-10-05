@@ -4304,8 +4304,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En scène</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Vous regardez cette scène. Rejoignez-la pour poser ici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Vous n'avez pas encore rejoint cette scène. Rejoignez-la pour poser ici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
