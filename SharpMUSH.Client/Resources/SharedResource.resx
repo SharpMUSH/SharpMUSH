@@ -2920,7 +2920,7 @@
     <value>Categories</value>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Every role and custom permission sits in a category, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category.</value>
+    <value>Roles and custom permissions each have their own list of categories, and this page groups them by it. Create a category before putting anything in it. A category that still holds something cannot be deleted. In the game: @role/category and @role/category/.../permission.</value>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
     <value>What belongs in it</value>
@@ -2946,8 +2946,17 @@
   <data name="RolCategoryDeleted" xml:space="preserve">
     <value>Category {0} deleted.</value>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} roles, {1} permissions</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# role} other {# roles}}</value>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permission} other {# permissions}}</value>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Role categories</value>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Permission categories</value>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">
     <value>Choose a category</value>

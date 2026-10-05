@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Fiecare rol și fiecare permisiune personalizată aparține unei categorii, iar această pagină le grupează după ea. Creați o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category.</value>
+    <value>Rolurile și permisiunile personalizate au fiecare propria listă de categorii, după care această pagină le grupează. Creează o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category și @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Categoria {0} a fost ștearsă.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>Roluri: {0}, permisiuni: {1}</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rol} few {# roluri} other {# de roluri}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permisiune} few {# permisiuni} other {# de permisiuni}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Categorii de roluri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Categorii de permisiuni</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

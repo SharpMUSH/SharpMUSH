@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>每个角色和自定义权限都属于一个类别，本页按类别分组显示。放入内容之前请先创建类别。仍包含内容的类别无法删除。游戏内：@role/category。</value>
+    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @role/category/.../permission。</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>已删除类别 {0}。</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} 个角色，{1} 个权限</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, other {# 个角色}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, other {# 个权限}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>角色分类</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>权限分类</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

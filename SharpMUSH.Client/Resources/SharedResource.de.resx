@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Jede Rolle und jede eigene Berechtigung gehört zu einer Kategorie, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category.</value>
+    <value>Rollen und eigene Berechtigungen haben jeweils eine eigene Liste von Kategorien, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category und @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Kategorie {0} gelöscht.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} Rollen, {1} Berechtigungen</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# Rolle} other {# Rollen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# Berechtigung} other {# Berechtigungen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rollenkategorien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Berechtigungskategorien</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

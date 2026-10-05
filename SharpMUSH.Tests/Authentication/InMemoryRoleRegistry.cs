@@ -14,7 +14,11 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	private readonly Dictionary<int, HashSet<string>> _objectRoles = new();
 	private readonly Dictionary<int, Dictionary<string, PermissionState>> _objectOverrides = new();
 	private readonly Dictionary<string, CustomPermission> _custom = new(StringComparer.OrdinalIgnoreCase);
-	private readonly Dictionary<string, RoleCategory> _categories = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<CategoryKind, Dictionary<string, RoleCategory>> _categories = new()
+	{
+		[CategoryKind.Role] = new(StringComparer.OrdinalIgnoreCase),
+		[CategoryKind.Permission] = new(StringComparer.OrdinalIgnoreCase)
+	};
 
 	/// <summary>A registry seeded like a new world: system and starter roles.</summary>
 	public static InMemoryRoleRegistry Seeded()
@@ -22,8 +26,9 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		var registry = new InMemoryRoleRegistry();
 		foreach (var role in BuiltInRoles.All.Concat(BuiltInRoles.Starters))
 			registry.Add(role);
-		foreach (var category in Categories.Seeds)
-			registry._categories[category.Name] = category;
+		foreach (var kind in Enum.GetValues<CategoryKind>())
+			foreach (var category in Categories.Seeds(kind))
+				registry._categories[kind][category.Name] = category;
 		return registry;
 	}
 
@@ -130,30 +135,32 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		return Task.CompletedTask;
 	}
 
-	public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CancellationToken cancellationToken = default)
-		=> Task.FromResult<IReadOnlyList<RoleCategory>>(_categories.Values.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList());
+	public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CategoryKind kind, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyList<RoleCategory>>(_categories[kind].Values.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList());
 
-	public Task UpsertCategoryAsync(RoleCategory category)
+	public Task UpsertCategoryAsync(CategoryKind kind, RoleCategory category)
 	{
-		_categories.Remove(category.Name);
-		_categories[category.Name] = category;
+		_categories[kind].Remove(category.Name);
+		_categories[kind][category.Name] = category;
 		return Task.CompletedTask;
 	}
 
-	public Task RenameCategoryAsync(string name, RoleCategory renamed)
+	public Task RenameCategoryAsync(CategoryKind kind, string name, RoleCategory renamed)
 	{
-		_categories.Remove(name);
-		_categories[renamed.Name] = renamed;
-		foreach (var role in _roles.Values.Where(r => string.Equals(r.Category, name, StringComparison.OrdinalIgnoreCase)))
-			role.Category = renamed.Name;
-		foreach (var permission in _custom.Values.Where(p => string.Equals(p.Category, name, StringComparison.OrdinalIgnoreCase)).ToList())
-			_custom[permission.Scope] = permission with { Category = renamed.Name };
+		_categories[kind].Remove(name);
+		_categories[kind][renamed.Name] = renamed;
+		if (kind == CategoryKind.Role)
+			foreach (var role in _roles.Values.Where(r => string.Equals(r.Category, name, StringComparison.OrdinalIgnoreCase)))
+				role.Category = renamed.Name;
+		else
+			foreach (var permission in _custom.Values.Where(p => string.Equals(p.Category, name, StringComparison.OrdinalIgnoreCase)).ToList())
+				_custom[permission.Scope] = permission with { Category = renamed.Name };
 		return Task.CompletedTask;
 	}
 
-	public Task RemoveCategoryAsync(string name)
+	public Task RemoveCategoryAsync(CategoryKind kind, string name)
 	{
-		_categories.Remove(name);
+		_categories[kind].Remove(name);
 		return Task.CompletedTask;
 	}
 

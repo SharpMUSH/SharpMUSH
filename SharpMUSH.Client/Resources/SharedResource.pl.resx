@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Każda rola i każde własne uprawnienie należy do kategorii, według której ta strona je grupuje. Utwórz kategorię, zanim cokolwiek do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category.</value>
+    <value>Role i własne uprawnienia mają osobne listy kategorii, według których ta strona je grupuje. Utwórz kategorię, zanim coś do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category i @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Usunięto kategorię {0}.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>Role: {0}, uprawnienia: {1}</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rola} few {# role} many {# ról} other {# roli}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# uprawnienie} few {# uprawnienia} many {# uprawnień} other {# uprawnienia}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Kategorie ról</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Kategorie uprawnień</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

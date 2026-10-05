@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Каждая роль и каждое пользовательское разрешение относятся к категории, и эта страница группирует их по ней. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category.</value>
+    <value>У ролей и собственных разрешений свои отдельные списки категорий, и эта страница группирует их по ним. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category и @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Категория {0} удалена.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>Ролей: {0}, разрешений: {1}</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# роль} few {# роли} many {# ролей} other {# роли}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# разрешение} few {# разрешения} many {# разрешений} other {# разрешения}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Категории ролей</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Категории разрешений</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

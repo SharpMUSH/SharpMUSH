@@ -207,17 +207,21 @@ public class RolesController(
 		};
 	}
 
-	[HttpGet("categories")]
+	/// <summary>The category list <paramref name="kind"/> (<c>role</c> or <c>permission</c>).</summary>
+	[HttpGet("categories/{kind}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	public async Task<ActionResult<IReadOnlyList<RoleCategory>>> ListCategories()
-		=> Ok(await roles.GetCategoriesAsync(HttpContext.RequestAborted));
+	public async Task<ActionResult<IReadOnlyList<RoleCategory>>> ListCategories(string kind)
+		=> ParseKind(kind) is { } list
+			? Ok(await roles.GetCategoriesAsync(list, HttpContext.RequestAborted))
+			: NotFound();
 
-	[HttpPost("categories")]
+	[HttpPost("categories/{kind}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	public async Task<IActionResult> CreateCategory([FromBody] CategoryDto dto)
+	public async Task<IActionResult> CreateCategory(string kind, [FromBody] CategoryDto dto)
 	{
 		if (Actor() is not { } actor) return Forbid();
-		return await management.CreateCategoryAsync(actor, dto.Name ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
+		if (ParseKind(kind) is not { } list) return NotFound();
+		return await management.CreateCategoryAsync(actor, list, dto.Name ?? string.Empty, dto.Description ?? string.Empty, HttpContext.RequestAborted) switch
 		{
 			RoleCategory category => Ok(category),
 			RoleRefusal refusal => Refused(refusal)
@@ -225,34 +229,44 @@ public class RolesController(
 	}
 
 	/// <summary>Sets the description, then the name when <see cref="CategoryDto.Name"/> differs from the route's.</summary>
-	[HttpPut("categories/{name}")]
+	[HttpPut("categories/{kind}/{name}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	public async Task<IActionResult> UpdateCategory(string name, [FromBody] CategoryDto dto)
+	public async Task<IActionResult> UpdateCategory(string kind, string name, [FromBody] CategoryDto dto)
 	{
 		if (Actor() is not { } actor) return Forbid();
+		if (ParseKind(kind) is not { } list) return NotFound();
 		var ct = HttpContext.RequestAborted;
-		if (await management.DescribeCategoryAsync(actor, name, dto.Description ?? string.Empty, ct) is RoleRefusal refusal)
+		if (await management.DescribeCategoryAsync(actor, list, name, dto.Description ?? string.Empty, ct) is RoleRefusal refusal)
 			return Refused(refusal);
 		var newName = dto.Name?.Trim() ?? string.Empty;
 		if (newName.Length == 0 || newName == name.Trim()) return Ok();
-		return await management.RenameCategoryAsync(actor, name, newName, ct) switch
+		return await management.RenameCategoryAsync(actor, list, name, newName, ct) switch
 		{
 			RoleCategory category => Ok(category),
 			RoleRefusal renameRefusal => Refused(renameRefusal)
 		};
 	}
 
-	[HttpDelete("categories/{name}")]
+	[HttpDelete("categories/{kind}/{name}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	public async Task<IActionResult> DeleteCategory(string name)
+	public async Task<IActionResult> DeleteCategory(string kind, string name)
 	{
 		if (Actor() is not { } actor) return Forbid();
-		return await management.DeleteCategoryAsync(actor, name, HttpContext.RequestAborted) switch
+		if (ParseKind(kind) is not { } list) return NotFound();
+		return await management.DeleteCategoryAsync(actor, list, name, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(new { deleted = true }),
 			RoleRefusal refusal => Refused(refusal)
 		};
 	}
+
+	/// <summary>The category list a route names: <c>role</c> or <c>permission</c>.</summary>
+	private static CategoryKind? ParseKind(string kind) => kind.ToLowerInvariant() switch
+	{
+		"role" => CategoryKind.Role,
+		"permission" => CategoryKind.Permission,
+		_ => null
+	};
 
 	/// <summary>Portal role authority is account-wide, as in every other HTTP policy gate.</summary>
 	private CapabilityActor? Actor()

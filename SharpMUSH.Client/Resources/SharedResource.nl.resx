@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Elke rol en elk eigen recht hoort bij een categorie, en deze pagina groepeert ze daarop. Maak een categorie voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category.</value>
+    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Categorie {0} verwijderd.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} rollen, {1} rechten</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rol} other {# rollen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# recht} other {# rechten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rolcategorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Rechtencategorieën</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

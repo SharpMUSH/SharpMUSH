@@ -112,11 +112,11 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 	private sealed record CustomPermissionRequest(string Scope, string Category, string Description);
 
 	/// <summary>The categories of roles and permissions, or none when unavailable.</summary>
-	public async Task<IReadOnlyList<RoleCategory>> ListCategoriesAsync()
+	public async Task<IReadOnlyList<RoleCategory>> ListCategoriesAsync(CategoryKind kind)
 	{
 		try
 		{
-			return await Client.GetFromJsonAsync<List<RoleCategory>>("api/roles/categories") ?? [];
+			return await Client.GetFromJsonAsync<List<RoleCategory>>(CategoriesPath(kind)) ?? [];
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
 		{
@@ -125,17 +125,20 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 		}
 	}
 
-	/// <summary>Creates a category.</summary>
-	public Task<ApiResult<Success>> CreateCategoryAsync(string name, string description) =>
-		Client.PostApiAsync("api/roles/categories", new CategoryRequest(name, description));
+	/// <summary>Creates a category in the list <paramref name="kind"/>.</summary>
+	public Task<ApiResult<Success>> CreateCategoryAsync(CategoryKind kind, string name, string description) =>
+		Client.PostApiAsync(CategoriesPath(kind), new CategoryRequest(name, description));
 
 	/// <summary>Changes a category's description and, when <paramref name="newName"/> differs, its name.</summary>
-	public Task<ApiResult<Success>> UpdateCategoryAsync(string name, string newName, string description) =>
-		Client.PutApiAsync($"api/roles/categories/{Uri.EscapeDataString(name)}", new CategoryRequest(newName, description));
+	public Task<ApiResult<Success>> UpdateCategoryAsync(CategoryKind kind, string name, string newName, string description) =>
+		Client.PutApiAsync($"{CategoriesPath(kind)}/{Uri.EscapeDataString(name)}", new CategoryRequest(newName, description));
 
 	/// <summary>Deletes a category that holds nothing.</summary>
-	public Task<ApiResult<Success>> DeleteCategoryAsync(string name) =>
-		Client.DeleteApiAsync($"api/roles/categories/{Uri.EscapeDataString(name)}");
+	public Task<ApiResult<Success>> DeleteCategoryAsync(CategoryKind kind, string name) =>
+		Client.DeleteApiAsync($"{CategoriesPath(kind)}/{Uri.EscapeDataString(name)}");
+
+	private static string CategoriesPath(CategoryKind kind)
+		=> kind == CategoryKind.Role ? "api/roles/categories/role" : "api/roles/categories/permission";
 
 	private sealed record CategoryRequest(string Name, string Description);
 

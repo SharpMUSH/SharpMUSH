@@ -41,7 +41,7 @@ timezone    Test for a valid timezone; see [timezones]<br>
 locktype    Test for a valid locktype for @lock/`<string>` `<target>`. `<target>` defaults to the caller.<br>
 lockkey     Test for a valid lockkey for @lock me=`<string>`<br>
 rolename    Test for a valid role short name for @role/create: 1 to 32 lowercase letters, digits, `-` and `_`.<br>
-rolecategory Test for a valid category name for @role/category/create: 1 to 32 characters a player name may use, without `/`.<br>
+rolecategory Test for a valid role or permission category name for @role/category/create: 1 to 32 characters a player name may use, without `/`.<br>
 permission  Test for a valid custom permission name for @role/define, such as `scene.close`. It does not say whether the name is taken.
 
 Note that, for "playername", valid() returns 0 if the name is valid but currently in use by a player other than `<target>`.

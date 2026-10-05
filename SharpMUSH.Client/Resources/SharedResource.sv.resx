@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Varje roll och egen behörighet hör till en kategori, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category.</value>
+    <value>Roller och egna behörigheter har var sin lista med kategorier, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category och @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Kategorin {0} borttagen.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} roller, {1} behörigheter</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# roll} other {# roller}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# behörighet} other {# behörigheter}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rollkategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Behörighetskategorier</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

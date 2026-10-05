@@ -443,8 +443,8 @@ public partial class LightningDatabase
 	/// Writes what <see cref="BuiltInRoles.SeedChanges"/> asks for: the missing system roles, the starter
 	/// roles into a world with none, and new in-game scopes on existing system roles. Runs on every start,
 	/// here rather than in a hosted service, because the privilege checks read roles from the first
-	/// command on. Then the categories: the seeded ones into a world with none, and any category a role
-	/// or custom permission names but the world does not have, so nothing sits in a missing category.
+	/// command on. Then the two category lists: the seeded ones into a list with none, and any category a
+	/// role or custom permission names but its list does not have, so nothing sits in a missing category.
 	/// </summary>
 	private static void SeedRoles(ITx tx)
 	{
@@ -455,23 +455,30 @@ public partial class LightningDatabase
 			tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role)));
 		}
 
-		var categories = tx.Range(Tables.RoleCategory, [])
+		SeedCategories(tx, CategoryKind.Role, now,
+			tx.Range(Tables.Role, []).Select(e => Codec.Deserialize<RoleRecord>(e.Value).Category));
+		SeedCategories(tx, CategoryKind.Permission, now,
+			tx.Range(Tables.CustomPermission, []).Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value).Category));
+	}
+
+	/// <summary>
+	/// Fills the category list <paramref name="kind"/>: its seeds when the list is empty, and any name in
+	/// <paramref name="used"/> the list lacks.
+	/// </summary>
+	private static void SeedCategories(ITx tx, CategoryKind kind, long now, IEnumerable<string> used)
+	{
+		var categories = tx.Range(CategoryTable(kind), [])
 			.Select(e => Codec.Deserialize<RoleCategoryRecord>(e.Value).Name)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 		if (categories.Count == 0)
-			foreach (var seed in Categories.Seeds)
+			foreach (var seed in Categories.Seeds(kind))
 			{
-				PutCategory(tx, seed with { CreatedAt = now });
+				PutCategory(tx, kind, seed with { CreatedAt = now });
 				categories.Add(seed.Name);
 			}
 
-		var used = tx.Range(Tables.Role, []).Select(e => Codec.Deserialize<RoleRecord>(e.Value).Category)
-			.Concat(tx.Range(Tables.CustomPermission, []).Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value).Category))
-			.Where(name => name.Length > 0)
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.ToList();
-		foreach (var name in used.Where(name => !categories.Contains(name)))
-			PutCategory(tx, new RoleCategory(name, "", now));
+		foreach (var name in used.Where(name => name.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Where(name => !categories.Contains(name)).ToList())
+			PutCategory(tx, kind, new RoleCategory(name, "", now));
 	}
 
 	/// <summary>

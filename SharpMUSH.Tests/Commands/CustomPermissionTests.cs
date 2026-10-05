@@ -117,27 +117,36 @@ public class CustomPermissionTests : ServerTestBase
 	{
 		var category = "Cat " + _role;
 		await Assert.That(await Heard(_wizard, $"@role/create {_role}")).Contains("Usage: @role/create <role>=<category>");
-		await Assert.That(await Heard(_wizard, $"@role/create {_role}={category}/Closers")).Contains($"No category named '{category}'. Create the category first");
-		await Assert.That(await Heard(_wizard, $"@role/category/create {category}=People who close scenes")).Contains($"Category {category} created");
+		await Assert.That(await Heard(_wizard, $"@role/create {_role}={category}/Closers")).Contains($"No role category named '{category}'. Create the category first: @role/category/create {category}=");
+		await Assert.That(await Heard(_wizard, $"@role/category/create {category}=People who close scenes")).Contains($"Role category {category} created");
 		await Assert.That(await Heard(_wizard, $"@role/create {_role}={category.ToUpperInvariant()}/Closers")).Contains($"created in {category}");
 		await Assert.That(await Heard(_wizard, $"@role {_role}")).Contains($"Category: {category}");
-		await Assert.That(await Heard(_wizard, $"@role/category {_role}=Staff")).Contains("is now in Staff");
 
+		// Permissions have a list of their own.
 		await Assert.That(await Heard(_wizard, $"@role/define {_scope}")).Contains("Usage: @role/define <permission>=<category>");
+		await Assert.That(await Heard(_wizard, $"@role/define {_scope}={category}/Finish any scene")).Contains($"No permission category named '{category}'. Create the category first: @role/category/create/permission {category}=");
+		await Assert.That(await Heard(_wizard, $"@role/category/create/permission {category}=Scene permissions")).Contains($"Permission category {category} created");
 		await Heard(_wizard, $"@role/define {_scope}=Staff/Finish any scene");
 		await Assert.That(await Heard(_wizard, $"@role/category {_scope}={category}")).Contains($"{_scope} is now in {category}");
 		await Assert.That(await Heard(_wizard, "@role/scopes")).Contains($" {category}\n  {_scope}  Finish any scene");
 		await Assert.That(await Heard(_wizard, $"@role/category wiki.read={category}")).Contains("built-in");
 
-		await Assert.That(await Heard(_wizard, "@role/categories")).Contains("People who close scenes");
-		await Assert.That(await Heard(_wizard, $"@role/category/delete {category}")).Contains("still holds");
-		await Heard(_wizard, $"@role/category {_scope}=Staff");
-		await Assert.That(await Heard(_wizard, $"@role/category/describe {category}=Closers")).Contains($"Category {category}: Closers");
+		var listed = await Heard(_wizard, "@role/categories");
+		await Assert.That(listed).Contains("Role categories:").And.Contains("Permission categories:");
+		await Assert.That(listed).Contains("People who close scenes").And.Contains("Scene permissions");
+		await Assert.That(await Heard(_wizard, $"@role/category/delete {category}")).Contains($"still holds {_role}");
+		await Assert.That(await Heard(_wizard, $"@role/category/delete/permission {category}")).Contains($"still holds {_scope}");
+
+		await Assert.That(await Heard(_wizard, $"@role/category/describe {category}=Closers")).Contains($"Role category {category}: Closers");
 		var renamed = category + "x";
 		await Assert.That(await Heard(_wizard, $"@role/category/rename {category}={renamed}")).Contains($"is now {renamed}");
+		await Assert.That(await Heard(_wizard, $"@role {_role}")).Contains($"Category: {renamed}");
+		await Assert.That(await Heard(_wizard, "@role/scopes")).Contains($" {category}\n  {_scope}");
 		await Assert.That(await Heard(_wizard, $"@role/category {_role}=Staff")).Contains("is now in Staff");
 		await Assert.That(await Heard(_wizard, $"@role/category/delete {renamed}")).Contains("deleted");
-		await Assert.That(await Heard(_wizard, "@role/categories")).DoesNotContain(renamed);
+		await Heard(_wizard, $"@role/category {_scope}=Staff");
+		await Assert.That(await Heard(_wizard, $"@role/category/delete/permission {category}")).Contains($"Permission category {category} deleted");
+		await Assert.That(await Heard(_wizard, "@role/categories")).DoesNotContain(category);
 	}
 
 	[Test]

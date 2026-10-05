@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Minden szerepkör és egyéni jogosultság egy kategóriába tartozik, és ez az oldal aszerint csoportosítja őket. Hozza létre a kategóriát, mielőtt bármit belehelyez. Az a kategória, amely még tartalmaz valamit, nem törölhető. Játékban: @role/category.</value>
+    <value>A szerepköröknek és az egyéni jogosultságoknak külön kategórialistájuk van, és ez az oldal aszerint csoportosítja őket. Hozz létre egy kategóriát, mielőtt bármit beleteszel. Az a kategória, amely még tartalmaz valamit, nem törölhető. A játékban: @role/category és @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>{0} kategória törölve.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>Szerepkörök: {0}, jogosultságok: {1}</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# szerepkör} other {# szerepkör}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# jogosultság} other {# jogosultság}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Szerepkör-kategóriák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Jogosultság-kategóriák</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

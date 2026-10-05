@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Hver rolle og egen tilladelse hører til en kategori, og denne side grupperer dem efter den. Opret en kategori, før du lægger noget i den. En kategori, der stadig indeholder noget, kan ikke slettes. I spillet: @role/category.</value>
+    <value>Roller og egne tilladelser har hver deres liste af kategorier, og denne side grupperer dem efter den. Opret en kategori, før du lægger noget i den. En kategori, der stadig indeholder noget, kan ikke slettes. I spillet: @role/category og @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Kategorien {0} blev slettet.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} roller, {1} tilladelser</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rolle} other {# roller}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# tilladelse} other {# tilladelser}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rollekategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Tilladelseskategorier</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

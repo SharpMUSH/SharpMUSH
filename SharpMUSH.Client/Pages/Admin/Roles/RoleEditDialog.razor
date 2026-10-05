@@ -74,7 +74,7 @@
             _priority = Existing.Priority;
         }
 
-        _categories = await Roles.ListCategoriesAsync();
+        _categories = await Roles.ListCategoriesAsync(SharpMUSH.Library.Models.CategoryKind.Role);
     }
 
     private void Cancel() => MudDialog.Cancel();

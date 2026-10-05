@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Svaka uloga i svako vlastito dopuštenje pripada kategoriji, a ova ih stranica grupira po njoj. Stvorite kategoriju prije nego što u nju išta stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category.</value>
+    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3290,8 +3290,20 @@
     <value>Kategorija {0} izbrisana.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>Uloge: {0}, dopuštenja: {1}</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# uloga} few {# uloge} many {# uloga} other {# uloga}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# dopuštenje} few {# dopuštenja} many {# dopuštenja} other {# dopuštenja}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Kategorije uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Kategorije dopuštenja</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">

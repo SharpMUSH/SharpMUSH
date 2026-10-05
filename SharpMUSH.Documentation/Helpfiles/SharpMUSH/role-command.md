@@ -69,16 +69,16 @@
 `@role/allow/account <player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
 `@role/define <permission>=<category>[/<description>]`<br>
 `@role/undefine <permission>`<br>
-`@role/category/create <category>=<description>`<br>
-`@role/category/describe <category>=<description>`<br>
-`@role/category/rename <category>=<new name>`<br>
-`@role/category/delete <category>`
+`@role/category/create[/permission] <category>=<description>`<br>
+`@role/category/describe[/permission] <category>=<description>`<br>
+`@role/category/rename[/permission] <category>=<new name>`<br>
+`@role/category/delete[/permission] <category>`
 
 @role shows and manages roles: named sets of permissions that decide what an object may do, in the game and in the web portal. See [roles] for how roles combine.
 
 A role is named by its short name (`moderator`), which is 1 to 32 lowercase letters, digits, `-` and `_`. Its display name, category, colour and priority can change; its short name cannot. A display name is up to 32 characters a player name may use.
 
-Every role and custom permission is in a category, and the category must exist first (see [@role categories]). The portal's Roles page groups them by it. The system roles start in `System`, and the starter roles in `Staff`.
+Every role is in a role category and every custom permission in a permission category; the two lists are separate, and a category must exist before anything goes in it (see [@role categories]). The portal's Roles page groups both by category. The system roles start in `System`, and the starter roles in `Staff`.
 
 ## Viewing roles
 
@@ -154,16 +154,18 @@ think permission(*Ariel,scene.close)
 
 ## Categories
 
-A category groups roles and custom permissions, and has a description of up to 200 characters. A new game has two: `System`, for the system roles, and `Staff`. `@role/categories` lists every category, with how many roles and permissions it holds and its description.
+Roles and custom permissions have separate lists of categories. Each category has a description of up to 200 characters. A new game has the role categories `System`, for the system roles, and `Staff`, and the permission category `Staff`. `@role/categories` lists both, with how many roles or permissions each category holds and its description.
 
-`@role/category/create <category>=<description>` makes one. A name is 1 to 32 characters a player name may use, without `/`; `valid(rolecategory, <name>)` checks one. Names are matched without regard to case. Naming a category that does not exist in `@role/create`, `@role/define` or `@role/category` is refused, with a reminder to create it first.
+`@role/category/create <category>=<description>` makes a role category, and `@role/category/create/permission` a permission category. A name is 1 to 32 characters a player name may use, without `/`; `valid(rolecategory, <name>)` checks one. Names are matched without regard to case, and the same name may be in both lists. `@role/create` and `@role/category <role>` refuse a role category that does not exist, and `@role/define` and `@role/category <permission>` a permission category, with a reminder to create it first.
 
-`@role/category/describe` changes the description, and `@role/category/rename` the name, taking everything in the category along. `@role/category/delete` removes an empty category; move what is in it elsewhere first. All of these need the `roles.admin` permission.
+`@role/category/describe` changes the description, and `@role/category/rename` the name, taking everything in the category along. `@role/category/delete` removes an empty category; move what is in it elsewhere first. Add `/permission` to each to act on a permission category. All of these need the `roles.admin` permission.
 
 Examples:
 ```sharp
 @role/category/create Scenes=People who run and close scenes
 @role/create closer=Scenes/Scene closer
+@role/category/create/permission Scenes=Permissions scene softcode checks
+@role/define scene.close=Scenes/Finish any scene
 @role/category/rename Scenes=Scene staff
 ```
 

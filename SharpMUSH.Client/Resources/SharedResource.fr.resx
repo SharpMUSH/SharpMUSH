@@ -1922,7 +1922,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Chaque rôle et chaque permission personnalisée appartient à une catégorie, et cette page les regroupe ainsi. Créez une catégorie avant d'y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category.</value>
+    <value>Les rôles et les permissions personnalisées ont chacun leur propre liste de catégories, selon laquelle cette page les regroupe. Créez une catégorie avant d’y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category et @role/category/.../permission.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -1957,8 +1957,20 @@
     <value>Catégorie {0} supprimée.</value>
     <comment>MT</comment>
   </data>
-  <data name="RolCategoryHolds" xml:space="preserve">
-    <value>{0} rôles, {1} permissions</value>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rôle} other {# rôles}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permission} other {# permissions}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Catégories de rôles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Catégories de permissions</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryChoose" xml:space="preserve">
