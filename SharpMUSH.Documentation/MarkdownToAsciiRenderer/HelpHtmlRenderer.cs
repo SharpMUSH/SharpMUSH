@@ -181,13 +181,13 @@ public static class HelpHtmlRenderer
 			switch (child)
 			{
 				case LiteralInline literal:
-					text.Append(literal.Content.ToString());
+					text.Append(literal.Content.AsSpan());
 					break;
 				case CodeInline code:
 					text.Append(code.Content);
 					break;
 				case HtmlEntityInline entity:
-					text.Append(entity.Transcoded.ToString());
+					text.Append(entity.Transcoded.AsSpan());
 					break;
 				case HtmlInline html when IsBreakTag(html.Tag):
 					text.Append('\n');
