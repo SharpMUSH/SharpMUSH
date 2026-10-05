@@ -196,6 +196,30 @@ public class ConnectionAnnounceServiceTests
 	private static Lazy<ITaskScheduler> FakeScheduler(ITaskScheduler? scheduler = null) =>
 		new(scheduler ?? Substitute.For<ITaskScheduler>());
 
+	/// <summary>
+	/// A scheduler whose reservations note in <paramref name="order"/> when each held hook is published,
+	/// and the state it was queued with in <paramref name="queued"/>.
+	/// </summary>
+	private static ITaskScheduler ReservingScheduler(List<string> order, List<(MString Body, ParserState State)> queued)
+	{
+		var scheduler = Substitute.For<ITaskScheduler>();
+		scheduler.ReserveCommandList(Arg.Any<MString>(), Arg.Any<ParserState>()).Returns(call =>
+		{
+			var body = call.Arg<MString>();
+			queued.Add((body, call.Arg<ParserState>()));
+			var admission = new QueueAdmissionResult(queued.Count, QueueRejectionReason.None);
+			return ValueTask.FromResult(new QueueCommandReservation(admission, () =>
+			{
+				order.Add($"run {body.ToPlainText()}");
+				return ValueTask.FromResult(admission);
+			}));
+		});
+		return scheduler;
+	}
+
+	private static SharpAttribute[] Hook(string name, string body) =>
+		[new SharpAttribute("", "", name, [], null, name, null!, null!, null!) { Value = MarkupText.Plain(body) }];
+
 	private static ILogger<ConnectionAnnounceService> FakeLogger() =>
 		Substitute.For<ILogger<ConnectionAnnounceService>>();
 
@@ -305,10 +329,7 @@ public class ConnectionAnnounceServiceTests
 		var masterRoom = factory.CreateRoom(2, "Master Room");
 		var hookTarget = factory.CreateThing(50, "Hookable Thing", location: masterRoom);
 		attributeService.GetAttributeAsync(hookTarget, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true)
-			.Returns(new ValueTask<OptionalSharpAttributeOrError>(new[]
-			{
-				new SharpAttribute("", "", "ACONNECT", [], null, "ACONNECT", null!, null!, null!) { Value = MarkupText.Plain("@pemit %#=hi") }
-			}));
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(Hook("ACONNECT", "@pemit %#=hi")));
 
 		var mediator = FakeMediatorWithNoMasterRoom();
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == masterRoom.Object.Key), Arg.Any<CancellationToken>())
@@ -318,27 +339,55 @@ public class ConnectionAnnounceServiceTests
 		mediator.CreateStream(Arg.Is<GetContentsQuery>(q => ContainerNumber(q.DBRef) == masterRoom.Object.Key), Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 
-		var scheduler = Substitute.For<ITaskScheduler>();
-		scheduler.AdmitCommandList(Arg.Any<MString>(), Arg.Any<ParserState>())
-			.Returns(ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None)));
+		var order = new List<string>();
+		var queued = new List<(MString Body, ParserState State)>();
 		var service = new ConnectionAnnounceService(
 			Substitute.For<ICommunicationService>(), Substitute.For<IGameBroadcastService>(), attributeService,
-			FakeOptionsWrapper(), mediator, FakeScheduler(scheduler), FakeLogger());
+			FakeOptionsWrapper(), mediator, FakeScheduler(ReservingScheduler(order, queued)), FakeLogger());
 		var player = FakeConnectedPlayer("Bob");
 
 		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1));
 		using var scope = budget.Enter();
 		await service.AnnounceConnectAsync(player, connectionCount: 3, isHiddenConnection: false);
 
-		var call = scheduler.ReceivedCalls().Single(x => x.GetMethodInfo().Name == nameof(ITaskScheduler.AdmitCommandList));
-		var state = (ParserState)call.GetArguments()[1]!;
-		await Assert.That(((MString)call.GetArguments()[0]!).ToPlainText()).IsEqualTo("@pemit %#=hi");
+		var (body, state) = queued.Single();
+		await Assert.That(body.ToPlainText()).IsEqualTo("@pemit %#=hi");
+		await Assert.That(order).IsEquivalentTo(["run @pemit %#=hi"]).Because("the held hook is published when the announcement ends");
 		await Assert.That(state.Executor).IsEqualTo(hookTarget.Object().DBRef);
 		await Assert.That(state.Enactor).IsEqualTo(player.Object().DBRef);
 		await Assert.That(state.Caller).IsEqualTo(player.Object().DBRef);
 		await Assert.That(state.Arguments["0"].Message!.ToPlainText()).IsEqualTo(string.Empty);
 		await Assert.That(state.Arguments["1"].Message!.ToPlainText()).IsEqualTo("3");
 		await Assert.That(state.ExecutionBudget).IsNull();
+	}
+
+	/// <summary>
+	/// announce_disconnect writes LASTLOGOUT (src/bsd.c:6162) before anything it queued can run, PennMUSH
+	/// being single-threaded. A socket closing is handled here outside the queue's consumer, so the
+	/// ADISCONNECT hooks are held until the bookkeeping is done: a hook reading LASTLOGOUT sees this logout.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_HooksRunOnlyAfterLastLogoutIsWritten()
+	{
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var player = FakeConnectedPlayer("Bob");
+		attributeService.GetAttributeAsync(player, player, "ADISCONNECT", IAttributeService.AttributeMode.Execute, true)
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(Hook("ADISCONNECT", "@pemit %#=[get(%#/LASTLOGOUT)]")));
+
+		var order = new List<string>();
+		var mediator = FakeMediatorWithNoMasterRoom();
+		mediator.When(m => m.Send(Arg.Is<SetAttributeCommand>(c => c.Attribute.SequenceEqual(new[] { "LASTLOGOUT" })), Arg.Any<CancellationToken>()))
+			.Do(_ => order.Add("LASTLOGOUT"));
+		var scheduler = ReservingScheduler(order, []);
+		var service = new ConnectionAnnounceService(
+			Substitute.For<ICommunicationService>(), Substitute.For<IGameBroadcastService>(), attributeService,
+			FakeOptionsWrapper(), mediator, FakeScheduler(scheduler), FakeLogger());
+
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
+
+		await Assert.That(string.Join(" | ", order)).IsEqualTo("LASTLOGOUT | run @pemit %#=[get(%#/LASTLOGOUT)]");
+		await scheduler.DidNotReceiveWithAnyArgs().AdmitCommandList(default!, default!);
 	}
 
 	/// <summary>

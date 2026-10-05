@@ -83,7 +83,7 @@ public class EventService(
 				CurrentEvaluation = new DBAttribute(handlerRef, eventName)
 			};
 
-			var admission = await scheduler.Value.AdmitCommandList(MarkupText.Plain(handler.Last().Value.ToPlainText()), state);
+			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(handler.Last().Value.ToPlainText()), state);
 			if (!admission.Accepted)
 			{
 				logger.LogWarning("Event {EventName} was not queued: {Reason}", eventName, admission.Reason);

@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -33,6 +34,10 @@ public class ConnectionStateEventHandler(
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
+		// A socket closing is handled outside the queue's consumer. The events and hooks below run once
+		// the whole change is recorded — LASTLOGOUT above all — as PennMUSH's queue entries do.
+		await using var hold = QueueHold.Enter();
+
 		// The connect screen goes to any connection arriving at the login prompt — a brand new socket,
 		// and equally one returning there via LOGOUT. PennMUSH logout_sock finishes with
 		// welcome_user(d, 0), the same call a fresh connection gets, because the descriptor is meant to

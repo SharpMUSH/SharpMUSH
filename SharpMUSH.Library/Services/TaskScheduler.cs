@@ -982,7 +982,7 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false, enactor: state.Enactor);
+		var admission = await Admit(() => ExecuteList(command, state), SchedulerKeys.Owner(state.Executor), EnqueueGroup, state.Executor, ready: false, sourceAttribute: SourceAttribute(state), enactor: state.Enactor);
 		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
 		var pid = admission.Pid!.Value;
 		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));

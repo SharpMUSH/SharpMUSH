@@ -31,6 +31,8 @@ public class ConnectionAnnounceService(
 	/// <inheritdoc />
 	public async ValueTask AnnounceConnectAsync(AnySharpObject player, int connectionCount, bool isHiddenConnection)
 	{
+		// What this queues runs once the announcement is done, as announce_connect's queue entries do.
+		await using var hold = QueueHold.Enter(logger);
 		try
 		{
 			var isDark = await player.IsDark();
@@ -88,6 +90,8 @@ public class ConnectionAnnounceService(
 	/// <inheritdoc />
 	public async ValueTask AnnounceDisconnectAsync(AnySharpObject player, int remainingConnections, bool isHiddenConnection)
 	{
+		// The ADISCONNECT hooks run once LASTLOGOUT is written, as announce_disconnect's queue entries do.
+		await using var hold = QueueHold.Enter(logger);
 		try
 		{
 			var isDark = await player.IsDark();
@@ -332,7 +336,7 @@ public class ConnectionAnnounceService(
 				CurrentEvaluation = new DBAttribute(ownerRef, attrName)
 			};
 
-			var admission = await scheduler.Value.AdmitCommandList(MarkupText.Plain(hook.Last().Value.ToPlainText()), state);
+			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(hook.Last().Value.ToPlainText()), state);
 			if (!admission.Accepted)
 			{
 				logger.LogWarning("{AttrName} hook on {Owner} for player {Player} was not queued: {Reason}",
