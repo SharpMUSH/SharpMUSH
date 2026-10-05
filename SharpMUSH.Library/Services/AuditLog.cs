@@ -45,7 +45,7 @@ public sealed class AuditLog(
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			Dropped(ex, action, target);
+			Dropped(ex, target);
 		}
 	}
 
@@ -60,7 +60,7 @@ public sealed class AuditLog(
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			Dropped(ex, action, target);
+			Dropped(ex, target);
 		}
 	}
 
@@ -76,9 +76,13 @@ public sealed class AuditLog(
 		=> await mediator.Send(new RecordAuditCommand(
 			new AuditDraft(time.GetUtcNow(), action, source, actor, target, details)), ct);
 
-	private void Dropped(Exception ex, string action, AuditTarget? target)
-		=> logger.LogError(ex, "[Audit] Could not record {Action} on {Target}", action,
-			LogSanitizer.Sanitize(target?.Id ?? "(none)"));
+	/// <remarks>
+	/// Names only the kind of target. The action and the target's id can name an account and what was done
+	/// to its password, which the application log is not the place for; the exception says what failed.
+	/// </remarks>
+	private void Dropped(Exception ex, AuditTarget? target)
+		=> logger.LogError(ex, "[Audit] Could not record an entry on a {TargetKind}",
+			LogSanitizer.Sanitize(target?.Kind ?? "(none)"));
 
 	private sealed class Scope(string? outer) : IDisposable
 	{
