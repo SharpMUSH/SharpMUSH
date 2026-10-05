@@ -50,7 +50,7 @@ public class AccountAuthService(
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
 	private record CreateCharacterRequest(string Name, string Password);
-	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime);
+	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime, string? Flags = null);
 	private record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private record ChangeUsernameRequest(string NewUsername);
@@ -703,7 +703,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<CreateCharacterResponse>();
 			if (result is null) return (false, "Unexpected server response.", null);
 
-			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, "");
+			var character = new CharacterSummary(result.DbrefNumber, result.CreationTime ?? 0, name, result.Flags ?? "");
 			SetCharacters([.. Characters, character]);
 			// An account's role comes from its characters: a fresh account is a Guest until its first
 			// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.

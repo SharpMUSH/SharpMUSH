@@ -42,7 +42,8 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IConnectionService>(),
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			FaceValueProjection(),
-			factory.Services.GetRequiredService<IPasswordService>())
+			factory.Services.GetRequiredService<IPasswordService>(),
+			factory.Services.GetRequiredService<IGuestAvailability>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -113,6 +114,23 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		// would leave the panel reporting success while guest login stayed broken.
 		var node = await Mediator.Send(new GetObjectNodeQuery(new DBRef(row.DbrefNumber, row.CreationTime)));
 		await Assert.That(await node.Expect<SharpPlayer>().Object.HasPower("Guest")).IsTrue();
+	}
+
+	/// <summary>
+	/// The portal offers anonymous visitors Play on this answer; a cached "no guests" from before the
+	/// roster had one would keep hiding it, so creating a guest must make it true at once.
+	/// </summary>
+	[Test]
+	public async Task Create_MakesGuestLoginAvailableAtOnce()
+	{
+		var wizard = await NewWizardAsync("GuestAdminAvail");
+		var availability = factory.Services.GetRequiredService<IGuestAvailability>();
+		await availability.CanLogInAsync();
+
+		await ControllerAs(wizard)
+			.Create(new AdminGuestsController.CreateGuestRequest($"GuestV{Guid.NewGuid():N}"[..14]), CancellationToken.None);
+
+		await Assert.That(await availability.CanLogInAsync()).IsTrue();
 	}
 
 	[Test]

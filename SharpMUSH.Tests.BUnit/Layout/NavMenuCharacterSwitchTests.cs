@@ -185,9 +185,10 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		=> Render<MudHarness>(p => p.AddChildContent<NavMenu>(nm => nm.Add(c => c.IsCollapsed, isCollapsed)));
 
 	[Test]
-	public async Task Switching_from_the_panel_does_not_touch_the_terminals()
+	public async Task Switching_from_the_panel_moves_the_connected_terminal_to_the_new_character()
 	{
 		var terminal = RegisterTerminal();
+		terminal.First.IsConnected.Returns(true);
 		var playTerminal = RegisterPlayTerminal();
 		var auth = await CreateLoggedInAuthAsync();
 
@@ -200,8 +201,11 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 				throw new InvalidOperationException("switch not applied yet");
 		});
 
-		// The account-panel switch is portal-only: a terminal's character is fixed at connect.
-		await terminal.First.DidNotReceive().DisposeAsync();
+		// The connected command terminal quits as Alpha and connects as Beta with the switch's OTT; the
+		// play terminal was never connected, so the Play page connects it as Beta when it opens.
+		cut.WaitForAssertion(() => terminal.Second.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "new-character-ott", Arg.Any<TerminalIdentity?>()));
+		await terminal.First.Received(1).SendAsync("QUIT");
+		await terminal.First.Received(1).DisposeAsync();
 		await playTerminal.First.DidNotReceive().DisposeAsync();
 	}
 

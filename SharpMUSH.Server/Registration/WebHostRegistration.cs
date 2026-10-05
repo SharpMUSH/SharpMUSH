@@ -93,6 +93,7 @@ internal static class WebHostRegistration
 		services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
 		services.AddSingleton(PortalBuild.For(environment));
+		services.AddSingleton<IGuestAvailability, GuestAvailability>();
 
 		services.AddCors(options =>
 		{

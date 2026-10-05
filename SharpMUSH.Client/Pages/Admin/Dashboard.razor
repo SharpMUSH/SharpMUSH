@@ -36,23 +36,25 @@
     /// <summary>A tool and its gate: visible when the viewer satisfies any one policy or holds any one role.</summary>
     private sealed record AdminCard(string TitleKey, string ActionKey, string Href, string Icon, string[] Policies, string[]? Roles = null);
 
+    /// <remarks>
+    /// Only pages with something behind them. Characters, Moderation and Server are still placeholders
+    /// (AdminComingSoon) and stay off the grid until they are built: a card that opens "coming soon" is a
+    /// dead end. Their routes remain.
+    /// </remarks>
     private static readonly AdminCard[] Cards =
     [
         new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats, ["queue.inspect", "queue.inspect.own"]),
         new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group, ["players.view"]),
         new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts, [], ["Wizard", "God"]),
-        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person, ["players.view"]),
         new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge, ["players.moderate"]),
         new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings, ["config.admin"]),
         new("AdmRolesTitle", "AdmRolesAction", "/admin/roles", Icons.Material.Filled.Shield, ["roles.admin"]),
-        new("AdmModerationTitle", "AdmModerationAction", "/admin/moderation", Icons.Material.Filled.Gavel, ["players.moderate"]),
         new("Suggestions", "AdmSuggestionsAction", "/admin/suggestions", Icons.Material.Filled.Lightbulb, ["config.admin"]),
         new("WikiAdmin", "WikiAdmin", "/admin/wiki", Icons.Material.Filled.MenuBook, ["wiki.admin"]),
         new("AdmMediaTitle", "AdmMediaAction", "/admin/media", Icons.Material.Filled.PermMedia, ["media.admin"]),
         new("AdmApplicationsTitle", "AdmApplicationsAction", "/admin/applications", Icons.Material.Filled.Apps, ["applications.admin"]),
         new("AdmPackagesTitle", "AdmPackagesAction", "/admin/packages", Icons.Material.Filled.Inventory2, ["packages.admin"]),
         new("AdmLayoutTitle", "AdmLayoutAction", "/admin/layout", Icons.Material.Filled.Dashboard, ["layout.admin"]),
-        new("Server", "AdmServerAction", "/admin/server", Icons.Material.Filled.Dns, ["server.admin"]),
         new("AdmDatabaseImportTitle", "AdmDatabaseImportAction", "/admin/database/import", Icons.Material.Filled.CloudUpload, ["server.admin"]),
     ];
 

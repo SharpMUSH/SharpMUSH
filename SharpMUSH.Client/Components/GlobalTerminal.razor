@@ -233,6 +233,7 @@
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
+        if (Terminal is TerminalServiceHost host) host.Recreated += OnRecreated;
 
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
@@ -515,6 +516,14 @@
     // established pattern defensively) would leave the connbar stale until some unrelated render.
     private void OnActiveCharacterChanged() => InvokeAsync(StateHasChanged);
 
+    /// <summary>A new session behind the facade (a character switch): the old character's lines go with the old one.</summary>
+    private void OnRecreated() => InvokeAsync(() =>
+    {
+        _displayLines.Clear();
+        _displayLines.AddRange(Terminal.Lines);
+        StateHasChanged();
+    });
+
     private void AddLocalLine(string text, TerminalLineSource source)
     {
         _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
@@ -559,6 +568,7 @@
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
+        if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
 
         await ReleaseAsync(_cmdLinkHandle);
         _selfRef?.Dispose();

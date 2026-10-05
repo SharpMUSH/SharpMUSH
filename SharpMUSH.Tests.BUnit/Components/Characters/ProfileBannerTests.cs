@@ -73,6 +73,22 @@ public class ProfileBannerTests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-banner-actions button.char-profile-full")).IsNotNull();
 	}
 
+	/// <summary>
+	/// Paging happens on Play, which a signed-out visitor reaches only as a guest. With no guest to hand
+	/// out, Page sent them to "Sorry, there are no guest characters available"; it sends them to sign in.
+	/// </summary>
+	[Test]
+	public async Task Page_ForAVisitorWhoCannotPlayAsAGuest_GoesToSignIn()
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: false));
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+
+		var cut = RenderProfile();
+
+		var page = cut.Find(".kit-banner-bottom-actions a.kit-capsule--primary");
+		await Assert.That(page.GetAttribute("href")).IsEqualTo("/login?returnUrl=%2Fplay%3Fpage%3DTomas%2520Reyes");
+	}
+
 	[Test]
 	public async Task WithoutProfileFields_TheGalleryDrawsIt()
 	{

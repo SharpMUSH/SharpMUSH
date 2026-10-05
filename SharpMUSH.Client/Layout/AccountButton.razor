@@ -120,7 +120,7 @@
 
     private void TogglePanel() => _panelOpen = !_panelOpen;
 
-    /// <summary>Switches the portal's active character (SignalR + REST); does not touch the terminal.</summary>
+    /// <summary>Switches the character this tab plays: REST, the hub, and every connected terminal.</summary>
     private Task HandleSwitchCharacterAsync(AccountAuthService.CharacterSummary character)
         => CharacterSwitch.SwitchAsync(character);
 

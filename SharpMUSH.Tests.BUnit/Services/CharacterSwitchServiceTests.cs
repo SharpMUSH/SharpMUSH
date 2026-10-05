@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
@@ -19,6 +20,8 @@ file sealed class SwitchApiHandler(bool succeed = true) : HttpMessageHandler
 		if (request.RequestUri?.AbsolutePath == "/api/account/session")
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{ Content = JsonContent.Create(new { username = "current", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() }) });
+		if (request.RequestUri?.AbsolutePath == "/api/auth/mush-token")
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { token = "play-ott" }) });
 		Calls++;
 		if (!succeed)
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
@@ -33,14 +36,34 @@ file sealed class SwitchApiHandler(bool succeed = true) : HttpMessageHandler
 /// <summary>
 /// Coverage for <see cref="CharacterSwitchService"/>, the account-panel switch of the portal's acting
 /// character. The switch is a server-side rebind: the endpoint mints a token bound to the target and
-/// the tab adopts it, then the hub reconnects so it re-authenticates with that token. It never touches
-/// the terminals (a terminal's character is fixed at connect).
+/// the tab adopts it, then the hub reconnects so it re-authenticates with that token, and every
+/// connected terminal quits and connects again as the new character.
 /// </summary>
 public class CharacterSwitchServiceTests : TrackingBunitContext
 {
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
 
-	private (AccountAuthService Auth, IConnectionStateService Connection, CharacterSwitchService Service) Build(bool succeed = true)
+	private sealed record Terminals(ITerminalService CommandBefore, ITerminalService CommandAfter,
+		IPlayTerminalService PlayBefore, IPlayTerminalService PlayAfter);
+
+	private Terminals _terminals = null!;
+
+	private (TerminalServiceHost Command, PlayTerminalServiceHost Play) BuildTerminals(bool commandConnected, bool playConnected)
+	{
+		var commandBefore = Substitute.For<ITerminalService>();
+		commandBefore.IsConnected.Returns(commandConnected);
+		var commandAfter = Substitute.For<ITerminalService>();
+		var commands = new Queue<ITerminalService>([commandBefore, commandAfter]);
+		var playBefore = Substitute.For<IPlayTerminalService>();
+		playBefore.IsConnected.Returns(playConnected);
+		var playAfter = Substitute.For<IPlayTerminalService>();
+		var plays = new Queue<IPlayTerminalService>([playBefore, playAfter]);
+		_terminals = new Terminals(commandBefore, commandAfter, playBefore, playAfter);
+		return (new TerminalServiceHost(() => commands.Dequeue()), new PlayTerminalServiceHost(() => plays.Dequeue()));
+	}
+
+	private (AccountAuthService Auth, IConnectionStateService Connection, CharacterSwitchService Service) Build(
+		bool succeed = true, bool commandConnected = false, bool playConnected = false)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("inherited-token");
@@ -55,7 +78,10 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]);
 		var connection = Substitute.For<IConnectionStateService>();
-		return (auth, connection, new CharacterSwitchService(auth, connection, new TerminalResumeStore(JSInterop.JSRuntime)));
+		var (command, play) = BuildTerminals(commandConnected, playConnected);
+		var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+		return (auth, connection, new CharacterSwitchService(auth, connection, new TerminalResumeStore(JSInterop.JSRuntime),
+			command, play, navigation, NullLogger<CharacterSwitchService>.Instance));
 	}
 
 	[Test]
@@ -109,5 +135,51 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 
 		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
 		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
+	}
+
+	/// <summary>
+	/// Each connected terminal ends the previous character's session (QUIT, so it leaves the WHO list at
+	/// once), is rebuilt, and connects as the new character: before, Play went on as the old character
+	/// while the rest of the portal named the new one.
+	/// </summary>
+	[Test]
+	public async Task SwitchAsync_moves_every_connected_terminal_to_the_new_character()
+	{
+		var (_, _, service) = Build(commandConnected: true, playConnected: true);
+
+		await service.SwitchAsync(Beta);
+
+		await _terminals.CommandBefore.Received(1).SendAsync("QUIT");
+		await _terminals.CommandBefore.Received(1).DisposeAsync();
+		await _terminals.CommandAfter.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", Arg.Any<TerminalIdentity?>());
+		await Assert.That(_terminals.CommandAfter.ConnectedPlayerName).IsEqualTo("Beta");
+
+		await _terminals.PlayBefore.Received(1).SendAsync("QUIT");
+		await _terminals.PlayBefore.Received(1).DisposeAsync();
+		// A terminal consumes its OTT, so Play mints its own.
+		await _terminals.PlayAfter.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "play-ott", Arg.Any<TerminalIdentity?>());
+	}
+
+	/// <summary>A terminal that is not connected is left for its page, which connects as the active character.</summary>
+	[Test]
+	public async Task SwitchAsync_leaves_a_terminal_that_is_not_connected()
+	{
+		var (_, _, service) = Build(commandConnected: true, playConnected: false);
+
+		await service.SwitchAsync(Beta);
+
+		await _terminals.PlayBefore.DidNotReceive().SendAsync(Arg.Any<string>());
+		await _terminals.PlayBefore.DidNotReceive().DisposeAsync();
+	}
+
+	[Test]
+	public async Task SwitchAsync_refused_by_the_server_leaves_the_terminals_connected()
+	{
+		var (_, _, service) = Build(succeed: false, commandConnected: true, playConnected: true);
+
+		await service.SwitchAsync(Beta);
+
+		await _terminals.CommandBefore.DidNotReceive().SendAsync(Arg.Any<string>());
+		await _terminals.PlayBefore.DidNotReceive().DisposeAsync();
 	}
 }

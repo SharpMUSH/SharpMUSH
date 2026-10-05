@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -75,6 +76,8 @@ public sealed class CharactersApiFake : HttpMessageHandler
 			.AddSingleton(new GalleryService(factory))
 			.AddSingleton<SidebarCollapseService>()
 			.AddLocalization();
+		// The profile's Page button asks whether a visitor could play as a guest.
+		ctx.Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		var auth = ctx.AddAuthorization();
 		return (fake, factory, auth);

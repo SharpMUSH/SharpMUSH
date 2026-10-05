@@ -44,7 +44,8 @@ public class AdminGuestsController(
 	IConnectionService connectionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IVisibleWorldProjection projection,
-	IPasswordService passwordService) : ControllerBase
+	IPasswordService passwordService,
+	IGuestAvailability guestAvailability) : ControllerBase
 {
 	/// <param name="InUse">
 	/// Whether someone is connected as this guest right now. Reported because it is the one reason a
@@ -150,6 +151,9 @@ public class AdminGuestsController(
 				new ApiErrorDto($"'{name}' was created but the {GuestCharacters.GuestPower} power did not take."));
 		}
 
+		// The portal offers anonymous visitors Play only while a guest exists; it may now.
+		guestAvailability.Invalidate();
+
 		// From the node, not the parsed dbref: a `?? 0` fallback would hand the panel `#N:0` for a
 		// guest that exists. The node is already loaded and is what List reports.
 		return Ok(new GuestRow(player.Object.Key, player.Object.CreationTime, name,
@@ -196,6 +200,7 @@ public class AdminGuestsController(
 		if (await NukeOnceAsync(executor, target) is { } secondRefusal)
 			return StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(secondRefusal));
 
+		guestAvailability.Invalidate();
 		return NoContent();
 	}
 

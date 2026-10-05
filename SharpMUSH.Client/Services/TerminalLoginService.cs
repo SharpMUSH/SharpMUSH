@@ -6,9 +6,8 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// Connects the command terminal as a specific character at initial login (the single-character
 /// auto-login and the <c>?as=</c> new-tab entry). Mints the character's OTT, commits it as the active
-/// character, and opens the terminal socket. Separate from <see cref="CharacterSwitchService"/>, which
-/// switches the PORTAL identity and never touches the terminal — a terminal's character is fixed once
-/// it connects.
+/// character, and opens the terminal socket. <see cref="CharacterSwitchService"/> is the switch made
+/// later, from the account panel, which also moves whichever terminals are already connected.
 /// </summary>
 public class TerminalLoginService(
 	ITerminalService terminal, AccountAuthService accountAuth, NavigationManager navigation,

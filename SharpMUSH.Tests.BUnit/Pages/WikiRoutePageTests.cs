@@ -139,6 +139,7 @@ file static class WikiServiceSetup
 				.AddSingleton(apiClient)
 				.AddMudServices()
 				.AddSingleton<WikiMarkdigPipeline>()
+				.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true))
 				.AddSingleton<IWikiService>(wikiSvc)
 				.AddSingleton(factory)
 				.AddSingleton(sp => new WikiService(

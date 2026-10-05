@@ -10,6 +10,7 @@
 @inject GalleryService Gallery
 @inject SceneService Scenes
 @inject AccountAuthService AccountAuth
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -80,7 +81,7 @@ else
             </Actions>
             <BottomActions>
                 <CapsuleButton Icon="@Icons.Material.Outlined.MailOutline" Href="@($"/mail/compose?to={Uri.EscapeDataString(DisplayName)}")">@Loc["NavCharMail"]</CapsuleButton>
-                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.ChatBubbleOutline" Href="@($"/play?page={Uri.EscapeDataString(DisplayName)}")">@Loc["NavCharPage"]</CapsuleButton>
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.ChatBubbleOutline" Href="@PageHref">@Loc["NavCharPage"]</CapsuleButton>
             </BottomActions>
         </GlassBanner>
 
@@ -135,8 +136,24 @@ else
 
     public void Dispose() => _liveSceneReload.Dispose();
 
+    private bool _guestCanPlay;
+
+    /// <summary>
+    /// Paging happens on Play. A signed-out visitor gets there only as a guest; when the game has none to
+    /// hand out, Play is a dead end ("no guest characters available"), so they sign in first, as Mail does.
+    /// </summary>
+    private string PageHref
+    {
+        get
+        {
+            var play = $"/play?page={Uri.EscapeDataString(DisplayName)}";
+            return AccountAuth.IsLoggedIn || _guestCanPlay ? play : $"/login?returnUrl={Uri.EscapeDataString(play)}";
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
+        _guestCanPlay = await ServerInfo.GuestLoginsEnabledAsync();
         var user = AuthState is null ? null : (await AuthState).User;
         var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
             ? own

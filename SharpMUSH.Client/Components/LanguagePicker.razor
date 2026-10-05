@@ -5,8 +5,11 @@
 @inject ILogger<LanguagePicker> Logger
 @inject IStringLocalizer<SharedResource> Loc
 
+@* Escape closes it, from the button (keydown bubbles to this span) or from an item: MudMenu does not. *@
+<span style="display:contents;" @onkeydown="CloseOnEscape">
 <MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin"
-         AriaLabel="@Loc["NavLanguage"]">
+         AriaLabel="@Loc["NavLanguage"]" @bind-Open="_open">
+    <div style="display:contents;" @onkeydown="CloseOnEscape">
     @foreach (var lang in _languages)
     {
         <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
@@ -19,7 +22,9 @@
             </MudStack>
         </MudMenuItem>
     }
+    </div>
 </MudMenu>
+</span>
 
 @code {
     /// <summary>Where the menu anchors: under the old top bar's icon by default; beside the rail's.</summary>
@@ -27,6 +32,12 @@
     [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopRight;
 
     private string _currentLocale = "en";
+    private bool _open;
+
+    private void CloseOnEscape(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _open = false;
+    }
 
     private readonly record struct LanguageOption(string Code, string DisplayName);
 

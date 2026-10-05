@@ -121,7 +121,12 @@ public class AccountController(
 			await accountService.LinkCharacterAsync(accountId!, playerRef);
 
 			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
-			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds });
+			// Its flags too, as the roster carries them: the portal adds this row to the account's list itself,
+			// and without them it showed the new character flagless until the list was refreshed.
+			var flags = await mediator.Send(new GetObjectNodeQuery(playerRef)) is AnySharpObject and SharpPlayer player
+				? (await CharacterSummaryMapper.BuildSummariesAsync([player]))[0].Flags
+				: string.Empty;
+			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = flags });
 		}
 		catch (Exception ex)
 		{

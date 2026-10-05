@@ -550,15 +550,16 @@ else
 
     private RenderFragment TerminalSettings => __builder =>
     {
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+        @* Escape closes it, from the button or from inside: MudMenu does not. *@
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" @bind-Open="_settingsOpen">
             <ActivatorContent>
-                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync"
+                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync" @onkeydown="CloseSettingsOnEscape"
                         title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
                     <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
                 </button>
             </ActivatorContent>
             <ChildContent>
-                <div class="play-cfg" @onclick:stopPropagation="true">
+                <div class="play-cfg" @onclick:stopPropagation="true" @onkeydown="CloseSettingsOnEscape">
                     <div class="play-cfg-kicker">@Loc["Terminal"]</div>
                     <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
                         <span>@Loc["NavTerminalWidthCols"]</span>
@@ -578,6 +579,13 @@ else
             </ChildContent>
         </MudMenu>
     };
+
+    private bool _settingsOpen;
+
+    private void CloseSettingsOnEscape(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _settingsOpen = false;
+    }
 
     private void ClearTerminal() => _playTerm?.ClearOutput();
 
