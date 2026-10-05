@@ -13,9 +13,9 @@ The optional second argument selects a field:
 * `markdown` - the raw Markdown source
 * `title` - the display title
 * `locale` - the locale actually served (see below)
-* `category` - the category, or an empty string
-* `tags` - space-separated tag list
-* `namespace` - main, help, character, or system
+* `categories` - the categories the page is in, as keys, space-separated.
+  A translation has no categories of its own: every locale answers the same
+* `namespace` - main, help, character, system, or category
 * `revision` - the current revision number in the served locale
 * `updated` - the last-edit time as a Unix timestamp (secs)
 * `author` - the dbref of the page's creator
@@ -47,9 +47,38 @@ en
 ```
 
 **See Also:**
+- [WIKICATEGORY()]
 - [WIKILIST()]
 - [WIKISEARCH()]
 - [WIKIRECENT()]
+
+# WIKICATEGORY()
+
+- `wikicategory(<category>)`
+
+Returns a space-separated list of the references of the published pages in a
+category, its subcategories (pages in the `category` namespace) included. The
+name is matched the way the portal matches it, so `Places of Note`,
+`places of note` and `places_of_note` name one category, and a leading
+`category:` is accepted. Categories belong to the page, not to a translation,
+so the list is the same whatever your `LOCALE` is.
+
+The other direction, the categories one page is in, is `wiki(<page>, categories)`.
+Set them with `@wiki/category <page>=<name>, <name>`.
+
+## Example
+
+```sharp
+> think wikicategory(Help)
+help:markdown_guide help:application_schema_guide
+> think wiki(help:markdown_guide, categories)
+help
+```
+
+**See Also:**
+- [WIKI()]
+- [WIKILIST()]
+- [wiki]
 
 # WIKILIST()
 

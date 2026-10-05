@@ -17,6 +17,15 @@
                     <MudTextField @bind-Value="_name" Label="@Loc["RolNameLabel"]" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_category" Label="@Loc["RolCategoryLabel"]" Required="true" Variant="Variant.Outlined"
+                               HelperText="@Loc["RolCategoryHelper"]">
+                        @foreach (var category in _categories)
+                        {
+                            <MudSelectItem T="string" Value="@category.Name">@category.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_color" Label="@Loc["RolColorLabel"]" Variant="Variant.Outlined"
                                   HelperText="@Loc["RolColorHelper"]" />
                 </MudItem>
@@ -48,19 +57,24 @@
     private bool _saving;
     private string _slug = "";
     private string _name = "";
+    private string _category = "";
+    private IReadOnlyList<SharpMUSH.Library.Models.RoleCategory> _categories = [];
     private string _color = "#6cde9a";
     private int _priority;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _isNew = Existing is null;
         if (Existing is not null)
         {
             _slug = Existing.Slug;
             _name = Existing.Name;
+            _category = Existing.Category;
             _color = Existing.Color;
             _priority = Existing.Priority;
         }
+
+        _categories = await Roles.ListCategoriesAsync(SharpMUSH.Library.Models.CategoryKind.Role);
     }
 
     private void Cancel() => MudDialog.Cancel();
@@ -73,10 +87,17 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(_category))
+        {
+            Snackbar.Add(Loc["RolCategoryRequired"], Severity.Warning);
+            return;
+        }
+
         _saving = true;
         var model = new PortalRoleModel(
             _slug.Trim(),
             _name.Trim(),
+            _category.Trim(),
             string.IsNullOrWhiteSpace(_color) ? "#6cde9a" : _color.Trim(),
             _priority,
             IsSystem: false,

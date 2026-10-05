@@ -36,16 +36,16 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>permission(&lt;object&gt;, &lt;permission&gt;)</c>: 1 when the object holds the permission, else 0.
-	/// <c>#-1 NO SUCH PERMISSION</c> for an unknown permission.
+	/// <c>#-1 NO SUCH PERMISSION</c> for a permission that is neither built in nor defined with <c>@permission/define</c>.
 	/// </summary>
 	[SharpFunction(Name = "permission", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "permission"])]
 	public async ValueTask<CallState> Permission(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var scope = parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim();
-		if (PortalPermission.Canonical(scope) is not { } canonical)
-			return new CallState("#-1 NO SUCH PERMISSION");
 		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			grants => new CallState(grants.Has(canonical)));
+			grants => grants.Canonical(scope) is { } canonical
+				? new CallState(grants.Has(canonical))
+				: new CallState("#-1 NO SUCH PERMISSION"));
 	}
 
 	/// <summary>Locates an object and answers from what it is granted (<see cref="ObjectGrants"/>).</summary>

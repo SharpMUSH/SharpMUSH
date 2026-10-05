@@ -6,8 +6,8 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 
 /// <summary>
 /// HTTP-level integration tests for the wiki admin endpoints on <c>WikiController</c>:
-/// the paginated /pages listing (with X-Total-Count), metadata round-trip,
-/// category/tag listings, and the batch protect/delete operations.
+/// the paginated /pages listing (with X-Total-Count), page metadata (categories and the published
+/// flag), category listings, and the batch protect/delete operations.
 ///
 /// DebugAuthenticationHandler auto-authenticates all requests as the bootstrap admin,
 /// so <c>[Authorize]</c> endpoints work out-of-the-box in the Development environment.
@@ -26,12 +26,12 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		string MarkdownSource,
 		bool IsProtected,
 		int RevisionNumber,
-		string? Category,
-		List<string>? Tags,
+		List<string>? Categories,
 		bool Published);
 
-	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
-	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
+	private record CreatePageRequest(string Title, string Markdown, string? Namespace, string[]? Categories = null);
+	private record SetMetadataRequest(string[]? Categories, bool Published);
+	private record UpdatePageRequest(string Markdown, string? EditSummary);
 	private record BatchProtectRequest(string[] Refs, bool IsProtected);
 	private record BatchDeleteRequest(string[] Refs);
 	private record BatchResult(List<string> Succeeded, List<string> Failed);
@@ -48,12 +48,13 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		return http;
 	}
 
-	private async Task<WikiPageDto> CreatePageAsync(HttpClient http, string titlePrefix)
+	private async Task<WikiPageDto> CreatePageAsync(
+		HttpClient http, string titlePrefix, string markdown = "# admin api test page", string[]? categories = null)
 	{
 		var title = $"{titlePrefix} {Guid.NewGuid():N}";
 		var response = await http.PostAsJsonAsync(
 			"api/wiki",
-			new CreatePageRequest(title, "# admin api test page", null));
+			new CreatePageRequest(title, markdown, null, categories));
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Created);
 		return (await response.Content.ReadFromJsonAsync<WikiPageDto>())!;
 	}
@@ -95,29 +96,26 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task SetMetadata_RoundTripsCategoryTagsAndPublished()
+	public async Task SetMetadata_RoundTripsCategoriesAndPublished()
 	{
 		var http = CreateClient();
-		var created = await CreatePageAsync(http, "AdminMeta");
+		var created = await CreatePageAsync(http, "AdminPub");
 
 		var put = await http.PutAsJsonAsync(
 			$"api/wiki/{Uri.EscapeDataString(created.Slug)}/metadata",
-			new SetMetadataRequest("Lore", ["Dragons", "magic", "dragons"], false));
+			new SetMetadataRequest(["Lore", "Places of Note", "lore"], false));
 
 		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var updated = await put.Content.ReadFromJsonAsync<WikiPageDto>();
 		await Assert.That(updated).IsNotNull();
-		await Assert.That(updated!.Category).IsEqualTo("lore");
-		await Assert.That(updated.Tags!.Count).IsEqualTo(2);
-		await Assert.That(updated.Tags!.Contains("dragons")).IsTrue();
-		await Assert.That(updated.Tags!.Contains("magic")).IsTrue();
-		await Assert.That(updated.Published).IsFalse();
+		await Assert.That(updated!.Published).IsFalse();
+		await Assert.That(updated.Categories!).IsEquivalentTo(["lore", "places_of_note"]);
+		await Assert.That(updated.RevisionNumber).IsEqualTo(created.RevisionNumber);
 
-		// GET reflects the change — the page has re-keyed into the new "lore" category.
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
-			$"api/wiki/ns/main/lore/{Uri.EscapeDataString(created.Slug)}");
-		await Assert.That(fetched!.Category).IsEqualTo("lore");
-		await Assert.That(fetched.Published).IsFalse();
+			$"api/wiki/ns/main/{Uri.EscapeDataString(created.Slug)}");
+		await Assert.That(fetched!.Published).IsFalse();
+		await Assert.That(fetched.Categories!).IsEquivalentTo(["lore", "places_of_note"]);
 	}
 
 	[Test]
@@ -127,21 +125,32 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 		var put = await http.PutAsJsonAsync(
 			"api/wiki/does-not-exist-xyzzy/metadata",
-			new SetMetadataRequest("lore", [], true));
+			new SetMetadataRequest(null, true));
 
 		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	[Test]
+	public async Task CreatePage_StoresTheCategoriesItIsGiven()
+	{
+		var http = CreateClient();
+		var created = await CreatePageAsync(http, "AdminCats",
+			"Dragons live here. See [[Category:Myth]].", ["Lore", "Dragons", "lore"]);
+
+		await Assert.That(created.Categories).IsNotNull();
+		await Assert.That(created.Categories!).IsEquivalentTo(["dragons", "lore"]);
+
+		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
+			$"api/wiki/ns/main/{Uri.EscapeDataString(created.Slug)}");
+		await Assert.That(fetched!.Categories!).IsEquivalentTo(["dragons", "lore"]);
 	}
 
 	[Test]
 	public async Task ListCategoryPages_ReturnsPagesInCategory()
 	{
 		var http = CreateClient();
-		var created = await CreatePageAsync(http, "AdminCat");
 		var category = $"cat{Guid.NewGuid():N}"[..12];
-
-		await http.PutAsJsonAsync(
-			$"api/wiki/{Uri.EscapeDataString(created.Slug)}/metadata",
-			new SetMetadataRequest(category, [], true));
+		var created = await CreatePageAsync(http, "AdminCat", "In a category.", [category]);
 
 		var pages = await http.GetFromJsonAsync<List<WikiPageDto>>(
 			$"api/wiki/category/{Uri.EscapeDataString(category)}");
@@ -151,21 +160,24 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task ListTagPages_ReturnsPagesWithTag()
+	public async Task CategoriesSurviveABodyEditAndLeaveOnlyThroughMetadata()
 	{
 		var http = CreateClient();
-		var created = await CreatePageAsync(http, "AdminTag");
-		var tag = $"tag{Guid.NewGuid():N}"[..12];
+		var category = $"cat{Guid.NewGuid():N}"[..12];
+		var created = await CreatePageAsync(http, "AdminUncat", "In a category.", [category]);
+		var listing = $"api/wiki/category/{Uri.EscapeDataString(category)}";
 
-		await http.PutAsJsonAsync(
+		var put = await http.PutAsJsonAsync(
+			$"api/wiki/{Uri.EscapeDataString(created.Slug)}",
+			new UpdatePageRequest("New text.", null));
+		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await http.GetFromJsonAsync<List<WikiPageDto>>(listing))!.Any(p => p.Slug == created.Slug)).IsTrue();
+
+		var cleared = await http.PutAsJsonAsync(
 			$"api/wiki/{Uri.EscapeDataString(created.Slug)}/metadata",
-			new SetMetadataRequest(null, [tag], true));
-
-		var pages = await http.GetFromJsonAsync<List<WikiPageDto>>(
-			$"api/wiki/tag/{Uri.EscapeDataString(tag)}");
-
-		await Assert.That(pages).IsNotNull();
-		await Assert.That(pages!.Any(p => p.Slug == created.Slug)).IsTrue();
+			new SetMetadataRequest([], true));
+		await Assert.That(cleared.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await http.GetFromJsonAsync<List<WikiPageDto>>(listing))!.Any(p => p.Slug == created.Slug)).IsFalse();
 	}
 
 	[Test]
@@ -178,16 +190,16 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		var response = await http.PostAsJsonAsync(
 			"api/wiki/batch/protect",
 			new BatchProtectRequest(
-				[$"main/general/{first.Slug}", $"main/general/{second.Slug}", "main/general/does-not-exist-xyzzy"], true));
+				[$"main/{first.Slug}", $"main/{second.Slug}", "main/does-not-exist-xyzzy"], true));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var result = await response.Content.ReadFromJsonAsync<BatchResult>();
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Succeeded.Count).IsEqualTo(2);
-		await Assert.That(result.Failed).Contains("main/general/does-not-exist-xyzzy");
+		await Assert.That(result.Failed).Contains("main/does-not-exist-xyzzy");
 
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
-			$"api/wiki/ns/main/general/{Uri.EscapeDataString(first.Slug)}");
+			$"api/wiki/ns/main/{Uri.EscapeDataString(first.Slug)}");
 		await Assert.That(fetched!.IsProtected).IsTrue();
 	}
 
@@ -201,7 +213,7 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		var response = await http.PostAsJsonAsync(
 			"api/wiki/batch/delete",
 			new BatchDeleteRequest(
-				[$"main/general/{first.Slug}", $"main/general/{second.Slug}", "main/general/does-not-exist-xyzzy"]));
+				[$"main/{first.Slug}", $"main/{second.Slug}", "main/does-not-exist-xyzzy"]));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var result = await response.Content.ReadFromJsonAsync<BatchResult>();
@@ -209,7 +221,7 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(result!.Succeeded.Count).IsEqualTo(2);
 		await Assert.That(result.Failed.Count).IsEqualTo(1);
 
-		var gone = await http.GetAsync($"api/wiki/ns/main/general/{Uri.EscapeDataString(first.Slug)}");
+		var gone = await http.GetAsync($"api/wiki/ns/main/{Uri.EscapeDataString(first.Slug)}");
 		await Assert.That(gone.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 }

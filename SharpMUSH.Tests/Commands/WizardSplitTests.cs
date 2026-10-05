@@ -48,7 +48,7 @@ public class WizardSplitTests : ServerTestBase
 	/// <summary>Gives the staff player a role of its own that allows <paramref name="scope"/>.</summary>
 	private async Task Allow(string scope)
 	{
-		await Heard(_wizard, $"@role/create {_role}");
+		await Heard(_wizard, $"@role/create {_role}=Staff");
 		await Heard(_wizard, $"@role/allow {_role}={scope}");
 		await Heard(_wizard, $"@role/assign {Ref(_staff)}={_role}");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission({Ref(_staff)},{scope})")).IsEqualTo("1");
