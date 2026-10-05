@@ -5040,6 +5040,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>В сцена</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Гледате тази сцена. Присъединете се, за да позирате тук.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Позите ви отиват в друга сцена. Присъединете се към тази, за да позирате тук.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Присъединяване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Напускане на сцената</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Канали</value>
   </data>

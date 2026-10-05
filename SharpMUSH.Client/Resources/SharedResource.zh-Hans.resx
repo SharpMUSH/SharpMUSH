@@ -5040,6 +5040,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>场景中</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>你正在观看此场景。加入后即可在此发表姿态。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>你的姿态会发往另一个场景。加入此场景即可在此发表姿态。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>加入场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>离开场景</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>频道</value>
   </data>

@@ -32,6 +32,7 @@ public static class SceneMemberHandlers
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
+		await SceneRoomRefresh.AfterMembershipAsync(parser, sceneService, sceneId);
 		await notifyService.Notify(executor,
 			$"SCENE: {member.MemberName} is now '{member.Role}' in scene #{sceneId}.");
 		return MarkupText.Plain(sceneId);
@@ -54,6 +55,7 @@ public static class SceneMemberHandlers
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
+		await SceneRoomRefresh.AfterMembershipAsync(parser, sceneService, sceneId);
 		await notifyService.Notify(executor, $"SCENE: Removed {playerDbref} from scene #{sceneId}.");
 		return MarkupText.Plain(sceneId);
 	}
@@ -69,11 +71,15 @@ public static class SceneMemberHandlers
 		// @scene/focus <playerDbref>=<sceneId> (empty = clear)
 		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		var sceneId = SceneCommandHelper.Plain(sceneArg);
+		var focusBefore = await SceneRoomRefresh.FocusOfAsync(sceneService, playerDbref);
 		if (await sceneService.SetFocusAsync(playerDbref, string.IsNullOrEmpty(sceneId) ? null : sceneId) is NotFound)
 		{
 			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
+
+		await SceneRoomRefresh.AfterFocusAsync(parser, sceneService, playerDbref, focusBefore,
+			await SceneRoomRefresh.FocusOfAsync(sceneService, playerDbref));
 
 		await notifyService.Notify(executor, string.IsNullOrEmpty(sceneId)
 			? $"SCENE: Cleared focus for {playerDbref}."

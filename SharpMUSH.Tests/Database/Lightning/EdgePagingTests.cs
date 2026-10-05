@@ -110,6 +110,25 @@ public class EdgePagingTests : LightningDatabaseFixture
 		await Assert.That(zoned).IsEquivalentTo(children, CollectionOrdering.Matching);
 	}
 
+	/// <summary>
+	/// A ref stamped for an object whose number now names another one reads as no set at all, not the
+	/// newer object's contents or zone members.
+	/// </summary>
+	[Test]
+	public async Task ContentsAndZoneMembersOfAStaleRef_AreEmpty()
+	{
+		var room = await NewRoom("RecycledRoom");
+		var zone = await Node((await NewThings(room, 1))[0]);
+		await Db.SetObjectZone(await Node((await NewThings(room, 1))[0]), zone);
+		var staleRoom = room.Object().DBRef with { CreationMilliseconds = room.Object().DBRef.CreationMilliseconds - 1 };
+		var staleZone = zone.Object().DBRef with { CreationMilliseconds = zone.Object().DBRef.CreationMilliseconds - 1 };
+
+		await Assert.That(await Db.GetContentRefsAsync(room.Object().DBRef).CountAsync()).IsEqualTo(2);
+		await Assert.That(await Db.GetZoneMemberRefsAsync(zone.Object().DBRef).CountAsync()).IsEqualTo(1);
+		await Assert.That(await Db.GetContentRefsAsync(staleRoom).CountAsync()).IsEqualTo(0);
+		await Assert.That(await Db.GetZoneMemberRefsAsync(staleZone).CountAsync()).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task ChannelMembersLargerThanAPage_ComeBackWholeAndSkipGoneObjects()
 	{

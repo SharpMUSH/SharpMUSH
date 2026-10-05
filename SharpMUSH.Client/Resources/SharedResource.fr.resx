@@ -4296,6 +4296,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En scène</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Vous regardez cette scène. Rejoignez-la pour poser ici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Vos poses vont dans une autre scène. Rejoignez celle-ci pour poser ici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Rejoindre la scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Quitter la scène</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Canaux</value>
   </data>

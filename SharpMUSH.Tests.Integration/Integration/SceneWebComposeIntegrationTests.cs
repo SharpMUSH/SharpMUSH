@@ -344,4 +344,28 @@ public class SceneWebComposeIntegrationTests
 		await Assert.That(markup).IsNotEqualTo(plainMarkup)
 			.Because("the markup of an uncoloured pose means the colour never reached storage");
 	}
+
+	/// <summary>
+	/// The Play page's Join sends <c>+scene/join</c> to a viewer focused elsewhere, the scene's own owner
+	/// included. Joining focuses them and must not demote them: <c>@scene/member</c> sets the role outright.
+	/// </summary>
+	[Test]
+	public async Task Join_FocusesAnOwner_WithoutDemotingThem()
+	{
+		await PutLoggerInMasterRoomAsync();
+
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Corin{Tag}");
+		await RunAs(ownerHandle, $"+scene/create First Scene {Tag}");
+		var first = await Eval($"scenefocus({Num(owner)})");
+		await Assert.That(first).DoesNotStartWith("#-1");
+
+		// A second scene takes the owner's focus away from the first.
+		await RunAs(ownerHandle, $"+scene/create Second Scene {Tag}");
+		await Assert.That(await Eval($"scenefocus({Num(owner)})")).IsNotEqualTo(first);
+
+		await RunAs(ownerHandle, $"+scene/join {first}");
+
+		await Assert.That(await Eval($"scenefocus({Num(owner)})")).IsEqualTo(first);
+		await Assert.That(await Eval($"scenemember({first},{Num(owner)},role)")).IsEqualTo("owner");
+	}
 }

@@ -23,7 +23,19 @@ public sealed record RoomDescription(string Format, string Text);
 /// <param name="Id">The scene id, a string (matching <c>SceneEventMessage.SceneId</c>).</param>
 /// <param name="Title">The scene's title, or null.</param>
 /// <param name="Cast">How many members the scene has, or null.</param>
-public sealed record RoomScene(string Id, string? Title, int? Cast);
+/// <param name="Role">The viewer's role in the scene (<c>participant</c>, <c>owner</c>, …), or null when they have none. v2.2.</param>
+/// <param name="Focus">
+/// Whether the viewer is focused on the scene, so that a pose they make in the room is recorded in it; null
+/// when the handler did not say. v2.2.
+/// </param>
+public sealed record RoomScene(string Id, string? Title, int? Cast, string? Role = null, bool? Focus = null)
+{
+	/// <summary>
+	/// A pose made in the room will not be recorded in the scene: the viewer is not focused on it. Unknown
+	/// (an older handler) is not "outside": the composer stays as it was.
+	/// </summary>
+	public bool Outside => Focus is false;
+}
 
 /// <summary>The <c>room.info</c> payload: the room the player is in.</summary>
 /// <param name="Dbref">The room's <c>#N</c>, or null.</param>

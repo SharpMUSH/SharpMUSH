@@ -5040,6 +5040,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In scène</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Je bekijkt deze scène. Doe mee om hier te posen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Je poses gaan naar een andere scène. Doe mee met deze om hier te posen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Meedoen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Scène verlaten</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanalen</value>
   </data>

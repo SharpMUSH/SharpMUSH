@@ -5040,6 +5040,22 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>U sceni</value>
   </data>
+  <data name="NavPlaySceneWatching" xml:space="preserve">
+    <value>Gledate ovu scenu. Pridružite joj se da biste ovdje pozirali.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
+    <value>Vaše poze idu u drugu scenu. Pridružite se ovoj da biste ovdje pozirali.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoin" xml:space="preserve">
+    <value>Pridruži se sceni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneLeave" xml:space="preserve">
+    <value>Napusti scenu</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanali</value>
   </data>
