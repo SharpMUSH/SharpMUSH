@@ -101,12 +101,12 @@ public class WikiRequirementsController(
 			return NotFound();
 
 		var requirements = await Access.RequirementsAsync();
-		var inherited = new List<WikiRequirementSetDto>();
-		foreach (var target in page.Categories.Select(WikiRuleTarget.ForCategory).Prepend(WikiRuleTarget.ForNamespace(page.Namespace)))
-		{
-			if (requirements.For(target) is { } set)
-				inherited.Add(await ToDtoAsync(target, set));
-		}
+		var inherited = await page.Categories.Select(WikiRuleTarget.ForCategory)
+			.Prepend(WikiRuleTarget.ForNamespace(page.Namespace))
+			.Where(target => requirements.For(target) is not null)
+			.ToAsyncEnumerable()
+			.Select(async (WikiRuleTarget target, CancellationToken _) => await ToDtoAsync(target, requirements.For(target)))
+			.ToListAsync();
 
 		var self = WikiRuleTarget.ForPage(page.Id);
 		return Ok(new WikiPageRequirementsDto(await ToDtoAsync(self, requirements.For(self), page.Title), inherited));

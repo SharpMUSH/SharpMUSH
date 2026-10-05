@@ -97,12 +97,10 @@ public class WikiBrowseController(
 		var visibility = await VisibilityAsync();
 		var counts = await Wiki.CountPagesByStateAsync(visibility);
 		// Only pages this caller may see: counting a hidden draft's rule would tell them it exists.
-		var restricted = 0;
-		foreach (var set in (await Access.RequirementsAsync()).Sets.Where(set => set.Target.Scope == WikiRuleScope.Page))
-		{
-			if (await Wiki.GetByIdAsync(set.Target.Key) is WikiPage page && visibility.Admits(page))
-				restricted++;
-		}
+		var restricted = await (await Access.RequirementsAsync()).Sets
+			.Where(set => set.Target.Scope == WikiRuleScope.Page)
+			.ToAsyncEnumerable()
+			.CountAsync(async (set, _) => await Wiki.GetByIdAsync(set.Target.Key) is WikiPage page && visibility.Admits(page));
 
 		return Ok(new WikiPageCountsDto(counts.Total, counts.Published, counts.Drafts, restricted));
 	}
