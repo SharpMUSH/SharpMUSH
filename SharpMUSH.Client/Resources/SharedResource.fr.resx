@@ -1445,9 +1445,6 @@
   <data name="AdmCharactersAction" xml:space="preserve">
     <value>Voir les personnages</value>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>L'administration des personnages arrive bientôt.</value>
-  </data>
   <data name="AdmProfilesTitle" xml:space="preserve">
     <value>Profils</value>
   </data>
@@ -1513,9 +1510,6 @@
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administration · Joueur</value>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Le détail du joueur arrive bientôt.</value>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Serveur</value>

@@ -1,0 +1,214 @@
+@page "/admin/moderation/audit"
+@attribute [Authorize(Policy = "players.moderate")]
+@using System.Globalization
+@using SharpMUSH.Library.Models
+@inject AdminAuditService AuditService
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmAuditTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="page-stack page-stack--padded adm-audit">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmAuditTitle"]" Description="@Loc["AdmAuditBlurb"]" />
+
+    <KitCard>
+        <div class="adm-audit-body">
+            <div class="adm-audit-filters">
+                <MudSelect T="string" Value="_action" ValueChanged="OnActionChangedAsync" Label="@Loc["AdmAuditAction"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="adm-audit-select">
+                    <MudSelectItem T="string" Value="@string.Empty">@Loc["AdmAuditAllActions"]</MudSelectItem>
+                    @foreach (var area in Areas)
+                    {
+                        <MudSelectItem T="string" Value="@($"{area}.")">@($"{area}.*")</MudSelectItem>
+                    }
+                    @foreach (var action in _actions)
+                    {
+                        <MudSelectItem T="string" Value="@action">@action</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="_actor" Label="@Loc["AdmAuditActor"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-audit-narrow"
+                              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
+                <MudTextField T="string" @bind-Value="_text" Label="@Loc["AdmAuditText"]" id="audit-text"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-audit-wide"
+                              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
+                <MudDatePicker Date="_from" DateChanged="OnFromChangedAsync" Label="@Loc["AdmAuditFrom"]" Clearable="true"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-audit-narrow" />
+                <MudDatePicker Date="_to" DateChanged="OnToChangedAsync" Label="@Loc["AdmAuditTo"]" Clearable="true"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-audit-narrow" />
+            </div>
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+
+            @if (_loading && _entries.Count == 0)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_entries.Count == 0)
+            {
+                <EmptyBox>@Loc["AdmAuditEmpty"]</EmptyBox>
+            }
+            else
+            {
+                <MudTable Items="_entries" Dense="true" Hover="true" Elevation="0" Class="adm-audit-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["AdmAuditWhen"]</MudTh>
+                        <MudTh>@Loc["AdmAuditActor"]</MudTh>
+                        <MudTh>@Loc["AdmAuditAction"]</MudTh>
+                        <MudTh>@Loc["AdmAuditTarget"]</MudTh>
+                        <MudTh>@Loc["AdmAuditDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["AdmAuditWhen"]" Class="adm-audit-when">
+                            @context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmAuditActor"]">
+                            <span class="adm-audit-actor">@context.Actor.Display</span>
+                            @if (context.Actor.AccountName is not null && context.Actor.Name is not null)
+                            {
+                                <span class="adm-audit-dim">@context.Actor.Name</span>
+                            }
+                            <MudChip T="string" Size="Size.Small" Class="adm-audit-source"
+                                     Color="@(context.Source == AuditSource.Portal ? Color.Info : Color.Default)">
+                                @(context.Source == AuditSource.Portal ? Loc["AdmAuditSourcePortal"] : Loc["AdmAuditSourceGame"])
+                            </MudChip>
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmAuditAction"]" Class="adm-audit-mono">@context.Action</MudTd>
+                        <MudTd data-label="@Loc["AdmAuditTarget"]">
+                            @if (context.Target is { } target)
+                            {
+                                @if (TargetHref(target) is { } href)
+                                {
+                                    <a class="adm-audit-link" href="@href">@target.Name</a>
+                                }
+                                else
+                                {
+                                    <span>@target.Name</span>
+                                }
+                                @if (target.Id != target.Name)
+                                {
+                                    <span class="adm-audit-dim adm-audit-mono">@target.Id</span>
+                                }
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmAuditDetails"]" Class="adm-audit-details">@(context.Details ?? "—")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                @if (_next is not null)
+                {
+                    <CapsuleButton Class="adm-audit-more" Disabled="_loading" OnClick="LoadMoreAsync">@Loc["AdmAuditLoadMore"]</CapsuleButton>
+                }
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    private const int PageSize = 50;
+
+    [SupplyParameterFromQuery(Name = "action")] public string? ActionQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "actor")] public string? ActorQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "text")] public string? TextQuery { get; set; }
+
+    private IReadOnlyList<string> _actions = AuditActions.All;
+    private readonly List<AuditEntry> _entries = [];
+    private string _action = string.Empty;
+    private string _actor = string.Empty;
+    private string _text = string.Empty;
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _next;
+    private bool _loading = true;
+    private string? _error;
+
+    /// <summary>The <c>area</c> of each <c>area.verb</c> action, offered as a prefix filter.</summary>
+    private IEnumerable<string> Areas => _actions.Select(a => a.Split('.')[0]).Distinct(StringComparer.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _action = ActionQuery ?? string.Empty;
+        _actor = ActorQuery ?? string.Empty;
+        _text = TextQuery ?? string.Empty;
+        var actions = AuditService.ActionsAsync();
+        await ReloadAsync();
+        if (await actions is AuditActionsResponse response) _actions = response.Actions;
+    }
+
+    private Task OnFilterDebouncedAsync(string _) => ReloadAsync();
+
+    private Task OnActionChangedAsync(string value)
+    {
+        _action = value;
+        return ReloadAsync();
+    }
+
+    private Task OnFromChangedAsync(DateTime? value)
+    {
+        _from = value;
+        return ReloadAsync();
+    }
+
+    private Task OnToChangedAsync(DateTime? value)
+    {
+        _to = value;
+        return ReloadAsync();
+    }
+
+    private Task ReloadAsync()
+    {
+        _entries.Clear();
+        _next = null;
+        return ReadAsync(null);
+    }
+
+    private Task LoadMoreAsync() => ReadAsync(_next);
+
+    private async Task ReadAsync(string? before)
+    {
+        _loading = true;
+        // The picker gives a local calendar day; "to" includes the whole of its day.
+        var filter = new AuditFilter(
+            Action: NullIfEmpty(_action),
+            Actor: NullIfEmpty(_actor),
+            From: _from is { } from ? new DateTimeOffset(from.Date) : null,
+            To: _to is { } to ? new DateTimeOffset(to.Date.AddDays(1).AddTicks(-1)) : null,
+            Text: NullIfEmpty(_text),
+            Before: before,
+            Limit: PageSize);
+        switch (await AuditService.ListAsync(filter))
+        {
+            case AuditPage page:
+                _entries.AddRange(page.Entries);
+                _next = page.Next;
+                _error = null;
+                break;
+            case ApiFailure failure:
+                _next = null;
+                _error = failure.Message;
+                break;
+        }
+        _loading = false;
+    }
+
+    private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>A link to the target's own admin page, for the kinds that have one.</summary>
+    private static string? TargetHref(AuditTarget target) => target.Kind switch
+    {
+        AuditTargetKinds.Character when DbrefNumber(target.Id) is { } number => $"/admin/players/{number}",
+        AuditTargetKinds.Role => "/admin/roles",
+        _ => null
+    };
+
+    private static int? DbrefNumber(string objid) =>
+        objid.StartsWith('#') && int.TryParse(objid[1..].Split(':')[0], NumberStyles.None, CultureInfo.InvariantCulture, out var n)
+            ? n
+            : null;
+}

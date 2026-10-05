@@ -43,7 +43,8 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			FaceValueProjection(),
 			factory.Services.GetRequiredService<IPasswordService>(),
-			guestAvailability ?? factory.Services.GetRequiredService<IGuestAvailability>())
+			guestAvailability ?? factory.Services.GetRequiredService<IGuestAvailability>(),
+			factory.Services.GetRequiredService<IAuditLog>())
 		{
 			ControllerContext = new ControllerContext
 			{

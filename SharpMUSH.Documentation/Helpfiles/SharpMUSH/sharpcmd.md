@@ -645,7 +645,7 @@ If the `/silent` switch is given, the message telling `<player>` he was booted i
 
 The `/me` switch boots all descriptors for the player using the command which have been idle for over 1 minute. Players can use this command to terminate hung connections.
 
-Only admin and those with the "boot" power can @boot other players.
+Anyone may @boot their own connections. Only holders of `players.moderate` and those with the "boot" power can @boot other players, and each time they do it is recorded in the audit log.
 
 
 **See Also:**

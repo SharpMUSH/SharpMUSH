@@ -508,8 +508,10 @@ Several things are kept after they stop being what the game shows:
   revision before it, so that history and rollback work.
 - **Scene pose edits.** Every version of every pose is kept, so that undo and redo work.
 - **Deleted poses.** Deleting a pose hides it. Its content and edit history stay stored.
+- **The audit log.** Every staff action, from the portal or the game, is one entry (the portal's
+  audit log page lists them).
 
-All three grow without bound by default. Each one makes the live world larger, and so every backup.
+All four grow without bound by default. Each one makes the live world larger, and so every backup.
 `@storage/history` counts them.
 
 **The default keeps everything.** Unless an operator sets a policy, nothing is ever purged. That
@@ -531,6 +533,7 @@ A purge frees pages inside the file for reuse. It does not shrink the file (see
 | `SHARPMUSH_HISTORY_SCENE_EDITS_KEEP` | unset | Keep at least this many of the newest versions of each pose. |
 | `SHARPMUSH_HISTORY_SCENE_EDITS_MAX_AGE` | unset | Purge pose versions older than this. |
 | `SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` | unset | Purge a deleted pose (its content and all its versions) once it has been deleted this long. |
+| `SHARPMUSH_HISTORY_AUDIT_MAX_AGE` | unset | Purge audit log entries older than this. The audit log takes no `_KEEP`. |
 | `SHARPMUSH_HISTORY_INTERVAL` | unset, so no scheduled pass | How often a pass runs, for example `1d`. `@storage/purge` runs one at any time. |
 | `SHARPMUSH_HISTORY_BATCH` | `256` | The most records one write transaction deletes. |
 | `SHARPMUSH_HISTORY_ARCHIVE_PATH` | unset, so no archive | Purged records are appended here as `<kind>-<date>.jsonl`, and flushed to disk, before they are deleted. |

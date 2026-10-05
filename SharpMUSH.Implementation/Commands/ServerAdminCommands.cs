@@ -342,8 +342,30 @@ public partial class Commands
 			}
 		}
 
+		// PennMUSH's Can_Boot: anyone may boot their own connections; anyone else's takes the Boot power, or
+		// players.moderate here, where the moderation half of WIZARD lives.
+		var executorRef = executor.Object().DBRef;
+		var targets = targetHandles
+			.Select(handle => ConnectionService.Get(handle))
+			.OfType<IConnectionService.ConnectionData>()
+			.ToList();
+
+		if (targets.Any(connection => connection.Ref is not { } owner || owner.Number != executorRef.Number)
+			&& !await executor.Can(PortalPermission.PlayersModerate) && !await executor.HasPower("Boot"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		foreach (var handle in targetHandles)
 		{
+			if (ConnectionService.Get(handle)?.Ref is { } booted && booted.Number != executorRef.Number
+				&& await Mediator.Send(new GetObjectNodeQuery(booted)) is AnySharpObject bootedPlayer)
+			{
+				await Audit.RecordAsync(executor, AuditActions.PlayerBoot, AuditTargets.Of(bootedPlayer),
+					silent ? $"descriptor {handle}, silent" : $"descriptor {handle}");
+			}
+
 			if (!silent)
 			{
 				await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
@@ -632,6 +654,7 @@ public partial class Commands
 	{
 		Logger.LogInformation("Config option '{Option}' set to '{Value}'{Saved} by {Executor}",
 			name, value, save ? " and saved" : "", executor.Object().Name);
+		await Audit.RecordAsync(executor, AuditActions.ConfigSet, AuditTargets.Of(AuditTargetKinds.Setting, name), value);
 		await NotifyService.NotifyLocalized(executor,
 			save ? nameof(ErrorMessages.Notifications.ConfigOptionSetAndSaved) : nameof(ErrorMessages.Notifications.ConfigOptionSet), executor);
 		return new CallState(value);

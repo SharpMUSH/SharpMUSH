@@ -98,7 +98,8 @@ public class AccountControllersSessionClaimsTests
 	{
 		var claims = new AccountClaimsService(
 			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
-		return new AdminAccountsController(accounts, sessions, claims, NullLogger<AdminAccountsController>.Instance)
+		return new AdminAccountsController(accounts, sessions, claims, Substitute.For<IAdministrativeCapabilityService>(),
+			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), NullLogger<AdminAccountsController>.Instance)
 		{ ControllerContext = Context(user, "token") };
 	}
 

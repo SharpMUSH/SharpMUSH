@@ -75,11 +75,9 @@ public class ResponsiveConventionsTests
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
 		// The not-yet-built admin screens render only <AdminComingSoon>, which carries the tiers.
-		"Pages/Admin/AdminCharacters.razor",
 		"Pages/Admin/AdminServer.razor",
 		"Pages/Admin/BannedNamesRedirect.razor",
 		"Pages/Admin/Moderation.razor",
-		"Pages/Admin/PlayerDetail.razor",
 		"Pages/Admin/RestrictionsRedirect.razor",
 		"Pages/Admin/SitelockRedirect.razor",
 		"Pages/NotFound.razor",

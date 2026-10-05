@@ -26,7 +26,7 @@ public class ConfigurationControllerTests
 		var reloadService = new ConfigurationReloadService();
 		var logger = Substitute.For<ILogger<ConfigurationController>>();
 		return new ConfigurationController(wrapper, database, reloadService,
-			new MushCnfImportService(wrapper, database, reloadService, NullLogger<MushCnfImportService>.Instance), logger);
+			new MushCnfImportService(wrapper, database, reloadService, NullLogger<MushCnfImportService>.Instance), Substitute.For<IAuditLog>(), logger);
 	}
 
 	[TUnit.Core.Test]
@@ -231,6 +231,7 @@ public class ConfigurationControllerTests
 			wrapper, database, new ConfigurationReloadService(),
 			new MushCnfImportService(wrapper, database, new ConfigurationReloadService(),
 				NullLogger<MushCnfImportService>.Instance),
+			Substitute.For<IAuditLog>(),
 			Substitute.For<ILogger<ConfigurationController>>());
 
 		var updates = new Dictionary<string, JsonElement>

@@ -46,7 +46,8 @@ public class AdminGuestsController(
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IVisibleWorldProjection projection,
 	IPasswordService passwordService,
-	IGuestAvailability guestAvailability) : ControllerBase
+	IGuestAvailability guestAvailability,
+	IAuditLog audit) : ControllerBase
 {
 	/// <param name="InUse">
 	/// Whether someone is connected as this guest right now. Reported because it is the one reason a
@@ -107,6 +108,9 @@ public class AdminGuestsController(
 		if (!await executor.Can(PortalPermission.PlayersModerate))
 			return StatusCode(StatusCodes.Status403Forbidden,
 				new ApiErrorDto("Creating guest characters needs players.moderate."));
+
+		// The commands below record themselves in the audit log; this makes those records the portal's.
+		using var portal = audit.BeginPortal(User);
 
 		var name = string.IsNullOrWhiteSpace(request.Name)
 			? await NextFreeGuestNameAsync(ct)
@@ -175,6 +179,8 @@ public class AdminGuestsController(
 		if (!await executor.Can(PortalPermission.PlayersModerate))
 			return StatusCode(StatusCodes.Status403Forbidden,
 				new ApiErrorDto("Removing guest characters needs players.moderate."));
+
+		using var portal = audit.BeginPortal(User);
 
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
 			return NotFound();
