@@ -73,6 +73,9 @@ file sealed class SetupApiHandler(
 	/// <summary>Whether api/setup/wizard/starter-wiki refuses (409), as when some pages could not be written.</summary>
 	public bool StarterWikiFails { get; set; }
 
+	/// <summary>Whether api/setup/wizard/packages refuses (409).</summary>
+	public bool PackagesFail { get; set; }
+
 	/// <summary>Whether api/setup/wizard/finish refuses, leaving the wizard pending.</summary>
 	public bool FinishFails { get; set; }
 
@@ -111,6 +114,11 @@ file sealed class SetupApiHandler(
 
 		if (path == "api/setup/wizard/packages" && request.Method == HttpMethod.Put)
 		{
+			if (PackagesFail)
+			{
+				return new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("Scene could not be installed.") };
+			}
+
 			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
 			PackageChoices.Add(body);
 			using var document = JsonDocument.Parse(body);
@@ -480,6 +488,32 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		cut.Find("#setup-starter-wiki").Change(false);
 		cut.Find("button.setup-save").Click();
 
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWikiCalls).IsEqualTo(0);
+	}
+
+	/// <summary>A failed package save keeps the administrator's unticked choice, so saving again writes no pages.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWikiUnticked_SurvivesAFailedSave()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.PackagesFail = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-starter-wiki"));
+		cut.Find("#setup-starter-wiki").Change(false);
+		cut.Find("button.setup-save").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".setup-error"));
+		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("checked")).IsFalse();
+
+		handler.PackagesFail = false;
+		cut.Find("button.setup-save").Click();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("AuthSetupComplete"))
