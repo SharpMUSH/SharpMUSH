@@ -50,7 +50,8 @@ An example of a puppet:
 
 To have an object relay things it hears to players other than its owner, use `@forwardlist`.
 
-**See Also:**
+::: seealso
 - [PUPPET]
 - [@force]
 - [database]
+:::

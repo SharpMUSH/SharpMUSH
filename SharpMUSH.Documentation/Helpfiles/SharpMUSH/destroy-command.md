@@ -33,13 +33,14 @@ To destroy objects set SAFE, you must use `@destroy/override` or @nuke. If the r
 
 @recycle is an alias for @destroy. Some MUSHes disable @destroy and only use @recycle, to avoid players mistyping. @nuke is an alias for `@destroy/override`.
 
-**See Also:**
+::: seealso
 - [@undestroy]
 - [@create]
 - [@dig]
 - [@open]
 - [DESTROY_OK]
 - [SAFE]
+:::
 
 ## Destruction lifecycle
 
@@ -52,6 +53,7 @@ When an object is destroyed, any commands, @waits and semaphores it has queued a
 Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels the player owned.
 
 
-**See Also:**
+::: seealso
 - [SAFE]
 - [EVENTS]
+:::

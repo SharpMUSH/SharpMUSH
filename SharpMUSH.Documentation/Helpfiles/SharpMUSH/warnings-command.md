@@ -34,9 +34,10 @@ For a list of warnings, see [warnings list].<br>
 For examples, see [@warnings building warning profiles].
 
 
-**See Also:**
+::: seealso
 - [@wcheck]
 - `[NO_WARN]`
+:::
 
 ## Building warning profiles
 

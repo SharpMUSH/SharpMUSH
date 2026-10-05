@@ -41,6 +41,7 @@ A Wizard can use `@quota/set` to set a player's total quota to an integer amount
 
 `@allquota` requires an integer amount and sets every player's total quota to that value. It is available to Wizards and holders of the Quota power. Normally each player is notified; `/quiet` suppresses those individual notifications. To list quotas without changing them, use `@quota/all`.
 
-**See Also:**
+::: seealso
 - [QUOTAS]
 - [@power]
+:::

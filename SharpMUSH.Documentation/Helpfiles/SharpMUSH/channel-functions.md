@@ -194,8 +194,9 @@ ON COMBINE
 !FLAG^GAGGED
 ```
 
-**See Also:**
+::: seealso
 - [@channel]
 - [@chat]
 - [@CEMIT]
 - [@CHANNEL CLOCK]
+:::

@@ -13,7 +13,7 @@ To speak on channels, use the `@chat` command.
 
 There are some aliases in place for players more familiar with the MUX comsys - see [MUXCOMSYS] for more details.
 
-**See Also:**
+::: seealso
 - [@channel]
 - [@chat]
 - [@CEMIT]
@@ -21,6 +21,7 @@ There are some aliases in place for players more familiar with the MUX comsys - 
 - [CHAN_USEFIRSTMATCH]
 - [@chatformat]
 - [@CHANNEL CLOCK]
+:::
 
 # @chat
 # +
@@ -40,9 +41,10 @@ The `@chat` command is used to speak on channels. Everyone on the channel will s
 <Public> Mike waves
 ```
 
-**See Also:**
+::: seealso
 - [@channel]
 - [@CEMIT]
+:::
 
 # CHAN_USEFIRSTMATCH
 
@@ -50,10 +52,11 @@ The `@chat` command is used to speak on channels. Everyone on the channel will s
 
 Normally, when an object attempts to speak on the channel system with @chat, using an ambiguous channel name produces an error message. With this flag set, it will instead speak on the first channel whose name is a match. Other commands in the chat system are not affected by the flag.
 
-**See Also:**
+::: seealso
 - [CHAT]
 - [@chat]
 - [@CEMIT]
+:::
 
 # @CEMIT
 # @NSCEMIT
@@ -75,8 +78,9 @@ cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respec
 
 @cemit is intended for use in writing extended chat systems. 
 
-**See Also:**
+::: seealso
 - [@chat]
+:::
 
 # @channel
 
@@ -88,11 +92,12 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - **Other** - Setting channel titles, recalling previous chat messages
 - **Admin** - Adding, deleting and modifying channels
 
-**See Also:**
+::: seealso
 - [CHAT]
 - [@chat]
 - [@CEMIT]
 - [channel functions]
+:::
 
 # @CHANNEL OTHER
 # @channel/recall
@@ -109,9 +114,10 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 
 `@channel/buffer` sets the recall buffer size for *\<channel\>* to *\<size\>*. Only channel admins can do this. A size of 0 disables the recall buffer.
 
-**See Also:**
+::: seealso
 - [@channel joining]
 - [@CHANNEL ADMIN]
+:::
 
 # @CHANNEL ADMIN
 # @channel/add
@@ -157,10 +163,11 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 
 Channel locks are managed by the separate `@clock` command, not by a `@channel` switch. See [@CHANNEL CLOCK] for details.
 
-**See Also:**
+::: seealso
 - [@channel joining]
 - [@CHANNEL ADMIN]
 - [@CHANNEL CLOCK]
+:::
 
 # @CHANNEL LIST
 
@@ -184,10 +191,11 @@ CHAT: Channel list: Public, Admin
 ```
 which reads `(None)` when nothing matched.
 
-**See Also:**
+::: seealso
 - [@channel joining]
 - [@CHANNEL ADMIN]
 - [@CHANNEL CLOCK]
+:::
 
 # @CHANNEL PRIVS
 # CHANNEL-PRIVS
@@ -223,11 +231,12 @@ These are privileges, not locks. A privilege says which *kind* of thing the chan
 @channel/privs Public=P Q o C
 ```
 
-**See Also:**
+::: seealso
 - [@channel joining]
 - [@CHANNEL CLOCK]
 - [@CHANNEL CLOCK]
 - [cflags()]
+:::
 
 # @CHANNEL CLOCK
 # @channel/clock
@@ -260,11 +269,12 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 @clock/speak Public=
 ```
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [LOCKING]
 - [lock keys]
 - [@CHANNEL PRIVS]
+:::
 
 # MUXCOMSYS
 # ADDCOM
@@ -289,7 +299,8 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 
 Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
 
-**See Also:**
+::: seealso
 - [@channel]
 - [@chat]
 - [CHAN_USEFIRSTMATCH]
+:::

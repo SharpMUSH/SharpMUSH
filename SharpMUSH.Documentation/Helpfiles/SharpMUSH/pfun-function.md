@@ -57,12 +57,13 @@ as the attribute is inherited (and evaluated by you, not the parent) - you don't
 This function is particularly useful when you want to inherit an attribute tree from a parent, but add further branches.
 
 
-**See Also:**
+::: seealso
 - [u()]
 - [GET()]
 - [PARENT()]
 - [ZFUN()]
 - [parent]
+:::
 
 ## Branch inheritance examples
 

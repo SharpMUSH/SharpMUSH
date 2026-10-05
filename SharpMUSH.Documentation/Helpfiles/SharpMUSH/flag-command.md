@@ -43,11 +43,12 @@ All other switches to this command are restricted to God:
 - /decompile prints out a list of @flag/add commands needed to recreate the flag table on another MUSH. If `<pattern>` is given, only flags whose names match that wildcard pattern are shown.
 
 
-**See Also:**
+::: seealso
 - [flags]
 - [@set]
 - [@power]
 - [flag permissions]
+:::
 
 ## Adding flags
 

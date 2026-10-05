@@ -34,9 +34,10 @@ When the attribute is called, %0 will be the type of the json object and %1 will
 
 `<osep>` defaults to a space.
 
-**See Also:**
+::: seealso
 - [json()]
 - [json_query()]
+:::
 
 ## Mapping primitive values
 

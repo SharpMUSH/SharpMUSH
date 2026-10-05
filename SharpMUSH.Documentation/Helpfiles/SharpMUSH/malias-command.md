@@ -45,8 +45,9 @@ The @malias command is used to create, view, and manipulate @mail aliases, or li
 `@malias` with a single argument (the name of an alias) lists the members of that alias, if you're allowed to see them. Other forms of the same command are `@malias/members <alias>` or `@malias/who <alias>`
 
 
-**See Also:**
+::: seealso
 - [@malias creating and naming aliases]
+:::
 
 ## Creating and naming aliases
 
@@ -64,8 +65,9 @@ The first form above creates a new alias for the given list of players.
 `@malias/destroy` destroys the alias completely.
 
 
-**See Also:**
+::: seealso
 - [@malias managing recipients]
+:::
 
 ## Managing recipients
 
@@ -80,8 +82,9 @@ The first form above creates a new alias for the given list of players.
 `@malias/remove` removes players from the alias. If a player is on the alias more than once, a single remove will remove only one instance of that player.
 
 
-**See Also:**
+::: seealso
 - [@malias alias permissions]
+:::
 
 ## Alias permissions
 
@@ -97,8 +100,9 @@ An empty permission list allows any player. The permission list may also be a sp
 By default, the owner and alias members may see and use the alias, but only the owner may list the members. Note that admin may always list aliases and their members, regardless of these settings, but are treated like anyone else when trying to @mail with an alias.
 
 
-**See Also:**
+::: seealso
 - [@malias administrative alias operations]
+:::
 
 ## Administrative alias operations
 

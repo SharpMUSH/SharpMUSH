@@ -44,7 +44,8 @@ Setting the option empty disables all automatic displaying of monikers, and they
 
 You can use !`<value>` to remove something, so 'everywhere !who' shows monikers everywhere except in WHO, '!everywhere !alltypes' will disable them entirely, etc.
 
-**See Also:**
+::: seealso
 - [@moniker]
 - [MONIKER()]
 - [MONIKER()]
+:::

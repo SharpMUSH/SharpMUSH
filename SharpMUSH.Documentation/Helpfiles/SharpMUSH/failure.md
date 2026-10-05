@@ -25,12 +25,13 @@ A "failure" usually occurs when you try to do something that is governed by an `
 See [LOCKING]
 
 
-**See Also:**
+::: seealso
 - [verbs]
 - [LOCKING]
 - [@afailure]
 - [@aefail]
 - [@lfail]
+:::
 
 ## Failure attributes
 

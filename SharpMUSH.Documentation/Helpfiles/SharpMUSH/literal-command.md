@@ -46,12 +46,13 @@ This can be used to pass unevaluated MUSHcode to softcoded commands without havi
 See [literal command examples] for more examples.
 
 
-**See Also:**
+::: seealso
 - [LIT()]
 - [DECOMPOSE()]
 - [ESCAPE()]
 - [@command]
 - [}]
+:::
 
 ## Literal command examples
 

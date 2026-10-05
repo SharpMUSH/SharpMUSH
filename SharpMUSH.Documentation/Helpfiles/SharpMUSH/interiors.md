@@ -45,10 +45,11 @@ Now, if you want people inside to be able to hear and communicate with the outsi
 (The filters will keep people on the outside from seeing the 'o' messages and people on the inside from seeing the 'ox' messages which is a good thing.)
 
 
-**See Also:**
+::: seealso
 - [enter]
 - [leave]
 - [@prefix]
 - [@filter]
 - [AUDIBLE]
 - [@listen]
+:::

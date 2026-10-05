@@ -27,7 +27,7 @@ If `<room>` is specified (usually as a dbref), this command shows `<message>` to
 The `/noeval` switch prevents the MUSH from evaluating `<message>`.<br>
 The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
-**See Also:**
+::: seealso
 - [@emit]
 - [@pemit]
 - [@nspemit]
@@ -35,6 +35,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 - [OEMIT()]
 - [NOSPOOF]
 - [SPOOFING]
+:::
 
 ## Location targeting examples
 

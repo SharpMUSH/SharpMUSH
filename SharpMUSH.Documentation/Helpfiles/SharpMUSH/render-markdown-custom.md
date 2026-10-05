@@ -85,10 +85,6 @@ The function looks for attributes on `<object>` with specific names that define 
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
   - `%0` - The quote content (already rendered)
   
-- ``RENDERMARKUP`SEEALSO`` - See Also footer rendering (see [rendermarkdown()])
-  - `%0` - The topics, each rendered (a topic link stays a link), separated by `, `
-  - `%1` - How many topics there are
-  
 ## Table templates
 
 - ``RENDERMARKUP`TABLE`` - Table rendering. Receives the table described as a
@@ -123,9 +119,10 @@ The function looks for attributes on `<object>` with specific names that define 
 ## Container templates
 
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
-  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, or your own)
+  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, `seealso`, or your own)
   - `%1` - The rest of the fence line, empty if there is none
-  - `%2` - The container's contents, rendered (see the note below)
+  - `%2` - The container's contents, rendered (see the note below). For a
+    `::: seealso` footer of names only, that is the topics separated by `, `
   
 ## Inline templates
 
@@ -364,8 +361,9 @@ than as hooks of their own.
 - Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
 - Falls back to default rendering if template attribute evaluation fails
 
-### See Also
+::: seealso
 - [rendermarkdown()]
 - [GET()]
 - [u()]
 - [ANSI]
+:::

@@ -197,7 +197,7 @@ public class HelpArticleTests
 		await Assert.That(html).Contains("<a href=\"/help/newbie\">newbie</a>");
 	}
 
-	private const string SeeAlso = "Body.\n\n**See Also:**\n- [newbie]\n- [ZONES]\n- `[NO_TEL]`";
+	private const string SeeAlso = "Body.\n\n::: seealso\n- [newbie]\n- [ZONES]\n- `[NO_TEL]`\n:::";
 
 	[Test]
 	public async Task TerminalSeeAlsoIsOneCommaSeparatedLine()
@@ -215,11 +215,22 @@ public class HelpArticleTests
 	}
 
 	[Test]
-	public async Task SeeAlsoWithDescribedItemsStaysAList()
+	public async Task SeeAlsoWithDescribedItemsStaysAListUnderTheLabel()
 	{
-		const string markdown = "**See Also:**\n- [newbie] — where to start";
-		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).Contains("* help newbie — where to start");
-		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).DoesNotContain("help-see-also");
+		const string markdown = "::: seealso\n- [newbie] — where to start\n:::";
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText())
+			.IsEqualTo("See Also:\n* help newbie — where to start");
+		var html = HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<span class=\"help-see-also-label\">See Also</span>");
+		await Assert.That(html).Contains("<li><a href=\"/help/newbie\">newbie</a> — where to start</li>");
+		await Assert.That(html).DoesNotContain("help-see-also-names");
+	}
+
+	[Test]
+	public async Task BoldSeeAlsoLabelIsOnlyAParagraph()
+	{
+		const string markdown = "**See Also:**\n- [newbie]";
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).IsEqualTo("See Also:\n* help newbie");
 	}
 
 	[Test]
@@ -227,6 +238,6 @@ public class HelpArticleTests
 	{
 		var html = HelpHtmlRenderer.RenderToHtml(SeeAlso, topic => "/help/" + topic);
 		await Assert.That(html).IsEqualTo("<p>Body.</p>\n<nav class=\"help-see-also\" aria-label=\"See also\"><span class=\"help-see-also-label\">See Also</span>"
-			+ "<ul><li><a href=\"/help/newbie\">newbie</a></li><li><a href=\"/help/ZONES\">ZONES</a></li><li><code>[NO_TEL]</code></li></ul></nav>\n");
+			+ "<ul class=\"help-see-also-names\"><li><a href=\"/help/newbie\">newbie</a></li><li><a href=\"/help/ZONES\">ZONES</a></li><li><code>[NO_TEL]</code></li></ul></nav>\n");
 	}
 }

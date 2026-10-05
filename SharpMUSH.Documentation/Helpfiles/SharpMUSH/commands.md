@@ -55,10 +55,11 @@ If a command would match, but the enactor can't pass the lock, the object may de
 *BE SURE TO `@LOCK`/USE ME==ME IF YOU SET `$-COMMANDS` ON YOURSELF!*
 
 
-**See Also:**
+::: seealso
 - [GLOBALS]
 - [evaluation order]
 - [STACK]
 - [%]
 - [WILDCARDS]
 - [LOCKING]
+:::

@@ -42,7 +42,7 @@ Registers set via setq() or setr() can be accessed via the r() function. Single-
 
 Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the same register, and %qA and %qa both fetch its value.
 
-**See Also:**
+::: seealso
 - [R()]
 - [LISTQ()]
 - [LISTQ()]
@@ -50,6 +50,7 @@ Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the 
 - [LOCALIZE()]
 - [ulocal()]
 - [REGISTERS()]
+:::
 
 ## Register names and limits
 

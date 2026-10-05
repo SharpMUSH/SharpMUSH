@@ -111,7 +111,7 @@ PAGE: End of list
 ```
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [@alias]
 - [@pageformat]
@@ -121,3 +121,4 @@ PAGE: End of list
 - [flags]
 - [pagerecall()]
 - [pageconversations()]
+:::

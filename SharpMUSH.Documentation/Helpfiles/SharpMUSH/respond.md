@@ -44,9 +44,10 @@ If an attribute exists, Penn defaults to **200 OK**, and Content-Type **"text/pl
 If `@respond` is run outside of an HTTP Context, the enactor will see "(HTTP): ..." for debugging, but it isn't buffered for output as if it was an active http request.
 
 
-**See Also:**
+::: seealso
 - [@respond examples]
 - [@respond requirements]
+:::
 
 ## Response examples
 

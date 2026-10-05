@@ -37,6 +37,7 @@ If the ZMO is a room, it is called a "Zone Master Room." Most of the statements 
 If you want restricted global commands defined over only a small area, you can define that area to be part of a zone, and place the desired `$-commands` upon the ZMO. If you want players to be able to use special commands for a culture they belong to, the `$-commands` should go on the ZMO, and the players `@chzoned` to it so they can use the commands anywhere.
 
 
-**See Also:**
+::: seealso
 - [@chzone]
 - [zone masters]
+:::

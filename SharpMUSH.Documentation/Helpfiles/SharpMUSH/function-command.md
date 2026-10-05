@@ -104,9 +104,10 @@ Using @function on an already-added @function will delete the old one and instal
 This creates a new version of ansi() that doesn't do any colorization, and that needs two arguments, like the built-in version. It will be restricted to non-guest players.
 
 
-**See Also:**
+::: seealso
 - [restrict]
 - [functions]
 - [@startup]
 - [fn()]
 - [valid()]
+:::

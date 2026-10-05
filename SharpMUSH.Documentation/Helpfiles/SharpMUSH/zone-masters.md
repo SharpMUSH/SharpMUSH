@@ -38,7 +38,8 @@ Some suggested uses of shared players:
 2. If local wizards are desired, a shared player may be created and zone locked to the local wizards. Players building within that zone should be `@chowning` to the shared player, or logged in as it while creating objects. The local wizard will then be able to control anything within that domain as long as the object in question is owned by the shared player.
 
 
-**See Also:**
+::: seealso
 - [SHARED]
 - [LOCKING]
 - [zone masters]
+:::

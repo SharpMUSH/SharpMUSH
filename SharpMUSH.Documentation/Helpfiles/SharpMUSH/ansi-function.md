@@ -44,12 +44,13 @@ ansi(y /+green B <#ffffff>, test)
 would show white text on an ANSI-blue background.
 ```
 
-**See Also:**
+::: seealso
 - [ANSI]
 - [COLOR]
 - [@SOCKSET]
 - [COLORSTYLE]
 - [colors()]
+:::
 
 ## Legacy color codes
 

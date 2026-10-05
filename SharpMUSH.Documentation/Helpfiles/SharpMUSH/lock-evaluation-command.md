@@ -35,8 +35,9 @@ The difference between this and an attribute lock is that the *<attribute>* is t
 The person trying to pass the lock is %# and *<object>* is %! when the evaluation takes place. The evaluation is done with the powers of *<object>*. If you try to do something (like `[get(%#/*<attribute>*)]`) and *<object>* doesn't have permission to do that, the person will automatically fail to pass the lock.
 
 
-**See Also:**
+::: seealso
 - [@lock-evaluation evaluation lock example]
+:::
 
 ## Evaluation lock example
 
@@ -52,5 +53,6 @@ Whenever someone tries to pass through the exit, the attribute "whichday" will b
 If you have an evaluation lock that just does `[hasflag(%#,FLAGNAME)]`, you should probably use a bit lock instead.
 
 
-**See Also:**
+::: seealso
 - [@LOCK-BIT]
+:::

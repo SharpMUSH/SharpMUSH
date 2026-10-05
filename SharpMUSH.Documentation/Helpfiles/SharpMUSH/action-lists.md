@@ -24,10 +24,11 @@ If part of the command (such as the text in an `@emit`, for example) contains a 
 
 Substitution will be performed on the contents of action lists before they are executed.
 
-**See Also:**
+::: seealso
 - [@-ATTRIBUTES]
 - [verbs]
 - [$-commands]
+:::
 
 ## Action list examples
 
@@ -52,8 +53,9 @@ Example 2:
 ```
 
 
-**See Also:**
+::: seealso
 - [attributes]
 - [%]
 - [@asuccess]
 - [@dolist]
+:::

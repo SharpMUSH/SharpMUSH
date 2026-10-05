@@ -32,8 +32,9 @@ F160
 For details of how the algorithm works, see [soundex algorithm].
 
 
-**See Also:**
+::: seealso
 - [SOUNDLIKE()]
+:::
 
 ## Soundex algorithm
 

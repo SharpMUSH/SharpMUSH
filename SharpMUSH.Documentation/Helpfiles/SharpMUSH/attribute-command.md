@@ -67,10 +67,11 @@ Only Wizards can modify the attribute table.
 ```
 
 
-**See Also:**
+::: seealso
 - [attributes]
 - [attribute flags]
 - [@set]
 - [@atrchown]
 - [@atrlock]
 - [@list]
+:::

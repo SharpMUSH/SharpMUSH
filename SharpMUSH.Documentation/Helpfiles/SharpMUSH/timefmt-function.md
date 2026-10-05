@@ -33,10 +33,11 @@ Monday, the 17th day of July.
 ```
 
 
-**See Also:**
+::: seealso
 - [CONVSECS()]
 - [etimefmt()]
 - [timezones]
+:::
 
 ## Date escape codes
 

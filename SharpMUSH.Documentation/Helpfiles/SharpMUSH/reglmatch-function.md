@@ -37,11 +37,12 @@ In all cases, the elements of `<list>` are separated by `<delimiter>`, which def
 
 SharpMUSH also registers regmatchalli() for reglmatchalli(). Despite the name it searches a list and returns positions, as the rest of this family does — it is not a case-insensitive [regmatch()].
 
-**See Also:**
+::: seealso
 - [regmatch()]
 - [GRAB()]
 - [element()]
 - [regexp syntax]
+:::
 
 ## Regular expression examples
 

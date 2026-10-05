@@ -42,10 +42,11 @@ It can be used for working out how certain colors will downgrade to people using
 
 `<format>` can also include the word "styles", in which case all ANSI styling options (f, u, i and h) present in `<colors>` are included in the output.
 
-**See Also:**
+::: seealso
 - [ansi()]
 - [valid()]
 - [COLORSTYLE]
+:::
 
 ## Palette examples
 

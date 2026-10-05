@@ -71,10 +71,11 @@ Additionally, unlike `$-commands`, ^-patterns are NOT inherited via `@parent`, u
 
 Listen patterns are checked after the object's normal `@listen` attribute.
 
-**See Also:**
+::: seealso
 - [@listen]
 - [@ahear] — `@ahear`, `@amhear`, and `@aahear` provide the three listener reaction attributes.
 - [MONITOR]
 - `[LISTEN_PARENT]`
 - [$-commands]
 - [interiors]
+:::

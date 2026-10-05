@@ -43,7 +43,7 @@ They can also be filled with information that is passed by an `@trigger` command
 Please see [setq()] for more information about the setq registers.
 
 
-**See Also:**
+::: seealso
 - [%]
 - [@trigger]
 - [$-commands]
@@ -56,3 +56,4 @@ Please see [setq()] for more information about the setq registers.
 - [LETQ()]
 - [LISTQ()]
 - [STRMATCH()]
+:::

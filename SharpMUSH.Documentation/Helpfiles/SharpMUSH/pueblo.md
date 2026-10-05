@@ -23,8 +23,9 @@ Pueblo is a client made by Chaco (a now defunct company). It attempts to mix HTM
 SharpMUSH will automatically detect a Pueblo client (rather, the client will announce itself and SharpMUSH will detect that), and set up that connection for Pueblo use. 
 
 
-**See Also:**
+::: seealso
 - [pueblo client enhancements]
+:::
 
 ## Client enhancements
 
@@ -43,6 +44,7 @@ While Pueblo brings a number of new features and markups to MUSHes, in many ways
 ```
 
 
-**See Also:**
+::: seealso
 - [PUEBLO()]
 - [HTML FUNCTIONS]
+:::

@@ -31,7 +31,7 @@ You can set the regexp flag on the filter attribute to use regular expressions i
 Sounds are only forwarded if the speaker also passes `<object>`'s @lock/filter, which receives the sound heard as %0.
 
 
-**See Also:**
+::: seealso
 - [AUDIBLE]
 - [@infilter]
 - [attribute flags]
@@ -39,6 +39,7 @@ Sounds are only forwarded if the speaker also passes `<object>`'s @lock/filter, 
 - [@forwardlist]
 - [@prefix]
 - [WILDCARDS]
+:::
 
 ## Audible exit example
 

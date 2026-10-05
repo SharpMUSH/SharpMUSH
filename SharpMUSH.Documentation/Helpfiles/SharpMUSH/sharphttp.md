@@ -28,8 +28,9 @@ You say, "potato^cheese"
 You say, "name,hobby,like,like"
 ```
 
-**See Also:**
+::: seealso
 - [FORMQ()]
+:::
 
 # FORMQ()
 `formq(<string>[, <prefix>])`
@@ -55,7 +56,8 @@ b
 
 The default HTTP verb handlers (see [http examples]) call formq() on the query string for you, so route sub-attributes can read *%q<form.*>* immediately.
 
-**See Also:**
+::: seealso
 - [FORMDECODE()]
 - [setq()]
+:::
 

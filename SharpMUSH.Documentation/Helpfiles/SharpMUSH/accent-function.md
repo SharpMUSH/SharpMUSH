@@ -30,12 +30,13 @@ SharpMUSH stores the resulting characters as Unicode text. Correct display depen
 For each character in `<string>`, the corresponding character of `<template>` is checked according to the table in [accents], and a replacement done. If either the current `<string>` or `<template>` characters aren't in the table, the `<string>` character is passed through unchanged.
 
 
-**See Also:**
+::: seealso
 - [STRIPACCENTS()]
 - `[NOACCENTS]`
 - [@nameaccent]
 - [ACCNAME()]
 - [accents]
+:::
 
 ## Accent examples
 

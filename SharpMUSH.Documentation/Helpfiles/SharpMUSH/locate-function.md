@@ -64,7 +64,7 @@ You can control where to look with:<br>
 
 Just string all the parameters together. Spaces are ignored, so you can use spaces between paramaters for clarity if you wish.
 
-**See Also:**
+::: seealso
 - [NUM()]
 - [RNUM()]
 - [PMATCH()]
@@ -72,6 +72,7 @@ Just string all the parameters together. Spaces are ignored, so you can use spac
 - [WHERE()]
 - [RLOC()]
 - [FINDABLE()]
+:::
 
 ## Matching examples
 

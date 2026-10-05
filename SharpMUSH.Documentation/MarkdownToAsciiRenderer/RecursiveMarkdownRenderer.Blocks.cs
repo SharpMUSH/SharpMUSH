@@ -35,6 +35,13 @@ public partial class RecursiveMarkdownRenderer
 	protected virtual MString RenderSeeAlso(SeeAlsoBlock seeAlso)
 	{
 		var label = $"{HelpSeeAlsoExtension.Label}: ";
+		if (seeAlso.Items is null)
+		{
+			// An item says more than its name, so the contents print as written, under the label.
+			return MarkupText.Concat([MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain("\n"),
+				RenderContainerBlock(seeAlso)]);
+		}
+
 		var indent = MarkupText.Plain("\n" + new string(' ', label.Length));
 		var parts = new List<MString> { MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain(" ") };
 		var column = label.Length;
@@ -65,7 +72,7 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// Each topic of a See Also footer, rendered. A topic link is named bare (<c>@lock</c>, not
+	/// Each topic of a See Also footer of bare names, rendered (none if an item says more). A topic link is named bare (<c>@lock</c>, not
 	/// <c>help @lock</c>): the label already says these are help topics, as in PennMUSH.
 	/// </summary>
 	protected IReadOnlyList<MString> RenderSeeAlsoItems(SeeAlsoBlock seeAlso)
@@ -73,7 +80,7 @@ public partial class RecursiveMarkdownRenderer
 		_bareCommandLabels = true;
 		try
 		{
-			return seeAlso.Items.Select(Render).ToList();
+			return (seeAlso.Items ?? []).Select(Render).ToList();
 		}
 		finally
 		{

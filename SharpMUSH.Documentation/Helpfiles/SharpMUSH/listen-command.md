@@ -59,7 +59,8 @@ Recorder records: Whee!
 ```
 
 
-**See Also:**
+::: seealso
 - [listening]
 - `AHEAR`, `AMHEAR`, and `AAHEAR`: [@ahear]
 - [WILDCARDS]
+:::

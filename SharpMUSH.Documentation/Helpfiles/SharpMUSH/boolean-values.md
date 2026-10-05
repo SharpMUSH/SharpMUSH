@@ -60,7 +60,8 @@ And so on...<br>
 (note: These rules only apply when a function expects a Boolean value, not for strings that expect other values.)
 
 
-**See Also:**
+::: seealso
 - [Boolean functions]
 - [NOT()]
 - [T()]
+:::

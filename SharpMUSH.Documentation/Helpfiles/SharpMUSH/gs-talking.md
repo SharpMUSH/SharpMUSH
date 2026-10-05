@@ -56,9 +56,10 @@ will show everyone in the room:<br>
 However, make sure you include your name somewhere, so people know who's talking.
 
 
-**See Also:**
+::: seealso
 - [gs chat]
 - ["]
 - [:]
 - [:]
 - [@emit]
+:::

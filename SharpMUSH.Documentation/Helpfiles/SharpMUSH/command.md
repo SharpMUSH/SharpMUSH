@@ -66,10 +66,11 @@ Any command added without both `/noparse` and `/rsnoparse` is provided with a `/
 
 Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
 
-**See Also:**
+::: seealso
 - [@hook]
 - [restrict]
 - [evaluation order]
+:::
 
 ## Added command example
 

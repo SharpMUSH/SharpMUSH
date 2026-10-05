@@ -35,10 +35,11 @@ Objects run under this flag are computationally expensive, and can generate larg
 There's also a DEBUG attribute flag, which only affects a single attribute; see [attribute flags] for more information. You can also use the "}" command prefix to run a command with DEBUG output just once.
 
 
-**See Also:**
+::: seealso
 - [VERBOSE]
 - [PUPPET]
 - [}]
+:::
 
 ## Debugging example
 

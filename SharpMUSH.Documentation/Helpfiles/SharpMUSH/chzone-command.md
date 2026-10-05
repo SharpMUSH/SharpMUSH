@@ -38,7 +38,8 @@ If `<zone>` does not have a Zone @lock when something is @chzoned to it, the loc
 Whenever an object besides a player is @chzoned to a zone object, the WIZARD, ROYALTY, and TRUST flags will be reset, as will all @power's (for security purposes). For similar reasons, it is strongly recommended that you do not @chzone admin- or wizard-owned objects to any zone that less privileged players have access to. Wizards can use the `/preserve` switch to prevent this reset.
 
 
-**See Also:**
+::: seealso
 - [zones]
 - [@chzoneall]
 - [ZONE()]
+:::

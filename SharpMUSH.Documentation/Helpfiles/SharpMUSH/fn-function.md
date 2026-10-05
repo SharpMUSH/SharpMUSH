@@ -60,7 +60,8 @@ Example:
 ```
 
 
-**See Also:**
+::: seealso
 - [@function]
 - [restrict]
 - [attribute flags]
+:::

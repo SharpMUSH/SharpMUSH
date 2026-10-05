@@ -38,8 +38,9 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 ```
 
 
-**See Also:**
+::: seealso
 - [event examples player creation example]
+:::
 
 ## Player creation example
 

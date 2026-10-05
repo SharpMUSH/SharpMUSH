@@ -113,10 +113,11 @@ An object set NO_COMMAND is not checked for `$`-commands. Use `@set <object>=!NO
 ones that carry them, or drop the flag from `thing_flags` if your game puts `$`-commands on things
 as a matter of course.
 
-**See Also:**
+::: seealso
 - [NO_COMMAND]
 - [@set]
 - [FLAG LIST]
+:::
 
 # @config funcs
 These options affect the behavior of some functions.

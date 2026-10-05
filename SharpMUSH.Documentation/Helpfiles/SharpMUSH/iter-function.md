@@ -33,13 +33,14 @@ If you nest iter()s, ## and #@ refer to the first/outermost iter(). The ilev() f
 
 parse() is an alias for iter().
 
-**See Also:**
+::: seealso
 - [ilev()]
 - [ilev()]
 - [ilev()]
 - [IBREAK()]
 - [MAP()]
 - [@dolist]
+:::
 
 ## Iteration examples
 

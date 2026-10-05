@@ -49,9 +49,10 @@ Thu Mar 01 19:20:25 2012
 ```
 
 
-**See Also:**
+::: seealso
 - [timefmt()]
 - [TIMESTRING()]
 - [CONVSECS()]
 - [CONVTIME()]
 - [timezones]
+:::

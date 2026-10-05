@@ -33,12 +33,13 @@ In both cases, elements of `<list>` are separated by `<delimiter>`, if it's give
 
 To get the matching elements, instead of the indexes of where they appear in the list, use grab()/graball(). To see if a single string matches a wildcard pattern, use strmatch().
 
-**See Also:**
+::: seealso
 - [GRAB()]
 - [STRMATCH()]
 - [MEMBER()]
 - [reglmatch()]
 - [WILDCARDS]
+:::
 
 ## Wildcard examples
 

@@ -77,8 +77,9 @@ The same principles apply to lattr(). `@decompile obj` is a special case, and di
 
 Branch attributes will be displayed with a \` in the attribute flags on examine. 
 
-**See Also:**
+::: seealso
 - [WILDCARDS]
+:::
 
 ## Permissions
 

@@ -540,20 +540,20 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_SeeAlsoFooter_PrintsOneLine()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(**See Also:**%r- \\[newbie\\]%r- \\[ZONES\\])")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("See Also: newbie, ZONES");
 	}
 
 	[Test]
-	public async Task RenderMarkdownCustom_SeeAlsoTemplate_GetsTheTopics()
+	public async Task RenderMarkdownCustom_ContainerTemplate_GetsTheSeeAlsoTopics()
 	{
 		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message!.ToString().Trim();
-		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`SEEALSO {testDbref}=Related (%1): %0"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`CONTAINER {testDbref}=%0 -> %2"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(**See Also:**%r- \\[newbie\\]%r- \\[ZONES\\],{testDbref})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::,{testDbref})")))?.Message;
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.ToPlainText()).IsEqualTo("Related (2): newbie, ZONES");
+		await Assert.That(result!.ToPlainText()).IsEqualTo("seealso -> newbie, ZONES");
 	}
 
 	[Test]

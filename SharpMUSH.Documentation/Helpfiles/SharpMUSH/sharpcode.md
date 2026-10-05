@@ -39,8 +39,9 @@ are never sent to anyone in-game; they stay in the log, reachable by `id`.
 This is a real error return, so softcode can test for it — `#-1 EXCEPTION:` is
 always the prefix, and the rest is always valid JSON.
 
-**See Also:**
+::: seealso
 - [pennmush compatibility]
+:::
 
 # i18n
 # internationalization

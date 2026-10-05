@@ -37,10 +37,11 @@ The third form combines the first two: the enactor will execute `<command_list>`
 More forms that support semaphores on arbitrary attributes are described in [@wait named semaphores].
 
 
-**See Also:**
+::: seealso
 - [semaphores]
 - [@drain]
 - [@notify]
+:::
 
 ## Named semaphores
 

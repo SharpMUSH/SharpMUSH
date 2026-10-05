@@ -81,8 +81,9 @@ Anything sent to the HTTP Handler player during evaluation of this code is inclu
 To modify the response headers, use the command `@respond`
 
 
-**See Also:**
+::: seealso
 - [http setup]
+:::
 
 ## Handler setup and lifetime
 
@@ -101,14 +102,16 @@ A missing method handler returns **404 NOT FOUND**. An executed handler defaults
 Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time limit, including asynchronous I/O. Zero disables this deadline. If the deadline expires, SharpMUSH returns **503 Service Unavailable** with `#-1 EXECUTION TIME LIMIT EXCEEDED`, discarding partial response output, headers, and status. World changes already performed are not rolled back. Request cancellation also cancels handler evaluation. The ``HTTP`COMMAND`` completion event is queued once the response is assembled, as in PennMUSH, and runs with its own time limit; the response does not wait for it. It is omitted after expiry.
 
 
-**See Also:**
+::: seealso
 - [http examples]
 - [http sitelock]
 - [EVENT HTTP]
+:::
 
 
-**See Also:**
+::: seealso
 - [http headers and limits]
+:::
 
 ## Headers and response limits
 
@@ -121,12 +124,13 @@ Multiple header lines will be added to the same q-register name, but %r-delimite
 HTTP responses are limited to 5,242,880 UTF-16 code units, the same ceiling used for function output. This is a character-buffer limit rather than a UTF-8 wire-byte limit. Anything sent to the HTTP Handler player, whether it uses `think` or `@pemit`, is added to the response buffer. Captured messages include a trailing newline. Exceeding the limit discards the partial body, status, content type, and custom headers and returns a complete plain-text 500 response.
 
 
-**See Also:**
+::: seealso
 - [@respond]
 - [FORMDECODE()]
 - [json_query()]
 - [URLENCODE()]
 - [URLDECODE()]
+:::
 
 ## Routing
 
@@ -169,9 +173,10 @@ Both routes pass `%r` as the `json_array()` separator rather than taking the def
 - `GET /http/profile/schema` (``&GET`PROFILE`SCHEMA``) — the profile field/section schema.
 - `GET /http/profile?objid=#1:123` (``&GET`PROFILE``) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in ``PROFILE`<key>`` attributes on the character. `fields` always carries `created` and `objid` (the two the shipped schema declares) plus three the portal reads directly without a schema entry: `image` (`IMAGE`), `banner` (``IMAGE`BANNER``, falling back to `IMAGE`) and `color` (``PROFILE`COLOR``, the game-defined name colour, accepted only as `#rrggbb` because the page puts it in a CSS custom property) — each `{value, visible}`, blank when the character has set nothing or set something that does not pass.
 
-**See Also:**
+::: seealso
 - [http]
 - [FORMQ()]
+:::
 
 ## Example handler setup
 
@@ -187,10 +192,11 @@ Examples all assume the following dedicated handler:
 ```
 
 
-**See Also:**
+::: seealso
 - [http simple]
 - [http get]
 - [http post]
+:::
 
 ## Simple handlers
 
