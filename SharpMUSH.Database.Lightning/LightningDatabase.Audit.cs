@@ -208,10 +208,10 @@ public partial class LightningDatabase : IAuditStore
 			{
 				var deleted = 0;
 				var freed = 0L;
-				foreach (var candidate in batch.Candidates)
+				// An entry's time is its key, so it is still as old as when it was chosen; only its presence can change.
+				foreach (var candidate in batch.Candidates.Where(candidate => ReadAuditMs(candidate.Key) <= cutoff))
 				{
-					// An entry's time is its key, so it is still as old as when it was chosen; only its presence can change.
-					if (ReadAuditMs(candidate.Key) > cutoff || !tx.TryGet(Tables.Audit, candidate.Key, out var value)) continue;
+					if (!tx.TryGet(Tables.Audit, candidate.Key, out var value)) continue;
 					tx.Delete(Tables.Audit, candidate.Key);
 					freed += candidate.Key.Length + value.Length;
 					deleted++;

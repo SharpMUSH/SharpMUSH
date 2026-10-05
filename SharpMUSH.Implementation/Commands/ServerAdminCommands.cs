@@ -345,11 +345,10 @@ public partial class Commands
 		// PennMUSH's Can_Boot: anyone may boot their own connections; anyone else's takes the Boot power, or
 		// players.moderate here, where the moderation half of WIZARD lives.
 		var executorRef = executor.Object().DBRef;
-		var targets = new List<IConnectionService.ConnectionData>();
-		foreach (var handle in targetHandles)
-		{
-			if (ConnectionService.Get(handle) is { } connection) targets.Add(connection);
-		}
+		var targets = targetHandles
+			.Select(handle => ConnectionService.Get(handle))
+			.OfType<IConnectionService.ConnectionData>()
+			.ToList();
 
 		if (targets.Any(connection => connection.Ref is not { } owner || owner.Number != executorRef.Number)
 			&& !await executor.Can(PortalPermission.PlayersModerate) && !await executor.HasPower("Boot"))

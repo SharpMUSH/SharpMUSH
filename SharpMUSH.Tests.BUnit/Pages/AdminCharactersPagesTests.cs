@@ -22,15 +22,30 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 	{
 		public Dictionary<string, string> Bodies { get; } = new(StringComparer.Ordinal);
 		public List<string> Requested { get; } = [];
+		private readonly List<HttpResponseMessage> _responses = [];
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			var full = request.RequestUri!.PathAndQuery.TrimStart('/');
 			var path = request.RequestUri.AbsolutePath.TrimStart('/');
 			Requested.Add($"{request.Method} {full}");
-			return Task.FromResult(Bodies.TryGetValue(full, out var body) || Bodies.TryGetValue(path, out body)
+			var response = Bodies.TryGetValue(full, out var body) || Bodies.TryGetValue(path, out body)
 				? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") }
-				: new HttpResponseMessage(HttpStatusCode.NotFound));
+				: new HttpResponseMessage(HttpStatusCode.NotFound);
+			_responses.Add(response);
+			return Task.FromResult(response);
+		}
+
+		/// <summary>Disposed with the tracked client, which owns this handler.</summary>
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				foreach (var response in _responses) response.Dispose();
+				_responses.Clear();
+			}
+
+			base.Dispose(disposing);
 		}
 	}
 
