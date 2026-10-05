@@ -5045,8 +5045,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In der Szene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du siehst diese Szene an. Tritt ihr bei, um hier zu posen.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du bist dieser Szene noch nicht beigetreten. Tritt ihr bei, um hier zu posen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5055,6 +5055,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Szene beitreten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Das Spiel hat dich dieser Szene nicht beitreten lassen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

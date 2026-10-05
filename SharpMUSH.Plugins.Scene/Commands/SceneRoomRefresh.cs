@@ -57,9 +57,20 @@ public static class SceneRoomRefresh
 		=> await RefreshAsync(parser, await RoomOfAsync(sceneService, sceneId));
 
 	/// <summary>
+	/// Whether a focus moving from <paramref name="before"/> to <paramref name="after"/> changes what the
+	/// room.info of a room running <paramref name="here"/> tells the player: focused on it, or focused on
+	/// another scene at all (the scene block's <c>elsewhere</c>). A move between two other scenes changes
+	/// neither.
+	/// </summary>
+	public static bool FocusShowsIn(string here, string? before, string? after)
+		=> !string.Equals(before, after, StringComparison.Ordinal)
+			&& (here == before || here == after || before is null || after is null);
+
+	/// <summary>
 	/// After a player's focus moved from <paramref name="before"/> to <paramref name="after"/>: refreshes the
-	/// player's own room when its scene is one of the two, the only place that focus shows. A focus that did
-	/// not move refreshes nothing, so posing from the portal (which focuses on every pose) costs no refresh.
+	/// player's own room, the only place that focus shows, when <see cref="FocusShowsIn"/> says its scene's
+	/// block changed. A focus that did not move refreshes nothing, so posing from the portal (which focuses
+	/// on every pose) costs no refresh.
 	/// </summary>
 	public static async ValueTask AfterFocusAsync(IMUSHCodeParser parser, ISceneService sceneService,
 		string playerDbref, string? before, string? after)
@@ -73,7 +84,7 @@ public static class SceneRoomRefresh
 
 		var room = location.Object().DBRef.ToString();
 		if (await sceneService.GetActiveSceneInRoomAsync(room) is Contracts.Scene here
-				&& (here.Id == before || here.Id == after))
+				&& FocusShowsIn(here.Id, before, after))
 			await RefreshAsync(parser, room);
 	}
 

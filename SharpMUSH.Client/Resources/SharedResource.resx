@@ -4392,14 +4392,17 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In scene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>You are watching this scene. Join it to pose here.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>You haven't joined this scene yet. Join it to pose here.</value>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
     <value>Your poses go to another scene. Join this one to pose here.</value>
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>The game did not let you join this scene.</value>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
