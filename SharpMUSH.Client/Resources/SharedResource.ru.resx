@@ -5164,8 +5164,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>В сцене</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Вы наблюдаете за этой сценой. Присоединитесь, чтобы позировать здесь.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Вы ещё не присоединились к этой сцене. Присоединитесь, чтобы позировать здесь.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5174,6 +5174,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присоединиться</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Игра не позволила вам присоединиться к этой сцене.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

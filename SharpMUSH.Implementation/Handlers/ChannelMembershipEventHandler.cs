@@ -2,7 +2,6 @@ using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -19,8 +18,7 @@ namespace SharpMUSH.Implementation.Handlers;
 /// </remarks>
 public class ChannelMembershipEventHandler(
 	IEventService eventService,
-	IConnectionService connectionService,
-	IMUSHCodeParser parser)
+	IConnectionService connectionService)
 	: INotificationHandler<ChannelMembershipChangedNotification>
 {
 	public async ValueTask Handle(ChannelMembershipChangedNotification notification, CancellationToken cancellationToken)
@@ -30,9 +28,7 @@ public class ChannelMembershipEventHandler(
 			return;
 		}
 
-		await eventService.TriggerEventAsync(
-			parser,
-			SharpEvents.PlayerChannels,
+		await eventService.TriggerEventAsync(SharpEvents.PlayerChannels,
 			null,
 			notification.Member.Object().DBRef.ToString(),
 			notification.Cause,

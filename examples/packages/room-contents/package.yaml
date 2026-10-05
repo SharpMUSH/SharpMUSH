@@ -1,6 +1,6 @@
 format: 1
 package: room-contents
-version: 2.2.0
+version: 2.2.2
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -13,6 +13,14 @@ requires_server: ">=0.1"
 # default). The engine fires ROOM`CONTENTS on movement, connect, disconnect and
 # resume; without a handler attribute nothing is emitted and the Play page has
 # no data source.
+#
+# 2.2.2 adds elsewhere to the scene block: whether the viewer is focused on another scene, so
+# the Play page can tell "your poses go to another scene" from "you have not joined this one".
+# A focus taken up or dropped anywhere refreshes the viewer's room for it.
+#
+# 2.2.1 finds the room's connected viewers first and does nothing when there are none: a move
+# into or out of a room nobody connected is in no longer builds a row for every occupant and
+# exit, which in a crowded room took most of a second per move.
 #
 # 2.2 answers the cause scene, which the Scene plugin fires when a room's scene
 # starts, stops, moves, is retitled or changes visibility, or its cast or a
@@ -142,9 +150,11 @@ objects:
       # does), and the echo fails on that. The scene functions gate on the
       # ENACTOR, so a private scene the causer may not see is null for
       # everyone; when the causer may see it, each viewer gets it only if it is
-      # public, they are Wizard/Royalty, or they are a member.
+      # public, they are Wizard/Royalty, or they are a member. elsewhere is a
+      # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
+      # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
       FN`SCENE: |-
-        if(cand(not(strmatch(setr(s,scenewhere(%0)),#-1*)),strmatch(%q<s>,scene(%q<s>,id))),if(cor(scene(%q<s>,public),orflags(%1,Wr),not(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*))),json(object,id,json(string,%q<s>),title,json(string,scene(%q<s>,title)),cast,json(number,words(scenemembers(%q<s>))),role,if(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*),null,json(string,%q<m>)),focus,json(boolean,strmatch(scenefocus(%1),%q<s>))),null),null)
+        if(cand(not(strmatch(setr(s,scenewhere(%0)),#-1*)),strmatch(%q<s>,scene(%q<s>,id))),if(cor(scene(%q<s>,public),orflags(%1,Wr),not(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*))),json(object,id,json(string,%q<s>),title,json(string,scene(%q<s>,title)),cast,json(number,words(scenemembers(%q<s>))),role,if(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*),null,json(string,%q<m>)),focus,json(boolean,strmatch(setr(sf,scenefocus(%1)),%q<s>)),elsewhere,json(boolean,cand(not(strmatch(%q<sf>,#-1 NOT FOUND)),not(strmatch(%q<sf>,%q<s>))))),null),null)
       # The hint shown on a locked exit (%0): its @fail message, as stored. It
       # is plain text to the page — never evaluated, so softcode in an @fail
       # arrives as the code itself.
@@ -243,6 +253,9 @@ objects:
       # %0 = the affected room, %1 = cause (move-in / move-out / connect /
       # disconnect / resume / scene).
       #
+      # The room's connected viewers come first: with none, nothing is built
+      # and nothing is sent.
+      #
       # A scene cause (the Scene plugin, when the room's scene or its cast
       # changed) sends room.info alone, to every connected viewer: only the
       # scene block changed, and it differs per viewer.
@@ -263,4 +276,4 @@ objects:
       # same room.info can ignore it. null() swallows the oob() counts, which
       # would otherwise be thought at the handler object.
       ROOM`CONTENTS: |-
-        think null(if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(filter(me/FN`VIEWER,lcon(%0)),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,filter(me/FN`VIEWER,lcon(%0))),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])]))
+        think null(if(setr(viewers,filter(me/FN`VIEWER,lcon(%0))),if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])])))

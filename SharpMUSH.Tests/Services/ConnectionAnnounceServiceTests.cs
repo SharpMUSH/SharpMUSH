@@ -8,6 +8,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -192,6 +193,33 @@ public class ConnectionAnnounceServiceTests
 	/// Builds a fresh <see cref="ILogger{ConnectionAnnounceService}"/> substitute for the service's
 	/// constructor. Tests that expect an exception to be swallowed assert against this directly.
 	/// </summary>
+	private static Lazy<ITaskScheduler> FakeScheduler(ITaskScheduler? scheduler = null) =>
+		new(scheduler ?? Substitute.For<ITaskScheduler>());
+
+	/// <summary>
+	/// A scheduler whose reservations note in <paramref name="order"/> when each held hook is published,
+	/// and the state it was queued with in <paramref name="queued"/>.
+	/// </summary>
+	private static ITaskScheduler ReservingScheduler(List<string> order, List<(MString Body, ParserState State)> queued)
+	{
+		var scheduler = Substitute.For<ITaskScheduler>();
+		scheduler.ReserveCommandList(Arg.Any<MString>(), Arg.Any<ParserState>()).Returns(call =>
+		{
+			var body = call.Arg<MString>();
+			queued.Add((body, call.Arg<ParserState>()));
+			var admission = new QueueAdmissionResult(queued.Count, QueueRejectionReason.None);
+			return ValueTask.FromResult(new QueueCommandReservation(admission, () =>
+			{
+				order.Add($"run {body.ToPlainText()}");
+				return ValueTask.FromResult(admission);
+			}));
+		});
+		return scheduler;
+	}
+
+	private static SharpAttribute[] Hook(string name, string body) =>
+		[new SharpAttribute("", "", name, [], null, name, null!, null!, null!) { Value = MarkupText.Plain(body) }];
+
 	private static ILogger<ConnectionAnnounceService> FakeLogger() =>
 		Substitute.For<ILogger<ConnectionAnnounceService>>();
 
@@ -206,12 +234,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await communicationService.Received(1).SendToRoomAsync(
 			player, player.AsContainer,
@@ -234,11 +261,10 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), FakeLogger());
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 2, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 2, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has reconnected.");
@@ -276,18 +302,92 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		// The permission check reads as the hook OWNER evaluating its own attribute (self-eval always
 		// passes CanEval, regardless of the owner's own privilege level), not as the connecting PLAYER -
 		// see the comment in ConnectionAnnounceService.QueueHookAsync.
 		await attributeService.Received(1).GetAttributeAsync(
 			hookTarget, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+	}
+
+	/// <summary>
+	/// PennMUSH announce_connect queues each ACONNECT with queue_attribute_base (src/bsd.c:5987-6015):
+	/// the hook is an entry of its own, run by its owner, with %1 the connection count. It does not run
+	/// inside the login, so a slow hook cannot run the login out of time.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_AconnectHook_IsQueuedAsTheOwnersEntry()
+	{
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var factory = new TestObjectFactory();
+		var masterRoom = factory.CreateRoom(2, "Master Room");
+		var hookTarget = factory.CreateThing(50, "Hookable Thing", location: masterRoom);
+		attributeService.GetAttributeAsync(hookTarget, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true)
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(Hook("ACONNECT", "@pemit %#=hi")));
+
+		var mediator = FakeMediatorWithNoMasterRoom();
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == masterRoom.Object.Key), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(masterRoom));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
+		mediator.CreateStream(Arg.Is<GetContentsQuery>(q => ContainerNumber(q.DBRef) == masterRoom.Object.Key), Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+
+		var order = new List<string>();
+		var queued = new List<(MString Body, ParserState State)>();
+		var service = new ConnectionAnnounceService(
+			Substitute.For<ICommunicationService>(), Substitute.For<IGameBroadcastService>(), attributeService,
+			FakeOptionsWrapper(), mediator, FakeScheduler(ReservingScheduler(order, queued)), FakeLogger());
+		var player = FakeConnectedPlayer("Bob");
+
+		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1));
+		using var scope = budget.Enter();
+		await service.AnnounceConnectAsync(player, connectionCount: 3, isHiddenConnection: false);
+
+		var (body, state) = queued.Single();
+		await Assert.That(body.ToPlainText()).IsEqualTo("@pemit %#=hi");
+		await Assert.That(order).IsEquivalentTo(["run @pemit %#=hi"]).Because("the held hook is published when the announcement ends");
+		await Assert.That(state.Executor).IsEqualTo(hookTarget.Object().DBRef);
+		await Assert.That(state.Enactor).IsEqualTo(player.Object().DBRef);
+		await Assert.That(state.Caller).IsEqualTo(player.Object().DBRef);
+		await Assert.That(state.Arguments["0"].Message!.ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(state.Arguments["1"].Message!.ToPlainText()).IsEqualTo("3");
+		await Assert.That(state.ExecutionBudget).IsNull();
+	}
+
+	/// <summary>
+	/// announce_disconnect writes LASTLOGOUT (src/bsd.c:6162) before anything it queued can run, PennMUSH
+	/// being single-threaded. A socket closing is handled here outside the queue's consumer, so the
+	/// ADISCONNECT hooks are held until the bookkeeping is done: a hook reading LASTLOGOUT sees this logout.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_HooksRunOnlyAfterLastLogoutIsWritten()
+	{
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var player = FakeConnectedPlayer("Bob");
+		attributeService.GetAttributeAsync(player, player, "ADISCONNECT", IAttributeService.AttributeMode.Execute, true)
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(Hook("ADISCONNECT", "@pemit %#=[get(%#/LASTLOGOUT)]")));
+
+		var order = new List<string>();
+		var mediator = FakeMediatorWithNoMasterRoom();
+		mediator.When(m => m.Send(Arg.Is<SetAttributeCommand>(c => c.Attribute.SequenceEqual(new[] { "LASTLOGOUT" })), Arg.Any<CancellationToken>()))
+			.Do(_ => order.Add("LASTLOGOUT"));
+		var scheduler = ReservingScheduler(order, []);
+		var service = new ConnectionAnnounceService(
+			Substitute.For<ICommunicationService>(), Substitute.For<IGameBroadcastService>(), attributeService,
+			FakeOptionsWrapper(), mediator, FakeScheduler(scheduler), FakeLogger());
+
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
+
+		await Assert.That(string.Join(" | ", order)).IsEqualTo("LASTLOGOUT | run @pemit %#=[get(%#/LASTLOGOUT)]");
+		await scheduler.DidNotReceiveWithAnyArgs().AdmitCommandList(default!, default!);
 	}
 
 	/// <summary>
@@ -337,11 +437,9 @@ public class ConnectionAnnounceServiceTests
 			.Returns<OptionalSharpAttributeOrError>(_ => throw new InvalidOperationException("boom"));
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, logger);
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), logger);
 
-		var parser = Substitute.For<IMUSHCodeParser>();
-
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await attributeService.Received(1).GetAttributeAsync(
 			laterHookTarget, laterHookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
@@ -382,11 +480,9 @@ public class ConnectionAnnounceServiceTests
 		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			mediator, logger);
+			mediator, FakeScheduler(), logger);
 
-		var parser = Substitute.For<IMUSHCodeParser>();
-
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
 
 		// LASTLOGOUT is engine-maintained bookkeeping, written directly via SetAttributeCommand (stamped
 		// with God's ownership) rather than through IAttributeService.SetAttributeAsync's permission
@@ -420,12 +516,11 @@ public class ConnectionAnnounceServiceTests
 		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			mediator, FakeLogger());
+			mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has disconnected.");
 		await mediator.Received(1).Send(
@@ -447,12 +542,11 @@ public class ConnectionAnnounceServiceTests
 		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			mediator, FakeLogger());
+			mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 1, isHiddenConnection: false);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 1, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
 		await mediator.DidNotReceive().Send(Arg.Any<SetAttributeCommand>(), Arg.Any<CancellationToken>());
@@ -482,12 +576,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), logger);
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), logger);
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		logger.Received(1).Log(
 			LogLevel.Error,
@@ -518,12 +611,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), logger);
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), logger);
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
 
 		logger.Received(1).Log(
 			LogLevel.Error,
@@ -559,12 +651,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), logger);
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), logger);
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await attributeService.Received(1).GetAttributeAsync(
 			player, player, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
@@ -594,12 +685,11 @@ public class ConnectionAnnounceServiceTests
 		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			mediator, logger);
+			mediator, FakeScheduler(), logger);
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
 
 		await attributeService.Received(1).GetAttributeAsync(
 			player, player, "ADISCONNECT", IAttributeService.AttributeMode.Execute, true);
@@ -626,12 +716,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: true);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: true);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-connected.");
@@ -651,12 +740,11 @@ public class ConnectionAnnounceServiceTests
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			FakeMediatorWithNoMasterRoom(), FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: true);
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: true);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-disconnected.");
@@ -681,12 +769,11 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
 			n.Channel == channel && n.Message.ToPlainText() == "Bob has connected." && !n.SeeAllOnly),
@@ -714,12 +801,11 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: true);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: true);
 
 		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
 			n.Channel == channel && n.Message.ToPlainText() == "Bob has HIDDEN-connected." && n.SeeAllOnly),
@@ -747,11 +833,9 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
 
-		var parser = Substitute.For<IMUSHCodeParser>();
-
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
 			n.Channel == channel && n.SeeAllOnly), Arg.Any<CancellationToken>());
@@ -775,12 +859,11 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
-		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await mediator.DidNotReceive().Publish(Arg.Any<ChannelMessageNotification>(), Arg.Any<CancellationToken>());
 	}

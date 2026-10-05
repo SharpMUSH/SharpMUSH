@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -24,9 +25,11 @@ public class HttpCompletionEventLifetimeTests
 		public EventService Events { get; }
 		public Func<string, CancellationToken, ValueTask> Visit { get; set; } = (_, _) => ValueTask.CompletedTask;
 		public Func<ParserState, ValueTask> Handler { get; set; } = _ => ValueTask.CompletedTask;
-		public Func<ParserState, ValueTask> Event { get; set; } = _ => ValueTask.CompletedTask;
+		public ITaskScheduler Scheduler { get; } = Substitute.For<ITaskScheduler>();
+		public Func<ParserState, ValueTask> Admit { get; set; } = _ => ValueTask.CompletedTask;
 		public ParserState? HandlerState { get; private set; }
 		public ParserState? EventState { get; private set; }
+		public MString? EventBody { get; private set; }
 		public int EventCalls { get; private set; }
 		public int EventLookups { get; private set; }
 
@@ -64,17 +67,22 @@ public class HttpCompletionEventLifetimeTests
 				}
 				else
 				{
-					EventCalls++;
-					EventState = current;
-					await Visit("body", ExecutionBudget.CurrentToken);
-					await Event(current!);
+					throw new InvalidOperationException("The completion event ran inside the request.");
 				}
 				return CallState.Empty;
 			});
 			var baseline = TestSharpMushOptions.Create();
 			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 			options.CurrentValue.Returns(baseline with { Database = baseline.Database with { HttpHandler = 8, EventHandler = 9 }, Limit = baseline.Limit with { QueueEntryCpuTime = milliseconds } });
-			Events = new EventService(Mediator, Attributes, options, NullLogger<EventService>.Instance);
+			Scheduler.AdmitCommandList(Arg.Any<MString>(), Arg.Any<ParserState>()).Returns(async ValueTask<QueueAdmissionResult> (call) =>
+			{
+				EventCalls++;
+				EventBody = call.Arg<MString>();
+				EventState = call.Arg<ParserState>();
+				await Admit(EventState);
+				return new QueueAdmissionResult(1, QueueRejectionReason.None);
+			});
+			Events = new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(Scheduler), options, NullLogger<EventService>.Instance);
 			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(), Events, InlineTaskScheduler.Create(), options, NullLogger<HttpHandlerCommandService>.Instance);
 		}
 	}
@@ -86,9 +94,9 @@ public class HttpCompletionEventLifetimeTests
 	[Arguments("enactor", true, false)]
 	[Arguments("attribute", false, false)]
 	[Arguments("attribute", true, false)]
-	[Arguments("body", false, false)]
-	[Arguments("body", true, false)]
-	[Arguments("body", true, true)]
+	[Arguments("admit", false, false)]
+	[Arguments("admit", true, false)]
+	[Arguments("admit", true, true)]
 	public async Task CompletionEventHonorsTheOriginalRequestLifetime(string stage, bool deadline, bool ambient)
 	{
 		var fixture = new Fixture(deadline && !ambient ? 100u : 0u);
@@ -101,6 +109,7 @@ public class HttpCompletionEventLifetimeTests
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
 			await Task.Delay(Timeout.Infinite, linked.Token);
 		};
+		fixture.Admit = async _ => await fixture.Visit("admit", ExecutionBudget.CurrentToken);
 		using var request = new CancellationTokenSource();
 		using var parent = new ExecutionBudget(ambient ? TimeSpan.FromMilliseconds(100) : Timeout.InfiniteTimeSpan);
 		using var parentScope = parent.Enter();
@@ -141,41 +150,19 @@ public class HttpCompletionEventLifetimeTests
 	[Arguments(0)]
 	[Arguments(1)]
 	[Arguments(2)]
-	public async Task NormalCompletionPreservesResponseAndSharesParserBudget(int eventFailure)
+	public async Task NormalCompletionQueuesTheEventWithoutWaitingForIt(int admissionFailure)
 	{
 		var fixture = new Fixture(5000);
-		if (eventFailure == 1) fixture.Event = _ => throw new IOException("ordinary event failure");
-		if (eventFailure == 2) fixture.Event = _ => throw new OperationCanceledException("unrelated event cancellation");
+		if (admissionFailure == 1) fixture.Admit = _ => throw new IOException("ordinary admission failure");
+		if (admissionFailure == 2) fixture.Admit = _ => throw new OperationCanceledException("unrelated admission cancellation");
 		var response = (await fixture.Service.DispatchAsync("GET", "/normal", "request", [])).Expect<HttpHandlerResult>();
 		await Assert.That(response.Status).IsEqualTo(201);
 		await Assert.That(response.Body).IsEqualTo("original response");
 		await Assert.That(fixture.EventCalls).IsEqualTo(1);
-		await Assert.That(ReferenceEquals(fixture.HandlerState!.ExecutionBudget, fixture.EventState!.ExecutionBudget)).IsTrue();
+		await Assert.That(fixture.EventBody!.ToPlainText()).IsEqualTo("event");
+		await Assert.That(fixture.EventState!.Executor!.Value.Number).IsEqualTo(9);
+		await Assert.That(fixture.EventState.ExecutionBudget).IsNull();
 		await Assert.That(fixture.EventState.EnvironmentRegisters["3"].Message!.ToPlainText()).IsEqualTo("201");
-	}
-	private sealed class LegacyEvents : IEventService
-	{
-		public CancellationToken ObservedToken { get; private set; }
-		public async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
-		{
-			ObservedToken = ExecutionBudget.CurrentToken;
-			await Task.Delay(Timeout.Infinite, ObservedToken);
-		}
-	}
-
-	[Test]
-	public async Task LegacyEventSlotAndImplementationRemainUsable()
-	{
-		var signature = new[] { typeof(IMUSHCodeParser), typeof(string), typeof(DBRef?), typeof(string[]) };
-		await Assert.That(typeof(IEventService).GetMethod(nameof(IEventService.TriggerEventAsync), signature)!.ReturnType).IsEqualTo(typeof(ValueTask));
-		await Assert.That(typeof(EventService).GetMethod(nameof(EventService.TriggerEventAsync), signature)!.ReturnType).IsEqualTo(typeof(ValueTask));
-		var legacy = new LegacyEvents();
-		IEventService service = legacy;
-		using var request = new CancellationTokenSource();
-		var pending = service.TriggerEventAsync(Substitute.For<IMUSHCodeParser>(), "TEST", null, request.Token).AsTask();
-		await Assert.That(legacy.ObservedToken.CanBeCanceled).IsTrue();
-		request.Cancel();
-		await Assert.ThrowsAsync<OperationCanceledException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(1)));
 	}
 
 	private sealed class HeldTimerProvider : TimeProvider
@@ -195,38 +182,11 @@ public class HttpCompletionEventLifetimeTests
 		}
 	}
 
-	private sealed class ExpiringLegacyEvent : IEventService
-	{
-		public async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
-		{
-			while (!ExecutionBudget.Current!.IsExpired) await Task.Delay(1);
-		}
-	}
-
-	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task MonotonicExpiryPropagatesBeforeTimerCallback(bool legacy)
-	{
-		var fixture = new Fixture(0);
-		fixture.Event = async _ =>
-		{
-			while (!ExecutionBudget.Current!.IsExpired) await Task.Delay(1);
-			ExecutionBudget.Current.ThrowIfExceeded();
-		};
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100), default, new HeldTimerProvider());
-		using var scope = budget.Enter();
-		IEventService service = legacy ? new ExpiringLegacyEvent() : fixture.Events;
-		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-			await service.TriggerEventAsync(fixture.Parser, "TEST", null, budget.Token));
-		await Assert.That(budget.Token.IsCancellationRequested).IsFalse();
-	}
-
 	[Test]
 	[Arguments("handler", false)]
-	[Arguments("body", false)]
+	[Arguments("admit", false)]
 	[Arguments("handler", true)]
-	[Arguments("body", true)]
+	[Arguments("admit", true)]
 	public async Task ParentTimerExpiryIsNotMistakenForRequestCancellation(string stage, bool cancelRequest)
 	{
 		var fixture = new Fixture(0);
@@ -237,6 +197,7 @@ public class HttpCompletionEventLifetimeTests
 			entered.TrySetResult();
 			await Task.Delay(Timeout.Infinite, token);
 		};
+		fixture.Admit = async _ => await fixture.Visit("admit", ExecutionBudget.CurrentToken);
 		var timer = new HeldTimerProvider();
 		using var parent = new ExecutionBudget(TimeSpan.FromMinutes(1), default, timer);
 		using var scope = parent.Enter();

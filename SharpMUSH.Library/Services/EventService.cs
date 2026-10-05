@@ -18,17 +18,13 @@ namespace SharpMUSH.Library.Services;
 public class EventService(
 	IMediator mediator,
 	IAttributeService attributeService,
+	Lazy<ITaskScheduler> scheduler,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<EventService> logger) : IEventService
 {
 	/// <inheritdoc />
-	public ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
-		=> TriggerEventAsync(parser, eventName, enactor, ExecutionBudget.CurrentToken, args);
-
-	/// <inheritdoc />
-	public async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, CancellationToken cancellationToken, params string[] args)
+	public async ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
 	{
-		using var lifetime = ExecutionBudget.EnterLinked(cancellationToken);
 		try
 		{
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
@@ -50,6 +46,7 @@ public class EventService(
 
 			var handlerRef = eventHandler.Object().DBRef;
 
+			// atr_get_noparent (src/cque.c:418): an event is the handler's own attribute, never a parent's.
 			var attributeResult = await attributeService.GetAttributeAsync(
 				eventHandler,
 				eventHandler,
@@ -57,80 +54,40 @@ public class EventService(
 				IAttributeService.AttributeMode.Execute,
 				parent: false);
 
-			// If the attribute doesn't exist, return early (no handler for this event)
-			// This is not an error - not all events need handlers
+			// Not every event needs a handler; a missing one queues nothing.
 			if (attributeResult is not SharpAttribute[] handler)
 			{
 				return;
 			}
 
-			// Build the arguments dictionary for the attribute execution
-			// Arguments are passed as %0, %1, %2, etc. in the attribute code
-			var argsDict = args.Index().ToDictionary(x => x.Index.ToString(), x => new CallState(x.Item));
+			// %# is the object that caused the event (the player who connected, the wizard who ran @tel).
+			// A system event, or one whose enactor is gone, runs with God (#1) as its enactor so that %#
+			// is always a real dbref inside handler code (PennMUSH uses #-1, which many functions reject).
+			var resolvedEnactorRef = enactor is { Number: >= 0 } eventEnactor
+				&& await mediator.Send(new GetObjectNodeQuery(eventEnactor), ExecutionBudget.CurrentToken) is AnySharpObject
+					? eventEnactor
+					: new DBRef(1, null);
 
-			// Resolve the enactor (%#) for this event.
-			// PennMUSH contract: %# is the object that caused the event (e.g. the player who
-			// connected, the wizard who ran @tel). For system events with no real actor, enactor
-			// is null → we fall back to God (#1) so that %# is always a real, existing dbref
-			// inside handler code (rather than a #-1 that many functions reject).
-			var eventEnactorRef = enactor ?? new DBRef(-1, null);
-			DBRef resolvedEnactorRef;
-			if (eventEnactorRef.Number < 0)
+			// queue_event (src/cque.c:392-517) queues the handler's attribute as an entry of its own, run
+			// by the handler and charged to it, so the code that raised the event never waits on it or
+			// shares its time limit. The handler runs with its own permissions: the seeded Event Handler
+			// (#9) is a WIZARD object; a custom, non-wizard handler runs unprivileged. The arguments are
+			// %0-%9. The body is re-wrapped as plain text (as @include does) so the stored markup cannot
+			// interfere with parsing.
+			var arguments = args.Index().ToDictionary(x => x.Index.ToString(), x => new CallState(x.Item));
+			var state = ParserState.RootFor(handlerRef) with
 			{
-				// System event: no real actor — use God (#1) as the enactor.
-				resolvedEnactorRef = new DBRef(1, null);
+				Enactor = resolvedEnactorRef,
+				Arguments = arguments,
+				EnvironmentRegisters = new(arguments),
+				CurrentEvaluation = new DBAttribute(handlerRef, eventName)
+			};
+
+			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(handler.Last().Value.ToPlainText()), state);
+			if (!admission.Accepted)
+			{
+				logger.LogWarning("Event {EventName} was not queued: {Reason}", eventName, admission.Reason);
 			}
-			else
-			{
-				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactorRef), ExecutionBudget.CurrentToken);
-				if (enactorResult.IsNone)
-				{
-					// Enactor no longer exists — fall back to God.
-					logger.LogWarning(
-						"Event enactor {Enactor} not found for event {EventName}, using God as enactor",
-						eventEnactorRef,
-						eventName);
-					resolvedEnactorRef = new DBRef(1, null);
-				}
-				else
-				{
-					resolvedEnactorRef = eventEnactorRef;
-				}
-			}
-
-			// Build a fresh parser state with the event arguments bound as %0, %1, ...
-			// This mirrors the HTTP handler pattern (HttpHandlerCommandService) and the startup
-			// bootstrap pattern (StartupAttributeBootstrapService): when there is no ambient parse
-			// context, push a minimal state rather than calling parser.CurrentState (which throws
-			// on an empty ImmutableStack). Using CommandListParse (not FunctionParse) so that the
-			// attribute body can run commands such as &attr obj=val, @emit, @switch, etc.
-			//
-			// Executor = the event handler itself (also %! and %@) — the handler runs with ITS OWN
-			//   permissions, exactly like the HTTP handler (HttpHandlerCommandService) and normal
-			//   attribute execution. The seeded Event Handler (#9) is a WIZARD object, so it can
-			//   @set/@power/@lock and see-all as an admin handler needs; a custom, non-wizard
-			//   handler object runs unprivileged (flag it wizard to grant elevated powers).
-			// Enactor = resolvedEnactorRef (%# — the object that caused the event)
-			// Caller  = handlerRef (%@ — who triggered this evaluation; the handler itself)
-			var evalParser = parser.Push(ParserState.ForAttributeHook(
-				parser.State.IsEmpty ? null : parser.CurrentState, handlerRef, resolvedEnactorRef, handlerRef, argsDict) with
-			{
-				ExecutionBudget = ExecutionBudget.Current
-			});
-
-			// Run the attribute body as a command list (same as @include, HTTP handler, @startup).
-			// This allows commands such as & (attribute set), @emit, @switch, etc.
-			// Convert to plain text then re-wrap (matching @include's behaviour) so that any
-			// markup encoding in the stored MString does not interfere with ANTLR parsing.
-			var attributeText = handler.Last().Value.ToPlainText();
-
-			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
-			ExecutionBudget.Current?.ThrowIfExceeded();
-
-			logger.LogDebug(
-				"Triggered event {EventName} with {ArgCount} arguments",
-				eventName,
-				args.Length);
 		}
 		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExceeded == true)
 		{
@@ -138,7 +95,7 @@ public class EventService(
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't propagate - event failures shouldn't break the triggering code
+			// An event failure must not break the code that raised it.
 			logger.LogError(
 				ex,
 				"Error triggering event {EventName} with enactor {Enactor}",

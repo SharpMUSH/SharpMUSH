@@ -159,6 +159,7 @@ public class BuildingCreationMessageParityTests
 			await Run(throughTheFunction ? $"think [pcreate({name},bcmpass)]" : $"@pcreate {name}=bcmpass");
 
 			var player = await PlayerNamed(name);
+			await WebAppFactoryArg.QueueBarrierAsync();
 			var (_, seen) = await Run($"think [get(#{EventHandlerDbRefNumber}/BCMEV`{name})]");
 			await Assert.That(seen).Contains($"{player} pcreate");
 		}

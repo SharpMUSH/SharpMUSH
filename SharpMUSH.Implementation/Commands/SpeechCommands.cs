@@ -369,9 +369,7 @@ public partial class Commands
 
 			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
 			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
-			await EventService.TriggerEventAsync(
-				parser,
-				SharpEvents.PageMessage,
+			await EventService.TriggerEventAsync(SharpEvents.PageMessage,
 				executor.Object().DBRef,
 				executor.Object().DBRef.ToString(),
 				string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString())),

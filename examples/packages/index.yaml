@@ -29,7 +29,7 @@ packages:
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 2.2.0
+    version: 2.2.2
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed

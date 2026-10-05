@@ -5164,8 +5164,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>În scenă</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Urmărești această scenă. Alătură-te pentru a poza aici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Nu te-ai alăturat încă acestei scene. Alătură-te pentru a poza aici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5174,6 +5174,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Alătură-te scenei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Jocul nu te-a lăsat să te alături acestei scene.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

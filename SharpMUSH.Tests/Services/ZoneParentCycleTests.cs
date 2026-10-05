@@ -48,14 +48,20 @@ public class ZoneParentCycleTests
 	public async ValueTask UnsetParent_WithoutNotify_RefusesSilently()
 	{
 		var outsiderRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "UnsetParentOutsider");
+		// A room of its own: in the shared default home the outsider hears other tests' arrivals and departures.
+		var room = (await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("UnsetParentRoom")}"))).Message!.ToPlainText().Trim();
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {outsiderRef}={room}"));
 		var outsider = (await Mediator.Send(new GetObjectNodeQuery(outsiderRef))).Expect<AnySharpObject>();
 		var targetResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "UnsetParentTarget");
 		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(targetResult.Message!.ToPlainText()!)))).Expect<AnySharpObject>();
 
+		var heardBefore = WebAppFactoryArg.Notifications.CountFor(outsiderRef);
+
 		var result = await RelationshipService.UnsetParent(outsider, target, false);
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
-		await Assert.That(WebAppFactoryArg.Notifications.For(outsiderRef)).IsEmpty();
+		await Assert.That(WebAppFactoryArg.Notifications.For(outsiderRef).Skip(heardBefore)).IsEmpty();
 	}
 
 	[Test]

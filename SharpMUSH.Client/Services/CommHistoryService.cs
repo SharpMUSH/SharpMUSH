@@ -10,10 +10,11 @@ namespace SharpMUSH.Client.Services;
 public interface ICommHistory
 {
 	/// <summary>
-	/// The channel's recall buffer, oldest first, each line with the id its <c>comm.message</c> carries. At most
-	/// <paramref name="lines"/> lines, the latest.
+	/// The channel's recall buffer, oldest first, each line with the id its <c>comm.message</c> carries: the latest
+	/// <paramref name="lines"/> lines (the whole buffer for 0), reaching further back, when <paramref name="after"/>
+	/// is given, to the first line after that id.
 	/// </summary>
-	Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines);
+	Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null);
 
 	/// <summary>The acting character's read markers.</summary>
 	Task<ApiResult<CommReadMarkers>> MarkersAsync();
@@ -33,9 +34,10 @@ public interface ICommHistory
 	/// <summary>
 	/// A page conversation's logged history, oldest first, each page with the id its <c>comm.message</c>
 	/// carries. <paramref name="with"/> is the other people in it by objid (the character alone, for pages
-	/// to themselves). At most <paramref name="lines"/> pages, the latest.
+	/// to themselves). The latest <paramref name="lines"/> pages (as many as the server gives for 0), reaching
+	/// further back, when <paramref name="after"/> is given, to the first page after that id.
 	/// </summary>
-	Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines);
+	Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null);
 }
 
 /// <summary><see cref="ICommHistory"/> over the <c>"api"</c> client, which carries the account session.</summary>
@@ -43,9 +45,10 @@ public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : I
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines) =>
+	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null) =>
 		Client.GetApiAsync<IReadOnlyList<ChannelRecallLine>>(
-			$"api/comm/channels/{Uri.EscapeDataString(channel)}/recall?lines={lines}", "The server returned no channel history.");
+			$"api/comm/channels/{Uri.EscapeDataString(channel)}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}",
+			"The server returned no channel history.");
 
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>
 		Client.GetApiAsync<CommReadMarkers>("api/comm/markers", "The server returned no read markers.");
@@ -61,8 +64,8 @@ public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : I
 	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
 		Client.GetApiAsync<PageConversations>("api/comm/conversations", "The server returned no page conversations.");
 
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines) =>
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null) =>
 		Client.GetApiAsync<PageRecall>(
-			$"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall?lines={lines}",
+			$"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}",
 			"The server returned no page history.");
 }

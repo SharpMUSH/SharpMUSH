@@ -517,12 +517,10 @@ public partial record ParserState(
 		MoveDepth = new InvocationCounter()
 	};
 
-	// Construction. Every state is made one of four ways, and these are the only places that spell
+	// Construction. Every state is made one of three ways, and these are the only places that spell
 	// out the record's positional fields (ParserStateConstructionTests holds every other file to them):
 	//  - fresh: RootFor, ForTypedLine and ForTrackedEvaluation start an evaluation with new registers
 	//    and new invocation counters (PennMUSH's PE_INFO_DEFAULT);
-	//  - hooked: ForAttributeHook starts new registers for a hook the server fires, but counts its
-	//    invocations against the ambient evaluation when there is one;
 	//  - forked: ForFunction opens a function frame that shares the caller's registers and counters;
 	//  - cloned: SnapshotForQueuedAction copies what a queued action keeps and owns (PE_INFO_CLONE).
 	// A state copied with `with` shares every mutable field it does not replace, so new work that
@@ -562,46 +560,6 @@ public partial record ParserState(
 		=> Fresh(caller?.Executor, caller?.Enactor, caller?.Caller, handle: null, ParserStateFlags.None,
 			session: null, caller?.ExecutionBudget, caller?.Restrictions, caller?.CommandText,
 			OutputCeiling.CurrentLimit);
-
-	/// <summary>
-	/// The state an attribute hook the server fires runs in — an <c>@aconnect</c>-family hook, or an
-	/// event handler's attribute — with <paramref name="arguments"/> bound as both <c>%0</c>-<c>%9</c>
-	/// and the environment registers, over a fresh register frame.
-	/// </summary>
-	/// <remarks>
-	/// With an <paramref name="ambient"/> state (the hook fired from inside an evaluation) it shares
-	/// that state's command invoker, connection handle and invocation, recursion, limit and move
-	/// counters, so the hook is bounded by the evaluation that fired it. With none it gets its own.
-	/// It carries no execution budget, restrictions or <c>%c</c>/<c>%u</c>; a caller that runs inside
-	/// a budget sets it with a <c>with</c> expression.
-	/// </remarks>
-	public static ParserState ForAttributeHook(ParserState? ambient, DBRef executor, DBRef enactor, DBRef caller,
-		Dictionary<string, CallState> arguments) => new(
-		Registers: new([[]]),
-		IterationRegisters: [],
-		RegexRegisters: [],
-		SwitchStack: [],
-		ExecutionStack: [],
-		EnvironmentRegisters: arguments,
-		CurrentEvaluation: null,
-		ParserFunctionDepth: 0,
-		Function: null,
-		Command: null,
-		CommandInvoker: ambient?.CommandInvoker ?? (_ => ValueTask.FromResult(new Option<CallState>(new None()))),
-		Switches: [],
-		Arguments: arguments,
-		Executor: executor,
-		Enactor: enactor,
-		Caller: caller,
-		Handle: ambient?.Handle,
-		CallDepth: ambient?.CallDepth ?? new InvocationCounter(),
-		FunctionRecursionDepths: ambient?.FunctionRecursionDepths
-			?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-		TotalInvocations: ambient?.TotalInvocations ?? new InvocationCounter(),
-		LimitExceeded: ambient?.LimitExceeded ?? new LimitExceededFlag())
-		{
-			MoveDepth = ambient?.MoveDepth ?? new InvocationCounter()
-		};
 
 	private static ParserState Fresh(DBRef? executor, DBRef? enactor, DBRef? caller, long? handle,
 		ParserStateFlags flags, string? session, ExecutionBudget? budget, EvaluationRestrictions? restrictions,
