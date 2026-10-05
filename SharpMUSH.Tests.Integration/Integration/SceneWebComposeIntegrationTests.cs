@@ -298,6 +298,12 @@ public class SceneWebComposeIntegrationTests
 		var refused = await RunAs(helperHandle, $"+scene/finish {sceneId}");
 		await Assert.That(refused.Any(m => m.Contains("not yours to finish", StringComparison.Ordinal)))
 			.IsTrue().Because($"saw instead: [{string.Join(" // ", refused)}]");
+
+		// A private scene the helper is not in reads as missing until they hold the permission.
+		await RunAs(ownerHandle, "+scene/private");
+		var hidden = await RunAs(helperHandle, $"+scene/finish {sceneId}");
+		await Assert.That(hidden.Any(m => m.Contains($"No such scene: {sceneId}", StringComparison.Ordinal)))
+			.IsTrue().Because($"saw instead: [{string.Join(" // ", hidden)}]");
 		await Assert.That(await Eval($"scene({sceneId},status)")).IsNotEqualTo("finished");
 
 		try

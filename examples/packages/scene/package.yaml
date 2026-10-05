@@ -315,8 +315,10 @@ objects:
         $+scene/finish: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`CAN`CLOSE,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_CLOSER)]; @scene/set %q<SceneID>/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # +scene/finish <id> closes a scene by id, without joining it: how staff close one they are not in.
+      # scene() hides a private scene from a non-member, so a scene.close holder gets past that guard and
+      # only a scene that does not exist stops them; to anyone else a hidden scene still reads as missing.
       CMD`FINISH`ID: |-
-        $+scene/finish *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @assert u(%!/FUN`CAN`CLOSE,%#,%0)=@pemit %#=[get(%!/DATA`DENY_NOT_CLOSER)]; @scene/set %0/status=finished; @if strmatch(scenefocus(%#),%0)={@scene/focus %#=}; @pemit %#=Scene %0 finished.
+        $+scene/finish *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert or(not(strmatch(scene(%0,status),#-1*)),permission(%#,scene.close))=@pemit %#=No such scene: %0; @assert not(strmatch(scene(%0,status),#-1 NOT FOUND))=@pemit %#=No such scene: %0; @assert u(%!/FUN`CAN`CLOSE,%#,%0)=@pemit %#=[get(%!/DATA`DENY_NOT_CLOSER)]; @scene/set %0/status=finished; @if strmatch(scenefocus(%#),%0)={@scene/focus %#=}; @pemit %#=Scene %0 finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its

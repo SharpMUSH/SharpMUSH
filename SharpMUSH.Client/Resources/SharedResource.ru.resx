@@ -3231,11 +3231,11 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomSection" xml:space="preserve">
-    <value>Свои</value>
+    <value>Пользовательские</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Свои разрешения — это разрешения, которые игра определяет для собственного софткода, например scene.close. Разрешите его в роли, как любое другое разрешение; софткод проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @role/define.</value>
+    <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @role/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">

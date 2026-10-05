@@ -3255,7 +3255,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomDefined" xml:space="preserve">
-    <value>Tilladelsen {0} defineret.</value>
+    <value>Tilladelsen {0} blev defineret.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomRemoveTitle" xml:space="preserve">
@@ -3267,7 +3267,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomRemoved" xml:space="preserve">
-    <value>Tilladelsen {0} fjernet.</value>
+    <value>Tilladelsen {0} blev fjernet.</value>
     <comment>MT</comment>
   </data>
   <data name="RolTabRoles" xml:space="preserve">

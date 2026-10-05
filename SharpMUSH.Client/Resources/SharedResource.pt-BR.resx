@@ -3263,7 +3263,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomRemoveConfirm" xml:space="preserve">
-    <value>Remover {0}? Todo cargo e toda exceção que a define a perde.</value>
+    <value>Remover {0}? A permissão será removida de todos os cargos e de todas as exceções que a concedem.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomRemoved" xml:space="preserve">
