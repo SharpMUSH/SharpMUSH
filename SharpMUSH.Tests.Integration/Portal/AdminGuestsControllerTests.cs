@@ -35,7 +35,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 {
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
 
-	private AdminGuestsController ControllerAs(DBRef actor) =>
+	private AdminGuestsController ControllerAs(DBRef actor, IGuestAvailability? guestAvailability = null) =>
 		new(
 			Mediator,
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
@@ -43,7 +43,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			FaceValueProjection(),
 			factory.Services.GetRequiredService<IPasswordService>(),
-			factory.Services.GetRequiredService<IGuestAvailability>())
+			guestAvailability ?? factory.Services.GetRequiredService<IGuestAvailability>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -117,20 +117,22 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// The portal offers anonymous visitors Play on this answer; a cached "no guests" from before the
-	/// roster had one would keep hiding it, so creating a guest must make it true at once.
+	/// The portal offers anonymous visitors Play on the cached guest answer; a cached "no guests" from before
+	/// the roster had one would keep hiding it, so creating a guest forgets it. Asserted on the call rather than
+	/// on the answer: the session's world is shared, and another test's guest makes the answer true either way.
 	/// </summary>
 	[Test]
-	public async Task Create_MakesGuestLoginAvailableAtOnce()
+	public async Task Create_ForgetsTheCachedGuestAnswer()
 	{
 		var wizard = await NewWizardAsync("GuestAdminAvail");
-		var availability = factory.Services.GetRequiredService<IGuestAvailability>();
-		await availability.CanLogInAsync();
+		var availability = Substitute.For<IGuestAvailability>();
+		var name = $"GuestV{Guid.NewGuid():N}"[..14];
 
-		await ControllerAs(wizard)
-			.Create(new AdminGuestsController.CreateGuestRequest($"GuestV{Guid.NewGuid():N}"[..14]), CancellationToken.None);
+		var created = await ControllerAs(wizard, availability)
+			.Create(new AdminGuestsController.CreateGuestRequest(name), CancellationToken.None);
 
-		await Assert.That(await availability.CanLogInAsync()).IsTrue();
+		await Assert.That(Body<AdminGuestsController.GuestRow>(created).Name).IsEqualTo(name);
+		availability.Received(1).Invalidate();
 	}
 
 	[Test]

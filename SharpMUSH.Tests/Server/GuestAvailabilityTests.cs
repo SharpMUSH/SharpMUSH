@@ -68,4 +68,32 @@ public class GuestAvailabilityTests
 		await availability.CanLogInAsync();
 		mediator.Received(2).CreateStream(Arg.Any<GetAllPlayersQuery>(), Arg.Any<CancellationToken>());
 	}
+
+	/// <summary>
+	/// A guest created while a lookup is still reading the roster: that lookup's older answer must not be cached,
+	/// or the portal goes on hiding Play for the rest of the window.
+	/// </summary>
+	[Test]
+	public async Task ALookupRunningAcrossAnInvalidation_DoesNotCacheItsAnswer()
+	{
+		var release = new TaskCompletionSource();
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetAllPlayersQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => HeldUntil(release.Task));
+		var availability = new GuestAvailability(mediator, Options());
+
+		var running = availability.CanLogInAsync().AsTask();
+		availability.Invalidate();
+		release.SetResult();
+		await running;
+
+		await availability.CanLogInAsync();
+		mediator.Received(2).CreateStream(Arg.Any<GetAllPlayersQuery>(), Arg.Any<CancellationToken>());
+	}
+
+	private static async IAsyncEnumerable<SharpPlayer> HeldUntil(Task release)
+	{
+		await release;
+		yield break;
+	}
 }

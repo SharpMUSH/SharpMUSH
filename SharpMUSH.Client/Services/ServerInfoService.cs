@@ -32,6 +32,10 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 	private DateTimeOffset _answeredAt;
 
+	// The last answer readers were given, kept across a failed read: a newer answer is compared with it, so a
+	// change is announced even when the read in between failed and fell back to the defaults.
+	private ServerInfoResponse? _lastAnswer;
+
 	// The build of the first answer this tab had. Refresh() does not forget it: it names the bundle running here.
 	private string? _firstBuildId;
 
@@ -81,20 +85,25 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public void Refresh()
 	{
 		_info = null;
+		// Announced here: the readers this wakes are given the newer answer, not told about it twice.
+		_lastAnswer = null;
 		Changed?.Invoke();
 	}
 
 	private async Task<ServerInfoResponse> FetchAsync()
 	{
-		var previous = _info is { IsCompletedSuccessfully: true } answered ? answered.Result : null;
-		if (previous is not null && DateTimeOffset.UtcNow - _answeredAt > MaxAge) _info = null;
+		if (_info is { IsCompletedSuccessfully: true, Result: not null } && DateTimeOffset.UtcNow - _answeredAt > MaxAge)
+			_info = null;
 
 		var pending = _info ??= FetchCoreAsync();
 		if (await pending is { } info)
 		{
 			// A newer answer that says something else: readers that asked once (the shell's Play links,
-			// FeatureGate) ask again.
-			if (previous is not null && !ReferenceEquals(previous, info) && Differs(previous, info)) Changed?.Invoke();
+			// FeatureGate) ask again. Every reader of one fetch gets the same instance, so it is announced once.
+			var previous = _lastAnswer;
+			if (ReferenceEquals(previous, info)) return info;
+			_lastAnswer = info;
+			if (previous is not null && Differs(previous, info)) Changed?.Invoke();
 			return info;
 		}
 

@@ -132,8 +132,12 @@
     protected override async Task OnInitializedAsync()
     {
         await AccountAuth.InitAsync();
-        if (AccountAuth.IsLoggedIn)
-            Nav.NavigateTo(SuccessUrl(), replace: true);
+        if (!AccountAuth.IsLoggedIn) return;
+
+        // As after signing in: an account with no character yet goes on to make one.
+        var characters = await AccountAuth.GetCharactersAsync();
+        Nav.NavigateTo(characters is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 } ? OnboardingUrl : SuccessUrl(),
+            replace: true);
     }
 
     private static string? GetQueryParam(string uri, string key)

@@ -249,7 +249,9 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	public async Task SendAsync(string message)
 	{
-		if (IsConnected && _webSocket is { } socket)
+		// One read of the socket: the one checked for its greeting is the one written to, even if a reconnect
+		// replaces it meanwhile.
+		if (_webSocket is { State: WebSocketState.Open } socket && ReferenceEquals(socket, _greeted))
 		{
 			try
 			{

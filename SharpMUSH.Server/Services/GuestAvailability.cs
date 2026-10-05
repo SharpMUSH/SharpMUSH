@@ -29,20 +29,34 @@ public sealed class GuestAvailability(IMediator mediator, IOptionsWrapper<SharpM
 {
 	public static readonly TimeSpan RosterFreshFor = TimeSpan.FromSeconds(30);
 
-	private (bool Any, DateTimeOffset At)? _roster;
+	private sealed record Roster(bool Any, DateTimeOffset At);
+
+	private Roster? _roster;
+
+	// Bumped by Invalidate, so a lookup that was already running when a guest was created or destroyed does
+	// not put its older answer back.
+	private int _generation;
 
 	public async ValueTask<bool> CanLogInAsync(CancellationToken ct = default)
 	{
 		var net = options.CurrentValue.Net;
 		if (!net.Logins || !net.Guests) return false;
 
-		if (_roster is { } known && DateTimeOffset.UtcNow - known.At < RosterFreshFor)
+		if (Volatile.Read(ref _roster) is { } known && DateTimeOffset.UtcNow - known.At < RosterFreshFor)
 			return known.Any;
 
+		var generation = Volatile.Read(ref _generation);
 		var any = await GuestCharacters.AllAsync(mediator).AnyAsync(ct);
-		_roster = (any, DateTimeOffset.UtcNow);
+		var answer = new Roster(any, DateTimeOffset.UtcNow);
+		// Publish only while no invalidation happened since the lookup began.
+		if (Volatile.Read(ref _generation) == generation) Interlocked.Exchange(ref _roster, answer);
+		if (Volatile.Read(ref _generation) != generation) Interlocked.CompareExchange(ref _roster, null, answer);
 		return any;
 	}
 
-	public void Invalidate() => _roster = null;
+	public void Invalidate()
+	{
+		Interlocked.Increment(ref _generation);
+		Interlocked.Exchange(ref _roster, null);
+	}
 }

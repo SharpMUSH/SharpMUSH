@@ -76,6 +76,32 @@ public class ServerInfoServiceTests
 		await Assert.That(changes).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// A failed read between two answers falls back to the defaults for its caller, but the next answer is still
+	/// compared with the last one readers were given: guests turned on while the server was briefly away are
+	/// announced, so the shell does not keep hiding Play.
+	/// </summary>
+	[Test]
+	public async Task AChangeAcrossAFailedRead_IsStillAnnounced()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([
+			() => Info(false, "Elsewhere"),
+			() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+			() => Info(true, "Elsewhere")]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler)) { MaxAge = TimeSpan.Zero };
+		var changes = 0;
+		service.Changed += () => changes++;
+
+		await Assert.That(await service.GuestLoginsEnabledAsync()).IsFalse();
+		await Task.Delay(5);
+		await service.GuestLoginsEnabledAsync();
+		await Assert.That(await service.GuestLoginsEnabledAsync()).IsTrue();
+
+		await Assert.That(handler.Requests.Count).IsEqualTo(3);
+		await Assert.That(changes).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task ATimeoutDegradesToTheDefaults()
 	{

@@ -339,6 +339,10 @@
             _pagebarOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
+            // A page change is when an aged-out server answer is asked again (a fresh one costs nothing), so
+            // a tab left open follows the guest roster without a reload; a changed answer reaches the menus
+            // through ServerInfo.Changed.
+            _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
             StateHasChanged();
         });
     }
