@@ -185,18 +185,16 @@
         @if (_requirements is not null)
         {
             <div class="adminwiki-requirements-grid">
-                @foreach (var ns in RequirementNamespaces)
+                @foreach (var key in RequirementNamespaces)
                 {
-                    var key = ns;
                     <WikiRequirementsEditor Scope="namespace" Key="@key" Editable="true"
                                             Heading="@string.Format(Loc["WikiRequirementsNamespace"], key)"
                                             Set="@_requirements.FirstOrDefault(r => r.Scope == "namespace" && r.Key == key)"
                                             SetChanged="@(_ => LoadRequirementsAsync())" />
                 }
             </div>
-            @foreach (var set in _requirements.Where(r => r.Scope != "namespace"))
+            @foreach (var rule in _requirements.Where(r => r.Scope != "namespace"))
             {
-                var rule = set;
                 <WikiRequirementsEditor Scope="@rule.Scope" Key="@rule.Key" Set="@rule" Editable="true"
                                         Heading="@(rule.Scope == "category" ? string.Format(Loc["WikiRequirementsCategory"], WikiHelpers.CategoryLabel(rule.Key, _categoryNames)) : rule.Label)"
                                         SetChanged="@(_ => LoadRequirementsAsync())" />
