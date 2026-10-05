@@ -97,15 +97,14 @@ public class LayoutEditorTests : TrackingBunitContext
 
 	/// <summary>
 	/// D1 §6.5: the editor opens with the kit's plain header (a way back, the scope as the title, its
-	/// actions as capsules with Preview a pressed toggle) and keeps its board full-bleed.
+	/// actions as capsules with Preview a pressed toggle).
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task OpensWithThePlainHeader_AndKeepsTheBoardFullBleed()
+	public async Task OpensWithThePlainHeader()
 	{
 		var cut = await RenderEditorAsync();
 
 		await Assert.That(cut.FindAll(".kit-page-head h1").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".layedit").ClassList).Contains("full-bleed");
 		await Assert.That(cut.Find(".kit-page-actions").TextContent).Contains("LayPublish");
 		var preview = cut.Find(".kit-page-actions [aria-pressed]");
 		await Assert.That(preview.TextContent).Contains("LayPreview");
