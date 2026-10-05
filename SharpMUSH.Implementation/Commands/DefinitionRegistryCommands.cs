@@ -842,7 +842,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// Penn's old-style restriction words as a lock, the way <c>restrict_command</c> builds one: the
 	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
 	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c> and <c>nogagged</c> become the command behaviours
-	/// that already enforce them. NotFound when any word is not one of these, so the text is a lock.
+	/// that already enforce them. A dotted word is a permission (built in or custom), checked as
+	/// <c>PERM^</c> and OR'ed with the flags and powers. NotFound when any word is not one of these, so
+	/// the text is a lock.
 	/// </summary>
 	private async ValueTask<Found<CommandRestriction>> RestrictionFromWords(string words, CommandBehavior behavior)
 	{
@@ -922,6 +924,7 @@ public partial class Commands : ICommandRestrictionApplier
 				default:
 					var term = await Mediator.Send(new GetObjectFlagQuery(word)) is not null ? $"FLAG^{word}"
 						: await Mediator.Send(new GetPowerQuery(word)) is not null ? $"POWER^{word}"
+						: word.Contains('.') ? $"PERM^{word.ToLowerInvariant()}"
 						: null;
 					if (term is null)
 					{

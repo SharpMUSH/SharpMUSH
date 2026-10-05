@@ -472,8 +472,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	public async Task Roles_SelectsNothingOnLoad_AndFillsTheEditorFromTheClickedRole()
 	{
 		_api.Bodies["api/roles"] = """
-			[{"slug":"builder","name":"Builder","color":"#123456","priority":10,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
-			 {"slug":"admin","name":"Admin","color":"#654321","priority":90,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
+			[{"slug":"builder","name":"Builder","category":"Staff","color":"#123456","priority":10,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
+			 {"slug":"admin","name":"Admin","category":"System","color":"#654321","priority":90,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
 			""";
 		var cut = RenderPage(typeof(AdminRoles));
 
@@ -488,5 +488,95 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".ra-detail-slug").TextContent).IsEqualTo("builder");
 		await Assert.That(cut.Find("input.ra-input").GetAttribute("value")).IsEqualTo("Builder");
 		await Assert.That(cut.FindAll(".ra-btn--danger").Count).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A permission the game defined (<c>@role/define</c>) gets a row in the role editor under its category,
+	/// with the same three states as a built-in one, and is listed by category on the Permissions tab.
+	/// </summary>
+	[Test]
+	public async Task Roles_ShowsCustomPermissionsInTheEditorAndOnTheirTab()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{"scene.close":"Allow"},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/permissions"] = """
+			[{"scope":"scene.close","category":"Scenes","description":"Finish any scene","createdAt":0}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		var section = cut.FindAll(".ra-section").Single(s => s.QuerySelector(".ra-section-label")?.TextContent == "Scenes");
+		var row = section.QuerySelectorAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "scene.close");
+		await Assert.That(row.QuerySelector(".ra-perm-desc")!.TextContent).IsEqualTo("Finish any scene");
+		await Assert.That(row.QuerySelector(".ra-tri--allow")!.ClassList.Contains("ra-tri--on")).IsTrue();
+
+		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabPermissions")).Click();
+		await Assert.That(cut.Find(".roleadmin-assign .ra-section-label").TextContent).IsEqualTo("Scenes");
+		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-scope").TextContent).IsEqualTo("scene.close");
+		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-desc").TextContent).IsEqualTo("Finish any scene");
+	}
+
+	/// <summary>
+	/// The role list is grouped by category: the group holding the highest role first, each group highest
+	/// first. The editor shows the role's category.
+	/// </summary>
+	[Test]
+	public async Task Roles_ListsRolesByCategory()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
+			 {"slug":"wizard","name":"Wizard","category":"System","color":"#5aa9ff","priority":30,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0},
+			 {"slug":"moderator","name":"Moderator","category":"staff","color":"#ff9f6b","priority":25,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		var list = cut.Find(".roleadmin-list");
+		var order = list.Children.Select(child => child.ClassList.Contains("ra-list-group")
+			? "#" + child.TextContent
+			: child.QuerySelector(".ra-card-sub")!.TextContent).ToArray();
+		await Assert.That(order).IsEquivalentTo(new[] { "#System", "wizard", "#staff", "moderator", "helper" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		cut.FindAll(".ra-card").Single(card => card.TextContent.Contains("helper")).Click();
+		await Assert.That(cut.Find("select.ra-input").GetAttribute("value")).IsEqualTo("Staff");
+	}
+
+	/// <summary>
+	/// The Categories tab lists the role categories and the permission categories apart, each category with
+	/// its description and what it holds; the role editor offers only the role categories.
+	/// </summary>
+	[Test]
+	public async Task Roles_ListsBothCategoryListsOnTheirTab()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/permissions"] = """
+			[{"scope":"scene.close","category":"Scenes","description":"Finish any scene","createdAt":0}]
+			""";
+		_api.Bodies["api/roles/categories/role"] = """
+			[{"name":"Staff","description":"Game staff"},{"name":"System","description":"Built in"}]
+			""";
+		_api.Bodies["api/roles/categories/permission"] = """
+			[{"name":"Scenes","description":"Who runs scenes"}]
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		var options = cut.Find("select.ra-input").QuerySelectorAll("option").Select(o => o.GetAttribute("value")).ToArray();
+		await Assert.That(options).IsEquivalentTo(new[] { "", "Staff", "System" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabCategories")).Click();
+		var roleRows = cut.FindAll("[data-kind=role] .ra-category-row");
+		var permissionRows = cut.FindAll("[data-kind=permission] .ra-category-row");
+		await Assert.That(roleRows.Count).IsEqualTo(2);
+		await Assert.That(permissionRows.Count).IsEqualTo(1);
+		await Assert.That(permissionRows[0].QuerySelectorAll("input.ra-input")[0].GetAttribute("value")).IsEqualTo("Scenes");
+		await Assert.That(permissionRows[0].QuerySelectorAll("input.ra-input")[1].GetAttribute("value")).IsEqualTo("Who runs scenes");
+		await Assert.That(permissionRows[0].QuerySelector(".ra-perm-desc")!.TextContent).Contains("RolCategoryHoldsPermissions");
+		await Assert.That(roleRows[0].QuerySelector(".ra-perm-desc")!.TextContent).Contains("RolCategoryHoldsRoles");
 	}
 }

@@ -103,8 +103,8 @@ public class OobCommFeedPageLogTests
 		await Assert.That(lines[0].FromObjId).IsEqualTo(Tomas);
 		await Assert.That(lines[0].Id).IsEqualTo(20);
 		await Assert.That(history.PageRecalled).Contains(Tomas);
-		await Assert.That(history.PageRecallLines).IsEquivalentTo(new[] { OobCommFeed.HistoryLimit })
-			.Because("a conversation keeps that many lines, so the server composes no more");
+		await Assert.That(history.PageRecallLines.Distinct()).IsEquivalentTo(new[] { 0 })
+			.Because("with no marker to go back to, the feed asks for as many pages as the server gives");
 	}
 
 	[Test]
@@ -172,6 +172,59 @@ public class OobCommFeedPageLogTests
 
 		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(5);
 		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(2).Because("22 and 23 are after the marker and Tomas's");
+	}
+
+	/// <summary>
+	/// On load a conversation behind its marker is pulled back to it, however far that is past the lines a
+	/// conversation usually keeps, so pages missed while on another machine are all there.
+	/// </summary>
+	[Test]
+	public async Task Backfill_reaches_back_to_the_conversations_marker()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 5);
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(300, 300)]);
+		history.PageLog[Tomas] = Enumerable.Range(1, 300).Select(id => Logged(id, $"page {id}", id)).ToList();
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(history.PageRecallAfter).IsEquivalentTo(new long?[] { 5 });
+		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(295);
+		await Assert.That(feed.Messages(TomasKey)[0].Id).IsEqualTo(6).Because("the first page after the marker");
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(295);
+	}
+
+	/// <summary>A conversation with no marker is pulled on load, as far back as the server gives.</summary>
+	[Test]
+	public async Task A_conversation_without_a_marker_is_pulled_whole_on_load()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(400, 400)]);
+		history.PageLog[Tomas] = Enumerable.Range(1, 400).Select(id => Logged(id, $"page {id}", id)).ToList();
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(history.PageRecallLines).IsEquivalentTo(new[] { 0 });
+		await Assert.That(history.PageRecallAfter).IsEquivalentTo(new long?[] { null });
+		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(400);
+	}
+
+	/// <summary>A conversation pull that fails on load is tried again on the next list.</summary>
+	[Test]
+	public async Task A_failed_conversation_pull_is_tried_again_on_the_next_list()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 20);
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(21, 21)]);
+		history.PageLog[Tomas] = [Logged(20, "read", 20), Logged(21, "missed", 21)];
+		history.FailRecalls = 1;
+
+		await LoadAsync(store, feed);
+		await Assert.That(feed.Messages(TomasKey)).IsEmpty();
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).Contains("missed");
 	}
 
 	/// <summary>A conversation read up to its last page is not pulled until it is opened.</summary>

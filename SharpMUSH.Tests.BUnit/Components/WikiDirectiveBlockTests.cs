@@ -85,10 +85,10 @@ public class WikiDirectiveBlockTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("WkDirectiveCategoryHeader");
 		await Assert.That(cut.Markup).Contains("wiki-directive-list");
 
-		// Canonical link form: /wiki/{ns}/{category}/{slug} (category defaults to general).
-		await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/dragon_lore\"");
+		// Canonical link form: /wiki/{ns}/{slug}; the category a page is listed under is not part of it.
+		await Assert.That(cut.Markup).Contains("href=\"/wiki/main/dragon_lore\"");
 		await Assert.That(cut.Markup).Contains("Dragon Lore");
-		await Assert.That(cut.Markup).Contains("href=\"/wiki/lore/general/old_gods\"");
+		await Assert.That(cut.Markup).Contains("href=\"/wiki/lore/old_gods\"");
 		await Assert.That(cut.Markup).Contains("Old Gods");
 	}
 

@@ -24,7 +24,7 @@
                 {
                     var entry = wp;
                     <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@entry.Image" Name="@entry.Title" Label="@entry.Title"
-                                Sub="@Meta(entry)" Href="@WikiRoutes.PathFor(entry.Namespace, entry.Category, entry.Slug)" />
+                                Sub="@Meta(entry)" Href="@WikiRoutes.PathFor(entry.Namespace, entry.Slug)" />
                 }
             </CardRows>
         }

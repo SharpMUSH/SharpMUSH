@@ -70,13 +70,19 @@ non-API routes (standard WASM hosting pattern).
 
 ### Wiki Pages
 
-- `/wiki/{namespace}/{category}/{slug}` — the canonical page route. All three
-  segments are part of a page's identity.
+- `/wiki/{namespace}/{slug}` — the canonical page route. Namespace and slug are
+  a page's identity, as `Help:Getting_Started` is in MediaWiki.
+- Categories are a list the page holds (set in the editor, by `PUT
+  api/wiki/{slug}/metadata`, or by `@wiki/category page=names`), never part of a
+  URL; `[[Category:Lore]]` in text is only a link. A page can be in several. Each category has its own page,
+  `/wiki/category/{key}`, an ordinary page in the `category` namespace that
+  lists the category's subcategories and members under whatever text it has.
+- The old three-segment route `/wiki/{namespace}/{category}/{slug}` (and its
+  `/edit`, `/history`, `/diff`) 301s to `/wiki/{namespace}/{slug}`.
 - Underscores replace spaces in the slug; lookup is case-insensitive
 - Display always shows the page's canonical title (original case)
 - Special characters in slugs are percent-encoded
-- `/character/{name}` is an alias resolving to the `character` namespace at the
-  default `general` category
+- `/character/{name}` is an alias resolving to the `character` namespace
 - `/help/...` is **not** a wiki route. See "Help files" below.
 
 ### Help files
@@ -103,7 +109,7 @@ to a game's editable content.
 
 Two wiki pages do live in the `Help` namespace — the Markdown Guide and the
 Application Schema Guide, both seeded at startup. They document the *portal's*
-wiki, not the engine, and stay at `/wiki/help/general/{slug}`.
+wiki, not the engine, and stay at `/wiki/help/{slug}`, in the `Help` category.
 
 ### Locale
 
@@ -135,7 +141,7 @@ A character's biography is the Character-namespace page whose slug is the
 character name, and `/character/{name}` is its **only** canonical URL. The
 wiki route it is stored under is an implementation detail:
 
-- Nothing in the portal links to `/wiki/character/general/{slug}`. Every link
+- Nothing in the portal links to `/wiki/character/{slug}`. Every link
   producer — the wiki index, recent-changes, directive blocks, the wiki admin
   grid, `[[wiki links]]` in markup, and the sitemap — goes through
   `WikiRoutes.PathFor`, which returns the alias for these pages.
@@ -145,14 +151,11 @@ wiki route it is stored under is an implementation detail:
   which never reach the server. It replaces the history entry rather than
   pushing one, so Back does not land on a URL that immediately bounces.
 
-Two deliberate limits on the alias:
+One deliberate limit on the alias:
 
 - **View route only.** `/history`, `/diff` and `/edit` have no equivalent under
   `/character` and keep working where they are. This is also what stops the
   profile page's own history link from bouncing.
-- **Default category only.** `/character/{name}` carries no category segment,
-  so a Character-namespace page filed under any other category cannot round-trip
-  through the alias and keeps its wiki path.
 
 ### Scene Permalinks
 
@@ -212,7 +215,7 @@ query param. When bot detected:
 <meta property="og:title" content="Magic System - GameName Wiki" />
 <meta property="og:description" content="First 200 chars of page content..." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://game.example.com/wiki/main/general/magic_system" />
+<meta property="og:url" content="https://game.example.com/wiki/main/magic_system" />
 
 <!-- Character profile -->
 <meta property="og:title" content="Gandalf - GameName" />
@@ -247,7 +250,7 @@ Bots get a 403 or a generic "Login required" page. No content leak.
   - `/wiki/Page Name` (space) → `/wiki/Page_Name` (301 redirect)
   - `/Wiki/Page_Name` (capital W) → `/wiki/Page_Name` (301 redirect)
   - `/character/Name/` (trailing slash) → `/character/Name` (301 redirect)
-  - `/wiki/character/general/Name` → `/character/Name` (301 redirect;
+  - `/wiki/character/Name` → `/character/Name` (301 redirect;
     see "Character Biographies" above)
 - `<link rel="canonical">` included in pre-rendered pages
 - `?lang=` is never canonical. Every locale of a page shares the unsuffixed

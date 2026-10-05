@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
@@ -19,9 +20,6 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-
-	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
-	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
 
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		ValidationTarget target)
@@ -71,6 +69,12 @@ public partial class ValidateService(
 				=> TimeZoneInfo.TryFindSystemTimeZoneById(value.ToPlainText(), out _),
 			IValidateService.ValidationType.FunctionName
 				=> FunctionNameRegex().IsMatch(value.ToPlainText()),
+			IValidateService.ValidationType.RoleName
+				=> RoleNames.IsValidShortName(value.ToPlainText()),
+			IValidateService.ValidationType.RoleCategory
+				=> Categories.IsValidName(value.ToPlainText()),
+			IValidateService.ValidationType.Permission
+				=> CustomPermissions.IsValidName(value.ToPlainText()),
 			_
 				=> throw new InvalidEnumArgumentException(type.ToString())
 		};
@@ -193,40 +197,5 @@ public partial class ValidateService(
 		=> configuration.CurrentValue.BannedNames.BannedNames
 			.Any(pattern => MushText.IsWildcardMatch(MarkupText.Plain(name), pattern));
 
-	/// <summary>
-	/// A legal object name: at least one character, no leading or trailing space, no control
-	/// characters anywhere, and none of <c>[ ] % \ = &amp; |</c>. Interior spaces are fine
-	/// ("a red ball"), and so is <c>;</c> — <c>@open</c> splits exit aliases on it.
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// Anchored with <c>\A</c>/<c>\z</c> rather than <c>^</c>/<c>$</c>: in .NET <c>$</c> also
-	/// matches immediately before a trailing newline, so <c>$</c> accepts <c>"name\n"</c>.
-	/// </para>
-	/// <para>
-	/// The previous pattern had <c>$</c> but no start anchor at all, and its middle term matched the
-	/// forbidden set instead of its complement, so <see cref="Regex.IsMatch"/> could satisfy the
-	/// whole expression against the last character or two of any input — every forbidden character
-	/// passed as long as it was not at the very end.
-	/// </para>
-	/// </remarks>
-	[GeneratedRegex(@"\A[^ \p{C}\[\]%\\=&\|](?:[^\p{C}\[\]%\\=&\|]*[^ \p{C}\[\]%\\=&\|])?\z")]
-	private partial Regex NameRegex();
-
-	private bool ValidateName(MString value)
-	{
-		var plain = value.ToPlainText();
-
-		if (!NameRegex().IsMatch(plain))
-		{
-			return false;
-		}
-
-		if (MagicCookies.Contains(plain))
-		{
-			return false;
-		}
-
-		return plain.EnumerateRunes().All(x => x.IsAscii);
-	}
+	private static bool ValidateName(MString value) => ObjectNames.IsLegal(value.ToPlainText());
 }

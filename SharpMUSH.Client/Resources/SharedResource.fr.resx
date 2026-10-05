@@ -1034,6 +1034,12 @@
     <value>Fermer {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Déplier {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Replier {0}</value>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Sélectionnez un objet.</value>
   </data>
@@ -1049,11 +1055,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>Aucun attribut sélectionné</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Tester</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Tester — évaluer sans enregistrer</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — exécuter l'attribut enregistré avec u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>
@@ -1066,9 +1069,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(aucune sortie)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vide)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Déclencheur de commande</value>
@@ -1651,9 +1651,6 @@
   <data name="WkInsertImage" xml:space="preserve">
     <value>Insérer une image</value>
   </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>ajouter une étiquette…</value>
-  </data>
   <data name="WkSummaryPlaceholder" xml:space="preserve">
     <value>Résumez votre modification (p. ex. « correction d'une faute »)…</value>
   </data>
@@ -1681,9 +1678,6 @@
   </data>
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Catégorie : {0}</value>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Étiquette : {0}</value>
   </data>
   <data name="WkNoAssets" xml:space="preserve">
     <value>Aucun média téléversé pour le moment.</value>
@@ -1886,6 +1880,122 @@
   </data>
   <data name="RolTabAssignments" xml:space="preserve">
     <value>Attributions</value>
+  </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permissions</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Les permissions personnalisées sont celles que votre jeu définit pour son propre softcode, comme scene.close. Autorisez-en une sur un rôle comme toute autre permission ; le softcode la vérifie avec permission(%#,scene.close) ou un verrou PERM^scene.close. En jeu : @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Nom de la permission</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Ce qu'elle permet de faire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Une catégorie est requise.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Catégories</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Les rôles et les permissions personnalisées ont chacun leur propre liste de catégories, selon laquelle cette page les regroupe. Créez une catégorie avant d’y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category et @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Ce qu'elle contient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Créer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Aucune catégorie pour l'instant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Catégorie {0} créée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Catégorie {0} enregistrée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Supprimer la catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Supprimer {0} ? Seule une catégorie sans rôle ni permission peut être supprimée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Catégorie {0} supprimée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rôle} other {# rôles}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permission} other {# permissions}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Catégories de rôles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Catégories de permissions</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Choisir une catégorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Créez les catégories dans l'onglet Catégories.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Une catégorie a besoin d'un nom et d'une description.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Définir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Aucune permission personnalisée pour l'instant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permission {0} définie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Supprimer la permission</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Supprimer {0} ? Chaque rôle et chaque dérogation qui la définit la perd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permission {0} supprimée.</value>
+    <comment>MT</comment>
   </data>
   <data name="RolNewRole" xml:space="preserve">
     <value>Nouveau rôle</value>
@@ -2239,9 +2349,6 @@
   </data>
   <data name="ResOnThisPage" xml:space="preserve">
     <value>Sur cette page</value>
-  </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Général</value>
   </data>
   <data name="ResScenesSubtitle" xml:space="preserve">
     <value>Parcourez et suivez les sessions de jeu de rôle.</value>
@@ -3610,10 +3717,6 @@
     <value>Parcourir par namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Catégorie</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Supprimer</value>
     <comment>MT</comment>
@@ -3684,14 +3787,6 @@
   <data name="WikiRevision" xml:space="preserve">
     <value>Révision</value>
     <comment>MT — matches the existing Wk* revision-history strings</comment>
-  </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Étiquettes</value>
-    <comment>MT — tag = étiquette per WkAddTagPlaceholder / WkDirectiveTagHeader</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Appuyez sur Entrée ou sur + pour ajouter une étiquette</value>
-    <comment>MT</comment>
   </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titre</value>
@@ -4298,8 +4393,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En scène</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Vous regardez cette scène. Rejoignez-la pour poser ici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Vous n'avez pas encore rejoint cette scène. Rejoignez-la pour poser ici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -4308,6 +4403,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Le jeu ne vous a pas laissé rejoindre cette scène.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
@@ -4537,5 +4636,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Exception pour {0} enregistrée.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Sans catégorie</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Décrire cette catégorie</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Ajouter une catégorie</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# sous-catégorie} other {# sous-catégories}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# page dans cette catégorie} other {# pages dans cette catégorie}}</value>
   </data>
 </root>

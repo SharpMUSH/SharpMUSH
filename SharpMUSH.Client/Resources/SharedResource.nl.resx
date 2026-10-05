@@ -2847,10 +2847,6 @@
     <value>iedereen kan bewerken</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Algemeen</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# wijziging} other {# wijzigingen}}</value>
     <comment>MT</comment>
@@ -3218,6 +3214,122 @@
     <value>Toewijzingen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Rechten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Naam van het recht</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Wat het iemand laat doen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Een categorie is verplicht.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Wat erin hoort</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Aanmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Nog geen categorieën.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Categorie {0} aangemaakt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Categorie {0} opgeslagen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Categorie verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>{0} verwijderen? Alleen een categorie zonder rollen en rechten kan worden verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Categorie {0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rol} other {# rollen}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# recht} other {# rechten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rolcategorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Rechtencategorieën</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Kies een categorie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Maak categorieën aan op het tabblad Categorieën.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Een categorie heeft een naam en een beschrijving nodig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definiëren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Nog geen eigen rechten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Recht {0} gedefinieerd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Recht verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>{0} verwijderen? Elke rol en elke uitzondering die het instelt, verliest het.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Recht {0} verwijderd.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Rollen</value>
     <comment>MT</comment>
@@ -3446,10 +3558,6 @@
     <value>Attribuut toevoegen</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leeg)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Commandotrigger</value>
     <comment>MT</comment>
@@ -3505,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} sluiten</value>
     <comment>MT — Dutch puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} uitklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} inklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal wissen</value>
@@ -3648,13 +3762,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evalueren zonder op te slaan</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — het opgeslagen attribuut uitvoeren met u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niet opgeslagen</value>
@@ -4000,10 +4109,6 @@
     <value>Bladeren op namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Categorie</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} heeft nog geen biografie.</value>
     <comment>MT</comment>
@@ -4099,14 +4204,6 @@
     <value>Revisie</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Druk op Enter of + om een tag toe te voegen</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4125,10 +4222,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Bijgewerkt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>tag toevoegen…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4277,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Nog geen pagina's.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5040,8 +5129,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In scène</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Je bekijkt deze scène. Doe mee om hier te posen.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Je doet nog niet mee aan deze scène. Doe mee om hier te posen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5050,6 +5139,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Meedoen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Het spel liet je niet meedoen aan deze scène.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
@@ -5279,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Uitzondering voor {0} opgeslagen.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Zonder categorie</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Deze categorie beschrijven</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Categorie toevoegen</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategorie} other {# subcategorieën}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# pagina in deze categorie} other {# pagina's in deze categorie}}</value>
   </data>
 </root>

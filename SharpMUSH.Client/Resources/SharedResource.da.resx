@@ -2847,10 +2847,6 @@
     <value>alle kan redigere</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Generelt</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# ændring} other {# ændringer}}</value>
     <comment>MT</comment>
@@ -3218,6 +3214,122 @@
     <value>Tildelinger</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Tilladelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Egne tilladelser er dem, dit spil definerer til sin egen softcode, f.eks. scene.close. Tillad en på en rolle som enhver anden tilladelse; softcode tjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Tilladelsens navn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Hvad den lader nogen gøre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>En kategori er påkrævet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Roller og egne tilladelser har hver deres liste af kategorier, og denne side grupperer dem efter den. Opret en kategori, før du lægger noget i den. En kategori, der stadig indeholder noget, kan ikke slettes. I spillet: @role/category og @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Hvad der hører til</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Opret</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Ingen kategorier endnu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Kategorien {0} blev oprettet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Kategorien {0} blev gemt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Slet kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Slet {0}? Kun en kategori uden roller og tilladelser kan slettes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Kategorien {0} blev slettet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# rolle} other {# roller}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# tilladelse} other {# tilladelser}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Rollekategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Tilladelseskategorier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Vælg en kategori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Opret kategorier under fanen Kategorier.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>En kategori skal have et navn og en beskrivelse.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definér</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Ingen egne tilladelser endnu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Tilladelsen {0} blev defineret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Fjern tilladelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Fjern {0}? Hver rolle og tilsidesættelse, der sætter den, mister den.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Tilladelsen {0} blev fjernet.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Roller</value>
     <comment>MT</comment>
@@ -3446,10 +3558,6 @@
     <value>Tilføj attribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tom)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandoudløser</value>
     <comment>MT</comment>
@@ -3505,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Luk {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fold {0} ud</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fold {0} sammen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Ryd terminalen</value>
@@ -3648,13 +3762,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluer uden at gemme</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kør den gemte attribut med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ugemt</value>
@@ -4000,10 +4109,6 @@
     <value>Gennemse efter namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategori</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} har endnu ingen biografi.</value>
     <comment>MT</comment>
@@ -4099,14 +4204,6 @@
     <value>Revision</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Tryk på Enter eller + for at tilføje et tag</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4125,10 +4222,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Opdateret</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>tilføj tag…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4277,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Ingen sider endnu.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5040,8 +5129,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du ser denne scene. Deltag for at posere her.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du har ikke deltaget i denne scene endnu. Deltag for at posere her.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5050,6 +5139,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Deltag i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Spillet lod dig ikke deltage i denne scene.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
@@ -5279,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Tilsidesættelse for {0} gemt.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Uden kategori</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Beskriv denne kategori</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Tilføj en kategori</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# underkategori} other {# underkategorier}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# side i denne kategori} other {# sider i denne kategori}}</value>
   </data>
 </root>

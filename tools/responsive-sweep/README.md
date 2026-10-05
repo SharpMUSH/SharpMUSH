@@ -280,7 +280,7 @@ Four groups:
 - `public` — no session required.
 - `authenticated` — requires a logged-in account.
 - `admin` — requires a Wizard+ session.
-- `parameterized` — routes with a path segment (`/character/{name}`, `/wiki/{ns}/{category}/{slug}`,
+- `parameterized` — routes with a path segment (`/character/{name}`, `/wiki/{ns}/{slug}`,
   `/mail/{id}`, …), each declaring the concrete sample URL(s) the sweep drives:
 
   ```json

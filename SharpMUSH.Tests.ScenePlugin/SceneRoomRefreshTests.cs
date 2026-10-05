@@ -92,6 +92,25 @@ public class SceneRoomRefreshTests
 		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
+	/// <summary>
+	/// The room's scene block says whether the player is focused on it, and whether they are focused on another
+	/// scene at all: a focus taken up or dropped elsewhere changes the second, a move between two other scenes
+	/// changes neither.
+	/// </summary>
+	[Test]
+	[Arguments(null, "42", true)]
+	[Arguments("42", null, true)]
+	[Arguments("42", "43", true)]
+	[Arguments(null, "43", true)]
+	[Arguments("43", null, true)]
+	[Arguments("43", "44", false)]
+	[Arguments("43", "43", false)]
+	[Arguments(null, null, false)]
+	public async Task A_focus_move_shows_in_the_room_when_its_block_changes(string? before, string? after, bool shows)
+	{
+		await Assert.That(SceneRoomRefresh.FocusShowsIn("42", before, after)).IsEqualTo(shows);
+	}
+
 	/// <summary>The write has committed by the time this runs; a failing handler must not turn it into an error.</summary>
 	[Test]
 	public async Task A_failing_event_does_not_reach_the_caller()

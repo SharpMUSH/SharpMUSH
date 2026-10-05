@@ -43,6 +43,13 @@ public class RoleReadCompatibilityTests
 		public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string slug, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
 		public Task SetObjectOverrideAsync(int number, string scope, PermissionState state) => throw new NotSupportedException();
+		public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken token = default) => throw new NotSupportedException();
+		public Task UpsertCustomPermissionAsync(CustomPermission permission) => throw new NotSupportedException();
+		public Task RemoveCustomPermissionAsync(string scope) => throw new NotSupportedException();
+		public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CategoryKind kind, CancellationToken token = default) => throw new NotSupportedException();
+		public Task UpsertCategoryAsync(CategoryKind kind, RoleCategory category) => throw new NotSupportedException();
+		public Task RenameCategoryAsync(CategoryKind kind, string name, RoleCategory renamed) => throw new NotSupportedException();
+		public Task RemoveCategoryAsync(CategoryKind kind, string name) => throw new NotSupportedException();
 	}
 
 	[Test]

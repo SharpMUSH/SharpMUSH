@@ -15,7 +15,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// Read-only listings over the wiki: recent changes, a namespace, a category, a tag, the paginated
+/// Read-only listings over the wiki: recent changes, a namespace, a category, the paginated
 /// index, the counts by state, and the batch existence check the reader uses to mark redlinks.
 /// Listings return <see cref="WikiPageSummaryDto"/> rows (no bodies), at most
 /// <see cref="WikiControllerBase.MaxListTake"/> per request.
@@ -25,8 +25,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/ns/{ns}         — pages in a namespace
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
 ///   GET  /api/wiki/counts          — page counts by state (published, draft, protected)
-///   GET  /api/wiki/category/{cat}  — pages in a category
-///   GET  /api/wiki/tag/{tag}       — pages carrying a tag
+///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
+///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -105,7 +105,8 @@ public class WikiBrowseController(
 
 	/// <summary>
 	/// GET /api/wiki/category/{category}?skip=0&amp;take=50&amp;lang=fr
-	/// Lists pages in a category with localized titles. Anonymous callers only see published pages.
+	/// Lists the pages in <c>{category}</c>, with localized titles. Rows in the
+	/// <c>category</c> namespace are its subcategories. Anonymous callers only see published pages.
 	/// </summary>
 	[HttpGet("category/{category}")]
 	public async Task<IActionResult> ListCategoryPages(
@@ -117,17 +118,14 @@ public class WikiBrowseController(
 	}
 
 	/// <summary>
-	/// GET /api/wiki/tag/{tag}?skip=0&amp;take=50&amp;lang=fr
-	/// Lists pages carrying a tag with localized titles. Anonymous callers only see published pages.
+	/// GET /api/wiki/category-names?lang=fr
+	/// Each category's name, keyed by category key: the title of its published page in the category
+	/// namespace, translated into <c>lang</c> where that page has a published translation. A category
+	/// with no page is absent; the client shows its key.
 	/// </summary>
-	[HttpGet("tag/{tag}")]
-	public async Task<IActionResult> ListTagPages(
-		string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
-	{
-		(skip, take) = ClampPage(skip, take);
-		var pages = await Wiki.GetByTagAsync(tag, skip, take, Visibility);
-		return Ok(await LocalizedListAsync(pages, lang));
-	}
+	[HttpGet("category-names")]
+	public async Task<IActionResult> GetCategoryNames([FromQuery] string? lang = null) =>
+		Ok(await Localization.GetCategoryNamesAsync(lang));
 
 	/// <summary>
 	/// POST /api/wiki/exists
@@ -144,8 +142,8 @@ public class WikiBrowseController(
 
 		foreach (var reference in request.Refs.Distinct(StringComparer.Ordinal).Take(maxRefs))
 		{
-			var (ns, category, slug) = ParseRef(reference);
-			result[reference] = await Wiki.GetBySlugAsync(slug, category, ns) is WikiPage page && CanSee(page);
+			var (ns, slug) = ParseRef(reference);
+			result[reference] = await Wiki.GetBySlugAsync(slug, ns) is WikiPage page && CanSee(page);
 		}
 
 		return Ok(result);

@@ -22,6 +22,7 @@ public partial class LightningDatabase
 	{
 		Slug = role.Slug,
 		Name = role.Name,
+		Category = role.Category,
 		Color = role.Color,
 		Priority = role.Priority,
 		IsSystem = role.IsSystem,
@@ -35,6 +36,7 @@ public partial class LightningDatabase
 		Id = $"node_roles/{r.Slug}",
 		Slug = r.Slug,
 		Name = r.Name,
+		Category = r.Category,
 		Color = r.Color,
 		Priority = r.Priority,
 		IsSystem = r.IsSystem,
@@ -197,4 +199,100 @@ public partial class LightningDatabase
 		=> tx.TryGet(Tables.ObjPermission, Keys.Dbref(number), out var bytes)
 			? new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(bytes), StringComparer.OrdinalIgnoreCase)
 			: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+	public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var permissions = Store.Read(tx => tx.Range(Tables.CustomPermission, [])
+			.Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value))
+			.Select(r => new CustomPermission(r.Scope, r.Category, r.Description, r.CreatedAt))
+			.OrderBy(p => p.Scope, StringComparer.Ordinal)
+			.ToList());
+		return Task.FromResult<IReadOnlyList<CustomPermission>>(permissions);
+	}
+
+	public async Task UpsertCustomPermissionAsync(CustomPermission permission)
+		=> await Store.WriteAsync(tx => tx.Put(Tables.CustomPermission, Keys.Str(permission.Scope), Codec.Serialize(new CustomPermissionRecord
+		{
+			Scope = permission.Scope,
+			Category = permission.Category,
+			Description = permission.Description,
+			CreatedAt = permission.CreatedAt
+		})));
+
+	public Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CategoryKind kind, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var categories = Store.Read(tx => tx.Range(CategoryTable(kind), [])
+			.Select(e => MapCategory(Codec.Deserialize<RoleCategoryRecord>(e.Value)))
+			.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList());
+		return Task.FromResult<IReadOnlyList<RoleCategory>>(categories);
+	}
+
+	public async Task UpsertCategoryAsync(CategoryKind kind, RoleCategory category)
+		=> await Store.WriteAsync(tx => PutCategory(tx, kind, category));
+
+	public async Task RenameCategoryAsync(CategoryKind kind, string name, RoleCategory renamed)
+		=> await Store.WriteAsync(tx =>
+		{
+			tx.Delete(CategoryTable(kind), CategoryKey(name));
+			PutCategory(tx, kind, renamed);
+
+			if (kind == CategoryKind.Role)
+				foreach (var (key, value) in tx.Range(Tables.Role, []).ToList())
+				{
+					var role = Codec.Deserialize<RoleRecord>(value);
+					if (string.Equals(role.Category, name, StringComparison.OrdinalIgnoreCase))
+						tx.Put(Tables.Role, key, Codec.Serialize(role with { Category = renamed.Name }));
+				}
+			else
+				foreach (var (key, value) in tx.Range(Tables.CustomPermission, []).ToList())
+				{
+					var permission = Codec.Deserialize<CustomPermissionRecord>(value);
+					if (string.Equals(permission.Category, name, StringComparison.OrdinalIgnoreCase))
+						tx.Put(Tables.CustomPermission, key, Codec.Serialize(permission with { Category = renamed.Name }));
+				}
+		});
+
+	public async Task RemoveCategoryAsync(CategoryKind kind, string name)
+		=> await Store.WriteAsync(tx => tx.Delete(CategoryTable(kind), CategoryKey(name)));
+
+	internal static TableDef CategoryTable(CategoryKind kind)
+		=> kind == CategoryKind.Role ? Tables.RoleCategory : Tables.PermissionCategory;
+
+	internal static byte[] CategoryKey(string name) => Keys.Str(name.ToLowerInvariant());
+
+	internal static void PutCategory(ITx tx, CategoryKind kind, RoleCategory category)
+		=> tx.Put(CategoryTable(kind), CategoryKey(category.Name), Codec.Serialize(new RoleCategoryRecord
+		{
+			Name = category.Name,
+			Description = category.Description,
+			CreatedAt = category.CreatedAt
+		}));
+
+	private static RoleCategory MapCategory(RoleCategoryRecord r) => new(r.Name, r.Description, r.CreatedAt);
+
+	public async Task RemoveCustomPermissionAsync(string scope)
+		=> await Store.WriteAsync(tx =>
+		{
+			tx.Delete(Tables.CustomPermission, Keys.Str(scope));
+
+			foreach (var (key, value) in tx.Range(Tables.Role, []).ToList())
+			{
+				var role = Codec.Deserialize<RoleRecord>(value);
+				var kept = role.Permissions.Where(p => !string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase))
+					.ToDictionary(p => p.Key, p => p.Value);
+				if (kept.Count != role.Permissions.Count) tx.Put(Tables.Role, key, Codec.Serialize(role with { Permissions = kept }));
+			}
+
+			foreach (var table in new[] { Tables.AccountPermission, Tables.ObjPermission })
+				foreach (var (key, value) in tx.Range(table, []).ToList())
+				{
+					var overrides = new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(value), StringComparer.OrdinalIgnoreCase);
+					if (!overrides.Remove(scope)) continue;
+					if (overrides.Count == 0) tx.Delete(table, key);
+					else tx.Put(table, key, Codec.Serialize(overrides));
+				}
+		});
 }

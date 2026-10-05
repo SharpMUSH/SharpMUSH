@@ -25,7 +25,8 @@
     background: var(--surface);
 }
 .sc-pane-attrs {
-    width: 248px;
+    /* Wider than the object pane: each tree level indents its rows. */
+    width: 288px;
     flex-shrink: 0;
     background: var(--surface);
 }
@@ -171,12 +172,12 @@
     width: 100%;
     text-align: left;
     display: block;
-    padding: 0.5625rem 0.625rem;
+    padding: 0.3125rem 0.5rem;
     border-radius: var(--radius);
     cursor: pointer;
     border: none;
     background: transparent;
-    margin-bottom: 0.1875rem;
+    margin-bottom: 1px;
     transition: background 0.12s;
 }
 .sc-attr-item:hover {
@@ -190,7 +191,6 @@
     display: flex;
     align-items: center;
     gap: 0.4375rem;
-    margin-bottom: 0.1875rem;
 }
 .sc-kind-badge {
     width: 16px;
@@ -218,16 +218,131 @@
     color: var(--text);
     font-weight: 600;
 }
-.sc-attr-desc {
-    display: block;
-    font-family: var(--font-ui);
-    font-size: 0.6875rem;
+
+/* ── Attribute tree: one row per attribute, indented by its depth under FOO`BAR`… ── */
+.sc-tree-row {
+    --sc-toggle: 20px;
+    --sc-indent: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding-left: calc(var(--sc-depth, 0) * var(--sc-indent));
+}
+/* A faint guide marks the branch a nested row belongs to. */
+.sc-tree-row--nested {
+    background-image: linear-gradient(var(--border-soft), var(--border-soft));
+    background-size: 1px 100%;
+    /* Under the centre of the parent's fold control. */
+    background-position: calc((var(--sc-depth, 0) - 1) * var(--sc-indent) + var(--sc-toggle) / 2) 0;
+    background-repeat: no-repeat;
+}
+.sc-tree-row .sc-attr-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+.sc-tree-row .sc-attr-row1 {
+    flex: 1;
+    min-width: 0;
+}
+.sc-tree-toggle,
+.sc-tree-spacer {
+    display: grid;
+    place-items: center;
+    width: var(--sc-toggle);
+    height: var(--sc-toggle);
+    flex-shrink: 0;
+}
+.sc-tree-toggle {
+    border: none;
+    border-radius: 5px;
+    background: transparent;
     color: var(--text-faint);
-    line-height: 1.35;
-    padding-left: 1.4375rem;
-    white-space: nowrap;
+    cursor: pointer;
+    padding: 0;
+}
+.sc-tree-toggle:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--surface-2);
+}
+.sc-tree-toggle:disabled {
+    cursor: default;
+}
+.sc-tree-count {
+    flex-shrink: 0;
+    padding: 0 0.3125rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    line-height: 1rem;
+}
+.sc-attr-item--bare:disabled {
+    cursor: default;
+}
+
+/* ── Toolbar breadcrumb: &FOO`BAR`BAZ, with each branch a link to that attribute ── */
+/* Only the attribute path gives way when the toolbar runs short; the buttons keep their size. */
+.sc-editor-toolbar ::deep > * {
+    flex-shrink: 0;
+}
+.sc-editor-toolbar > .sc-crumb-chevron {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+}
+.sc-crumbs {
+    flex-shrink: 1;
+}
+.sc-crumb-obj {
+    max-width: 10rem;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+.sc-crumbs {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+.sc-crumb-part,
+.sc-crumb-sep {
+    color: var(--text-dim);
+}
+.sc-crumb-sep {
+    opacity: 0.6;
+}
+.sc-crumb-link {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    cursor: pointer;
+}
+.sc-crumb-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+/* Overflow past the end of a flex-end box spills off its start and is clipped there, so a
+   long path loses its outermost branches first. */
+.sc-crumb-trail {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+    overflow: hidden;
+}
+.sc-crumb-leaf {
+    flex-shrink: 0;
+    font-weight: 600;
 }
 
 /* ── Open-attribute tab strip ── */
@@ -257,6 +372,7 @@
     border-top-color: var(--accent);
 }
 .sc-tab-label {
+    display: flex;
     max-width: 15rem;
     padding: 0 0.25rem 0 0.75rem;
     border: none;
@@ -275,6 +391,13 @@
 /* The dbref recedes so the attribute name — the part that differs between tabs — leads. */
 .sc-tab-ref {
     opacity: 0.6;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* A deep branch path gives way before the attribute's own name does. */
+.sc-tab-leaf {
+    flex-shrink: 0;
 }
 .sc-tab-dirty {
     flex-shrink: 0;
@@ -334,6 +457,19 @@
     background: rgba(var(--glow), 0.1);
 }
 .sc-mobiletab:disabled { opacity: 0.4; cursor: default; }
+.sc-mobiletab--icon {
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+}
+.sc-mobiletab--editor {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    padding: 0 0.625rem;
+}
 
 /* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
    a real height so Monaco lays out; panes scroll internally rather than the page. */
@@ -360,6 +496,20 @@
     .sc-shell--attrs   .sc-pane-editor,
     .sc-shell--editor  .sc-pane-objects,
     .sc-shell--editor  .sc-pane-attrs {
+        display: none;
+    }
+    /* Finger-sized fold controls; the tree rows themselves already are. */
+    .sc-tree-row {
+        --sc-toggle: 32px;
+        --sc-indent: 1.25rem;
+    }
+    /* One line per attribute is too short a target for a finger. */
+    .sc-tree-row .sc-attr-item {
+        min-height: 2.5rem;
+    }
+    /* The pane switcher above already shows the open attribute's whole name. */
+    .sc-crumbs,
+    .sc-crumb-chevron {
         display: none;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */

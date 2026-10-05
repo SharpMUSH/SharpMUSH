@@ -18,7 +18,6 @@ public class LocalizedWikiPageTests
 
 	private static WikiPage BarePage() => UnstampedPage() with
 	{
-		Category = "general",
 		SourceLocale = "en",
 	};
 

@@ -51,6 +51,11 @@
 
 /* List */
 .roleadmin-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.ra-category-row .ra-perm-label { display: flex; flex-direction: column; gap: 0.375rem; }
+.ra-list-group {
+    font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-faint); padding: 0.5rem 0.25rem 0;
+}
 .ra-empty-list { padding: 1rem; color: var(--text-faint); font-size: 0.8125rem; text-align: center; }
 .ra-card {
     display: flex;
