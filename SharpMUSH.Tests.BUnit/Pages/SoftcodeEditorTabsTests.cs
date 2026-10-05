@@ -206,6 +206,10 @@ public class SoftcodeEditorTabsTests : BunitContext
 		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.Find(".sc-tree-toggle").GetAttribute("aria-expanded")).IsEqualTo("true");
 		await Assert.That(cut.FindAll(".sc-tree-row--nested")).Count().IsEqualTo(1);
+
+		// Nesting alone does not make an attribute a function; sitting under FN does.
+		var badges = cut.FindAll(".sc-tree-row .sc-kind-badge").Select(e => e.TextContent.Trim()).ToList();
+		await Assert.That(badges).IsEquivalentTo(["¶", "¶", "ƒ"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[TUnit.Core.Test]

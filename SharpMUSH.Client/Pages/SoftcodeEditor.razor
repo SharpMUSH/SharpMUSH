@@ -526,11 +526,17 @@
     private ElementReference _newAttrInput;
     private bool _focusNewAttr;
 
+    private static readonly HashSet<string> FunctionBranches =
+        new(["FN", "FUN", "FUNC", "FUNCS", "FUNCTION", "FUNCTIONS", "UFUN"], StringComparer.OrdinalIgnoreCase);
+
     private static string AttrKindBadge(MushAttribute attr)
     {
         if (attr.Value.TrimStart().StartsWith('$')) return "$";
         if (attr.Value.TrimStart().StartsWith('^')) return "^";
-        if (attr.Name.Contains('`', StringComparison.Ordinal) || attr.AttributeFlags.Contains("SAFE", StringComparer.OrdinalIgnoreCase))
+        // The tree already shows that an attribute is nested, so nesting alone no longer marks a
+        // function: a branch named for functions does (FN`ROW, FUN`HEADER), as SAFE does.
+        if (attr.AttributeFlags.Contains("SAFE", StringComparer.OrdinalIgnoreCase)
+            || attr.Name.Split(SoftcodeAttributeTree.Separator).SkipLast(1).Any(FunctionBranches.Contains))
             return "ƒ";
         return attr.Value.Length > 0 && (char.IsDigit(attr.Value[0]) || attr.Value == "0" || attr.Value.StartsWith("#-"))
             ? "•"
