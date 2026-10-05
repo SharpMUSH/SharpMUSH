@@ -25,7 +25,8 @@
     background: var(--surface);
 }
 .sc-pane-attrs {
-    width: 248px;
+    /* Wider than the object pane: each tree level indents its rows. */
+    width: 288px;
     flex-shrink: 0;
     background: var(--surface);
 }
@@ -230,6 +231,99 @@
     text-overflow: ellipsis;
 }
 
+/* ── Attribute tree: one row per attribute, indented by its depth under FOO`BAR`… ── */
+.sc-tree-row {
+    --sc-toggle: 20px;
+    --sc-indent: 0.875rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.125rem;
+    padding-left: calc(var(--sc-depth, 0) * var(--sc-indent));
+}
+/* A faint guide marks the branch a nested row belongs to. */
+.sc-tree-row--nested {
+    background-image: linear-gradient(var(--border-soft), var(--border-soft));
+    background-size: 1px 100%;
+    /* Under the centre of the parent's fold control. */
+    background-position: calc((var(--sc-depth, 0) - 1) * var(--sc-indent) + var(--sc-toggle) / 2) 0;
+    background-repeat: no-repeat;
+}
+.sc-tree-row .sc-attr-item {
+    flex: 1;
+    min-width: 0;
+}
+.sc-tree-toggle,
+.sc-tree-spacer {
+    display: grid;
+    place-items: center;
+    width: var(--sc-toggle);
+    height: var(--sc-toggle);
+    margin-top: 0.5rem;
+    flex-shrink: 0;
+}
+.sc-tree-toggle {
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 0;
+}
+.sc-tree-toggle:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--surface-2);
+}
+.sc-tree-toggle:disabled {
+    cursor: default;
+}
+.sc-tree-count {
+    flex-shrink: 0;
+    padding: 0 0.3125rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    line-height: 1rem;
+}
+.sc-attr-item--bare:disabled {
+    cursor: default;
+}
+
+/* ── Toolbar breadcrumb: &FOO`BAR`BAZ, with each branch a link to that attribute ── */
+.sc-crumbs {
+    display: inline-flex;
+    align-items: baseline;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+.sc-crumb-part,
+.sc-crumb-sep {
+    color: var(--text-dim);
+}
+.sc-crumb-sep {
+    opacity: 0.6;
+}
+.sc-crumb-link {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    cursor: pointer;
+}
+.sc-crumb-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+.sc-crumb-leaf {
+    font-weight: 600;
+}
+
 /* ── Open-attribute tab strip ── */
 .sc-tabstrip {
     display: flex;
@@ -361,6 +455,15 @@
     .sc-shell--editor  .sc-pane-objects,
     .sc-shell--editor  .sc-pane-attrs {
         display: none;
+    }
+    /* Finger-sized fold controls; the tree rows themselves already are. */
+    .sc-tree-row {
+        --sc-toggle: 32px;
+        --sc-indent: 1.25rem;
+    }
+    .sc-tree-toggle,
+    .sc-tree-spacer {
+        margin-top: 0.125rem;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */
     .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }

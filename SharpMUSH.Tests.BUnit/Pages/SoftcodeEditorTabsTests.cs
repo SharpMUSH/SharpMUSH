@@ -72,7 +72,12 @@ public class SoftcodeEditorTabsTests : BunitContext
 
 		var handler = new ObjectApiHandler(
 			new ObjectSummaryDto("#8", "Widget", "THING", "Wizard(#1)", []),
-			[new AttributeDto("DESCRIBE", "A widget.", [])]);
+			// Listed level by level, as the API does: the branch's leaf comes after both top-level attributes.
+			[
+				new AttributeDto("DESCRIBE", "A widget.", []),
+				new AttributeDto("FN", "", []),
+				new AttributeDto("FN`GREET", "Hello, %0.", []),
+			]);
 		// Held in a field and disposed at teardown; disposing the client disposes the handler with it.
 		_api = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -170,6 +175,69 @@ public class SoftcodeEditorTabsTests : BunitContext
 		await Assert.That(dirty.GetAttribute("aria-hidden")).IsNull();
 		await Assert.That(dirty.GetAttribute("role")).IsEqualTo("img");
 		await Assert.That(dirty.GetAttribute("aria-label")).IsEqualTo("TermUnsaved");
+	}
+
+	private async Task<IRenderedComponent<Components.MudHarness>> RenderWithObjectSelectedAsync()
+	{
+		var cut = Render<Components.MudHarness>(p => p
+			.AddChildContent<SharpMUSH.Client.Pages.SoftcodeEditor>());
+
+		cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).Click();
+		cut.WaitForElement(".sc-attr-item", TimeSpan.FromSeconds(5));
+		return cut;
+	}
+
+	private static List<string> AttributeRowNames(IRenderedComponent<Components.MudHarness> cut) =>
+		cut.FindAll(".sc-tree-row .sc-attr-name").Select(e => e.TextContent.Trim()).ToList();
+
+	[TUnit.Core.Test]
+	public async Task ABranchStartsFolded_AndItsToggleShowsWhatIsBeneathIt()
+	{
+		var cut = await RenderWithObjectSelectedAsync();
+
+		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var toggle = cut.Find(".sc-tree-toggle");
+		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("TermExpandBranch(FN)");
+
+		toggle.Click();
+
+		// A nested row shows only its own segment; its depth carries the rest of the name.
+		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".sc-tree-toggle").GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".sc-tree-row--nested")).Count().IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task FilteringShowsAMatchInsideAFoldedBranch()
+	{
+		var cut = await RenderWithObjectSelectedAsync();
+
+		cut.Find(".sc-search-input").Input("greet");
+
+		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[TUnit.Core.Test]
+	public async Task ANestedAttributeOpensWithItsBranchesLinkedAboveIt()
+	{
+		var cut = await RenderWithObjectSelectedAsync();
+		cut.Find(".sc-tree-toggle").Click();
+		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
+		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
+
+		// The full reference still reads as softcode names it; only the branch part recedes.
+		await Assert.That(cut.Find(".sc-tab-label").TextContent.Trim()).IsEqualTo("#8/FN`GREET");
+		await Assert.That(cut.Find(".sc-tab-ref").TextContent).IsEqualTo("#8/FN`");
+		await Assert.That(string.Concat(cut.Find(".sc-crumbs").TextContent.Where(c => !char.IsWhiteSpace(c))))
+			.IsEqualTo("&FN`GREET");
+
+		// The branch in the breadcrumb is an attribute of its own, and opens as one.
+		cut.Find(".sc-crumb-link").Click();
+		await cut.WaitForAssertionAsync(
+			async () => await Assert.That(cut.FindAll(".sc-tab")).Count().IsEqualTo(2),
+			TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".sc-tab--on .sc-tab-label").TextContent.Trim()).IsEqualTo("#8/FN");
 	}
 
 	/// <summary>Disposes the HttpClient this fixture owns; the handler goes with it.</summary>

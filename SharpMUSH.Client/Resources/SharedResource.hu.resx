@@ -3514,6 +3514,12 @@
     <value>{0} bezárása</value>
     <comment>MT — Hungarian nominalises the verb after its object.</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} kibontása</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} összecsukása</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminál törlése</value>
     <comment>MT</comment>

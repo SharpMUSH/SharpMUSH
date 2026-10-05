@@ -3514,6 +3514,12 @@
     <value>Zatvori {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Sažmi {0}</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Očisti terminal</value>
     <comment>MT</comment>

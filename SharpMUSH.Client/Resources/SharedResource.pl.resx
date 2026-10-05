@@ -3514,6 +3514,12 @@
     <value>Zamknij {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Rozwiń {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Zwiń {0}</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Wyczyść terminal</value>
     <comment>MT</comment>

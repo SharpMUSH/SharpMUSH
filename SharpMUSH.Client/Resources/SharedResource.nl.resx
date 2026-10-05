@@ -3514,6 +3514,12 @@
     <value>{0} sluiten</value>
     <comment>MT — Dutch puts the infinitive last, so the reference leads.</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} uitklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} inklappen</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal wissen</value>
     <comment>MT</comment>

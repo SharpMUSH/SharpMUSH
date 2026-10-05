@@ -3514,6 +3514,12 @@
     <value>Luk {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fold {0} ud</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fold {0} sammen</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Ryd terminalen</value>
     <comment>MT</comment>

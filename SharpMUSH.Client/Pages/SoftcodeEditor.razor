@@ -165,25 +165,66 @@
                 }
                 else
                 {
-                    var filteredAttrs = string.IsNullOrWhiteSpace(_attrSearch)
-                        ? _selectedObject.Attributes
-                        : _selectedObject.Attributes.Where(a => a.Name.Contains(_attrSearch, StringComparison.OrdinalIgnoreCase)).ToList();
+                    var rows = SoftcodeAttributeTree.Rows(AttributeTree, _expandedBranches, _attrSearch).ToList();
+                    var filtering = !string.IsNullOrWhiteSpace(_attrSearch);
 
-                    @foreach (var attr in filteredAttrs)
+                    @* The attribute tree: FOO`BAR`BAZ sits under BAR, under FOO. A branch is still an
+                       attribute of its own, so its name opens it and only the chevron folds it. *@
+                    @foreach (var row in rows)
                     {
-                        var a = attr;
-                        var isActive = ActiveTab?.Attr.Name == a.Name && ActiveTab?.Obj.Dbref == _selectedObject.Dbref;
-                        <button type="button" class="sc-attr-item @(isActive ? "sc-attr-item--on" : "")"
-                                @onclick="() => OnAttributeSelected(a)">
-                            <span class="sc-attr-row1">
-                                <span class="sc-kind-badge" style="@KindBadgeStyle(a)" title="@Loc[AttrKindLabelKey(a)]">@AttrKindBadge(a)</span>
-                                <span class="sc-attr-name">@a.Name</span>
-                            </span>
-                            <span class="sc-attr-desc">@(AttrPreview(a) ?? Loc["TermAttrEmpty"].Value)</span>
-                        </button>
+                        var node = row;
+                        var a = node.Attribute;
+                        var isActive = a is not null && ActiveTab is not null && ActiveTab.Obj.Dbref == _selectedObject.Dbref
+                                       && string.Equals(ActiveTab.Attr.Name, a.Name, StringComparison.OrdinalIgnoreCase);
+                        var isOpen = filtering || _expandedBranches.Contains(node.Path);
+                        <div class="sc-tree-row @(node.Depth > 0 ? "sc-tree-row--nested" : "")" style="--sc-depth:@node.Depth;">
+                            @if (node.IsBranch)
+                            {
+                                <button type="button" class="sc-tree-toggle" disabled="@filtering"
+                                        aria-expanded="@(isOpen ? "true" : "false")"
+                                        title="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
+                                        aria-label="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
+                                        @onclick="() => ToggleBranch(node.Path)">
+                                    <MudIcon Icon="@(isOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Style="font-size:0.875rem;" />
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="sc-tree-spacer"></span>
+                            }
+                            @if (a is not null)
+                            {
+                                <button type="button" class="sc-attr-item @(isActive ? "sc-attr-item--on" : "")"
+                                        title="@a.Name" @onclick="() => OnAttributeSelected(a)">
+                                    <span class="sc-attr-row1">
+                                        <span class="sc-kind-badge" style="@KindBadgeStyle(a)" title="@Loc[AttrKindLabelKey(a)]">@AttrKindBadge(a)</span>
+                                        <span class="sc-attr-name">@node.Segment</span>
+                                        @if (node.IsBranch && !isOpen)
+                                        {
+                                            <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
+                                        }
+                                    </span>
+                                    <span class="sc-attr-desc">@(AttrPreview(a) ?? Loc["TermAttrEmpty"].Value)</span>
+                                </button>
+                            }
+                            else
+                            {
+                                @* Listed only through what is beneath it: nothing to open, so the name folds too. *@
+                                <button type="button" class="sc-attr-item sc-attr-item--bare" title="@node.Path"
+                                        disabled="@filtering" @onclick="() => ToggleBranch(node.Path)">
+                                    <span class="sc-attr-row1">
+                                        <span class="sc-attr-name">@node.Segment</span>
+                                        @if (!isOpen)
+                                        {
+                                            <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
+                                        }
+                                    </span>
+                                </button>
+                            }
+                        </div>
                     }
 
-                    @if (filteredAttrs.Count == 0 && !_showCreateAttr)
+                    @if (rows.Count == 0 && !_showCreateAttr)
                     {
                         <div style="padding:0.75rem;color:var(--text-faint);font-size:0.75rem;text-align:center;font-family:var(--font-mono);">
                             @(string.IsNullOrWhiteSpace(_attrSearch) ? Loc["TermNoAttributes"] : Loc["TermNoMatch"])
@@ -204,9 +245,26 @@
                     @ActiveTab.Obj.Name
                 </MudText>
                 <MudText Style="font-size:0.75rem;color:var(--text-faint);">›</MudText>
-                <MudText Style="font-size:0.75rem;font-family:var(--font-mono);color:var(--accent);font-weight:600;">
-                    &amp;@ActiveTab.Attr.Name
-                </MudText>
+                @* The name reads exactly as typed, backticks included; each branch above the
+                   attribute links to that branch where this object has it. *@
+                <span class="sc-crumbs">
+                    <span>&amp;</span>
+                    @foreach (var crumb in Breadcrumbs(ActiveTab))
+                    {
+                        var target = crumb.Attribute;
+                        if (target is null)
+                        {
+                            <span class="sc-crumb-part">@crumb.Segment</span>
+                        }
+                        else
+                        {
+                            <button type="button" class="sc-crumb-link" title="@crumb.Path"
+                                    @onclick="() => OnAttributeSelected(target)">@crumb.Segment</button>
+                        }
+                        <span class="sc-crumb-sep">`</span>
+                    }
+                    <span class="sc-crumb-leaf">@SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)</span>
+                </span>
                 <MudText Style="font-size:0.6875rem;font-family:var(--font-mono);color:var(--text-faint);">
                     #@ActiveTab.Obj.Dbref
                 </MudText>
@@ -272,7 +330,7 @@
                     var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
                     <div class="sc-tab @(idx == _tabs.ActiveIndex ? "sc-tab--on" : "")">
                         <button type="button" class="sc-tab-label" title="@reference"
-                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/</span>@tab.Attr.Name</button>
+                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@TabBranch(tab)</span>@SoftcodeAttributeTree.Segment(tab.Attr.Name)</button>
                         @if (tab.IsDirty)
                         {
                             @* role="img" + aria-label, not aria-hidden: the dot is the only thing
@@ -406,6 +464,59 @@
     private MobilePane _mobilePane = MobilePane.Objects;
 
     private string _attrSearch = string.Empty;
+
+    // The selected object's attributes arranged by name, rebuilt only when a read replaces them.
+    private List<MushAttribute>? _treeSource;
+    private IReadOnlyList<SoftcodeAttributeNode> _attributeTree = [];
+
+    private IReadOnlyList<SoftcodeAttributeNode> AttributeTree
+    {
+        get
+        {
+            var source = _selectedObject?.Attributes;
+            if (!ReferenceEquals(source, _treeSource))
+            {
+                _treeSource = source;
+                _attributeTree = source is null ? [] : SoftcodeAttributeTree.Build(source);
+            }
+
+            return _attributeTree;
+        }
+    }
+
+    // Branches shown open in the attribute pane. Every branch starts folded, so a large object
+    // reads as its top level first; opening an attribute unfolds the branches above it.
+    private readonly HashSet<string> _expandedBranches = new(StringComparer.OrdinalIgnoreCase);
+
+    private void ToggleBranch(string path)
+    {
+        if (!_expandedBranches.Remove(path))
+            _expandedBranches.Add(path);
+    }
+
+    private void RevealInTree(SoftcodeTab tab)
+    {
+        if (_selectedObject?.Dbref != tab.Obj.Dbref) return;
+        foreach (var ancestor in SoftcodeAttributeTree.Ancestors(tab.Attr.Name))
+            _expandedBranches.Add(ancestor);
+    }
+
+    /// <summary>The branches above <paramref name="tab"/>'s attribute, each with the attribute to open for it where the selected object has one.</summary>
+    private IEnumerable<(string Path, string Segment, MushAttribute? Attribute)> Breadcrumbs(SoftcodeTab tab)
+    {
+        var attributes = _selectedObject?.Dbref == tab.Obj.Dbref ? _selectedObject.Attributes : [];
+        return SoftcodeAttributeTree.Ancestors(tab.Attr.Name).Select(path => (
+            path,
+            SoftcodeAttributeTree.Segment(path),
+            attributes.FirstOrDefault(a => string.Equals(a.Name, path, StringComparison.OrdinalIgnoreCase))));
+    }
+
+    /// <summary>The branch part of a tab's attribute name, backtick included: <c>FOO`</c> for <c>FOO`BAR</c>.</summary>
+    private static string TabBranch(SoftcodeTab tab)
+    {
+        var cut = tab.Attr.Name.LastIndexOf(SoftcodeAttributeTree.Separator);
+        return cut < 0 ? string.Empty : tab.Attr.Name[..(cut + 1)];
+    }
 
     private MushObjectType? _createObjectType;
     private string _createObjectName = string.Empty;
@@ -542,6 +653,7 @@
         await CaptureEditorAsync();
 
         var tab = _tabs.Open(_selectedObject, attr);
+        RevealInTree(tab);
         await SetEditorValueAsync(tab.WorkingContent);
 
         // Mobile drill-down: picking an attribute advances to the editor.
@@ -556,7 +668,10 @@
         await CaptureEditorAsync();
         _tabs.Switch(idx);
         if (ActiveTab is not null)
+        {
+            RevealInTree(ActiveTab);
             await SetEditorValueAsync(ActiveTab.WorkingContent);
+        }
         StateHasChanged();
     }
 
@@ -600,6 +715,10 @@
             switch (result)
             {
                 case MushObject obj:
+                    // A different object's branches share nothing with this one's; a re-read of
+                    // the same object keeps what the reader had unfolded.
+                    if (_selectedObject?.Dbref != obj.Dbref)
+                        _expandedBranches.Clear();
                     _selectedObject = obj;
                     // Mobile drill-down: picking an object advances to its attributes.
                     if (advanceMobilePane)

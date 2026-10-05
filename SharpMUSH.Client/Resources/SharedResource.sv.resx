@@ -3514,6 +3514,12 @@
     <value>Stäng {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fäll ut {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fäll ihop {0}</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Rensa terminalen</value>
     <comment>MT</comment>

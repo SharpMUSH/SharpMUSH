@@ -3514,6 +3514,12 @@
     <value>Fechar {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expandir {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Recolher {0}</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Limpar terminal</value>
     <comment>MT</comment>

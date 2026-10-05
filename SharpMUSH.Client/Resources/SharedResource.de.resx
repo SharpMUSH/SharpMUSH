@@ -3514,6 +3514,12 @@
     <value>{0} schließen</value>
     <comment>MT — German puts the infinitive last, so the reference leads.</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} aufklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} zuklappen</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal leeren</value>
     <comment>MT</comment>

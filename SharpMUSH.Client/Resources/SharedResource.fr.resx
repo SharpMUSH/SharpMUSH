@@ -1034,6 +1034,12 @@
     <value>Fermer {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Déplier {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Replier {0}</value>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Sélectionnez un objet.</value>
   </data>

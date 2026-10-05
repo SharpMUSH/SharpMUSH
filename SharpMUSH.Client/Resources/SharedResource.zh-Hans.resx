@@ -3514,6 +3514,12 @@
     <value>关闭 {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>展开 {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>折叠 {0}</value>
+  </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>清除终端</value>
     <comment>MT</comment>
