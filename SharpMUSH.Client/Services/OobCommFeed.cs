@@ -228,7 +228,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
 			? await server.ConversationRecallAsync(others, HistoryLimit, seen)
 			: await server.ConversationRecallAsync(others, 0);
-		if (generation != _generation || pulled is not PageRecall recall) return;
+		if (generation != _generation) return;
+		if (pulled is not PageRecall recall)
+		{
+			// The next list lists the conversations again and pulls those still behind, this one among them.
+			_conversationsListed = false;
+			return;
+		}
 
 		if (!recall.Logging)
 		{
@@ -334,6 +340,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		{
 			if (_drops != _resyncedDrops)
 			{
+				// Every channel counts as unpulled again, and is marked pulled only by a pull that answers, so a
+				// pull that fails now is tried again on the next list.
+				_pulled.Clear();
 				_conversationsListed = false;
 				_sync = RefreshAsync(_server, viewer, _generation, _channels.Select(channel => channel.Name).ToArray(),
 					_drops);

@@ -124,6 +124,32 @@ public class OobCommFeedHistoryTests
 		await Assert.That(history.Recalled.Count).IsEqualTo(2).Because("that drop is covered");
 	}
 
+	/// <summary>A pull that fails after a drop is tried again on the next list, not taken as covered.</summary>
+	[Test]
+	public async Task A_failed_pull_after_a_drop_is_tried_again()
+	{
+		var store = new OobChannelStore();
+		var history = new FakeCommHistory { Markers = Markers(publicId: 1) };
+		var connection = Substitute.For<ITerminalService>();
+		using var feed = new OobCommFeed(store, history: history, connection: connection);
+		history.Recall["Public"] = [Pulled(1, "one")];
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		connection.ConnectionStateChanged += Raise.Event<Action<bool>>(false);
+		history.Recall["Public"].Add(Pulled(2, "missed"));
+		history.FailRecalls = 1;
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+		await Assert.That(feed.Messages("Public").Select(m => m.Text)).IsEquivalentTo(new[] { "one" });
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(feed.Messages("Public").Select(m => m.Text)).IsEquivalentTo(new[] { "one", "missed" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	/// <summary>With no marker, the whole recall buffer is history, past the lines a channel usually keeps.</summary>
 	[Test]
 	public async Task Without_a_marker_the_whole_buffer_is_pulled()
