@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -107,7 +108,7 @@ public class PennMUSHImportObjectFieldsTests
 		await Assert.That(await FlagNamesAsync(world, "Alice")).IsEquivalentTo(["ENTER_OK", "ANSI"]);
 
 		var bob = await FindAsync(world, "Bob");
-		var powers = await bob.Object().Powers.Value.Select(p => p.Name).ToListAsync();
+		var powers = (await bob.Object().ReadPowersAsync(CancellationToken.None)).Select(p => p.Name).ToList();
 		await Assert.That(powers).IsEquivalentTo(["See_All", "Quotas"]);
 
 		await Assert.That(await FlagNamesAsync(world, "Fields Hall")).IsEquivalentTo(["UNINSPECTED"]);

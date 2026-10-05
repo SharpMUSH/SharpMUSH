@@ -32,7 +32,7 @@ public class LockNormalizationTests
 	[Test]
 	[Arguments("role^Wizard", "ROLE^wizard")]
 	[Arguments("perm^Game.See_All", "PERM^game.see_all")]
-	[Arguments("ROLE^moderator|!PERM^wiki.edit", "ROLE^moderator|!PERM^wiki.edit")]
+	[Arguments("ROLE^moderator|!PERM^wiki.edit", "ROLE^moderator | !PERM^wiki.edit")]
 	public async Task NormalizeLowercasesRoleAndPermissionKeys(string expression, string expected)
 		=> await Assert.That(BooleanParser.Normalize(expression)).IsEqualTo(expected);
 

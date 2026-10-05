@@ -202,15 +202,24 @@ public class RoomContentsHandlerReferenceTests
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		var thingName = $"Probe{token}";
+		var otherName = $"Other{token}";
+		var created = new List<string>();
 		try
 		{
 			// The previous tests prove the handler fires with the right room/cause, but not that
 			// the v1 idioms (json_array + iter + filter + helper rows) actually produce VALID JSON for
 			// the room's occupants. This exercises exactly that, with the 1.0 row shape.
 
-			// A uniquely-named thing dropped into God's room becomes a who-list occupant.
-			await Cmd($"@create {thingName}");
-			await Cmd($"drop {thingName}");
+			// A room of its own: God's room collects every player the session creates, and a row per
+			// occupant there runs past the function invocation limit.
+			var room = await Build($"dig(RcV1Room{token})");
+			created.Add(room);
+			var thing = await Build($"create({thingName})");
+			created.Add(thing);
+			var other = await Build($"create({otherName})");
+			created.Add(other);
+			await Cmd($"@tel {thing}={room}");
+			await Cmd($"@tel {other}={room}");
 
 			// Install the v1 helpers under scratch names, plus a handler that records the
 			// room.contents payload (json_array of per-occupant rows) into LAST_PAYLOAD — oob() needs
@@ -219,7 +228,6 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd("&FN`V1ROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
 			await Cmd("&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`V1ROW,itext(0)),%b,|),|))");
 
-			var room = await Eval("loc(#1)");
 			await Trigger(room, "move-in");
 
 			// The core assertion the earlier tests missed: the handler emits VALID JSON.
@@ -227,15 +235,17 @@ public class RoomContentsHandlerReferenceTests
 			var one = "1";
 			await Assert.That(valid).IsEqualTo(one);
 
-			// And the who list is built from the real occupants: it contains the unique thing and God.
+			// And the who list is built from the real occupants.
 			var payload = await Eval("get(#9/LAST_PAYLOAD)");
 			await Assert.That(payload).Contains(thingName);
-			await Assert.That(payload).Contains("\"dbref\":\"#1\"");
+			await Assert.That(payload).Contains(otherName);
+			await Assert.That(payload).Contains($"\"dbref\":\"{thing}\"");
 		}
 		finally
 		{
 			await RestorePackage();
-			await Cmd($"@dest/override {thingName}");
+			foreach (var dbref in created)
+				await Cmd($"@dest/override {dbref}");
 		}
 	}
 

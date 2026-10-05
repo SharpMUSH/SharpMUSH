@@ -33,7 +33,15 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 
 	private Task<string> AsWizard(string expression) => EvalAs(_wizard.DbRef, expression);
 
-	private Task<string> As(string command) => CmdAs(_wizard.DbRef, _wizard.Handle, command);
+	private Task<string> As(string command) => Heard(_wizard, command);
+
+	/// <summary>Runs a command and returns what the executor was told, one line per notification.</summary>
+	private async Task<string> Heard(TestIsolationHelpers.TestPlayer who, string command)
+	{
+		var before = WebAppFactoryArg.Notifications.CountFor(who.DbRef);
+		await CmdAs(who.DbRef, who.Handle, command);
+		return string.Join("\n", WebAppFactoryArg.Notifications.For(who.DbRef).Skip(before));
+	}
 
 	private string Target => $"#{_target.DbRef.Number}";
 
@@ -42,7 +50,8 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	[Arguments("ROYALTY", "r", "royalty")]
 	public async Task RoleFlagIsTheRole(string flag, string letter, string role)
 	{
-		await As($"@set {Target}={flag}");
+		// As in PennMUSH, only God makes a player a wizard: the wizard role is not below a wizard's own.
+		await Cmd($"@set {Target}={flag}");
 		await Assert.That(await AsWizard($"hasflag({Target},{flag})")).IsEqualTo("1");
 		await Assert.That(await AsWizard($"hasrole({Target},{role})")).IsEqualTo("1");
 		await Assert.That(await AsWizard($"strmatch(flags({Target}),*{letter}*)")).IsEqualTo("1");
@@ -51,7 +60,7 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 		await Assert.That(await AsWizard($"member(lsearch(all,lflags,{flag}),{Target})")).IsNotEqualTo("0");
 		await Assert.That(await As($"examine {Target}")).Contains($"Roles: {role}");
 
-		await As($"@set {Target}=!{flag}");
+		await Cmd($"@set {Target}=!{flag}");
 		await Assert.That(await AsWizard($"hasflag({Target},{flag})")).IsEqualTo("0");
 		await Assert.That(await AsWizard($"hasrole({Target},{role})")).IsEqualTo("0");
 		await Assert.That(await AsWizard($"testlock(FLAG^{flag},{Target})")).IsEqualTo("0");
@@ -65,8 +74,8 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	[Arguments("Guest", "game.guest")]
 	public async Task PowerIsAPermission(string power, string scope)
 	{
-		await As($"@power {Target}={power}");
-		await Assert.That(await AsWizard($"haspower({Target},{power})")).IsEqualTo("1");
+		var set = await As($"@power {Target}={power}");
+		await Assert.That(await AsWizard($"haspower({Target},{power})")).IsEqualTo("1").Because(set);
 		await Assert.That(await AsWizard($"permission({Target},{scope})")).IsEqualTo("1");
 		await Assert.That(await AsWizard($"testlock(POWER^{power},{Target})")).IsEqualTo("1");
 		await Assert.That(await AsWizard($"testlock(PERM^{scope},{Target})")).IsEqualTo("1");
@@ -115,9 +124,19 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task WizardCannotMakeAnotherPlayerAWizard()
+	{
+		await Assert.That(await As($"@set {Target}=WIZARD")).Contains("Permission denied");
+		await Assert.That(await AsWizard($"hasflag({Target},WIZARD)")).IsEqualTo("0");
+		await Assert.That(await As($"@set {Target}=ROYALTY")).DoesNotContain("Permission denied");
+		await Assert.That(await AsWizard($"hasflag({Target},ROYALTY)")).IsEqualTo("1");
+		await As($"@set {Target}=!ROYALTY");
+	}
+
+	[Test]
 	public async Task MortalCannotMakeAWizard()
 	{
-		var output = await CmdAs(_target.DbRef, _target.Handle, $"@set {_target.DbRef}=WIZARD");
+		var output = await Heard(_target, $"@set {Target}=WIZARD");
 		await Assert.That(output).Contains("Permission denied");
 		await Assert.That(await AsWizard($"hasflag({Target},WIZARD)")).IsEqualTo("0");
 	}
