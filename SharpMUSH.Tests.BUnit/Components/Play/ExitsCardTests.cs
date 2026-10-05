@@ -184,6 +184,27 @@ public class ExitsCardTests : BunitContext
 	}
 
 	[Test]
+	public async Task AnExit_NamesItsDestination_WhenItsOwnNameDoesNot()
+	{
+		// Grave: the room on the other side should be readable in the list, not only on hover.
+		var cut = RenderExits([Out, Row, Customs]);
+		await Assert.That(Tile(cut, "Out").QuerySelector(".exit-dest-name")!.TextContent).IsEqualTo("Salt Market");
+		await Assert.That(Tile(cut, "Harbour Row").QuerySelector(".exit-dest")).IsNull()
+			.Because("the exit's name already says where it goes");
+		await Assert.That(Tile(cut, "Customs House").QuerySelector(".exit-dest")).IsNull()
+			.Because("a row without a destination names none");
+	}
+
+	[Test]
+	public async Task Rows_NameTheDestination_AboveTheArea()
+	{
+		var outward = Out with { Dest = Out.Dest! with { Area = "Harbour Ward" } };
+		var cut = RenderExits([outward], rows: true);
+		await Assert.That(Tile(cut, "Out").QuerySelector(".exit-dest-name")!.TextContent).IsEqualTo("Salt Market");
+		await Assert.That(Tile(cut, "Out").QuerySelector(".exit-sub")!.TextContent).IsEqualTo("Harbour Ward");
+	}
+
+	[Test]
 	public async Task NoExits_SaysSo()
 	{
 		var cut = RenderExits([]);
