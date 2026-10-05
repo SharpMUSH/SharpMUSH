@@ -97,7 +97,15 @@ try
 			}));
 
 	Log.Information("Language server started successfully");
+
+	// VSTHRD003 fires because WaitForExit is a Task this method did not start: it is the LSP
+	// host's lifetime task, created by LanguageServer.From above and owned by OmniSharp.
+	// Awaiting it is how the entry point blocks until the client disconnects. The deadlock the
+	// rule guards against needs a SynchronizationContext that the awaited work has to get back
+	// onto; this is a console host, which has none, and nothing here uses JoinableTaskFactory.
+#pragma warning disable VSTHRD003
 	await server.WaitForExit;
+#pragma warning restore VSTHRD003
 }
 catch (Exception ex)
 {
