@@ -31,8 +31,7 @@ public class NavMenuTests : MudBlazorTestContext
 		var cut = RenderCollapsed();
 
 		// Core links are present but render as icons only (no text label) when collapsed.
-		// (Scope the Home link to the nav list — the logo also points at "/".)
-		await Assert.That(cut.Find("a.phosphor-nav-link[href='/']").TextContent.Trim()).IsEmpty();
+		await Assert.That(cut.Find("a.phosphor-nav-link[href='/wiki']").TextContent.Trim()).IsEmpty();
 	}
 
 	[Test]
@@ -50,8 +49,9 @@ public class NavMenuTests : MudBlazorTestContext
 		var cut = RenderExpanded();
 
 		// The always-visible (ungated, non-character-scoped) destinations.
-		// (The Home nav link is distinct from the logo, which also links to "/".)
-		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/']").Count).IsEqualTo(1);
+		// The logo is the only link home; there is no separate Home item.
+		await Assert.That(cut.FindAll("a[href='/']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/']").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/wiki']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/characters']").Count).IsEqualTo(1);
@@ -81,10 +81,11 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task Expanded_HomeLinkText_IsCorrect()
+	public async Task Logo_IsTheHomeLink()
 	{
 		var cut = RenderExpanded();
-		await Assert.That(cut.Find("a.phosphor-nav-link[href='/']").TextContent).Contains("Home");
+		var logo = cut.Find("a.phosphor-logo[href='/']");
+		await Assert.That(logo.GetAttribute("title")).Contains("Home");
 	}
 
 	[Test]
