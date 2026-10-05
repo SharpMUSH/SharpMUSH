@@ -35,6 +35,7 @@ public class SetupController(
 	SitelockGuard sitelockGuard,
 	GameFeatureService features,
 	HandlerSetupService handlers,
+	StarterWikiService starterWiki,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -115,6 +116,20 @@ public class SetupController(
 			Error<string> error => Conflict(error.Value),
 		};
 
+	/// <summary>
+	/// Writes the starter wiki pages the game does not have yet: Getting Started, Theme, Setting, Policies and the
+	/// categories that file them. Pages the game already has are left as they are. 409 naming the pages that could
+	/// not be written; the others still were.
+	/// </summary>
+	[HttpPost("wizard/starter-wiki")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> ApplyStarterWiki(CancellationToken cancellationToken)
+		=> await starterWiki.ApplyAsync() switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+
 	/// <summary>Closes the wizard. What it set up stays as it is.</summary>
 	[HttpPost("wizard/finish")]
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
@@ -126,7 +141,7 @@ public class SetupController(
 
 	private async Task<SetupWizardResponse> WizardAsync(CancellationToken cancellationToken)
 		=> new(await features.WizardPendingAsync(), await handlers.HandlersAsync(cancellationToken),
-			await features.PackagesAsync());
+			await features.PackagesAsync(), await starterWiki.AppliedAsync());
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

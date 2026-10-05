@@ -21,18 +21,8 @@
       "lookup": "@role assigning"
     },
     {
-      "id": "role-overrides",
-      "heading": "Overrides",
-      "lookup": "@role overrides"
-    },
-    {
-      "id": "role-custom",
-      "heading": "Custom permissions",
-      "lookup": "@role define"
-    },
-    {
       "id": "role-categories",
-      "heading": "Categories",
+      "heading": "Role categories",
       "lookup": "@role categories"
     },
     {
@@ -43,7 +33,7 @@
   ],
   "redirects": {
     "@role2": "@role editing",
-    "@role3": "@role overrides"
+    "@role3": "@role assigning"
   }
 }
 -->
@@ -52,37 +42,32 @@
 `@role[/list]`<br>
 `@role[/info] <role>`<br>
 `@role/player [<object>]`<br>
-`@role/scopes`<br>
-`@role/categories`<br>
 `@role/create <role>=<category>[/<display name>]`<br>
 `@role/delete <role>`<br>
 `@role/rename <role>=<display name>`<br>
 `@role/color <role>=<#rrggbb|none>`<br>
 `@role/priority <role>=<number>`<br>
-`@role/category <role or custom permission>=<category>`<br>
+`@role/category <role>=<category>`<br>
 `@role/allow <role>=<permission> [<permission> ...]`<br>
 `@role/deny <role>=<permission> [<permission> ...]`<br>
 `@role/clear <role>=<permission> [<permission> ...]`<br>
 `@role/assign[/account] <object>=<role>`<br>
 `@role/unassign[/account] <object>=<role>`<br>
-`@role/allow/object <object>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
-`@role/allow/account <player>=<permission> [<permission> ...]` (and `/deny`, `/clear`)<br>
-`@role/define <permission>=<category>[/<description>]`<br>
-`@role/undefine <permission>`<br>
-`@role/category/create[/permission] <category>=<description>`<br>
-`@role/category/describe[/permission] <category>=<description>`<br>
-`@role/category/rename[/permission] <category>=<new name>`<br>
-`@role/category/delete[/permission] <category>`
+`@role/categories`<br>
+`@role/category/create <category>=<description>`<br>
+`@role/category/describe <category>=<description>`<br>
+`@role/category/rename <category>=<new name>`<br>
+`@role/category/delete <category>`
 
-@role shows and manages roles: named sets of permissions that decide what an object may do, in the game and in the web portal. See [roles] for how roles combine.
+@role shows and manages roles: named sets of permissions that decide what an object may do, in the game and in the web portal. See [roles] for how roles combine. The permissions themselves, the game's own permissions and overrides on one object or account are [@permission].
 
 A role is named by its short name (`moderator`), which is 1 to 32 lowercase letters, digits, `-` and `_`. Its display name, category, colour and priority can change; its short name cannot. A display name is up to 32 characters a player name may use.
 
-Every role is in a role category and every custom permission in a permission category; the two lists are separate, and a category must exist before anything goes in it (see [@role categories]). The portal's Roles page groups both by category. The system roles start in `System`, and the starter roles in `Staff`.
+Every role is in a role category, which must exist before a role goes in it (see [@role categories]). The portal's Roles page groups roles by category. The system roles start in `System`, and the starter roles in `Staff`.
 
 ## Viewing roles
 
-`@role` and `@role/list` list every role, highest priority first, with its category. `@role <role>` shows one role: its category, priority, colour, and what it allows and denies. `@role/scopes` lists every permission, with the narrower permissions each umbrella permission covers, and then the game's custom permissions by category.
+`@role` and `@role/list` list every role, highest priority first, with its category. `@role <role>` shows one role: its category, priority, colour, and what it allows and denies. `@permission` lists the permissions a role can allow.
 
 `@role/player` shows your own roles and where each comes from, the overrides on you and on your account, and the permissions you hold and lack. `@role/player <object>` shows another object's, and needs the `players.view` or `roles.admin` permission, or that you may examine the object. `examine` also shows an object's roles and overrides.
 
@@ -120,58 +105,24 @@ Examples:
 @role/unassign Ariel=moderator
 ```
 
-## Overrides
+## Role categories
 
-An override sets one permission on one holder, and beats every role that holder has. `@role/deny/object Twink=wiki.edit` takes wiki editing away from that character even though the `player` role allows it, and `@role/allow/object Ariel=wiki.delete` grants it without a role. Use `/account` to set it on the player's account instead, so it applies to all their characters. `@role/clear/object` and `@role/clear/account` remove an override.
+Each role category has a description of up to 200 characters. A new game has `System`, for the system roles, and `Staff`. `@role/categories` lists them, with how many roles each holds and its description. Custom permissions have a category list of their own; see [@permission categories].
 
-When both are set, the object's override beats the account's. `@power <object>=See_All` is an Allow override on `game.see_all`, and `@power <object>=!See_All` clears it.
+`@role/category/create <category>=<description>` makes one. A name is 1 to 32 characters a player name may use, without `/`; `valid(rolecategory, <name>)` checks one. Names are matched without regard to case. `@role/create` and `@role/category <role>` refuse a category that does not exist, with a reminder to create it first.
 
-An override cannot touch `administrator`, and nothing overrides a role that allows `administrator`.
-
-Examples:
-```sharp
-@role/deny/object Twink=wiki.edit media.upload
-@role/clear/object Twink=wiki.edit
-@role/allow/account Ariel=wiki.delete
-```
-
-## Custom permissions
-
-A game can add permissions of its own for its softcode to check. `@role/define scene.close=Staff/Finish any scene` defines `scene.close` in the `Staff` category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,scene.close)` or locks with `PERM^scene.close`, and `@command/restrict` and `@function/restrict` accept it.
-
-A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its category and description; `@role/category <permission>=<category>` changes only the category.
-
-`@role/undefine <permission>` removes it, and every role and override that set it. It needs the right to grant the permission.
-
-A new custom permission is held only by #1 and holders of `administrator` until a role or override allows it. A holder of `game.wizard` may allow any custom permission.
-
-Examples:
-```sharp
-@role/define scene.close=Staff/Finish any scene
-@role/allow helper=scene.close
-think permission(*Ariel,scene.close)
-```
-
-## Categories
-
-Roles and custom permissions have separate lists of categories. Each category has a description of up to 200 characters. A new game has the role categories `System`, for the system roles, and `Staff`, and the permission category `Staff`. `@role/categories` lists both, with how many roles or permissions each category holds and its description.
-
-`@role/category/create <category>=<description>` makes a role category, and `@role/category/create/permission` a permission category. A name is 1 to 32 characters a player name may use, without `/`; `valid(rolecategory, <name>)` checks one. Names are matched without regard to case, and the same name may be in both lists. `@role/create` and `@role/category <role>` refuse a role category that does not exist, and `@role/define` and `@role/category <permission>` a permission category, with a reminder to create it first.
-
-`@role/category/describe` changes the description, and `@role/category/rename` the name, taking everything in the category along. `@role/category/delete` removes an empty category; move what is in it elsewhere first. Add `/permission` to each to act on a permission category. All of these need the `roles.admin` permission.
+`@role/category/describe` changes the description, and `@role/category/rename` the name, taking every role in it along. `@role/category/delete` removes an empty category; move its roles elsewhere first. All of these need the `roles.admin` permission.
 
 Examples:
 ```sharp
 @role/category/create Scenes=People who run and close scenes
 @role/create closer=Scenes/Scene closer
-@role/category/create/permission Scenes=Permissions scene softcode checks
-@role/define scene.close=Scenes/Finish any scene
 @role/category/rename Scenes=Scene staff
 ```
 
 ## Who may change what
 
-Every change needs the `roles.admin` permission, and follows Discord's role hierarchy:
+Every change, here and with [@permission], needs the `roles.admin` permission, and follows Discord's role hierarchy:
 
 - You can create, edit, delete, assign or unassign only roles whose priority is below your own highest role.
 - You can change the roles and overrides of an object or account only when its highest role is below yours. You cannot change your own, except that a holder of `game.wizard` may set or clear power permissions (`game.see_all` and the like) on itself, as a PennMUSH wizard may `@power` itself.
@@ -183,6 +134,7 @@ Player #1 is exempt from all of these. Role priority decides only who may manage
 
 **See Also:**
 - [roles]
+- [@permission]
 - [ROLES()]
 - [HASROLE()]
 - [PERMISSION()]

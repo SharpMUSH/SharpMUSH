@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Egna behörigheter är sådana som ditt spel definierar för sin egen softcode, till exempel scene.close. Tillåt en i en roll som vilken behörighet som helst; softcode kontrollerar den med permission(%#,scene.close) eller ett PERM^scene.close-lås. I spelet: @role/define.</value>
+    <value>Egna behörigheter är sådana som ditt spel definierar för sin egen softcode, till exempel scene.close. Tillåt en i en roll som vilken behörighet som helst; softcode kontrollerar den med permission(%#,scene.close) eller ett PERM^scene.close-lås. I spelet: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Roller och egna behörigheter har var sin lista med kategorier, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category och @role/category/.../permission.</value>
+    <value>Roller och egna behörigheter har var sin lista med kategorier, och den här sidan grupperar dem efter den. Skapa en kategori innan du lägger något i den. En kategori som fortfarande innehåller något kan inte tas bort. I spelet: @role/category och @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Lägg till attribut</value>
     <comment>MT — corpus term 'attribut'.</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tomt)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandoutlösare</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Stäng {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Fäll ut {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Fäll ihop {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Rensa terminalen</value>
@@ -3774,13 +3776,8 @@
     <value>Softcode-redigerare</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testa</value>
-    <comment>MT — imperative, assumed a button.</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testa — evaluera utan att spara</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kör det sparade attributet med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>osparat</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scen</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du tittar på den här scenen. Gå med för att posera här.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du har inte gått med i den här scenen än. Gå med för att posera här.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Gå med i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Spelet lät dig inte gå med i den här scenen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

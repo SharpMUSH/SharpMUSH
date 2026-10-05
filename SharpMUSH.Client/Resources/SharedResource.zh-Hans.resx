@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@role/define。</value>
+    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@permission/define。</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @role/category/.../permission。</value>
+    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @permission/category。</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>添加属性</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>（空）</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>命令触发器</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>关闭 {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>展开 {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>折叠 {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>清除终端</value>
@@ -3774,13 +3776,8 @@
     <value>Softcode 编辑器</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>测试</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>测试 — 不保存直接求值</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — 用 u() 运行已保存的属性</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>未保存</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>场景中</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>你正在观看此场景。加入后即可在此发表姿态。</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>你尚未加入此场景。加入后即可在此发表姿态。</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>加入场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>游戏未允许你加入此场景。</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

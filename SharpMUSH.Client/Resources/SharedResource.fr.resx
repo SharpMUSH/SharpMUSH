@@ -1034,6 +1034,12 @@
     <value>Fermer {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Déplier {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Replier {0}</value>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Sélectionnez un objet.</value>
   </data>
@@ -1049,11 +1055,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>Aucun attribut sélectionné</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Tester</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Tester — évaluer sans enregistrer</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — exécuter l'attribut enregistré avec u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>
@@ -1066,9 +1069,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(aucune sortie)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vide)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Déclencheur de commande</value>
@@ -1892,7 +1892,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Les permissions personnalisées sont celles que votre jeu définit pour son propre softcode, comme scene.close. Autorisez-en une sur un rôle comme toute autre permission ; le softcode la vérifie avec permission(%#,scene.close) ou un verrou PERM^scene.close. En jeu : @role/define.</value>
+    <value>Les permissions personnalisées sont celles que votre jeu définit pour son propre softcode, comme scene.close. Autorisez-en une sur un rôle comme toute autre permission ; le softcode la vérifie avec permission(%#,scene.close) ou un verrou PERM^scene.close. En jeu : @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -1916,7 +1916,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Les rôles et les permissions personnalisées ont chacun leur propre liste de catégories, selon laquelle cette page les regroupe. Créez une catégorie avant d’y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category et @role/category/.../permission.</value>
+    <value>Les rôles et les permissions personnalisées ont chacun leur propre liste de catégories, selon laquelle cette page les regroupe. Créez une catégorie avant d’y placer quoi que ce soit. Une catégorie qui contient encore quelque chose ne peut pas être supprimée. En jeu : @role/category et @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -4401,8 +4401,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En scène</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Vous regardez cette scène. Rejoignez-la pour poser ici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Vous n'avez pas encore rejoint cette scène. Rejoignez-la pour poser ici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -4411,6 +4411,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Le jeu ne vous a pas laissé rejoindre cette scène.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

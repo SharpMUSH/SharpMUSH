@@ -46,26 +46,51 @@ public sealed class FakeCommHistory : ICommHistory
 	/// <summary>How many lines each conversation pull asked for.</summary>
 	public List<int> PageRecallLines { get; } = [];
 
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines)
+	/// <summary>The marker id each conversation pull reached back to, or null.</summary>
+	public List<long?> PageRecallAfter { get; } = [];
+
+	/// <summary>Answers as the server does: the last <paramref name="lines"/> (all for 0), reaching back to the page after <paramref name="after"/>.</summary>
+	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null)
 	{
 		PageRecallLines.Add(lines);
+		PageRecallAfter.Add(after);
 		var key = string.Join(' ', with.Order(StringComparer.Ordinal));
 		PageRecalled.Add(key);
-		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging,
-			PageLogging && PageLog.TryGetValue(key, out var logged) ? logged.ToArray() : []));
+		if (FailRecalls-- > 0)
+			return Task.FromResult<ApiResult<PageRecall>>(new ApiFailure(ApiFailureKind.Transport, "connection dropped"));
+		if (!PageLogging || !PageLog.TryGetValue(key, out var logged))
+			return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(PageLogging, []));
+
+		var from = lines == 0 ? 0 : Math.Max(0, logged.Count - lines);
+		var unseen = after is { } seen ? logged.FindIndex(line => line.Id > seen) : -1;
+		var start = unseen < 0 ? from : Math.Min(unseen, from);
+		return Task.FromResult<ApiResult<PageRecall>>(new PageRecall(true, logged.Skip(start).ToArray()));
 	}
 
-	/// <summary>The line limit each channel recall asked for.</summary>
+	/// <summary>The line limit each channel recall asked for (0 for the whole buffer).</summary>
 	public List<int> RecallLines { get; } = [];
 
-	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines)
+	/// <summary>The marker id each channel recall reached back to, or null.</summary>
+	public List<long?> RecallAfter { get; } = [];
+
+	/// <summary>Answers as the server does: the last <paramref name="lines"/>, reaching back to the line after <paramref name="after"/>.</summary>
+	/// <summary>How many of the next channel and conversation recalls fail, as a dropped connection or a 5xx would.</summary>
+	public int FailRecalls { get; set; }
+
+	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null)
 	{
 		Recalled.Add(channel);
 		RecallLines.Add(lines);
-		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(
-			Recall.TryGetValue(channel, out var buffer)
-				? buffer.Skip(Math.Max(0, buffer.Count - lines)).ToArray()
-				: new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
+		RecallAfter.Add(after);
+		if (FailRecalls-- > 0)
+			return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(new ApiFailure(ApiFailureKind.Transport, "connection dropped"));
+		if (!Recall.TryGetValue(channel, out var buffer))
+			return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
+
+		var from = lines == 0 ? 0 : Math.Max(0, buffer.Count - lines);
+		var unseen = after is { } seen ? buffer.FindIndex(line => line.Id > seen) : -1;
+		var start = unseen < 0 ? from : Math.Min(unseen, from);
+		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(buffer.Skip(start).ToArray());
 	}
 
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>

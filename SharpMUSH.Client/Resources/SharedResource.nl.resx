@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @role/define.</value>
+    <value>Eigen rechten zijn rechten die je spel definieert voor zijn eigen softcode, zoals scene.close. Sta er een toe op een rol zoals elk ander recht; softcode controleert het met permission(%#,scene.close) of een PERM^scene.close-slot. In het spel: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @role/category/.../permission.</value>
+    <value>Rollen en eigen rechten hebben elk hun eigen lijst met categorieën, en deze pagina groepeert ze daarop. Maak een categorie aan voordat je er iets in plaatst. Een categorie die nog iets bevat, kan niet worden verwijderd. In het spel: @role/category en @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Attribuut toevoegen</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leeg)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Commandotrigger</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} sluiten</value>
     <comment>MT — Dutch puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} uitklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} inklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal wissen</value>
@@ -3774,13 +3776,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evalueren zonder op te slaan</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — het opgeslagen attribuut uitvoeren met u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niet opgeslagen</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In scène</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Je bekijkt deze scène. Doe mee om hier te posen.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Je doet nog niet mee aan deze scène. Doe mee om hier te posen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Meedoen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Het spel liet je niet meedoen aan deze scène.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

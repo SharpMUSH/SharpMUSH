@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @role/define.</value>
+    <value>Пользовательские разрешения — это разрешения, которые игра определяет для собственного softcode, например scene.close. Разрешите его в роли, как любое другое разрешение; softcode проверяет его через permission(%#,scene.close) или замок PERM^scene.close. В игре: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>У ролей и собственных разрешений свои отдельные списки категорий, и эта страница группирует их по ним. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category и @role/category/.../permission.</value>
+    <value>У ролей и собственных разрешений свои отдельные списки категорий, и эта страница группирует их по ним. Создайте категорию, прежде чем что-то в неё помещать. Категорию, в которой ещё что-то есть, удалить нельзя. В игре: @role/category и @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Добавить атрибут</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(пусто)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Триггер команды</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Закрыть {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Развернуть {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Свернуть {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Очистить терминал</value>
@@ -3774,13 +3776,8 @@
     <value>Редактор softcode</value>
     <comment>MT — softcode kept untranslated per the glossary.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Проверить</value>
-    <comment>MT — assumed an imperative button (run/test the code), not the noun "test".</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Проверить — вычислить без сохранения</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — выполнить сохранённый атрибут через u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>не сохранено</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>В сцене</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Вы наблюдаете за этой сценой. Присоединитесь, чтобы позировать здесь.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Вы ещё не присоединились к этой сцене. Присоединитесь, чтобы позировать здесь.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присоединиться</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Игра не позволила вам присоединиться к этой сцене.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

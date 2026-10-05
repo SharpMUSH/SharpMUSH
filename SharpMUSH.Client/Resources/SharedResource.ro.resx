@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Permisiunile personalizate sunt cele pe care jocul le definește pentru propriul softcode, de exemplu scene.close. Permiteți una într-un rol ca pe orice altă permisiune; softcode-ul o verifică cu permission(%#,scene.close) sau un lacăt PERM^scene.close. În joc: @role/define.</value>
+    <value>Permisiunile personalizate sunt cele pe care jocul le definește pentru propriul softcode, de exemplu scene.close. Permiteți una într-un rol ca pe orice altă permisiune; softcode-ul o verifică cu permission(%#,scene.close) sau un lacăt PERM^scene.close. În joc: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Rolurile și permisiunile personalizate au fiecare propria listă de categorii, după care această pagină le grupează. Creează o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category și @role/category/.../permission.</value>
+    <value>Rolurile și permisiunile personalizate au fiecare propria listă de categorii, după care această pagină le grupează. Creează o categorie înainte de a pune ceva în ea. O categorie care încă mai conține ceva nu poate fi ștearsă. În joc: @role/category și @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Adăugare atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(gol)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Declanșator de comandă</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Închide {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Extinde {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Restrânge {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Golire terminal</value>
@@ -3774,13 +3776,8 @@
     <value>Editor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testare</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testare — evaluare fără salvare</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — rulează atributul salvat cu u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nesalvat</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>În scenă</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Urmărești această scenă. Alătură-te pentru a poza aici.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Nu te-ai alăturat încă acestei scene. Alătură-te pentru a poza aici.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Alătură-te scenei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Jocul nu te-a lăsat să te alături acestei scene.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

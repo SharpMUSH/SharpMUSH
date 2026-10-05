@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Egne tillatelser er de spillet ditt definerer for sin egen softcode, for eksempel scene.close. Gi den til en rolle på samme måte som enhver annen tillatelse; softcode sjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @role/define.</value>
+    <value>Egne tillatelser er de spillet ditt definerer for sin egen softcode, for eksempel scene.close. Gi den til en rolle på samme måte som enhver annen tillatelse; softcode sjekker den med permission(%#,scene.close) eller en PERM^scene.close-lås. I spillet: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Roller og egne tillatelser har hver sin liste med kategorier, og denne siden grupperer dem etter den. Opprett en kategori før du legger noe i den. En kategori som fortsatt inneholder noe, kan ikke slettes. I spillet: @role/category og @role/category/.../permission.</value>
+    <value>Roller og egne tillatelser har hver sin liste med kategorier, og denne siden grupperer dem etter den. Opprett en kategori før du legger noe i den. En kategori som fortsatt inneholder noe, kan ikke slettes. I spillet: @role/category og @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Legg til attributt</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tom)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandotrigger</value>
     <comment>MT — $-command attribute kind.</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Lukk {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Utvid {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Skjul {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Tøm terminalen</value>
@@ -3774,13 +3776,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluer uten å lagre</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kjør det lagrede attributtet med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ulagret</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>I scene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du ser på denne scenen. Bli med for å posere her.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du har ikke blitt med i denne scenen ennå. Bli med for å posere her.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Bli med i scenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Spillet lot deg ikke bli med i denne scenen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

@@ -264,7 +264,7 @@ public class RoleManagementServiceTests
 
 		// The lists are separate: a role category does not take a permission.
 		var permission = await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "Scene staff", "");
-		await Assert.That(permission is RoleRefusal { Message: var message } && message.Contains("@role/category/create/permission Scene staff=")).IsTrue();
+		await Assert.That(permission is RoleRefusal { Message: var message } && message.Contains("@permission/category/create Scene staff=")).IsTrue();
 		await Assert.That(await world.Service.CreateCategoryAsync(A("owner"), CategoryKind.Permission, "Scene staff", "Scene permissions") is RoleCategory).IsTrue();
 		await Assert.That(await world.Service.DefinePermissionAsync(A("owner"), "scene.close", "scene staff", "") is CustomPermission { Category: "Scene staff" }).IsTrue();
 	}

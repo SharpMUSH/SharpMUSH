@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @role/define.</value>
+    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @role/category/.../permission.</value>
+    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Dodaj atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(prazno)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Okidač naredbe</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Zatvori {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Sažmi {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Očisti terminal</value>
@@ -3774,13 +3776,8 @@
     <value>Uređivač softcodea</value>
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testiraj</value>
-    <comment>MT — assumed a button that runs a test</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluiraj bez spremanja</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — pokreni spremljeni atribut s u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>U sceni</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Gledate ovu scenu. Pridružite joj se da biste ovdje pozirali.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Još se niste pridružili ovoj sceni. Pridružite joj se da biste ovdje pozirali.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Pridruži se sceni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Igra vam nije dopustila da se pridružite ovoj sceni.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

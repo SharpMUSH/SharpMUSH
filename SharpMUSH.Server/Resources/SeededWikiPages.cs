@@ -14,6 +14,12 @@ namespace SharpMUSH.Server.Resources;
 public static class SeededWikiPages
 {
 	/// <summary>
+	/// <c>Home</c> — the wiki's front page. The starter wiki pages replace it while it is still this text
+	/// (<see cref="Services.StarterWikiService"/>).
+	/// </summary>
+	public static string Home { get; } = Read("home.md");
+
+	/// <summary>
 	/// <c>Help:Markdown Guide</c> — the CommonMark subset and SharpMUSH extensions the wiki
 	/// pipeline supports. Lives at <c>/wiki/help/markdown_guide</c>.
 	/// </summary>

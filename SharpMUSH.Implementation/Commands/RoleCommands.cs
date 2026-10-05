@@ -14,44 +14,35 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	private static readonly string[] RoleOperations =
-		["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "CATEGORY", "CATEGORIES", "DESCRIBE"];
+		["LIST", "INFO", "PLAYER", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "CATEGORY", "CATEGORIES", "DESCRIBE"];
 
-	/// <summary>The operations <c>@role/category/&lt;operation&gt;</c> runs on a category itself.</summary>
+	/// <summary>The operations <c>@role/category/&lt;operation&gt;</c> and <c>@permission/category/&lt;operation&gt;</c> run on a category itself.</summary>
 	private static readonly string[] CategoryOperations = ["CREATE", "DESCRIBE", "RENAME", "DELETE"];
 
 	/// <summary>
-	/// <c>@role</c>: list, inspect and manage roles, who holds them, and per-object or per-account
-	/// overrides. Every change goes through <see cref="IRoleManagementService"/>, the same rules the
+	/// <c>@role</c>: list, inspect and manage roles, what they allow, who holds them, and the role
+	/// categories. Permissions themselves (custom ones, their categories and overrides) are
+	/// <c>@permission</c>. Every change goes through <see cref="IRoleManagementService"/>, the same rules the
 	/// portal applies, with the executor as the actor: an object needs no account to manage roles.
 	/// </summary>
-	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "SCOPES", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "DEFINE", "UNDEFINE", "CATEGORY", "CATEGORIES", "DESCRIBE", "OBJECT", "ACCOUNT", "PERMISSION"],
+	[SharpCommand(Name = "@ROLE", Switches = ["LIST", "INFO", "PLAYER", "CREATE", "DELETE", "RENAME", "COLOR", "PRIORITY", "ALLOW", "DENY", "CLEAR", "ASSIGN", "UNASSIGN", "CATEGORY", "CATEGORIES", "DESCRIBE", "ACCOUNT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["role or object", "value"])]
 	public async ValueTask<Option<CallState>> Role(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var allSwitches = parser.CurrentState.Switches.ToArray();
-		var switches = allSwitches.Where(RoleOperations.Contains).ToArray();
-		var holder = allSwitches.Contains("ACCOUNT") ? RoleHolder.Account
-			: allSwitches.Contains("OBJECT") ? RoleHolder.Object
-			: RoleHolder.Default;
-		var kind = allSwitches.Contains("PERMISSION") ? CategoryKind.Permission : CategoryKind.Role;
+		var switches = CategorySwitches(allSwitches.Where(RoleOperations.Contains).ToArray());
 		var args = parser.CurrentState.Arguments;
 		var left = (args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();
 		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");
 
-		// @role/category/create and friends act on the category itself.
-		if (switches.Length == 2 && switches.Contains("CATEGORY") && switches.FirstOrDefault(CategoryOperations.Contains) is { } onCategory)
-			switches = [$"CATEGORY/{onCategory}"];
-
 		string output;
 		if (switches.Length > 1)
 			output = "Choose one @role operation.";
 		else if (switches.FirstOrDefault() == "DESCRIBE")
-			output = $"Usage: @role/category/describe {RoleUsage("CATEGORY/DESCRIBE")}. See help @role.";
-		else if (allSwitches.Contains("ACCOUNT") && allSwitches.Contains("OBJECT"))
-			output = "Choose /object or /account, not both.";
+			output = $"Usage: @role/category/describe {CategoryUsage("CATEGORY/DESCRIBE")}. See help @role.";
 		else
 		{
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
@@ -59,10 +50,10 @@ public partial class Commands
 			{
 				"LIST" => await RoleListAsync(parser),
 				"INFO" => await RoleInfoAsync(parser, left),
-				"SCOPES" => await RoleScopesAsync(parser),
-				"CATEGORIES" => await RoleCategoriesAsync(parser),
+				"CATEGORIES" => await CategoriesAsync(parser, CategoryKind.Role),
 				"PLAYER" => await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left),
-				_ => await RoleChangeAsync(parser, executor, operation, holder, kind, left, right, hasRight)
+				_ when operation.StartsWith("CATEGORY/") => await CategoryChangeAsync(parser, executor, CategoryKind.Role, operation, left, right, hasRight),
+				_ => await RoleChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight)
 			};
 		}
 
@@ -70,13 +61,11 @@ public partial class Commands
 		return new CallState(output);
 	}
 
-	/// <summary>Who an assignment or override is for: the named role, the object, or its account.</summary>
-	private enum RoleHolder
-	{
-		Default,
-		Object,
-		Account
-	}
+	/// <summary><c>/category/create</c> and friends act on a category itself: the pair becomes one operation, <c>CATEGORY/CREATE</c>.</summary>
+	private static string[] CategorySwitches(string[] switches)
+		=> switches.Length == 2 && switches.Contains("CATEGORY") && switches.FirstOrDefault(CategoryOperations.Contains) is { } onCategory
+			? [$"CATEGORY/{onCategory}"]
+			: switches;
 
 	private static async ValueTask<string> RoleListAsync(IMUSHCodeParser parser)
 	{
@@ -109,43 +98,24 @@ public partial class Commands
 		return output.ToString();
 	}
 
-	private static async ValueTask<string> RoleScopesAsync(IMUSHCodeParser parser)
-	{
-		var output = new StringBuilder("Permissions (an umbrella also covers the scopes listed after it):");
-		foreach (var scope in PortalPermission.AllScopes)
-		{
-			var implied = PortalPermission.ImpliedScopes(scope);
-			output.Append($"\n  {scope}{(implied.Count > 0 ? "  -> " + string.Join(", ", implied) : "")}");
-		}
-
-		var custom = await RoleRegistry(parser).GetCustomPermissionsAsync(ExecutionBudget.CurrentToken);
-		output.Append(custom.Count == 0 ? "\nCustom permissions: none. Add one with @role/define." : "\nCustom permissions, by category:");
-		foreach (var category in custom.GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
-		{
-			output.Append($"\n {category.Key}");
-			foreach (var permission in category)
-				output.Append($"\n  {permission.Scope}{(permission.Description.Length > 0 ? "  " + permission.Description : "")}");
-		}
-		return output.ToString();
-	}
-
-	/// <summary><c>@role/categories</c>: both category lists, what each category holds and its description.</summary>
-	private static async ValueTask<string> RoleCategoriesAsync(IMUSHCodeParser parser)
+	/// <summary><c>@role/categories</c> and <c>@permission/categories</c>: one category list, what each category holds and its description.</summary>
+	private static async ValueTask<string> CategoriesAsync(IMUSHCodeParser parser, CategoryKind kind)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var registry = RoleRegistry(parser);
-		var roles = await registry.GetRolesAsync(ct);
-		var permissions = await registry.GetCustomPermissionsAsync(ct);
+		var members = kind == CategoryKind.Role
+			? (await registry.GetRolesAsync(ct)).Select(r => r.Category).ToArray()
+			: (await registry.GetCustomPermissionsAsync(ct)).Select(p => p.Category).ToArray();
 		var output = new StringBuilder();
-		AppendCategories(output, "Role categories:", await registry.GetCategoriesAsync(CategoryKind.Role, ct),
-			category => Counted(roles.Count(r => string.Equals(r.Category, category, StringComparison.OrdinalIgnoreCase)), "role"),
-			"@role/category/create <name>=<description>");
-		output.Append('\n');
-		AppendCategories(output, "Permission categories:", await registry.GetCategoriesAsync(CategoryKind.Permission, ct),
-			category => Counted(permissions.Count(p => string.Equals(p.Category, category, StringComparison.OrdinalIgnoreCase)), "permission"),
-			"@role/category/create/permission <name>=<description>");
+		AppendCategories(output, kind == CategoryKind.Role ? "Role categories:" : "Permission categories:",
+			await registry.GetCategoriesAsync(kind, ct),
+			category => Counted(members.Count(m => string.Equals(m, category, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
+			$"{CategoryCommand(kind)}/category/create <name>=<description>");
 		return output.ToString();
 	}
+
+	/// <summary>The command that manages the category list <paramref name="kind"/>.</summary>
+	private static string CategoryCommand(CategoryKind kind) => kind == CategoryKind.Role ? "@role" : "@permission";
 
 	private static void AppendCategories(StringBuilder output, string heading, IReadOnlyList<RoleCategory> categories,
 		Func<string, string> held, string create)
@@ -205,10 +175,10 @@ public partial class Commands
 	}
 
 	private async ValueTask<string> RoleChangeAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,
-		RoleHolder holder, CategoryKind kind, string left, string right, bool hasRight)
+		bool onAccount, string left, string right, bool hasRight)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		if (left.Length == 0 || (operation is not ("DELETE" or "UNDEFINE" or "CATEGORY/DELETE") && !hasRight))
+		if (left.Length == 0 || (operation != "DELETE" && !hasRight))
 			return $"Usage: @role/{operation.ToLowerInvariant()} {RoleUsage(operation)}. See help @role.";
 		var management = parser.ServiceProvider.GetRequiredService<IRoleManagementService>();
 		RoleActor actor = executor;
@@ -222,52 +192,9 @@ public partial class Commands
 					role => $"Role {role.Name} ({role.Slug}) created in {role.Category} at priority {role.Priority}. Set what it allows with @role/allow.");
 			case "DELETE":
 				return Done(await management.DeleteRoleAsync(actor, left, ct), _ => $"Role {left} deleted.");
-			case "DEFINE":
-				var (group, description) = CategoryAndRest(right);
-				return await management.DefinePermissionAsync(actor, left, group, description, ct) switch
-				{
-					CustomPermission permission => $"Permission {permission.Scope} defined in {permission.Category}. Allow it on a role with @role/allow <role>={permission.Scope}.",
-					RoleRefusal refusal => refusal.Message
-				};
-			case "CATEGORY/CREATE":
-				return await management.CreateCategoryAsync(actor, kind, left, right, ct) switch
-				{
-					RoleCategory created => kind == CategoryKind.Role
-						? $"Role category {created.Name} created. Put a role in it with @role/category <role>={created.Name}."
-						: $"Permission category {created.Name} created. Put a permission in it with @role/define <permission>={created.Name}/<description>.",
-					RoleRefusal refusal => refusal.Message
-				};
-			case "CATEGORY/DESCRIBE":
-				return await management.DescribeCategoryAsync(actor, kind, left, right, ct) switch
-				{
-					RoleCategory described => $"{Capitalized(Categories.Noun(kind))} {described.Name}: {described.Description}",
-					RoleRefusal refusal => refusal.Message
-				};
-			case "CATEGORY/RENAME":
-				return await management.RenameCategoryAsync(actor, kind, left, right, ct) switch
-				{
-					RoleCategory renamed => $"{Capitalized(Categories.Noun(kind))} {left} is now {renamed.Name}, with everything in it.",
-					RoleRefusal refusal => refusal.Message
-				};
-			case "CATEGORY/DELETE":
-				return Done(await management.DeleteCategoryAsync(actor, kind, left, ct), _ => $"{Capitalized(Categories.Noun(kind))} {left} deleted.");
-			case "CATEGORY" when left.Contains('.'):
-				var scope = left.ToLowerInvariant();
-				if ((await RoleRegistry(parser).GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == scope) is not { } defined)
-					return PortalPermission.IsKnown(scope)
-						? $"{scope} is a built-in permission; its group is fixed."
-						: $"No custom permission named '{scope}'. See @role/scopes.";
-				return await management.DefinePermissionAsync(actor, scope, right, defined.Description, ct) switch
-				{
-					CustomPermission permission => $"Permission {permission.Scope} is now in {permission.Category}.",
-					RoleRefusal refusal => refusal.Message
-				};
 			case "CATEGORY":
 				return Done(await management.EditRoleAsync(actor, left, role => Draft(role) with { Category = right }, ct),
 					role => $"Role {role.Name} is now in {role.Category}.");
-			case "UNDEFINE":
-				return Done(await management.RemovePermissionAsync(actor, left, ct),
-					_ => $"Permission {left.ToLowerInvariant()} removed, with every role and override that set it.");
 			case "RENAME":
 				return Done(await management.EditRoleAsync(actor, left, role => Draft(role) with { Name = right }, ct),
 					role => $"Role {role.Slug} is now named {role.Name}.");
@@ -280,38 +207,18 @@ public partial class Commands
 				return Done(await management.EditRoleAsync(actor, left, role => Draft(role) with { Priority = priority }, ct),
 					role => $"Role {role.Name} is now at priority {role.Priority}.");
 			case "ALLOW" or "DENY" or "CLEAR":
-				var state = operation switch { "ALLOW" => PermissionState.Allow, "DENY" => PermissionState.Deny, _ => PermissionState.Inherit };
-				var scopes = right.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				if (scopes.Length == 0) return "Name at least one permission. See @role/scopes.";
-				var custom = (await RoleRegistry(parser).GetCustomPermissionsAsync(ct)).Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase);
-				if (scopes.FirstOrDefault(s => !PortalPermission.IsKnown(s) && !custom.Contains(s)) is { } unknown)
-					return $"Unknown permission '{unknown}'. See @role/scopes.";
-				var changed = $"{StateWord(state)} {string.Join(", ", scopes)}";
-				return holder switch
-				{
-					RoleHolder.Object => await RoleTargetAsync(parser, executor, left) switch
+				if (await ScopesAsync(parser, right) is not string[] scopes) return await UnknownScopeAsync(parser, right);
+				var state = StateOf(operation);
+				return Done(await management.EditRoleAsync(actor, left, role =>
 					{
-						AnySharpObject target => Done(await management.SetObjectOverridesAsync(actor, target, scopes, state, ct),
-							_ => $"{target.Object().Name}: {changed}."),
-						Error<string> error => error.Value
-					},
-					RoleHolder.Account => await RoleAccountAsync(parser, executor, left) switch
-					{
-						(SharpPlayer player, SharpAccount account) => Done(await management.SetOverridesAsync(actor, account.Id!, scopes, state, ct),
-							_ => $"{player.Object.Name} (account {account.Username}): {changed}."),
-						_ => $"No player named '{left}' with an account."
-					},
-					_ => Done(await management.EditRoleAsync(actor, left, role =>
-						{
-							var permissions = new Dictionary<string, PermissionState>(role.Permissions, StringComparer.OrdinalIgnoreCase);
-							foreach (var scope in scopes) permissions[scope] = state;
-							return Draft(role) with { Permissions = permissions };
-						}, ct),
-						role => $"Role {role.Name}: {changed}.")
-				};
+						var permissions = new Dictionary<string, PermissionState>(role.Permissions, StringComparer.OrdinalIgnoreCase);
+						foreach (var scope in scopes) permissions[scope] = state;
+						return Draft(role) with { Permissions = permissions };
+					}, ct),
+					role => $"Role {role.Name}: {StateWord(state)} {string.Join(", ", scopes)}.");
 			default:
 				var assign = operation == "ASSIGN";
-				if (holder == RoleHolder.Account)
+				if (onAccount)
 				{
 					if (await RoleAccountAsync(parser, executor, left) is not var (player, account))
 						return $"No player named '{left}' with an account.";
@@ -389,16 +296,18 @@ public partial class Commands
 		"RENAME" => "<role>=<name>",
 		"COLOR" => "<role>=<#rrggbb|none>",
 		"PRIORITY" => "<role>=<number>",
-		"ALLOW" or "DENY" or "CLEAR" => "[/object|/account] <role, object or player>=<permission> [<permission> ...]",
+		"ALLOW" or "DENY" or "CLEAR" => "<role>=<permission> [<permission> ...]",
 		"ASSIGN" or "UNASSIGN" => "[/account] <object>=<role>",
 		"CREATE" => "<role>=<category>[/<display name>]",
-		"DEFINE" => "<permission>=<category>[/<description>]",
-		"CATEGORY" => "<role or custom permission>=<category>",
-		"CATEGORY/CREATE" or "CATEGORY/DESCRIBE" => "[/permission] <category>=<description>",
-		"CATEGORY/RENAME" => "[/permission] <category>=<new name>",
-		"CATEGORY/DELETE" => "[/permission] <category>",
-		"UNDEFINE" => "<permission>",
+		"CATEGORY" => "<role>=<category>",
 		_ => "<role>"
+	};
+
+	private static string CategoryUsage(string operation) => operation switch
+	{
+		"CATEGORY/CREATE" or "CATEGORY/DESCRIBE" => "<category>=<description>",
+		"CATEGORY/RENAME" => "<category>=<new name>",
+		_ => "<category>"
 	};
 
 	private static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];

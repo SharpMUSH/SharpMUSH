@@ -21,12 +21,14 @@ namespace SharpMUSH.Server.Controllers;
 /// character.
 ///
 /// Routes:
-///   GET /api/comm/channels/{channel}/recall?lines=N — the channel's recall buffer (the last N lines, or all)
+///   GET /api/comm/channels/{channel}/recall?lines=N&amp;after=ID — the channel's recall buffer (the last N lines, or
+///                                                    all; with after, also every line after that id)
 ///   GET /api/comm/markers                            — the character's read markers
 ///   PUT /api/comm/markers/channels/{channel}         — move a channel's marker on
 ///   PUT /api/comm/markers/conversations              — move a page conversation's marker on
 ///   GET /api/comm/conversations                      — the character's logged page conversations
-///   GET /api/comm/conversations/{key}/recall?lines=N — one of them: its last N logged pages
+///   GET /api/comm/conversations/{key}/recall?lines=N&amp;after=ID — one of them: its last N logged pages (with
+///                                                    after, also every page after that id, within the cap)
 ///
 /// <para>The recall endpoint is <c>@channel/recall</c>'s buffer behind <c>@channel/recall</c>'s gates, both
 /// taken from the command rather than restated: the channel must be one the character may be told exists
@@ -99,10 +101,13 @@ public class CommController(
 	/// The last <paramref name="lines"/> pages (at most <see cref="PageRecallLimit"/>) of the character's own
 	/// conversation with the people <paramref name="key"/> names: their objids, separated by spaces or
 	/// commas, in any order, the character's own ignored (or alone, for pages to themselves). With
-	/// <c>page_log</c> off it answers with no lines and says so.
+	/// <paramref name="after"/>, a read marker's id, it reaches further back when it must, to the first page
+	/// after that id, never past the last <see cref="PageRecallLimit"/>. With <c>page_log</c> off it answers with
+	/// no lines and says so.
 	/// </summary>
 	[HttpGet("conversations/{key}/recall")]
-	public async Task<ActionResult<PageRecall>> ConversationRecall(string key, [FromQuery] int? lines, CancellationToken ct)
+	public async Task<ActionResult<PageRecall>> ConversationRecall(string key, [FromQuery] int? lines,
+		[FromQuery] long? after, CancellationToken ct)
 	{
 		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
 		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
@@ -110,17 +115,27 @@ public class CommController(
 		return ConversationWith(player, key.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries), selfAlone: true) switch
 		{
 			IReadOnlyList<DBRef> with => await ConversationRecallAsync(player, with,
-				lines is null or 0 ? PageRecallLimit : Math.Min(lines.Value, PageRecallLimit), ct),
+				lines is null or 0 ? PageRecallLimit : Math.Min(lines.Value, PageRecallLimit), after, ct),
 			ActionResult refusal => refusal
 		};
 	}
 
 	private async Task<ActionResult<PageRecall>> ConversationRecallAsync(SharpPlayer player, IReadOnlyList<DBRef> with,
-		int lines, CancellationToken ct)
+		int lines, long? after, CancellationToken ct)
 	{
 		if (!PageLogOn) return new PageRecall(false, []);
 
-		var pages = await mediator.Send(new GetPageLogQuery(player.Object.DBRef, with, lines), ct);
+		var pages = await mediator.Send(
+			new GetPageLogQuery(player.Object.DBRef, with, after is null ? lines : PageRecallLimit), ct);
+		if (after is { } seen)
+		{
+			var log = pages.ToList();
+			var unseen = log.FindIndex(page => page.Id > seen);
+			var tail = Math.Max(0, log.Count - lines);
+			var start = unseen < 0 ? tail : Math.Min(unseen, tail);
+			pages = log.GetRange(start, log.Count - start);
+		}
+
 		var handler = await textComposer.HandlerAsync(ct);
 		var recalled = new List<PageRecallLine>(pages.Count);
 		foreach (var page in pages)
@@ -183,26 +198,39 @@ public class CommController(
 		page.Style,
 		page.Timestamp.ToUnixTimeMilliseconds());
 
+	/// <summary>
+	/// The last <paramref name="lines"/> lines of the channel's recall buffer (every line when not given, or 0).
+	/// With <paramref name="after"/>, a read marker's id, it reaches further back when it must, to the first
+	/// line after that id, so a reader coming back gets everything they have not seen that the buffer still holds.
+	/// </summary>
 	[HttpGet("channels/{channel}/recall")]
 	public async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> Recall(string channel, [FromQuery] int? lines,
-		CancellationToken ct)
+		[FromQuery] long? after, CancellationToken ct)
 	{
 		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
 		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
 
 		return await ReadableChannelAsync(executor, channel) switch
 		{
-			SharpChannel found => await RecallAsync(executor, found, lines is null or 0 ? int.MaxValue : lines.Value, ct),
+			SharpChannel found => await RecallAsync(executor, found, lines is null or 0 ? int.MaxValue : lines.Value, after,
+				ct),
 			ActionResult refusal => refusal
 		};
 	}
 
 	private async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(AnySharpObject executor,
-		SharpChannel channel, int lines, CancellationToken ct)
+		SharpChannel channel, int lines, long? after, CancellationToken ct)
 	{
 		var buffered = await mediator
-			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines), ct)
+			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, after is null ? lines : int.MaxValue), ct)
 			.ToListAsync(ct);
+		if (after is { } seen)
+		{
+			var unseen = buffered.FindIndex(line => line.Id > seen);
+			var from = Math.Max(0, buffered.Count - lines);
+			var start = unseen < 0 ? from : Math.Min(unseen, from);
+			buffered = buffered.GetRange(start, buffered.Count - start);
+		}
 		var name = channel.Name.ToPlainText();
 		var handler = await textComposer.HandlerAsync(ct);
 

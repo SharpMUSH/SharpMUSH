@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @role/define.</value>
+    <value>Eigene Berechtigungen legt dein Spiel für seinen eigenen Softcode fest, etwa scene.close. Erlaube eine davon in einer Rolle wie jede andere Berechtigung; Softcode prüft sie mit permission(%#,scene.close) oder einer PERM^scene.close-Sperre. Im Spiel: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Rollen und eigene Berechtigungen haben jeweils eine eigene Liste von Kategorien, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category und @role/category/.../permission.</value>
+    <value>Rollen und eigene Berechtigungen haben jeweils eine eigene Liste von Kategorien, nach der diese Seite sie gruppiert. Lege eine Kategorie an, bevor du etwas hineinlegst. Eine Kategorie, die noch etwas enthält, kann nicht gelöscht werden. Im Spiel: @role/category und @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Attribut hinzufügen</value>
     <comment>MT — attribute inflected as Attribut, matching the existing French "Ajouter un attribut".</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leer)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Befehlsauslöser</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} schließen</value>
     <comment>MT — German puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} aufklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} zuklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal leeren</value>
@@ -3774,13 +3776,8 @@
     <value>Softcode-Editor</value>
     <comment>MT — hyphenated compound on the protected term, per the spec.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — auswerten, ohne zu speichern</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — gespeichertes Attribut mit u() ausführen</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ungespeichert</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>In der Szene</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Du siehst diese Szene an. Tritt ihr bei, um hier zu posen.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Du bist dieser Szene noch nicht beigetreten. Tritt ihr bei, um hier zu posen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Szene beitreten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Das Spiel hat dich dieser Szene nicht beitreten lassen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

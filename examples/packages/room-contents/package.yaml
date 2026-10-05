@@ -1,6 +1,6 @@
 format: 1
 package: room-contents
-version: 2.2.1
+version: 2.2.2
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -13,6 +13,10 @@ requires_server: ">=0.1"
 # default). The engine fires ROOM`CONTENTS on movement, connect, disconnect and
 # resume; without a handler attribute nothing is emitted and the Play page has
 # no data source.
+#
+# 2.2.2 adds elsewhere to the scene block: whether the viewer is focused on another scene, so
+# the Play page can tell "your poses go to another scene" from "you have not joined this one".
+# A focus taken up or dropped anywhere refreshes the viewer's room for it.
 #
 # 2.2.1 finds the room's connected viewers first and does nothing when there are none: a move
 # into or out of a room nobody connected is in no longer builds a row for every occupant and
@@ -146,9 +150,11 @@ objects:
       # does), and the echo fails on that. The scene functions gate on the
       # ENACTOR, so a private scene the causer may not see is null for
       # everyone; when the causer may see it, each viewer gets it only if it is
-      # public, they are Wizard/Royalty, or they are a member.
+      # public, they are Wizard/Royalty, or they are a member. elsewhere is a
+      # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
+      # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
       FN`SCENE: |-
-        if(cand(not(strmatch(setr(s,scenewhere(%0)),#-1*)),strmatch(%q<s>,scene(%q<s>,id))),if(cor(scene(%q<s>,public),orflags(%1,Wr),not(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*))),json(object,id,json(string,%q<s>),title,json(string,scene(%q<s>,title)),cast,json(number,words(scenemembers(%q<s>))),role,if(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*),null,json(string,%q<m>)),focus,json(boolean,strmatch(scenefocus(%1),%q<s>))),null),null)
+        if(cand(not(strmatch(setr(s,scenewhere(%0)),#-1*)),strmatch(%q<s>,scene(%q<s>,id))),if(cor(scene(%q<s>,public),orflags(%1,Wr),not(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*))),json(object,id,json(string,%q<s>),title,json(string,scene(%q<s>,title)),cast,json(number,words(scenemembers(%q<s>))),role,if(strmatch(setr(m,scenemember(%q<s>,%1,role)),#-1*),null,json(string,%q<m>)),focus,json(boolean,strmatch(setr(sf,scenefocus(%1)),%q<s>)),elsewhere,json(boolean,cand(not(strmatch(%q<sf>,#-1 NOT FOUND)),not(strmatch(%q<sf>,%q<s>))))),null),null)
       # The hint shown on a locked exit (%0): its @fail message, as stored. It
       # is plain text to the page — never evaluated, so softcode in an @fail
       # arrives as the code itself.

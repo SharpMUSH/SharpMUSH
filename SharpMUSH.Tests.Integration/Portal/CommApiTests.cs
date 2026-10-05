@@ -77,7 +77,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@chat {channel}=hello {marker}");
 		await God($"@chat {channel}=:waves {marker}");
 
-		var lines = Value(await (await As(reader)).Recall(channel, null, CancellationToken.None));
+		var lines = Value(await (await As(reader)).Recall(channel, null, null, CancellationToken.None));
 
 		var mine = lines.Where(line => line.Text.Contains(marker)).ToList();
 		await Assert.That(mine.Count).IsEqualTo(2);
@@ -106,7 +106,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@channel/add {channel}=player");
 		await God($"@clock/join {channel}=#1");
 
-		var result = await (await As(outsider)).Recall(channel, null, CancellationToken.None);
+		var result = await (await As(outsider)).Recall(channel, null, null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status403Forbidden);
 	}
@@ -121,8 +121,8 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@clock/join {hidden}=#1");
 
 		var controller = await As(outsider);
-		var hiddenResult = await controller.Recall(hidden, null, CancellationToken.None);
-		var missingResult = await controller.Recall(UniqueChannel("CommRecallMissing"), null, CancellationToken.None);
+		var hiddenResult = await controller.Recall(hidden, null, null, CancellationToken.None);
+		var missingResult = await controller.Recall(UniqueChannel("CommRecallMissing"), null, null, CancellationToken.None);
 
 		await Assert.That(Status(hiddenResult)).IsEqualTo(StatusCodes.Status404NotFound);
 		await Assert.That(Status(missingResult)).IsEqualTo(StatusCodes.Status404NotFound);
@@ -137,7 +137,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("open");
 		await God($"@chat {channel}={marker}");
 
-		var lines = Value(await (await As(passerby)).Recall(channel, null, CancellationToken.None));
+		var lines = Value(await (await As(passerby)).Recall(channel, null, null, CancellationToken.None));
 
 		await Assert.That(lines.Any(line => line.Text == marker)).IsTrue();
 	}
@@ -152,9 +152,37 @@ public class CommApiTests(ServerWebAppFactory factory)
 			await God($"@chat {channel}=line {n}");
 		}
 
-		var lines = Value(await (await As(reader)).Recall(channel, 2, CancellationToken.None));
+		var lines = Value(await (await As(reader)).Recall(channel, 2, null, CancellationToken.None));
 
 		await Assert.That(lines.Select(line => line.Text)).IsEquivalentTo(new[] { "line 4", "line 5" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// With a read marker's id, recall reaches back past the lines asked for to the first line after it, so a
+	/// reader coming back gets all they missed; a marker inside the tail changes nothing.
+	/// </summary>
+	[Test]
+	public async Task Recall_ReachesBackToTheLineAfterTheMarker()
+	{
+		var reader = await NewPlayerAsync("CommRecallAfter");
+		var channel = await ChannelAsync("CommRecallAfter", reader);
+		foreach (var n in Enumerable.Range(1, 6))
+		{
+			await God($"@chat {channel}=line {n}");
+		}
+
+		var controller = await As(reader);
+		var all = Value(await controller.Recall(channel, null, null, CancellationToken.None));
+		var seen = all.Single(line => line.Text == "line 2").Id;
+
+		var missed = Value(await controller.Recall(channel, 2, seen, CancellationToken.None));
+		var tail = Value(await controller.Recall(channel, 2, all.Single(line => line.Text == "line 5").Id,
+			CancellationToken.None));
+
+		await Assert.That(missed.Select(line => line.Text)).IsEquivalentTo(new[] { "line 3", "line 4", "line 5", "line 6" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(tail.Select(line => line.Text)).IsEquivalentTo(new[] { "line 5", "line 6" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -171,11 +199,11 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("before");
 		await God($"@chat {channel}={marker}");
 		var controller = await As(reader);
-		var before = Value(await controller.Recall(channel, null, CancellationToken.None)).Single(line => line.Text == marker);
+		var before = Value(await controller.Recall(channel, null, null, CancellationToken.None)).Single(line => line.Text == marker);
 
 		await God($"@channel/rename {channel}={renamed}");
 
-		var after = Value(await controller.Recall(renamed, null, CancellationToken.None)).Single(line => line.Text == marker);
+		var after = Value(await controller.Recall(renamed, null, null, CancellationToken.None)).Single(line => line.Text == marker);
 		await Assert.That(after.Id).IsEqualTo(before.Id);
 		await Assert.That(after.Channel).IsEqualTo(renamed);
 	}
@@ -331,7 +359,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 	{
 		var controller = PortalControllers.CommControllerFor(factory, new System.Security.Claims.ClaimsIdentity());
 
-		await Assert.That(Status(await controller.Recall("Public", null, CancellationToken.None)))
+		await Assert.That(Status(await controller.Recall("Public", null, null, CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
 		await Assert.That(Status(await controller.Markers(CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);

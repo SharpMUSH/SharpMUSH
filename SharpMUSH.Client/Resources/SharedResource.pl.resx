@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Własne uprawnienia to te, które gra definiuje dla swojego softcode'u, np. scene.close. Zezwól na nie w roli jak na każde inne uprawnienie; softcode sprawdza je przez permission(%#,scene.close) lub blokadę PERM^scene.close. W grze: @role/define.</value>
+    <value>Własne uprawnienia to te, które gra definiuje dla swojego softcode'u, np. scene.close. Zezwól na nie w roli jak na każde inne uprawnienie; softcode sprawdza je przez permission(%#,scene.close) lub blokadę PERM^scene.close. W grze: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Role i własne uprawnienia mają osobne listy kategorii, według których ta strona je grupuje. Utwórz kategorię, zanim coś do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category i @role/category/.../permission.</value>
+    <value>Role i własne uprawnienia mają osobne listy kategorii, według których ta strona je grupuje. Utwórz kategorię, zanim coś do niej dodasz. Kategorii, która nadal coś zawiera, nie można usunąć. W grze: @role/category i @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Dodaj atrybut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(puste)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Wyzwalacz komendy</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Zamknij {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Rozwiń {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Zwiń {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Wyczyść terminal</value>
@@ -3774,13 +3776,8 @@
     <value>Edytor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testuj</value>
-    <comment>MT — assumed a button (verb), not a noun label</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testuj — ewaluacja bez zapisywania</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — uruchom zapisany atrybut przez u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niezapisane</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>W scenie</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Oglądasz tę scenę. Dołącz, aby tu pozować.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Nie dołączono jeszcze do tej sceny. Dołącz, aby tu pozować.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Dołącz do sceny</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Gra nie pozwoliła dołączyć do tej sceny.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

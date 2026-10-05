@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCustomHelp" xml:space="preserve">
-    <value>Los permisos personalizados son los que tu juego define para su propio softcode, como scene.close. Permite uno en un rol como cualquier otro permiso; el softcode lo comprueba con permission(%#,scene.close) o un bloqueo PERM^scene.close. En el juego: @role/define.</value>
+    <value>Los permisos personalizados son los que tu juego define para su propio softcode, como scene.close. Permite uno en un rol como cualquier otro permiso; el softcode lo comprueba con permission(%#,scene.close) o un bloqueo PERM^scene.close. En el juego: @permission/define.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCustomScopeLabel" xml:space="preserve">
@@ -3257,7 +3257,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoriesHelp" xml:space="preserve">
-    <value>Los roles y los permisos personalizados tienen cada uno su propia lista de categorías, y esta página los agrupa por ella. Crea una categoría antes de poner algo en ella. Una categoría que aún contiene algo no se puede eliminar. En el juego: @role/category y @role/category/.../permission.</value>
+    <value>Los roles y los permisos personalizados tienen cada uno su propia lista de categorías, y esta página los agrupa por ella. Crea una categoría antes de poner algo en ella. Una categoría que aún contiene algo no se puede eliminar. En el juego: @role/category y @permission/category.</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryDescriptionLabel" xml:space="preserve">
@@ -3572,10 +3572,6 @@
     <value>Añadir atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vacío)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Disparador de comando</value>
     <comment>MT</comment>
@@ -3631,6 +3627,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Cerrar {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expandir {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Contraer {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Limpiar terminal</value>
@@ -3774,13 +3776,8 @@
     <value>Editor de softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Probar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Probar — evaluar sin guardar</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — ejecutar el atributo guardado con u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>sin guardar</value>
@@ -5142,8 +5139,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>En escena</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Estás viendo esta escena. Únete para posar aquí.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Aún no te has unido a esta escena. Únete para posar aquí.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5152,6 +5149,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Unirse a la escena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>El juego no te dejó unirte a esta escena.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">

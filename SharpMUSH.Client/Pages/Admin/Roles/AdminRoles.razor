@@ -374,13 +374,13 @@
 
     private string _overrideScope = PortalPermission.AllScopes[0];
 
-    /// <summary>The custom permissions the game defines (@role/define).</summary>
+    /// <summary>The custom permissions the game defines (@permission/define).</summary>
     private IReadOnlyList<CustomPermission> _custom = [];
     private string _newScope = "";
     private string _newCategory = "";
     private string _newDescription = "";
 
-    /// <summary>The two category lists (@role/categories): roles sit in one, custom permissions in the other.</summary>
+    /// <summary>The two category lists (@role/categories, @permission/categories): roles sit in one, custom permissions in the other.</summary>
     private readonly Dictionary<CategoryKind, IReadOnlyList<RoleCategory>> _categories = new()
     {
         [CategoryKind.Role] = [],
