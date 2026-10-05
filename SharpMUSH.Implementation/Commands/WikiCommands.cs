@@ -111,7 +111,7 @@ public partial class Commands
 				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Unpublish),
 			// "page=list" sets a page's categories ("page=" clears them); a bare name lists a category.
 			"CATEGORY" when hasArg0 && arg1CallState is not null
-				=> await EditWiki.SetCategories(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+				=> await EditWiki.SetCategories(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1),
 			"CATEGORY" when hasArg0
 				=> await ListWiki.Category(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource),
 			"VIEW" when hasArg0 && !hasArg1

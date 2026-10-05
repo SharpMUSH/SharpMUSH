@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -178,6 +179,26 @@ public class WikiFunctionUnitTests
 			.IsEqualTo(string.Empty)
 			.Because("softcode has no reader to gate on, so a draft translation's body is unreachable from "
 				+ "it exactly as wiki() already makes the draft itself unreachable");
+	}
+
+	[Test]
+	public async Task WikiCategory_ListsThePagesInACategoryAndWikiNamesAPagesCategories()
+	{
+		var category = TestIsolationHelpers.GenerateUniqueName("FnCat");
+		var key = WikiHelpers.CategoryKey(category);
+		var member = (await WikiService.CreateAsync($"{category} Member", "body", "#1", WikiNamespace.Main, "en", [category, "Lore"]))
+			.Expect<WikiPage>();
+		var draft = (await WikiService.CreateAsync($"{category} Draft", "body", "#1", WikiNamespace.Main, "en", [category]))
+			.Expect<WikiPage>();
+		await WikiService.SetMetadataAsync(draft.Id, draft.Categories, published: false);
+		var subcategory = (await WikiService.CreateAsync($"{category} Sub", "body", "#1", WikiNamespace.Category, "en", [category]))
+			.Expect<WikiPage>();
+
+		await Assert.That((await Eval($"wikicategory({category})")).Split(' '))
+			.IsEquivalentTo(new[] { $"main:{member.Slug}", $"category:{subcategory.Slug}" });
+		await Assert.That(await Eval($"wikicategory(category:{key})")).Contains($"main:{member.Slug}");
+		await Assert.That(await Eval($"wiki(main:{member.Slug}, categories)")).IsEqualTo(string.Join(' ', member.Categories));
+		await Assert.That(await Eval("wikicategory( )")).StartsWith("#-1");
 	}
 
 	[Test]

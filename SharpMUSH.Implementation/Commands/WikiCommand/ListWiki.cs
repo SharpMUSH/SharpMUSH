@@ -98,11 +98,12 @@ public static class ListWiki
 		var subcategories = members.Where(p => p.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)).ToList();
 		var pages = members.Except(subcategories).ToList();
 
+		var names = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
 		var lines = new List<MString>
 		{
-			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),
+			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),
 		};
-		lines.AddRange(subcategories.Select(p => MarkupText.Plain($"  Category:{WikiHelpers.CategoryLabel(p.Slug)}")));
+		lines.AddRange(subcategories.Select(p => MarkupText.Plain($"  Category:{WikiHelpers.CategoryLabel(p.Slug, names)}")));
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
 			.Select(l => MarkupText.Plain("  " + l)));
 

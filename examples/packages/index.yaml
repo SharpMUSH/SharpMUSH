@@ -64,5 +64,5 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.6.0
+    version: 1.7.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit

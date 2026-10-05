@@ -33,7 +33,7 @@
         @foreach (var group in _groups.Where(g => !g.IsUncategorized))
         {
             var g = group;
-            var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"]);
+            var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
             var route = WikiCategories.Route(g.Key);
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
         }
@@ -69,6 +69,7 @@
 
     private IReadOnlyList<WikiPageSummary> _pages = [];
     private IReadOnlyList<WikiCategoryGroup> _groups = [];
+    private IReadOnlyDictionary<string, string>? _names;
     private string _path = "/wiki";
     private bool _newOpen;
     private static string NewPageHref => "/wiki/main/new-page/edit";
@@ -78,7 +79,9 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         Locate();
+        var names = Wiki.GetCategoryNamesAsync().AsTask();
         var (pages, _) = await Wiki.GetAllPagesAsync(0, 500);
+        _names = await names;
         _pages = pages;
         _groups = WikiCategories.Group(pages);
     }

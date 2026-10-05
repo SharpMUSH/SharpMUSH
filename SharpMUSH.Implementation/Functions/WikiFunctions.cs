@@ -111,6 +111,32 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// wikicategory(&lt;category&gt;)
+	/// Returns a space-separated list of the references of the pages in a category, subcategories
+	/// (pages in the category namespace) included. The name is matched by key, so <c>Places of Note</c>
+	/// and <c>places_of_note</c> are one category. Categories belong to the page, so the answer is the
+	/// same in every locale.
+	/// </summary>
+	[SharpFunction(Name = "wikicategory", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["category"])]
+	public async ValueTask<CallState> wikicategory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var key = WikiHelpers.CategoryKey(name.StartsWith("category:", StringComparison.OrdinalIgnoreCase) ? name["category:".Length..] : name);
+		if (key.Length == 0)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKICATEGORY"));
+		}
+
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		// Same rule as wikilist(): softcode has no reader to gate drafts on, so none are listed.
+		var pages = await wikiService.GetByCategoryAsync(key, 0, 1000, WikiVisibility.PublishedOnly);
+
+		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+	}
+
+	/// <summary>
 	/// wikisearch(&lt;text&gt;)
 	/// Returns a space-separated list of page references whose title or body
 	/// contains the given text (case-insensitive), in any locale the page has been

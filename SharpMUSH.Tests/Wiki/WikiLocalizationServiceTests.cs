@@ -328,4 +328,35 @@ public class WikiLocalizationServiceTests
 			.Because("Page carries identity and inherited metadata only — never content");
 		await Assert.That(localized.Page.Namespace).IsEqualTo("main");
 	}
+
+	/// <summary>
+	/// Categories belong to the page, so a translation cannot change them; only a category's name is
+	/// translated, and it is its category page's title in the reader's language.
+	/// </summary>
+	[Test]
+	public async Task CategoryNames_AreTheCategoryPagesTitlesInTheReadersLocale()
+	{
+		var (storage, service) = Build();
+		var lore = (await storage.CreateAsync("Lore", "Stories.", "#1", WikiNamespace.Category, "en")).Expect<WikiPage>();
+		var places = (await storage.CreateAsync("Places of Note", "Where.", "#1", WikiNamespace.Category, "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(lore.Id, "fr", "Légendes", "Histoires.", "#2", null, published: true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(places.Id, "fr", "Lieux (brouillon)", "Où.", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "en", ["Lore", "Places of Note", "Harbour"])).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var french = await service.GetCategoryNamesAsync("fr");
+		var english = await service.GetCategoryNamesAsync("en");
+
+		await Assert.That(french["lore"]).IsEqualTo("Légendes");
+		await Assert.That(french["places_of_note"]).IsEqualTo("Places of Note")
+			.Because("an unpublished translation of a category's name is not shown, as with any page");
+		await Assert.That(english["lore"]).IsEqualTo("Lore");
+		await Assert.That(french.ContainsKey("harbour")).IsFalse().Because("a category with no page has no name to translate");
+		await Assert.That(WikiHelpers.CategoryLabel("harbour", french)).IsEqualTo("Harbour");
+
+		var localized = await service.LocalizeAsync(page, "fr", includeDrafts: false);
+		await Assert.That(localized.Title).IsEqualTo("Dragons (fr)");
+		await Assert.That(localized.Page.Categories).IsEquivalentTo(new[] { "harbour", "lore", "places_of_note" })
+			.Because("a translation is in the same categories as its page");
+	}
 }

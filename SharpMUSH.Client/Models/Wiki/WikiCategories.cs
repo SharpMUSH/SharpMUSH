@@ -22,11 +22,14 @@ public static class WikiCategories
 {
 	public static string Key(string? category) => WikiHelpers.CategoryKey(category);
 
-	/// <summary>The display label: the localized "Uncategorized" for no category, else the category's title.</summary>
-	public static string Label(string? category, string uncategorizedLabel)
+	/// <summary>
+	/// The display label: the localized "Uncategorized" for no category, else the category's name from
+	/// <paramref name="names"/> (its category page's title, translated), else its key as a title.
+	/// </summary>
+	public static string Label(string? category, string uncategorizedLabel, IReadOnlyDictionary<string, string>? names = null)
 	{
 		var key = Key(category);
-		return key.Length == 0 ? uncategorizedLabel : WikiHelpers.CategoryLabel(key);
+		return key.Length == 0 ? uncategorizedLabel : WikiHelpers.CategoryLabel(key, names);
 	}
 
 	public static string Route(string category) => WikiRoutes.CategoryPath(category);

@@ -269,28 +269,38 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiCategorizer");
 
 		var gate = await SeedSourcePageAsync("Wyrmholt Gate", "A gate.");
-		(await WikiService.CreateAsync("Wyrmholt Places", "Places in Wyrmholt.", "#1",
+		var places = (await WikiService.CreateAsync("Wyrmholt Places", "Places in Wyrmholt.", "#1",
 			WikiNamespace.Category, "en")).Expect<WikiPage>();
 
-		// Categories are page data set by name, not text: setting them leaves the body alone.
+		// Categories are page data set by name, not text: setting them leaves the body alone. A category's
+		// name is its category page's title.
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category wyrmholt_gate=Wyrmholt Places"));
-		await ExpectNotify(player.DbRef, "WIKI: 'Wyrmholt Gate' categories: Wyrmholt places.");
+		await ExpectNotify(player.DbRef, "WIKI: 'Wyrmholt Gate' categories: Wyrmholt Places.");
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category Category:Wyrmholt Places=Wyrmholt Setting"));
 		await Assert.That((await WikiService.GetByIdAsync(gate.Id)).Expect<WikiPage>().MarkdownSource).IsEqualTo("A gate.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category wyrmholt places"));
-		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt places' — 1 page(s), 0 subcategory(ies):");
+		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt Places' — 1 page(s), 0 subcategory(ies):");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category Wyrmholt_Setting"));
-		await ExpectNotify(player.DbRef, "Category:Wyrmholt places");
+		await ExpectNotify(player.DbRef, "Category:Wyrmholt Places");
+		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt setting'");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki wyrmholt_gate"));
-		await ExpectNotify(player.DbRef, "Categories: Wyrmholt places");
+		await ExpectNotify(player.DbRef, "Categories: Wyrmholt Places");
+
+		// Translating the category page translates the category's name; the page's categories stay its own.
+		await WikiService.UpsertTranslationAsync(
+			places.Id, "fr", "Lieux de Wyrmholt", "Lieux.", "#1", null, published: true, expectedRevisionNumber: null);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@wiki wyrmholt_gate"));
+		await ExpectNotify(player.DbRef, "Categories: Lieux de Wyrmholt");
 	}
 
 	[Test]

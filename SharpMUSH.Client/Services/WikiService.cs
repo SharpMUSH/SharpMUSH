@@ -16,6 +16,9 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>Concurrent reads of one recent-changes list (the stats tile and the activity widget) share a request.</summary>
 	private readonly SingleFlight<string, IReadOnlyList<WikiPageSummary>> _recentFlight = new();
 
+	/// <summary>The sidebar, the index and the article all ask for the category names at once; they share a request.</summary>
+	private readonly SingleFlight<string, IReadOnlyDictionary<string, string>> _categoryNamesFlight = new();
+
 	public async ValueTask<FoundResult<WikiArticle>> GetWikiArticle(
 		string slug, string? ns = null, string? lang = null)
 	{
@@ -338,6 +341,32 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{KeyQuery(ns)}",
 				new RollbackRequest(revisionNumber), EmptyResponse)),
 			"RollbackAsync", slug);
+
+	/// <summary>
+	/// Each category's name in <paramref name="lang"/> (null: the reader's default), keyed by category key:
+	/// the title of the category's page, translated where it is. Pass it to
+	/// <c>WikiHelpers.CategoryLabel</c>; a category
+	/// with no page, or a failed request, shows its key.
+	/// </summary>
+	public ValueTask<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? lang = null)
+	{
+		var url = $"api/wiki/category-names{LangQuery(lang, first: true)}";
+		return new ValueTask<IReadOnlyDictionary<string, string>>(_categoryNamesFlight.RunAsync(url, () => FetchCategoryNamesAsync(url)));
+	}
+
+	private async Task<IReadOnlyDictionary<string, string>> FetchCategoryNamesAsync(string url)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			return await http.GetFromJsonAsync<Dictionary<string, string>>(url) ?? new Dictionary<string, string>();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "GetCategoryNamesAsync failed");
+			return new Dictionary<string, string>();
+		}
+	}
 
 	/// <summary>
 	/// Batch page-existence check used for redlink rendering. Refs use URL-path
