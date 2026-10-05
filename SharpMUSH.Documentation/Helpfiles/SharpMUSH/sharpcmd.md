@@ -112,6 +112,8 @@ In order for debug to be shown for triggered $-commands, you must either control
 
 The "@@" command does nothing; it does not evaluate its input or show any messages to the executor. It can be used for commenting code.
 
+Output: leaves the previous command's output unchanged.
+
 ### Example
 ```sharp
 > @va me=$testing: @emit Test ; @@ Just a test ; @vb me=Testing
@@ -701,6 +703,8 @@ Changes the zone of all objects owned by `<player>` to `<zone object>`. If `<zon
 
 This command creates a copy of `<object>`. The clone will have the same name as the original unless a `<new name>` is given for it. You can only clone things, rooms and exits, not players. You must control `<object>`. The new object will be owned by the player who performs the @clone, not the owner of the original `<object>`.
 
+Output: the clone's dbref, as `clone()` returns it.
+
 When cloning things and exits, the clone will be placed in your current location, not the location of `<object>`. When cloning rooms, the exits and contents in the room are not cloned as well.
 
 The cloned object will have the same modification time as the original object, to make tracking revisions easier, but will have a different creation time.
@@ -739,6 +743,8 @@ This is a wizard-only command which sets a COMMENT attribute on `<object>`. The 
 `@config/save <option>=<value>`
 
 With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
+
+Output: when exactly one option matches, its value, as `config()` returns it; otherwise nothing.
 
 The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Booleans take yes/no, true/false or 1/0; numbers may be written with a leading `#`; an object option takes -1 for none. A value that does not fit the option, or that the configuration's own checks reject, is refused and nothing changes. Options naming files (the File and Message categories), the SQL credentials, and list-valued options (banned names, sitelock rules, restrictions — see [@sitelock]) cannot be set this way.
 
@@ -982,6 +988,8 @@ would copy the TEST attribute from "box" to TEST on "cube".
 
 This command creates a new thing called `<name>`. Creating an object costs a certain number of pennies (see '@config object_cost'); you can specify a higher cost if you wish. This cost is refunded to you when the object is destroyed.
 
+Output: the new thing's dbref, as `create()` returns it.
+
 Some MUSHes choose to limit the number of objects you can create by setting a quota.
 
 Wizards and objects with the pick_dbref power can also specify the `<dbref>` of a garbage object to use when creating the object. Otherwise, the object is given the next available dbref.
@@ -1219,6 +1227,8 @@ Zone leaving is assumed to occur after room leaving, so these are triggered afte
 
 This command will show you all objects linked to `<object>`. If you don't specify an `<object>`, your current location is used. You can limit the range of the dbrefs searched by specifying `<begin>` and `<end>`.
 
+Output: the dbrefs of the entrances found, as `entrances()` returns them.
+
 You can use any combination of switches to limit the types of objects:
 - /exits show only exits linked to `<object>`
 - /things show only things which have their homes in `<object>`
@@ -1300,6 +1310,8 @@ One, Two, and Three
 
 Displays the name and dbref of every room, thing, or player you control whose name matches `<name>`. If `<begin>` and `<end>` are given, @find will start at the `<begin>`th object in the database, and will not search past the `<end>`th object.
 
+Output: the dbrefs found, separated by spaces.
+
 You may wish to use the @search command instead, which can filter the results more complexly.
 
 
@@ -1358,6 +1370,8 @@ event Trigger the OBJECT`FLAG event when this flag is set or cleared. Only meani
 `@grep[/<switches>] <object>[/<attrs>]=<pattern>`
 
 @grep returns a list of all attributes on `<object>` which match `<pattern>`. If `<attrs>` is specified, only attributes which match the wildcard pattern `<attrs>` are checked; it defaults to "*". Use "**" for all attributes.
+
+Output: the names of the attributes matched, as `grep()` returns them.
 
 By default, attributes which contain the string `<pattern>` are returned. However, if the `/wild` switch is given, `<pattern>` is treated as a wildcard pattern, and attributes which match the pattern are returned. If the `/regexp` switch is given, `<pattern>` is treated as a regular expression, and attributes matching the regexp are returned. Please note that `<pattern>` will NOT be evaluated, so you can easily grep for code strings.
 
@@ -1872,6 +1886,8 @@ These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @ze
 
 This command opens an exit, named `<exit name>`, in your current location, or in `<source room>` if one is given. Exits can only be opened from rooms. If a `<destination>` is given, the exit will be linked (as per @link) to that object. If you don't have permission to link to `<destination>`, the exit will be created but unlinked.
 
+Output: the new exit's dbref, as `open()` returns it.
+
 If `<return exit name>` is given, the MUSH will attempt to open an exit back from `<destination>` and link it to `<exit name>`'s source.
 
 Both `<exit name>` and `<return exit name>` can include any number of aliases for the exits, separated by semicolons. See [@name] for details.
@@ -1970,6 +1986,8 @@ In all cases, %0 is the dbref of the object being given, and %1 is the dbref of 
 `@pcreate <name>=<password>[, <dbref>]`
 
 This wizard-only command creates a player with the given name and password. If specified, `<dbref>` is the dbref of a garbage object to be used for the new player.
+
+Output: the new player's dbref, as `pcreate()` returns it.
 
 
 **See Also:**
@@ -2093,6 +2111,8 @@ This command halts `<object>` (as described in @halt), and then triggers the STA
 `@scan[/<switches>] <command>`
 
 @scan gives you a list of all objects containing $-commands (user-defined commands) which could match `<command>`. If given no switches, it checks you, your possessions, your location, objects in your location, the zone/zone master room of your location, your zone, and objects in the master room. It does NOT stop when it gets a match, but rather, finds all possible matches. It also tells how many commands on each object were matched, and what attributes they are in. It does NOT scan objects that you do not control and are not set VISUAL.
+
+Output: the `<object>/<attribute>` pairs matched, as `scan()` returns them.
 
 This command any combination of these four switches:
 - /room -- just matches on your location and objects in it.
@@ -2348,6 +2368,8 @@ Prepared statement example:
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
 
+Output: the query's result, as it shows it.
+
 Generally, the sql() function is more useful for coding, as it delimits its return values, but @sql is handy for INSERT-type queries and quick checks. If you pass arbitrary data to @sql, be sure you call sqlescape() on it; see the example in help sql().
 
 The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
@@ -2536,6 +2558,8 @@ This is a SharpMUSH command; PennMUSH has no @locale.
 
 Runs an attribute once for each element of `<list>`, as [@dolist] does, but passing the element as `%0` rather than substituting it into the command text. The attribute is named as `<object>/<attribute>`.
 
+Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
+
 Switches are the queue-control set shared with [@dolist] and [@include]: `/inline`, `/inplace`, `/localize`, `/clearregs`, `/nobreak`, `/notify` and `/delimit`.
 
 This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [MAP()].
@@ -2550,6 +2574,8 @@ This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [M
 `@version`
 
 Tells the player the name of the MUSH, which version of the code is currently running on the system, when it was compiled, and when the last restart was. It may also include some other information, including the MUSH's website address and the GIT revision, if available.
+
+Output: the version, as `version()` returns it.
 
 
 **See Also:**
@@ -2592,6 +2618,8 @@ The third runs it on all objects the player owns that aren't set NO_WARN.
 `@whereis <player>`
 
 If `<player>` is not set UNFINDABLE, this command will tell you where the player is. It will also inform the player that you attempted to locate their position, and whether you succeeded or not.
+
+Output: the player's location, as `loc()` returns it.
 
 To avoid being found this way, just do: `@set me=UNFINDABLE`
 
@@ -2683,6 +2711,9 @@ Some routers will only consider a connection alive if text is received, as well 
 `teach/list <action list>`
 
 The teach command shows its argument (unparsed) to others in your location, and then executes it as a command. If the `/list` switch is given, it will run an `<action list>` of commands in much the same way as @triggering an attribute. Otherwise, it executes a single `<command>`, exactly as if you'd entered `<command>` from your client. Useful for helping newbies and demonstrating commands.
+
+Output: the output of the last command it ran. See [command output].
+
 ```sharp
 > say To do a pose, use :<action>
 You say "To do a pose, use :<action>"
@@ -2726,6 +2757,8 @@ In order to drop an object, you must pass it's Drop lock and your location's Dro
 
 Used to enter a thing or player. You can only enter an object if you own it or if it is set ENTER_OK. You must also pass the enter-lock, if it is set. Entering an object triggers is @enter/@oenter/@oxenter messages and its @aenter actions. If you fail the enter-lock, the object's @efail/@oefail/@aefail messages and actions are triggered.
 
+Output: the dbref of the object you enter.
+
 Insides of objects are best used for vehicles, or storage spaces when you don't have a home. You can describe the interior of an object differently from its exterior by using @idescribe.
 
 See: [@aenter], [@aefail], [@ealias], [leave], [LOCKING], [@idescribe], [interiors]
@@ -2737,6 +2770,8 @@ The * wildcard matches any number of characters except a backtick (`).<br>
 The ? wildcard matches a single character except a backtick (`).<br>
 The ** wildcard matches any number of characters, including backticks.<br>
 For example, to see all the attributes that began with a 'v' you could do ex `<object>`/v**
+
+Output: the dbref of the object examined.
 
 The `/brief` switch is equivalent to the 'brief' command.<br>
 The `/debug` switch is wizard-only and shows raw values for certain fields in an object.<br>
@@ -2925,6 +2960,8 @@ The last two forms of this command give an `<object>` from your inventory to `<r
 
 Goes in the specified direction. `<Direction>` can be the name or alias of an exit in your area, the enter alias of an object in your area, or the leave alias of the object you are in. You do not need to use the word 'go' or 'move', in fact -- simply typing the direction will have the same effect.
 
+Output: the dbref of the room you arrive in.
+
 'go home' is a special command that returns you to your home room/object.
 
 
@@ -2983,6 +3020,8 @@ This command returns some information about the MUSH you are on, such as its ver
 
 Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. It also tells you how much MUSH money you have. If you are not set OPAQUE, others will also be able to see what is in your inventory by looking at you.
 
+Output: the dbrefs of what you carry, separated by spaces.
+
 Note that on some MUSHes it is possible to take things that are in someone else's inventory. To be safe, @lock any objects that you do not want to lose.
 
 
@@ -2997,6 +3036,8 @@ Note that on some MUSHes it is possible to take things that are in someone else'
 `leave`
 
 The command leave allows you to exit an object you have enter'ed into. When you leave an object, its @leave/@oleave/@oxleave messages are triggered, and its @aleave actions are triggered.
+
+Output: the dbref of the room you arrive in.
 
 The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cannot be left. @lock/leave may also be enabled on some MUSHes, which allows you to set who can leave the object. If you fail to leave, the object's @lfail/@olfail/@alfail messages/actions will be triggered.
 
@@ -3050,6 +3091,8 @@ Displays how many pennies you have. Helpful to see if any machines are looping. 
 `think <message>`
 
 You can use this command to send a private message to yourself. Pronoun substitution is performed. This is essentially equivalent to doing a "`@pemit/silent me=<message>`".
+
+Output: the text it shows.
 
 One possible use: `@adesc me=think %n just looked at you.`
 
@@ -3232,6 +3275,8 @@ The SESSION command is the same as the admin WHO, but instead of showing the hos
 `with[/room] <obj>=<command>`
 
 Attempts to run a user-defined command on a specific object. If the `/room` switch is given, `<obj>` must be a room or your current location, and its contents are checked for commands as if it was a master room.
+
+Output: the output of the command run. See [command output].
 
 `<obj>` must be an object near you, an object you control, your ZMO or (if the `/room` switch is given) the Master Room.
 
