@@ -62,7 +62,7 @@ public class RoleCommandTests : ServerTestBase
 	[Test]
 	public async Task WizardCreatesAllowsAndAssignsARole()
 	{
-		await Assert.That(await As(_wizard, $"@role/create {_slug}=Storyteller")).Contains("created");
+		await Assert.That(await As(_wizard, $"@role/create {_slug}=Staff/Storyteller")).Contains("created");
 		await Assert.That(await As(_wizard, $"@role/priority {_slug}=14")).Contains("priority 14");
 		await Assert.That(await As(_wizard, $"@role/allow {_slug}=wiki.delete")).Contains("allows wiki.delete");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("0");
@@ -81,19 +81,19 @@ public class RoleCommandTests : ServerTestBase
 	public async Task ObjectOverrideBeatsTheirRoles()
 	{
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
-		await Assert.That(await As(_wizard, $"@role/deny/object {_mortal.Name}=wiki.edit")).Contains("denies wiki.edit");
+		await Assert.That(await As(_wizard, $"@permission/deny {_mortal.Name}=wiki.edit")).Contains("denies wiki.edit");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("0");
 		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("deny wiki.edit");
-		await As(_wizard, $"@role/clear/object {_mortal.Name}=wiki.edit");
+		await As(_wizard, $"@permission/clear {_mortal.Name}=wiki.edit");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
 	}
 
 	[Test]
 	public async Task AccountOverrideAndRoleReachTheCharacter()
 	{
-		await Assert.That(await As(_wizard, $"@role/allow/account {_mortal.Name}=wiki.delete")).Contains("(account ");
+		await Assert.That(await As(_wizard, $"@permission/allow/account {_mortal.Name}=wiki.delete")).Contains("(account ");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("1");
-		await As(_wizard, $"@role/clear/account {_mortal.Name}=wiki.delete");
+		await As(_wizard, $"@permission/clear/account {_mortal.Name}=wiki.delete");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("0");
 
 		await Assert.That(await As(_wizard, $"@role/assign/account {_mortal.Name}=helper")).Contains("now holds helper");
@@ -114,7 +114,7 @@ public class RoleCommandTests : ServerTestBase
 	[Test]
 	public async Task WizardCannotRaiseARoleToItsOwnRank()
 	{
-		await As(_wizard, $"@role/create {_slug}");
+		await As(_wizard, $"@role/create {_slug}=Staff");
 		await Assert.That(await As(_wizard, $"@role/priority {_slug}=30")).Contains("not below your highest role");
 		await Assert.That(await As(_wizard, $"@role/allow {_slug}=server.admin")).Contains("do not hold");
 		await As(_wizard, $"@role/delete {_slug}");

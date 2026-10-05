@@ -289,7 +289,8 @@ public static class OobEntryParser
 			|| SceneId(scene) is not { } id)
 			return null;
 
-		return new RoomScene(id, Str(scene, "title"), Count(scene, "cast"), Str(scene, "role"), Flag(scene, "focus"));
+		return new RoomScene(id, Str(scene, "title"), Count(scene, "cast"), Str(scene, "role"), Flag(scene, "focus"),
+			Flag(scene, "elsewhere") is true);
 	}
 
 	/// <summary>The contract's id is a string; board <c>12</c> drew a number, so a whole number reads too.</summary>
