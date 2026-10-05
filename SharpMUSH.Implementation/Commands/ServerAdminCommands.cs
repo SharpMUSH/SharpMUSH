@@ -362,7 +362,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@UPTIME", Output = CommandOutput.Value, Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -387,9 +387,11 @@ public partial class Commands
 
 		await NotifyService.Notify(executor, details, executor);
 
+		// The start time, as uptime() gives it; the report is only shown.
+		var output = new CallState(data.StartTime.ToUnixTimeSeconds().ToString());
 		if (!await executor.Can(PortalPermission.ServerOperate) || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
-			return new CallState(details);
+			return output;
 		}
 
 		var process = Process.GetCurrentProcess();
@@ -410,7 +412,7 @@ public partial class Commands
 
 		await NotifyService.Notify(executor, extra, executor);
 
-		return new CallState(details);
+		return output;
 	}
 
 	[SharpCommand(Name = "@LOG", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "RECALL"],
@@ -928,7 +930,7 @@ public partial class Commands
 	/// the very string <c>version()</c> returns, exactly as PennMUSH's <c>fun_version</c> and
 	/// <c>do_version</c> both format from VERSION/PATCHLEVEL/PATCHDATE.
 	/// </summary>
-	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@VERSION", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -955,7 +957,8 @@ public partial class Commands
 
 		await NotifyService.Notify(executor, result, executor);
 
-		return new CallState(result);
+		// The version string, as version() gives it; the rest is only shown.
+		return new CallState(Implementation.Generated.VersionInfo.Version);
 	}
 
 	/// <summary>
@@ -1106,7 +1109,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
+	[SharpCommand(Name = "@CONFIG", Output = CommandOutput.Value, Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["option", "value"])]
 	public async ValueTask<Option<CallState>> Config(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

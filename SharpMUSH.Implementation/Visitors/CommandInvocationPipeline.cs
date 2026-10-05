@@ -309,6 +309,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					await services.Diagnostics.SendDebugOrVerboseOutput(visitor.Parser, verboseExecutor, verboseOutput);
 				}
 
+				var commandText = newParser.CurrentState.CommandText;
+				var outputVersion = commandText?.OutputVersion;
 				try
 				{
 					// Track command history for @retry support (shared mutable reference, persists across With() copies).
@@ -327,6 +329,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					services.Telemetry?.RecordCommandInvocation(rootCommand, elapsedMs, commandSuccess);
 				}
 
+				// %| is recorded before the after hook runs, so the hook reads the command's own output.
+				RecordOutput(commandText, outputVersion, libraryCommandDefinition.Attribute.Output, commandResult);
+
 				// 5. Check for /after hook
 				var afterHookFinal = await services.HookService.GetHookAsync(hookedCommand, "AFTER");
 				if (afterHookFinal is CommandHook afterFinalCode)
@@ -344,6 +349,30 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				return PreserveHookErrors(commandResult);
 			});
 		return argumentResults.Preserve(dispatchResult);
+	}
+
+	/// <summary>
+	/// Records a built-in command's <c>%|</c> as its <see cref="CommandOutput"/> declares. A command that
+	/// records nothing here — <see cref="CommandOutput.None"/>, or <see cref="CommandOutput.Runs"/> when
+	/// the list it ran was queued — is cleared by <see cref="CommandDispatcher"/> once it returns.
+	/// </summary>
+	private static void RecordOutput(CommandText? commandText, long? versionBefore, CommandOutput kind,
+		Option<CallState> result)
+	{
+		if (commandText is null) return;
+		switch (kind)
+		{
+			case CommandOutput.Value:
+				commandText.SetOutput(result is CallState { Message: { } message } ? message : MarkupText.Empty);
+				break;
+			case CommandOutput.Passthrough:
+				commandText.KeepOutput();
+				break;
+			case CommandOutput.Runs when commandText.OutputVersion != versionBefore:
+				// The in-place list it ran recorded its last command's output into this same entry.
+				commandText.KeepOutput();
+				break;
+		}
 	}
 
 	/// <summary>
@@ -456,8 +485,10 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				Enactor = prs.CurrentState.Executor,
 				Caller = prs.CurrentState.Executor,
 				// No %c/%u yet: CommandListParse starts them, and treats the body as a queue entry's own
-				// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182).
-				CommandText = null
+				// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182). Its %| starts
+				// as a copy of the matching list's, as a queued body's does.
+				CommandText = null,
+				QueuedOutput = prs.CurrentState.PipedOutput
 			});
 
 			var result = await newParser.CommandListParse(body);
@@ -622,6 +653,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			Function = null
 		});
 
-		return await newParser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
+		var gotoCommand = newParser.CommandLibrary["GOTO"].LibraryInformation;
+		var result = await gotoCommand.Command.Invoke(newParser);
+		RecordOutput(prs.CurrentState.CommandText, null, gotoCommand.Attribute.Output, result);
+		return result;
 	}
 }

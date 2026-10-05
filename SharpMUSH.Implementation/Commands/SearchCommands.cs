@@ -27,7 +27,7 @@ public partial class Commands
 	/// <c>[begin, end)</c>, exits excepted, whose name has a word starting with <c>&lt;name&gt;</c>
 	/// (<c>string_match</c>), one <c>object_header</c> line each, then the count.
 	/// </summary>
-	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+	[SharpCommand(Name = "@FIND", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 0, MaxArgs = 3, ParameterNames = ["name", "flags"])]
 	public async ValueTask<Option<CallState>> Find(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -63,7 +63,8 @@ public partial class Commands
 			MaxDbRef = end - 1
 		};
 
-		var count = 0;
+		// The output is the list lsearch(me, name, <name>) would give; the count is only shown.
+		var found = new List<string>();
 		await foreach (var obj in Mediator.CreateStream(new GetFilteredObjectsQuery(filter)))
 		{
 			if ((name.Length > 0 && !StringMatch(obj.Name, name))
@@ -74,11 +75,11 @@ public partial class Commands
 			}
 
 			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node, ConnectionService), executor);
-			count++;
+			found.Add($"#{obj.DBRef.Number}");
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectsFoundFormat), executor, count);
-		return new CallState(count.ToString());
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectsFoundFormat), executor, found.Count);
+		return new CallState(string.Join(" ", found));
 	}
 
 	/// <summary>
@@ -99,7 +100,7 @@ public partial class Commands
 		return false;
 	}
 
-	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged,
+	[SharpCommand(Name = "@SCAN", Output = CommandOutput.Value, Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 0, ParameterNames = ["object", "code"])]
 	public async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -315,7 +316,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
+	[SharpCommand(Name = "@SEARCH", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
 		MinArgs = 0, MaxArgs = int.MaxValue, ParameterNames = ["player", "class=restriction..."])]
 	public async ValueTask<Option<CallState>> Search(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -373,12 +374,13 @@ public partial class Commands
 		if (matches.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
-			return new CallState("0") { HadErrors = search.HadErrors };
+			return new CallState(MarkupText.Empty) { HadErrors = search.HadErrors };
 		}
 
 		await ReportSearchAsync(executor, matches);
 
-		return new CallState(matches.Count.ToString()) { HadErrors = search.HadErrors };
+		// The list lsearch() gives for the same search; the report above is only shown.
+		return new CallState(string.Join(" ", matches.Select(obj => $"#{obj.Key}"))) { HadErrors = search.HadErrors };
 	}
 
 	/// <summary>
@@ -560,7 +562,7 @@ public partial class Commands
 		return (player, pairs);
 	}
 
-	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["name"])]
+	[SharpCommand(Name = "@WHEREIS", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["name"])]
 	public async ValueTask<Option<CallState>> WhereIs(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -616,10 +618,10 @@ public partial class Commands
 		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.", executor);
 
-		return new CallState(targetLocation.Object().DBRef.ToString());
+		return new CallState($"#{targetLocation.Object().DBRef.Number}");
 	}
 
-	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
+	[SharpCommand(Name = "@DECOMPILE", Output = CommandOutput.Value, Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "name"])]
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -847,7 +849,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, output, executor);
 		}
 
-		return CallState.Empty;
+		// The commands are what it shows; its output is the object, as for look and examine.
+		return new CallState(obj.DBRef.ToString());
 	}
 
 	/// <summary>
@@ -886,7 +889,7 @@ public partial class Commands
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
-	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
+	[SharpCommand(Name = "@ENTRANCES", Output = CommandOutput.Value, Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 3, ParameterNames = ["object", "flags"])]
 	public async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -989,10 +992,11 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesCountFormat), executor, entrances.Count);
 		}
 
-		return new CallState(entrances.Count.ToString());
+		// The list entrances() gives; the count is only shown.
+		return new CallState(string.Join(" ", entrances.Select(entrance => entrance.Object.DBRef.ToString())));
 	}
 
-	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
+	[SharpCommand(Name = "@GREP", Output = CommandOutput.Value, Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "pattern"])]
 	public async ValueTask<Option<CallState>> Grep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1250,7 +1254,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, attrNames, executor);
 		}
 
-		return new CallState(string.Empty);
+		// The attribute list grep() gives, whichever way the matches were shown.
+		return new CallState(string.Join(" ", matchingAttributes.Select(a => a.Attribute.Name)));
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,

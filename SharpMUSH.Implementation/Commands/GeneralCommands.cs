@@ -55,7 +55,7 @@ public partial class Commands
 		return new CallState(ErrorMessages.Returns.Huh);
 	}
 
-	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "LOOK", Output = CommandOutput.Value, Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -119,7 +119,7 @@ public partial class Commands
 		return await LookService.LookRoom(parser, executor, viewing, key, lookOutside);
 	}
 
-	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "EXAMINE", Output = CommandOutput.Value, Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
 	public ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ExamineAsync(parser, parser.CurrentState.Switches.ToArray());
 

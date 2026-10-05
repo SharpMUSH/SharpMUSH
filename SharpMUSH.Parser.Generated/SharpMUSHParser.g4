@@ -160,6 +160,7 @@ substitutionSymbol: (
         | LOCATION_DBREF
         | LASTCOMMAND_BEFORE_EVAL
         | LASTCOMMAND_AFTER_EVAL
+        | PIPED_OUTPUT
         | INVOCATION_DEPTH
         | EQUALS
         | CURRENT_ARG_COUNT
