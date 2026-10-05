@@ -112,7 +112,9 @@
                 </CellTemplate>
             </TemplateColumn>
             <PropertyColumn Property="p => p.Namespace" Title="@Loc["WikiNamespace"]" Sortable="false" />
-            <PropertyColumn Property="p => p.Category" Title="@Loc["WikiCategory"]" Sortable="false" />
+            <TemplateColumn Title="@Loc["NavWikiCategories"]" Sortable="false">
+                <CellTemplate>@string.Join(", ", context.Item.Categories.Select(c => WikiHelpers.CategoryLabel(c, _categoryNames)))</CellTemplate>
+            </TemplateColumn>
             <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
                 <CellTemplate>
                     <Pill Tag="true" Warn="@(!context.Item.Published)">
@@ -128,19 +130,6 @@
                 </CellTemplate>
             </TemplateColumn>
             <PropertyColumn Property="p => p.RevisionNumber" Title="@Loc["WikiRevision"]" Sortable="false" />
-            <TemplateColumn Title="@Loc["WikiTags"]" Sortable="false">
-                <CellTemplate>
-                    @foreach (var tag in context.Item.Tags.Take(3))
-                    {
-                        <MudChip T="string" Text="@tag" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined"
-                                 Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;" />
-                    }
-                    @if (context.Item.Tags.Count > 3)
-                    {
-                        <MudText Style="font-size:0.625rem;color:var(--text-faint);">+@(context.Item.Tags.Count - 3)</MudText>
-                    }
-                </CellTemplate>
-            </TemplateColumn>
             <TemplateColumn Title="@Loc["WikiTranslations"]" Sortable="false">
                 <CellTemplate>
                     @{
@@ -211,28 +200,24 @@
     </TitleContent>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField @bind-Value="_metaCategory"
-                          Label="@Loc["WikiCategory"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense" />
-            <MudTextField Value="@_metaTagEntry"
-                          ValueChanged="@((string v) => _metaTagEntry = v)"
-                          Label="@Loc["WikiTags"]"
+            <MudTextField Value="@_metaCategoryEntry"
+                          ValueChanged="@((string v) => _metaCategoryEntry = v)"
+                          Label="@Loc["NavWikiCategories"]"
+                          Placeholder="@Loc["WkAddCategory"]"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
-                          HelperText="@Loc["WikiTagsHelper"]"
                           Adornment="Adornment.End"
                           AdornmentIcon="@Icons.Material.Filled.Add"
-                          OnAdornmentClick="@AddMetaTag"
-                          OnKeyDown="@OnMetaTagKeyDown"
+                          OnAdornmentClick="@AddMetaCategory"
+                          OnKeyDown="@OnMetaCategoryKeyDown"
                           Immediate="true" />
-            @if (_metaTags.Count > 0)
+            @if (_metaCategories.Count > 0)
             {
                 <MudStack Row="true" Spacing="1" Style="flex-wrap:wrap;">
-                    @foreach (var tag in _metaTags)
+                    @foreach (var category in _metaCategories)
                     {
-                        <MudChip T="string" Text="@tag" Size="Size.Small" Color="Color.Info"
-                                 Variant="Variant.Outlined" OnClose="@(() => _metaTags.Remove(tag))" />
+                        <MudChip T="string" Text="@WikiHelpers.CategoryLabel(category, _categoryNames)" Size="Size.Small" Color="Color.Info"
+                                 Variant="Variant.Outlined" OnClose="@(() => _metaCategories.Remove(category))" />
                     }
                 </MudStack>
             }
@@ -291,10 +276,9 @@
     private bool _showDeleteConfirm;
     private bool _showMetadataDialog;
     private WikiPageSummary? _metadataTarget;
-    private string? _metaCategory;
-    private string _metaTagEntry = string.Empty;
-    private List<string> _metaTags = [];
     private bool _metaPublished = true;
+    private string _metaCategoryEntry = string.Empty;
+    private List<string> _metaCategories = [];
 
     private bool _statsLoaded;
     private int _totalPages;
@@ -302,9 +286,14 @@
     private int _drafts;
     private int _protected_;
 
+    /// <summary>Each category's name (its category page's title); a category with no page shows its key.</summary>
+    private IReadOnlyDictionary<string, string>? _categoryNames;
+
     protected override async Task OnInitializedAsync()
     {
+        var names = Wiki.GetCategoryNamesAsync().AsTask();
         await LoadStatsAsync();
+        _categoryNames = await names;
     }
 
     private async Task LoadStatsAsync()
@@ -380,22 +369,22 @@
         {
             var reference = RefFor(page);
             if (_coverage.ContainsKey(reference)) continue;
-            var translations = await Wiki.GetTranslationsAsync(page.Slug, page.Namespace, page.Category);
+            var translations = await Wiki.GetTranslationsAsync(page.Slug, page.Namespace);
             _coverage[reference] = translations.Select(t => t.Locale).ToList();
         }
     }
 
     /// <summary>Where the page is read — the profile alias for character biographies.</summary>
     private static string PageHref(WikiPageSummary page) =>
-        WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
+        WikiRoutes.PathFor(page.Namespace, page.Slug);
 
     /// <summary>Base for the management actions. /edit and /history exist only under /wiki,
     /// so these must not be built from a page's profile alias.</summary>
     private static string WikiHref(WikiPageSummary page) =>
-        WikiRoutes.WikiPathFor(page.Namespace, page.Category, page.Slug);
+        WikiRoutes.WikiPathFor(page.Namespace, page.Slug);
 
     private static string RefFor(WikiPageSummary page) =>
-        $"{page.Namespace.ToLowerInvariant()}/{page.Category ?? "general"}/{page.Slug}";
+        $"{page.Namespace.ToLowerInvariant()}/{page.Slug}";
 
     private async Task OnNamespaceFilterChanged(string value)
     {
@@ -457,24 +446,23 @@
     private void OpenMetadataDialog(WikiPageSummary page)
     {
         _metadataTarget = page;
-        _metaCategory = page.Category;
-        _metaTags = [.. page.Tags];
-        _metaTagEntry = string.Empty;
         _metaPublished = page.Published;
+        _metaCategories = [.. page.Categories];
+        _metaCategoryEntry = string.Empty;
         _showMetadataDialog = true;
     }
 
-    private void AddMetaTag()
+    private void AddMetaCategory()
     {
-        var tag = _metaTagEntry.Trim().ToLowerInvariant();
-        if (tag.Length > 0 && !_metaTags.Contains(tag))
-            _metaTags.Add(tag);
-        _metaTagEntry = string.Empty;
+        var category = WikiHelpers.CategoryKey(_metaCategoryEntry);
+        if (category.Length > 0 && !_metaCategories.Contains(category))
+            _metaCategories.Add(category);
+        _metaCategoryEntry = string.Empty;
     }
 
-    private void OnMetaTagKeyDown(KeyboardEventArgs args)
+    private void OnMetaCategoryKeyDown(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter") AddMetaTag();
+        if (args.Key == "Enter") AddMetaCategory();
     }
 
     private async Task SaveMetadataAsync()
@@ -483,9 +471,7 @@
         _busy = true;
         try
         {
-            var result = await Wiki.SetMetadataAsync(
-                _metadataTarget.Slug, _metaCategory, _metaTags, _metaPublished, _metadataTarget.Namespace,
-                currentCategory: _metadataTarget.Category);
+            var result = await Wiki.SetMetadataAsync(_metadataTarget.Slug, _metaCategories, _metaPublished, _metadataTarget.Namespace);
             switch (result)
             {
                 case WikiArticle:

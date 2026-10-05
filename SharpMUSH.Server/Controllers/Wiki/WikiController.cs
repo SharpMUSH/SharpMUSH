@@ -22,11 +22,11 @@ namespace SharpMUSH.Server.Controllers;
 /// <see cref="WikiControllerBase"/>'s visibility rules and share the <c>api/wiki</c> prefix.
 ///
 /// Routes:
-///   GET    /api/wiki/ns/{ns}/{category}/{slug} — JSON page data (canonical, all clients)
-///   GET    /api/wiki/character/{name}          — character namespace alias
-///   POST   /api/wiki                           — create page (authenticated)
-///   PUT    /api/wiki/{slug}                    — update page (authenticated)
-///   DELETE /api/wiki/{slug}                    — delete page (Wizard+)
+///   GET    /api/wiki/ns/{ns}/{slug}   — JSON page data (canonical, all clients)
+///   GET    /api/wiki/character/{name} — character namespace alias
+///   POST   /api/wiki                  — create page (authenticated)
+///   PUT    /api/wiki/{slug}           — update page (authenticated)
+///   DELETE /api/wiki/{slug}           — delete page (Wizard+)
 /// </summary>
 [ApiController]
 [Route("api/wiki")]
@@ -38,16 +38,16 @@ public class WikiController(
 	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
-	/// GET /api/wiki/ns/{namespace}/{category}/{slug}?lang=fr
-	/// Returns JSON page data for a page identified by (namespace, category, slug), resolved into the
+	/// GET /api/wiki/ns/{namespace}/{slug}?lang=fr
+	/// Returns JSON page data for a page identified by (namespace, slug), resolved into the
 	/// reader's locale, or 404 when the page doesn't exist. This is the canonical page route.
 	/// <c>lang</c> is advisory: a malformed or unknown tag is treated as absent and falls to the
 	/// configured default rather than producing a 400.
 	/// </summary>
-	[HttpGet("ns/{ns}/{category}/{slug}")]
-	public async Task<IActionResult> GetPage(string ns, string category, string slug, [FromQuery] string? lang = null)
+	[HttpGet("ns/{ns}/{slug}")]
+	public async Task<IActionResult> GetPage(string ns, string slug, [FromQuery] string? lang = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
 			return NotFound();
 
 		return Ok(await LocalizedDtoAsync(page, lang));
@@ -55,13 +55,13 @@ public class WikiController(
 
 	/// <summary>
 	/// GET /api/wiki/character/{name}?lang=fr
-	/// Resolves the /character/{name} alias to the Character namespace wiki page (default category),
-	/// resolved into the reader's locale.
+	/// Resolves the /character/{name} alias to the Character namespace wiki page, resolved into the
+	/// reader's locale.
 	/// </summary>
 	[HttpGet("character/{name}")]
 	public async Task<IActionResult> GetCharacterPage(string name, [FromQuery] string? lang = null)
 	{
-		if (await Wiki.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character) is not WikiPage page
+		if (await Wiki.GetBySlugAsync(name, WikiNamespace.Character) is not WikiPage page
 			|| !CanSee(page))
 			return NotFound();
 
@@ -83,7 +83,7 @@ public class WikiController(
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.
 		var result = await Wiki.CreateAsync(
-			request.Title, request.Markdown, authorDbref, ns, request.Category, Localization.DefaultLocale);
+			request.Title, request.Markdown, authorDbref, ns, Localization.DefaultLocale, request.Categories);
 		return result switch
 		{
 			WikiPage page => await PageCreatedAsync(page),
@@ -92,10 +92,10 @@ public class WikiController(
 
 		async Task<IActionResult> PageCreatedAsync(WikiPage page)
 		{
-			Logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} category={Category} by={Author}",
-				LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(page.Category), LogSanitizer.Sanitize(authorDbref));
+			Logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}",
+				LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(authorDbref));
 			return CreatedAtAction(nameof(GetPage),
-				new { ns = page.Namespace, category = page.Category, slug = page.Slug }, await ToDtoAsync(page));
+				new { ns = page.Namespace, slug = page.Slug }, await ToDtoAsync(page));
 		}
 	}
 
@@ -106,12 +106,12 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
-	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage existing)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)
 			return NotFound();
 
 		// Protected pages may only be edited by Wizard-level users.
@@ -133,12 +133,12 @@ public class WikiController(
 	/// </summary>
 	[HttpDelete("{slug}")]
 	[Authorize(Policy = PortalPermission.WikiDelete)]
-	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
 		if (await Wiki.DeleteAsync(page.Id, editorDbref) is not None)

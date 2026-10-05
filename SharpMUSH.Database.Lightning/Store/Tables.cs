@@ -78,7 +78,6 @@ public static class Tables
 	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
 	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
-	public static readonly TableDef WikiByTag = TableDef.Index("wiki.tag");
 	/// <summary>Page key → visibility, for protected pages only, so the protected count reads no page row.</summary>
 	public static readonly TableDef WikiProtected = TableDef.Index("wiki.protected");
 	public static readonly TableDef Layout = TableDef.Node("layout");

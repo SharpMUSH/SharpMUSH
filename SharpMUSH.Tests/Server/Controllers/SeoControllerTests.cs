@@ -55,7 +55,7 @@ public class SeoControllerTests
 		var xml = await GetSitemapXml(MakeController(wiki));
 
 		await Assert.That(xml).Contains("<?xml");
-		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{page.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/{page.Slug}");
 	}
 
 	[Test]
@@ -64,11 +64,11 @@ public class SeoControllerTests
 		var wiki = InMemoryWikiStore.CreateService();
 		var published = (await wiki.CreateAsync("Visible Page", "# visible", "#1")).Expect<WikiPage>();
 		var draft = (await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).Expect<WikiPage>();
-		await wiki.SetMetadataAsync(draft.Id, null, [], published: false);
+		await wiki.SetMetadataAsync(draft.Id, [], published: false);
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
-		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{published.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/{published.Slug}");
 		await Assert.That(xml).DoesNotContain(draft.Slug);
 	}
 

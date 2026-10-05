@@ -34,7 +34,7 @@ public class WikiRevisionsController(
 	ILogger<WikiRevisionsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
-	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=&amp;before=
+	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;lang=&amp;before=
 	/// Revision history, newest first. Omitting <c>lang</c> (or naming the page's source locale) returns
 	/// the source-locale stream. <c>before</c>, the last revision number of the previous page, pages by
 	/// cursor instead of by <c>skip</c>, which it then ignores.
@@ -42,11 +42,11 @@ public class WikiRevisionsController(
 	[HttpGet("{slug}/revisions")]
 	public async Task<IActionResult> GetRevisions(
 		string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20,
-		[FromQuery] string? ns = null, [FromQuery] string? category = null,
+		[FromQuery] string? ns = null,
 		[FromQuery] string? lang = null, [FromQuery] int? before = null)
 	{
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
 			return NotFound();
 
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
@@ -59,7 +59,7 @@ public class WikiRevisionsController(
 	}
 
 	/// <summary>
-	/// GET /api/wiki/{slug}/revisions/{number}?ns=&amp;category=&amp;lang=
+	/// GET /api/wiki/{slug}/revisions/{number}?ns=&amp;lang=
 	/// Returns a single revision snapshot, including its full markdown body.
 	/// </summary>
 	/// <remarks>
@@ -71,11 +71,11 @@ public class WikiRevisionsController(
 	[HttpGet("{slug}/revisions/{number:int}")]
 	public async Task<IActionResult> GetRevision(
 		string slug, int number,
-		[FromQuery] string? ns = null, [FromQuery] string? category = null,
+		[FromQuery] string? ns = null,
 		[FromQuery] string? lang = null)
 	{
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
 			return NotFound();
 
 		var stream = await ResolveRevisionStreamAsync(page, lang);
@@ -93,12 +93,12 @@ public class WikiRevisionsController(
 	/// </summary>
 	[HttpPost("{slug}/rollback")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
-	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
 		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))

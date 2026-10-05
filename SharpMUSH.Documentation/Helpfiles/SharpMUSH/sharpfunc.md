@@ -289,7 +289,8 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [WIKI()]         | [WIKILIST()]     | [WIKIRECENT()]   | [WIKISEARCH()]   |
+| [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
+| [WIKISEARCH()]   |                  |                  |                  |
 
 **See Also:**
 - [wiki]

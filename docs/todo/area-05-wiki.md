@@ -11,7 +11,7 @@
 - [x] Wiki CRUD: create, read, update (with revision history) — `IWikiService` + Lightning/in-memory implementations
 - [x] Revision history storage (full snapshots) — `WikiRevision.cs`
 - [x] Page protection/locking (Royalty+ can protect pages) — `IsProtected` flag + `PUT /api/wiki/{slug}/protection` (Wizard role)
-- [x] @wiki in-game commands — `WikiCommands.cs` + `Commands/WikiCommand/`: view/list/search/recent/history, create/edit/append, delete/protect/unprotect/publish/unpublish/category/tag (+ `/noeval`, `/source`); plus `wiki()`, `wikilist()`, `wikisearch()`, `wikirecent()` softcode functions (`WikiFunctions.cs`); helpfile `sharpwiki.md`
+- [x] @wiki in-game commands — `WikiCommands.cs` + `Commands/WikiCommand/`: view/list/search/recent/history, create/edit/append, delete/protect/unprotect/publish/unpublish, `/category <name>` listing (+ `/noeval`, `/source`); plus `wiki()`, `wikilist()`, `wikisearch()`, `wikirecent()` softcode functions (`WikiFunctions.cs`); helpfile `sharpwiki.md`
 - [x] Markdown → MString custom renderer (for in-game wiki display) — `RecursiveMarkdownHelper` pipeline extended with wiki links, generic attributes, directives, task lists
 - [x] HTTP handler: serve wiki pages for portal — `WikiController.cs` (CRUD, recent, namespace listing, revisions, protection, cache invalidation)
 - [ ] NATS event on wiki edit (`portal.wiki.changes`)
@@ -27,16 +27,17 @@
 - [x] Wiki content CSS — links, redlinks, headings, tables, code, blockquotes in `wwwroot/css/custom.css`
 
 ## Admin & Semantic Layer
-- [x] Page metadata: Category / Tags / Published(draft) on `WikiPage` — normalised (lower-case, de-duped), `SetMetadataAsync` in every implementation (metadata changes do not create revisions)
-- [x] Listing APIs — `GET /api/wiki/pages` (X-Total-Count header), `GET /api/wiki/category/{cat}`, `GET /api/wiki/tag/{tag}`; anonymous callers only see Published pages (drafts 404/are filtered)
+- [x] Categories the MediaWiki way — a page holds a list of categories, keyed by `WikiHelpers.CategoryKey`, set in the editor's category chips, by `PUT api/wiki/{slug}/metadata` (`IWikiService.SetMetadataAsync`) or by `@wiki/category page=names`; `[[Category:Name]]` in text is a link to the category page. Identity is `(namespace, slug)`; category pages live in the `category` namespace at `/wiki/category/{key}`. Tags were merged into categories. Lightning migration `0012_wiki_categories` merged each page's old category (unless `general`) and tags into its category list, without a revision
+- [x] Published(draft) on `WikiPage` — `SetMetadataAsync` in every implementation (does not create a revision)
+- [x] Listing APIs — `GET /api/wiki/pages` (X-Total-Count header), `GET /api/wiki/category/{cat}`; anonymous callers only see Published pages (drafts 404/are filtered)
 - [x] Batch administration — `POST /api/wiki/batch/protect` + `batch/delete` (Wizard), `{Succeeded, Failed}` result; `/admin/wiki` is a full multi-select grid (paging, namespace filter, protect/unprotect/delete, per-row metadata dialog)
-- [x] Editor metadata — category / tag chips / published switch in `WikiEdit.razor`, saved via the metadata endpoint only when changed
+- [x] Editor — "add category" toolbar button and the categories the text names in `WikiEdit.razor`; published switch saved via `PUT …/published` only when changed
 - [x] Asset uploads — `POST/GET/DELETE /api/wiki-assets` (`WikiAssetController.cs`): 10 MB cap, image whitelist, SVG script-scan; filesystem store with sha256 + sidecar metadata (`FileSystemWikiAssetService.cs`); `/admin/wiki/assets` manager; `WikiAssetPicker.razor` + "Insert image" button in the editor
-- [x] Markdown directives — `WikiDirectiveExtension.cs`: `::: category X`, `::: tag X`, `::: pagelist NS`, `::: recent N` render live listings client-side (`WikiDirectiveBlock.razor`); args validated/escaped, unknown containers keep default rendering
+- [x] Markdown directives — `WikiDirectiveExtension.cs`: `::: category X`, `::: pagelist NS`, `::: recent N` render live listings client-side (`WikiDirectiveBlock.razor`); args validated/escaped, unknown containers keep default rendering
 - [x] SEO — `/sitemap.xml` (published pages only) + `/robots.txt` (`SeoController.cs`); JSON-LD schema.org Article in bot prerender HTML
 
 ## Localization
-- [x] Per-locale content via `WikiTranslation` overlay rows keyed `(PageId, Locale)` — a translation owns Title / MarkdownSource / Published / revisions and inherits Category / Tags / IsProtected structurally; no schema migration and no content rewrite (one additive-column backfill)
+- [x] Per-locale content via `WikiTranslation` overlay rows keyed `(PageId, Locale)` — a translation owns Title / MarkdownSource / Published / revisions and inherits Categories / IsProtected structurally; no schema migration and no content rewrite (one additive-column backfill)
 - [x] `Wiki.DefaultLocale` (`wiki_default_locale`, default `en`, validated at startup) in `/admin/config/wiki`; `WikiPage.SourceLocale` is materialised once by the migration and never re-derived, so changing the default cannot relabel existing pages
 - [x] Fallback, never 404 — `IWikiLocaleResolver` (pure, 5-step chain) + `IWikiLocalizationService` (visibility filtering, the only `LocalizedWikiPage` factory)
 - [x] Drafts do not leak — the candidate set is filtered before resolution; an unpublished translation is unreachable for readers without edit permission
@@ -46,7 +47,7 @@
 - [x] `?lang=` on the page read, all five listings and `{slug}/revisions`; translation CRUD at `/api/wiki/{slug}/translations[/{locale}]`, with `expectedRevisionNumber` optimistic concurrency answering 409 on a conflict (never retried)
 - [x] Unique `(PageId, Locale, RevisionNumber)` constraint on all three DB backends, which disagreed before this change; asserted by a cross-backend test that checks the constraint *rejects* duplicates
 - [x] Reader UI — dismissible fallback notice (per-session) + language chip row in `WikiDisplay.razor`
-- [x] Authoring — locale selector in `WikiEdit.razor` with inherited Category/Tags visibly disabled; `/wiki/{ns}/{cat}/{slug}/edit?lang=`
+- [x] Authoring — locale selector in `WikiEdit.razor` with the add-category button disabled on a translation; `/wiki/{ns}/{slug}/edit?lang=`
 - [x] Per-locale history and diff (`?lang=` on `WikiPageHistory` / `WikiPageDiff`)
 - [x] Staff — translation-coverage column and locale filter (incl. "missing only") on `/admin/wiki`
 - [x] SEO — `hreflang` alternates + `x-default` + `<html lang>` in the bot prerender, `xhtml:link` in the sitemap; canonical unchanged
@@ -73,9 +74,9 @@
 - Translating the seeded Help pages — content work needing native review, deliberately not machine-translated
 - Locale-aware search for the web omnisearch box — the in-game side is done (see Localization above); the portal's search surface still matches source `PlainText` only
 - Search cost: `ListWiki.SearchPagesAsync` is a full in-process scan of both content streams, capped at 100 results, and scanning translations roughly doubles the rows read. Deliberate at in-game wiki sizes — no index, no query-language work in the backend, and the same code path for every implementation. Measure before replacing it with the area-14 full-text index
-- Localized category *display* names — Category is part of page identity, so it cannot be translated through the overlay
+- Localized category *display* names — a category's label comes from its key; its category page can carry translations of its description
 - Listing performance: localized listings resolve per row. Measure before adding a denormalized title cache
-- `@wiki/view <draft>` still confirms to a mortal that the page exists, and shows its title, category, tags, revision number and timestamp — only the body is withheld. That is the project owner's call ("say a draft exists and is not shown"), taken because a bare "no such page" is worse to work with and is contradicted by the `(draft)` marker the header has always carried. If the *existence* of a draft ever has to be secret, the fix is a page-level 404 on the read path, not a wider body gate — and it would have to cover `@wiki/history` at the same time
+- `@wiki/view <draft>` still confirms to a mortal that the page exists, and shows its title, categories, revision number and timestamp — only the body is withheld. That is the project owner's call ("say a draft exists and is not shown"), taken because a bare "no such page" is worse to work with and is contradicted by the `(draft)` marker the header has always carried. If the *existence* of a draft ever has to be secret, the fix is a page-level 404 on the read path, not a wider body gate — and it would have to cover `@wiki/history` at the same time
 - `WikiEdit` collects an edit summary and a minor-edit flag and discards both (predates localization)
 - **A database transaction abort is classified as a lost write, and that is deliberately conservative.** `UpsertTranslationAsync` reports `WikiWriteConflict.StaleRevision`/`TranslationGone` rather than a fault when the caller's update did not land. A stale revision must always surface rather than reapplying stale markdown over the winning write.
 - `@wiki/translate` writes a body only: an existing translation keeps its title and published flag, a new one is born published under the source page's title. There is no in-game way to retitle a translation or to mark one a draft — `@wiki` has no per-translation publish switch, and a draft created in-game would be invisible to every in-game reader including its author. Both are web-portal actions

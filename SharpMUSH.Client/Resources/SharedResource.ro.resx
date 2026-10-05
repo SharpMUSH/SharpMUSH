@@ -2855,10 +2855,6 @@
     <value>oricine poate edita</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>General</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# modificare} few {# modificări} other {# de modificări}}</value>
     <comment>MT</comment>
@@ -4121,10 +4117,6 @@
     <value>Răsfoire după namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Categorie</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} nu are încă o biografie.</value>
     <comment>MT</comment>
@@ -4220,14 +4212,6 @@
     <value>Revizie</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Etichete</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Apăsați Enter sau + pentru a adăuga o etichetă</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titlu</value>
     <comment>MT</comment>
@@ -4247,10 +4231,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Actualizată</value>
     <comment>MT — assumed it describes a page (feminine)</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>adăugați o etichetă…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Adăugare traducere…</value>
@@ -4398,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Nicio pagină încă.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Etichetă: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5404,5 +5380,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Excepția pentru {0} a fost salvată.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Fără categorie</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Descrie această categorie</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Adaugă o categorie</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategorie} few {# subcategorii} other {# de subcategorii}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# pagină în această categorie} few {# pagini în această categorie} other {# de pagini în această categorie}}</value>
   </data>
 </root>

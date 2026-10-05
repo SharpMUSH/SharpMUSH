@@ -730,13 +730,13 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("See Getting Started for details.");
 
 		// Command link, not navigation: xch_cmd rather than href, and no OSC 8 in the ANSI.
-		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"@wiki main:getting_started\"");
 		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("href=");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).DoesNotContain("]8;;");
 
 		// Pueblo and MXP carry the same command; a plain telnet client still just sees underline.
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("XCH_CMD=\"@wiki main:general:getting_started\"");
-		await Assert.That(result.Render(MarkupFormat.Mxp)).Contains("HREF=\"@wiki main:general:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("XCH_CMD=\"@wiki main:getting_started\"");
+		await Assert.That(result.Render(MarkupFormat.Mxp)).Contains("HREF=\"@wiki main:getting_started\"");
 		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 4)).IsTrue();
 	}
 
@@ -753,7 +753,7 @@ public class RecursiveMarkdownRendererTests
 			.RenderMarkdown("[[Help:Markdown Guide]]", renderer);
 		await Assert.That(namespaced.ToPlainText()).IsEqualTo("Markdown Guide");
 		await Assert.That(namespaced.Render(MarkupFormat.Html))
-			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
+			.Contains("xch_cmd=\"@wiki help:markdown_guide\"");
 
 		var categorised = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("[[Help:Guides:Getting Started]]", renderer);
@@ -775,7 +775,7 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Click here");
 		await Assert.That(result.Render(MarkupFormat.Html))
-			.Contains("xch_cmd=\"@wiki help:general:markdown_guide\"");
+			.Contains("xch_cmd=\"@wiki help:markdown_guide\"");
 	}
 
 	/// <summary>

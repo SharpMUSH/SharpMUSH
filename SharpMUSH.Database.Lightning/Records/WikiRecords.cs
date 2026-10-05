@@ -18,10 +18,22 @@ public sealed record WikiPageRecord
 	public string UpdatedAt { get; init; } = "";
 	public bool IsProtected { get; init; }
 	public int RevisionNumber { get; init; } = 1;
-	public string? Category { get; init; }
-	public string[]? Tags { get; init; }
+	/// <summary>The page's category keys; absent on a row written before
+	/// <c>0012_wiki_categories</c>, which fills it.</summary>
+	public string[]? Categories { get; init; }
 	public bool? Published { get; init; }
 	public string? SourceLocale { get; init; }
+}
+
+/// <summary>
+/// The two fields a page row carried while a category was part of its identity and tags were set beside
+/// the text. Read only by <c>0012_wiki_categories</c>, which merges them into the page's
+/// category list.
+/// </summary>
+public sealed record WikiPageFiledRecord
+{
+	public string? Category { get; init; }
+	public string[]? Tags { get; init; }
 }
 
 /// <summary>A stored wiki page revision.</summary>

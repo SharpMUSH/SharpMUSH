@@ -2855,10 +2855,6 @@
     <value>alla kan redigera</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Allmänt</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# ändring} other {# ändringar}}</value>
     <comment>MT</comment>
@@ -4121,10 +4117,6 @@
     <value>Bläddra efter namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategori</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} har ingen biografi ännu.</value>
     <comment>MT</comment>
@@ -4220,14 +4212,6 @@
     <value>Version</value>
     <comment>MT — 'revision' rendered as 'version'; Swedish 'revision' primarily means audit.</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Taggar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Tryck på Enter eller + för att lägga till en tagg</value>
-    <comment>MT — key name Enter kept.</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Titel</value>
     <comment>MT</comment>
@@ -4246,10 +4230,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Uppdaterad</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>lägg till tagg…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4398,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Inga sidor än.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tagg: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5404,5 +5380,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Undantag för {0} sparat.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Utan kategori</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Beskriv den här kategorin</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Lägg till en kategori</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# underkategori} other {# underkategorier}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# sida i den här kategorin} other {# sidor i den här kategorin}}</value>
   </data>
 </root>

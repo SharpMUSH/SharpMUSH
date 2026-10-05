@@ -318,7 +318,7 @@ Profile pages can show "Recent Scenes" (scenes this character participated in).
 ### Wiki
 
 Profile IS a wiki page — inherits categories, tags, revision history.
-Characters can be categorized: `[[Category:Free Peoples]]`, `[[Category:Wizards]]`.
+Characters can be categorized like any page, e.g. in Free Peoples and Wizards.
 
 ### Presence
 
