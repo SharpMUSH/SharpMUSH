@@ -35,11 +35,11 @@
 </div>
 
 @code {
-    /// <summary>Directive name: category, tag, pagelist, or recent.</summary>
+    /// <summary>Directive name: category, pagelist, or recent.</summary>
     [Parameter]
     public string Directive { get; set; } = string.Empty;
 
-    /// <summary>Directive argument (category/tag/namespace name, or count for recent).</summary>
+    /// <summary>Directive argument (category or namespace name, or count for recent).</summary>
     [Parameter]
     public string Arg { get; set; } = string.Empty;
 
@@ -47,7 +47,7 @@
     private bool _loaded;
 
     /// <summary>Minimal projection of the wiki page listing endpoints' JSON shape.</summary>
-    private sealed record PageDto(string Slug, string Title, string Namespace, DateTimeOffset UpdatedAt, string? Category = null);
+    private sealed record PageDto(string Slug, string Title, string Namespace, DateTimeOffset UpdatedAt);
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,7 +75,6 @@
     private string? BuildUrl() => Directive switch
     {
         "category" when Arg.Length > 0 => $"api/wiki/category/{Uri.EscapeDataString(Arg)}",
-        "tag" when Arg.Length > 0 => $"api/wiki/tag/{Uri.EscapeDataString(Arg)}",
         "pagelist" when Arg.Length > 0 => $"api/wiki/ns/{Uri.EscapeDataString(Arg)}",
         "recent" => $"api/wiki/recent?count={Uri.EscapeDataString(Arg.Length > 0 ? Arg : "10")}",
         _ => null
@@ -84,11 +83,10 @@
     private string? Header => Directive switch
     {
         "category" => Loc["WkDirectiveCategoryHeader", Arg].Value,
-        "tag" => Loc["WkDirectiveTagHeader", Arg].Value,
         "recent" => Loc["WikiRecentChanges"].Value,
         _ => null
     };
 
     private static string LinkFor(PageDto page) =>
-        WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
+        WikiRoutes.PathFor(page.Namespace, page.Slug);
 }

@@ -104,7 +104,7 @@ public class SeoController(
 
 	/// <summary>Maps a wiki page to its public portal path based on its namespace.</summary>
 	private static string PathFor(WikiPage page) =>
-		WikiRoutes.PathFor(page.Namespace, page.Category, page.Slug);
+		WikiRoutes.PathFor(page.Namespace, page.Slug);
 
 	private static void AppendUrl(
 		StringBuilder sb, string loc, string lastmod, IReadOnlyList<string>? alternateLocales = null)

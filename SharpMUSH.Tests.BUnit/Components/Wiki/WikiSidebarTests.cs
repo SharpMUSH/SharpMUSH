@@ -29,17 +29,17 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task ListsCategoriesWithCountsAndCovers_GeneralLast()
+	public async Task ListsNamedCategoriesWithCountsAndCovers()
 	{
 		var cut = RenderAt("/wiki");
-		var rows = cut.FindAll(".wiki-side-cats a.kit-row");
-		await Assert.That(rows.Count).IsEqualTo(3);
+		var rows = cut.FindAll(".wiki-side-cats .kit-row");
+		await Assert.That(rows.Count).IsEqualTo(2)
+			.Because("pages in no category have no category page, so the strip does not offer a row for them");
 		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/wiki/category/guides");
 		await Assert.That(rows[0].QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("2");
 		await Assert.That(rows[0].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
-		await Assert.That(rows[2].GetAttribute("href")).IsEqualTo("/wiki/category/general")
-			.Because("uncategorised pages are 'General', listed after the named categories");
-		await Assert.That(rows[2].QuerySelector(".kit-row-fallback svg")).IsNotNull().Because("no cover: the document icon, as on board 21");
+		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/wiki/category/lore");
+		await Assert.That(rows.Any(r => r.TextContent.Contains("Uncategorized"))).IsFalse();
 	}
 
 	[Test]
@@ -80,13 +80,13 @@ public class WikiSidebarTests : TrackingBunitContext
 		creator.Find("button.wiki-side-new").Click();
 		creator.Find(".wiki-side-new-form input").Input("Salt Market");
 		creator.Find(".wiki-side-new-form").Submit();
-		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/salt_market/edit?title=Salt%20Market")
+		await Assert.That(_nav.Uri).EndsWith("/wiki/main/salt_market/edit?title=Salt%20Market")
 			.Because("the editor starts from the title the creator typed, not the slug made from it");
 
 		creator.Find("button.wiki-side-new").Click();
 		creator.Find(".wiki-side-new-form input").Input("What? / Why#");
 		creator.Find(".wiki-side-new-form").Submit();
-		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/what%3F_%2F_why%23/edit?title=What%3F%20%2F%20Why%23")
+		await Assert.That(_nav.Uri).EndsWith("/wiki/main/what%3F_%2F_why%23/edit?title=What%3F%20%2F%20Why%23")
 			.Because("a title with ?, / or # must not break the route");
 	}
 
@@ -96,8 +96,8 @@ public class WikiSidebarTests : TrackingBunitContext
 		_auth.SetPolicies("wiki.create");
 		_nav.NavigateTo("/wiki");
 		var cut = Render<WikiSidebar>(p => p.Add(x => x.Collapsed, true));
-		cut.WaitForAssertion(() => cut.Find("a.kit-row--collapsed[href='/wiki/main/general/new-page/edit']"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll("button.kit-row--collapsed").Count).IsEqualTo(0)
+		cut.WaitForAssertion(() => cut.Find("a.kit-row--collapsed[href='/wiki/main/new-page/edit']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.kit-row--collapsed").Count(b => b.Closest(".wiki-side-cats") is null)).IsEqualTo(0)
 			.Because("the strip has no room for the title form, so its New page is a link to the editor, not a toggle");
 	}
 

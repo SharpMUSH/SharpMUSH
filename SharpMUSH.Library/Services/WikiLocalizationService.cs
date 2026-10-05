@@ -14,9 +14,9 @@ public sealed class WikiLocalizationService(
 	public string DefaultLocale => resolver.DefaultLocale;
 
 	public async Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
-		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
+		string slug, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
 	{
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page) return new NotFound();
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page) return new NotFound();
 
 		return await LocalizeAsync(page, requestedLocale, includeDrafts);
 	}
@@ -37,6 +37,18 @@ public sealed class WikiLocalizationService(
 		}
 
 		return results.AsReadOnly();
+	}
+
+	/// <summary>More category pages than any game will write; a name past it falls back to its key.</summary>
+	private const int MaxCategoryNames = 1000;
+
+	public async Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale)
+	{
+		var pages = await wikiService.GetAllPagesAsync(0, MaxCategoryNames, WikiNamespace.Category, WikiVisibility.PublishedOnly);
+		var localized = await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false);
+		return localized
+			.Where(p => p.Title.Length > 0)
+			.ToDictionary(p => p.Page.Slug, p => p.Title, StringComparer.Ordinal);
 	}
 
 	public async Task<IReadOnlyList<WikiTranslationSummary>> GetVisibleTranslationsAsync(

@@ -25,9 +25,9 @@ public sealed class InMemoryWikiStore : IWikiStore
 	/// <summary>A <see cref="WikiStoreService"/> over a fresh in-memory store.</summary>
 	public static WikiStoreService CreateService() => new(new InMemoryWikiStore(), new WikiMarkdigPipeline());
 
-	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string category, string slug)
+	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string slug)
 		=> Task.FromResult<Found<WikiPage>>(
-			_slugIndex.TryGetValue(WikiHelpers.SlugKey(ns, category, slug), out var id)
+			_slugIndex.TryGetValue(WikiHelpers.SlugKey(ns, slug), out var id)
 			&& _pagesById.TryGetValue(id, out var page)
 				? page
 				: new NotFound());
@@ -62,15 +62,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
-			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(p => p.Title, StringComparer.Ordinal)
-			.Skip(skip)
-			.Take(take)
-			.ToList());
-
-	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility)
-		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
-			.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+			.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
@@ -90,10 +82,10 @@ public sealed class InMemoryWikiStore : IWikiStore
 		var stored = page with { Id = id };
 
 		// TryAdd is the uniqueness check and the claim in one step, so two creators of the same
-		// (namespace, category, slug) cannot both pass.
-		if (!_slugIndex.TryAdd(WikiHelpers.SlugKey(stored.Namespace, stored.Category, stored.Slug), id))
+		// (namespace, slug) cannot both pass.
+		if (!_slugIndex.TryAdd(WikiHelpers.SlugKey(stored.Namespace, stored.Slug), id))
 			return Task.FromResult<Result<WikiPage>>(new Error<string>(
-				$"A wiki page with slug '{stored.Slug}' already exists in namespace '{stored.Namespace}' category '{stored.Category}'."));
+				$"A wiki page with slug '{stored.Slug}' already exists in namespace '{stored.Namespace}'."));
 
 		_pagesById[id] = stored;
 		AppendRevision(id, string.Empty, 1, stored.MarkdownSource, stored.AuthorDbref, null, stored.CreatedAt);
@@ -126,7 +118,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 		if (!_pagesById.TryRemove(id, out var page))
 			return Task.FromResult<Found<None>>(new NotFound());
 
-		_slugIndex.TryRemove(WikiHelpers.SlugKey(page.Namespace, page.Category, page.Slug), out _);
+		_slugIndex.TryRemove(WikiHelpers.SlugKey(page.Namespace, page.Slug), out _);
 		_revisions.TryRemove(id, out _);
 
 		// Keys is a snapshot, so removing while walking it is safe.
@@ -145,22 +137,12 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult<Found<None>>(new None());
 	}
 
-	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, string category, IReadOnlyList<string> tags,
-		bool published)
+	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
 			return Task.FromResult<Found<WikiPage>>(new NotFound());
 
-		// Category is part of page identity, so changing it re-keys the page in the slug index: reserve the
-		// new key first, refusing a collision, before releasing the old one.
-		if (!string.Equals(category, existing.Category, StringComparison.OrdinalIgnoreCase))
-		{
-			if (!_slugIndex.TryAdd(WikiHelpers.SlugKey(existing.Namespace, category, existing.Slug), id))
-				return Task.FromResult<Found<WikiPage>>(new NotFound());
-			_slugIndex.TryRemove(WikiHelpers.SlugKey(existing.Namespace, existing.Category, existing.Slug), out _);
-		}
-
-		var updated = existing with { Category = category, Tags = tags, Published = published };
+		var updated = existing with { Categories = categories, Published = published };
 		_pagesById[id] = updated;
 		return Task.FromResult<Found<WikiPage>>(updated);
 	}

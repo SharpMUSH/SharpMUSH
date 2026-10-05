@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Services;
 public sealed class WikiLinkInline : LeafInline
 {
 	/// <summary>
-	/// The target slug (possibly namespace-prefixed, e.g. <c>help/getting_started</c>).
+	/// The target's identity as <c>namespace/slug</c>, e.g. <c>help/getting_started</c>.
 	/// </summary>
 	public required string Slug { get; init; }
 
@@ -50,6 +50,8 @@ public sealed class WikiLinkInline : LeafInline
 ///   <item><c>[[Page Name]]</c> — link to main-namespace page, title = page name</item>
 ///   <item><c>[[Display Text|Page Name]]</c> — custom display text</item>
 ///   <item><c>[[Help:Getting Started]]</c> — namespace-prefixed page</item>
+///   <item><c>[[Category:Lore]]</c> (or MediaWiki's <c>[[:Category:Lore]]</c>) — a link to the category's
+///     page. A page's own categories are a list stored on the page, never read from its text.</item>
 /// </list>
 /// </summary>
 internal sealed class WikiLinkParser : InlineParser
@@ -105,7 +107,11 @@ internal sealed class WikiLinkParser : InlineParser
 			target = raw[(pipeIdx + 1)..].Trim();
 		}
 
-		var (ns, category, slug) = ResolveTarget(target);
+		// MediaWiki's leading colon ([[:Category:Lore]]) is accepted and means the same link.
+		if (target.StartsWith(':')) target = target[1..].TrimStart();
+
+		var (ns, slug) = WikiHelpers.ResolveTitle(target);
+		if (slug.Length == 0) return false;
 
 		// Derive title from the bare slug (spaces for underscores)
 		var title = System.Globalization.CultureInfo.CurrentCulture.TextInfo
@@ -113,9 +119,8 @@ internal sealed class WikiLinkParser : InlineParser
 
 		var node = new WikiLinkInline
 		{
-			// Canonical path identity: namespace/category/slug.
-			Slug = $"{ns}/{category}/{slug}",
-			Href = WikiRoutes.PathFor(ns, category, slug),
+			Slug = $"{WikiHelpers.NamespaceName(ns)}/{slug}",
+			Href = WikiRoutes.PathFor(ns, slug),
 			Title = title,
 			DisplayText = displayText,
 		};
@@ -125,32 +130,6 @@ internal sealed class WikiLinkParser : InlineParser
 		slice = current;
 		return true;
 	}
-
-	/// <summary>
-	/// Resolves a wiki-link target into its (namespace, category, slug) identity. Forms:
-	/// <list type="bullet">
-	///   <item><c>Page Name</c> → (main, general, page_name)</item>
-	///   <item><c>Help:Page Name</c> → (help, general, page_name)</item>
-	///   <item><c>Help:Guides:Page Name</c> → (help, guides, page_name)</item>
-	/// </list>
-	/// </summary>
-	private static (string Namespace, string Category, string Slug) ResolveTarget(string target)
-	{
-		var parts = target.Split(':', 3);
-		return parts.Length switch
-		{
-			3 => (parts[0].Trim().ToLowerInvariant(),
-				WikiHelpers.NormalizeCategory(parts[1]),
-				Slugify(parts[2].Trim())),
-			2 => (parts[0].Trim().ToLowerInvariant(),
-				WikiHelpers.DefaultCategory,
-				Slugify(parts[1].Trim())),
-			_ => ("main", WikiHelpers.DefaultCategory, Slugify(target.Trim()))
-		};
-	}
-
-	private static string Slugify(string text) =>
-		WikiHelpers.Slugify(text);
 }
 
 /// <summary>

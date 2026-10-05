@@ -2855,10 +2855,6 @@
     <value>każdy może edytować</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Ogólne</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# zmiana} few {# zmiany} many {# zmian} other {# zmiany}}</value>
     <comment>MT — plural value taken verbatim from the pl locale sheet</comment>
@@ -4121,10 +4117,6 @@
     <value>Przeglądaj według namespace</value>
     <comment>MT — "namespace" kept untranslated per glossary, indeclinable</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategoria</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} nie ma jeszcze biografii.</value>
     <comment>MT</comment>
@@ -4220,14 +4212,6 @@
     <value>Wersja</value>
     <comment>MT — "wersja" per the locale sheet's revision decision</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tagi</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Naciśnij Enter lub +, aby dodać tag</value>
-    <comment>MT — key name "Enter" and the "+" glyph left as-is</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Tytuł</value>
     <comment>MT</comment>
@@ -4247,10 +4231,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Zaktualizowano</value>
     <comment>MT — assumed a column header for the last-modified timestamp</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>dodaj tag…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Dodaj tłumaczenie…</value>
@@ -4398,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Brak stron.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5404,5 +5380,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Zapisano wyjątek dla {0}.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Bez kategorii</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Opisz tę kategorię</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Dodaj kategorię</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# podkategoria} few {# podkategorie} many {# podkategorii} other {# podkategorii}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# strona w tej kategorii} few {# strony w tej kategorii} many {# stron w tej kategorii} other {# strony w tej kategorii}}</value>
   </data>
 </root>

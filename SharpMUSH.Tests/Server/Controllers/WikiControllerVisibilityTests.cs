@@ -38,7 +38,7 @@ public class WikiControllerVisibilityTests
 	{
 		var wiki = InMemoryWikiStore.CreateService();
 		var page = (await wiki.CreateAsync("Draft Page", "# draft", "#1")).Expect<WikiPage>();
-		await wiki.SetMetadataAsync(page.Id, null, [], published: false);
+		await wiki.SetMetadataAsync(page.Id, [], published: false);
 		return (wiki, page.Slug);
 	}
 
@@ -48,7 +48,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await endpoints.Pages.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", slug);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
@@ -59,7 +59,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true);
 
-		var result = await endpoints.Pages.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -71,7 +71,7 @@ public class WikiControllerVisibilityTests
 		var created = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
 		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await endpoints.Pages.GetPage("main", "general", created.Slug);
+		var result = await endpoints.Pages.GetPage("main", created.Slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -170,7 +170,7 @@ public class WikiControllerVisibilityTests
 		var published = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
 		await wiki.SetProtectionAsync(published.Id, true);
 		var protectedDraft = (await wiki.CreateAsync("Locked Draft", "# draft", "#1")).Expect<WikiPage>();
-		await wiki.SetMetadataAsync(protectedDraft.Id, null, [], published: false);
+		await wiki.SetMetadataAsync(protectedDraft.Id, [], published: false);
 		await wiki.SetProtectionAsync(protectedDraft.Id, true);
 
 		static WikiPageCountsDto Counts(IActionResult result) => (WikiPageCountsDto)((OkObjectResult)result).Value!;
@@ -216,7 +216,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
 
-		var result = await endpoints.Pages.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -227,7 +227,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");
 
-		var result = await endpoints.Pages.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", slug);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}

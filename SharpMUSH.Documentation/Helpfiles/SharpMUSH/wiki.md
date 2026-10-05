@@ -33,9 +33,16 @@
         "@WIKI/UNPROTECT",
         "@WIKI/PUBLISH",
         "@WIKI/UNPUBLISH",
-        "@WIKI/CATEGORY",
-        "@WIKI/TAG",
         "@WIKI/HISTORY"
+      ]
+    },
+    {
+      "id": "categories",
+      "heading": "Wiki categories",
+      "lookup": "wiki categories",
+      "aliases": [
+        "WIKI-CATEGORIES",
+        "@WIKI/CATEGORY"
       ]
     },
     {
@@ -88,18 +95,22 @@ on the website immediately, and vice versa.
 
 Page targets may carry a namespace prefix: `Help:Markdown Guide` refers to the
 page "Markdown Guide" in the help namespace. Without a prefix, pages live in
-the main namespace. Valid namespaces: main, help, character, system.
+the main namespace. Valid namespaces: main, help, character, system, category.
+A page is identified by its namespace and title alone; categories are labels
+it carries (see [wiki categories]).
 
 Listings (`@wiki/list`, `@wiki/search`, `@wiki/recent`) print every page's
-identifier fully qualified as `<namespace>:<category>:<slug>` — `home` in the
-main namespace lists as `main:general:home`. One column, one grammar, and the
-identifier printed is always one you can paste straight back into `@wiki`.
-Typing a target is unchanged: the short forms still work, so `@wiki home`,
-`@wiki main:home` and `@wiki main:general:home` all reach the same page.
+identifier fully qualified as `<namespace>:<slug>` — `home` in the main
+namespace lists as `main:home`. One column, one grammar, and the identifier
+printed is always one you can paste straight back into `@wiki`. Typing a
+target is unchanged: the short form still works, so `@wiki home` and
+`@wiki main:home` reach the same page.
 
 ## Viewing and discovery
 * `@wiki <page>` or `@wiki/view <page>` - display a page
 * `@wiki/list [<namespace>]` - list pages
+* `@wiki/category <name>` - list the pages and subcategories in a category
+* `@wiki/category <page>=<names>` - set a page's categories (comma-separated)
 * `@wiki/search <text>` - find pages by title or content, in any locale
 * `@wiki/recent [<count>]` - recently edited pages (default 10)
 * `@wiki/history <page>` - revision history
@@ -118,8 +129,6 @@ body
 * `@wiki/delete <page>` - delete a page (wizard)
 * `@wiki/protect <page>`, `@wiki/unprotect <page>` - restrict edits to wizards (wizard)
 * `@wiki/publish <page>`, `@wiki/unpublish <page>` - publish or mark as draft (wizard)
-* `@wiki/category <page>=<category>` - set or clear the page's category
-* `@wiki/tag <page>=<tag> <tag> ...` - replace the page's tags
 
 The `/noeval` switch may be combined with any of the above to suppress
 softcode evaluation of the arguments.
@@ -206,14 +215,13 @@ appear in-game as a placeholder.
 
 Linking to other pages:
 Inside a page's Markdown, `[[Page Name]]` links to another wiki page. The
-target takes the same forms `@wiki` does, so `[[Home]]`,
-`[[Help:Markdown Guide]]` and `[[Help:Guides:Getting Started]]` all reach the
-pages you would reach by typing them. `[[Display text|Page Name]]` links with
+target takes the same forms `@wiki` does, so `[[Home]]` and
+`[[Help:Markdown Guide]]` reach the pages you would reach by typing them. `[[Display text|Page Name]]` links with
 wording of your own; without it the page's title is shown. Only the display
 text appears - the brackets and the target never do.
 
 On the web portal that is an ordinary link. In-game, `@wiki` renders it as a
-clickable command link that runs `@wiki <namespace>:<category>:<slug>` for the
+clickable command link that runs `@wiki <namespace>:<slug>` for the
 page named, so a Pueblo, MXP or web client follows a wiki link by clicking it.
 A plain telnet client cannot click, and sees the underlined text it always saw.
 
@@ -227,6 +235,7 @@ follow one.
 ::: seealso
 - [wiki editing]
 - [wiki administration]
+- [wiki categories]
 - [WIKI()]
 :::
 
@@ -262,7 +271,7 @@ the page itself, so translating a page into the language it was written in is
 refused too.
 
 A translation keeps its own title, revision numbers and draft flag; the page's
-category, tags and protection are inherited and cannot differ. @wiki/translate
+categories and protection are inherited and cannot differ. @wiki/translate
 supplies only the body, so an existing translation keeps the title and the
 draft/published state it already had, and a brand-new one starts published,
 under the source page's title. Retitle it on the web portal.
@@ -298,8 +307,6 @@ WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<t
 - `@wiki/delete <page>`
 - `@wiki/protect <page>` and `@wiki/unprotect <page>`
 - `@wiki/publish <page>` and `@wiki/unpublish <page>`
-- `@wiki/category <page>=<category>`
-- `@wiki/tag <page>=<tag> <tag> ...`
 - `@wiki/history <page>`
 
 Deleting, protecting, and publishing are wizard-only. Deletion removes the
@@ -309,16 +316,56 @@ hidden from anonymous web visitors and from the sitemap, and in-game their
 body and revision history are shown only to a wizard who asks for them with
 `/draft`. See [wiki].
 
-Categories and tags group pages for the web portal's listings and the wiki's
-live `::: category` blocks. Tags are space-separated; both are stored
-lower-case. Setting an empty category clears it.
-
 @wiki/history lists every revision with its editor, date, and edit summary, for
 the revision stream of your own locale. Each locale is numbered independently
 starting from 1, so "rev 3" of a French translation is unrelated to "rev 3" of
 the source; `@wiki/history/source` shows the source locale's stream. An edit
 summary is prose about unpublished content, so a draft's revisions are withheld
 exactly as its body is: `@wiki/history/draft` shows them, to a wizard.
+
+::: seealso
+- [wiki]
+- [wiki editing]
+:::
+
+## Wiki categories
+
+- `@wiki/category <name>`
+- `@wiki/category <page>=<name>[, <name>...]`
+
+Categories work the way they do in MediaWiki, except that they are held by
+the page rather than written in its text. A page can be in any number of
+categories; the portal lists them at the page's foot.
+
+`@wiki/category <page>=<names>` replaces the page's categories with a
+comma-separated list, and `@wiki/category <page>=` takes it out of all of them.
+It follows the same rule as @wiki/edit: a protected page is wizard-only. It is
+not an edit of the text, so it adds no revision.
+
+Each category has a page of its own, `Category:Lore`, in the category
+namespace. Writing that page is optional: whatever it says is shown above the
+list of the category's members. A category page that is itself in the Setting
+category is a subcategory of Setting. `[[Category:Lore]]` in a page's text is
+an ordinary link to that page.
+
+A translation is in the same categories as its page; only a category's name
+is translated. The name shown is the title of the category's page, so giving
+`Category:Lore` a French translation in the portal shows French readers its
+French title wherever the category appears. A category with no page is shown
+by its name as typed.
+
+`@wiki/category <name>` lists a category's subcategories and pages. Category
+names are matched as titles are: case and spaces versus underscores do not
+matter. From softcode, `wikicategory(<name>)` returns a category's pages and
+`wiki(<page>, categories)` a page's categories.
+
+```sharp
+> @wiki/category combat_primer=Rules, Combat
+WIKI: 'Combat Primer' categories: Combat, Rules.
+> @wiki/category rules
+WIKI: Category 'Rules' — 1 page(s), 0 subcategory(ies):
+  main:combat_primer             Combat Primer (rev 2, 2026-10-05)
+```
 
 ::: seealso
 - [wiki]

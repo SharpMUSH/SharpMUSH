@@ -665,7 +665,7 @@ public class MarkdownFunctionUnitTests
 
 		// WIKILINK's %1 is the fully qualified @wiki reference, whatever short form was written.
 		// This is the example in `help rendermarkdowncustom`, verbatim.
-		await Assert.That(plainText).Contains("Markdown Guide (@wiki help:general:markdown_guide)");
+		await Assert.That(plainText).Contains("Markdown Guide (@wiki help:markdown_guide)");
 	}
 
 	/// <summary>

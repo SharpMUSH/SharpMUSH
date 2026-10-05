@@ -300,7 +300,8 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [WIKI()]         | [WIKILIST()]     | [WIKIRECENT()]   | [WIKISEARCH()]   |
+| [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
+| [WIKISEARCH()]   |                  |                  |                  |
 
 ::: seealso
 - [wiki]

@@ -27,6 +27,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(PageConversationRecord))]
 [JsonSerializable(typeof(ServerStateRecord))]
 [JsonSerializable(typeof(WikiPageRecord))]
+[JsonSerializable(typeof(WikiPageFiledRecord))]
 [JsonSerializable(typeof(WikiRevisionRecord))]
 [JsonSerializable(typeof(WikiTranslationRecord))]
 [JsonSerializable(typeof(ApplicationRecord))]

@@ -2855,10 +2855,6 @@
     <value>bárki szerkesztheti</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Általános</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# módosítás} other {# módosítás}}</value>
     <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
@@ -4121,10 +4117,6 @@
     <value>Böngészés névtér szerint</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategória</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} még nem rendelkezik életrajzzal.</value>
     <comment>MT</comment>
@@ -4220,14 +4212,6 @@
     <value>Változat</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Címkék</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Címke hozzáadásához nyomjon Entert, vagy kattintson a + jelre</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Cím</value>
     <comment>MT</comment>
@@ -4246,10 +4230,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Frissítve</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>címke hozzáadása…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4398,10 +4378,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Még nincsenek oldalak.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Címke: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5404,5 +5380,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>A(z) {0} kivétele mentve.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Kategória nélkül</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Kategória leírása</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Kategória hozzáadása</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# alkategória} other {# alkategória}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# oldal ebben a kategóriában} other {# oldal ebben a kategóriában}}</value>
   </data>
 </root>

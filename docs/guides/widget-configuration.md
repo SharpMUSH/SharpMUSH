@@ -86,14 +86,13 @@ Sidebar and footer behaviour is not per-widget — it lives in the layout's `set
 
 ### Wiki Body
 
-Renders one wiki page inline. A page's identity is (namespace, category, slug), so `slug` alone
-addresses `main:general:{slug}` and the other keys narrow it.
+Renders one wiki page inline. A page's identity is (namespace, slug), so `slug` alone addresses
+`main:{slug}` and `namespace` narrows it.
 
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `slug` | string | — | Page slug. Set this to render an arbitrary wiki page. |
 | `namespace` | string | `main` | Wiki namespace. |
-| `category` | string | `general` | Category segment. |
 | `locale` | string | reader's preference | Locale to render. |
 | `character` | string | — | Shorthand for a character biography: same as `slug` = the name with `namespace` = `character`. Ignored when `slug` is set. |
 
@@ -111,7 +110,7 @@ profile. With none of the three, the widget renders nothing.
 namespace, so a `namespace` set alongside `character` (or alongside no page at all) is ignored.
 
 ```json
-{ "slug": "house-rules", "namespace": "main", "category": "policies" }
+{ "slug": "house_rules", "namespace": "help" }
 ```
 
 ```json

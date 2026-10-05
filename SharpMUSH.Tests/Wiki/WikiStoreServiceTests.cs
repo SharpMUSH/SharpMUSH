@@ -23,10 +23,9 @@ public class WikiStoreServiceTests
 		string title = "Test Page",
 		WikiNamespace ns = WikiNamespace.Main,
 		string markdown = "Hello **world**.",
-		string editor = "#1",
-		string? category = null)
+		string editor = "#1")
 	{
-		var result = await svc.CreateAsync(title, markdown, editor, ns, category);
+		var result = await svc.CreateAsync(title, markdown, editor, ns);
 		var page = result.Expect<WikiPage>();
 		return page;
 	}
@@ -112,56 +111,41 @@ public class WikiStoreServiceTests
 	}
 
 	[Test]
-	public async Task CreateAsync_SameSlugDifferentCategory_Succeeds()
+	public async Task CreateAsync_SameSlugDifferentCategories_ReturnsError()
 	{
-		// Category is part of identity, so the same slug may live in different categories.
+		// Categories are tags in the text, not identity: one namespace holds one page per slug.
 		var svc = BuildService();
-		var lore = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
-		var rules = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "rules");
+		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, categories: ["Lore"]);
 
-		await Assert.That(lore.Id).IsNotEqualTo(rules.Id);
-		var foundLore = (await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Expect<WikiPage>();
-		await Assert.That(foundLore.Id).IsEqualTo(lore.Id);
-		var foundRules = (await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).Expect<WikiPage>();
-		await Assert.That(foundRules.Id).IsEqualTo(rules.Id);
-	}
-
-	[Test]
-	public async Task CreateAsync_SameSlugSameCategory_ReturnsError()
-	{
-		var svc = BuildService();
-		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore");
-
-		var result = await svc.CreateAsync("Dragons", "more", "#1", WikiNamespace.Main, "lore");
+		var result = await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, categories: ["Rules"]);
 
 		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
-	public async Task SetMetadata_ChangingCategory_RekeysPage()
+	public async Task SetMetadata_ChangingCategories_KeepsSlug()
 	{
 		var svc = BuildService();
-		var page = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
+		var page = (await svc.CreateAsync("Dragons", "content", "#1", categories: ["Lore"])).Expect<WikiPage>();
 
-		await svc.SetMetadataAsync(page.Id, "rules", [], true);
+		await svc.SetMetadataAsync(page.Id, ["Rules"], published: true);
 
-		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
-		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Value).IsTypeOf<NotFound>();
+		var found = (await svc.GetBySlugAsync("dragons", WikiNamespace.Main)).Expect<WikiPage>();
+		await Assert.That(found.Id).IsEqualTo(page.Id);
+		await Assert.That(found.Categories).IsEquivalentTo(new[] { "rules" });
 	}
 
 	[Test]
-	public async Task SetMetadata_ChangingCategoryToExisting_IsRejected()
+	public async Task CreateAsync_CategoryPageLivesInCategoryNamespace()
 	{
 		var svc = BuildService();
-		var lore = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
-		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "rules");
+		var page = (await svc.CreateAsync("Lore", "Stories of the world.", "#1", WikiNamespace.Category,
+			categories: ["Setting"])).Expect<WikiPage>();
 
-		// Moving the lore page into "rules" would collide with the existing rules page.
-		var result = await svc.SetMetadataAsync(lore.Id, "rules", [], true);
-
-		await Assert.That(result.Value).IsTypeOf<NotFound>();
-		var unmoved = (await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Expect<WikiPage>();
-		await Assert.That(unmoved.Id).IsEqualTo(lore.Id);
+		var found = (await svc.GetBySlugAsync("lore", WikiNamespace.Category)).Expect<WikiPage>();
+		await Assert.That(found.Id).IsEqualTo(page.Id);
+		await Assert.That((await svc.GetByCategoryAsync("setting")).Single().Id).IsEqualTo(page.Id)
+			.Because("a category page that names another category is that category's subcategory");
 	}
 
 	[Test]
@@ -170,7 +154,7 @@ public class WikiStoreServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, title: "Find Me");
 
-		var result = await svc.GetBySlugAsync("find_me", "general", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("find_me", WikiNamespace.Main);
 
 		var page = result.Expect<WikiPage>();
 		await Assert.That(page.Id).IsEqualTo(created.Id);
@@ -185,7 +169,7 @@ public class WikiStoreServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, title: "Mercutio");
 
-		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync(lookup, WikiNamespace.Main);
 
 		var page = result.Expect<WikiPage>();
 		await Assert.That(page.Id).IsEqualTo(created.Id);
@@ -199,7 +183,7 @@ public class WikiStoreServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, title: "Mannaz Byron");
 
-		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync(lookup, WikiNamespace.Main);
 
 		var page = result.Expect<WikiPage>();
 		await Assert.That(page.Id).IsEqualTo(created.Id);
@@ -209,7 +193,7 @@ public class WikiStoreServiceTests
 	public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
 	{
 		var svc = BuildService();
-		var result = await svc.GetBySlugAsync("nonexistent", "general", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("nonexistent", WikiNamespace.Main);
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
@@ -220,7 +204,7 @@ public class WikiStoreServiceTests
 		var svc = BuildService();
 		await CreatePageAsync(svc, title: "Ns Test", ns: WikiNamespace.Main);
 
-		var result = await svc.GetBySlugAsync("ns_test", "general", WikiNamespace.Help);
+		var result = await svc.GetBySlugAsync("ns_test", WikiNamespace.Help);
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
@@ -439,13 +423,13 @@ public class WikiStoreServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "**original**");
 
-		var before = (await svc.GetBySlugAsync(created.Slug, "general")).Expect<WikiPage>();
+		var before = (await svc.GetBySlugAsync(created.Slug)).Expect<WikiPage>();
 		await Assert.That(before.RenderedHtml).Contains("original");
 
 		var updateResult = await svc.UpdateAsync(created.Id, "**updated**", "#1", "edit");
 		await Assert.That(updateResult.Value).IsTypeOf<WikiPage>();
 
-		var after = (await svc.GetBySlugAsync(created.Slug, "general")).Expect<WikiPage>();
+		var after = (await svc.GetBySlugAsync(created.Slug)).Expect<WikiPage>();
 		await Assert.That(after.RenderedHtml).Contains("updated");
 		await Assert.That(after.RenderedHtml).DoesNotContain("original");
 	}
@@ -624,7 +608,7 @@ public class WikiStoreServiceTests
 	public async Task UpsertTranslationAsync_RejectsShadowingTheSourceLocale()
 	{
 		var svc = BuildService();
-		var page = (await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		var page = (await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 
 		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
@@ -785,7 +769,7 @@ public class WikiStoreServiceTests
 		await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
 
 		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count).IsEqualTo(0);
-		await Assert.That((await svc.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main)).Value).IsTypeOf<WikiPage>()
+		await Assert.That((await svc.GetBySlugAsync(page.Slug, WikiNamespace.Main)).Value).IsTypeOf<WikiPage>()
 			.Because("removing the last translation must not remove the page");
 	}
 
@@ -818,7 +802,7 @@ public class WikiStoreServiceTests
 	{
 		var svc = BuildService();
 
-		var page = (await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "fr-CA")).Expect<WikiPage>();
+		var page = (await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "fr-CA")).Expect<WikiPage>();
 
 		await Assert.That(page.SourceLocale).IsEqualTo("fr-CA");
 	}
@@ -828,7 +812,7 @@ public class WikiStoreServiceTests
 	{
 		var svc = BuildService();
 
-		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "not a locale");
+		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "not a locale");
 
 		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("SourceLocale is materialised and authoritative, so a junk tag must not reach storage");
@@ -839,7 +823,7 @@ public class WikiStoreServiceTests
 	{
 		var svc = BuildService();
 
-		var page = (await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "PT-br")).Expect<WikiPage>();
+		var page = (await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "PT-br")).Expect<WikiPage>();
 
 		await Assert.That(page.SourceLocale).IsEqualTo("pt-BR");
 	}

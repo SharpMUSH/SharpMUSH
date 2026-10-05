@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 /// Every listing is compared with the definition the store had when it sorted every page in memory —
 /// <see cref="Reference"/> below — over pages chosen to stress its tie-breaks: titles that differ only in
 /// case, a prefix, a supplementary-plane character against a fullwidth one, namespaces and categories
-/// that differ only in case, duplicate tags, drafts by two authors and timestamps that tie.
+/// that differ only in case, a page in several categories, drafts by two authors and timestamps that tie.
 /// </summary>
 public class WikiListIndexTests : LightningDatabaseFixture
 {
@@ -29,14 +29,13 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		new(IncludeDrafts: false, AuthorDbref: "#42")
 	];
 
-	private async Task<string> Add(string ns, string slug, string title, string? category, string[] tags, bool published,
+	private async Task<string> Add(string ns, string slug, string title, string[] categories, bool published,
 		string author = "#1", int minutes = 0)
 	{
 		var at = T0.AddMinutes(minutes);
 		var page = new WikiPage("", slug, title, ns, "md " + slug, "<p>" + slug + "</p>", slug, author, author, at, at, false, 1)
 		{
-			Category = category,
-			Tags = tags,
+			Categories = categories,
 			Published = published
 		};
 		return (await Wiki.CreatePageAsync(page)).Expect<WikiPage>().Id;
@@ -46,16 +45,16 @@ public class WikiListIndexTests : LightningDatabaseFixture
 	{
 		return
 		[
-			await Add("main", "apple", "apple", "lore", ["x", "X", "y"], true, minutes: 5),
-			await Add("main", "apple_upper", "Apple", "Lore", ["y"], true, minutes: 5),
-			await Add("main", "ab", "ab", "lore", [], false, author: "#42", minutes: 3),
-			await Add("main", "a", "a", "rules", ["x"], true, minutes: 9),
-			await Add("help", "emoji", "\U0001F600 smile", "lore", ["Y"], true, minutes: 9),
-			await Add("help", "fullwidth", "＠fullwidth", "lore", [], false, minutes: 1),
-			await Add("Main", "legacy_case", "zeta", "LORE", ["x"], true, minutes: 9),
-			await Add("MAIN", "legacy_upper", "Zeta", null, [], true, minutes: 2),
-			await Add("main", "empty_category", "Ünïcode", "", ["x"], false, author: "#42", minutes: 7),
-			await Add("system", "z", "", "rules", [], true, minutes: 0)
+			await Add("main", "apple", "apple", ["lore", "x", "X", "y"], true, minutes: 5),
+			await Add("main", "apple_upper", "Apple", ["Lore", "y"], true, minutes: 5),
+			await Add("main", "ab", "ab", ["lore"], false, author: "#42", minutes: 3),
+			await Add("main", "a", "a", ["rules", "x"], true, minutes: 9),
+			await Add("help", "emoji", "\U0001F600 smile", ["lore", "Y"], true, minutes: 9),
+			await Add("help", "fullwidth", "＠fullwidth", ["lore"], false, minutes: 1),
+			await Add("Main", "legacy_case", "zeta", ["LORE", "x"], true, minutes: 9),
+			await Add("MAIN", "legacy_upper", "Zeta", [], true, minutes: 2),
+			await Add("main", "uncategorized", "Ünïcode", ["x"], false, author: "#42", minutes: 7),
+			await Add("system", "z", "", ["rules"], true, minutes: 0)
 		];
 	}
 
@@ -91,13 +90,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 
 		public static IEnumerable<string> Category(IEnumerable<WikiPage> all, string category, int skip, int take, WikiVisibility v)
 			=> Visible(all, v)
-				.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
-				.OrderBy(p => p.Title, StringComparer.Ordinal)
-				.Skip(skip).Take(take).Select(p => p.Id);
-
-		public static IEnumerable<string> Tag(IEnumerable<WikiPage> all, string tag, int skip, int take, WikiVisibility v)
-			=> Visible(all, v)
-				.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+				.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
 				.OrderBy(p => p.Title, StringComparer.Ordinal)
 				.Skip(skip).Take(take).Select(p => p.Id);
 	}
@@ -122,21 +115,12 @@ public class WikiListIndexTests : LightningDatabaseFixture
 				}
 			}
 
-			foreach (var category in new[] { "lore", "LORE", "rules", "", "none" })
+			foreach (var category in new[] { "lore", "LORE", "rules", "x", "Y", "", "none" })
 			{
 				foreach (var (skip, take) in new[] { (0, 50), (1, 2) })
 				{
 					await Assert.That((await Wiki.GetPagesByCategoryAsync(category, skip, take, v)).Select(p => p.Id))
 						.IsEquivalentTo(Reference.Category(all, category, skip, take, v), CollectionOrdering.Matching);
-				}
-			}
-
-			foreach (var tag in new[] { "x", "Y", "none" })
-			{
-				foreach (var (skip, take) in new[] { (0, 50), (2, 1) })
-				{
-					await Assert.That((await Wiki.GetPagesByTagAsync(tag, skip, take, v)).Select(p => p.Id))
-						.IsEquivalentTo(Reference.Tag(all, tag, skip, take, v), CollectionOrdering.Matching);
 				}
 			}
 		}
@@ -168,15 +152,17 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		var ids = await Seed();
 
 		await Wiki.UpdatePageBodyAsync(ids[0], new WikiBody("new", "<p>new</p>", "new"), "#1", null, T0.AddMinutes(30));
-		await Wiki.SetPageMetadataAsync(ids[3], "lore", ["y", "z"], published: false);
-		await Wiki.SetPageMetadataAsync(ids[2], "rules", [], published: true);
+		await Wiki.SetPageMetadataAsync(ids[0], ["rules"], published: true);
+		await Wiki.UpdatePageBodyAsync(ids[3], new WikiBody("moved", "<p>moved</p>", "moved"), "#1", null, T0.AddMinutes(31));
+		await Wiki.SetPageMetadataAsync(ids[3], ["lore", "y", "z"], published: false);
+		await Wiki.SetPageMetadataAsync(ids[2], ["lore"], published: true);
 		await Wiki.SetPageProtectionAsync(ids[4], true);
 		await Wiki.DeletePageAsync(ids[6]);
 		await AssertListingsMatchReference();
 
 		// A deleted page leaves nothing behind in any list index.
 		var deletedKey = long.Parse(ids[6]["wiki_page/".Length..]);
-		foreach (var table in new[] { Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory, Tables.WikiByTag })
+		foreach (var table in new[] { Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory })
 		{
 			var keys = Db.Store.Read(tx => tx.Range(table, []).Select(e => Keys.ReadDbref(e.Key.AsSpan(e.Key.Length - 8))).ToList());
 			await Assert.That(keys).DoesNotContain(deletedKey);
@@ -210,10 +196,10 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		await Db.Store.WriteAsync(tx =>
 		{
 			tx.TryGet(Tables.WikiPage, Keys.Dbref(legacyKey), out var bytes);
-			tx.Put(Tables.WikiPage, Keys.Dbref(legacyKey), Codec.Serialize(Codec.Deserialize<WikiPageRecord>(bytes) with { Published = null, Tags = null }));
+			tx.Put(Tables.WikiPage, Keys.Dbref(legacyKey), Codec.Serialize(Codec.Deserialize<WikiPageRecord>(bytes) with { Published = null }));
 		});
 		await ForgetIndexAsync(LightningDatabase.WikiListIndexMigrationId,
-			Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory, Tables.WikiByTag);
+			Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory);
 
 		await Db.Migrate();
 
@@ -241,7 +227,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		await Wiki.SetPageProtectionAsync(ids[3], true);
 		await Wiki.SetPageProtectionAsync(ids[3], false);
 		await Wiki.SetPageProtectionAsync(ids[5], true);
-		await Wiki.SetPageMetadataAsync(ids[5], "lore", [], published: true);
+		await Wiki.SetPageMetadataAsync(ids[5], ["lore"], published: true);
 		await Wiki.DeletePageAsync(ids[0]);
 
 		var all = await ReferenceCounts(includeDrafts: true);
@@ -277,7 +263,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 	[Test]
 	public async Task RevisionPagesAreNewestFirstByOffsetAndByCursor()
 	{
-		var id = await Add("main", "history", "History", "lore", [], true);
+		var id = await Add("main", "history", "History", ["lore"], true);
 		for (var i = 2; i <= 30; i++)
 		{
 			await Wiki.UpdatePageBodyAsync(id, new WikiBody($"v{i}", $"<p>v{i}</p>", $"v{i}"), "#1", null, T0.AddMinutes(i));

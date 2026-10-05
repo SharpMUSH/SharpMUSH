@@ -38,7 +38,7 @@ public interface IWikiLocalizationService
 	/// <param name="includeDrafts">True when the caller may see unpublished translations, i.e. may edit
 	/// the page. Ordinary readers pass false and fall back as though drafts were absent.</param>
 	Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
-		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts);
+		string slug, WikiNamespace ns, string? requestedLocale, bool includeDrafts);
 
 	/// <summary>Resolves an already-loaded page. Never fails.</summary>
 	Task<LocalizedWikiPage> LocalizeAsync(WikiPage page, string? requestedLocale, bool includeDrafts);
@@ -58,4 +58,13 @@ public interface IWikiLocalizationService
 	/// visible translation's locale. Drives the language chip row and <c>hreflang</c>.
 	/// </summary>
 	Task<IReadOnlyList<string>> GetVisibleLocalesAsync(WikiPage page, bool includeDrafts);
+
+	/// <summary>
+	/// Each category's name in <paramref name="requestedLocale"/>, keyed by category key: the title of the
+	/// category's published page in the category namespace, from its published translation where there is
+	/// one. Categories belong to a page, not to a translation, so only their names are translated. A category
+	/// with no page is absent; <see cref="WikiHelpers.CategoryLabel(string, IReadOnlyDictionary{string, string}?)"/>
+	/// falls back to the key for it.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale);
 }

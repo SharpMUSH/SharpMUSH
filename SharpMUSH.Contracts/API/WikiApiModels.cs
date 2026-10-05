@@ -23,16 +23,15 @@ public record WikiPageDto(
 	DateTimeOffset UpdatedAt,
 	bool IsProtected,
 	int RevisionNumber,
-	string? Category,
-	IReadOnlyList<string>? Tags,
+	IReadOnlyList<string>? Categories,
 	bool Published)
 {
 	/// <summary>
-	/// Tags on the page. Declared nullable on the constructor and normalised here so that a payload
-	/// without the array binds as empty rather than handing the browser a null through a
-	/// non-nullable property.
+	/// The categories the page is in, as keys. The page holds the list; its text does not set it.
+	/// Declared nullable on the constructor and normalised here so that a payload without the array
+	/// binds as empty rather than handing the browser a null through a non-nullable property.
 	/// </summary>
-	public IReadOnlyList<string> Tags { get; init; } = Tags ?? [];
+	public IReadOnlyList<string> Categories { get; init; } = Categories ?? [];
 
 	// Localization fields are init-only with defaults so that the non-localized mapping — used by
 	// every endpoint that has not been localized yet — keeps its current shape.
@@ -52,12 +51,13 @@ public record WikiPageDto(
 	/// <summary>The name of the player who last edited the page; null when the editor is gone.</summary>
 	public string? LastEditedBy { get; init; }
 
-	/// <summary>The first image in the page's Markdown (the page banner), or null.</summary>
+	/// <summary>The first image in the page's Markdown, or null. It is the page's banner only when it opens
+	/// the page (<c>WikiImages.LeadImageUrl</c>).</summary>
 	public string? Image { get; init; }
 }
 
 /// <summary>
-/// One row of a wiki listing (recent changes, a namespace, a category, a tag, the paged index): the page
+/// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page
 /// without its body. A listing renders link rows and metadata columns, so the Markdown, HTML and plain
 /// text stay on the server; the banner image, the one thing a row takes from the body, is found there.
 /// </summary>
@@ -73,16 +73,15 @@ public record WikiPageSummaryDto(
 	DateTimeOffset UpdatedAt,
 	bool IsProtected,
 	int RevisionNumber,
-	string? Category,
-	IReadOnlyList<string>? Tags,
+	IReadOnlyList<string>? Categories,
 	bool Published,
 	string? Locale,
 	bool IsFallback,
 	string? Image,
 	string? LastEditedBy)
 {
-	/// <inheritdoc cref="WikiPageDto.Tags"/>
-	public IReadOnlyList<string> Tags { get; init; } = Tags ?? [];
+	/// <inheritdoc cref="WikiPageDto.Categories"/>
+	public IReadOnlyList<string> Categories { get; init; } = Categories ?? [];
 
 	/// <summary>The served locale; a payload without one binds as empty, as on <see cref="WikiPageDto"/>.</summary>
 	public string Locale { get; init; } = Locale ?? string.Empty;
@@ -127,8 +126,8 @@ public record UpsertTranslationRequest(
 	bool Published,
 	int? ExpectedRevisionNumber);
 
-/// <summary>Request body for creating a new wiki page. Category is part of identity and is fixed at create.</summary>
-public record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
+/// <summary>Request body for creating a new wiki page, with the categories it starts in.</summary>
+public record CreatePageRequest(string Title, string Markdown, string? Namespace, IReadOnlyList<string>? Categories = null);
 
 /// <summary>Request body for updating an existing wiki page.</summary>
 public record UpdatePageRequest(string Markdown, string? EditSummary);
@@ -140,18 +139,21 @@ public record SetProtectionRequest(bool IsProtected);
 public record RollbackRequest(int RevisionNumber);
 
 /// <summary>
-/// Request body for the batch existence check. Refs use URL-path form: <c>ns/category/slug</c>
-/// (canonical), <c>ns/slug</c> (general category), or <c>slug</c> (main/general).
+/// Request body for the batch existence check. Refs use URL-path form: <c>ns/slug</c> (canonical) or
+/// <c>slug</c> (main namespace).
 /// </summary>
 public record ExistsRequest(string[] Refs);
 
-/// <summary>Request body for setting page metadata.</summary>
-public record SetMetadataRequest(string? Category, string[] Tags, bool Published);
+/// <summary>
+/// Request body for setting page metadata: the categories the page is in (keyed on save; null or empty
+/// leaves it in none) and whether it is published.
+/// </summary>
+public record SetMetadataRequest(IReadOnlyList<string>? Categories, bool Published);
 
-/// <summary>Request body for batch protection changes. Refs use <c>ns/category/slug</c> form.</summary>
+/// <summary>Request body for batch protection changes. Refs use <c>ns/slug</c> form.</summary>
 public record BatchProtectRequest(string[] Refs, bool IsProtected);
 
-/// <summary>Request body for batch deletion. Refs use <c>ns/category/slug</c> form.</summary>
+/// <summary>Request body for batch deletion. Refs use <c>ns/slug</c> form.</summary>
 public record BatchDeleteRequest(string[] Refs);
 
 /// <summary>Per-ref outcome of a batch operation.</summary>
