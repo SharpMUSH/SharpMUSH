@@ -109,7 +109,7 @@ else
     /// <summary>The format menu needs the field, which exists only once it has rendered: render again for it.</summary>
     protected override void OnAfterRender(bool firstRender)
     {
-        if (ReferenceEquals(_field, _menuFor)) return;
+        if (_field == _menuFor) return;
         _menuFor = _field;
         if (_field is not null) StateHasChanged();
     }
