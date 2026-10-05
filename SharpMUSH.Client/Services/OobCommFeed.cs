@@ -22,7 +22,9 @@ namespace SharpMUSH.Client.Services;
 /// recent are kept.</para>
 /// <para><b>History and read markers.</b> Given an <see cref="ICommHistory"/>, the feed is also the
 /// server's: once a <c>comm.channels</c> says whose feed it is, it reads that character's read markers
-/// and pulls each channel's recall buffer (and a channel's again on <see cref="LoadHistoryAsync"/>). A
+/// and pulls each channel's recall buffer (and a channel's again on <see cref="LoadHistoryAsync"/>): back to
+/// the channel's marker where it has one, so the viewer sees all they missed that the buffer still holds, and
+/// the whole buffer where it has none. A
 /// line with an id is kept once however it arrived, pulled, pushed, or replayed on a resumed connection.
 /// A key with a marker counts as unread only what came after it from someone else — so the count survives
 /// a reload and a change of device — and a key without one counts lines as they arrive, as before.
@@ -43,7 +45,11 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public sealed class OobCommFeed : ICommFeed, IDisposable
 {
-	/// <summary>How many lines are kept per channel or conversation; older ones are dropped.</summary>
+	/// <summary>
+	/// How many lines are kept per channel or conversation; older ones are dropped. A pull can bring back more — a
+	/// channel's backfill reaches to its read marker, or takes the whole recall buffer — and a key keeps as many
+	/// as its pulls brought back.
+	/// </summary>
 	public const int HistoryLimit = 200;
 
 	/// <summary>How many page conversations are kept; the least recent are dropped, history and all.</summary>
@@ -58,6 +64,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private readonly Dictionary<string, List<CommMessage>> _history = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, int> _unread = new(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>By key, how many lines it keeps when a pull brought back more than <see cref="HistoryLimit"/>.</summary>
+	private readonly Dictionary<string, int> _kept = new(StringComparer.OrdinalIgnoreCase);
 	private readonly Dictionary<string, Conversation> _conversations = new(StringComparer.Ordinal);
 	private IReadOnlyList<CommChannel> _channels = [];
 	private CommParticipant? _viewer;
@@ -168,8 +177,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		var generation = _generation;
-		// As many as a channel keeps: the rest of the buffer would be dropped on arrival.
-		var pulled = await _server.RecallAsync(key, HistoryLimit);
+		// Back to where the viewer last read, and at least as many as a channel keeps; with no marker to go back
+		// to, everything the recall buffer holds.
+		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
+			? await _server.RecallAsync(key, HistoryLimit, seen)
+			: await _server.RecallAsync(key, 0);
 		if (generation != _generation || pulled is not IReadOnlyList<ChannelRecallLine> lines) return;
 
 		_pulled.Add(key);
@@ -224,6 +236,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	private int UnreadFor(string key) => _unread.GetValueOrDefault(key);
 
+	/// <summary>How many lines a key keeps: <see cref="HistoryLimit"/>, or more when a pull brought back more.</summary>
+	private int Kept(string key) => _kept.GetValueOrDefault(key, HistoryLimit);
+
 	private void OnChannelUpdated(string package)
 	{
 		if (package is not (CommPayloadParser.ChannelsPackage or CommPayloadParser.MessagePackage)) return;
@@ -252,6 +267,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		{
 			_history.Remove(key);
 			_unread.Remove(key);
+			_kept.Remove(key);
 			_pulled.Remove(key);
 			_markers.Remove(key);
 		}
@@ -454,6 +470,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			_conversations.Remove(key);
 			_history.Remove(key);
 			_unread.Remove(key);
+			_kept.Remove(key);
 			changed = true;
 		}
 
@@ -472,8 +489,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 	/// <summary>
 	/// Files pulled lines with the key's history: a line whose id is already there is skipped, and the
-	/// whole is put back in the order the lines were sent. Then the key's unread count is taken again from
-	/// its marker, if it has one, and a key being viewed has its marker moved to the new last line.
+	/// whole is put back in the order the lines were sent. The key keeps every line from the earliest pulled
+	/// on, however many that is. Then the key's unread count is taken again from its marker, if it has one,
+	/// and a key being viewed has its marker moved to the new last line.
 	/// </summary>
 	private bool Merge(string key, IReadOnlyList<CommMessage> pulled)
 	{
@@ -486,8 +504,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		lines.AddRange(added);
 		// Stable: lines with the same key keep the order they arrived in.
 		var ordered = lines.OrderBy(OrderKey).ToList();
+		var earliest = pulled.Min(OrderKey);
+		var kept = Math.Max(Kept(key), ordered.Count(line => OrderKey(line) >= earliest));
+		if (kept > HistoryLimit) _kept[key] = kept;
 		lines.Clear();
-		lines.AddRange(ordered.Skip(Math.Max(0, ordered.Count - HistoryLimit)));
+		lines.AddRange(ordered.Skip(Math.Max(0, ordered.Count - kept)));
 
 		Recount(key);
 		if (string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)) AdvanceMarker(key);
@@ -602,7 +623,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		if (!_history.TryGetValue(key, out var lines)) _history[key] = lines = [];
 		lines.Add(message);
-		if (lines.Count > HistoryLimit) lines.RemoveRange(0, lines.Count - HistoryLimit);
+		if (lines.Count > Kept(key)) lines.RemoveRange(0, lines.Count - Kept(key));
 
 		var viewing = string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase);
 		var alreadyRead = _markers.TryGetValue(key, out var marker) && !marker.IsBefore(message);
@@ -646,6 +667,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			_conversations.Remove(key);
 			_history.Remove(key);
 			_unread.Remove(key);
+			_kept.Remove(key);
 			_pulledOnly.Remove(key);
 			_listedOnly.Remove(key);
 		}
@@ -712,6 +734,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_viewing = null;
 		_history.Clear();
 		_unread.Clear();
+		_kept.Clear();
 		_conversations.Clear();
 		Changed?.Invoke();
 	}

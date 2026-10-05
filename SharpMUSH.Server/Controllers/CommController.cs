@@ -21,7 +21,8 @@ namespace SharpMUSH.Server.Controllers;
 /// character.
 ///
 /// Routes:
-///   GET /api/comm/channels/{channel}/recall?lines=N — the channel's recall buffer (the last N lines, or all)
+///   GET /api/comm/channels/{channel}/recall?lines=N&amp;after=ID — the channel's recall buffer (the last N lines, or
+///                                                    all; with after, also every line after that id)
 ///   GET /api/comm/markers                            — the character's read markers
 ///   PUT /api/comm/markers/channels/{channel}         — move a channel's marker on
 ///   PUT /api/comm/markers/conversations              — move a page conversation's marker on
@@ -183,26 +184,39 @@ public class CommController(
 		page.Style,
 		page.Timestamp.ToUnixTimeMilliseconds());
 
+	/// <summary>
+	/// The last <paramref name="lines"/> lines of the channel's recall buffer (every line when not given, or 0).
+	/// With <paramref name="after"/>, a read marker's id, it reaches further back when it must, to the first
+	/// line after that id, so a reader coming back gets everything they have not seen that the buffer still holds.
+	/// </summary>
 	[HttpGet("channels/{channel}/recall")]
 	public async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> Recall(string channel, [FromQuery] int? lines,
-		CancellationToken ct)
+		[FromQuery] long? after, CancellationToken ct)
 	{
 		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
 		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
 
 		return await ReadableChannelAsync(executor, channel) switch
 		{
-			SharpChannel found => await RecallAsync(executor, found, lines is null or 0 ? int.MaxValue : lines.Value, ct),
+			SharpChannel found => await RecallAsync(executor, found, lines is null or 0 ? int.MaxValue : lines.Value, after,
+				ct),
 			ActionResult refusal => refusal
 		};
 	}
 
 	private async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(AnySharpObject executor,
-		SharpChannel channel, int lines, CancellationToken ct)
+		SharpChannel channel, int lines, long? after, CancellationToken ct)
 	{
 		var buffered = await mediator
-			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines), ct)
+			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, after is null ? lines : int.MaxValue), ct)
 			.ToListAsync(ct);
+		if (after is { } seen)
+		{
+			var unseen = buffered.FindIndex(line => line.Id > seen);
+			var from = Math.Max(0, buffered.Count - lines);
+			var start = unseen < 0 ? from : Math.Min(unseen, from);
+			buffered = buffered.GetRange(start, buffered.Count - start);
+		}
 		var name = channel.Name.ToPlainText();
 		var handler = await textComposer.HandlerAsync(ct);
 

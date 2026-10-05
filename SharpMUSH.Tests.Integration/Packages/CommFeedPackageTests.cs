@@ -238,7 +238,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 		var pushed = Frames(sent[member.Handle], "comm.message").Single();
 		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
-			.Recall(channel, null, CancellationToken.None);
+			.Recall(channel, null, null, CancellationToken.None);
 		var pulled = recall.Value!.Single(line => line.Text == marker);
 
 		await Assert.That(pushed["id"]!.GetValue<long>()).IsEqualTo(pulled.Id);
@@ -350,7 +350,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 			var pushed = Frames(sent[member.Handle], "comm.message").Single();
 			var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
-				.Recall(channel, null, CancellationToken.None);
+				.Recall(channel, null, null, CancellationToken.None);
 			var pulled = recall.Value!.Single(line => line.Id == pushed["id"]!.GetValue<long>());
 
 			await Assert.That(pushed["text"]!.GetValue<string>()).StartsWith("custom:")

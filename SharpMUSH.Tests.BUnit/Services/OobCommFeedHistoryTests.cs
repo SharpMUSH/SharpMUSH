@@ -55,8 +55,51 @@ public class OobCommFeedHistoryTests
 		await Assert.That(feed.Messages("Public").Select(m => m.Text)).IsEquivalentTo(new[] { "one" });
 		await Assert.That(feed.Messages("Public").Single().Id).IsEqualTo(5);
 		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(0).Because("a line already held is not news");
-		await Assert.That(history.RecallLines.Distinct()).IsEquivalentTo(new[] { OobCommFeed.HistoryLimit })
-			.Because("the feed keeps that many lines, so it asks the server for no more");
+		await Assert.That(history.RecallLines.Distinct()).IsEquivalentTo(new[] { 0 })
+			.Because("with no marker to go back to, the feed asks for the whole buffer");
+	}
+
+	/// <summary>
+	/// On login a channel with a marker is pulled back to it, however far that is past the lines a channel
+	/// usually keeps, so the viewer sees everything they missed that the buffer still holds.
+	/// </summary>
+	[Test]
+	public async Task Backfill_reaches_back_to_the_marker()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(publicId: 5);
+		history.Recall["Public"] = Enumerable.Range(1, 300).Select(id => Pulled(id, $"line {id}")).ToList();
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.RecallAfter).IsEquivalentTo(new long?[] { 5 });
+		await Assert.That(history.RecallLines).IsEquivalentTo(new[] { OobCommFeed.HistoryLimit });
+		await Assert.That(feed.Messages("Public").Count).IsEqualTo(295);
+		await Assert.That(feed.Messages("Public")[0].Id).IsEqualTo(6).Because("the first line after the marker");
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(295);
+
+		store.Set(CommPayloadParser.MessagePackage, Line(301, "new"));
+
+		await Assert.That(feed.Messages("Public").Count).IsEqualTo(295)
+			.Because("the channel keeps as many as the backfill brought, dropping the oldest for the new line");
+		await Assert.That(feed.Messages("Public")[^1].Text).IsEqualTo("new");
+	}
+
+	/// <summary>With no marker, the whole recall buffer is history, past the lines a channel usually keeps.</summary>
+	[Test]
+	public async Task Without_a_marker_the_whole_buffer_is_pulled()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers();
+		history.Recall["Public"] = Enumerable.Range(1, 500).Select(id => Pulled(id, $"line {id}")).ToList();
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		await feed.Synced;
+
+		await Assert.That(history.RecallAfter).IsEquivalentTo(new long?[] { null });
+		await Assert.That(feed.Messages("Public").Count).IsEqualTo(500);
+		await Assert.That(feed.Messages("Public")[0].Id).IsEqualTo(1);
 	}
 
 	/// <summary>A resumed connection replays what it missed; a line the feed already has is not counted twice.</summary>

@@ -203,7 +203,8 @@ of a missing `v` and of any malformed member):
   included — by objid where there is one, sorted, prefixed `page `, so every
   page among the same people is one conversation whoever sent it, and it can
   never be a channel name (those cannot hold a space).
-- 200 lines are kept per key, and the 100 most recent conversations.
+- 200 lines are kept per key, or as many as a pull brought back when that
+  is more, and the 100 most recent conversations.
 - A line from someone else arriving for a key that is not `Viewing` is
   unread until `MarkRead`, unless the key's read marker is already past it
   (markers below). A count a `comm.channels` row carries, 0 included,
@@ -214,7 +215,11 @@ of a missing `v` and of any malformed member):
 - Once a `comm.channels` says whose feed it is, the feed reads that
   character's read markers (`GET api/comm/markers`) and each channel's recall
   buffer (`GET api/comm/channels/<channel>/recall`), and the channel view pulls
-  its channel again when it opens. A line with an `id` is kept once, however it
+  its channel again when it opens. A channel with a marker is pulled back to it
+  (`?lines=200&after=<marker id>`: the last 200 lines, or every line after the
+  marker when that reaches further back), so the viewer gets all they missed
+  that the buffer still holds; one without a marker takes the whole buffer
+  (`?lines=0`). A line with an `id` is kept once, however it
   arrived. A channel or conversation with a marker counts as unread only what
   came after it from someone else, so the count survives a reload and a change
   of device; one without a marker counts lines as they arrive. `MarkRead`, and

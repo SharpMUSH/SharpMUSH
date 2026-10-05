@@ -55,17 +55,25 @@ public sealed class FakeCommHistory : ICommHistory
 			PageLogging && PageLog.TryGetValue(key, out var logged) ? logged.ToArray() : []));
 	}
 
-	/// <summary>The line limit each channel recall asked for.</summary>
+	/// <summary>The line limit each channel recall asked for (0 for the whole buffer).</summary>
 	public List<int> RecallLines { get; } = [];
 
-	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines)
+	/// <summary>The marker id each channel recall reached back to, or null.</summary>
+	public List<long?> RecallAfter { get; } = [];
+
+	/// <summary>Answers as the server does: the last <paramref name="lines"/>, reaching back to the line after <paramref name="after"/>.</summary>
+	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null)
 	{
 		Recalled.Add(channel);
 		RecallLines.Add(lines);
-		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(
-			Recall.TryGetValue(channel, out var buffer)
-				? buffer.Skip(Math.Max(0, buffer.Count - lines)).ToArray()
-				: new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
+		RecallAfter.Add(after);
+		if (!Recall.TryGetValue(channel, out var buffer))
+			return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(new ApiFailure(ApiFailureKind.NotFound, "no such channel"));
+
+		var from = lines == 0 ? 0 : Math.Max(0, buffer.Count - lines);
+		var unseen = after is { } seen ? buffer.FindIndex(line => line.Id > seen) : -1;
+		var start = unseen < 0 ? from : Math.Min(unseen, from);
+		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(buffer.Skip(start).ToArray());
 	}
 
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>
