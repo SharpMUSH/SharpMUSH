@@ -31,6 +31,12 @@ public interface IWebSocketClientService : IAsyncDisposable
 	event EventHandler? ResumeRefused;
 
 	/// <summary>
+	/// Logs a reconnect the server could not resume back in. It then landed in a fresh session at the login
+	/// screen; this runs before the commands buffered while disconnected are sent. Null drops them.
+	/// </summary>
+	Func<Task>? Relogin { get; set; }
+
+	/// <summary>
 	/// Gets whether the WebSocket is currently connected
 	/// </summary>
 	bool IsConnected { get; }

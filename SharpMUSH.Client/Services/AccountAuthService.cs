@@ -384,6 +384,9 @@ public class AccountAuthService(
 	/// </summary>
 	public void InvalidateDebugOtt() => _debugOttTask = null;
 
+	/// <summary>Whether this tab signed in through the development debug OTT.</summary>
+	public bool HasDebugOtt => _debugOttTask is not null;
+
 	private async Task<DebugOttResponse?> GetDebugOttCoreAsync()
 	{
 		// Force a genuine suspension before touching any state, for exactly the reentrancy reason

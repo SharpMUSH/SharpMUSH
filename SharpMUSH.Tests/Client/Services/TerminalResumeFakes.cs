@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client.Services;
 
@@ -138,9 +139,12 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 
 	/// <summary>
 	/// <paramref name="reply"/> is given the first frame and the connection's number (1 for the first);
-	/// null drops that connection without answering, as a network failure would.
+	/// null drops that connection without answering, as a network failure would. <paramref name="dropAfter"/>
+	/// is given each later frame and the connection's number, and drops the connection after a frame it
+	/// accepts.
 	/// </summary>
-	public static async Task<ScriptedTerminalServer> StartAsync(Func<string, int, IReadOnlyList<string>?> reply)
+	public static async Task<ScriptedTerminalServer> StartAsync(Func<string, int, IReadOnlyList<string>?> reply,
+		Func<string, int, bool>? dropAfter = null)
 	{
 		var connections = 0;
 		var builder = WebApplication.CreateSlimBuilder();
@@ -162,7 +166,8 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 			var first = await ReceiveAsync(socket, context.RequestAborted);
 			if (first is null) return;
 			server!.FirstFrames.Enqueue(first);
-			if (reply(first, Interlocked.Increment(ref connections)) is not { } frames)
+			var connection = Interlocked.Increment(ref connections);
+			if (reply(first, connection) is not { } frames)
 			{
 				socket.Abort();
 				return;
@@ -171,7 +176,14 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 				await socket.SendAsync(Encoding.UTF8.GetBytes(frame), WebSocketMessageType.Text, true, context.RequestAborted);
 
 			while (await ReceiveAsync(socket, context.RequestAborted) is { } later)
+			{
 				server.LaterFrames.Enqueue(later);
+				if (dropAfter?.Invoke(later, connection) is true)
+				{
+					socket.Abort();
+					return;
+				}
+			}
 			if (socket.State == WebSocketState.CloseReceived)
 				await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
 		});
@@ -227,5 +239,19 @@ internal static class Eventually
 			await Task.Delay(10);
 		}
 		return condition();
+	}
+}
+
+/// <summary>Hands out the given login tokens in order, then none; records whom each was asked for.</summary>
+internal sealed class FakeLoginTokens(params string[] tokens) : ITerminalLoginTokens
+{
+	private readonly ConcurrentQueue<string> _tokens = new(tokens);
+
+	public ConcurrentQueue<TerminalIdentity> Asked { get; } = new();
+
+	public Task<string?> MintAsync(TerminalIdentity identity)
+	{
+		Asked.Enqueue(identity);
+		return Task.FromResult(_tokens.TryDequeue(out var token) ? token : null);
 	}
 }
