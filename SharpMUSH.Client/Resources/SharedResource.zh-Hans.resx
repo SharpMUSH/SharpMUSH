@@ -156,10 +156,6 @@
     <value>查看角色</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>角色管理功能即将推出。</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>站点配置</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>“{0}”的密码已重置为：{1} — 请通过安全方式转达；对方在下次登录时必须更改密码。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>玩家详情即将推出。</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
@@ -2855,10 +2847,6 @@
     <value>任何人都可编辑</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>常规</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, other {# 项更改}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
@@ -3226,6 +3214,122 @@
     <value>分配</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@permission/define。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>权限名称</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>它允许做什么</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>必须填写类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @permission/category。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>包含哪些内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>创建</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>还没有类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>已创建类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>已保存类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>删除类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>删除 {0}？只有不含角色和权限的类别才能删除。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>已删除类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, other {# 个角色}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, other {# 个权限}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>角色分类</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>权限分类</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>选择类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>请在“类别”标签页中创建类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>类别需要名称和描述。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>定义</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>还没有自定义权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>已定义权限 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>移除权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>移除 {0}？设置它的每个角色和覆盖都会失去它。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>已移除权限 {0}。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>权限组</value>
     <comment>MT</comment>
@@ -3454,10 +3558,6 @@
     <value>添加属性</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>（空）</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>命令触发器</value>
     <comment>MT</comment>
@@ -3513,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>关闭 {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>展开 {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>折叠 {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>清除终端</value>
@@ -3656,13 +3762,8 @@
     <value>Softcode 编辑器</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>测试</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>测试 — 不保存直接求值</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — 用 u() 运行已保存的属性</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>未保存</value>
@@ -4008,10 +4109,6 @@
     <value>按命名空间浏览</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>分类</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} 还没有传记。</value>
     <comment>MT</comment>
@@ -4107,14 +4204,6 @@
     <value>修订版</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>标签</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>按回车键或点击 + 添加标签</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>标题</value>
     <comment>MT</comment>
@@ -4133,10 +4222,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>已更新</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>添加标签…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4285,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>暂无页面。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>标签：{0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5291,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>已保存 {0} 的例外。</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>未分类</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>描述此分类</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>添加分类</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, other {# 个子分类}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, other {此分类中有 # 个页面}}</value>
   </data>
 </root>

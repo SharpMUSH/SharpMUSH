@@ -276,7 +276,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		};
 
 		var result = await controller.CreatePage(new CreatePageRequest(
-			UniqueName("Page"), "Written by a brand-new player.", null, null));
+			UniqueName("Page"), "Written by a brand-new player.", null));
 
 		await Assert.That(result).IsTypeOf<CreatedAtActionResult>()
 			.Because($"expected the page to be created, got: {result}");

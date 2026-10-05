@@ -1,0 +1,86 @@
+.adm-chars-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+
+.adm-chars-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+
+.adm-chars-filters ::deep .adm-chars-search {
+	flex: 1 1 16rem;
+}
+
+.adm-chars-filters ::deep .adm-chars-select,
+.adm-chars-filters ::deep .adm-chars-narrow {
+	flex: 0 1 11rem;
+}
+
+.adm-chars-total {
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.adm-chars-body ::deep .adm-chars-table {
+	background: transparent;
+}
+
+.adm-chars-link {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.adm-chars-link:hover {
+	text-decoration: underline;
+}
+
+.adm-chars-dbref {
+	margin-inline-start: 6px;
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.adm-chars-body ::deep .adm-chars-flags {
+	font-family: var(--font-mono, monospace);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.adm-chars-body ::deep .adm-chars-pages {
+	align-self: center;
+}
+
+@container page (max-width: 48rem) {
+	.adm-chars-filters ::deep .adm-chars-select,
+	.adm-chars-filters ::deep .adm-chars-narrow {
+		flex: 1 1 100%;
+	}
+
+	.adm-chars-body ::deep .adm-chars-table thead {
+		display: none;
+	}
+
+	.adm-chars-body ::deep .adm-chars-table tr {
+		display: block;
+		border-bottom: 1px solid var(--border);
+		padding-block: 0.5rem;
+	}
+
+	.adm-chars-body ::deep .adm-chars-table td {
+		display: grid;
+		grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+		gap: 0.5rem;
+		border: none;
+	}
+
+	.adm-chars-body ::deep .adm-chars-table td::before {
+		content: attr(data-label);
+		color: var(--text-dim);
+		font-size: 0.8125rem;
+	}
+}

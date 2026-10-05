@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
@@ -12,9 +13,10 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
-/// A translation inherits the source page's category and tags structurally — <c>WikiTranslation</c> has
-/// nowhere to store its own. These tests assert the editor makes that legible (visible but disabled with a
-/// hint) rather than mysterious, and that the fields a translation <em>does</em> own stay editable.
+/// A translation inherits the source page's categories structurally — they are a list held by the page and
+/// <c>WikiTranslation</c> has nowhere to store its own. These tests assert the editor makes that legible (the
+/// category controls disabled, with a hint) rather than mysterious, that the source page edits its list in
+/// place, and that the fields a translation <em>does</em> own stay editable.
 /// </summary>
 public class WikiEditLocaleTests : BunitContext
 {
@@ -31,8 +33,7 @@ public class WikiEditLocaleTests : BunitContext
 	{
 		Id = "1",
 		Slug = "dragons",
-		Category = "lore",
-		Tags = ["myth"],
+		Categories = ["lore"],
 		Published = true,
 	};
 
@@ -53,25 +54,69 @@ public class WikiEditLocaleTests : BunitContext
 		return host.FindComponent<WikiEdit>();
 	}
 
+	private static AngleSharp.Dom.IElement AddCategoryButton(IRenderedComponent<WikiEdit> cut) =>
+		cut.Find(".wiki-edit-tags .wiki-edit-taginput");
+
+	private static List<string> ShownCategories(IRenderedComponent<WikiEdit> cut) =>
+		cut.FindAll(".wiki-edit-tags .wiki-edit-tag").Select(t => t.FirstChild!.TextContent.Trim()).ToList();
+
 	[Test]
-	public async Task Category_and_tags_are_enabled_on_the_source_locale()
+	public async Task Add_category_is_enabled_on_the_source_locale()
 	{
 		var cut = RenderEditor("en");
 
-		await Assert.That(cut.Find(".wiki-edit-cat input").HasAttribute("disabled")).IsFalse();
-		await Assert.That(cut.Find(".wiki-edit-taginput").HasAttribute("disabled")).IsFalse();
+		await Assert.That(AddCategoryButton(cut).HasAttribute("disabled")).IsFalse();
 		await Assert.That(cut.FindAll(".wiki-edit-inherited")).IsEmpty();
 	}
 
 	[Test]
-	public async Task Category_and_tags_are_disabled_on_a_translation()
+	public async Task Add_category_is_disabled_on_a_translation()
 	{
 		var cut = RenderEditor("fr");
 
-		await Assert.That(cut.Find(".wiki-edit-cat input").HasAttribute("disabled"))
+		await Assert.That(AddCategoryButton(cut).HasAttribute("disabled"))
 			.IsTrue()
-			.Because("a translation has nowhere to store its own category");
-		await Assert.That(cut.Find(".wiki-edit-taginput").HasAttribute("disabled")).IsTrue();
+			.Because("a translation's categories are the source page's; its own text cannot set them");
+	}
+
+	[Test]
+	public async Task Source_locale_lists_the_pages_categories()
+	{
+		var cut = RenderEditor("en");
+
+		await Assert.That(ShownCategories(cut)).IsEquivalentTo(["Lore"]);
+	}
+
+	[Test]
+	public async Task Enter_in_the_category_input_adds_a_category_by_key()
+	{
+		var cut = RenderEditor("en");
+
+		AddCategoryButton(cut).Input("Places of Note");
+		AddCategoryButton(cut).KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+		await Assert.That(cut.Instance.Article!.Categories).IsEquivalentTo(["lore", "places_of_note"]);
+		await Assert.That(ShownCategories(cut)).IsEquivalentTo(["Lore", "Places of note"]);
+		await Assert.That(cut.Instance.Article.Content).IsEqualTo("body").Because("categories are not written into the text");
+	}
+
+	[Test]
+	public async Task Remove_button_drops_the_category()
+	{
+		var cut = RenderEditor("en");
+
+		cut.Find(".wiki-edit-tags .wiki-edit-tag button").Click();
+
+		await Assert.That(cut.Instance.Article!.Categories).IsEmpty();
+	}
+
+	[Test]
+	public async Task Translation_lists_the_source_pages_categories()
+	{
+		var cut = RenderEditor("fr");
+
+		await Assert.That(ShownCategories(cut)).IsEquivalentTo(["Lore"]);
+		await Assert.That(cut.Find(".wiki-edit-tags .wiki-edit-tag button").HasAttribute("disabled")).IsTrue();
 	}
 
 	[Test]
@@ -98,11 +143,11 @@ public class WikiEditLocaleTests : BunitContext
 	public async Task Region_variant_of_the_source_locale_is_not_treated_as_a_translation()
 	{
 		// SameLanguage ignores region, and it must here too: editing en-GB on an en-sourced page is still
-		// editing the page itself, so disabling its category would lock the source page's own metadata.
+		// editing the page itself, so disabling its categories would lock the source page's own metadata.
 		var cut = RenderEditor("en-GB");
 
 		await Assert.That(cut.Instance.IsTranslationEdit).IsFalse();
-		await Assert.That(cut.Find(".wiki-edit-cat input").HasAttribute("disabled")).IsFalse();
+		await Assert.That(AddCategoryButton(cut).HasAttribute("disabled")).IsFalse();
 	}
 
 	[Test]

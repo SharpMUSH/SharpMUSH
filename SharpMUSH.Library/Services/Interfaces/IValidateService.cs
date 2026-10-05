@@ -24,7 +24,10 @@ public interface IValidateService
 		Timezone,
 		LockType,
 		LockKey,
-		BoolExp
+		BoolExp,
+		RoleName,
+		RoleCategory,
+		Permission
 	}
 
 	ValueTask<bool> Valid(ValidationType type, MString value, ValidationTarget target);

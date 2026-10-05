@@ -38,11 +38,8 @@ public class WikiArticle
 	/// </summary>
 	public string? RenderedHtml { get; set; }
 
-	/// <summary>Optional category grouping (lower-case), or null when uncategorised.</summary>
-	public string? Category { get; set; }
-
-	/// <summary>Searchable tags (lower-case, de-duplicated).</summary>
-	public List<string> Tags { get; set; } = [];
+	/// <summary>The categories the page is in, as keys. Set in the editor and saved as page metadata, not text.</summary>
+	public List<string> Categories { get; set; } = [];
 
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;

@@ -71,7 +71,7 @@ else
        its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
-        <div class="play full-bleed full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
+        <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
                 @if (BannerShown)
                 {

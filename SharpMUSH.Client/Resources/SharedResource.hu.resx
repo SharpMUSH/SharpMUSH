@@ -156,10 +156,6 @@
     <value>Karakterek megtekintése</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>A karakteradminisztráció hamarosan elérhető.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Oldalbeállítások</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>A(z) „{0}” jelszava visszaállítva a következőre: {1} — ossza meg biztonságosan; a következő bejelentkezéskor meg kell változtatnia.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>A játékos részletes adatai hamarosan elérhetők.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
@@ -2855,10 +2847,6 @@
     <value>bárki szerkesztheti</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Általános</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# módosítás} other {# módosítás}}</value>
     <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
@@ -3226,6 +3214,122 @@
     <value>Hozzárendelések</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Jogosultságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Az egyéni jogosultságokat a játék a saját softcode-ja számára határozza meg, például scene.close. Engedélyezze egy szerepkörön, mint bármely más jogosultságot; a softcode a permission(%#,scene.close) függvénnyel vagy PERM^scene.close zárral ellenőrzi. Játékban: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>A jogosultság neve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Mit tesz lehetővé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategória</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategória megadása kötelező.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategóriák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>A szerepköröknek és az egyéni jogosultságoknak külön kategórialistájuk van, és ez az oldal aszerint csoportosítja őket. Hozz létre egy kategóriát, mielőtt bármit beleteszel. Az a kategória, amely még tartalmaz valamit, nem törölhető. A játékban: @role/category és @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Mi tartozik bele</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Létrehozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Még nincsenek kategóriák.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>{0} kategória létrehozva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>{0} kategória mentve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Kategória törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Törli: {0}? Csak szerepkör és jogosultság nélküli kategória törölhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>{0} kategória törölve.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# szerepkör} other {# szerepkör}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# jogosultság} other {# jogosultság}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Szerepkör-kategóriák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Jogosultság-kategóriák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Válasszon kategóriát</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Kategóriákat a Kategóriák lapon hozhat létre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>A kategóriának névre és leírásra van szüksége.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Meghatározás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Még nincsenek egyéni jogosultságok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>{0} jogosultság meghatározva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Jogosultság eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Eltávolítja: {0}? Minden szerepkör és felülbírálás, amely beállítja, elveszíti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>{0} jogosultság eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Szerepkörök</value>
     <comment>MT</comment>
@@ -3454,10 +3558,6 @@
     <value>Attribútum hozzáadása</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(üres)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Parancskiváltó</value>
     <comment>MT</comment>
@@ -3513,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} bezárása</value>
     <comment>MT — Hungarian nominalises the verb after its object.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} kibontása</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} összecsukása</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminál törlése</value>
@@ -3656,13 +3762,8 @@
     <value>Softcode-szerkesztő</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Teszt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Teszt — kiértékelés mentés nélkül</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — a mentett attribútum futtatása u()-val</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nincs mentve</value>
@@ -4008,10 +4109,6 @@
     <value>Böngészés névtér szerint</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategória</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} még nem rendelkezik életrajzzal.</value>
     <comment>MT</comment>
@@ -4107,14 +4204,6 @@
     <value>Változat</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Címkék</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Címke hozzáadásához nyomjon Entert, vagy kattintson a + jelre</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Cím</value>
     <comment>MT</comment>
@@ -4133,10 +4222,6 @@
   </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Frissítve</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>címke hozzáadása…</value>
     <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
@@ -4285,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Még nincsenek oldalak.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Címke: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5291,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>A(z) {0} kivétele mentve.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Kategória nélkül</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Kategória leírása</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Kategória hozzáadása</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# alkategória} other {# alkategória}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# oldal ebben a kategóriában} other {# oldal ebben a kategóriában}}</value>
   </data>
 </root>

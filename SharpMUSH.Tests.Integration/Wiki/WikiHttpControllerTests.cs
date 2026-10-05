@@ -1,3 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -47,7 +50,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = factory.CreateHttpClient();
 
-		var response = await http.GetAsync("api/wiki/ns/main/general/home");
+		var response = await http.GetAsync("api/wiki/ns/main/home");
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
@@ -55,12 +58,33 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(dto!.Slug).IsEqualTo("home");
 	}
 
+	/// <summary>
+	/// A category's name is its category page's title, in the language asked for; the portal shows it in
+	/// place of the key wherever the category appears.
+	/// </summary>
+	[Test]
+	public async Task GetCategoryNames_GivesEachCategoryPagesTitleInTheAskedLanguage()
+	{
+		var http = factory.CreateHttpClient();
+		var wiki = factory.Services.GetRequiredService<IWikiService>();
+		var title = $"Shoals {Guid.NewGuid():N}"[..14];
+		var page = (await wiki.CreateAsync(title, "Shallow water.", "#1", WikiNamespace.Category, "en")).Expect<WikiPage>();
+		await wiki.UpsertTranslationAsync(page.Id, "fr", "Hauts-fonds", "Eaux peu profondes.", "#1", null,
+			published: true, expectedRevisionNumber: null);
+
+		var english = await http.GetFromJsonAsync<Dictionary<string, string>>("api/wiki/category-names?lang=en");
+		var french = await http.GetFromJsonAsync<Dictionary<string, string>>("api/wiki/category-names?lang=fr");
+
+		await Assert.That(english![page.Slug]).IsEqualTo(title);
+		await Assert.That(french![page.Slug]).IsEqualTo("Hauts-fonds");
+	}
+
 	[Test]
 	public async Task GetPage_UnknownSlug_Returns404()
 	{
 		var http = factory.CreateHttpClient();
 
-		var response = await http.GetAsync("api/wiki/ns/main/general/does-not-exist-xyzzy");
+		var response = await http.GetAsync("api/wiki/ns/main/does-not-exist-xyzzy");
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
@@ -150,7 +174,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 			new UpdatePageRequest(updatedMarkdown, "round-trip test"));
 		await Assert.That(updated.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
-		var fetched = await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/general/{Uri.EscapeDataString(slug)}");
+		var fetched = await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/{Uri.EscapeDataString(slug)}");
 		await Assert.That(fetched).IsNotNull();
 		await Assert.That(fetched!.MarkdownSource).IsEqualTo(updatedMarkdown);
 		await Assert.That(fetched.RevisionNumber).IsGreaterThan(createdDto.RevisionNumber);
@@ -168,7 +192,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(create.StatusCode).IsEqualTo(HttpStatusCode.Created);
 		var created = await create.Content.ReadFromJsonAsync<WikiPageDto>();
 
-		var response = await http.GetAsync($"api/wiki/ns/main/general/{created!.Slug}");
+		var response = await http.GetAsync($"api/wiki/ns/main/{created!.Slug}");
 		var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 
 		await Assert.That(dto!.Image).IsEqualTo("/api/wiki-assets/abc/quay.jpg");

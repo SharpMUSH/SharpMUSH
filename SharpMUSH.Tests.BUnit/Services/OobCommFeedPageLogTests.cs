@@ -209,6 +209,24 @@ public class OobCommFeedPageLogTests
 		await Assert.That(feed.Messages(TomasKey).Count).IsEqualTo(400);
 	}
 
+	/// <summary>A conversation pull that fails on load is tried again on the next list.</summary>
+	[Test]
+	public async Task A_failed_conversation_pull_is_tried_again_on_the_next_list()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers(tomasId: 20);
+		history.PageConversations = new PageConversations(Viewer, true, [WithTomas(21, 21)]);
+		history.PageLog[Tomas] = [Logged(20, "read", 20), Logged(21, "missed", 21)];
+		history.FailRecalls = 1;
+
+		await LoadAsync(store, feed);
+		await Assert.That(feed.Messages(TomasKey)).IsEmpty();
+
+		await LoadAsync(store, feed);
+
+		await Assert.That(feed.Messages(TomasKey).Select(line => line.Text)).Contains("missed");
+	}
+
 	/// <summary>A conversation read up to its last page is not pulled until it is opened.</summary>
 	[Test]
 	public async Task A_conversation_read_to_its_end_is_not_pulled_on_load()

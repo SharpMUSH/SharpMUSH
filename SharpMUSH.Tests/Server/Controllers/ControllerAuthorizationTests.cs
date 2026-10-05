@@ -33,4 +33,16 @@ public class ControllerAuthorizationTests
 		await Assert.That(attr).IsNotNull();
 		await Assert.That(attr!.Policy).IsEqualTo(PortalPermission.ConfigAdmin);
 	}
+
+	/// <summary>The character list reads with players.view; booting from it and the audit log take players.moderate.</summary>
+	[Test]
+	public async Task StaffControllers_AreGatedOnTheirScopes()
+	{
+		await Assert.That(ClassAuthorize<AdminCharactersController>()!.Policy).IsEqualTo(PortalPermission.PlayersView);
+		await Assert.That(ClassAuthorize<AdminAuditController>()!.Policy).IsEqualTo(PortalPermission.PlayersModerate);
+
+		var boot = typeof(AdminCharactersController).GetMethod(nameof(AdminCharactersController.Boot))!;
+		var attr = (AuthorizeAttribute?)Attribute.GetCustomAttribute(boot, typeof(AuthorizeAttribute));
+		await Assert.That(attr?.Policy).IsEqualTo(PortalPermission.PlayersModerate);
+	}
 }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration.Wiki;
@@ -112,23 +113,40 @@ public class WikiServiceIntegrationTests
 	}
 
 	[Test]
-	public async Task CreateAsync_SameSlugDifferentCategory_BothSucceedAndAreDistinct()
+	public async Task CreateAsync_SameSlugInOneNamespace_IsRefused()
 	{
-		// Verifies the (Namespace, Category, Slug) unique index in the live provider:
-		// the same slug may exist in two categories, but not twice in one.
+		// A page's identity is (namespace, slug): categories are not part of it, so the same title
+		// cannot be created twice in one namespace whatever categories the two pages are given.
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var title = $"Dragons {uid}";
 
-		var lore = (await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "lore")).Expect<WikiPage>();
-		var rules = (await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "rules")).Expect<WikiPage>();
-		var dupe = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "lore");
+		var lore = (await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, categories: ["Lore"])).Expect<WikiPage>();
+		var dupe = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, categories: ["Rules"]);
 
-		await Assert.That(lore.Id).IsNotEqualTo(rules.Id);
 		await Assert.That(dupe.Value).IsTypeOf<Error<string>>();
+		await Assert.That((await Wiki.GetBySlugAsync(lore.Slug, WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(lore.Id);
+	}
 
-		var slug = lore.Slug;
-		await Assert.That((await Wiki.GetBySlugAsync(slug, "lore", WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(lore.Id);
-		await Assert.That((await Wiki.GetBySlugAsync(slug, "rules", WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(rules.Id);
+	[Test]
+	public async Task CreateAsync_StoresCategoriesThatOnlyMetadataChanges()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var category = $"Wyrms {uid}";
+
+		var page = (await Wiki.CreateAsync($"Categorised {uid}", "Body text.", "#1", WikiNamespace.Main, categories: [category, "Lore"]))
+			.Expect<WikiPage>();
+
+		await Assert.That(page.Categories).IsEquivalentTo([WikiHelpers.CategoryKey(category), "lore"]);
+
+		var members = await Wiki.GetByCategoryAsync(WikiHelpers.CategoryKey(category));
+		await Assert.That(members.Select(p => p.Id)).Contains(page.Id);
+
+		// A body edit keeps the categories; only setting the list takes the page out.
+		await Wiki.UpdateAsync(page.Id, "Body text only.", "#1", null);
+		await Assert.That((await Wiki.GetByCategoryAsync(WikiHelpers.CategoryKey(category))).Select(p => p.Id)).Contains(page.Id);
+		await Wiki.SetMetadataAsync(page.Id, ["Lore"], page.Published);
+		var after = await Wiki.GetByCategoryAsync(WikiHelpers.CategoryKey(category));
+		await Assert.That(after.Select(p => p.Id)).DoesNotContain(page.Id);
 	}
 
 	[Test]
@@ -138,7 +156,7 @@ public class WikiServiceIntegrationTests
 		var title = $"Find Me {uid}";
 		var created = await CreatePageAsync(title);
 
-		var result = await Wiki.GetBySlugAsync(created.Slug, "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync(created.Slug, WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
@@ -155,7 +173,7 @@ public class WikiServiceIntegrationTests
 		var title = $"Mercutio {uid}";
 		var created = await CreatePageAsync(title);
 
-		var result = await Wiki.GetBySlugAsync(title, "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync(title, WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
@@ -166,7 +184,7 @@ public class WikiServiceIntegrationTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var created = await CreatePageAsync($"Mercutio {uid}");
 
-		var result = await Wiki.GetBySlugAsync(created.Slug.ToUpperInvariant(), "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync(created.Slug.ToUpperInvariant(), WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
@@ -174,7 +192,7 @@ public class WikiServiceIntegrationTests
 	[Test]
 	public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
 	{
-		var result = await Wiki.GetBySlugAsync($"nonexistent_{Guid.NewGuid():N}", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync($"nonexistent_{Guid.NewGuid():N}", WikiNamespace.Main);
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
@@ -185,7 +203,7 @@ public class WikiServiceIntegrationTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var created = await CreatePageAsync($"Ns Test {uid}", ns: WikiNamespace.Main);
 
-		var result = await Wiki.GetBySlugAsync(created.Slug, "general", WikiNamespace.Help);
+		var result = await Wiki.GetBySlugAsync(created.Slug, WikiNamespace.Help);
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
@@ -403,7 +421,7 @@ public class WikiServiceIntegrationTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var kept = await CreatePageAsync($"Count Published {uid}", WikiNamespace.System, wiki: wiki);
 		var draft = await CreatePageAsync($"Count Draft {uid}", WikiNamespace.System, wiki: wiki);
-		var unpublished = await wiki.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
+		var unpublished = await wiki.SetMetadataAsync(draft.Id, [], published: false);
 
 		await Assert.That(kept.Published).IsTrue();
 		await Assert.That(unpublished.Expect<WikiPage>().Published).IsFalse();
@@ -414,7 +432,7 @@ public class WikiServiceIntegrationTests
 		// A draft in another namespace must not move these. A query in which the published condition
 		// replaced the namespace condition rather than joining it would satisfy every assertion above.
 		var elsewhere = await CreatePageAsync($"Count Elsewhere {uid}", WikiNamespace.Character, wiki: wiki);
-		await wiki.SetMetadataAsync(elsewhere.Id, elsewhere.Category, elsewhere.Tags, published: false);
+		await wiki.SetMetadataAsync(elsewhere.Id, [], published: false);
 
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);

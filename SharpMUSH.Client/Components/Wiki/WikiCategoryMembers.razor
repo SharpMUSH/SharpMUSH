@@ -1,0 +1,87 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A category's members, under its page (MediaWiki's category listing): its subcategories — the category
+   pages that are themselves in this category — as links, then the pages as image tiles with draft and
+   locked tags where the home cards show them. *@
+<div class="wiki-cat">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+    }
+    else if (_pages.Count == 0 && _subcategories.Count == 0)
+    {
+        <EmptyState Class="wiki-cat-empty">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+    }
+    else
+    {
+        @if (_subcategories.Count > 0)
+        {
+            <SectionLabel>@Loc.Plural("NavWikiSubcategories", "count", _subcategories.Count)</SectionLabel>
+            <nav class="wiki-cat-subs">
+                @foreach (var sub in _subcategories)
+                {
+                    <a class="wiki-catlink" href="@WikiCategories.Route(sub.Slug)">@(string.IsNullOrEmpty(sub.Title) ? WikiHelpers.CategoryLabel(sub.Slug) : sub.Title)</a>
+                }
+            </nav>
+        }
+        @if (_pages.Count > 0)
+        {
+            <SectionLabel>@Loc.Plural("NavWikiCategoryPages", "count", _pages.Count)</SectionLabel>
+            <div class="wiki-cat-grid">
+                @foreach (var page in _pages)
+                {
+                    var p = page;
+                    <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)"
+                               Sub="@(p.LastEditedBy is null ? Loc.Format(p.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, Loc.Format(p.UpdatedAt)))">
+                        <Overlay>
+                            @if (!p.Published)
+                            {
+                                <Pill Tag="true" Warn="true" Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
+                            }
+                            @if (p.IsProtected)
+                            {
+                                <Pill Tag="true" Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
+                            }
+                        </Overlay>
+                    </ImageTile>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>The category, as its key or its name.</summary>
+    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+
+    private bool _loading = true;
+    private IReadOnlyList<WikiPageSummary> _pages = [];
+    private IReadOnlyList<WikiPageSummary> _subcategories = [];
+    private string? _loadedCategory;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = WikiCategories.Key(Category);
+        if (key == _loadedCategory) return;
+        _loadedCategory = key;
+        _loading = true;
+        try
+        {
+            var members = await Wiki.GetAllByCategoryAsync(key);
+            _subcategories = members.Where(WikiCategories.IsCategoryPage)
+                .OrderBy(p => p.Slug, StringComparer.Ordinal)
+                .ToList();
+            _pages = members.Where(p => !WikiCategories.IsCategoryPage(p))
+                .OrderByDescending(p => p.UpdatedAt)
+                .ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

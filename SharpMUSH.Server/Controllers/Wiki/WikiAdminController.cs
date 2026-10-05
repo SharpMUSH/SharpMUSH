@@ -20,7 +20,7 @@ namespace SharpMUSH.Server.Controllers;
 ///
 /// Routes:
 ///   PUT  /api/wiki/{slug}/protection  — set protection flag (Wizard+)
-///   PUT  /api/wiki/{slug}/metadata    — set category/tags/published (authenticated)
+///   PUT  /api/wiki/{slug}/metadata    — set categories/published (authenticated)
 ///   POST /api/wiki/batch/protect      — batch protection change (Wizard+)
 ///   POST /api/wiki/batch/delete       — batch deletion (Wizard+)
 ///   POST /api/wiki/invalidate-cache   — evict pre-render cache entries after an edit
@@ -40,9 +40,9 @@ public class WikiAdminController(
 	/// </summary>
 	[HttpPut("{slug}/protection")]
 	[Authorize(Policy = PortalPermission.WikiAdmin)]
-	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
 		if (await Wiki.SetProtectionAsync(page.Id, request.IsProtected) is not None)
@@ -53,27 +53,26 @@ public class WikiAdminController(
 
 	/// <summary>
 	/// PUT /api/wiki/{slug}/metadata
-	/// Sets the category, tags and published flag on a page, identified by slug.
+	/// Sets the categories and published flag on a page, identified by slug.
 	/// Does not create a content revision.
 	/// </summary>
 	[HttpPut("{slug}/metadata")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
-	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage existing)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)
 			return NotFound();
 
-		// Protected pages may only be retagged/(un)published by Wizard-level users,
+		// Protected pages may only have their metadata changed by Wizard-level users,
 		// mirroring the edit restriction in UpdatePage.
 		if (existing.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
-		if (await Wiki.SetMetadataAsync(existing.Id, request.Category, request.Tags ?? [], request.Published)
-			is not WikiPage page)
+		if (await Wiki.SetMetadataAsync(existing.Id, request.Categories ?? [], request.Published) is not WikiPage page)
 			return NotFound();
 
-		Logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
-			LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(page.Category), page.Published);
+		Logger.LogInformation("Wiki page metadata updated: slug={Slug} categories={Categories} published={Published}",
+			LogSanitizer.Sanitize(slug), string.Join(',', page.Categories), page.Published);
 		prerenderCache.InvalidatePrefix("/wiki/");
 		return Ok(await ToDtoAsync(page));
 	}
@@ -91,8 +90,8 @@ public class WikiAdminController(
 
 		foreach (var reference in request.Refs ?? [])
 		{
-			var (ns, category, slug) = ParseRef(reference);
-			if (await Wiki.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+			var (ns, slug) = ParseRef(reference);
+			if (await Wiki.GetBySlugAsync(slug, ns) is not WikiPage page)
 			{
 				failed.Add(reference);
 				continue;
@@ -123,8 +122,8 @@ public class WikiAdminController(
 
 		foreach (var reference in request.Refs ?? [])
 		{
-			var (ns, category, slug) = ParseRef(reference);
-			if (await Wiki.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+			var (ns, slug) = ParseRef(reference);
+			if (await Wiki.GetBySlugAsync(slug, ns) is not WikiPage page)
 			{
 				failed.Add(reference);
 				continue;

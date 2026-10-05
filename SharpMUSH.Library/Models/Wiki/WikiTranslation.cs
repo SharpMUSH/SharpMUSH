@@ -5,10 +5,10 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// not a page in its own right.
 /// </summary>
 /// <remarks>
-/// Note what this record deliberately lacks: no <c>Category</c>, no <c>Tags</c>, no <c>IsProtected</c>,
-/// no <c>Slug</c>. That absence <em>is</em> the enforcement of "a translation inherits the source
-/// page's metadata" — there is nowhere for a translation to store a conflicting category, so no
-/// runtime check is needed to keep the two in step.
+/// Note what this record deliberately lacks: no <c>Categories</c>, no <c>IsProtected</c>, no
+/// <c>Slug</c>. That absence <em>is</em> the enforcement of "a translation inherits the source
+/// page's metadata" — there is nowhere for a translation to store conflicting categories, so no
+/// runtime check is needed to keep the two in step. The source page's category list decides.
 /// </remarks>
 /// <param name="Id">Storage key.</param>
 /// <param name="PageId">FK to the parent <see cref="WikiPage.Id"/>.</param>

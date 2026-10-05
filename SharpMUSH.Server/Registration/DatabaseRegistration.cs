@@ -142,10 +142,13 @@ internal static class DatabaseRegistration
 			compact: compactBackups,
 			sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 
-		// Capacity reporting (@storage, the sharpmush.storage.* gauges) and the provider's own history kind.
+		// Capacity reporting (@storage, the sharpmush.storage.* gauges), the audit log, and the provider's own
+		// history kinds (wiki revisions, audit entries).
 		services.AddSingleton<IStorageCapacityService>(sp => new LightningStorageCapacityService(
 			sp.GetRequiredService<LightningDatabase>(), sp.GetRequiredService<IWorldBackupService>(), compactBackups));
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().WikiHistory);
+		services.AddSingleton<IAuditStore>(sp => sp.GetRequiredService<LightningDatabase>());
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().AuditHistory);
 		AddHistoryRetention(services);
 
 		return services;

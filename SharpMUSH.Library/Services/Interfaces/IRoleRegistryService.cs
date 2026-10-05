@@ -75,4 +75,31 @@ public interface IRoleRegistryService
 
 	/// <summary>Sets one override on an object; <see cref="PermissionState.Inherit"/> removes it.</summary>
 	Task SetObjectOverrideAsync(int number, string scope, PermissionState state);
+
+	/// <summary>The custom permissions the world defines, ordered by scope.</summary>
+	Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Defines a custom permission, or replaces its description (keyed by <see cref="CustomPermission.Scope"/>).</summary>
+	Task UpsertCustomPermissionAsync(CustomPermission permission);
+
+	/// <summary>
+	/// Removes a custom permission and every setting of it: on roles, on accounts and on objects, in one
+	/// write. Does not error if absent.
+	/// </summary>
+	Task RemoveCustomPermissionAsync(string scope);
+
+	/// <summary>The categories in the list <paramref name="kind"/>, ordered by name.</summary>
+	Task<IReadOnlyList<RoleCategory>> GetCategoriesAsync(CategoryKind kind, CancellationToken cancellationToken = default);
+
+	/// <summary>Creates a category in the list <paramref name="kind"/>, or replaces its description (keyed by <see cref="RoleCategory.Name"/> without case).</summary>
+	Task UpsertCategoryAsync(CategoryKind kind, RoleCategory category);
+
+	/// <summary>
+	/// Renames the category <paramref name="name"/> in the list <paramref name="kind"/> to <paramref name="renamed"/>
+	/// and moves every role (or, for <see cref="CategoryKind.Permission"/>, every custom permission) in it, in one write.
+	/// </summary>
+	Task RenameCategoryAsync(CategoryKind kind, string name, RoleCategory renamed);
+
+	/// <summary>Removes a category from the list <paramref name="kind"/>. Does not error if absent. (Callers must check nothing is in it.)</summary>
+	Task RemoveCategoryAsync(CategoryKind kind, string name);
 }

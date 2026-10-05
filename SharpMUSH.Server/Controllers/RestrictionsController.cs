@@ -7,6 +7,8 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -17,6 +19,7 @@ public class RestrictionsController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
+	IAuditLog audit,
 	ILogger<RestrictionsController> logger)
 	: ControllerBase
 {
@@ -58,6 +61,7 @@ public class RestrictionsController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.RestrictionSet, AuditTargets.Of(AuditTargetKinds.Command, commandName), string.Join(" ", restrictions));
 
 			logger.LogInformation("Added/updated command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
 			return Ok();
@@ -92,6 +96,7 @@ public class RestrictionsController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.RestrictionClear, AuditTargets.Of(AuditTargetKinds.Command, commandName));
 
 			logger.LogInformation("Deleted command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
 			return Ok();
@@ -143,6 +148,7 @@ public class RestrictionsController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.RestrictionSet, AuditTargets.Of(AuditTargetKinds.Function, functionName), string.Join(" ", restrictions));
 
 			logger.LogInformation("Added/updated function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
 			return Ok();
@@ -177,6 +183,7 @@ public class RestrictionsController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.RestrictionClear, AuditTargets.Of(AuditTargetKinds.Function, functionName));
 
 			logger.LogInformation("Deleted function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
 			return Ok();

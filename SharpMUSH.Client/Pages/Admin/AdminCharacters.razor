@@ -1,7 +1,138 @@
 @page "/admin/characters"
 @attribute [Authorize(Policy = "players.view")]
+@inject AdminCharactersService CharactersService
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Characters"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<AdminComingSoon Kicker="@Loc["AdmKicker"]" Title="@Loc["Characters"]" Icon="@Icons.Material.Filled.Person" Message="@Loc["AdmCharactersComingSoon"]" />
+<div class="page-stack page-stack--padded adm-chars">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["Characters"]" />
+
+    <KitCard>
+        <div class="adm-chars-body">
+            <div class="adm-chars-filters">
+                <MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmCharactersSearchPlaceholder"]"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-chars-search" id="characters-search"
+                              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
+                <MudSelect T="string" Value="_online" ValueChanged="OnOnlineChangedAsync" Label="@Loc["AdmCharactersConnection"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="adm-chars-select">
+                    <MudSelectItem T="string" Value="@("any")">@Loc["AdmCharactersAny"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("online")">@Loc["AdmCharactersOnline"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("offline")">@Loc["AdmCharactersOffline"]</MudSelectItem>
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="_flag" Label="@Loc["AdmCharactersFlag"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-chars-narrow"
+                              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
+                <MudTextField T="string" @bind-Value="_account" Label="@Loc["AdmCharactersAccount"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-chars-narrow"
+                              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
+            </div>
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+
+            @if (_loading && _page is null)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_page is null || _page.Characters.Count == 0)
+            {
+                <EmptyBox>@Loc["AdmCharactersEmpty"]</EmptyBox>
+            }
+            else
+            {
+                <div class="adm-chars-total">@Loc["AdmCharactersTotal", _page.Total]</div>
+                <MudTable Items="_page.Characters" Dense="true" Hover="true" Elevation="0" Class="adm-chars-table" Loading="_loading">
+                    <HeaderContent>
+                        <MudTh>@Loc["AdmCharactersName"]</MudTh>
+                        <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
+                        <MudTh>@Loc["AdmCharactersConnection"]</MudTh>
+                        <MudTh>@Loc["AdmCharactersFlags"]</MudTh>
+                        <MudTh>@Loc["AdmCharactersLastConnect"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["AdmCharactersName"]">
+                            <a class="adm-chars-link" href="/admin/players/@context.DbrefNumber">@context.Name</a>
+                            <span class="adm-chars-dbref">#@context.DbrefNumber</span>
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmCharactersAccount"]">@(context.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</MudTd>
+                        <MudTd data-label="@Loc["AdmCharactersConnection"]">
+                            <MudChip T="string" Size="Size.Small" Color="@(context.Online ? Color.Success : Color.Default)">
+                                @(context.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
+                            </MudChip>
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmCharactersFlags"]" Class="adm-chars-flags">@context.Flags</MudTd>
+                        <MudTd data-label="@Loc["AdmCharactersLastConnect"]">@(context.LastConnect ?? Loc["AdmCharactersNever"].Value)</MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                @if (PageCount > 1)
+                {
+                    <MudPagination Count="PageCount" Selected="_pageNumber" SelectedChanged="OnPageChangedAsync"
+                                   Size="Size.Small" Class="adm-chars-pages" />
+                }
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    private const int PageSize = 50;
+
+    private AdminCharacterPage? _page;
+    private string _search = string.Empty;
+    private string _online = "any";
+    private string _flag = string.Empty;
+    private string _account = string.Empty;
+    private int _pageNumber = 1;
+    private bool _loading = true;
+    private string? _error;
+
+    private int PageCount => _page is null ? 0 : (_page.Total + PageSize - 1) / PageSize;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private Task OnFilterDebouncedAsync(string _)
+    {
+        _pageNumber = 1;
+        return LoadAsync();
+    }
+
+    private Task OnOnlineChangedAsync(string value)
+    {
+        _online = value;
+        _pageNumber = 1;
+        return LoadAsync();
+    }
+
+    private Task OnPageChangedAsync(int page)
+    {
+        _pageNumber = page;
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var filter = new AdminCharactersService.Filter(
+            _search,
+            _online switch { "online" => true, "offline" => false, _ => null },
+            _flag,
+            _account);
+        switch (await CharactersService.ListAsync(filter, _pageNumber, PageSize))
+        {
+            case AdminCharacterPage page:
+                _page = page;
+                _error = null;
+                break;
+            case ApiFailure failure:
+                _page = null;
+                _error = failure.Message;
+                break;
+        }
+        _loading = false;
+    }
+}

@@ -2454,6 +2454,12 @@
   <data name="NewPasswordChangedByFormat" xml:space="preserve">
     <value>Your password has been changed by {0}.</value>
   </data>
+  <data name="LastConnectFormat" xml:space="preserve">
+    <value>Last connect was from {0} on {1}.</value>
+  </data>
+  <data name="LastFailedConnectFormat" xml:space="preserve">
+    <value>Last FAILED connect was from {0}.</value>
+  </data>
 
   <!-- @purge -->
   <data name="PurgeComplete" xml:space="preserve">

@@ -1,5 +1,4 @@
 .wiki-edit {
-    padding: var(--cpad);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -48,21 +47,6 @@
     outline: none;
 }
 .wiki-edit-title:focus { border-color: var(--accent); }
-.wiki-edit-cat {
-    display: flex;
-    align-items: center;
-    gap: 0.5625rem;
-    padding: 0 0.875rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-}
-.wiki-edit-cat:focus-within { border-color: var(--accent); }
-.wiki-edit-cat input {
-    background: transparent; border: none; outline: none; color: var(--text);
-    font-family: var(--font-ui); font-size: 0.8125rem; width: 130px;
-}
-.wiki-edit-cat input::placeholder { color: var(--text-faint); }
 
 .wiki-edit-toolbar {
     display: flex;
@@ -92,9 +76,11 @@
 
 .wiki-edit-split {
     flex: 1;
-    min-height: 0;
+    /* fills what the page leaves it; below this the page scrolls rather than the panes shrinking */
+    min-height: 20rem;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     border: 1px solid var(--border-soft);
     border-radius: 0 0 var(--radius) var(--radius);
     overflow: hidden;
@@ -111,6 +97,10 @@
     line-height: 1.7;
     caret-color: var(--accent);
     border-right: 1px solid var(--border-soft);
+    /* fills the pane and scrolls; in an embed the pane has no height of its own, and the
+       textarea grows with its content instead */
+    height: 100%;
+    overflow-y: auto;
     field-sizing: content;
 }
 .wiki-edit-preview {
@@ -152,9 +142,10 @@
 .wiki-edit-tag button:hover { opacity: 1; }
 .wiki-edit-taginput {
     background: transparent; border: none; outline: none; color: var(--text);
-    font-family: var(--font-ui); font-size: 0.78125rem; width: 100px;
+    font-family: var(--font-ui); font-size: 0.78125rem; width: 120px;
 }
 .wiki-edit-taginput::placeholder { color: var(--text-faint); }
+.wiki-edit-taginput:disabled { opacity: 0.55; cursor: not-allowed; }
 .wiki-edit-pub {
     display: inline-flex; align-items: center; gap: 0.375rem;
     font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-dim); cursor: pointer;
@@ -216,7 +207,7 @@
 .wiki-edit-foot a:hover { text-decoration: underline; }
 
 @container page (max-width: 48rem) {
-    .wiki-edit-split { grid-template-columns: 1fr; }
+    .wiki-edit-split { grid-template-columns: minmax(0, 1fr); }
     .wiki-edit-preview { display: none; }
 }
 
@@ -245,8 +236,3 @@
     font-size: 0.6875rem;
 }
 
-.wiki-edit-cat input:disabled,
-.wiki-edit-taginput:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}

@@ -30,6 +30,7 @@
 		"/admin/characters",
 		"/admin/accounts",
 		"/admin/moderation",
+		"/admin/moderation/audit",
 		"/admin/profiles",
 		"/admin/media",
 		"/admin/server",
@@ -99,8 +100,8 @@
 			"note": "renders the profile shell with empty sections when the character is absent"
 		},
 		{
-			"route": "/wiki/{ns}/{category}/{slug}",
-			"samples": ["/wiki/main/general/welcome"],
+			"route": "/wiki/{ns}/{slug}",
+			"samples": ["/wiki/main/welcome"],
 			"content": "placeholder",
 			"note": "falls back to the 'page does not exist yet' state when the wiki has no such slug"
 		},

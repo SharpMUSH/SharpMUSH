@@ -156,10 +156,6 @@
     <value>Ver personagens</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Administração de personagens em breve.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Configuração do site</value>
     <comment>MT</comment>
@@ -246,10 +242,6 @@
   </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Senha de '{0}' redefinida para: {1} — compartilhe com segurança; ela deverá ser trocada no próximo login.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Detalhes do jogador em breve.</value>
     <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
@@ -2855,10 +2847,6 @@
     <value>qualquer pessoa pode editar</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Geral</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# alteração} other {# alterações}}</value>
     <comment>MT</comment>
@@ -3226,6 +3214,122 @@
     <value>Atribuições</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Permissões</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Permissões personalizadas são as que seu jogo define para o próprio softcode, como scene.close. Permita uma em um cargo como qualquer outra permissão; o softcode a verifica com permission(%#,scene.close) ou uma trava PERM^scene.close. No jogo: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Nome da permissão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>O que ela permite fazer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Categoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>É necessária uma categoria.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Categorias</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Cargos e permissões personalizadas têm cada um sua própria lista de categorias, e esta página os agrupa por ela. Crie uma categoria antes de colocar algo nela. Uma categoria que ainda contém algo não pode ser excluída. No jogo: @role/category e @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>O que ela contém</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Criar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Ainda não há categorias.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Categoria {0} criada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Categoria {0} salva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Excluir categoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Excluir {0}? Só é possível excluir uma categoria sem cargos nem permissões.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Categoria {0} excluída.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# cargo} other {# cargos}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# permissão} other {# permissões}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Categorias de cargos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Categorias de permissões</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Escolha uma categoria</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Crie categorias na aba Categorias.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Uma categoria precisa de nome e descrição.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Ainda não há permissões personalizadas.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Permissão {0} definida.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Remover permissão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Remover {0}? A permissão será removida de todos os cargos e de todas as exceções que a concedem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Permissão {0} removida.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Funções</value>
     <comment>MT</comment>
@@ -3454,10 +3558,6 @@
     <value>Adicionar atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vazio)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Gatilho de comando</value>
     <comment>MT</comment>
@@ -3513,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Fechar {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expandir {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Recolher {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Limpar terminal</value>
@@ -3656,13 +3762,8 @@
     <value>Editor de softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testar — avaliar sem salvar</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — executar o atributo salvo com u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>não salvo</value>
@@ -4008,10 +4109,6 @@
     <value>Navegar por namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Categoria</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} ainda não tem biografia.</value>
     <comment>MT</comment>
@@ -4107,14 +4204,6 @@
     <value>Revisão</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Tags</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Pressione Enter ou + para adicionar uma tag</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Título</value>
     <comment>MT</comment>
@@ -4134,10 +4223,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Atualizada</value>
     <comment>MT — refers to a página (feminine)</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>adicionar tag…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Adicionar uma tradução…</value>
@@ -4285,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Nenhuma página ainda.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Tag: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5291,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Exceção para {0} salva.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Sem categoria</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Descrever esta categoria</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Adicionar uma categoria</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# subcategoria} other {# subcategorias}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# página nesta categoria} other {# páginas nesta categoria}}</value>
   </data>
 </root>

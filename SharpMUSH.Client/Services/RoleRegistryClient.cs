@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Client.Models.Roles;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Client.Services;
 
@@ -85,6 +86,61 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountId)}/overrides", new OverrideRequest(scope, state));
 
 	private sealed record OverrideRequest(string Scope, string State);
+
+	/// <summary>The custom permissions the game defines, or none when unavailable.</summary>
+	public async Task<IReadOnlyList<CustomPermission>> ListCustomPermissionsAsync()
+	{
+		try
+		{
+			return await Client.GetFromJsonAsync<List<CustomPermission>>("api/roles/permissions") ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to list custom permissions.");
+			return [];
+		}
+	}
+
+	/// <summary>Defines a custom permission, or changes its category and description.</summary>
+	public Task<ApiResult<Success>> DefinePermissionAsync(string scope, string category, string description) =>
+		Client.PutApiAsync("api/roles/permissions", new CustomPermissionRequest(scope, category, description));
+
+	/// <summary>Removes a custom permission and every setting of it.</summary>
+	public Task<ApiResult<Success>> RemovePermissionAsync(string scope) =>
+		Client.DeleteApiAsync($"api/roles/permissions/{Uri.EscapeDataString(scope)}");
+
+	private sealed record CustomPermissionRequest(string Scope, string Category, string Description);
+
+	/// <summary>The categories of roles and permissions, or none when unavailable.</summary>
+	public async Task<IReadOnlyList<RoleCategory>> ListCategoriesAsync(CategoryKind kind)
+	{
+		try
+		{
+			return await Client.GetFromJsonAsync<List<RoleCategory>>(CategoriesPath(kind)) ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to list role categories.");
+			return [];
+		}
+	}
+
+	/// <summary>Creates a category in the list <paramref name="kind"/>.</summary>
+	public Task<ApiResult<Success>> CreateCategoryAsync(CategoryKind kind, string name, string description) =>
+		Client.PostApiAsync(CategoriesPath(kind), new CategoryRequest(name, description));
+
+	/// <summary>Changes a category's description and, when <paramref name="newName"/> differs, its name.</summary>
+	public Task<ApiResult<Success>> UpdateCategoryAsync(CategoryKind kind, string name, string newName, string description) =>
+		Client.PutApiAsync($"{CategoriesPath(kind)}/{Uri.EscapeDataString(name)}", new CategoryRequest(newName, description));
+
+	/// <summary>Deletes a category that holds nothing.</summary>
+	public Task<ApiResult<Success>> DeleteCategoryAsync(CategoryKind kind, string name) =>
+		Client.DeleteApiAsync($"{CategoriesPath(kind)}/{Uri.EscapeDataString(name)}");
+
+	private static string CategoriesPath(CategoryKind kind)
+		=> kind == CategoryKind.Role ? "api/roles/categories/role" : "api/roles/categories/permission";
+
+	private sealed record CategoryRequest(string Name, string Description);
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 }

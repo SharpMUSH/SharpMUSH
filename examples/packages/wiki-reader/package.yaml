@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -94,11 +94,11 @@ objects:
           @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[ansi(hc,Wiki>)] %0
         flags: [cmdsyntax]
 
-      # The four namespaces @wiki knows (WikiNamespace). Named once so the index, the listing
-      # validator and anything else agree on the set.
+      # The namespaces @wiki knows (WikiNamespace). Named once so the index, the listing
+      # validator and anything else agree on the set. A category's own page lives in "category".
       FUN`GET`NAMESPACES:
         value: |-
-          main help character system
+          main help character system category
         flags: [funsyntax]
 
       FUN`GET`ROWS:
@@ -129,18 +129,36 @@ objects:
         value: |-
           [@@(%0 a page reference — false for a missing page and for a draft alike)][not(strmatch(wiki(%0,title),#-1*))]
         flags: [funsyntax]
+      # Categories are a list the page holds, the same in every translation; wiki() answers them
+      # as keys, space-separated.
       FUN`IS`UNCATEGORISED:
         value: |-
-          not(wiki(%0,category))
+          not(words(wiki(%0,categories)))
         flags: [funsyntax]
-      FUN`IS`UNTAGGED:
+      FUN`IS`CATEGORY:
         value: |-
-          not(wiki(%0,tags))
+          [@@(%0 a category name — true when a published page is in it)][words(wikicategory(%0))]
         flags: [funsyntax]
 
       FUN`DISPLAY`COUNT:
         value: |-
           [@@(%0 a count · %1 the singular noun · %2 the plural — English does not pluralise by appending s, and "3 entrys" is what pretending it does looks like)]%0 [if(eq(%0,1),%1,%2)]
+        flags: [funsyntax]
+      # A category's name is the title of its page in the category namespace, which wiki() answers in
+      # the reader's language. A category with no page shows its key as MediaWiki would: underscores
+      # become spaces and the first letter is capitalised.
+      FUN`DISPLAY`CATLABEL:
+        value: |-
+          [@@(%0 a category key)][if(u(%!/FUN`IS`PAGE,category:%0),wiki(category:%0,title),capstr(edit(%0,_,%b)))]
+        flags: [funsyntax]
+      FUN`DISPLAY`CATREF:
+        value: |-
+          [@@(%0 a category key — clickable where the client can take a command)][cmdlink(u(%!/FUN`DISPLAY`CATLABEL,%0),+wiki/category %0,Pages in [u(%!/FUN`DISPLAY`CATLABEL,%0)])]
+        flags: [funsyntax]
+      # The category bar under an article, as MediaWiki puts it under the page. Empty for a page in none.
+      FUN`DISPLAY`CATBAR:
+        value: |-
+          [@@(%0 a page reference)][if(words(setr(c,wiki(%0,categories))),[line()]%r[ansi(h,Categories:)]%b[iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b)]%r)]
         flags: [funsyntax]
       FUN`DISPLAY`REF:
         value: |-
@@ -161,11 +179,11 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`ARTICLE:
         value: |-
-          [@@(%0 a page reference — the whole article between chrome. Literal brackets and parens below are percent-escaped, which is the only spelling that works; this comment cannot show you one, because @@ parses its own argument too)][header([wiki(%0,title)]%b%([wiki(%0,namespace)][if(wiki(%0,category),:[wiki(%0,category)])]%))]%r[rendermarkdowncustom(wiki(%0,markdown),%!,width(%#,78))]%r[footer(rev [wiki(%0,revision)]%b%[[wiki(%0,locale)]%]%b-%b[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]
+          [@@(%0 a page reference — the whole article between chrome. Literal brackets and parens below are percent-escaped, which is the only spelling that works; this comment cannot show you one, because @@ parses its own argument too)][header([wiki(%0,title)]%b%([wiki(%0,namespace)]%))]%r[rendermarkdowncustom(wiki(%0,markdown),%!,width(%#,78))]%r[u(%!/FUN`DISPLAY`CATBAR,%0)][footer(rev [wiki(%0,revision)]%b%[[wiki(%0,locale)]%]%b-%b[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]
         flags: [funsyntax]
       FUN`DISPLAY`FIELDS:
         value: |-
-          [@@(%0 a page reference — its metadata as a field list)][header([wiki(%0,title)])]%r[iter(title namespace category tags revision locale,[ljust(ucstr(%i0),12)][if(strlen(setr(v,wiki(%0,%i0))),%q<v>,-)],%b,%r)]%r[ljust(AUTHOR,12)][if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),%q<a>)]%r[ljust(UPDATED,12)][trim(timestring(sub(secs(),wiki(%0,updated))))] ago%r[footer(%0)]
+          [@@(%0 a page reference — its metadata as a field list)][header([wiki(%0,title)])]%r[iter(title namespace revision locale,[ljust(ucstr(%i0),12)][if(strlen(setr(v,wiki(%0,%i0))),%q<v>,-)],%b,%r)]%r[ljust(CATEGORIES,12)][if(words(setr(c,wiki(%0,categories))),iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b),-)]%r[ljust(AUTHOR,12)][if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),%q<a>)]%r[ljust(UPDATED,12)][trim(timestring(sub(secs(),wiki(%0,updated))))] ago%r[footer(%0)]
         flags: [funsyntax]
       FUN`DISPLAY`AUDITSECTION:
         value: |-
@@ -173,11 +191,11 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`AUDIT:
         value: |-
-          [@@(%0 published · %1 uncategorised · %2 untagged — a section only appears when it has something in it, so a clean wiki reads as three counts)][header(Wiki audit)]%r[ljust(Published pages,24)][words(%0)]%r[ljust(Without a category,24)][words(%1)]%r[ljust(Without tags,24)][words(%2)]%r[u(%!/FUN`DISPLAY`AUDITSECTION,Uncategorised,%1)][u(%!/FUN`DISPLAY`AUDITSECTION,Untagged,%2)][footer(drafts are invisible to softcode - use @wiki/list)]
+          [@@(%0 published · %1 uncategorised — the section only appears when it has something in it, so a clean wiki reads as two counts)][header(Wiki audit)]%r[ljust(Published pages,24)][words(%0)]%r[ljust(Without a category,24)][words(%1)]%r[u(%!/FUN`DISPLAY`AUDITSECTION,Uncategorised,%1)][footer(drafts are invisible to softcode - use @wiki/list)]
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [header(Wiki)]%r[iter(u(%!/FUN`GET`NAMESPACES),[ljust(%i0,12)][rjust(words(wikilist(%i0)),4)] page[if(eq(words(wikilist(%i0)),1),,s)],%b,%r)]%r[line()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/recent %[<n>%]%r[footer()]
+          [header(Wiki)]%r[iter(u(%!/FUN`GET`NAMESPACES),[ljust(%i0,12)][rjust(words(wikilist(%i0)),4)] page[if(eq(words(wikilist(%i0)),1),,s)],%b,%r)]%r[line()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%]%r[footer()]
         flags: [funsyntax]
 
       INC`DO`LISTING:
@@ -220,6 +238,12 @@ objects:
           $(?s)^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
         flags: [regexp, cmdsyntax]
 
+      # Categories are not in a page's name: a category is a list of pages, read with wikicategory().
+      CMD`CATEGORY:
+        value: |-
+          $^\+wiki/category\s+(?<name>[^=]*\S)(?\:=(?<page>\d+))?$:think [setq(category,trim(r(name,args)),page,strfirstof(r(page,args),1))]; think [setq(refs,wikicategory(%q<category>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,edit(lcstr(%q<category>),%b,_))],hint,+wiki/category %q<category>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
+        flags: [regexp, cmdsyntax]
+
       CMD`RECENT:
         value: |-
           $^\+wiki/recent(?\:\s+(?<count>\d+))?(?\:=(?<page>\d+))?$:think [setq(count,strfirstof(r(count,args),10),page,strfirstof(r(page,args),1))]; think [setq(refs,wikirecent(%q<count>),title,Recently edited,hint,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`RECENTROW,%q<hint>
@@ -232,13 +256,13 @@ objects:
 
       CMD`USAGE:
         value: |-
-          $^\+wiki/(?<sw>search|info)\s*$:@include %!/INC`DISPLAY`ERROR=Usage: +wiki/[r(sw,args)] [if(strmatch(r(sw,args),info),<page>,<text>)]
+          $^\+wiki/(?<sw>search|info|category)\s*$:@include %!/INC`DISPLAY`ERROR=Usage: +wiki/[r(sw,args)] [switch(r(sw,args),info,<page>,category,<name>,<text>)]
         flags: [regexp, cmdsyntax]
 
       # Drafts never appear in wikilist(), so this audits published pages only.
       CMD`AUDIT:
         value: |-
-          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>),untagged,filterq(tagged,%!/FUN`IS`UNTAGGED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>,%q<untagged>)]
+          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>)]
         flags: [regexp, cmdsyntax]
 
       # ---- +help topics -------------------------------------------------------
@@ -260,15 +284,19 @@ objects:
         - `+wiki/list %[<namespace>%]` — every published page, or one namespace's
         - `+wiki/search <text>` — pages matching the text
         - `+wiki/recent %[<n>%]` — what changed lately
-        - `+wiki/info <page>` — a page's title, category, tags and revision
+        - `+wiki/category <name>` — the pages in a category
+        - `+wiki/info <page>` — a page's title, categories and revision
 
-        The namespaces are `main`, `help`, `character` and `system`. A page is named
-        `<namespace>:<category>:<slug>`, and long listings page with `=<n>`: `+wiki/list main=2`.
+        The namespaces are `main`, `help`, `character`, `system` and `category`. A page is named
+        `<namespace>:<slug>` (`help:markdown_guide`); a main page by its slug alone. Its categories
+        are not part of its name: they are listed under the article, the same in every language,
+        and staff set them with `@wiki/category <page>=<name>, <name>`. Long listings page with
+        `=<n>`: `+wiki/list main=2`.
 
         Drafts are invisible here — a page appears once it is published.
       HELP`WIKI`AUDIT: |-
-        `+wiki/audit` is a staff verb. It counts the published pages and lists the ones missing a
-        category or tags, which is what makes a wiki hard to navigate as it grows.
+        `+wiki/audit` is a staff verb. It counts the published pages and lists the ones in no
+        category, which is what makes a wiki hard to navigate as it grows.
 
         It sees published pages only. For drafts, use `@wiki/list`.
 

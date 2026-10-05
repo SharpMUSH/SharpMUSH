@@ -7,6 +7,8 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -17,6 +19,7 @@ public class BannedNamesController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
+	IAuditLog audit,
 	ILogger<BannedNamesController> logger)
 	: ControllerBase
 {
@@ -62,6 +65,7 @@ public class BannedNamesController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.BannedNameAdd, AuditTargets.Of(AuditTargetKinds.Name, name));
 
 			logger.LogInformation("Added banned name: {Name}", LogSanitizer.Sanitize(name));
 			return Ok();
@@ -96,6 +100,7 @@ public class BannedNamesController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.BannedNameRemove, AuditTargets.Of(AuditTargetKinds.Name, name));
 
 			logger.LogInformation("Deleted banned name: {Name}", LogSanitizer.Sanitize(name));
 			return Ok();
