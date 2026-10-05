@@ -126,7 +126,7 @@ cannot be lightened by accident. Text dimmed behind a modal (the character sheet
 └──────┴──────────────┴──────────────────────────────────────────┴───────────┘
 ```
 
-- **Rail** (72px, `--rail-bg`, shell): logo, then section icons (Home, Play, Scenes, Wiki, Characters,
+- **Rail** (72px, `--rail-bg`, shell): logo (the Home link; there is no separate Home icon), then section icons (Play, Scenes, Wiki, Characters,
   Mail with an unread badge), a spacer, then **Build & manage** (the shield, labelled "Staff tools" on the
   boards) and the account avatar. Active item: `--surface-2` fill and accent icon, 44×44px, radius 14.
 - **Page sidebar** (232px, `--surface-3`, **a shell slot** the page fills, for example with Blazor
@@ -162,7 +162,7 @@ cannot be lightened by accident. Text dimmed behind a modal (the character sheet
 
 | Today | D1 |
 |---|---|
-| Play group: Home, Play, Scene archive, Mail (only while `_characterActive`) | rail: Home, Play, Scenes, Mail (same gate) |
+| Play group: Home, Play, Scene archive, Mail (only while `_characterActive`) | rail: Play, Scenes, Mail (same gate); the logo is Home |
 | World group: Wiki, Characters, Help | rail: Wiki, Characters. Help per Q2 |
 | Build group and Manage group | the **Build & manage** section. Its page sidebar lists the same items with the **same gates**, which are policies, fallback pairs (`queue.inspect` → `queue.inspect.own`, `jobs.manage.own` → `jobs.manage`) and the Snapshots claim check (`perm` `snapshots.capture`/`restore`). The rail item appears only when at least one item is visible (`softcode.use` counts) |
 | `ApplicationNavLinks` per section, and novel sections | apps appear under "Apps" in their section's sidebar. A novel section gets a rail item using the icon of its lowest-`Order` app |

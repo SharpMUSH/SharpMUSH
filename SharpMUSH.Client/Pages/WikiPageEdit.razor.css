@@ -1,3 +1,6 @@
+/* The route has no section around it, so it pads the editor the way a section body pads its page. */
 .wiki-edit-host {
     height: 100%;
+    box-sizing: border-box;
+    padding: var(--main-pad);
 }

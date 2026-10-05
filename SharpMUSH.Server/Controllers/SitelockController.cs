@@ -7,6 +7,8 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -18,6 +20,7 @@ public class SitelockController(
 	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	IBanEnforcer banEnforcer,
+	IAuditLog audit,
 	ILogger<SitelockController> logger)
 	: ControllerBase
 {
@@ -79,6 +82,8 @@ public class SitelockController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.SitelockAdd, AuditTargets.Of(AuditTargetKinds.Host, hostPattern),
+				string.Join(" ", accessRules));
 			await banEnforcer.EnforceHostRuleAsync(hostPattern);
 
 			logger.LogInformation("Added/updated sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
@@ -111,6 +116,7 @@ public class SitelockController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await audit.RecordPortalAsync(User, AuditActions.SitelockRemove, AuditTargets.Of(AuditTargetKinds.Host, hostPattern));
 
 			logger.LogInformation("Deleted sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
 			return Ok();

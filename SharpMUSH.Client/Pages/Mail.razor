@@ -60,6 +60,7 @@ else
                             var m = msg;
                             <button type="button" class="mail-row @(_selected?.Number == m.Number ? "mail-row--selected" : null) @(m.Read ? null : "mail-row--unread")"
                                     aria-current="@(_selected?.Number == m.Number ? "true" : null)" @onclick="() => SelectMessageAsync(m)">
+                                <span class="mail-avatar mail-row-avatar" style="@AvatarStyle(m.From)" aria-hidden="true">@Initials.From(m.From)</span>
                                 <span class="mail-row-top">
                                     @if (!m.Read)
                                     {
@@ -87,7 +88,7 @@ else
                 else
                 {
                     <div class="mail-reading-head">
-                        <span class="mail-reading-avatar" style="@AvatarStyle(_selected.From)" aria-hidden="true">@Initials.From(_selected.From)</span>
+                        <span class="mail-avatar mail-reading-avatar" style="@AvatarStyle(_selected.From)" aria-hidden="true">@Initials.From(_selected.From)</span>
                         <div class="mail-reading-meta">
                             <div class="mail-reading-subject">@_selected.Subject</div>
                             <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>

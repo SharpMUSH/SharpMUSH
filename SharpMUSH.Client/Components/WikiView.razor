@@ -30,28 +30,31 @@ else if (Mode == WikiMode.View)
 }
 else
 {
-    <br />
-    <WikiEdit Article="@_editDraft"
-              SourceLocale="@_sourceLocale"
-              SelectedLocale="@_selectedLocale"
-              AvailableLocales="@_availableLocales"
-              CategoryNames="@_categoryNames"
-              OnLocaleChanged="@HandleLocaleChanged"
-              OnSaved="@HandleSave"
-              OnCancel="@HandleCancel" />
-    @if (_saveError is not null)
-    {
-        <MudAlert Severity="@(_saveConflict ? Severity.Warning : Severity.Error)" Dense="true" Class="mt-2">
-            @_saveError
-            @if (_saveConflict)
-            {
-                <MudButton Variant="Variant.Text" Size="Size.Small"
-                           OnClick="@(() => Nav.NavigateTo(Nav.Uri, forceLoad: true))">
-                    @Loc["WkTranslationReload"]
-                </MudButton>
-            }
-        </MudAlert>
-    }
+    @* Outside an embed the editor takes the page's full height (full-height passes a definite height
+       down through the shell), so the source and preview panes fill the window and scroll inside it. *@
+    <div class="wiki-view-edit @(Embedded ? null : "full-height")">
+        <WikiEdit Article="@_editDraft"
+                  SourceLocale="@_sourceLocale"
+                  SelectedLocale="@_selectedLocale"
+                  AvailableLocales="@_availableLocales"
+                  CategoryNames="@_categoryNames"
+                  OnLocaleChanged="@HandleLocaleChanged"
+                  OnSaved="@HandleSave"
+                  OnCancel="@HandleCancel" />
+        @if (_saveError is not null)
+        {
+            <MudAlert Severity="@(_saveConflict ? Severity.Warning : Severity.Error)" Dense="true" Class="mt-2">
+                @_saveError
+                @if (_saveConflict)
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               OnClick="@(() => Nav.NavigateTo(Nav.Uri, forceLoad: true))">
+                        @Loc["WkTranslationReload"]
+                    </MudButton>
+                }
+            </MudAlert>
+        }
+    </div>
 }
 
 @code {

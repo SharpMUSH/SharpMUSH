@@ -2,17 +2,10 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	max-width: 960px;
 }
 
 .scenes-list {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-}
-
-@container page (max-width: 48rem) {
-	.scenes-active-page {
-		max-width: none;
-	}
 }

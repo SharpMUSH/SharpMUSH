@@ -86,7 +86,6 @@
 	   Sizing is rem (16px root) so type + spacing honor the user's browser font size;
 	   borders, shadows, fixed dimensions, radii, and breakpoints stay px. */
 	--cpad-mobile: 1rem;
-	--content-max: 1400px;
 	/* Documentation only: a @container condition cannot read a custom property. */
 	--tier-narrow: 48rem;
 	--tier-medium: 64rem;

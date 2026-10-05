@@ -211,6 +211,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IPageLogService, PageLogService>();
+		services.AddSingleton<IAuditLog, AuditLog>();
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
@@ -228,7 +229,9 @@ internal static class EngineRegistration
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
-		services.AddSingleton<IRoleManagementService, RoleManagementService>();
+		// Role changes go through the auditing decorator, so every one from either surface is recorded once.
+		services.AddSingleton<RoleManagementService>();
+		services.AddSingleton<IRoleManagementService, AuditingRoleManagementService>();
 		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
 		services.AddHttpContextAccessor();
