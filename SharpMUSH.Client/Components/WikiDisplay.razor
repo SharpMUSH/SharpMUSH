@@ -1,3 +1,4 @@
+@using SharpMUSH.Client.Components.Wiki
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Client.Resources
@@ -28,6 +29,26 @@
                            OnClick="@ActivateEditMode">@Loc["WikiCharacterWriteBio"]</MudButton>
             </Authorized>
         </AuthorizeView>
+    </div>
+}
+else if (Article is null && IsCategoryPage)
+{
+    @* A category exists as soon as a page names it; its own page is only a description, so a category
+       without one still lists its members, as MediaWiki's does. *@
+    <div class="wiki-page">
+        <div class="wiki-page-main">
+            <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
+                <Actions>
+                    <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
+                    <AuthorizeView Policy="wiki.create">
+                        <Authorized>
+                            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiCategoryDescribe"]</CapsuleButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </Actions>
+            </PlainPageHeader>
+            <WikiCategoryMembers Category="@Slug" />
+        </div>
     </div>
 }
 else if (Article is null)
@@ -64,8 +85,8 @@ else if (DisplayAsHero)
 }
 else
 {
-    @* D1 §6.2 (boards 23–24). Not embedded: a glass banner when the page has an image (the first
-       Markdown image, which the body then omits) or the plain header; the body in a 640px card;
+    @* D1 §6.2 (boards 23–24). Not embedded: a glass banner when the page opens with an image (its lead
+       image, which the body then omits; an image further down stays in the body) or the plain header; the body in a 640px card;
        an aside with the table of contents and locales, the characters mentioned, and more pages in
        the category. Embedded (a biography on a profile) keeps the article alone with no chrome. *@
     <div class="wiki-page @(Embedded ? "wiki-page--embedded" : null)">
@@ -74,7 +95,7 @@ else
             {
                 @if (HasBanner)
                 {
-                    <GlassBanner Title="@Article.Title" Kicker="@CategoryLabel" ImageUrl="@Article.Image" Alt="@Article.Title"
+                    <GlassBanner Title="@Article.Title" Kicker="@Kicker" ImageUrl="@LeadImage" Alt="@Article.Title"
                                  Height="200" TitleSize="hero" HeadingLevel="1"
                                  Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact">
                         <Secondary>@MetaLine</Secondary>
@@ -86,7 +107,7 @@ else
                 }
                 else
                 {
-                    <PlainPageHeader Kicker="@CategoryLabel" Title="@Article.Title">
+                    <PlainPageHeader Kicker="@Kicker" Title="@Article.Title">
                         <DescriptionContent>@MetaLine</DescriptionContent>
                         <Actions>
                             <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
@@ -105,13 +126,18 @@ else
                         </div>
                     </KitCard>
                 }
+                @CategoryBar
+                @if (IsCategoryPage)
+                {
+                    <WikiCategoryMembers Category="@Slug" />
+                }
             }
             else
             {
                 <article class="wiki-article-main">
                     @if (ShowTitle)
                     {
-                        <div class="wiki-article-kicker">@CategoryLabel</div>
+                        <div class="wiki-article-kicker">@Kicker</div>
                         <h1 class="wiki-article-title">@Article.Title</h1>
                     }
                     @LocaleBanner
@@ -169,9 +195,9 @@ else
                 }
                 @if (_more.Count > 0)
                 {
-                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], CategoryLabel)">
+                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], WikiHelpers.CategoryLabel(_moreLoadedFor!, _categoryNames))">
                         <Controls>
-                            <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
+                            <a class="wiki-more-all" href="@WikiCategories.Route(_moreLoadedFor!)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
                         </Controls>
                         <ChildContent>
                         <CardRows>
@@ -179,7 +205,7 @@ else
                             {
                                 var page2 = sibling;
                                 <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
-                                            Href="@WikiRoutes.PathFor(page2.Namespace, page2.Category, page2.Slug)" />
+                                            Href="@WikiRoutes.PathFor(page2.Namespace, page2.Slug)" />
                             }
                         </CardRows>
                         </ChildContent>
@@ -197,10 +223,6 @@ else
     /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
     [Parameter]
     public string? Namespace { get; init; }
-
-    /// <summary>Category segment — part of the page's identity.</summary>
-    [Parameter]
-    public string? Category { get; init; }
 
     /// <summary>The locale the reader asked for via <c>?lang=</c>; null means their stored preference.</summary>
     [Parameter]
@@ -268,14 +290,44 @@ else
     private bool _minimised;
     private string? _moreLoadedFor;
 
-    private bool HasBanner => Article is not null && ImageUrlPolicy.IsRenderable(Article.Image);
+    /// <summary>The image the page opens with, which becomes its banner; null when it opens with text.</summary>
+    private string? LeadImage => WikiImages.LeadImageUrl(Article?.RenderedHtml);
 
-    private string PagePath => WikiRoutes.WikiPathFor(Namespace, Category, Slug);
+    private bool HasBanner => Article is not null && ImageUrlPolicy.IsRenderable(LeadImage);
+
+    private string PagePath => WikiRoutes.WikiPathFor(Namespace, Slug);
+
+    /// <summary>True for a category's own page, whose view lists the category's members after its text.</summary>
+    private bool IsCategoryPage => string.Equals(Namespace, "category", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The line above the title: the namespace for a page outside Main ("Help", "Category"), else the
+    /// page's first category, else nothing more specific than the wiki itself.
+    /// </summary>
+    private string Kicker =>
+        WikiHelpers.ParseNamespace(Namespace) is { } ns and not SharpMUSH.Library.Models.Wiki.WikiNamespace.Main
+            ? ns is SharpMUSH.Library.Models.Wiki.WikiNamespace.Category ? Loc["NavWikiCategoryKicker"] : WikiHelpers.CategoryLabel(ns.ToString())
+            : Article?.Categories.FirstOrDefault() is { } category ? WikiHelpers.CategoryLabel(category, _categoryNames) : Loc["Wiki"];
+
+    /// <summary>The page's categories under its body, each linking to its category page (MediaWiki's catlinks).</summary>
+    private RenderFragment CategoryBar => __builder =>
+    {
+        @if (Article is { Categories.Count: > 0 })
+        {
+            <nav class="wiki-catlinks" aria-label="@Loc["NavWikiCategories"]">
+                <span class="wiki-catlinks-label">@Loc["NavWikiCategories"]</span>
+                @foreach (var category in Article.Categories)
+                {
+                    <a class="wiki-catlink" href="@WikiCategories.Route(category)">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
+                }
+            </nav>
+        }
+    };
 
     private string? EditedWhen => Article?.UpdatedAt is { } at ? Loc.Format(at) : null;
 
     private string MinimisedFact =>
-        EditedWhen is null ? CategoryLabel : $"{CategoryLabel} · {string.Format(Loc["NavWikiEditedAgo"], EditedWhen)}";
+        EditedWhen is null ? Kicker : $"{Kicker} · {string.Format(Loc["NavWikiEditedAgo"], EditedWhen)}";
 
     /// <summary>"Last edited by {mention} · when · anyone can edit" — the mention is a component, so the resx value is split around its placeholder.</summary>
     private RenderFragment MetaLine => __builder =>
@@ -321,13 +373,9 @@ else
     /// True when this page is a character biography — served from /character/{slug}, where the wiki
     /// framing (and the "this page does not exist" wording) would misread as something broken.
     /// </summary>
-    private bool IsCharacterBiography => WikiRoutes.IsCharacterProfile(Namespace, Category);
+    private bool IsCharacterBiography => WikiRoutes.IsCharacterProfile(Namespace);
 
-    private string CategoryLabel =>
-        string.IsNullOrWhiteSpace(Category) ? Loc["ResCategoryGeneral"] : char.ToUpper(Category[0]) + Category[1..];
-
-    private string HistoryHref =>
-        $"{WikiRoutes.WikiPathFor(Namespace, Category, Slug)}/history";
+    private string HistoryHref => $"{PagePath}/history";
 
     /// <summary>
     /// Per-session only, deliberately: a translation gap should keep nagging on the next page view, so this
@@ -344,7 +392,7 @@ else
         ?? [];
 
     private string LocaleHref(string locale) =>
-        $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(locale)}";
+        $"{PagePath}?lang={Uri.EscapeDataString(locale)}";
 
     /// <summary>
     /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
@@ -379,7 +427,7 @@ else
                     </span>
                     <AuthorizeView Policy="wiki.edit">
                         <Authorized>
-                            <MudLink Href="@($"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}/edit?lang={Uri.EscapeDataString(TargetLocale)}")"
+                            <MudLink Href="@($"{PagePath}/edit?lang={Uri.EscapeDataString(TargetLocale)}")"
                                      Typo="Typo.body2">
                                 @Loc["WikiFallbackCreateTranslation"]
                             </MudLink>
@@ -411,6 +459,11 @@ else
     private string? _markedFrom;
     private Task<string>? _marking;
 
+    // Each category's name in the language the page is shown in: its category page's title, translated.
+    // Categories are the page's, the same in every translation; only their names change.
+    private IReadOnlyDictionary<string, string>? _categoryNames;
+    private string? _categoryNamesFor;
+
     protected override async Task OnParametersSetAsync()
     {
         // The server renders the article; the Markdig pipeline is only for the rare page that arrives
@@ -421,10 +474,10 @@ else
                        ? Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(Article.Content)
                        : string.Empty);
 
-        // The banner shows the first image; the body must not show it a second time.
+        // The banner shows the lead image; the body must not show it a second time.
         if (!Embedded && HasBanner)
         {
-            html = WikiImages.StripFirstImage(html, Article!.Image!);
+            html = WikiImages.StripFirstImage(html, LeadImage!);
         }
         html = ApiUrl.ResolveHtml(html);
 
@@ -448,8 +501,26 @@ else
             _segments = SplitOnDirectives(marked);
         }
 
+        await LoadCategoryNamesAsync();
         await LoadMoreAsync();
         await LoadMentionImagesAsync();
+    }
+
+    private async Task LoadCategoryNamesAsync()
+    {
+        if (Article is not { Categories.Count: > 0 } && !IsCategoryPage)
+        {
+            return;
+        }
+
+        var lang = Article?.Locale ?? Locale ?? string.Empty;
+        if (_categoryNames is not null && lang == _categoryNamesFor)
+        {
+            return;
+        }
+
+        _categoryNamesFor = lang;
+        _categoryNames = await Wiki.GetCategoryNamesAsync(lang.Length == 0 ? null : lang);
     }
 
     /// <summary>
@@ -471,15 +542,18 @@ else
     private string? MentionImage(string name) =>
         _characters.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;
 
-    /// <summary>Up to three other pages in this category for the aside, plus the total for the "All N" link.</summary>
+    /// <summary>
+    /// Up to three other pages in the page's first category for the aside, plus the total for the "All N"
+    /// link. A page in no category has no aside.
+    /// </summary>
     private async Task LoadMoreAsync()
     {
-        if (Embedded || Article is null)
+        if (Embedded || Article?.Categories.FirstOrDefault() is not { } key)
         {
+            _more = [];
             return;
         }
 
-        var key = WikiCategories.Key(Category);
         if (key == _moreLoadedFor)
         {
             return;
@@ -566,7 +640,7 @@ else
     private static readonly Regex EmbeddedMedia = new(@"<(img|video|audio|iframe|svg|table)\b", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     /// <summary>An anchor found in rendered HTML: the href as written, and the wiki page
-    /// reference ("ns/category/slug") whose existence decides whether it is a redlink.</summary>
+    /// reference ("ns/slug") whose existence decides whether it is a redlink.</summary>
     private readonly record struct LinkTarget(string Href, string Reference);
 
     private static List<LinkTarget> FindLinkTargets(string html) =>
@@ -575,7 +649,7 @@ else
             .Concat(CharacterLinkHref.Matches(html)
                 .Select(m => new LinkTarget(
                     $"/character/{m.Groups[1].Value}",
-                    $"character/general/{m.Groups[1].Value}")))
+                    $"character/{m.Groups[1].Value}")))
             .DistinctBy(t => t.Href, StringComparer.Ordinal)
             .ToList();
 

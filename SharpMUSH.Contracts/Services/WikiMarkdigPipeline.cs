@@ -31,7 +31,7 @@ public sealed class WikiMarkdigPipeline
 	///   <item><see cref="WikiLinkExtension"/> for <c>[[page]]</c> links</item>
 	///   <item><see cref="WikiImageExtension"/> for lazy-loading, lightbox-ready images</item>
 	///   <item><see cref="WikiDirectiveExtension"/> for dynamic-listing directives
-	///     (<c>::: category …</c>, <c>::: tag …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
+	///     (<c>::: category …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
 	///   <item>DisableHtml — raw HTML in wiki source is blocked for security</item>
 	/// </list>
 	/// </summary>

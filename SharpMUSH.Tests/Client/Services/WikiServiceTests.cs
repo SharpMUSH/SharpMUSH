@@ -247,7 +247,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		await Assert.That(handler!.LastRequest!.Method).IsEqualTo(HttpMethod.Get);
 		await Assert.That(handler.LastRequest.RequestUri!.ToString())
-			.Contains("api/wiki/ns/main/general/home");
+			.Contains("api/wiki/ns/main/home");
 	}
 
 	[Test]
@@ -336,14 +336,14 @@ public class WikiServiceTests : TrackingTestContext
 	{
 		var handler = new RefusingTrackingHandler();
 		var service = BuildService(handler, out _);
-		string[] refs = ["main/general/home"];
+		string[] refs = ["main/home"];
 
 		await service.GetAllPagesAsync();
 		await service.UpsertTranslationAsync("home", "fr", "Accueil", "# Accueil", true, 1);
 		await service.DeleteTranslationAsync("home", "fr");
 		await service.CreatePageAsync("Home", "# Home");
 		await service.UpdatePageAsync("home", "# Home");
-		await service.SetMetadataAsync("home", null, [], true);
+		await service.SetMetadataAsync("home", [], true);
 		await service.RollbackAsync("home", 1);
 		await service.CheckExistsAsync(refs);
 		await service.BatchProtectAsync(refs, true);
@@ -395,7 +395,7 @@ public class WikiServiceTests : TrackingTestContext
 		});
 		var service = BuildService(handler, out _);
 
-		var pages = await service.GetAllByCategoryAsync("General");
+		var pages = await service.GetAllByCategoryAsync("Lore");
 
 		await Assert.That(pages.Select(p => p.Slug)).IsEquivalentTo(["a", "b"]);
 		await Assert.That(handler.Requests.Count).IsEqualTo(1);

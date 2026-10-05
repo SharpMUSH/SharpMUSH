@@ -9,8 +9,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
 /// <summary>
-/// @wiki/list [&lt;namespace&gt;], @wiki/search &lt;text&gt;, @wiki/recent [&lt;count&gt;]
-/// — page discovery subcommands.
+/// @wiki/list [&lt;namespace&gt;], @wiki/category &lt;name&gt;, @wiki/search &lt;text&gt;,
+/// @wiki/recent [&lt;count&gt;] — page discovery subcommands.
 /// </summary>
 public static class ListWiki
 {
@@ -41,7 +41,7 @@ public static class ListWiki
 			if (!Enum.TryParse<WikiNamespace>(nsText, ignoreCase: true, out var parsed))
 			{
 				await notifyService.Notify(executor,
-					$"WIKI: Unknown namespace '{nsText}'. Valid: main, help, character, system.", executor);
+					$"WIKI: Unknown namespace '{nsText}'. Valid: {string.Join(", ", Enum.GetValues<WikiNamespace>().Select(WikiHelpers.NamespaceName))}.", executor);
 				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 			}
 			ns = parsed;
@@ -61,6 +61,51 @@ public static class ListWiki
 		// is "visible pages past the window", and neither the header nor this line reveals a draft.
 		if (total > pages.Count)
 			lines.Add(MarkupText.Plain($"  … and {total - pages.Count} more. See the web portal for the full index."));
+
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		await notifyService.Notify(executor, output, executor);
+		return output;
+	}
+
+	/// <summary>
+	/// <c>@wiki/category &lt;name&gt;</c>: the pages a category holds — every page whose category list
+	/// names it — with its subcategories listed first, as MediaWiki's category page does.
+	/// </summary>
+	/// <param name="locale">The reader's locale, or null for the configured default.</param>
+	/// <param name="forceSource"><c>/SOURCE</c>: list source-locale titles, skipping localization entirely.</param>
+	public static async ValueTask<MString> Category(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IWikiService wikiService,
+		IWikiLocalizationService localization,
+		INotifyService notifyService,
+		MString categoryArg,
+		string? locale = null,
+		bool forceSource = false)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var name = categoryArg.ToPlainText().Trim();
+		if (name.StartsWith("category:", StringComparison.OrdinalIgnoreCase)) name = name["category:".Length..];
+		var key = WikiHelpers.CategoryKey(name);
+		if (key.Length == 0)
+		{
+			await notifyService.Notify(executor, "WIKI: Which category?", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+		}
+
+		var members = await wikiService.GetByCategoryAsync(key, 0, MaxListed,
+			Visibility(await WikiCommandHelper.CanSeeDrafts(executor)));
+		var subcategories = members.Where(p => p.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)).ToList();
+		var pages = members.Except(subcategories).ToList();
+
+		var names = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var lines = new List<MString>
+		{
+			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),
+		};
+		lines.AddRange(subcategories.Select(p => MarkupText.Plain($"  Category:{WikiHelpers.CategoryLabel(p.Slug, names)}")));
+		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
+			.Select(l => MarkupText.Plain("  " + l)));
 
 		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);

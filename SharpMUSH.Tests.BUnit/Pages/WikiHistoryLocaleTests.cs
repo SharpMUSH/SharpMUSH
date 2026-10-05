@@ -97,12 +97,11 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 	private IRenderedComponent<SharpMUSH.Client.Pages.WikiPageHistory> RenderHistory(string? lang)
 	{
 		var query = lang is null ? string.Empty : $"?lang={lang}";
-		NavigateTo($"/wiki/main/general/dragons/history{query}");
+		NavigateTo($"/wiki/main/dragons/history{query}");
 
 		var host = Render<Components.MudHarness>(p => p
 			.AddChildContent<SharpMUSH.Client.Pages.WikiPageHistory>(cp => cp
 				.Add(c => c.Ns, "main")
-				.Add(c => c.Category, "general")
 				.Add(c => c.Slug, "dragons")));
 
 		return host.FindComponent<SharpMUSH.Client.Pages.WikiPageHistory>();
@@ -147,18 +146,17 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 
 		var hrefs = cut.FindAll(".wiki-lang-chips a").Select(a => a.GetAttribute("href")!).ToList();
 
-		await Assert.That(hrefs).Contains("/wiki/main/general/dragons/history");
-		await Assert.That(hrefs).Contains("/wiki/main/general/dragons/history?lang=fr");
+		await Assert.That(hrefs).Contains("/wiki/main/dragons/history");
+		await Assert.That(hrefs).Contains("/wiki/main/dragons/history?lang=fr");
 	}
 
 	[Test]
 	public async Task Diff_page_requests_both_revisions_in_the_requested_locale()
 	{
-		NavigateTo("/wiki/main/general/dragons/diff?from=1&to=2&lang=fr");
+		NavigateTo("/wiki/main/dragons/diff?from=1&to=2&lang=fr");
 
 		Render<SharpMUSH.Client.Pages.WikiPageDiff>(p => p
 			.Add(c => c.Ns, "main")
-			.Add(c => c.Category, "general")
 			.Add(c => c.Slug, "dragons"));
 
 		var revisionFetches = _handler.Requests

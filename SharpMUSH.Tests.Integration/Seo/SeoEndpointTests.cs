@@ -28,9 +28,9 @@ public class SeoEndpointTests(ServerWebAppFactory factory)
 		await Assert.That(contentType.StartsWith("application/xml")).IsTrue();
 
 		var body = await response.Content.ReadAsStringAsync();
-		// Wiki URLs are category-qualified: /wiki/{ns}/{category}/{slug}. The seeded home page lives at
-		// main/general/home.
-		await Assert.That(body).Contains("/wiki/main/general/home");
+		// Wiki URLs are /wiki/{ns}/{slug}; categories are not part of a page's address. The seeded home
+		// page lives at main/home.
+		await Assert.That(body).Contains("/wiki/main/home<");
 	}
 
 	[Test]

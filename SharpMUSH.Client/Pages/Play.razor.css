@@ -104,6 +104,12 @@
     min-width: 0;
 }
 
+.play-join-refusal {
+    display: block;
+    margin-top: 4px;
+    color: var(--warn);
+}
+
 .play-join-btn {
     flex-shrink: 0;
     padding: 6px 14px;

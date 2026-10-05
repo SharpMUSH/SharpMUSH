@@ -25,6 +25,15 @@ public sealed record PermissionContext(
 	/// </summary>
 	public IReadOnlyDictionary<string, PermissionState> ObjectOverrides { get; init; } = new Dictionary<string, PermissionState>();
 
+	/// <summary>
+	/// The custom permissions the world defines (<see cref="CustomPermission"/>). They resolve like the
+	/// built-in scopes; a scope that is neither is refused, so a role still naming a removed one grants nothing.
+	/// </summary>
+	public IReadOnlySet<string> CustomScopes { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>Whether <paramref name="scope"/> is a built-in permission or one of <see cref="CustomScopes"/>.</summary>
+	public bool Knows(string scope) => PortalPermission.IsKnown(scope) || CustomScopes.Contains(scope);
+
 	/// <summary>The highest priority among the held roles, or <see cref="int.MinValue"/> with none.</summary>
 	public int TopPriority => Roles.Count == 0 ? int.MinValue : Roles.Max(r => r.Priority);
 }
@@ -62,11 +71,12 @@ public interface IPermissionResolver
 public sealed class PermissionResolver : IPermissionResolver
 {
 	public IReadOnlySet<string> Resolve(PermissionContext context)
-		=> PortalPermission.AllScopes.Where(scope => Explain(context, scope).Allowed).ToHashSet(StringComparer.Ordinal);
+		=> PortalPermission.AllScopes.Concat(context.CustomScopes)
+			.Where(scope => Explain(context, scope).Allowed).ToHashSet(StringComparer.Ordinal);
 
 	public PermissionExplanation Explain(PermissionContext context, string scope)
 	{
-		if (!PortalPermission.IsKnown(scope))
+		if (!context.Knows(scope))
 			return new(false, null, [], "unknown-scope");
 		if (context.IsOwner)
 			return new(true, null, [], "owner");

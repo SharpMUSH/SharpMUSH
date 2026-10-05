@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Wiki;
 
 /// <summary>
 /// Unit tests for the metadata and listing additions to <see cref="IWikiService"/>:
-/// GetAllPagesAsync, CountPagesAsync, GetByCategoryAsync, GetByTagAsync, SetMetadataAsync.
+/// GetAllPagesAsync, CountPagesAsync, GetByCategoryAsync, SetMetadataAsync.
 /// Exercised against the in-memory implementation; the DB providers share the same
 /// contract and are covered by the HTTP integration tests.
 /// </summary>
@@ -17,9 +17,9 @@ public class WikiMetadataServiceTests
 		InMemoryWikiStore.CreateService();
 
 	private static async Task<WikiPage> CreatePageAsync(
-		IWikiService svc, string title, WikiNamespace ns = WikiNamespace.Main)
+		IWikiService svc, string title, WikiNamespace ns = WikiNamespace.Main, string[]? categories = null)
 	{
-		var result = await svc.CreateAsync(title, $"# {title}", "#1", ns);
+		var result = await svc.CreateAsync(title, $"# {title}", "#1", ns, categories: categories);
 		var page = result.Expect<WikiPage>();
 		return page;
 	}
@@ -89,8 +89,8 @@ public class WikiMetadataServiceTests
 		await CreatePageAsync(svc, "Help Draft", WikiNamespace.Help);
 
 		var help = await svc.GetAllPagesAsync(ns: WikiNamespace.Help);
-		await svc.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
-		await svc.SetMetadataAsync(help[0].Id, help[0].Category, help[0].Tags, published: false);
+		await svc.SetMetadataAsync(draft.Id, draft.Categories, published: false);
+		await svc.SetMetadataAsync(help[0].Id, help[0].Categories, published: false);
 
 		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: false)).IsEqualTo(1);
 		await Assert.That(await svc.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(3);
@@ -103,30 +103,47 @@ public class WikiMetadataServiceTests
 	}
 
 	[Test]
-	public async Task SetMetadata_StoresNormalizedCategoryAndTags()
+	public async Task SetMetadata_StoresNormalizedCategories()
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Magic System");
 
-		var result = await svc.SetMetadataAsync(page.Id, "  Lore ", ["Magic", " magic ", "RULES", ""], published: true);
+		var updated = (await svc.SetMetadataAsync(page.Id, ["  Lore ", "Magic", "magic", "Places of Note", ""], published: true))
+			.Expect<WikiPage>();
 
-		var updated = result.Expect<WikiPage>();
-		await Assert.That(updated.Category).IsEqualTo("lore");
-		await Assert.That(updated.Tags.Count).IsEqualTo(2);
-		await Assert.That(updated.Tags).Contains("magic");
-		await Assert.That(updated.Tags).Contains("rules");
+		await Assert.That(updated.Categories).IsEquivalentTo(new[] { "lore", "magic", "places_of_note" });
 	}
 
 	[Test]
-	public async Task SetMetadata_BlankCategory_StoresDefault()
+	public async Task CreateAsync_StoresNormalizedCategories()
 	{
-		// Category is part of page identity, so a blank value normalizes to the default "general".
 		var svc = BuildService();
-		var page = await CreatePageAsync(svc, "Untagged");
+		var page = await CreatePageAsync(svc, "Magic System", categories: ["Lore", " lore", ""]);
 
-		var updated = (await svc.SetMetadataAsync(page.Id, "   ", [], published: true)).Expect<WikiPage>();
+		await Assert.That(page.Categories).IsEquivalentTo(new[] { "lore" });
+	}
 
-		await Assert.That(updated.Category).IsEqualTo("general");
+	/// <summary>Categories are held by the page, not read from its text: a link to a category files nothing.</summary>
+	[Test]
+	public async Task CategoryLinkInText_IsNotMembership()
+	{
+		var svc = BuildService();
+		var page = (await svc.CreateAsync("Index", "See [[Category:Lore]].", "#1")).Expect<WikiPage>();
+
+		await Assert.That(page.Categories.Count).IsEqualTo(0);
+		await Assert.That((await svc.GetByCategoryAsync("lore")).Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Categories_SurviveContentEdits()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Drifting", categories: ["Lore"]);
+
+		var updated = (await svc.UpdateAsync(page.Id, "# Drifting\n\nNew text.", "#1")).Expect<WikiPage>();
+
+		await Assert.That(updated.Categories).IsEquivalentTo(new[] { "lore" });
+		await Assert.That((await svc.GetByCategoryAsync("lore")).Count).IsEqualTo(1);
 	}
 
 	[Test]
@@ -135,9 +152,12 @@ public class WikiMetadataServiceTests
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Stable");
 
-		await svc.SetMetadataAsync(page.Id, "lore", ["x"], published: false);
+		var updated = (await svc.SetMetadataAsync(page.Id, ["lore"], published: false)).Expect<WikiPage>();
+		await Assert.That(updated.Published).IsFalse();
 
 		var reloaded = (await svc.GetByIdAsync(page.Id)).Expect<WikiPage>();
+		await Assert.That(reloaded.Published).IsFalse();
+		await Assert.That(reloaded.Categories).IsEquivalentTo(new[] { "lore" });
 		await Assert.That(reloaded.RevisionNumber).IsEqualTo(page.RevisionNumber);
 		await Assert.That(reloaded.MarkdownSource).IsEqualTo(page.MarkdownSource);
 
@@ -150,53 +170,35 @@ public class WikiMetadataServiceTests
 	{
 		var svc = BuildService();
 
-		var result = await svc.SetMetadataAsync("nope", "lore", [], true);
+		var result = await svc.SetMetadataAsync("nope", ["lore"], true);
 
-		await Assert.That(result.Value).IsTypeOf<NotFound>();
+		await Assert.That(result is NotFound).IsTrue();
 	}
 
 	[Test]
-	public async Task NewPage_DefaultsToPublishedWithNoMetadata()
+	public async Task NewPage_DefaultsToPublishedWithNoCategories()
 	{
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Defaults");
 
 		await Assert.That(page.Published).IsTrue();
-		await Assert.That(page.Category).IsEqualTo("general");
-		await Assert.That(page.Tags.Count).IsEqualTo(0);
+		await Assert.That(page.Categories.Count).IsEqualTo(0);
 	}
 
 	[Test]
 	public async Task GetByCategory_ReturnsOnlyMatchingPages_CaseInsensitive()
 	{
 		var svc = BuildService();
-		var lore1 = await CreatePageAsync(svc, "Dragons");
-		var lore2 = await CreatePageAsync(svc, "Elves");
-		var other = await CreatePageAsync(svc, "Combat Rules");
-		await svc.SetMetadataAsync(lore1.Id, "lore", [], true);
-		await svc.SetMetadataAsync(lore2.Id, "lore", [], true);
-		await svc.SetMetadataAsync(other.Id, "rules", [], true);
+		await CreatePageAsync(svc, "Dragons", categories: ["Lore"]);
+		await CreatePageAsync(svc, "Elves", categories: ["lore", "Peoples"]);
+		await CreatePageAsync(svc, "Combat Rules", categories: ["Rules"]);
 
 		var lorePages = await svc.GetByCategoryAsync("LORE");
 
 		await Assert.That(lorePages.Count).IsEqualTo(2);
 		await Assert.That(lorePages[0].Title).IsEqualTo("Dragons");
-		await Assert.That(lorePages.All(p => p.Category == "lore")).IsTrue();
-	}
-
-	[Test]
-	public async Task GetByTag_ReturnsPagesCarryingTag()
-	{
-		var svc = BuildService();
-		var a = await CreatePageAsync(svc, "Alpha");
-		var b = await CreatePageAsync(svc, "Beta");
-		await svc.SetMetadataAsync(a.Id, null, ["magic", "fire"], true);
-		await svc.SetMetadataAsync(b.Id, null, ["water"], true);
-
-		var magic = await svc.GetByTagAsync("Magic");
-
-		await Assert.That(magic.Count).IsEqualTo(1);
-		await Assert.That(magic[0].Title).IsEqualTo("Alpha");
+		await Assert.That(lorePages.All(p => p.Categories.Contains("lore"))).IsTrue();
+		await Assert.That((await svc.GetByCategoryAsync("Peoples")).Count).IsEqualTo(1);
 	}
 
 	[Test]

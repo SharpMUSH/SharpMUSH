@@ -29,7 +29,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_GetBySlugReturnsFound()
 	{
-		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 
 		await Assert.That(result.Value)
 			.IsTypeOf<WikiPage>()
@@ -39,7 +39,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_SlugIsHome()
 	{
-		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Slug).IsEqualTo("home");
 	}
@@ -47,7 +47,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_TitleIsHome()
 	{
-		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Title).IsEqualTo("Home");
 	}
@@ -55,7 +55,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task MarkdownGuideIsSeeded_InHelpNamespace()
 	{
-		var result = await Wiki.GetBySlugAsync("markdown_guide", "general", WikiNamespace.Help);
+		var result = await Wiki.GetBySlugAsync("markdown_guide", WikiNamespace.Help);
 
 		await Assert.That(result.Value)
 			.IsTypeOf<WikiPage>()
@@ -68,7 +68,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_NamespaceIsMain()
 	{
-		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().Namespace).IsEqualTo("main");
 	}
@@ -76,7 +76,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_GetByIdRoundTrip()
 	{
-		var id = (await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main)).Expect<WikiPage>().Id;
+		var id = (await Wiki.GetBySlugAsync("home", WikiNamespace.Main)).Expect<WikiPage>().Id;
 		await Assert.That(id).IsNotEmpty();
 
 		var byId = await Wiki.GetByIdAsync(id);
@@ -97,7 +97,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task PutControllerPath_SlugLookupThenUpdateById_Succeeds()
 	{
-		var lookup = (await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main)).Expect<WikiPage>();
+		var lookup = (await Wiki.GetBySlugAsync("home", WikiNamespace.Main)).Expect<WikiPage>();
 
 		var pageId = lookup.Id;
 
@@ -111,24 +111,24 @@ public class WikiStartupSeedingTests
 			.IsGreaterThan(lookup.RevisionNumber)
 			.Because("UpdateAsync must increment the revision counter");
 
-		var afterUpdate = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var afterUpdate = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 		await Assert.That(afterUpdate.Expect<WikiPage>().MarkdownSource)
 			.Contains("<!-- PUT path test -->")
 			.Because("the updated markdown must be persisted and returned by slug");
 	}
 
-	/// <summary>The (namespace, category, slug) identity of every page <c>SeedWikiPagesAsync</c> creates.</summary>
-	private static readonly (WikiNamespace Ns, string Category, string Slug)[] SeededPages =
+	/// <summary>The (namespace, slug) identity of every page <c>SeedWikiPagesAsync</c> creates.</summary>
+	private static readonly (WikiNamespace Ns, string Slug)[] SeededPages =
 	[
-		(WikiNamespace.Main, "general", "home"),
-		(WikiNamespace.Help, "general", "markdown_guide"),
-		(WikiNamespace.Help, "general", "application_schema_guide")
+		(WikiNamespace.Main, "home"),
+		(WikiNamespace.Help, "markdown_guide"),
+		(WikiNamespace.Help, "application_schema_guide")
 	];
 
 	[Test]
 	public async Task SeededPagesCarryAnExplicitSourceLocale()
 	{
-		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
 
 		await Assert.That(result.Expect<WikiPage>().SourceLocale)
 			.IsEqualTo("en")
@@ -138,9 +138,9 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task SeededHelpPagesCarryAnExplicitSourceLocale()
 	{
-		foreach (var (ns, category, slug) in SeededPages.Where(p => p.Ns == WikiNamespace.Help))
+		foreach (var (ns, slug) in SeededPages.Where(p => p.Ns == WikiNamespace.Help))
 		{
-			var result = await Wiki.GetBySlugAsync(slug, category, ns);
+			var result = await Wiki.GetBySlugAsync(slug, ns);
 
 			await Assert.That(result.Value).IsTypeOf<WikiPage>().Because($"{slug} is seeded at startup");
 			await Assert.That(result.Expect<WikiPage>().SourceLocale).IsEqualTo("en");
@@ -150,9 +150,9 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task NoTranslationsAreSeeded()
 	{
-		foreach (var (ns, category, slug) in SeededPages)
+		foreach (var (ns, slug) in SeededPages)
 		{
-			var page = (await Wiki.GetBySlugAsync(slug, category, ns)).Expect<WikiPage>();
+			var page = (await Wiki.GetBySlugAsync(slug, ns)).Expect<WikiPage>();
 
 			var translations = await Wiki.GetTranslationsAsync(page.Id);
 
@@ -167,14 +167,14 @@ public class WikiStartupSeedingTests
 	{
 		// StartupHandler ran once before this suite. A second pass must be a no-op, not a duplicate or an
 		// error, and must not change the recorded source locale.
-		var before = (await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main)).Expect<WikiPage>();
+		var before = (await Wiki.GetBySlugAsync("home", WikiNamespace.Main)).Expect<WikiPage>();
 
-		var second = await Wiki.CreateAsync("Home", "different body", "#1", WikiNamespace.Main, "general", "en");
+		var second = await Wiki.CreateAsync("Home", "different body", "#1", WikiNamespace.Main, "en");
 
 		await Assert.That(second.Value)
 			.IsTypeOf<Error<string>>()
 			.Because("CreateAsync rejects a duplicate identity, which is what makes seeding idempotent");
-		var after = (await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main)).Expect<WikiPage>();
+		var after = (await Wiki.GetBySlugAsync("home", WikiNamespace.Main)).Expect<WikiPage>();
 		await Assert.That(after.SourceLocale).IsEqualTo(before.SourceLocale);
 		await Assert.That(after.MarkdownSource).IsEqualTo(before.MarkdownSource);
 	}
@@ -188,9 +188,9 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task NoSeededPageIsLeftUnstampedAndItsRevisionStreamSurvives()
 	{
-		foreach (var (ns, category, slug) in SeededPages)
+		foreach (var (ns, slug) in SeededPages)
 		{
-			var page = (await Wiki.GetBySlugAsync(slug, category, ns)).Expect<WikiPage>();
+			var page = (await Wiki.GetBySlugAsync(slug, ns)).Expect<WikiPage>();
 
 			await Assert.That(page.SourceLocale.Length)
 				.IsGreaterThan(0)

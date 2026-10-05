@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -70,7 +71,7 @@ public class WikiFunctionUnitTests
 	{
 		var result = await Eval("wikilist(help)");
 
-		await Assert.That(result).Contains("help:general:markdown_guide");
+		await Assert.That(result).Contains("help:markdown_guide");
 	}
 
 	[Test]
@@ -95,10 +96,10 @@ public class WikiFunctionUnitTests
 	/// <summary>Creates a page and unpublishes it, returning it.</summary>
 	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
 	{
-		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 
-		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, [], published: false);
 		return unpublished.Expect<WikiPage>();
 	}
 
@@ -147,7 +148,7 @@ public class WikiFunctionUnitTests
 	public async Task WikiSearch_MatchesTranslationBodiesAndStillReturnsReferences()
 	{
 		var created = await WikiService.CreateAsync(
-			"Fn Translated Search Target", "en fn search body", "#1", WikiNamespace.Main, "general", "en");
+			"Fn Translated Search Target", "en fn search body", "#1", WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 		var translated = await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Cible fn traduite", "corps avec vertugadin", "#1", null,
@@ -157,9 +158,9 @@ public class WikiFunctionUnitTests
 		var result = await Eval("wikisearch(vertugadin)");
 
 		// A reference is fully qualified in every listing surface, main namespace included, so the
-		// expected answer here is "main:general:<slug>" rather than the bare slug.
+		// expected answer here is "main:<slug>" rather than the bare slug.
 		await Assert.That(result)
-			.IsEqualTo($"main:general:{page.Slug}")
+			.IsEqualTo($"main:{page.Slug}")
 			.Because("wikisearch() returns references, never titles — a locale-aware search must widen what "
 				+ "is found without changing the shape of the answer");
 	}
@@ -168,7 +169,7 @@ public class WikiFunctionUnitTests
 	public async Task WikiSearch_DoesNotReturnPagesWhoseOnlyMatchIsADraftTranslation()
 	{
 		var created = await WikiService.CreateAsync(
-			"Fn Draft Translation Target", "en draft-tr host body", "#1", WikiNamespace.Main, "general", "en");
+			"Fn Draft Translation Target", "en draft-tr host body", "#1", WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 		await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Cible brouillon", "corps avec fanfreluche", "#1", null,
@@ -178,6 +179,26 @@ public class WikiFunctionUnitTests
 			.IsEqualTo(string.Empty)
 			.Because("softcode has no reader to gate on, so a draft translation's body is unreachable from "
 				+ "it exactly as wiki() already makes the draft itself unreachable");
+	}
+
+	[Test]
+	public async Task WikiCategory_ListsThePagesInACategoryAndWikiNamesAPagesCategories()
+	{
+		var category = TestIsolationHelpers.GenerateUniqueName("FnCat");
+		var key = WikiHelpers.CategoryKey(category);
+		var member = (await WikiService.CreateAsync($"{category} Member", "body", "#1", WikiNamespace.Main, "en", [category, "Lore"]))
+			.Expect<WikiPage>();
+		var draft = (await WikiService.CreateAsync($"{category} Draft", "body", "#1", WikiNamespace.Main, "en", [category]))
+			.Expect<WikiPage>();
+		await WikiService.SetMetadataAsync(draft.Id, draft.Categories, published: false);
+		var subcategory = (await WikiService.CreateAsync($"{category} Sub", "body", "#1", WikiNamespace.Category, "en", [category]))
+			.Expect<WikiPage>();
+
+		await Assert.That((await Eval($"wikicategory({category})")).Split(' '))
+			.IsEquivalentTo(new[] { $"main:{member.Slug}", $"category:{subcategory.Slug}" });
+		await Assert.That(await Eval($"wikicategory(category:{key})")).Contains($"main:{member.Slug}");
+		await Assert.That(await Eval($"wiki(main:{member.Slug}, categories)")).IsEqualTo(string.Join(' ', member.Categories));
+		await Assert.That(await Eval("wikicategory( )")).StartsWith("#-1");
 	}
 
 	[Test]
@@ -216,7 +237,7 @@ public class WikiFunctionUnitTests
 	private async Task<string> SeedTranslatedPageAsync(string title)
 	{
 		var created = await WikiService.CreateAsync(
-			title, "en fn body", "#1", WikiNamespace.Main, "general", "en");
+			title, "en fn body", "#1", WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 
 		// Create-only: this is the first write for fr, so there is no revision to compare against.
@@ -261,7 +282,7 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			"Fn Draft Locale Page", "en draft-host body", "#1",
-			WikiNamespace.Main, "general", "en");
+			WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 		await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Brouillon fn", "corps brouillon fn", "#1", null, published: false,
@@ -281,7 +302,7 @@ public class WikiFunctionUnitTests
 
 	/// <remarks>
 	/// The design spec says <c>wikilist()</c> and <c>wikirecent()</c> "return localized titles". They do
-	/// not return titles at all — they return page *references*, the canonical slug (or ns:category:slug),
+	/// not return titles at all — they return page *references*, the canonical slug (or ns:slug),
 	/// which is what makes their output a valid input to <c>wiki()</c> and <c>@wiki</c>. A slug has no
 	/// locale dimension, so there is nothing here to localize, and localizing anyway would cost one
 	/// translation lookup per row for output that is byte-identical. This test pins the contract so the

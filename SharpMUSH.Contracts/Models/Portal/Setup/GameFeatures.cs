@@ -84,8 +84,12 @@ public record BundledPackageState(string Id, string Description, bool Installed,
 
 /// <summary>The first-run wizard's state after the game has been claimed.</summary>
 /// <param name="Pending">True from the claim until the administrator finishes or dismisses the wizard.</param>
+/// <param name="StarterWikiApplied">
+/// Whether the starter wiki pages (Getting Started, Theme, Setting, Policies and their categories) have been
+/// written to this game. They are offered once; an administrator who deletes one keeps it deleted.
+/// </param>
 public record SetupWizardResponse(bool Pending, IReadOnlyList<HandlerState> Handlers,
-	IReadOnlyList<BundledPackageState> Packages);
+	IReadOnlyList<BundledPackageState> Packages, bool StarterWikiApplied = false);
 
 /// <summary>The bundled packages the administrator wants installed; every other bundled package is removed.</summary>
 public record SetupPackagesRequest(IReadOnlyList<string> Installed);

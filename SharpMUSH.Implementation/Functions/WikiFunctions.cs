@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -15,7 +16,7 @@ public partial class Functions
 	/// wiki(&lt;page&gt;[, &lt;field&gt;[, &lt;locale&gt;]])
 	/// Returns information about a wiki page. The page target accepts a namespace
 	/// prefix ("Help:Markdown Guide"). Fields: text (default), markdown, title,
-	/// locale, category, tags, namespace, revision, updated, author.
+	/// locale, categories, namespace, revision, updated, author.
 	/// The optional third argument names a locale; it defaults to the executor's LOCALE.
 	/// Unpublished pages and unpublished translations are never reachable.
 	/// </summary>
@@ -29,8 +30,8 @@ public partial class Functions
 		var field = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "text").ToPlainText().Trim().ToLowerInvariant();
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target);
-		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
+		var (ns, slug) = WikiHelpers.ResolveTitle(target);
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
@@ -67,8 +68,7 @@ public partial class Functions
 			"markdown" => new CallState(localized.MarkdownSource),
 			"title" => new CallState(localized.Title),
 			"locale" => new CallState(localized.Locale),
-			"category" => new CallState(localized.Page.Category ?? string.Empty),
-			"tags" => new CallState(string.Join(" ", localized.Page.Tags)),
+			"categories" => new CallState(string.Join(" ", localized.Page.Categories)),
 			"namespace" => new CallState(localized.Page.Namespace),
 			"revision" => new CallState(localized.RevisionNumber.ToString()),
 			"updated" => new CallState(localized.UpdatedAt.ToUnixTimeSeconds().ToString()),
@@ -106,6 +106,32 @@ public partial class Functions
 		// Softcode has no reader to check drafts against, so — as in wiki() and wikisearch() — a draft is
 		// never discoverable from a function.
 		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns, WikiVisibility.PublishedOnly);
+
+		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+	}
+
+	/// <summary>
+	/// wikicategory(&lt;category&gt;)
+	/// Returns a space-separated list of the references of the pages in a category, subcategories
+	/// (pages in the category namespace) included. The name is matched by key, so <c>Places of Note</c>
+	/// and <c>places_of_note</c> are one category. Categories belong to the page, so the answer is the
+	/// same in every locale.
+	/// </summary>
+	[SharpFunction(Name = "wikicategory", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["category"])]
+	public async ValueTask<CallState> wikicategory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var key = WikiHelpers.CategoryKey(name.StartsWith("category:", StringComparison.OrdinalIgnoreCase) ? name["category:".Length..] : name);
+		if (key.Length == 0)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKICATEGORY"));
+		}
+
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		// Same rule as wikilist(): softcode has no reader to gate drafts on, so none are listed.
+		var pages = await wikiService.GetByCategoryAsync(key, 0, 1000, WikiVisibility.PublishedOnly);
 
 		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
 	}

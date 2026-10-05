@@ -12,11 +12,8 @@ public record WikiPageSummary(
 	DateTimeOffset UpdatedAt,
 	int RevisionNumber)
 {
-	/// <summary>Optional category grouping (lower-case), or null when uncategorised.</summary>
-	public string? Category { get; init; }
-
-	/// <summary>Searchable tags (lower-case, de-duplicated).</summary>
-	public IReadOnlyList<string> Tags { get; init; } = [];
+	/// <summary>The categories the page is in, as keys.</summary>
+	public IReadOnlyList<string> Categories { get; init; } = [];
 
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; init; } = true;

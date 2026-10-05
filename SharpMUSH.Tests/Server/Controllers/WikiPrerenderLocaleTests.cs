@@ -21,7 +21,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </remarks>
 public class WikiPrerenderLocaleTests
 {
-	private const string Canonical = "https://x/wiki/main/general/dragons";
+	private const string Canonical = "https://x/wiki/main/dragons";
 
 	private static (WikiStoreService Storage, WikiLocalizationService Localization) Build()
 	{
@@ -38,7 +38,7 @@ public class WikiPrerenderLocaleTests
 		string? requestedLocale, bool withFrench)
 	{
 		var (storage, localization) = Build();
-		if (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")
+		if (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")
 			is not WikiPage page)
 		{
 			throw new InvalidOperationException("Seeding the source page failed.");
@@ -172,7 +172,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (storage, localization) = Build();
 		var page = (await storage.CreateAsync(
-			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+			"Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(
 			page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false,
 			expectedRevisionNumber: null);
