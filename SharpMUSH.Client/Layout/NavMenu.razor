@@ -167,6 +167,7 @@
 
     protected override void OnInitialized()
     {
+        ServerInfo.Changed += OnServerInfoChanged;
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
 
@@ -249,5 +250,13 @@
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
+        ServerInfo.Changed -= OnServerInfoChanged;
     }
+
+    /// <summary>A newer server answer (the guest roster changed): the Play link follows it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        StateHasChanged();
+    });
 }

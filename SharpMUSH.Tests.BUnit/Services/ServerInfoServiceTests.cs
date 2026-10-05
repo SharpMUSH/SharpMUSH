@@ -7,7 +7,7 @@ using System.Text;
 namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
-/// <see cref="ServerInfoService"/> memoizes the server's answer for the app's lifetime. It used to
+/// <see cref="ServerInfoService"/> keeps the server's answer for <see cref="ServerInfoService.MaxAge"/>. It used to
 /// memoize a failure the same way, so a visitor whose first page load met a restarting server saw
 /// "SharpMUSH" in place of the game's name, and the config-default guest button, until they reloaded.
 /// </summary>
@@ -53,6 +53,27 @@ public class ServerInfoServiceTests
 		await service.GameNameAsync();
 
 		await Assert.That(handler.Requests.Count).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// Whether a visitor can play as a guest follows the guest roster, so a tab open for long asks again once
+	/// its answer is old, and tells the shell when the answer changed (the Play link appears or goes).
+	/// </summary>
+	[Test]
+	public async Task AnOldAnswerIsAskedForAgain_AndAChangeIsAnnounced()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([() => Info(false, "Elsewhere"), () => Info(true, "Elsewhere")]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler)) { MaxAge = TimeSpan.Zero };
+		var changes = 0;
+		service.Changed += () => changes++;
+
+		await Assert.That(await service.GuestLoginsEnabledAsync()).IsFalse();
+		await Task.Delay(5);
+		await Assert.That(await service.GuestLoginsEnabledAsync()).IsTrue();
+
+		await Assert.That(handler.Requests.Count).IsEqualTo(2);
+		await Assert.That(changes).IsEqualTo(1);
 	}
 
 	[Test]

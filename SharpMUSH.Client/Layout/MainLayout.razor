@@ -212,6 +212,7 @@
         Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
         UpdateConfigRouteState();
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
+        ServerInfo.Changed += OnServerInfoChanged;
 
         // None of these depend on who is signed in, so they go out now, alongside session restore,
         // instead of one after another behind it: each is a round trip the shell's zones, the Play
@@ -273,6 +274,9 @@
         _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
         StateHasChanged();
     }
+
+    /// <summary>A newer server answer (the guest roster changed): the Play tab follows it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(LoadGuestLoginsEnabledAsync);
 
     private void HandleLayoutChanged(string scope)
     {
@@ -452,5 +456,6 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
         Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;
+        ServerInfo.Changed -= OnServerInfoChanged;
     }
 }

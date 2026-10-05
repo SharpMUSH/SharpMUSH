@@ -260,8 +260,17 @@ public class AccountAuthService(
 	private async Task ReloadAuthorityAsync()
 	{
 		if (AccountSessionToken is not { } token) return;
-		if (await LoadSessionAuthorityAsync(token) is SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut)
-			RaiseAuthStateChanged();
+		switch (await LoadSessionAuthorityAsync(token))
+		{
+			case SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut:
+				RaiseAuthStateChanged();
+				break;
+			case SessionAuthorityLoad.Failed:
+				// One dropped request would otherwise leave the tab on the role it had before (a Guest after
+				// its first character, or staff controls after unlinking the character that granted them).
+				_ = RetrySessionAuthorityAsync();
+				break;
+		}
 	}
 
 	/// <summary>Everything a tab holding no usable session must look like. Does not raise
