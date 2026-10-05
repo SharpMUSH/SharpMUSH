@@ -3,6 +3,7 @@ using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using System.Text.Json;
 
@@ -444,15 +445,42 @@ public partial class LightningDatabase
 	/// Writes what <see cref="BuiltInRoles.SeedChanges"/> asks for: the missing system roles, the starter
 	/// roles into a world with none, and new in-game scopes on existing system roles. Runs on every start,
 	/// here rather than in a hosted service, because the privilege checks read roles from the first
-	/// command on.
+	/// command on. Then the two category lists: the seeded ones into a list with none, and any category a
+	/// role or custom permission names but its list does not have, so nothing sits in a missing category.
 	/// </summary>
 	private static void SeedRoles(ITx tx)
 	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var existing = tx.Range(Tables.Role, []).Select(e => MapRole(Codec.Deserialize<RoleRecord>(e.Value))).ToList();
-		foreach (var role in BuiltInRoles.SeedChanges(existing, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()))
+		foreach (var role in BuiltInRoles.SeedChanges(existing, now))
 		{
 			tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role)));
 		}
+
+		SeedCategories(tx, CategoryKind.Role, now,
+			tx.Range(Tables.Role, []).Select(e => Codec.Deserialize<RoleRecord>(e.Value).Category));
+		SeedCategories(tx, CategoryKind.Permission, now,
+			tx.Range(Tables.CustomPermission, []).Select(e => Codec.Deserialize<CustomPermissionRecord>(e.Value).Category));
+	}
+
+	/// <summary>
+	/// Fills the category list <paramref name="kind"/>: its seeds when the list is empty, and any name in
+	/// <paramref name="used"/> the list lacks.
+	/// </summary>
+	private static void SeedCategories(ITx tx, CategoryKind kind, long now, IEnumerable<string> used)
+	{
+		var categories = tx.Range(CategoryTable(kind), [])
+			.Select(e => Codec.Deserialize<RoleCategoryRecord>(e.Value).Name)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		if (categories.Count == 0)
+			foreach (var seed in Categories.Seeds(kind))
+			{
+				PutCategory(tx, kind, seed with { CreatedAt = now });
+				categories.Add(seed.Name);
+			}
+
+		foreach (var name in used.Where(name => name.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Where(name => !categories.Contains(name)).ToList())
+			PutCategory(tx, kind, new RoleCategory(name, "", now));
 	}
 
 	/// <summary>

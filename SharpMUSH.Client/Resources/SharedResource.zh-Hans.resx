@@ -3222,6 +3222,122 @@
     <value>分配</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>自定义权限是游戏为自己的软代码定义的权限，例如 scene.close。像其他权限一样在角色上允许它；软代码用 permission(%#,scene.close) 或 PERM^scene.close 锁来检查。游戏内：@role/define。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>权限名称</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>它允许做什么</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>必须填写类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>角色和自定义权限各有自己的分类列表，此页面按其分组。先创建分类，再往里放内容。仍有内容的分类无法删除。游戏内：@role/category 和 @role/category/.../permission。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>包含哪些内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>创建</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>还没有类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>已创建类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>已保存类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>删除类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>删除 {0}？只有不含角色和权限的类别才能删除。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>已删除类别 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, other {# 个角色}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, other {# 个权限}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>角色分类</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>权限分类</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>选择类别</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>请在“类别”标签页中创建类别。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>类别需要名称和描述。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>定义</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>还没有自定义权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>已定义权限 {0}。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>移除权限</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>移除 {0}？设置它的每个角色和覆盖都会失去它。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>已移除权限 {0}。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>权限组</value>
     <comment>MT</comment>

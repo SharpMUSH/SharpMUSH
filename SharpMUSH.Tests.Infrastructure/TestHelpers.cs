@@ -499,7 +499,7 @@ public static class TestHelpers
 	{
 		var overrides = (powers ?? []).Select(GamePowers.Find).OfType<GamePowers.Power>()
 			.DistinctBy(p => p.Scope).ToDictionary(p => p.Scope, _ => PermissionState.Allow);
-		var grants = ObjectGrants.For(key, isPlayer, BuiltInRoles.All, roles ?? [], overrides, null);
+		var grants = ObjectGrants.For(key, isPlayer, BuiltInRoles.All, roles ?? [], overrides, null, []);
 		return new(_ => Task.FromResult(grants));
 	}
 }
