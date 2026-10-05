@@ -63,6 +63,7 @@ public partial class Commands
 		// has to be able to pass on to the new player and just typed anyway — and PLAYER`CREATE.
 		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
 			name, password, player);
+		await Audit.RecordAsync(executor, AuditActions.PlayerCreate, new AuditTarget(AuditTargetKinds.Character, player.ToString(), name));
 
 		return new CallState(player.ToString());
 	}
@@ -142,6 +143,7 @@ public partial class Commands
 				new SetPlayerPasswordCommand(asPlayer,
 					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
+			await Audit.RecordAsync(executor, AuditActions.PlayerPassword, AuditTargets.Of(victim), "generated");
 			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
 			await NotifyService.NotifyLocalized(asPlayer.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordChangedByFormat), executor, executor.Object().Name);
 
@@ -158,6 +160,7 @@ public partial class Commands
 		var newHashedPassword = PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
 
 		await Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
+		await Audit.RecordAsync(executor, AuditActions.PlayerPassword, AuditTargets.Of(victim));
 
 		await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name);
 		await NotifyService.NotifyLocalized(asPlayer.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordChangedByFormat), executor, executor.Object().Name);
@@ -264,7 +267,7 @@ public partial class Commands
 
 			var banPattern = args["0"].Message!.ToPlainText();
 			string[] banFlags = ["!connect", "!create", "!guest"];
-			await AddSitelockRuleAsync(banPattern, banFlags);
+			await AddSitelockRuleAsync(executor, banPattern, banFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, banPattern, string.Join(" ", banFlags));
 			return CallState.Empty;
 		}
@@ -280,7 +283,7 @@ public partial class Commands
 
 			var registerPattern = args["0"].Message!.ToPlainText();
 			string[] registerFlags = ["!create", "register"];
-			await AddSitelockRuleAsync(registerPattern, registerFlags);
+			await AddSitelockRuleAsync(executor, registerPattern, registerFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, registerPattern, string.Join(" ", registerFlags));
 			return CallState.Empty;
 		}
@@ -294,7 +297,7 @@ public partial class Commands
 			}
 
 			var removePattern = args["0"].Message!.ToPlainText();
-			var removed = await RemoveSitelockRuleAsync(removePattern);
+			var removed = await RemoveSitelockRuleAsync(executor, removePattern);
 			if (!removed)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotFound), executor);
@@ -310,7 +313,7 @@ public partial class Commands
 			var rulePattern = args["0"].Message!.ToPlainText();
 			var ruleFlags = args["1"].Message!.ToPlainText()
 				.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			await AddSitelockRuleAsync(rulePattern, ruleFlags);
+			await AddSitelockRuleAsync(executor, rulePattern, ruleFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
 			return CallState.Empty;
 		}
@@ -340,7 +343,7 @@ public partial class Commands
 	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
 	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
 	/// </summary>
-	private async ValueTask AddSitelockRuleAsync(string pattern, string[] flags)
+	private async ValueTask AddSitelockRuleAsync(AnySharpObject executor, string pattern, string[] flags)
 	{
 		var currentOptions = await CurrentPersistedOptionsAsync();
 		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
@@ -355,6 +358,8 @@ public partial class Commands
 
 		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
+		await Audit.RecordAsync(executor, AuditActions.SitelockAdd, AuditTargets.Of(AuditTargetKinds.Host, pattern),
+			string.Join(" ", flags));
 		await BanEnforcer.EnforceHostRuleAsync(pattern);
 	}
 
@@ -365,7 +370,7 @@ public partial class Commands
 	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
 	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
 	/// </summary>
-	private async ValueTask<bool> RemoveSitelockRuleAsync(string pattern)
+	private async ValueTask<bool> RemoveSitelockRuleAsync(AnySharpObject executor, string pattern)
 	{
 		var currentOptions = await CurrentPersistedOptionsAsync();
 		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
@@ -382,6 +387,7 @@ public partial class Commands
 
 		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
+		await Audit.RecordAsync(executor, AuditActions.SitelockRemove, AuditTargets.Of(AuditTargetKinds.Host, pattern));
 		return true;
 	}
 
@@ -419,6 +425,7 @@ public partial class Commands
 
 			await SetBannedNamesAsync(currentOptions,
 				[.. names.Where(name => !name.Equals(unban, StringComparison.OrdinalIgnoreCase))]);
+			await Audit.RecordAsync(executor, AuditActions.BannedNameRemove, AuditTargets.Of(AuditTargetKinds.Name, unban));
 			Logger.LogInformation("*** UNLOCKED NAME *** {Pattern} by {Executor}", unban, executor.Object().Name);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRemoved), executor);
 			return CallState.Empty;
@@ -427,6 +434,7 @@ public partial class Commands
 		if (!names.Contains(pattern, StringComparer.OrdinalIgnoreCase))
 		{
 			await SetBannedNamesAsync(currentOptions, [.. names, pattern]);
+			await Audit.RecordAsync(executor, AuditActions.BannedNameAdd, AuditTargets.Of(AuditTargetKinds.Name, pattern));
 		}
 
 		Logger.LogInformation("*** NAMELOCK *** {Pattern} by {Executor}", pattern, executor.Object().Name);

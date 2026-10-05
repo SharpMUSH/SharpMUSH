@@ -55,7 +55,6 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 		{
 			Id = "1",
 			Slug = "dragons",
-			Category = "general",
 			Locale = locale,
 			RequestedLocale = requested,
 			IsFallback = isFallback,
@@ -67,7 +66,6 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 		Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, slug)
 			.Add(c => c.Namespace, "main")
-			.Add(c => c.Category, "general")
 			.Add(c => c.Locale, "fr")
 			.Add(c => c.Article, article)
 			.Add(c => c.Embedded, embedded)
@@ -116,7 +114,7 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 
 		var hrefs = cut.FindAll(".wiki-lang-chips a").Select(a => a.GetAttribute("href")).ToList();
 
-		await Assert.That(hrefs).Contains("/wiki/main/general/dragons?lang=fr");
+		await Assert.That(hrefs).Contains("/wiki/main/dragons?lang=fr");
 		await Assert.That(hrefs.Any(h => h!.EndsWith("lang=en")))
 			.IsFalse()
 			.Because("the locale already on screen is not a link to somewhere else");
@@ -146,11 +144,10 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 		var cut = Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, "dragons")
 			.Add(c => c.Namespace, "main")
-			.Add(c => c.Category, "general")
 			.Add(c => c.Locale, "de")
 			.Add(c => c.Article, article)
 			.Add(c => c.ActivateEditMode, () => Task.CompletedTask));
 
-		await Assert.That(cut.Markup).Contains("/wiki/main/general/dragons/edit?lang=de");
+		await Assert.That(cut.Markup).Contains("/wiki/main/dragons/edit?lang=de");
 	}
 }

@@ -330,6 +330,19 @@ public class OobEntryParserTests
 		await Assert.That(watcher.Scene!.Outside).IsTrue();
 	}
 
+	/// <summary>A viewer focused on another scene (room-contents 2.2.2); a handler that does not say means not.</summary>
+	[Test]
+	public async Task V2_room_info_scene_carries_whether_the_viewer_is_focused_elsewhere()
+	{
+		var elsewhere = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","cast":3,"role":"participant","focus":false,"elsewhere":true}}""")!;
+		var unsaid = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"42","cast":3,"role":"participant","focus":false}}""")!;
+
+		await Assert.That(elsewhere.Scene!.Elsewhere).IsTrue();
+		await Assert.That(unsaid.Scene!.Elsewhere).IsFalse();
+	}
+
 	/// <summary>An older handler says nothing about focus; that is not "outside", so the composer stays.</summary>
 	[Test]
 	public async Task V2_room_info_scene_without_focus_is_not_outside()

@@ -68,7 +68,7 @@ disable and revocation therefore apply when queued work executes.
 
 ## Delegated role management
 
-Every role change, from @role or the portal, goes through the role management service and needs
+Every role change, from @role, @permission or the portal, goes through the role management service and needs
 roles.admin. Following Discord's role hierarchy, a manager creates, edits, deletes, assigns and
 removes only roles below their own highest role, changes only accounts whose highest role is below
 theirs, never changes their own account, and allows only scopes they hold. System roles keep their

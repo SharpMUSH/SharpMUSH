@@ -1387,6 +1387,10 @@ public static partial class ErrorMessages
 		public const string NewPasswordSetFormat = "Password for {0} changed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NewPasswordChangedByFormat = "Your password has been changed by {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LastConnectFormat = "Last connect was from {0} on {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LastFailedConnectFormat = "Last FAILED connect was from {0}.";
 
 		public const string PurgeComplete = "Purge complete.";
 

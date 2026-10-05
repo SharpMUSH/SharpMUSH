@@ -12,7 +12,6 @@ namespace SharpMUSH.Library.Services;
 /// portal hydrates with live data at display time:
 /// <list type="bullet">
 ///   <item><c>::: category lore</c> — pages in a category</item>
-///   <item><c>::: tag magic</c> — pages with a tag</item>
 ///   <item><c>::: pagelist help</c> — pages in a namespace</item>
 ///   <item><c>::: recent 10</c> — recently updated pages (count clamped 1–50)</item>
 /// </list>
@@ -67,7 +66,7 @@ internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContain
 	{
 		var directive = container.Info?.Trim().ToLowerInvariant();
 
-		if (directive is not ("category" or "tag" or "pagelist" or "recent"))
+		if (directive is not ("category" or "pagelist" or "recent"))
 		{
 			// Unknown info string — keep the default custom-container rendering.
 			base.Write(renderer, container);

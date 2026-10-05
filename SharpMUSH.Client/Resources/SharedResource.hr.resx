@@ -156,10 +156,6 @@
     <value>Prikaz likova</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Administracija likova uskoro dolazi.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Konfiguracija stranice</value>
     <comment>MT</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Lozinka za '{0}' promijenjena je u: {1} — podijelite je na siguran način; korisnik je mora promijeniti pri sljedećoj prijavi.</value>
     <comment>MT — lozinka per the locale sheet; {1} follows a colon so the generated password stays uninflected; the English "they" rendered as "korisnik" since Croatian has no neutral pronoun here</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Detalji o igraču uskoro dolaze.</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administracija · Igrač</value>
@@ -2855,10 +2847,6 @@
     <value>svatko može uređivati</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Općenito</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# promjena} few {# promjene} other {# promjena}}</value>
     <comment>MT — verbatim from the locale sheet</comment>
@@ -3226,6 +3214,122 @@
     <value>Dodjele</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Vlastita dopuštenja su ona koja igra definira za svoj softcode, npr. scene.close. Dopustite ga u ulozi kao svako drugo dopuštenje; softcode ga provjerava s permission(%#,scene.close) ili bravom PERM^scene.close. U igri: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Naziv dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Što omogućuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Kategorija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Kategorija je obavezna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Kategorije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Uloge i prilagođena dopuštenja imaju svaka svoj popis kategorija, a ova ih stranica grupira prema njemu. Stvorite kategoriju prije nego što u nju nešto stavite. Kategorija koja još nešto sadrži ne može se izbrisati. U igri: @role/category i @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Što pripada u nju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Stvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Još nema kategorija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Kategorija {0} stvorena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Kategorija {0} spremljena.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Izbriši kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Izbrisati {0}? Može se izbrisati samo kategorija bez uloga i dopuštenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Kategorija {0} izbrisana.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# uloga} few {# uloge} many {# uloga} other {# uloga}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# dopuštenje} few {# dopuštenja} many {# dopuštenja} other {# dopuštenja}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Kategorije uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Kategorije dopuštenja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Odaberite kategoriju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Kategorije se stvaraju na kartici Kategorije.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Kategorija treba naziv i opis.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Definiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Još nema vlastitih dopuštenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Dopuštenje {0} definirano.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Ukloni dopuštenje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Ukloniti {0}? Svaka uloga i svako nadjačavanje koje ga postavlja izgubit će ga.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Dopuštenje {0} uklonjeno.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Uloge</value>
     <comment>MT</comment>
@@ -3454,10 +3558,6 @@
     <value>Dodaj atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(prazno)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Okidač naredbe</value>
     <comment>MT</comment>
@@ -3513,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Zatvori {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Sažmi {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Očisti terminal</value>
@@ -3656,13 +3762,8 @@
     <value>Uređivač softcodea</value>
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testiraj</value>
-    <comment>MT — assumed a button that runs a test</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluiraj bez spremanja</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — pokreni spremljeni atribut s u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>
@@ -4008,10 +4109,6 @@
     <value>Pregled po namespace-u</value>
     <comment>MT — namespace kept untranslated; Croatian locative ending attached with a hyphen</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Kategorija</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} još nema biografiju.</value>
     <comment>MT</comment>
@@ -4107,14 +4204,6 @@
     <value>Revizija</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Oznake</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Pritisnite Enter ili + za dodavanje oznake</value>
-    <comment>MT — key name Enter and the + symbol kept as-is</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Naslov</value>
     <comment>MT</comment>
@@ -4134,10 +4223,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Ažurirano</value>
     <comment>MT — assumed a column label for the last-modified date</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>dodaj oznaku…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Dodaj prijevod…</value>
@@ -4285,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Još nema stranica.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Oznaka: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5048,8 +5129,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>U sceni</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Gledate ovu scenu. Pridružite joj se da biste ovdje pozirali.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Još se niste pridružili ovoj sceni. Pridružite joj se da biste ovdje pozirali.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5058,6 +5139,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Pridruži se sceni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Igra vam nije dopustila da se pridružite ovoj sceni.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
@@ -5287,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Iznimka za {0} je spremljena.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Bez kategorije</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Opišite ovu kategoriju</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Dodaj kategoriju</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# potkategorija} few {# potkategorije} other {# potkategorija}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# stranica u ovoj kategoriji} few {# stranice u ovoj kategoriji} other {# stranica u ovoj kategoriji}}</value>
   </data>
 </root>

@@ -156,10 +156,6 @@
     <value>Преглед на персонажите</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmCharactersComingSoon" xml:space="preserve">
-    <value>Администрирането на персонажи предстои.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmConfigAction" xml:space="preserve">
     <value>Конфигурация на сайта</value>
     <comment>MT</comment>
@@ -247,10 +243,6 @@
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Паролата за „{0}“ е нулирана на: {1} — споделете я по сигурен начин; тя трябва да бъде сменена при следващото влизане.</value>
     <comment>MT — English «they must change it» made impersonal passive to avoid gendering the account holder</comment>
-  </data>
-  <data name="AdmPlayerDetailComingSoon" xml:space="preserve">
-    <value>Подробностите за играча предстоят.</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Администриране · Играч</value>
@@ -2855,10 +2847,6 @@
     <value>всеки може да редактира</value>
     <comment>MT</comment>
   </data>
-  <data name="ResCategoryGeneral" xml:space="preserve">
-    <value>Общи</value>
-    <comment>MT — assumed a settings category label</comment>
-  </data>
   <data name="ResChangeCount" xml:space="preserve">
     <value>{count, plural, one {# промяна} other {# промени}}</value>
     <comment>MT — verbatim from the locale sheet; two categories only</comment>
@@ -3226,6 +3214,122 @@
     <value>Присвоявания</value>
     <comment>MT</comment>
   </data>
+  <data name="RolTabPermissions" xml:space="preserve">
+    <value>Разрешения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomHelp" xml:space="preserve">
+    <value>Собствените разрешения са тези, които играта определя за собствения си софткод, например scene.close. Разрешете го в роля като всяко друго разрешение; софткодът го проверява с permission(%#,scene.close) или ключалка PERM^scene.close. В играта: @permission/define.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomScopeLabel" xml:space="preserve">
+    <value>Име на разрешението</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDescriptionLabel" xml:space="preserve">
+    <value>Какво позволява</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryLabel" xml:space="preserve">
+    <value>Категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryRequired" xml:space="preserve">
+    <value>Изисква се категория.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolTabCategories" xml:space="preserve">
+    <value>Категории</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoriesHelp" xml:space="preserve">
+    <value>Ролите и потребителските разрешения имат всяко свой списък с категории и тази страница ги групира по него. Създайте категория, преди да поставите нещо в нея. Категория, която още съдържа нещо, не може да бъде изтрита. В играта: @role/category и @permission/category.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDescriptionLabel" xml:space="preserve">
+    <value>Какво включва</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryAdd" xml:space="preserve">
+    <value>Създай</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryEmpty" xml:space="preserve">
+    <value>Все още няма категории.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryCreated" xml:space="preserve">
+    <value>Категорията {0} е създадена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategorySaved" xml:space="preserve">
+    <value>Категорията {0} е запазена.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteTitle" xml:space="preserve">
+    <value>Изтриване на категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleteConfirm" xml:space="preserve">
+    <value>Да се изтрие ли {0}? Може да се изтрие само категория без роли и разрешения.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryDeleted" xml:space="preserve">
+    <value>Категорията {0} е изтрита.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsRoles" xml:space="preserve">
+    <value>{count, plural, one {# роля} other {# роли}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHoldsPermissions" xml:space="preserve">
+    <value>{count, plural, one {# разрешение} other {# разрешения}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolRoleCategories" xml:space="preserve">
+    <value>Категории роли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolPermissionCategories" xml:space="preserve">
+    <value>Категории разрешения</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryChoose" xml:space="preserve">
+    <value>Изберете категория</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryHelper" xml:space="preserve">
+    <value>Категориите се създават в раздела „Категории“.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCategoryNameAndDescriptionRequired" xml:space="preserve">
+    <value>Категорията трябва да има име и описание.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomAdd" xml:space="preserve">
+    <value>Определи</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomEmpty" xml:space="preserve">
+    <value>Все още няма собствени разрешения.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomDefined" xml:space="preserve">
+    <value>Разрешението {0} е определено.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveTitle" xml:space="preserve">
+    <value>Премахване на разрешение</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoveConfirm" xml:space="preserve">
+    <value>Да се премахне ли {0}? Всяка роля и всяко изключение, което го задава, ще го загуби.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCustomRemoved" xml:space="preserve">
+    <value>Разрешението {0} е премахнато.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Роли</value>
     <comment>MT</comment>
@@ -3454,10 +3558,6 @@
     <value>Добави атрибут</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(празно)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Тригер за команда</value>
     <comment>MT</comment>
@@ -3513,6 +3613,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Затвори {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Разгъни {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Свий {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Изчисти терминала</value>
@@ -3656,13 +3762,8 @@
     <value>Редактор на softcode</value>
     <comment>MT — `softcode` kept untranslated per glossary</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Тест</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Тест — изчисляване без запазване</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — изпълни запазения атрибут с u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>незапазено</value>
@@ -4008,10 +4109,6 @@
     <value>Преглед по namespace</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiCategory" xml:space="preserve">
-    <value>Категория</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiCharacterNoBio" xml:space="preserve">
     <value>{0} все още няма биография.</value>
     <comment>MT</comment>
@@ -4107,14 +4204,6 @@
     <value>Версия</value>
     <comment>MT — per sheet, revision → версия</comment>
   </data>
-  <data name="WikiTags" xml:space="preserve">
-    <value>Етикети</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiTagsHelper" xml:space="preserve">
-    <value>Натиснете Enter или +, за да добавите етикет</value>
-    <comment>MT — key name «Enter» and the + sign kept as-is</comment>
-  </data>
   <data name="WikiTitle" xml:space="preserve">
     <value>Заглавие</value>
     <comment>MT</comment>
@@ -4134,10 +4223,6 @@
   <data name="WikiUpdated" xml:space="preserve">
     <value>Обновена</value>
     <comment>MT — assumed a page-status/last-changed column referring to «страница» (feminine); if it labels a bare timestamp, neuter «Обновено» would be better</comment>
-  </data>
-  <data name="WkAddTagPlaceholder" xml:space="preserve">
-    <value>добавяне на етикет…</value>
-    <comment>MT</comment>
   </data>
   <data name="WkAddTranslation" xml:space="preserve">
     <value>Добавяне на превод…</value>
@@ -4285,10 +4370,6 @@
   </data>
   <data name="WkDirectiveNoPages" xml:space="preserve">
     <value>Все още няма страници.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkDirectiveTagHeader" xml:space="preserve">
-    <value>Етикет: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="WkDiscard" xml:space="preserve">
@@ -5048,8 +5129,8 @@
   <data name="NavPlayInScene" xml:space="preserve">
     <value>В сцена</value>
   </data>
-  <data name="NavPlaySceneWatching" xml:space="preserve">
-    <value>Гледате тази сцена. Присъединете се, за да позирате тук.</value>
+  <data name="NavPlaySceneNotJoined" xml:space="preserve">
+    <value>Още не сте се присъединили към тази сцена. Присъединете се, за да позирате тук.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
@@ -5058,6 +5139,10 @@
   </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присъединяване</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneJoinFailed" xml:space="preserve">
+    <value>Играта не ви позволи да се присъедините към тази сцена.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneLeave" xml:space="preserve">
@@ -5287,5 +5372,20 @@
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Изключението за {0} е запазено.</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavWikiUncategorized" xml:space="preserve">
+    <value>Без категория</value>
+  </data>
+  <data name="WikiCategoryDescribe" xml:space="preserve">
+    <value>Опишете тази категория</value>
+  </data>
+  <data name="WkAddCategory" xml:space="preserve">
+    <value>Добавяне на категория</value>
+  </data>
+  <data name="NavWikiSubcategories" xml:space="preserve">
+    <value>{count, plural, one {# подкатегория} other {# подкатегории}}</value>
+  </data>
+  <data name="NavWikiCategoryPages" xml:space="preserve">
+    <value>{count, plural, one {# страница в тази категория} other {# страници в тази категория}}</value>
   </data>
 </root>

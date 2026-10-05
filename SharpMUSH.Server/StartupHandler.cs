@@ -80,25 +80,9 @@ public class StartupHandler(
 		// this is safe on every restart.
 		var homeResult = await wikiService.CreateAsync(
 			title: "Home",
-			markdown: """
-				![SharpMUSH logo](/assets/Logo.svg){width=20%}
-				
-				This is your MUSH's home page. It's stored as a wiki article and can be edited
-				by any authorised user.
-
-				## Getting started
-				- Connect with a MU* client on port **4201**
-				- Or use the terminal panel below
-				- Create a character with `create <name> <password>`
-				- Then log in with `connect <name> <password>`
-
-				## About SharpMUSH
-				SharpMUSH is a modern, open-source MUSH server written in .NET, targeting
-				PennMUSH compatibility. See the [[Help:Markdown Guide]] for formatting help.
-				""",
+			markdown: SeededWikiPages.Home,
 			authorDbref: "#1",
 			ns: WikiNamespace.Main,
-			category: "general",
 			sourceLocale: "en");
 		switch (homeResult)
 		{
@@ -118,8 +102,8 @@ public class StartupHandler(
 			markdown: SeededWikiPages.MarkdownGuide,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general",
-			sourceLocale: "en");
+			sourceLocale: "en",
+			categories: ["Help"]);
 		switch (guideResult)
 		{
 			case WikiPage page:
@@ -138,8 +122,8 @@ public class StartupHandler(
 			markdown: SeededWikiPages.ApplicationSchemaGuide,
 			authorDbref: "#1",
 			ns: WikiNamespace.Help,
-			category: "general",
-			sourceLocale: "en");
+			sourceLocale: "en",
+			categories: ["Help"]);
 		switch (appSchemaResult)
 		{
 			case WikiPage page:

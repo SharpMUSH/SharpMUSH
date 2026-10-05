@@ -1,12 +1,12 @@
-@page "/wiki/{Ns}/{Category}/{Slug}/edit"
+@page "/wiki/{Ns}/{Slug}/edit"
 @using SharpMUSH.Client.Components
 @attribute [Authorize(Policy = "wiki.edit")]
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
 
-<div class="full-bleed full-height wiki-edit-host">
-    <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
+<div class="full-height wiki-edit-host">
+    <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
               Locale="@Lang" NewTitle="@NewTitle" Mode="WikiView.WikiMode.Edit" />
 </div>
 
@@ -17,8 +17,6 @@
     [Parameter]
     public required string Ns { get; set; }
 
-    [Parameter]
-    public required string Category { get; set; }
 
     /// <summary>
     /// The locale to edit, from <c>?lang=</c> — the deep link the reader's "Translate this page" points at.

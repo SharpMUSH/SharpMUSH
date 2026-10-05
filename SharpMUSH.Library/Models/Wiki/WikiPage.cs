@@ -5,9 +5,9 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// Wiki pages are NOT SharpObjects — they have their own schema and live
 /// in their own collection.
 /// </summary>
-/// <param name="Slug">URL-friendly identifier, unique per namespace. Format: [a-z0-9_/]+</param>
+/// <param name="Slug">URL-friendly identifier, unique per namespace. With <paramref name="Namespace"/> it is the page's identity.</param>
 /// <param name="Title">Human-readable display title.</param>
-/// <param name="Namespace">Top-level namespace grouping (main, help, character, system).</param>
+/// <param name="Namespace">The namespace (main, help, character, system, category).</param>
 /// <param name="MarkdownSource">Raw Markdown content — the single source of truth.</param>
 /// <param name="RenderedHtml">Cached HTML render from Markdig.</param>
 /// <param name="PlainText">Plain text extracted from Markdown, used for search indexing.</param>
@@ -36,11 +36,12 @@ public record WikiPage(
 	// existing construction sites and stored documents missing these fields keep
 	// working — they simply get the defaults below.
 
-	/// <summary>Optional top-level category grouping (e.g. "lore", "rules"). Lower-case.</summary>
-	public string? Category { get; init; }
-
-	/// <summary>Searchable tags for cross-cutting concerns. Lower-case, de-duplicated.</summary>
-	public IReadOnlyList<string> Tags { get; init; } = [];
+	/// <summary>
+	/// The categories the page is in, as keys (<see cref="Services.WikiHelpers.CategoryKey"/>), sorted.
+	/// Held by the page and set apart from its text (<see cref="Services.Interfaces.IWikiService.SetMetadataAsync"/>);
+	/// a <c>[[Category:Name]]</c> link in <see cref="MarkdownSource"/> is only a link.
+	/// </summary>
+	public IReadOnlyList<string> Categories { get; init; } = [];
 
 	/// <summary>When false, the page is a draft hidden from non-admin listings and views.</summary>
 	public bool Published { get; init; } = true;

@@ -27,7 +27,7 @@ public class WikiTranslationIntegrationTests
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var result = await (wiki ?? Wiki).CreateAsync(
-			$"{label} {uid}", "en **body**", "#1", WikiNamespace.Main, "general", sourceLocale);
+			$"{label} {uid}", "en **body**", "#1", WikiNamespace.Main, sourceLocale);
 		return result.Expect<WikiPage>();
 	}
 
@@ -36,7 +36,7 @@ public class WikiTranslationIntegrationTests
 	{
 		var page = await CreateSourcePageAsync("SrcLocale", sourceLocale: "fr-CA");
 
-		var reread = await Wiki.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main);
+		var reread = await Wiki.GetBySlugAsync(page.Slug, WikiNamespace.Main);
 
 		await Assert.That(reread.Expect<WikiPage>().SourceLocale)
 			.IsEqualTo("fr-CA")

@@ -56,7 +56,6 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		{
 			Id = "1",
 			Slug = "home",
-			Category = "general",
 			Locale = "en",
 			RequestedLocale = "en",
 			AvailableLocales = ["en"],
@@ -66,7 +65,6 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, "home")
 			.Add(c => c.Namespace, "main")
-			.Add(c => c.Category, "general")
 			.Add(c => c.Article, Home(image))
 			.Add(c => c.Embedded, embedded)
 			.Add(c => c.ActivateEditMode, () => Task.CompletedTask));
@@ -78,7 +76,7 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 
 		var hrefs = cut.FindAll("a.kit-capsule").Select(a => a.GetAttribute("href")).ToList();
 
-		await Assert.That(hrefs).Contains("/wiki/main/general/home/history");
+		await Assert.That(hrefs).Contains("/wiki/main/home/history");
 	}
 
 	[Test]
@@ -134,7 +132,6 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		var cut = Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, "dragons")
 			.Add(c => c.Namespace, "main")
-			.Add(c => c.Category, "general")
 			.Add(c => c.Article, article)
 			.Add(c => c.Embedded, true)
 			.Add(c => c.ActivateEditMode, () => Task.CompletedTask));

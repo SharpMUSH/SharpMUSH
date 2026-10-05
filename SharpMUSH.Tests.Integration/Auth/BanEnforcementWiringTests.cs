@@ -92,7 +92,8 @@ public class BanEnforcementWiringTests(ServerWebAppFactory factory)
 		// Constructed directly (bypassing HTTP/[Authorize]), same pattern as
 		// SharpMUSH.Tests.Configuration.ConfigurationControllerTests: real DI-resolved
 		// collaborators, calling the action method straight.
-		var controller = new SitelockController(optionsWrapper, database, configReloadService, banEnforcer, logger);
+		var controller = new SitelockController(optionsWrapper, database, configReloadService, banEnforcer,
+			factory.Services.GetRequiredService<IAuditLog>(), logger);
 
 		var hostPattern = $"203.0.113.{Random.Shared.Next(1, 254)}";
 		var aborted = false;

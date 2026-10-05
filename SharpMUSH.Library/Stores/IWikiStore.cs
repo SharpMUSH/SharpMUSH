@@ -15,9 +15,9 @@ public readonly record struct WikiBody(string Markdown, string Html, string Plai
 /// </summary>
 /// <remarks>
 /// Every argument arrives normalised by <see cref="Services.WikiStoreService"/>, which owns each rule that
-/// is not about storage: a slug is already slugified, a namespace lower-cased, a category, tag or locale
+/// is not about storage: a slug is already slugified, a namespace lower-cased, a category or locale
 /// already canonical, and Markdown already rendered. What stays here is what needs the store's own
-/// atomicity — the <c>(namespace, category, slug)</c> uniqueness check, revision numbering, and the
+/// atomicity — the <c>(namespace, slug)</c> uniqueness check, revision numbering, and the
 /// translation compare-and-swap — plus the page-id format, which is the store's to choose.
 /// <para>
 /// A locale of <see cref="string.Empty"/> names the page's source-locale revision stream.
@@ -25,7 +25,7 @@ public readonly record struct WikiBody(string Markdown, string Html, string Plai
 /// </remarks>
 public interface IWikiStore
 {
-	Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string category, string slug);
+	Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string slug);
 
 	Task<Found<WikiPage>> GetPageByIdAsync(string id);
 
@@ -50,13 +50,9 @@ public interface IWikiStore
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);
 
-	/// <summary>Pages carrying <paramref name="tag"/>, case-insensitively, ordered by title.</summary>
-	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
-	Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility);
-
 	/// <summary>
 	/// Stores <paramref name="page"/> under a newly allocated id, ignoring the one it carries, with its
-	/// body as source revision 1. <c>Error</c> when its <c>(namespace, category, slug)</c> is taken.
+	/// body as source revision 1. <c>Error</c> when its <c>(namespace, slug)</c> is taken.
 	/// </summary>
 	Task<Result<WikiPage>> CreatePageAsync(WikiPage page);
 
@@ -69,11 +65,8 @@ public interface IWikiStore
 
 	Task<Found<None>> SetPageProtectionAsync(string id, bool isProtected);
 
-	/// <summary>
-	/// Sets category, tags and published flag without a revision. Category is part of the page's identity,
-	/// so a change that would collide with another page is refused as <c>NotFound</c>.
-	/// </summary>
-	Task<Found<WikiPage>> SetPageMetadataAsync(string id, string category, IReadOnlyList<string> tags, bool published);
+	/// <summary>Sets the page's categories and published flag without a revision.</summary>
+	Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published);
 
 	/// <summary>One locale's revisions, by revision number descending.</summary>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take);

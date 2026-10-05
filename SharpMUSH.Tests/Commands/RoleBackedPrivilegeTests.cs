@@ -103,7 +103,7 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	public async Task RoleThatAllowsAPowerGivesItToEveryHolder()
 	{
 		var slug = "r" + Guid.NewGuid().ToString("N")[..12];
-		await As($"@role/create {slug}");
+		await As($"@role/create {slug}=Staff");
 		await As($"@role/allow {slug}=game.see_all");
 		await As($"@role/assign {Target}={slug}");
 		await Assert.That(await AsWizard($"haspower({Target},See_All)")).IsEqualTo("1");
@@ -115,10 +115,10 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	public async Task ObjectOverrideDeniesWhatARoleAllows()
 	{
 		await As($"@set {Target}=ROYALTY");
-		await As($"@role/deny/object {Target}=game.royalty");
+		await As($"@permission/deny {Target}=game.royalty");
 		await Assert.That(await AsWizard($"hasflag({Target},ROYALTY)")).IsEqualTo("0");
 		await Assert.That(await As($"examine {Target}")).Contains("Overrides: -game.royalty");
-		await As($"@role/clear/object {Target}=game.royalty");
+		await As($"@permission/clear {Target}=game.royalty");
 		await Assert.That(await AsWizard($"hasflag({Target},ROYALTY)")).IsEqualTo("1");
 		await As($"@set {Target}=!ROYALTY");
 	}
@@ -146,7 +146,7 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 		// The exception is for powers only: a wizard still cannot hand itself a role or a portal permission.
 		await Assert.That(await As("@role/assign me=moderator")).DoesNotContain("assigned");
 		await Assert.That(await AsWizard("hasrole(me,moderator)")).IsEqualTo("0");
-		await As("@role/allow/object me=wiki.read");
+		await As("@permission/allow me=wiki.read");
 		await Assert.That(await As($"@role/player {me}")).DoesNotContain("allow wiki.read");
 	}
 

@@ -82,12 +82,12 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/list help"));
-		await ExpectNotify(player.DbRef, "help:general:markdown_guide");
+		await ExpectNotify(player.DbRef, "help:markdown_guide");
 	}
 
 	/// <summary>
 	/// One column, one grammar. Main-namespace pages listed bare ("home") while every other namespace
-	/// listed qualified ("help:general:markdown_guide"), so a reader could not tell from the column which
+	/// listed qualified ("help:markdown_guide"), so a reader could not tell from the column which
 	/// spelling any given row was in. Every row is now fully qualified.
 	/// </summary>
 	[Test]
@@ -111,10 +111,10 @@ public class WikiCommandTests
 		foreach (var row in rows)
 		{
 			var identifier = row.Split(' ')[0];
-			await Assert.That(identifier.Split(':').Length).IsEqualTo(3);
+			await Assert.That(identifier.Split(':').Length).IsEqualTo(2);
 		}
 
-		await Assert.That(rows.Any(r => r.StartsWith("main:general:qualified_row_page"))).IsTrue();
+		await Assert.That(rows.Any(r => r.StartsWith("main:qualified_row_page"))).IsTrue();
 	}
 
 	/// <summary>
@@ -131,12 +131,12 @@ public class WikiCommandTests
 			MarkupText.Plain("@wiki/create Round Trip Page=Body of the round trip page."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain("@wiki/view main:general:round_trip_page"));
+			MarkupText.Plain("@wiki/view main:round_trip_page"));
 		await ExpectNotify(player.DbRef, "Body of the round trip page");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain("@wiki/view help:general:markdown_guide"));
-		await ExpectNoNotify(player.DbRef, "WIKI: No such page: help:general:markdown_guide");
+			MarkupText.Plain("@wiki/view help:markdown_guide"));
+		await ExpectNoNotify(player.DbRef, "WIKI: No such page: help:markdown_guide");
 	}
 
 	[Test]
@@ -263,17 +263,59 @@ public class WikiCommandTests
 	}
 
 	[Test]
-	public async ValueTask WikiTag_SetsNormalizedTags()
+	public async ValueTask WikiCategory_ListsPagesThatNameIt()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTagger");
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiCategorizer");
+
+		var gate = await SeedSourcePageAsync("Wyrmholt Gate", "A gate.");
+		var places = (await WikiService.CreateAsync("Wyrmholt Places", "Places in Wyrmholt.", "#1",
+			WikiNamespace.Category, "en")).Expect<WikiPage>();
+
+		// Categories are page data set by name, not text: setting them leaves the body alone. A category's
+		// name is its category page's title.
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@wiki/category wyrmholt_gate=Wyrmholt Places"));
+		await ExpectNotify(player.DbRef, "WIKI: 'Wyrmholt Gate' categories: Wyrmholt Places.");
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@wiki/category Category:Wyrmholt Places=Wyrmholt Setting"));
+		await Assert.That((await WikiService.GetByIdAsync(gate.Id)).Expect<WikiPage>().MarkdownSource).IsEqualTo("A gate.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain("@wiki/create Tagged Page=content"));
+			MarkupText.Plain("@wiki/category wyrmholt places"));
+		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt Places' — 1 page(s), 0 subcategory(ies):");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain("@wiki/tag tagged_page=Magic FIRE magic"));
-		await ExpectNotify(player.DbRef, "set to: fire, magic");
+			MarkupText.Plain("@wiki/category Wyrmholt_Setting"));
+		await ExpectNotify(player.DbRef, "Category:Wyrmholt Places");
+		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt setting'");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@wiki wyrmholt_gate"));
+		await ExpectNotify(player.DbRef, "Categories: Wyrmholt Places");
+
+		// Translating the category page translates the category's name; the page's categories stay its own.
+		await WikiService.UpsertTranslationAsync(
+			places.Id, "fr", "Lieux de Wyrmholt", "Lieux.", "#1", null, published: true, expectedRevisionNumber: null);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@wiki wyrmholt_gate"));
+		await ExpectNotify(player.DbRef, "Categories: Lieux de Wyrmholt");
+	}
+
+	[Test]
+	public async ValueTask WikiCategory_WithAnEmptyListClearsThePagesCategories()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiUncategorizer");
+		var title = TestIsolationHelpers.GenerateUniqueName("Uncat");
+		var page = (await WikiService.CreateAsync(title, "body", "#1", WikiNamespace.Main, "en", ["Lore", "Myth"])).Expect<WikiPage>();
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/category {page.Slug}="));
+
+		await ExpectNotify(player.DbRef, $"WIKI: '{title}' is in no category.");
+		await Assert.That((await WikiService.GetByIdAsync(page.Id)).Expect<WikiPage>().Categories).IsEmpty();
 	}
 
 	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
@@ -290,7 +332,7 @@ public class WikiCommandTests
 		string title, string englishBody, string frenchTitle, string frenchBody, bool published)
 	{
 		var created = await WikiService.CreateAsync(
-			title, englishBody, "#1", WikiNamespace.Main, "general", "en");
+			title, englishBody, "#1", WikiNamespace.Main, "en");
 		var page = created.Expect<WikiPage>();
 
 		var translated = await WikiService.UpsertTranslationAsync(
@@ -377,7 +419,7 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
+		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
 		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
@@ -401,8 +443,8 @@ public class WikiCommandTests
 			"Draft Page Published Tr", "en secret host body", "Titre Publié", "corps publié secret",
 			published: true);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
-		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, [], published: false);
 		await Assert.That(unpublished.Value).IsTypeOf<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
@@ -423,8 +465,8 @@ public class WikiCommandTests
 			"Draft Page Published Hist", "en host body", "Titre Historique", "corps historique",
 			published: true);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
-		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, [], published: false);
 		await Assert.That(unpublished.Value).IsTypeOf<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
@@ -470,7 +512,7 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/create Stamped At Birth=body of a stamped page"));
 
-		var created = await WikiService.GetBySlugAsync("stamped_at_birth", "general", WikiNamespace.Main);
+		var created = await WikiService.GetBySlugAsync("stamped_at_birth", WikiNamespace.Main);
 		await Assert.That(created.Expect<WikiPage>().SourceLocale)
 			.IsEqualTo(localization.DefaultLocale)
 			.Because("a page created in-game must be stamped at birth exactly as the API path is; the "
@@ -535,10 +577,10 @@ public class WikiCommandTests
 	private async Task<WikiPage> SeedUnpublishedPageAsync(
 		string title, string body, WikiNamespace ns = WikiNamespace.Main)
 	{
-		var created = await WikiService.CreateAsync(title, body, "#1", ns, "general", "en");
+		var created = await WikiService.CreateAsync(title, body, "#1", ns, "en");
 		var page = created.Expect<WikiPage>();
 
-		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
+		var unpublished = await WikiService.SetMetadataAsync(page.Id, [], published: false);
 		return unpublished.Expect<WikiPage>();
 	}
 
@@ -891,7 +933,7 @@ public class WikiCommandTests
 	/// <summary>Creates a plain English page through the service and returns it.</summary>
 	private async Task<WikiPage> SeedSourcePageAsync(string title, string body)
 	{
-		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
+		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "en");
 		return created.Expect<WikiPage>();
 	}
 
@@ -914,7 +956,7 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "corps traduit en jeu");
 
 		// ...and the source body being untouched is what rules out "wrote the page itself".
-		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, WikiNamespace.Main);
 		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en dragon body");
 	}
 
@@ -940,7 +982,7 @@ public class WikiCommandTests
 			.Because("an untagged write must produce no translation at all, least of all one in the "
 				+ "writer's own reading locale");
 
-		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, WikiNamespace.Main);
 		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en untagged body");
 	}
 
@@ -976,7 +1018,7 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "use @wiki/edit to change the page itself");
 		await ExpectNoNotify(player.DbRef, "rather than adding a translation");
 
-		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
+		var reloaded = await WikiService.GetBySlugAsync(page.Slug, WikiNamespace.Main);
 		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en shadowing body");
 	}
 
@@ -1047,7 +1089,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorDraftKeeper");
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Keeping Dragons", "en keeper body", "Dragons Conserves", "corps initial", published: false);
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
+		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {slug}/fr=corps corrige"));
@@ -1120,8 +1162,8 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki {page.Slug}"));
 
-		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Html, "xch_cmd=\"@wiki help:general:markdown_guide\"");
-		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Pueblo, "XCH_CMD=\"@wiki help:general:markdown_guide\"");
+		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Html, "xch_cmd=\"@wiki help:markdown_guide\"");
+		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Pueblo, "XCH_CMD=\"@wiki help:markdown_guide\"");
 		// The display text is the page title, never the raw target, and the brackets never leak.
 		await ExpectNotify(player.DbRef, "See Markdown Guide for details.");
 	}

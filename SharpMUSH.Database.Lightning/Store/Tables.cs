@@ -66,6 +66,8 @@ public static class Tables
 	public static readonly TableDef PageConversation = TableDef.Node("page.conv");
 	public static readonly TableDef PageConversationLatest = TableDef.Index("page.conv.latest");
 	public static readonly TableDef PageLogTime = TableDef.Index("page.time");
+	/// <summary>Staff actions: big-endian millis + big-endian sequence → the entry, so the log reads newest first and a date range is one key range.</summary>
+	public static readonly TableDef Audit = TableDef.Node("audit");
 	public static readonly TableDef State = TableDef.Node("state");
 	public static readonly TableDef ExpandedObj = TableDef.Node("x.obj");
 	public static readonly TableDef ExpandedSrv = TableDef.Node("x.srv");
@@ -78,12 +80,16 @@ public static class Tables
 	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
 	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
-	public static readonly TableDef WikiByTag = TableDef.Index("wiki.tag");
 	/// <summary>Page key → visibility, for protected pages only, so the protected count reads no page row.</summary>
 	public static readonly TableDef WikiProtected = TableDef.Index("wiki.protected");
 	public static readonly TableDef Layout = TableDef.Node("layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");
+	/// <summary>Custom permissions a game defines, keyed by scope.</summary>
+	public static readonly TableDef CustomPermission = TableDef.Node("perm.def");
+	/// <summary>Categories of roles and custom permissions, keyed by lowercased name.</summary>
+	public static readonly TableDef RoleCategory = TableDef.Node("role.cat");
+	public static readonly TableDef PermissionCategory = TableDef.Node("perm.cat");
 	public static readonly TableDef Pkg = TableDef.Node("pkg");
 	public static readonly TableDef PkgObj = TableDef.Node("pkg.obj");
 	public static readonly TableDef PkgAttr = TableDef.Node("pkg.attr");

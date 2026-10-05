@@ -71,7 +71,7 @@ else
        its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
-        <div class="play full-bleed full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
+        <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
                 @if (BannerShown)
                 {
@@ -510,8 +510,14 @@ else
                so the footer offers to join instead. Joining focuses the viewer, and the room.info that follows
                brings the composer back. *@
             <div class="play-join" role="status">
-                <span class="play-join-text">@(scene.Role is null ? Loc["NavPlaySceneWatching"] : Loc["NavPlaySceneFocusedElsewhere"])</span>
-                <button type="button" class="play-join-btn" disabled="@(!PlayTerminal.IsConnected)" @onclick="() => JoinSceneAsync(scene)">
+                <span class="play-join-text">
+                    @(scene.Elsewhere ? Loc["NavPlaySceneFocusedElsewhere"] : Loc["NavPlaySceneNotJoined"])
+                    @if (_joinRefusal is { } refusal && refusal.SceneId == scene.Id)
+                    {
+                        <span class="play-join-refusal" role="alert">@refusal.Text</span>
+                    }
+                </span>
+                <button type="button" class="play-join-btn" disabled="@(!PlayTerminal.IsConnected || _joining)" @onclick="() => JoinSceneAsync(scene)">
                     @Loc["NavPlaySceneJoin"]
                 </button>
             </div>
@@ -532,7 +538,46 @@ else
         </button>
     };
 
-    private Task JoinSceneAsync(RoomScene scene) => SendAsync($"+scene/join {scene.Id}");
+    // A join the game refused, kept for the scene it was asked of: the refusal goes to the terminal, which
+    // the Story view does not show, so the join bar repeats it.
+    private (string SceneId, string Text)? _joinRefusal;
+    private bool _joining;
+
+    /// <summary>
+    /// Joins the room's scene, then asks the same connection what the character is focused on. The query
+    /// runs after the join, so a focus that is not this scene means the join was refused, and what the game
+    /// printed in between is why. A join that took needs nothing here: the room.info that follows brings
+    /// the composer back.
+    /// </summary>
+    private async Task JoinSceneAsync(RoomScene scene)
+    {
+        _joining = true;
+        _joinRefusal = null;
+        var said = new List<string>();
+        void Heard(TerminalLine line)
+        {
+            if (line.Source == TerminalLineSource.Server && !string.IsNullOrWhiteSpace(line.Text))
+                lock (said) said.Add(line.Text.Trim());
+        }
+
+        PlayTerminal.LineReceived += Heard;
+        try
+        {
+            await PlayTerminal.SendAsync($"+scene/join {scene.Id}");
+            var focus = await PlayTerminal.SendCommandAsync("scenefocus(me)");
+            if (focus.FirstOrDefault()?.Trim() != scene.Id)
+            {
+                string text;
+                lock (said) text = said.Count > 0 ? string.Join(" ", said) : Loc["NavPlaySceneJoinFailed"];
+                _joinRefusal = (scene.Id, text);
+            }
+        }
+        finally
+        {
+            PlayTerminal.LineReceived -= Heard;
+            _joining = false;
+        }
+    }
 
     private Task LeaveSceneAsync() => SendAsync("+scene/leave");
 

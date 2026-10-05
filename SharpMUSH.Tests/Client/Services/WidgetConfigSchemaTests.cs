@@ -29,7 +29,7 @@ public class WidgetConfigSchemaTests
 	{
 		var keys = WidgetConfigSchema.Describe(typeof(WikiBodyConfig)).Select(f => f.Key).ToList();
 
-		await Assert.That(keys).IsEquivalentTo(new[] { "slug", "namespace", "category", "locale", "character" });
+		await Assert.That(keys).IsEquivalentTo(new[] { "slug", "namespace", "locale", "character" });
 	}
 
 	[Test]
@@ -62,7 +62,6 @@ public class WidgetConfigSchemaTests
 		var fields = WidgetConfigSchema.Describe(typeof(WikiBodyConfig)).ToDictionary(f => f.Key);
 
 		await Assert.That(fields["namespace"].Default).IsEqualTo("\"main\"");
-		await Assert.That(fields["category"].Default).IsEqualTo("\"general\"");
 		await Assert.That(fields["slug"].Default).IsNull();
 	}
 
@@ -85,7 +84,7 @@ public class WidgetConfigSchemaTests
 
 		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Object);
 		await Assert.That(doc.RootElement.EnumerateObject().Select(p => p.Name))
-			.IsEquivalentTo(new[] { "slug", "namespace", "category", "locale", "character" });
+			.IsEquivalentTo(new[] { "slug", "namespace", "locale", "character" });
 		await Assert.That(doc.RootElement.GetProperty("namespace").GetString()).IsEqualTo("main");
 	}
 
@@ -142,7 +141,7 @@ public class WidgetConfigSchemaTests
 		await Assert.That(order).IsEqualTo("label,url,icon,newTab");
 
 		var wikiBody = string.Join(",", WidgetConfigSchema.Describe(typeof(WikiBodyConfig)).Select(f => f.Key));
-		await Assert.That(wikiBody).IsEqualTo("slug,namespace,category,locale,character");
+		await Assert.That(wikiBody).IsEqualTo("slug,namespace,locale,character");
 	}
 
 	/// <summary>

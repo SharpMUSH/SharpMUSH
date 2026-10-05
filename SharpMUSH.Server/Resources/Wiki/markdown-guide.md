@@ -35,6 +35,7 @@ or SharpMUSH equivalent.
 - **Wiki links**: `[[Page Name]]` links to a page in this wiki, displaying "Page Name".
 - Custom text: `[[Display Text|Page Name]]`
 - Other namespaces: `[[Help:Getting Started]]` or `[[Character:Some Name]]`
+- A category's page: `[[Category:Lore]]`
 - Bare URLs like `https://example.com` auto-link.
 
 ## Images
@@ -84,9 +85,6 @@ Each block opens with `:::` plus a directive and closes with a bare `:::`:
 ::: category lore
 :::
 
-::: tag magic
-:::
-
 ::: pagelist help
 :::
 
@@ -94,9 +92,8 @@ Each block opens with `:::` plus a directive and closes with a bare `:::`:
 :::
 ```
 
-- `category <name>` — every page whose Category matches (build "Category:" pages with this)
-- `tag <name>` — every page carrying the tag
-- `pagelist <namespace>` — every page in a namespace (main, help, character, system)
+- `category <name>` — every page in a category
+- `pagelist <namespace>` — every page in a namespace (main, help, character, system, category)
 - `recent <count>` — the most recently edited pages (1–50)
 
 For example, the five most recently edited pages right now:
@@ -104,8 +101,22 @@ For example, the five most recently edited pages right now:
 ::: recent 5
 :::
 
-## Page metadata
+## Categories
 
-The editor's metadata panel (below the text area) sets the page's **Category**,
-**Tags**, and **Published** switch. Unpublished pages are drafts: invisible to
-visitors who aren't logged in, and excluded from listings and the sitemap.
+A page's categories are set in the editor's **Categories** field (below the text
+area), not in the text. A page can be in as many categories as you like; they are
+listed at its foot, each linking to the category's page. Category names ignore
+case, and spaces and underscores are the same. In-game, `@wiki/category
+page=Lore, Places of Note` sets them.
+
+Every category has its own page, `Category:Lore`, which lists its subcategories
+and member pages. Writing that page is optional: whatever it says appears above
+the list. A category page that is itself in the Setting category is a
+subcategory of Setting. `[[Category:Lore]]` in text is an ordinary link to that
+page.
+
+## Publishing
+
+The editor's **Published** switch (below the text area) controls whether a page
+is live. Unpublished pages are drafts: invisible to visitors who aren't logged
+in, and excluded from listings and the sitemap.

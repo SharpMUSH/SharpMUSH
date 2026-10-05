@@ -75,11 +75,9 @@ public class ResponsiveConventionsTests
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
 		// The not-yet-built admin screens render only <AdminComingSoon>, which carries the tiers.
-		"Pages/Admin/AdminCharacters.razor",
 		"Pages/Admin/AdminServer.razor",
 		"Pages/Admin/BannedNamesRedirect.razor",
 		"Pages/Admin/Moderation.razor",
-		"Pages/Admin/PlayerDetail.razor",
 		"Pages/Admin/RestrictionsRedirect.razor",
 		"Pages/Admin/SitelockRedirect.razor",
 		"Pages/NotFound.razor",
@@ -98,10 +96,14 @@ public class ResponsiveConventionsTests
 			"a chip row above <AdminKeyValueList>, which carries the tiers; the chips wrap on their own",
 		["Pages/Admin/Sitelock.razor.css"] =
 			"styles only the code list in the kit header; <AdminKeyValueList> carries the tiers",
+		["Pages/ScenesActive.razor.css"] =
+			"a single column of scene cards at the page's full width; <SceneCard> reflows against its own container",
 		["Pages/Register.razor.css"] =
 			"the route renders a <PageTitle> and redirects to /login?tab=register; there is no layout here",
 		["Pages/WikiPage.razor.css"] =
 			"renders only <WikiView Mode=\"View\">, whose own stylesheet carries the tiers",
+		["Pages/WikiRecent.razor.css"] =
+			"a single column of change rows at the page's full width; the rows wrap on their own",
 		["Pages/WikiPageEdit.razor.css"] =
 			"renders only <WikiView Mode=\"Edit\"> behind a height:100% wrapper; WikiEdit carries the tiers",
 	};
@@ -233,10 +235,8 @@ public class ResponsiveConventionsTests
 
 		await Assert.That(offenders).IsEmpty()
 			.Because("narrow/medium gate on max-width (a downgrade as the container shrinks) and "
-				+ "roomy gates on min-width (an upgrade as the container grows); a max-width tier at "
-				+ "90rem or wider sits above the shell's 1400px content cap, so it is unreachable or "
-				+ "flicker-prone rather than merely off-spec. This is a page-tier rule; a component's "
-				+ "own container has no relationship to the shell's content cap");
+				+ "roomy gates on min-width (an upgrade as the container grows). This is a page-tier "
+				+ "rule; a component's own container picks its own values");
 	}
 
 	[Test]

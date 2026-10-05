@@ -1,12 +1,193 @@
 @page "/admin/players/{Id:int}"
 @attribute [Authorize(Policy = "players.view")]
+@using System.Globalization
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject AdminCharactersService CharactersService
+@inject AdminAccountsService AccountsService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["AdmPlayerNumber", Id] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Title — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<AdminComingSoon Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Loc["AdmPlayerNumber", Id]" Icon="@Icons.Material.Filled.Person" Message="@Loc["AdmPlayerDetailComingSoon"]" />
+<div class="page-stack page-stack--padded adm-char">
+    <BackLink Href="/admin/characters">@Loc["Characters"]</BackLink>
+    <PlainPageHeader Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Title">
+        <Actions>
+            @if (_detail is { } detail)
+            {
+                <AuthorizeView Policy="players.moderate" Context="moderator">
+                    @if (detail.Character.Online)
+                    {
+                        <CapsuleButton Icon="@Icons.Material.Filled.PowerSettingsNew" Disabled="_busy"
+                                       Class="adm-char-boot" OnClick="BootAsync">@Loc["AdmCharacterBoot"]</CapsuleButton>
+                    }
+                    @if (detail.Character.AccountKey is not null)
+                    {
+                        <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Disabled="_busy"
+                                       Class="adm-char-unlink" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
+                    }
+                    <CapsuleButton Icon="@Icons.Material.Filled.History" Href="@AuditHref(detail)">@Loc["AdmAuditTitle"]</CapsuleButton>
+                </AuthorizeView>
+            }
+        </Actions>
+    </PlainPageHeader>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_detail is not { } detail)
+    {
+        <KitCard>
+            <div class="adm-char-body">
+                <MudAlert Severity="Severity.Error" Dense="true">@(_error ?? Loc["AdmCharacterNotFound", Id].Value)</MudAlert>
+            </div>
+        </KitCard>
+    }
+    else
+    {
+        <div class="adm-char-grid">
+            <KitCard Title="@Loc["AdmCharacterOverview"]">
+                <dl class="adm-char-facts">
+                    <dt>@Loc["AdmCharactersDbref"]</dt>
+                    <dd>#@detail.Character.DbrefNumber:@detail.Character.CreationTime</dd>
+                    <dt>@Loc["AdmCharactersAccount"]</dt>
+                    <dd>@(detail.Character.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</dd>
+                    <dt>@Loc["AdmCharacterCreated"]</dt>
+                    <dd>@detail.Created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</dd>
+                    <dt>@Loc["AdmCharactersFlags"]</dt>
+                    <dd class="adm-char-mono">@(detail.Character.Flags is { Length: > 0 } flags ? flags : "—")</dd>
+                    <dt>@Loc["AdmCharacterRoles"]</dt>
+                    <dd>
+                        @if (detail.Roles.Count == 0)
+                        {
+                            @Loc["AdmCharacterNoRoles"]
+                        }
+                        else
+                        {
+                            @foreach (var role in detail.Roles)
+                            {
+                                <MudChip T="string" Size="Size.Small">@role</MudChip>
+                            }
+                        }
+                    </dd>
+                    <dt>@Loc["AdmCharacterAttributes"]</dt>
+                    <dd>@detail.AttributeCount</dd>
+                    <dt>@Loc["AdmCharacterMail"]</dt>
+                    <dd>@Loc["AdmCharacterMailCount", detail.MailTotal, detail.MailUnread]</dd>
+                </dl>
+            </KitCard>
+
+            <KitCard Title="@Loc["AdmCharacterActivity"]">
+                <dl class="adm-char-facts">
+                    <dt>@Loc["AdmCharactersConnection"]</dt>
+                    <dd>
+                        <MudChip T="string" Size="Size.Small" Color="@(detail.Character.Online ? Color.Success : Color.Default)">
+                            @(detail.Character.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
+                        </MudChip>
+                        @if (detail.Connections.Count > 0)
+                        {
+                            <span class="adm-char-dim">@Loc["AdmCharacterConnections", detail.Connections.Count]</span>
+                        }
+                    </dd>
+                    <dt>@Loc["AdmCharactersLastConnect"]</dt>
+                    <dd>@(detail.Character.LastConnect ?? Loc["AdmCharactersNever"].Value)</dd>
+                    <dt>@Loc["AdmCharacterLastLogout"]</dt>
+                    <dd>@(detail.LastLogout ?? "—")</dd>
+                    @* The server sends these only to server.admin; for everyone else they are null. *@
+                    @if (detail.LastSite is not null || detail.LastIp is not null)
+                    {
+                        <dt>@Loc["AdmCharacterLastSite"]</dt>
+                        <dd class="adm-char-mono">@(detail.LastSite ?? "—")</dd>
+                        <dt>@Loc["AdmCharacterLastIp"]</dt>
+                        <dd class="adm-char-mono">@(detail.LastIp ?? "—")</dd>
+                    }
+                </dl>
+            </KitCard>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter]
     public int Id { get; set; }
+
+    private AdminCharacterDetail? _detail;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+
+    private string Title => _detail?.Character.Name ?? Loc["AdmPlayerNumber", Id].Value;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        switch (await CharactersService.GetAsync(Id))
+        {
+            case AdminCharacterDetail detail:
+                _detail = detail;
+                _error = null;
+                break;
+            case ApiFailure { Kind: ApiFailureKind.NotFound }:
+                _detail = null;
+                _error = null;
+                break;
+            case ApiFailure failure:
+                _detail = null;
+                _error = failure.Message;
+                break;
+        }
+        _loading = false;
+    }
+
+    /// <summary>The audit log, narrowed to entries naming this character's objid.</summary>
+    private static string AuditHref(AdminCharacterDetail detail) =>
+        $"/admin/moderation/audit?text={Uri.EscapeDataString($"#{detail.Character.DbrefNumber}:{detail.Character.CreationTime}")}";
+
+    private async Task BootAsync()
+    {
+        if (_detail is not { } detail) return;
+        var name = detail.Character.Name;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmCharacterBootConfirmTitle", name],
+            Loc["AdmCharacterBootConfirm", name],
+            yesText: Loc["AdmCharacterBoot"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        await RunAsync(CharactersService.BootAsync(detail.Character.DbrefNumber, detail.Character.CreationTime),
+            Loc["AdmCharacterBooted", name].Value, Loc["AdmOperationFailed"].Value);
+    }
+
+    private async Task UnlinkAsync()
+    {
+        if (_detail is not { Character: { AccountKey: { } account } character }) return;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmCharacterUnlinkConfirmTitle", character.Name],
+            Loc["AdmCharacterUnlinkConfirm", character.Name, character.AccountName ?? account],
+            yesText: Loc["AdmCharacterUnlink"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        await RunAsync(AccountsService.UnlinkCharacterAsync(account, character.DbrefNumber),
+            Loc["AdmCharacterUnlinked", character.Name, character.AccountName ?? account].Value,
+            Loc["AdmUnlinkFailed"].Value);
+    }
+
+    private async Task RunAsync(Task<ApiResult<Success>> action, string succeeded, string failed)
+    {
+        _busy = true;
+        switch (await action)
+        {
+            case Success:
+                Snackbar.Add(succeeded, Severity.Success);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message is { Length: > 0 } detail ? detail : failed, Severity.Error);
+                break;
+        }
+        _busy = false;
+        await LoadAsync();
+    }
 }

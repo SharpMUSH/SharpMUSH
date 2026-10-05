@@ -33,15 +33,15 @@ public class WikiTranslationsController(
 	ILogger<WikiTranslationsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
-	/// GET /api/wiki/{slug}/translations?ns=&amp;category=
+	/// GET /api/wiki/{slug}/translations?ns=
 	/// Lists the translations of a page that this reader may see. Drafts are omitted for readers without
 	/// the edit scope, so the language chips and <c>hreflang</c> never advertise a page nobody can open.
 	/// </summary>
 	[HttpGet("{slug}/translations")]
 	public async Task<IActionResult> GetTranslations(
-		string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+		string slug, [FromQuery] string? ns = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
 			return NotFound();
 
 		var summaries = await Localization.GetVisibleTranslationsAsync(page.Id, IncludeDrafts);
@@ -49,7 +49,7 @@ public class WikiTranslationsController(
 	}
 
 	/// <summary>
-	/// PUT /api/wiki/{slug}/translations/{locale}?ns=&amp;category=
+	/// PUT /api/wiki/{slug}/translations/{locale}?ns=
 	/// Creates or updates one locale's translation. Gated on the page-edit scope and on the source page's
 	/// <c>IsProtected</c>, exactly as <see cref="UpdatePage"/> is: a translation is an edit to the page.
 	/// </summary>
@@ -57,13 +57,13 @@ public class WikiTranslationsController(
 	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> PutTranslation(
 		string slug, string locale, [FromBody] UpsertTranslationRequest request,
-		[FromQuery] string? ns = null, [FromQuery] string? category = null)
+		[FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
 
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
 		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
@@ -111,20 +111,20 @@ public class WikiTranslationsController(
 	};
 
 	/// <summary>
-	/// DELETE /api/wiki/{slug}/translations/{locale}?ns=&amp;category=
+	/// DELETE /api/wiki/{slug}/translations/{locale}?ns=
 	/// Removes one locale's translation and its revision stream. The page and every other translation are
 	/// untouched, and deleting the last translation is allowed. Gated as an edit, not a page deletion.
 	/// </summary>
 	[HttpDelete("{slug}/translations/{locale}")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> DeleteTranslation(
-		string slug, string locale, [FromQuery] string? ns = null, [FromQuery] string? category = null)
+		string slug, string locale, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
 
-		if (await Wiki.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
 		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))

@@ -15,11 +15,10 @@ public class WikiControllerPagingTests
 {
 	private const int HiddenDrafts = 60;
 	private const string Category = "lore";
-	private const string Tag = "harbour";
 
 	/// <summary>
 	/// Sixty drafts by someone else whose titles and slugs sort first, then five published pages and
-	/// two drafts by the caller (#42), all in one category and carrying one tag.
+	/// two drafts by the caller (#42), all in one category.
 	/// </summary>
 	private static async Task<(WikiStoreService Wiki, string[] Published, string[] Own)> SeedAsync()
 	{
@@ -42,7 +41,7 @@ public class WikiControllerPagingTests
 	private static async Task<string> AddAsync(WikiStoreService wiki, string title, string author, bool published)
 	{
 		var page = (await wiki.CreateAsync(title, $"# {title}", author)).Expect<WikiPage>();
-		await wiki.SetMetadataAsync(page.Id, Category, [Tag], published);
+		await wiki.SetMetadataAsync(page.Id, [Category], published);
 		return page.Slug;
 	}
 
@@ -59,7 +58,6 @@ public class WikiControllerPagingTests
 	private static readonly Func<WikiEndpoints, int, int, Task<IActionResult>>[] Listings =
 	[
 		(e, skip, take) => e.Browse.ListCategoryPages(Category, skip, take),
-		(e, skip, take) => e.Browse.ListTagPages(Tag, skip, take),
 		(e, skip, take) => e.Browse.ListNamespacePages("main", skip, take),
 		(e, skip, take) => e.Browse.ListAllPages(skip, take),
 	];
@@ -86,7 +84,6 @@ public class WikiControllerPagingTests
 	[Arguments(0)]
 	[Arguments(1)]
 	[Arguments(2)]
-	[Arguments(3)]
 	public async Task TheFirstPage_IsFullOfVisibleRows(int listing)
 	{
 		var (wiki, published, _) = await SeedAsync();
@@ -102,7 +99,6 @@ public class WikiControllerPagingTests
 	[Arguments(0)]
 	[Arguments(1)]
 	[Arguments(2)]
-	[Arguments(3)]
 	public async Task PagingUntilEmpty_ReachesEveryVisibleRow(int listing)
 	{
 		var (wiki, published, own) = await SeedAsync();

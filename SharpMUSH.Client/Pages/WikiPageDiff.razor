@@ -1,4 +1,4 @@
-@page "/wiki/{Ns}/{Category}/{Slug}/diff"
+@page "/wiki/{Ns}/{Slug}/diff"
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
@@ -8,8 +8,8 @@
 
 <PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
-<div class="wikidiff full-bleed">
-    <BackLink Href="@($"/wiki/{Ns}/{Category}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">@Loc["WkRevisionHistory"]</BackLink>
+<div class="wikidiff">
+    <BackLink Href="@($"/wiki/{Ns}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">@Loc["WkRevisionHistory"]</BackLink>
     <PlainPageHeader Kicker="@Loc["WkComparingRevisions"]" Title="@_displayTitle">
         <Actions>
             <div class="wikidiff-toggle">
@@ -114,7 +114,6 @@
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
-    [Parameter] public required string Category { get; set; }
 
     [SupplyParameterFromQuery(Name = "from")]
     public int? FromRev { get; set; }
@@ -150,8 +149,8 @@
         if (FromRev.HasValue && ToRev.HasValue)
         {
             // A ValueTask may be awaited only once, so each becomes a Task before the two are joined.
-            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category, Lang).AsTask();
-            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category, Lang).AsTask();
+            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Lang).AsTask();
+            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Lang).AsTask();
             await Task.WhenAll(fromTask, toTask);
             _fromRev = await fromTask is WikiRevisionInfo fromRevision ? fromRevision : null;
             _toRev   = await toTask is WikiRevisionInfo toRevision ? toRevision : null;
