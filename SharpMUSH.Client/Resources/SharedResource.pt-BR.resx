@@ -3570,10 +3570,6 @@
     <value>Adicionar atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vazio)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Gatilho de comando</value>
     <comment>MT</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Fechar {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expandir {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Recolher {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Limpar terminal</value>
@@ -3772,13 +3774,8 @@
     <value>Editor de softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testar — avaliar sem salvar</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — executar o atributo salvo com u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>não salvo</value>

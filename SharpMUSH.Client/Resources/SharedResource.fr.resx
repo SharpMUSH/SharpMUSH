@@ -1034,6 +1034,12 @@
     <value>Fermer {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Déplier {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Replier {0}</value>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Sélectionnez un objet.</value>
   </data>
@@ -1049,11 +1055,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>Aucun attribut sélectionné</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Tester</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Tester — évaluer sans enregistrer</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — exécuter l'attribut enregistré avec u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>
@@ -1066,9 +1069,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(aucune sortie)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(vide)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Déclencheur de commande</value>

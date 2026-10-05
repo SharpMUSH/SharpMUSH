@@ -3570,10 +3570,6 @@
     <value>Attribut hinzufügen</value>
     <comment>MT — attribute inflected as Attribut, matching the existing French "Ajouter un attribut".</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leer)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Befehlsauslöser</value>
     <comment>MT</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} schließen</value>
     <comment>MT — German puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} aufklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} zuklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal leeren</value>
@@ -3772,13 +3774,8 @@
     <value>Softcode-Editor</value>
     <comment>MT — hyphenated compound on the protected term, per the spec.</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — auswerten, ohne zu speichern</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — gespeichertes Attribut mit u() ausführen</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ungespeichert</value>

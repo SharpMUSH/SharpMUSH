@@ -3570,10 +3570,6 @@
     <value>Attribuut toevoegen</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(leeg)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Commandotrigger</value>
     <comment>MT</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} sluiten</value>
     <comment>MT — Dutch puts the infinitive last, so the reference leads.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} uitklappen</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} inklappen</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminal wissen</value>
@@ -3772,13 +3774,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evalueren zonder op te slaan</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — het opgeslagen attribuut uitvoeren met u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niet opgeslagen</value>

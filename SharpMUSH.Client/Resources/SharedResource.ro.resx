@@ -3570,10 +3570,6 @@
     <value>Adăugare atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(gol)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Declanșator de comandă</value>
     <comment>MT</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Închide {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Extinde {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Restrânge {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Golire terminal</value>
@@ -3772,13 +3774,8 @@
     <value>Editor softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Testare</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Testare — evaluare fără salvare</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — rulează atributul salvat cu u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nesalvat</value>

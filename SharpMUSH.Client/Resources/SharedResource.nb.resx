@@ -3570,10 +3570,6 @@
     <value>Legg til attributt</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(tom)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Kommandotrigger</value>
     <comment>MT — $-command attribute kind.</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Lukk {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Utvid {0}</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Skjul {0}</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Tøm terminalen</value>
@@ -3772,13 +3774,8 @@
     <value>Softcode-editor</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluer uten å lagre</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — kjør det lagrede attributtet med u()</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ulagret</value>

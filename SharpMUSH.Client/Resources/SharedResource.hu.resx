@@ -3570,10 +3570,6 @@
     <value>Attribútum hozzáadása</value>
     <comment>MT</comment>
   </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(üres)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Parancskiváltó</value>
     <comment>MT</comment>
@@ -3629,6 +3625,12 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>{0} bezárása</value>
     <comment>MT — Hungarian nominalises the verb after its object.</comment>
+  </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>{0} kibontása</value>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>{0} összecsukása</value>
   </data>
   <data name="TermClearTerminal" xml:space="preserve">
     <value>Terminál törlése</value>
@@ -3772,13 +3774,8 @@
     <value>Softcode-szerkesztő</value>
     <comment>MT</comment>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Teszt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Teszt — kiértékelés mentés nélkül</value>
-    <comment>MT</comment>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — a mentett attribútum futtatása u()-val</value>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nincs mentve</value>

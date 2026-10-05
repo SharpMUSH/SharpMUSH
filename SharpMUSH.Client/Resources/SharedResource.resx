@@ -1909,6 +1909,14 @@
   <data name="TermCloseTab" xml:space="preserve">
     <value>Close {0}</value>
   </data>
+  <data name="TermExpandBranch" xml:space="preserve">
+    <value>Expand {0}</value>
+    <comment>Softcode Editor attribute tree: unfold a branch attribute. {0} is the attribute name, e.g. FOO`BAR.</comment>
+  </data>
+  <data name="TermCollapseBranch" xml:space="preserve">
+    <value>Collapse {0}</value>
+    <comment>Softcode Editor attribute tree: fold a branch attribute. {0} is the attribute name.</comment>
+  </data>
   <data name="TermSelectAnObject" xml:space="preserve">
     <value>Select an object.</value>
   </data>
@@ -1924,11 +1932,8 @@
   <data name="TermNoAttributeSelected" xml:space="preserve">
     <value>No attribute selected</value>
   </data>
-  <data name="TermTest" xml:space="preserve">
-    <value>Test</value>
-  </data>
-  <data name="TermTestTooltip" xml:space="preserve">
-    <value>Test — evaluate without saving</value>
+  <data name="TermEvalTooltip" xml:space="preserve">
+    <value>Eval — run the saved attribute with u()</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Refresh attributes</value>
@@ -1941,9 +1946,6 @@
   </data>
   <data name="TermNoOutput" xml:space="preserve">
     <value>(no output)</value>
-  </data>
-  <data name="TermAttrEmpty" xml:space="preserve">
-    <value>(empty)</value>
   </data>
   <data name="TermAttrKindCommand" xml:space="preserve">
     <value>Command trigger</value>
