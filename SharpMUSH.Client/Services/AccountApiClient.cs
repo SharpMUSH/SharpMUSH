@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSH.Client.Services.AccountAuthService;
 
@@ -51,6 +52,16 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	private sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private sealed record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private sealed record ChangeUsernameRequest(string NewUsername);
+	private sealed record PasskeyLoginRequest(string CeremonyId, JsonElement Credential);
+	private sealed record PasskeyOptionsRequest(string CurrentPassword);
+	private sealed record AddPasskeyRequest(string CeremonyId, string? Name, JsonElement Credential);
+	private sealed record RenamePasskeyRequest(string Name);
+
+	/// <summary>A passkey ceremony the server started: the options for the browser, and the id to answer with.</summary>
+	public sealed record PasskeyChallenge(string CeremonyId, JsonElement Options);
+
+	/// <summary>One of the account's passkeys. <paramref name="IsSynced"/>: the authenticator keeps it on more than one device.</summary>
+	public sealed record PasskeySummary(string Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt, bool IsSynced);
 
 	private const string NoSession = "The server answered without a session.";
 	private const string IncompleteSession = "The server's sign-in answer was missing its session, name or roster.";
@@ -142,6 +153,30 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	public Task<ApiResult<Success>> ChangeUsernameAsync(string newUsername) =>
 		Client.PutApiAsync("api/account/username", new ChangeUsernameRequest(newUsername));
+
+	public Task<ApiResult<PasskeyChallenge>> PasskeyLoginOptionsAsync() =>
+		Client.PostApiAsync<object?, PasskeyChallenge>("api/auth/passkey-login/options", null, "The server started no passkey sign-in.");
+
+	public async Task<ApiResult<LoginResponse>> PasskeyLoginAsync(string ceremonyId, JsonElement credential) =>
+		Complete(await Client.PostApiAsync<PasskeyLoginRequest, LoginResponse>(
+			"api/auth/passkey-login", new PasskeyLoginRequest(ceremonyId, credential), NoSession));
+
+	public Task<ApiResult<IReadOnlyList<PasskeySummary>>> PasskeysAsync() =>
+		Client.GetApiAsync<IReadOnlyList<PasskeySummary>>("api/account/passkeys", "The server returned no passkey list.");
+
+	public Task<ApiResult<PasskeyChallenge>> PasskeyOptionsAsync(string currentPassword) =>
+		Client.PostApiAsync<PasskeyOptionsRequest, PasskeyChallenge>(
+			"api/account/passkeys/options", new PasskeyOptionsRequest(currentPassword), "The server started no passkey.");
+
+	public Task<ApiResult<PasskeySummary>> AddPasskeyAsync(string ceremonyId, string? name, JsonElement credential) =>
+		Client.PostApiAsync<AddPasskeyRequest, PasskeySummary>(
+			"api/account/passkeys", new AddPasskeyRequest(ceremonyId, name, credential), "The passkey was added but the server described nothing.");
+
+	public Task<ApiResult<Success>> RenamePasskeyAsync(string id, string name) =>
+		Client.PutApiAsync($"api/account/passkeys/{Uri.EscapeDataString(id)}", new RenamePasskeyRequest(name));
+
+	public Task<ApiResult<Success>> RemovePasskeyAsync(string id) =>
+		Client.DeleteApiAsync($"api/account/passkeys/{Uri.EscapeDataString(id)}");
 
 	public Task<ApiResult<Success>> LogoutAsync() => Client.PostApiAsync("api/account/logout");
 }

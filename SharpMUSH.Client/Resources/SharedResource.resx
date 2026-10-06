@@ -5945,6 +5945,60 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Passkeys</value>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Sign in with your fingerprint, face or device PIN instead of typing your password.</value>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>No passkeys yet.</value>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>This browser does not support passkeys.</value>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Add a passkey</value>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Passkey name</value>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Create passkey</value>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Passkey added.</value>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Passkey removed.</value>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Rename passkey</value>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Remove passkey</value>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Remove {0}?</value>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>This passkey will no longer sign in to your account.</value>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Added {0}</value>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Last used {0}</value>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Never used</value>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Synced</value>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Sign in with a passkey</value>
+  </data>
   <data name="WkFenceUnnamed" xml:space="preserve">
     <value>Line {0}: this ::: has no name, so it opens an empty block. If it was meant to close a block, give the block around it more colons than the blocks inside it.</value>
   </data>

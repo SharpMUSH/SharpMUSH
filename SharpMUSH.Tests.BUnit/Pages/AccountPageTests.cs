@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// characters list on init (<c>api/account/characters</c>). Always returns an empty list —
 /// these tests are about render-crash regressions, not characters-table content.
 /// </summary>
-file sealed class AccountPageApiHandler(object[]? characters = null) : HttpMessageHandler
+file sealed class AccountPageApiHandler(object[]? characters = null, object[]? passkeys = null) : HttpMessageHandler
 {
 	/// <summary>DELETE api/account/characters/{n} requests seen: the unlink itself.</summary>
 	public int Unlinks { get; private set; }
@@ -31,6 +31,11 @@ file sealed class AccountPageApiHandler(object[]? characters = null) : HttpMessa
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create(characters ?? [])
+			});
+		if (request.Method == HttpMethod.Get && path == "api/account/passkeys")
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(passkeys ?? [])
 			});
 		if (request.Method == HttpMethod.Delete && path.StartsWith("api/account/characters/", StringComparison.Ordinal))
 		{
@@ -70,7 +75,8 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	/// driving state through the real service rather than substituting it (AccountAuthService's
 	/// members aren't virtual, so NSubstitute can't fake it directly).
 	/// </summary>
-	private void SeedAuthState(bool loggedIn, bool mustChangePassword = false, HttpMessageHandler? handler = null)
+	private void SeedAuthState(bool loggedIn, bool mustChangePassword = false, HttpMessageHandler? handler = null,
+		bool passkeysSupported = true)
 	{
 		var apiClient = Track(new HttpClient(handler ?? new AccountPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		ownedHttpClients.Add(apiClient);
@@ -85,10 +91,13 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance, []));
+				NullLogger<AccountAuthService>.Instance, []))
+			.AddSingleton<PasskeyInterop>()
+			.AddSingleton<AccountPasskeyService>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
+		JSInterop.Setup<bool>("SharpMUSH.Passkeys.isSupported").SetResult(passkeysSupported);
 
 		if (loggedIn)
 		{
@@ -216,11 +225,49 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("headwiz");
 		await Assert.That(cut.Find(".kit-page-head .kit-page-actions .acct-btn-danger").TextContent.Trim()).IsEqualTo("AuthLogOutOfAccount");
 		await Assert.That(cut.FindAll(".kit-card .kit-card-title").Select(t => t.TextContent).ToList())
-			.IsEquivalentTo(["AuthProfile", "Characters"]);
+			.IsEquivalentTo(["AuthProfile", "Characters", "AuthPasskeys"]);
 		await Assert.That(cut.Find("#characters a[href='/characters/new']")).IsNotNull();
 		var layout = typeof(SharpMUSH.Client.Pages.Account).GetCustomAttributes(typeof(Microsoft.AspNetCore.Components.LayoutAttribute), false)
 			.Cast<Microsoft.AspNetCore.Components.LayoutAttribute>().Single();
 		await Assert.That(layout.LayoutType).IsEqualTo(typeof(SharpMUSH.Client.Layout.SettingsLayout));
+	}
+
+	/// <summary>
+	/// The passkeys card, the <c>#passkeys</c> anchor, lists the account's passkeys with when each was
+	/// last used, and offers to add one in a browser that can make one.
+	/// </summary>
+	[Test]
+	public async Task Render_LoggedIn_ListsPasskeys_AndOffersToAddOne()
+	{
+		Auth.SetAuthorized("headwiz");
+		var handler = new AccountPageApiHandler(passkeys:
+		[
+			new { id = "AQID", name = "Phone", createdAt = DateTimeOffset.UnixEpoch, lastUsedAt = (DateTimeOffset?)null, isSynced = true }
+		]);
+		SeedAuthState(loggedIn: true, handler: handler);
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#passkeys .acct-passkey"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("#passkeys .acct-passkey-name").TextContent).Contains("Phone");
+		await Assert.That(cut.Find("#passkeys .acct-passkey-name .acct-flag").TextContent).IsEqualTo("AuthPasskeySynced");
+		await Assert.That(cut.Find("#passkeys .acct-passkey-meta").TextContent).Contains("AuthPasskeyNeverUsed");
+		await Assert.That(cut.Find("#passkeys button[aria-label='AuthPasskeyRemove']")).IsNotNull();
+		await Assert.That(cut.FindAll("#passkeys button").Any(b => b.TextContent.Contains("AuthPasskeyAdd"))).IsTrue();
+	}
+
+	/// <summary>A browser with no passkey support says so, and offers nothing it cannot do.</summary>
+	[Test]
+	public async Task Render_LoggedIn_WithoutPasskeySupport_SaysSo()
+	{
+		Auth.SetAuthorized("headwiz");
+		SeedAuthState(loggedIn: true, passkeysSupported: false);
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#passkeys .acct-empty"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("#passkeys").TextContent).Contains("AuthPasskeyUnsupported");
+		await Assert.That(cut.FindAll("#passkeys button").Any(b => b.TextContent.Contains("AuthPasskeyAdd"))).IsFalse();
 	}
 
 	/// <summary>

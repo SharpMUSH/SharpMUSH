@@ -30,7 +30,7 @@ public class SettingsSidebarTests : TrackingBunitContext
 	{
 		var cut = await RenderAtAsync("/settings");
 		var hrefs = cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(hrefs).IsEquivalentTo(["/settings", "/account", "/account#characters", "/settings/theme"]);
+		await Assert.That(hrefs).IsEquivalentTo(["/settings", "/account", "/account#characters", "/account#passkeys", "/settings/theme"]);
 		await Assert.That(cut.FindAll(".kit-section-label").Select(l => l.TextContent.Trim()).ToList())
 			.IsEquivalentTo(["Account", "Preferences"]);
 	}
@@ -44,7 +44,7 @@ public class SettingsSidebarTests : TrackingBunitContext
 		var cut = await RenderAtAsync(path);
 		var marked = cut.FindAll("a.kit-row[aria-current='page']").Select(a => a.GetAttribute("href")).ToList();
 		await Assert.That(marked).IsEquivalentTo([current])
-			.Because("the Characters row points into the Account page and is never current on its own");
+			.Because("the Characters and Passkeys rows point into the Account page and are never current on their own");
 	}
 
 	[Test]
@@ -61,7 +61,7 @@ public class SettingsSidebarTests : TrackingBunitContext
 		var cut = await RenderAtAsync("/settings/theme", collapsed: true);
 		await Assert.That(cut.FindAll(".kit-side-head").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-section-label").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(4);
+		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(5);
 		await Assert.That(cut.Find("a.kit-row[href='/settings/theme']").GetAttribute("aria-label")).IsEqualTo("Theme");
 	}
 

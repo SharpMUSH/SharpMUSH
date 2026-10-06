@@ -44,6 +44,16 @@
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                         @Loc["Connect"]
                     </MudButton>
+
+                    @if (_passkeysSupported)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                                   Disabled="_busy" OnClick="PasskeyLoginAsync" Class="login-passkey mt-3"
+                                   StartIcon="@Icons.Material.Outlined.Key"
+                                   Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                            @Loc["AuthPasskeySignIn"]
+                        </MudButton>
+                    }
                 </div>
             </MudTabPanel>
 
@@ -101,6 +111,7 @@
 
     private int _tabIndex = SignInTabIndex;
     private bool _busy;
+    private bool _passkeysSupported;
     private string? _error;
 
     private string _loginIdentifier = string.Empty;
@@ -138,6 +149,13 @@
         var characters = await AccountAuth.GetCharactersAsync();
         Nav.NavigateTo(characters is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 } ? OnboardingUrl : SuccessUrl(),
             replace: true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _passkeysSupported = await AccountAuth.PasskeysSupportedAsync();
+        if (_passkeysSupported) StateHasChanged();
     }
 
     private static string? GetQueryParam(string uri, string key)
@@ -181,6 +199,26 @@
         var result = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
         _busy = false;
         SignedIn(result);
+    }
+
+    private async Task PasskeyLoginAsync()
+    {
+        _error = null;
+        _busy = true;
+        var result = await AccountAuth.LoginWithPasskeyAsync();
+        _busy = false;
+        switch (result)
+        {
+            case IReadOnlyList<AccountAuthService.CharacterSummary> characters:
+                SignedIn(new ApiResult<IReadOnlyList<AccountAuthService.CharacterSummary>>(characters));
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+            // A dismissed prompt is the visitor changing their mind, not something to report.
+            case PasskeyCancelled:
+                break;
+        }
     }
 
     private async Task RegisterAsync()

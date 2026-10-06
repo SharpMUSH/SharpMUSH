@@ -21,3 +21,20 @@ public sealed record AccountBanRecord
 	public long AtMs { get; init; }
 	public long? ExpiresAtMs { get; init; }
 }
+
+/// <summary>
+/// A passkey, keyed by the SHA-256 of its credential id: an id can run to a kilobyte, past what an LMDB
+/// key holds, and the hash is fixed-length. Times are Unix milliseconds.
+/// </summary>
+public sealed record AccountPasskeyRecord
+{
+	public string AccountKey { get; init; } = "";
+	public byte[] CredentialId { get; init; } = [];
+	public byte[] PublicKey { get; init; } = [];
+	public uint SignCount { get; init; }
+	public string Name { get; init; } = "";
+	public string[] Transports { get; init; } = [];
+	public bool IsBackedUp { get; init; }
+	public long CreatedAtMs { get; init; }
+	public long? LastUsedAtMs { get; init; }
+}

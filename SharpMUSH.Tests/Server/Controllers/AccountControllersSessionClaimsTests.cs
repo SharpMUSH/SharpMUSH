@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -9,6 +10,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Authentication.Passkeys;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
 using ZiggyCreatures.Caching.Fusion;
@@ -45,6 +47,9 @@ public class AccountControllersSessionClaimsTests
 	private static AccountController Account(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user, string? bearer = null)
 		=> new(Substitute.For<IMediator>(), accounts, sessions, Substitute.For<IPasswordService>(),
 			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IValidateService>(),
+			new PasskeyService(Substitute.For<SharpMUSH.Library.IAccountStore>(),
+				new PasskeyRelyingParty(new ConfigurationBuilder().Build(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>()),
+				new PasskeyCeremonyStore(TimeProvider.System), TimeProvider.System, NullLogger<PasskeyService>.Instance),
 			NullLogger<AccountController>.Instance)
 		{ ControllerContext = Context(user, bearer) };
 
