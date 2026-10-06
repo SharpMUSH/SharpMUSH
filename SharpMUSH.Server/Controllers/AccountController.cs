@@ -2,6 +2,7 @@ using System.Text.Json;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -312,6 +313,7 @@ public class AccountController(
 	/// for the password the holder signs in with, so a session alone cannot plant a passkey of its own.
 	/// </summary>
 	[HttpPost("passkeys/options")]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> PasskeyOptions([FromBody] PasskeyOptionsRequest request)
 	{
 		var (accountId, failure) = await GetAccountIdFromBearerAsync();
