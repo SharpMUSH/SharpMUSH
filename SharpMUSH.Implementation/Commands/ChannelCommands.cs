@@ -382,7 +382,7 @@ public partial class Commands
 
 		var outputLines = aliases.Select(attr =>
 		{
-			var aliasName = attr.Name.StartsWith("CHANALIAS`") ? attr.Name[10..] : attr.Name;
+			var aliasName = attr.LongName.StartsWith("CHANALIAS`") ? attr.LongName[10..] : attr.LongName;
 			return MarkupText.Concat(MarkupText.Plain($"{aliasName.ToLower()} : "), attr.Value);
 		});
 

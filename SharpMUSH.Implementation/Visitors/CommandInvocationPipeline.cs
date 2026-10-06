@@ -539,7 +539,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			// player, ...), src/attrib.c), so a forced player's inline-hooked `say` speaks as that player.
 			var newParser = prs.Push(bodyState with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.LongName),
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,

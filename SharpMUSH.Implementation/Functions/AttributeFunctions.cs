@@ -1039,7 +1039,7 @@ public partial class Functions
 				var value = chain.Last();
 				return (await parser.With(state => state with
 				{
-					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.Name),
+					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.LongName),
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
 					Executor = actualObject.Object().DBRef,
