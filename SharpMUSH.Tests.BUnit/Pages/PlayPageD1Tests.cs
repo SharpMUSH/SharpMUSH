@@ -736,7 +736,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await _play.Received(1).SendAsync("@chat Public=I'm in");
 
 		cut.Find("button.comm-close").Click();
-		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
+		// Closing re-renders once the comms service drops the view; wait for that rather than racing it.
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".comm").Count != 0) throw new InvalidOperationException("channel view still open");
+		}, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsFalse();
 		await Assert.That(_comms.Viewing).IsNull();
 	}
