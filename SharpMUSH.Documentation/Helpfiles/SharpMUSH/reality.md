@@ -1,6 +1,6 @@
 <!-- help-article
 {
-  "corpus": "ahelp",
+  "corpus": "help",
   "id": "reality",
   "lookup": "@reality",
   "aliases": [

@@ -1,6 +1,6 @@
 <!-- help-article
 {
-  "corpus": "ahelp",
+  "corpus": "help",
   "id": "object-snapshots",
   "lookup": "object snapshots",
   "aliases": [

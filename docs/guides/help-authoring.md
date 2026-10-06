@@ -20,8 +20,11 @@ or compatibility; never replace `ALIGN4` with `examples 2`.
 ## Schema and example
 
 Use one `.md` file per article in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/`
-(general help), `ahelp/` (administrator help), or `news/`. File order has no
-meaning. Metadata is a leading `help-article` HTML comment containing JSON:
+(help) or `news/`. File order has no meaning. SharpMUSH's own documentation goes
+in help, administrator topics included: a topic for staff says who may use it
+rather than moving to `ahelp`. The `ahelp/` directory holds only the index of the
+administrator corpus, which a game fills with its own staff topics.
+Metadata is a leading `help-article` HTML comment containing JSON:
 
 ```markdown
 <!-- help-article

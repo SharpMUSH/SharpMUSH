@@ -1,6 +1,6 @@
 <!-- help-article
 {
-  "corpus": "ahelp",
+  "corpus": "help",
   "id": "recurring-jobs",
   "lookup": "recurring jobs",
   "aliases": [

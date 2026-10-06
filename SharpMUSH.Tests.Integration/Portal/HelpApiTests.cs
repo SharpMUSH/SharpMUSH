@@ -207,24 +207,29 @@ public class HelpApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Corpus isolation. <c>Security</c> exists only in the wizard-only <c>ahelp</c> files; the
-	/// general corpus must not fall through to it. Before the corpus scoping fix a bare "help"
-	/// reference searched every category, so a mortal typing <c>help security</c> got the admin entry.
+	/// Corpus isolation. <c>ahelp</c> is a topic in both corpora: the command's entry in the general
+	/// files and the index of the wizard-only <c>ahelp</c> files. The general corpus must answer with
+	/// its own entry, never the admin one. Before the corpus scoping fix a bare "help" reference
+	/// searched every category, so a mortal could read an admin entry through <c>help</c>.
 	/// </summary>
 	[Test]
 	public async Task PublicCorpus_DoesNotFallThroughToAdminOnlyTopics()
 	{
 		var resolver = factory.Services.GetRequiredService<IHelpTopicResolver>();
 
-		var admin = await resolver.GetExactAsync("ahelp", "Security");
-		await Assert.That(admin).IsNotNull()
+		var admin = await resolver.GetExactAsync("ahelp", "ahelp");
+		await Assert.That(admin?.Markdown).Contains(AdminIndexText)
 			.Because("the admin corpus has to actually be indexed for this test to mean anything");
 
 		var http = CreateClient();
-		var response = await http.GetAsync("api/help/entry?topic=Security");
+		var response = await http.GetAsync("api/help/entry?topic=ahelp");
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(await response.Content.ReadAsStringAsync()).DoesNotContain(AdminIndexText);
 	}
+
+	/// <summary>A line only the <c>ahelp</c> index carries.</summary>
+	private const string AdminIndexText = "The administrator help files, readable by wizards.";
 
 	[Test]
 	public async Task AdminCorpus_RefusedToAnonymous()
@@ -233,7 +238,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 
 		await Assert.That((await http.GetAsync("api/help/admin")).StatusCode)
 			.IsEqualTo(HttpStatusCode.Unauthorized);
-		await Assert.That((await http.GetAsync("api/help/admin/entry?topic=Security")).StatusCode)
+		await Assert.That((await http.GetAsync("api/help/admin/entry?topic=ahelp")).StatusCode)
 			.IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
@@ -261,7 +266,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 
 		await Assert.That((await http.GetAsync("api/help/admin")).StatusCode)
 			.IsEqualTo(HttpStatusCode.Forbidden);
-		await Assert.That((await http.GetAsync("api/help/admin/entry?topic=Security")).StatusCode)
+		await Assert.That((await http.GetAsync("api/help/admin/entry?topic=ahelp")).StatusCode)
 			.IsEqualTo(HttpStatusCode.Forbidden);
 	}
 

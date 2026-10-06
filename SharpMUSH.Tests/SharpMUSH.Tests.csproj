@@ -85,6 +85,11 @@
 			<Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<!-- SharpMUSH ships only the ahelp index; this stands in for a game's own staff topic. -->
+		<None Include="HelpFixtures\ahelp\*.md">
+			<Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\news\*.md">
 			<Link>TextFiles\news\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

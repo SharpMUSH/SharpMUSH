@@ -38,18 +38,22 @@ For example, the syntax of the help command is:
 
 What this means is that to get help, you would type first the word "help" and then you could optionally type the name of a more specific topic in order to get help on that topic. Just typing "help" will work too (that's why the `<topic>` part is optional).
 
-Some common commands that you should look at help for are:
-
-    look   say    go    page    pose    get     give    home
+Some common commands that you should look at help for are [look], [say], [go], [page], [pose], [get], [give] and [home].
 
 Just type help `<command>` for help. Example: help page
 
 ## Finding related help
 
-There is help available on every standard MUSH command. If you see a command or someone mentions one to you that you want to know more about, try just typing: help `<command name>` -- that will most likely bring up the help file on it.
+There is help available on every standard MUSH command. If you see a command or someone mentions one to you that you want to know more about, try just typing: help `<command name>` -- that will most likely bring up the help file on it. If you don't know the name, search the help text with help [help search].
+
+The full lists are in [COMMANDS], [FUNCTION LIST] and [topics].
 
 Please note that just because there is help available on a command does not necessarily mean that the command can be used on this MUSH. The siteadmin of the MUSH can choose to turn off some commands. If there's something that you would like available, and it isn't, please ask a wizard why not.
 
 ::: seealso
 - [Getting Started]
+- [help search]
+- [COMMANDS]
+- [topics]
+- [sharpmush features]
 :::

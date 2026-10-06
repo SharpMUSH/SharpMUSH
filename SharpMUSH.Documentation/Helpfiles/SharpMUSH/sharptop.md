@@ -8,6 +8,7 @@ This is the index to the MUSH online help files.
   For the list of MUSH commands, type:            help [COMMANDS]<br>
   For the list of MUSH topics, type:              help [topics]<br>
   For an alphabetical list of all help entries:   help [help search]<br>
+  For what SharpMUSH adds to PennMUSH:            help [sharpmush features]<br>
   For information about SharpMUSH:                help [code]
 
   For a list of flags:                            help [FLAG LIST]<br>
@@ -30,7 +31,13 @@ This is the index to the MUSH online help files.
 
   For a brief guide to the SharpMUSH chat system, see [gs chat].
 
-  For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
+  For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, see [gs mail].
+
+  If the game has a web portal, you can [register] an account there or at the login screen, then [make] characters and [play] them. The portal also serves the game's [wiki].
+
+  To have the server address you in another language, see [@locale].
+
+  For the other things SharpMUSH can do, see [sharpmush features].
 
 # ANCESTORS
   ANCESTORS
@@ -365,7 +372,7 @@ This is the index to the MUSH online help files.
 
 ::: seealso
 - [@ps]
-- [HALT]
+- [HALTED]
 - [COSTS]
 - [@trigger]
 - [@retry]

@@ -9,6 +9,11 @@
       "id": "posing-actions",
       "heading": "Posing actions",
       "lookup": "gs talking posing actions"
+    },
+    {
+      "id": "talking-privately",
+      "heading": "Talking privately",
+      "lookup": "gs talking privately"
     }
   ],
   "redirects": {
@@ -55,11 +60,16 @@ will show everyone in the room:<br>
 
 However, make sure you include your name somewhere, so people know who's talking.
 
+## Talking privately
+
+To talk to someone who isn't in the room with you, use `page`: `page Lisa=Hi there!` sends Lisa a message anywhere in the game. To speak to one person in the room without the others hearing, use `whisper`: `whisper Lisa=Over here.` See [page] and [whisper].
+
 
 ::: seealso
 - [gs chat]
-- ["]
-- [:]
-- [:]
+- [say]
+- [pose]
 - [@emit]
+- [page]
+- [whisper]
 :::
