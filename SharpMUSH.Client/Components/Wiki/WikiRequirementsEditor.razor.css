@@ -27,6 +27,7 @@
 .wiki-req-actions {
 	display: flex;
 	justify-content: flex-end;
+	align-items: center;
 	gap: 0.5rem;
 }
 
@@ -79,4 +80,33 @@
 	color: var(--accent);
 	font-size: 0.8125rem;
 	text-decoration: none;
+}
+
+.wiki-req-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	padding: 0 0 0 0.5rem;
+	border: 1px solid var(--border);
+	border-radius: 99px;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	color: var(--text);
+}
+
+.wiki-req-chip ::deep .wiki-req-chip-x {
+	padding: 0.125rem;
+}
+
+.wiki-req-chip ::deep .wiki-req-chip-x svg {
+	font-size: 0.875rem;
+}
+
+.wiki-req-actions-start {
+	margin-right: auto;
+}
+
+.wiki-req-actions-start .wiki-req-define {
+	border-top: none;
+	padding: 0.25rem 0;
 }

@@ -4869,4 +4869,7 @@
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>Définir une nouvelle permission</value>
   </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Retirer {0}</value>
+  </data>
 </root>

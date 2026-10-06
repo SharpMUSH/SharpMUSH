@@ -5602,4 +5602,7 @@
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>Új engedély megadása</value>
   </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>{0} eltávolítása</value>
+  </data>
 </root>

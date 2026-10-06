@@ -5582,16 +5582,16 @@
     <value>账户例外</value>
   </data>
   <data name="RolAccessNoRole" xml:space="preserve">
-    <value>没有角色允许</value>
+    <value>没有权限组允许</value>
   </data>
   <data name="RolAccessUnknown" xml:space="preserve">
     <value>未知权限</value>
   </data>
   <data name="RolAccessOwnerNote" xml:space="preserve">
-    <value>你是此游戏的所有者，因此无论角色如何，你都拥有所有权限。</value>
+    <value>你是此游戏的所有者，因此无论权限组如何设置，你都拥有所有权限。</value>
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
-    <value>你的某个角色允许“管理员”，因此你拥有所有权限。</value>
+    <value>你的某个权限组允许“管理员”，因此你拥有所有权限。</value>
   </data>
   <data name="WikiRequirementsAdd" xml:space="preserve">
     <value>添加权限…</value>
@@ -5601,5 +5601,8 @@
   </data>
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>定义新权限</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>移除 {0}</value>
   </data>
 </root>

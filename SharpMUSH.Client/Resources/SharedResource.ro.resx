@@ -5602,4 +5602,7 @@
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>Definește o permisiune nouă</value>
   </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Elimină {0}</value>
+  </data>
 </root>

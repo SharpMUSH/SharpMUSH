@@ -10,6 +10,7 @@ using NSubstitute;
 using SharpMUSH.Client.Components.Wiki;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
@@ -69,6 +70,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 			.AddSingleton(_ => new RoleRegistryClient(factory, NullLogger<RoleRegistryClient>.Instance))
 			.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		AddAuthorization().SetAuthorized("admin").SetPolicies(PortalPermission.RolesAdmin);
 	}
 
 	[Test]
@@ -118,6 +120,38 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		await Assert.That(lore).Contains("lore.read");
 		await Assert.That(wiki).Contains("wiki.edit");
 		await Assert.That(wiki).DoesNotContain("wiki.read");
+	}
+
+	/// <summary>A chosen permission is removed with a labelled button, so a keyboard can reach it.</summary>
+	[Test]
+	public async Task AChosenPermissionIsRemovedWithItsButton()
+	{
+		var set = new WikiRequirementSetDto("category", "lore", "lore",
+			new Dictionary<string, IReadOnlyList<string>> { ["read"] = ["lore.read"] }, null, null);
+		var cut = Render<WikiRequirementsEditor>(p => p
+			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
+
+		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		cut.Find(".wiki-req-chip button[aria-label$='lore.read']").Click();
+		cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).Click();
+		cut.WaitForAssertion(() =>
+		{
+			if (Server.Puts.Count != 1) throw new InvalidOperationException("no save yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var sent = JsonDocument.Parse(Server.Puts[0]).RootElement.GetProperty("required");
+		await Assert.That(sent.GetProperty("read").GetArrayLength()).IsEqualTo(0);
+	}
+
+	/// <summary>A roles.admin holder can reach the Permissions tab from the form, outside the pickers' lists.</summary>
+	[Test]
+	public async Task TheFormLinksToDefiningANewPermission()
+	{
+		var cut = Render<WikiRequirementsEditor>(p => p
+			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Editable, true));
+
+		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		await Assert.That(cut.Find(".wiki-req-actions a.wiki-req-define").GetAttribute("href")).IsEqualTo("/admin/roles?tab=permissions");
 	}
 
 	[Test]

@@ -26,8 +26,12 @@
                     <div class="wiki-req-chips">
                         @foreach (var scope in _draft[name])
                         {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" title="@DescriptionOf(scope)"
-                                     OnClose="@(_ => _draft[name].Remove(scope))">@scope</MudChip>
+                            <span class="wiki-req-chip" title="@DescriptionOf(scope)">
+                                @scope
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="wiki-req-chip-x"
+                                               aria-label="@string.Format(Loc["WikiRequirementsRemove"], scope)"
+                                               OnClick="@(() => _draft[name].Remove(scope))" />
+                            </span>
                         }
                     </div>
                 }
@@ -58,6 +62,8 @@
             </div>
         }
         <div class="wiki-req-actions">
+            @* Also outside the pickers: Tab closes a picker's list before reaching the link inside it. *@
+            <div class="wiki-req-actions-start">@DefineLink</div>
             <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@_saving" OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving" OnClick="SaveAsync">@Loc["Save"]</MudButton>
         </div>

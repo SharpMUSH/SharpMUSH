@@ -5602,4 +5602,7 @@
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>Определете ново разрешение</value>
   </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Премахване на {0}</value>
+  </data>
 </root>

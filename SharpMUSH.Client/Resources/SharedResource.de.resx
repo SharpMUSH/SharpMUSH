@@ -5602,4 +5602,7 @@
   <data name="WikiRequirementsDefine" xml:space="preserve">
     <value>Neue Berechtigung festlegen</value>
   </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>{0} entfernen</value>
+  </data>
 </root>
