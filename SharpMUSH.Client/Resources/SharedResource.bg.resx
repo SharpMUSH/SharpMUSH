@@ -391,6 +391,10 @@
     <value>Имейл (незадължително)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Запомни ме</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Моля, въведете данните си за вход.</value>
     <comment>MT</comment>

@@ -27,11 +27,26 @@ public interface IAccountSessionStore
 
 	/// <summary>
 	/// Validates a token. If valid and unexpired, returns the bound account and acting character and
-	/// slides the expiry window by the original TTL. Returns <c>null</c> if unknown, expired, or revoked
+	/// slides the expiry window by the original TTL. Returns <c>null</c> if unknown, expired, a remembered
+	/// login (see <see cref="CreateRememberedLoginAsync"/>), or revoked
 	/// while this very call was in flight — a token a ban has already taken away must not authenticate
 	/// the request that was holding it.
 	/// </summary>
 	Task<SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default);
+
+	/// <summary>
+	/// Creates a remembered login for <paramref name="accountId"/>: a credential that lasts
+	/// <paramref name="ttl"/> past its last use, kept by the browser in an HttpOnly cookie. Only
+	/// <see cref="RedeemRememberedLoginAsync"/> accepts it; <see cref="ValidateAsync"/> refuses it, so it
+	/// never authenticates a request by itself. Revoked like any session, by token, account or origin IP.
+	/// </summary>
+	Task<string> CreateRememberedLoginAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default);
+
+	/// <summary>
+	/// The account a remembered login belongs to, sliding its expiry by its TTL; <c>null</c> if the token is
+	/// unknown, expired, revoked, or a tab session rather than a remembered login.
+	/// </summary>
+	Task<string?> RedeemRememberedLoginAsync(string token, CancellationToken ct = default);
 
 	/// <summary>Explicitly invalidates a token (logout).</summary>
 	Task RevokeAsync(string token, CancellationToken ct = default);

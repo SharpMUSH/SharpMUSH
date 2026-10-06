@@ -7,6 +7,19 @@ using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
 
+/// <summary>
+/// What every handler below answers a tab's remembered-login check with: none, so hydration leaves the tab
+/// signed out and only debug-OTT requests are counted.
+/// </summary>
+file static class DebugOttHandler
+{
+	public static bool IsResume(HttpRequestMessage request) =>
+		request.RequestUri!.AbsolutePath == "/api/auth/account-resume";
+
+	public static Task<HttpResponseMessage> NoRememberedLogin() =>
+		Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+}
+
 /// <summary>Counts requests and always returns a successful debug-OTT payload.</summary>
 file sealed class SingleSuccessHandler : HttpMessageHandler
 {
@@ -14,6 +27,7 @@ file sealed class SingleSuccessHandler : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		if (DebugOttHandler.IsResume(request)) return DebugOttHandler.NoRememberedLogin();
 		CallCount++;
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 		{
@@ -38,6 +52,7 @@ file sealed class FailThenSucceedHandler : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		if (DebugOttHandler.IsResume(request)) return DebugOttHandler.NoRememberedLogin();
 		CallCount++;
 		if (CallCount == 1)
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
@@ -65,6 +80,7 @@ file sealed class NeverExpectedHandler : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		if (DebugOttHandler.IsResume(request)) return DebugOttHandler.NoRememberedLogin();
 		CallCount++;
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
 	}

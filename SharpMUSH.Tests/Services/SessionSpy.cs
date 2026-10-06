@@ -38,7 +38,8 @@ internal sealed class SessionSpy
 				{
 					Token = s.Token, AccountId = s.AccountId, OriginIp = s.OriginIp,
 					ExpiryUnixMs = s.ExpiryUnixMs, TtlMs = s.TtlMs,
-					CharacterKey = s.CharacterKey, CharacterCreationTime = s.CharacterCreationTime
+					CharacterKey = s.CharacterKey, CharacterCreationTime = s.CharacterCreationTime,
+					Remembered = s.Remembered
 				};
 			});
 		Database.TouchSessionExpiryAsync(Arg.Any<string>(), Arg.Any<long>(), Arg.Any<CancellationToken>())

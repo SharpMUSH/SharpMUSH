@@ -1210,6 +1210,9 @@
   <data name="AuthEmailOptional" xml:space="preserve">
     <value>Email (optional)</value>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Remember me</value>
+  </data>
   <data name="AuthCreateAccount" xml:space="preserve">
     <value>Create Account</value>
   </data>

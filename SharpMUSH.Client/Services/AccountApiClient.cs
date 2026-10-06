@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSH.Client.Services.AccountAuthService;
 
@@ -42,8 +43,9 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	public sealed record SetupStatusResponse(bool NeedsSetup);
 
-	private sealed record LoginRequest(string UsernameOrEmail, string Password);
-	private sealed record RegisterRequest(string Username, string? Email, string Password);
+	private sealed record LoginRequest(string UsernameOrEmail, string Password, bool RememberMe);
+	private sealed record RegisterRequest(string Username, string? Email, string Password, bool RememberMe);
+	private sealed record ResumeRequest(int? CharacterKey, long? CharacterCreationTime);
 	private sealed record SetupCompleteRequest(string Username, string Password);
 	private sealed record MushTokenRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private sealed record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
@@ -57,15 +59,35 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public async Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password) =>
+	/// <param name="rememberMe">Also keep this browser signed in (see <see cref="ResumeAsync"/>).</param>
+	public async Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password, bool rememberMe) =>
 		Complete(await Client.PostApiAsync<LoginRequest, LoginResponse>(
-			"api/auth/account-login", new LoginRequest(identifier, password), NoSession));
+			"api/auth/account-login", new LoginRequest(identifier, password, rememberMe), NoSession));
 
-	public async Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password) =>
+	public async Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password, bool rememberMe) =>
 		Complete(await Client.PostApiAsync<RegisterRequest, LoginResponse>(
 			"api/auth/account-register",
-			new RegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password),
+			new RegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password, rememberMe),
 			NoSession));
+
+	/// <summary>
+	/// A new session for this tab from the browser's remembered login, an HttpOnly cookie the browser
+	/// sends by itself; bound to <paramref name="character"/> when the account still owns it.
+	/// </summary>
+	/// <remarks>
+	/// Sent as <see cref="AccountSessionBearerHandler.Anonymous"/>: it runs inside the hydration the
+	/// handler waits on, and it is how the handler recovers from a rejected bearer, so it must neither
+	/// wait on the one nor trigger the other.
+	/// </remarks>
+	public async Task<ApiResult<LoginResponse>> ResumeAsync(CharacterSummary? character, CancellationToken cancellationToken)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/account-resume")
+		{
+			Content = JsonContent.Create(new ResumeRequest(character?.DbrefNumber, character?.CreationTime)),
+		};
+		request.Options.Set(AccountSessionBearerHandler.Anonymous, true);
+		return Complete(await Client.SendApiAsync<LoginResponse>(request, NoSession, cancellationToken));
+	}
 
 	/// <summary>
 	/// A sign-in answer the tab can adopt whole. JSON that parses but leaves out the token, the name or

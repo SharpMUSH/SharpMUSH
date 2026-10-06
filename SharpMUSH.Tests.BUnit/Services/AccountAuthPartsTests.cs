@@ -177,7 +177,7 @@ public class AccountApiClientTests
 	{
 		var (client, _) = Answering(HttpStatusCode.Unauthorized, "Invalid account credentials.");
 
-		var failure = (await client.LoginAsync("headwiz", "wrong")).Expect<ApiFailure>();
+		var failure = (await client.LoginAsync("headwiz", "wrong", rememberMe: false)).Expect<ApiFailure>();
 
 		await Assert.That(failure.Message).IsEqualTo("Invalid account credentials.");
 		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Unauthenticated);

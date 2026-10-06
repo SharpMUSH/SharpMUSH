@@ -391,6 +391,10 @@
     <value>E-pošta (neobavezno)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Zapamti me</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Unesite svoje podatke za prijavu.</value>
     <comment>MT</comment>

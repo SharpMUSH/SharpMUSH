@@ -391,6 +391,10 @@
     <value>E-post (valfritt)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Kom ihåg mig</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Ange dina inloggningsuppgifter.</value>
     <comment>MT</comment>

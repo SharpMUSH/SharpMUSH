@@ -149,13 +149,21 @@ public class AccountAuthService(
 	{
 		ExplicitlyLoggedOut = await _storage.IsLoggedOutAsync();
 
-		if (ExplicitlyLoggedOut || await _storage.ReadAsync() is not AccountSessionStorage.StoredSession stored)
+		if (ExplicitlyLoggedOut)
+		{
+			ClearSessionState();
+			return;
+		}
+
+		if (await _storage.ReadAsync() is not AccountSessionStorage.StoredSession stored)
 		{
 			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
 			// Permissions — a returning user in a new tab would otherwise get a phantom identity with
 			// no live session. Nothing in the portal pre-fills the login form from Username, so
-			// there's no UX reason to keep it around.
+			// there's no UX reason to keep it around. A browser that was told to remember the account
+			// signs this tab in from that instead.
 			ClearSessionState();
+			await ResumeRememberedLoginAsync(character: null);
 			return;
 		}
 
@@ -165,12 +173,73 @@ public class AccountAuthService(
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
-		if (await LoadSessionAuthorityAsync(AccountSessionToken) == SessionAuthorityLoad.Failed)
+		switch (await LoadSessionAuthorityAsync(AccountSessionToken))
 		{
-			// The credential stays usable, but with no role or grant the tab is a Guest until the server
-			// answers. InitAsync is cached for the life of the tab, so without this one timed-out refresh
-			// — a server restarting, a dropped request — would leave it that way until a reload.
-			_ = RetrySessionAuthorityAsync();
+			case SessionAuthorityLoad.Failed:
+				// The credential stays usable, but with no role or grant the tab is a Guest until the server
+				// answers. InitAsync is cached for the life of the tab, so without this one timed-out refresh
+				// — a server restarting, a dropped request — would leave it that way until a reload.
+				_ = RetrySessionAuthorityAsync();
+				break;
+			case SessionAuthorityLoad.SignedOut:
+				// The tab's own session ran out while it was closed or idle; the remembered login, if this
+				// browser has one, outlasts it.
+				await ResumeRememberedLoginAsync(character: null);
+				break;
+		}
+	}
+
+	/// <summary>
+	/// Signs this tab in from the browser's remembered login, bound to <paramref name="character"/> when
+	/// the account still owns it; false, with nothing changed, when there is none to use.
+	/// </summary>
+	private async Task<bool> ResumeRememberedLoginAsync(CharacterSummary? character)
+	{
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		return await _api.ResumeAsync(character, timeout.Token) switch
+		{
+			LoginResponse session => await SignedInAsync(session) is IReadOnlyList<CharacterSummary>,
+			// The usual answer: this browser was not told to remember anyone, or the login lapsed.
+			ApiFailure { Kind: ApiFailureKind.Unauthenticated } => false,
+			ApiFailure failure => NotResumed(failure),
+		};
+
+		bool NotResumed(ApiFailure failure)
+		{
+			logger.LogWarning("Could not resume the remembered login: {Message}", failure.Message);
+			return false;
+		}
+	}
+
+	/// <summary>The renewal in flight, shared by every request its token failed on.</summary>
+	private Task<string?>? _renewal;
+
+	/// <summary>The last token the remembered login could not renew; requests on it are not retried.</summary>
+	private string? _unrenewable;
+
+	public async Task<string?> RenewSessionAsync(string rejectedToken)
+	{
+		await InitAsync();
+		if (AccountSessionToken is not { } current) return null;
+		if (current != rejectedToken) return current;
+		if (current == _unrenewable) return null;
+		return await (_renewal ??= RenewCoreAsync(rejectedToken));
+	}
+
+	private async Task<string?> RenewCoreAsync(string rejectedToken)
+	{
+		// Yield first, so _renewal is set before this can finish and clear it.
+		await Task.Yield();
+		try
+		{
+			if (await ResumeRememberedLoginAsync(ActiveCharacter) && AccountSessionToken is { } renewed)
+				return renewed;
+			_unrenewable = rejectedToken;
+			return null;
+		}
+		finally
+		{
+			_renewal = null;
 		}
 	}
 
@@ -287,8 +356,11 @@ public class AccountAuthService(
 	}
 
 	/// <summary>Signs in with a name or email and a password; answers with the account's roster.</summary>
-	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> LoginAsync(string identifier, string password) =>
-		await _api.LoginAsync(identifier, password) switch
+	/// <param name="rememberMe">Also keep this browser signed in, for tabs opened later and for this one once
+	/// its own session runs out.</param>
+	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> LoginAsync(string identifier, string password,
+		bool rememberMe = false) =>
+		await _api.LoginAsync(identifier, password, rememberMe) switch
 		{
 			LoginResponse session => await SignedInAsync(session),
 			ApiFailure failure => Logged(failure, "Account login"),
@@ -296,8 +368,8 @@ public class AccountAuthService(
 
 	/// <summary>Creates an account and signs in to it; answers with its (empty) roster.</summary>
 	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> RegisterAsync(
-		string username, string? email, string password) =>
-		await _api.RegisterAsync(username, email, password) switch
+		string username, string? email, string password, bool rememberMe = false) =>
+		await _api.RegisterAsync(username, email, password, rememberMe) switch
 		{
 			LoginResponse session => await SignedInAsync(session),
 			ApiFailure failure => Logged(failure, "Account registration"),
@@ -454,6 +526,14 @@ public class AccountAuthService(
 		return await _api.MushTokenAsync(session, character) switch
 		{
 			MushTokenResponse token => token.Token,
+			// The session rides in the body as well as the header, so the bearer handler's retry still
+			// names the refused one: ask again with whatever the tab renewed to.
+			ApiFailure { Kind: ApiFailureKind.Unauthenticated }
+				when await RenewSessionAsync(session) is { } renewed => await _api.MushTokenAsync(renewed, character) switch
+				{
+					MushTokenResponse token => token.Token,
+					ApiFailure retried => Logged(retried, "OTT via account session"),
+				},
 			ApiFailure failure => Logged(failure, "OTT via account session"),
 		};
 	}

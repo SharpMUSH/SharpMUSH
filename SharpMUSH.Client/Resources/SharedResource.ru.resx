@@ -391,6 +391,10 @@
     <value>Эл. почта (необязательно)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Запомнить меня</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Введите учётные данные.</value>
     <comment>MT</comment>

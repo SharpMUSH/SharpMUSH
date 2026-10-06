@@ -391,6 +391,10 @@
     <value>邮箱（可选）</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>记住我</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>请输入您的登录凭据。</value>
     <comment>MT</comment>

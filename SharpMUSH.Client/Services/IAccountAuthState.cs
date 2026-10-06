@@ -47,6 +47,14 @@ public interface IAccountAuthState
 	Task InitAsync();
 
 	/// <summary>
+	/// A session to use instead of <paramref name="rejectedToken"/>, which the server just refused: the one
+	/// this tab already moved on to, or a new one from the browser's remembered login. <c>null</c> when
+	/// there is none; the tab is left as it is. Concurrent callers share one attempt, and a token that could
+	/// not be renewed is not tried again.
+	/// </summary>
+	Task<string?> RenewSessionAsync(string rejectedToken);
+
+	/// <summary>
 	/// Development-only: get a debug OTT for player #1 without credentials. Exposed on the
 	/// narrow interface (rather than requiring the concrete <see cref="AccountAuthService"/>)
 	/// so <c>SharpMUSH.Client.Authentication.DebugAuthStateProvider</c> can be constructed

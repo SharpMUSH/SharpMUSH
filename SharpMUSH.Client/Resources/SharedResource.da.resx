@@ -391,6 +391,10 @@
     <value>E-mail (valgfrit)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Husk mig</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Indtast dine loginoplysninger.</value>
     <comment>MT</comment>

@@ -285,7 +285,10 @@ public class AccountController(
 		};
 	}
 
-	/// <summary>Invalidate the current account session token (logout).</summary>
+	/// <summary>
+	/// Invalidate the current account session token (logout), and the browser's remembered login so a
+	/// tab opened later does not sign straight back in.
+	/// </summary>
 	[HttpPost("logout")]
 	public async Task<IActionResult> Logout()
 	{
@@ -295,6 +298,9 @@ public class AccountController(
 			var token = header["Bearer ".Length..].Trim();
 			await accountSessionStore.RevokeAsync(token);
 		}
+		if (RememberedLoginCookie.Read(Request) is { } remembered)
+			await accountSessionStore.RevokeAsync(remembered);
+		RememberedLoginCookie.Delete(Response);
 		return NoContent();
 	}
 }
