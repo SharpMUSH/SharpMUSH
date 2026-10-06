@@ -203,7 +203,7 @@
     private static string? TargetHref(AuditTarget target) => target.Kind switch
     {
         AuditTargetKinds.Character when DbrefNumber(target.Id) is { } number => $"/admin/players/{number}",
-        AuditTargetKinds.Role => "/admin/roles",
+        AuditTargetKinds.Role or AuditTargetKinds.Permission or AuditTargetKinds.Category => "/admin/roles",
         _ => null
     };
 
