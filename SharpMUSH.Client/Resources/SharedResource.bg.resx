@@ -2929,10 +2929,6 @@
     <value>Цвят</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Поза, реплика или разказ…</value>
-    <comment>MT — rendered as nouns; the English verbs pose/say/narrate have no compact Bulgarian imperative that fits the input hint</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Да се изтрие ли „{0}“ ({1})? Ролята ще бъде премахната от всички акаунти, които я притежават.</value>
     <comment>MT — second sentence names «ролята» explicitly so no pronoun agrees with the interpolated name</comment>
@@ -2991,22 +2987,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Потърси</value>
     <comment>MT — plain imperative, button</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Емит</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Поза</value>
-    <comment>MT — compose-mode label, noun to match RolModeSay</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Реплика</value>
-    <comment>MT — compose-mode label; noun («line of speech») to pair with «Поза»</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Полупоза</value>
-    <comment>MT — MUSH semipose; formed by analogy with «поза»</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Име</value>
@@ -5584,5 +5564,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>На пауза, без зададен час</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Публикувай като</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter за изпращане</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Тази сцена е на пауза. Не приема пози, докато собственикът ѝ не я поднови.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Тази сцена не е активна, затова не приема пози.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

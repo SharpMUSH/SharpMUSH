@@ -2929,10 +2929,6 @@
     <value>Farbe</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Posen, sprechen oder erzählen…</value>
-    <comment>MT — prose placeholder is translated even though the Pose/Say mode buttons keep their English names.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>'{0}' ({1}) löschen? Dadurch wird sie aus allen Konten entfernt, die sie besitzen.</value>
     <comment>MT — "sie" agrees with the feminine Rolle.</comment>
@@ -2991,22 +2987,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Nachschlagen</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — mode button named after the pose command; kept English, matching the existing French.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — mode button named after the say command; kept English, matching the existing French.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH pose-mode term of art, left untranslated like Pose/Semipose elsewhere.</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Name</value>
@@ -5584,5 +5564,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pausiert, ohne Zeitpunkt</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Posten als</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Strg+Enter zum Senden</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Diese Szene ist pausiert. Sie nimmt keine Posen an, bis ihr Besitzer sie fortsetzt.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Diese Szene läuft nicht und nimmt daher keine Posen an.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

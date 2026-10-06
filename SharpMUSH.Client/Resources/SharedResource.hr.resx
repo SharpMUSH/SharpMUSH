@@ -2929,10 +2929,6 @@
     <value>Boja</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pozirajte, govorite ili pripovijedajte…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Obrisati ulogu '{0}' ({1})? Bit će uklonjena sa svih računa koji je imaju.</value>
     <comment>MT — added the governing noun 'ulogu' so the role name stays uninflected</comment>
@@ -2991,22 +2987,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Pretraži</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poza</value>
-    <comment>MT — compose-mode label (noun), per the sheet's pose → poza</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Govor</value>
-    <comment>MT — compose-mode label rendered as a noun to parallel 'Poza'</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Polupoza</value>
-    <comment>MT — compose-mode label parallel to 'Poza'</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Ime</value>
@@ -5584,5 +5564,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pauzirano, bez vremena</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Objavi kao</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter za slanje</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Ova scena je pauzirana. Ne prima poze dok je vlasnik ne nastavi.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Ova scena nije u tijeku pa ne prima poze.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>
