@@ -26,9 +26,8 @@
                     <div class="wiki-req-chips">
                         @foreach (var scope in _draft[name])
                         {
-                            var chosen = scope;
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" title="@DescriptionOf(chosen)"
-                                     OnClose="@(_ => _draft[name].Remove(chosen))">@chosen</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" title="@DescriptionOf(scope)"
+                                     OnClose="@(_ => _draft[name].Remove(scope))">@scope</MudChip>
                         }
                     </div>
                 }
