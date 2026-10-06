@@ -50,11 +50,12 @@ public static class RecursiveMarkdownHelper
 		builder
 			.UsePipeTables()
 			.UseHelpTopicLinks() // [topic] → help <topic> hyperlinks
-			.UseGenericAttributes()
 			.UseCustomContainers()
 			.UseTaskLists()
 			.Use<WikiLinkExtension>() // parser only; its HTML renderer hook is a no-op for ASCII
-			.UseHelpSeeAlso(); // **See Also:** + a list of topics → SeeAlsoBlock
+			.UseHelpSeeAlso() // **See Also:** + a list of topics → SeeAlsoBlock
+			.UseFlexLayout() // ::: flex / ::: item → FlexBlock columns
+			.UseGenericAttributes(); // last, as Markdig requires, so a ::: fence's {…} block is read as attributes
 
 	/// <summary>
 	/// Renders markdown text to MString using the recursive renderer

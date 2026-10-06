@@ -5607,4 +5607,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Redak {0}: ovaj ::: nema ime pa otvara prazan blok. Ako je trebao zatvoriti blok, dajte okružujućem bloku više dvotočki nego blokovima u njemu.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Redak {0}: blok ::: otvoren ovdje nikad se ne zatvara i seže do kraja stranice ili okružujućeg bloka.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Redak {0}: ovo je unutar flexa, ali izvan ::: itema, pa postaje zaseban stupac.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Redak {0}: ::: item raspoređuje se samo izravno unutar flexa.</value>
+  </data>
 </root>

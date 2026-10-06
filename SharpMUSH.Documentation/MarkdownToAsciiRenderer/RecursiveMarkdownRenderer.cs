@@ -29,12 +29,12 @@ public partial class RecursiveMarkdownRenderer
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
 	private readonly Ansi _headingStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true);
-	private readonly int _maxWidth;
+	private int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
 	/// <summary>
 	/// The width this render is laid out to — the one the caller asked for, which is not necessarily the
-	/// reader's terminal width. Exposed to subclasses because a renderer that lays a block out for itself
+	/// reader's terminal width, narrowed to a column's width while a flex item renders. Exposed to subclasses because a renderer that lays a block out for itself
 	/// has to work to the same budget as everything around it.
 	/// </summary>
 	protected int MaxWidth => _maxWidth;
@@ -105,6 +105,7 @@ public partial class RecursiveMarkdownRenderer
 		{
 			MarkdownDocument doc => RenderDocument(doc),
 			SeeAlsoBlock seeAlso => RenderSeeAlso(seeAlso),
+			FlexBlock flex => RenderFlex(flex),
 			HeadingBlock heading => RenderHeading(heading),
 			ParagraphBlock para => RenderParagraph(para),
 			CodeBlock code => RenderCodeBlock(code),
@@ -169,9 +170,9 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
 										 + (items[i].block.LinesBefore?.Count ?? 0);
-			// Pipe tables keep no trivia, but a table always stands apart from its neighbours in the source;
-			// and a heading starts a section, which a blank line sets off from the one before.
-			if (blankLines == 0 && (items[i - 1].block is Table || items[i].block is Table or HeadingBlock))
+			// Pipe tables and flex layouts keep no trivia, but either always stands apart from its neighbours in
+			// the source; and a heading starts a section, which a blank line sets off from the one before.
+			if (blankLines == 0 && (items[i - 1].block is Table or FlexBlock || items[i].block is Table or FlexBlock or HeadingBlock))
 			{
 				blankLines = 1;
 			}

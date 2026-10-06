@@ -5607,4 +5607,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Zeile {0}: Dieses ::: hat keinen Namen und öffnet daher einen leeren Block. Sollte es einen Block schließen, gib dem umgebenden Block mehr Doppelpunkte als den Blöcken darin.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Zeile {0}: Der hier geöffnete :::-Block wird nie geschlossen und reicht bis zum Ende der Seite oder des umgebenden Blocks.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Zeile {0}: Dies steht in einem flex, aber außerhalb eines ::: item, und wird daher eine eigene Spalte.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Zeile {0}: Ein ::: item wird nur direkt innerhalb eines flex angeordnet.</value>
+  </data>
 </root>
