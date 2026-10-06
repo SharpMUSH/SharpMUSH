@@ -7,8 +7,9 @@
    sends — open, occupied (a count, never names), locked (still listed, with its hint), closed,
    leaves the scene (asks first, in the payload's words), no image (the fallback tile). Dark exits
    are never sent, so none is invented. The keycap is the first alias; pressing a one-letter keycap
-   goes, except while typing. Hover or focus shows a preview with Go and Look. Rows is the mobile Room
-   sheet's list. *@
+   goes, except while typing. The destination's name shows under the exit's when they differ. Hover or
+   focus shows a preview with Go and Look, which stays while the pointer crosses to it. Rows is the
+   mobile Room sheet's list. *@
 @if (Bare)
 {
     @Body
@@ -70,6 +71,10 @@ else
                                     <kbd class="exit-key">@key</kbd>
                                 }
                             </span>
+                            @if (DestOf(e) is { } dest)
+                            {
+                                <span class="exit-dest"><MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" aria-hidden="true" /> <span class="exit-dest-name">@dest</span></span>
+                            }
                             @if (SubOf(e) is { } sub)
                             {
                                 <span class="exit-sub">@sub</span>
@@ -79,29 +84,31 @@ else
                     @if (!Rows)
                     {
                         <div class="exit-preview" role="group" aria-label="@NameOf(e)">
-                            @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
-                            {
-                                <img class="exit-preview-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
-                            }
-                            <div class="exit-preview-body">
-                                <div class="exit-row">
-                                    <span class="exit-preview-name">@(e.Dest?.Name ?? NameOf(e))</span>
-                                    @if (key is not null)
+                            <div class="exit-preview-panel">
+                                @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
+                                {
+                                    <img class="exit-preview-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
+                                }
+                                <div class="exit-preview-body">
+                                    <div class="exit-row">
+                                        <span class="exit-preview-name">@(e.Dest?.Name ?? NameOf(e))</span>
+                                        @if (key is not null)
+                                        {
+                                            <kbd class="exit-key">@key</kbd>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(e.Dest?.Desc))
                                     {
-                                        <kbd class="exit-key">@key</kbd>
+                                        <p class="exit-preview-desc">@e.Dest!.Desc</p>
                                     }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(e.Dest?.Desc))
-                                {
-                                    <p class="exit-preview-desc">@e.Dest!.Desc</p>
-                                }
-                                @if (e.Dest?.Here is > 0)
-                                {
-                                    <div class="exit-preview-there">@Loc.Plural("NavPlayThereCount", "count", e.Dest.Here.Value)</div>
-                                }
-                                <div class="exit-preview-actions">
-                                    <button type="button" class="exit-preview-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)" @onclick="() => TakeAsync(e)">@Loc["NavPlayGo"]</button>
-                                    <button type="button" class="exit-preview-look" @onclick="() => OnCommand.InvokeAsync(LookAt(e))">@Loc["NavPlayLook"]</button>
+                                    @if (e.Dest?.Here is > 0)
+                                    {
+                                        <div class="exit-preview-there">@Loc.Plural("NavPlayThereCount", "count", e.Dest.Here.Value)</div>
+                                    }
+                                    <div class="exit-preview-actions">
+                                        <button type="button" class="exit-preview-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)" @onclick="() => TakeAsync(e)">@Loc["NavPlayGo"]</button>
+                                        <button type="button" class="exit-preview-look" @onclick="() => OnCommand.InvokeAsync(LookAt(e))">@Loc["NavPlayLook"]</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -221,6 +228,12 @@ else
         ExitState.Closed => "closed",
         _ => "open",
     };
+
+    /// <summary>Where the exit leads, when the payload names it and the exit's own name does not already say so.</summary>
+    private static string? DestOf(RoomExit e) => e.Dest?.Name is { } dest && !string.IsNullOrWhiteSpace(dest)
+        && !string.Equals(dest.Trim(), e.Name.Trim(), StringComparison.OrdinalIgnoreCase)
+        ? dest
+        : null;
 
     /// <summary>The line under the name: a locked or closed exit's hint; in the rows, else the destination's area.</summary>
     private string? SubOf(RoomExit e) => e.State is ExitState.Locked or ExitState.Closed && !string.IsNullOrWhiteSpace(e.Hint)

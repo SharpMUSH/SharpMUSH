@@ -8,7 +8,7 @@
 
 <PageTitle>@Loc["WkDiffPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
 
-<div class="wikidiff full-bleed">
+<div class="wikidiff">
     <BackLink Href="@($"/wiki/{Ns}/{Slug}/history{(string.IsNullOrWhiteSpace(Lang) ? "" : $"?lang={Uri.EscapeDataString(Lang)}")}")">@Loc["WkRevisionHistory"]</BackLink>
     <PlainPageHeader Kicker="@Loc["WkComparingRevisions"]" Title="@_displayTitle">
         <Actions>

@@ -1,0 +1,169 @@
+using Mediator;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Library;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
+
+namespace SharpMUSH.Server.Controllers;
+
+/// <summary>
+/// Every character in the game, for staff: the list with search and filters, one character's detail,
+/// and booting one.
+///
+/// Routes:
+///   GET  api/admin/characters                 — list  ?search=&amp;online=&amp;flag=&amp;account=&amp;page=&amp;pageSize=
+///   GET  api/admin/characters/{dbref}         — detail
+///   POST api/admin/characters/{dbref}/boot    — boot  ?created=
+///
+/// Unlinking a character from its account is <c>DELETE api/admin/accounts/{key}/characters/{dbref}</c>.
+/// </summary>
+[ApiController]
+[Route("api/admin/characters")]
+[Authorize(Policy = PortalPermission.PlayersView)]
+public class AdminCharactersController(
+	IMediator mediator,
+	IAccountService accounts,
+	IConnectionService connections,
+	IAuthorizationService authorization,
+	IVisibleWorldProjection projection,
+	IEngineCommandInvoker commandInvoker,
+	IAuditLog audit) : ControllerBase
+{
+	/// <summary>The most rows one page holds.</summary>
+	public const int MaxPageSize = 200;
+
+	[HttpGet]
+	public async Task<IActionResult> List(
+		[FromQuery] string? search = null,
+		[FromQuery] bool? online = null,
+		[FromQuery] string? flag = null,
+		[FromQuery] string? account = null,
+		[FromQuery] int page = 1,
+		[FromQuery] int pageSize = 50,
+		CancellationToken ct = default)
+	{
+		pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+		page = Math.Max(page, 1);
+
+		var named = new List<SharpPlayer>();
+		await foreach (var player in mediator.CreateStream(new GetAllPlayersQuery()).WithCancellation(ct))
+		{
+			if (search is not { Length: > 0 } || player.Object.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+				named.Add(player);
+		}
+
+		named.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Object.Name, b.Object.Name));
+		var skip = (page - 1) * pageSize;
+
+		// Without the filters a row answers, only the page's rows are built: each costs an account
+		// lookup, the flags and an attribute read.
+		if (online is null && flag is not { Length: > 0 } && account is not { Length: > 0 })
+		{
+			var rows = new List<AdminCharacterRow>();
+			foreach (var player in named.Skip(skip).Take(pageSize))
+				rows.Add(await RowAsync(player, ct));
+			return Ok(new AdminCharacterPage(rows, named.Count));
+		}
+
+		var matched = new List<AdminCharacterRow>();
+		foreach (var player in named)
+		{
+			var row = await RowAsync(player, ct);
+			if (online is { } wanted && row.Online != wanted) continue;
+			if (flag is { Length: > 0 }
+				&& !row.Flags.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains(flag, StringComparer.OrdinalIgnoreCase))
+				continue;
+			if (account is { Length: > 0 }
+				&& !(row.AccountName?.Contains(account, StringComparison.OrdinalIgnoreCase) ?? false))
+				continue;
+			matched.Add(row);
+		}
+
+		return Ok(new AdminCharacterPage(matched.Skip(skip).Take(pageSize).ToList(), matched.Count));
+	}
+
+	[HttpGet("{dbref:int}")]
+	public async Task<IActionResult> Get(int dbref, CancellationToken ct)
+	{
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
+			return NotFound();
+
+		var playerRef = player.Object.DBRef;
+		var mail = await mediator.CreateStream(new GetAllMailListQuery(player)).ToListAsync(ct);
+		var attributes = await mediator.CreateStream(new GetLazyAttributesQuery(playerRef, ".*", false,
+			IAttributeService.AttributePatternMode.Regex)).CountAsync(ct);
+		var mayReadSite = (await authorization.AuthorizeAsync(User, PortalPermission.ServerAdmin)).Succeeded;
+		var grants = await player.Object.Grants.WithCancellation(ct);
+
+		return Ok(new AdminCharacterDetail(
+			await RowAsync(player, ct),
+			DateTimeOffset.FromUnixTimeMilliseconds(player.Object.CreationTime),
+			attributes,
+			mail.Count,
+			mail.Count(message => !message.Read),
+			await AttributeAsync(playerRef, "LASTLOGOUT", ct),
+			mayReadSite ? await AttributeAsync(playerRef, "LASTSITE", ct) : null,
+			mayReadSite ? await AttributeAsync(playerRef, "LASTIP", ct) : null,
+			ObjectGrantsDisplay.Roles(grants).Split(' ', StringSplitOptions.RemoveEmptyEntries),
+			await connections.Get(playerRef)
+				.Where(connection => connection.State == IConnectionService.ConnectionState.LoggedIn)
+				.Select(connection => connection.Handle)
+				.ToListAsync(ct)));
+	}
+
+	/// <param name="created">
+	/// The character's creation time, as the list reported it. A dbref number alone does not say which
+	/// character a page that has stayed open meant: numbers are reused after a nuke.
+	/// </param>
+	[HttpPost("{dbref:int}/boot")]
+	[Authorize(Policy = PortalPermission.PlayersModerate)]
+	public async Task<IActionResult> Boot(int dbref, [FromQuery] long? created, CancellationToken ct)
+	{
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
+			return Conflict(new ApiErrorDto("Choose a character to act as before booting anyone."));
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
+			return NotFound();
+		if (created is { } stamp && player.Object.CreationTime != stamp)
+			return Conflict(new ApiErrorDto($"#{dbref} is now a different character. Reload and try again."));
+		if (!await connections.Get(player.Object.DBRef).AnyAsync(c => c.State == IConnectionService.ConnectionState.LoggedIn, ct))
+			return Conflict(new ApiErrorDto($"{player.Object.Name} is not connected."));
+
+		// @BOOT does the work, checks the permission and records itself in the audit log, as the portal's.
+		using var portal = audit.BeginPortal(User);
+		var result = await commandInvoker.InvokeAsync("@BOOT", executor.Object().DBRef,
+			new Dictionary<string, CallState> { ["0"] = new(player.Object.DBRef.ToString()) });
+		return result?.Message?.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
+			? StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(message))
+			: NoContent();
+	}
+
+	private async Task<AdminCharacterRow> RowAsync(SharpPlayer player, CancellationToken ct)
+	{
+		var playerRef = player.Object.DBRef;
+		var owner = await accounts.GetAccountForCharacterAsync(playerRef, ct);
+		var flags = (await player.Object.ReadFlagsAsync(ct)).Flags.Select(f => f.Name);
+		return new AdminCharacterRow(
+			player.Object.Key,
+			player.Object.CreationTime,
+			player.Object.Name,
+			owner?.Id?.Split('/')[^1],
+			owner?.Username,
+			await connections.Get(playerRef).AnyAsync(c => c.State == IConnectionService.ConnectionState.LoggedIn, ct),
+			string.Join(' ', flags),
+			await AttributeAsync(playerRef, "LAST", ct));
+	}
+
+	private async Task<string?> AttributeAsync(DBRef dbref, string name, CancellationToken ct)
+		=> await mediator.CreateStream(new GetAttributeQuery(dbref, [name])).LastOrDefaultAsync(ct) is { } attribute
+			? attribute.Value.ToPlainText()
+			: null;
+}

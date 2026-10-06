@@ -12,16 +12,16 @@
 ### Player Management
 - [ ] Account list with search/filter (name, role, status)
 - [ ] Account detail: email, created, last login, linked characters
-- [ ] Character detail: flags, attribute count, mail count
+- [x] Character list (`/admin/characters`): search, online, flag and account filters
+- [x] Character detail (`/admin/players/{id}`): flags, roles, attribute count, mail count, last connect/site
 - [ ] Actions: ban/unban, force password reset, unlink character
 - [ ] Role override (promote/demote — Wizard+ only, cannot exceed own role)
 
 ### Moderation
-- [ ] Report queue (reported content with context)
-- [ ] Report actions: dismiss, delete content, warn, ban
+- [-] Report queue and report actions: dropped (#1565). Games take reports their own way; the panel standardizes only staff actions
 - [ ] Ban management: list, add, remove, expiry
-- [ ] Audit log: all staff actions logged (who, what, target, when)
-- [ ] Audit log viewer: search, filter by action type / staff / date range
+- [x] Audit log: staff actions from the portal and in-game logged (who, what, target, when)
+- [x] Audit log viewer (`/admin/moderation/audit`): filter by action / staff / text / date range
 
 ### Site Configuration
 - [ ] Form-based config editor (sections: General, Limits, Features)
@@ -36,6 +36,6 @@
 - [ ] Royalty can see players/moderation, cannot see config
 - [ ] Wizard can see everything except server settings
 - [ ] God can see server settings
-- [ ] Audit log: every action creates an entry
+- [x] Audit log: every action creates an entry
 - [ ] Config save: values persist, hot-reload works for supported fields
 - [ ] Ban: banned account cannot log in

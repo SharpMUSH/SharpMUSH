@@ -2,7 +2,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	max-width: 960px;
 }
 
 .help-entry {
@@ -118,10 +117,6 @@
 
 /* narrow: the card header's filter takes the full width it has, and the entry keeps less padding */
 @container page (max-width: 48rem) {
-	.help-page {
-		max-width: none;
-	}
-
 	.help-filter {
 		width: 100%;
 	}

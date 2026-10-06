@@ -112,6 +112,18 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/scenes']").Count).IsEqualTo(scenes ? 1 : 0);
 	}
 
+	/// <summary>The brand links home; a Home item in the Play group went to the same place.</summary>
+	[Test]
+	public async Task The_brand_is_the_only_link_home()
+	{
+		Auth.SetNotAuthorized();
+
+		var cut = RenderNav();
+
+		await Assert.That(cut.FindAll("a[href='/']").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("a[href='/']").ClassList).Contains("phosphor-logo");
+	}
+
 	[Test]
 	public async Task Build_has_no_links_for_an_anonymous_visitor()
 	{

@@ -13,14 +13,15 @@
 @inject IAuthorizationService Authorization
 @implements IDisposable
 
-@* D1 §3 rail (desktop): 72px, the logo, one icon per section (Home, Play, Scenes, Wiki, Characters,
-   Help, Mail while a character is active, then any novel application section), a spacer, then
+@* D1 §3 rail (desktop): 72px, the logo (the link home), one icon per section (Play, Scenes, Wiki,
+   Characters, Mail while a character is active, Help, then any novel application section), a spacer, then
    Build & manage when anything in it is visible to the viewer, search (the command palette), the
    terminal toggle, the language, and the account. Each item is 44×44, radius 14; the current
    section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
    the rail and keeps the drawer (NavMenu) and bottom tab bar. *@
 <nav class="phosphor-rail" aria-label="@Loc["NavSections"]">
-    <a href="/" class="phosphor-rail-logo" aria-label="@_gameName" title="@_gameName">
+    <a href="/" class="phosphor-rail-logo @(IsHome ? "phosphor-rail-logo--on" : null)"
+       aria-current="@(IsHome ? "page" : null)" aria-label="@HomeLabel" title="@HomeLabel">
         <svg width="26" height="26" viewBox="0 0 512 512" aria-hidden="true">
             <g fill="var(--accent)">
                 <path d="m345.16-0.31-88.2 163.24-88.13-163.1-167.67 252.72 87.98 234.7-1.24-233.41 64.74-117.99 104.11 196.48 0.27-0.37 0.51 0.0 104.11-196.48 64.74 117.99-1.25 233.41 87.98-234.7z" />
@@ -31,7 +32,6 @@
     </a>
     <div class="phosphor-rail-sep" aria-hidden="true"></div>
 
-    @Item("/", Icons.Material.Outlined.Home, Loc["Home"], IsHome)
     @if (_showPlay)
     {
         <a href="/play" class="phosphor-rail-item @(IsUnder("/play") ? "phosphor-rail-item--on" : null)"
@@ -102,6 +102,8 @@
     private bool _playUnread;
     private string _gameName = "SharpMUSH";
     private string _path = "/";
+
+    private string HomeLabel => $"{_gameName} · {Loc["Home"]}";
 
     private string PlayLabel => _playActive
         ? $"{Loc["Play"]} · {(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])}"

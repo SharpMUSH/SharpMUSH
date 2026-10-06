@@ -91,6 +91,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IPageLogService PageLog { get; }
 
+	private IAuditLog Audit { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -146,6 +148,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IHistoryRetentionService historyRetention,
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
+		IAuditLog audit,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -193,6 +196,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		HistoryRetention = historyRetention;
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;
+		Audit = audit;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 
