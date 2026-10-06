@@ -62,7 +62,7 @@ public class AccountService(
 		// (unclaimed) admin account stays unlobbable until first-run setup claims it.
 		if (!string.IsNullOrEmpty(account.PasswordHash)
 			&& passwordService.PasswordIsValid(password, account.PasswordHash))
-			return account;
+			return true;
 
 		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
 		return await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await CharacterPasswordMatchesAsync(character, password));

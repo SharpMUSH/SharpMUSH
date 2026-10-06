@@ -85,7 +85,7 @@ public class AccountStatusTests
 	{
 		var (svc, db, pw, _) = Build();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(AccountStatus.Disabled));
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
 
 		(await svc.AuthenticateAsync("TestUser", "wrong-password")).Expect<NotFound>();
 	}
@@ -95,7 +95,7 @@ public class AccountStatusTests
 	{
 		var (svc, db, pw, _) = Build();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(AccountStatus.Deleted));
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		(await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<NotFound>();
 	}
@@ -108,7 +108,7 @@ public class AccountStatusTests
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
 		db.GetAccountBanAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new AccountBan(account.Id!, "spam", null,
 			new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 8, 14, 30, 0, TimeSpan.Zero)));
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		var refused = (await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<AccountUnavailable>();
 		await Assert.That(refused.Message).IsEqualTo("This account is banned until 2026-10-08 14:30 UTC.");
