@@ -97,6 +97,30 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		await Assert.That(row.QuerySelector(".cfg-row-help")).IsNotNull();
 	}
 
+	/// <summary>
+	/// The listener options a mush.cnf carries are marked as not used, with what sets them instead, so
+	/// nobody edits a port and waits for a restart that changes nothing (#1565).
+	/// </summary>
+	[Test]
+	public async Task UnusedOptionsAreMarked_WithWhatSetsThemInstead()
+	{
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/net");
+		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "net"));
+		cut.WaitForAssertion(() => cut.Find(".cfg-row"), TimeSpan.FromSeconds(5));
+		AngleSharp.Dom.IElement Row(string key) =>
+			cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == key);
+
+		var port = Row("Net.Port");
+		await Assert.That(port.QuerySelector(".cfg-row-unused")!.TextContent).IsEqualTo("Not used");
+		var note = port.QuerySelector(".cfg-row-unused-note")!;
+		await Assert.That(note.TextContent).Contains("ConnectionServer:TelnetPort");
+		await Assert.That(port.QuerySelector("input")!.GetAttribute("aria-describedby")!.Split(' ')).Contains(note.Id!);
+		foreach (var key in new[] { "Net.SslPort", "Net.PortalPort", "Net.SslPortalPort", "Net.IpAddr", "Net.SslIpAddr",
+			"Net.SocketFile", "Net.UseWebsockets", "Net.WebsocketUrl" })
+			await Assert.That(Row(key).QuerySelector(".cfg-row-unused")).IsNotNull().Because(key);
+		await Assert.That(Row("Net.MudName").QuerySelector(".cfg-row-unused")).IsNull();
+	}
+
 	[Test]
 	public async Task SingleCharPattern_RendersTheNarrowInput_AndNumericShowsItsRange()
 	{

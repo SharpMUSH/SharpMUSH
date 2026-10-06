@@ -104,9 +104,6 @@
   <!-- ======================== -->
   <!-- ConfigNavDrawer.razor    -->
   <!-- ======================== -->
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Server Settings</value>
-  </data>
   <data name="SearchSettings" xml:space="preserve">
     <value>Search settings...</value>
   </data>
@@ -2526,11 +2523,92 @@
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Server</value>
   </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>God-only server settings</value>
+  <data name="AdmServerTitle" xml:space="preserve">
+    <value>Server</value>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Server configuration and live metrics are coming soon.</value>
+  <data name="AdmServerDescription" xml:space="preserve">
+    <value>This server's live figures, read again every 10 seconds while the page is open.</value>
+  </data>
+  <data name="AdmServerReadiness" xml:space="preserve">
+    <value>Readiness</value>
+  </data>
+  <data name="AdmServerReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="AdmServerNotReady" xml:space="preserve">
+    <value>Starting</value>
+  </data>
+  <data name="AdmServerWaitingOn" xml:space="preserve">
+    <value>Waiting on {0}</value>
+  </data>
+  <data name="AdmServerUptime" xml:space="preserve">
+    <value>Uptime</value>
+  </data>
+  <data name="AdmServerSince" xml:space="preserve">
+    <value>Since {0}</value>
+  </data>
+  <data name="AdmServerUptimeDays" xml:space="preserve">
+    <value>{0}d {1}h</value>
+  </data>
+  <data name="AdmServerUptimeHours" xml:space="preserve">
+    <value>{0}h {1}m</value>
+  </data>
+  <data name="AdmServerUptimeMinutes" xml:space="preserve">
+    <value>{0}m</value>
+  </data>
+  <data name="AdmServerPlayers" xml:space="preserve">
+    <value>Players online</value>
+  </data>
+  <data name="AdmServerConnections" xml:space="preserve">
+    <value>{0} connections</value>
+  </data>
+  <data name="AdmServerQueue" xml:space="preserve">
+    <value>Queued jobs</value>
+  </data>
+  <data name="AdmServerQueueLimit" xml:space="preserve">
+    <value>Limit {0}</value>
+  </data>
+  <data name="AdmServerBusBacklog" xml:space="preserve">
+    <value>Bus backlog</value>
+  </data>
+  <data name="AdmServerBusNotRead" xml:space="preserve">
+    <value>Not read yet</value>
+  </data>
+  <data name="AdmServerBusStream" xml:space="preserve">
+    <value>{0}: {1} of {2}</value>
+  </data>
+  <data name="AdmServerBusNoBudget" xml:space="preserve">
+    <value>No stream budget</value>
+  </data>
+  <data name="AdmServerStorage" xml:space="preserve">
+    <value>World data</value>
+  </data>
+  <data name="AdmServerStorageLine" xml:space="preserve">
+    <value>{0} file, {1} map</value>
+  </data>
+  <data name="AdmServerDiskFree" xml:space="preserve">
+    <value>Disk free</value>
+  </data>
+  <data name="AdmServerLastBackup" xml:space="preserve">
+    <value>Last backup</value>
+  </data>
+  <data name="AdmServerBackupNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmServerBackupUnsupported" xml:space="preserve">
+    <value>Not supported</value>
+  </data>
+  <data name="AdmServerVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AdmServerBuild" xml:space="preserve">
+    <value>Build {0}</value>
+  </data>
+  <data name="AdmServerUpdated" xml:space="preserve">
+    <value>Read at {0} UTC</value>
+  </data>
+  <data name="AdmCfgUnused" xml:space="preserve">
+    <value>Not used</value>
   </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Search username or email…</value>

@@ -91,8 +91,12 @@ Form-based UI (not raw text editing). Sections:
 - Toggle: public profiles (or login-required for all)
 - Toggle: guest access to public content
 
-Changes write to the game's configuration store. Hot-reload where the engine
-supports it; otherwise note "requires restart" next to the field.
+Changes write to the game's configuration store and take effect without a restart.
+The listener options a `mush.cnf` carries (`port`, `ssl_port`, `portal_port`,
+`ssl_portal_port`, `ip_addr`, `ssl_ip_addr`, `socket_file`, `use_ws`, `ws_url`) are
+marked "Not used", each with what sets it instead (the ConnectionServer settings, or
+the server's Kestrel addresses), via `SharpConfigAttribute.Unused`. No other option
+needs a restart, so there is no restart marker (#1565).
 
 ### Layout Editor (`/admin/layout`)
 
@@ -113,14 +117,20 @@ See Widget System doc for details. Lives at `/admin/layout`.
 - Most-edited pages
 - Page lock/protection management
 
-### Server Settings (`/admin/server`) — God Only
+### Server (`/admin/server`) — `server.admin`
 
-- View server version, uptime, connected players
-- NATS connection status
-- Database connection status
-- Cache statistics (hit/miss ratio)
-- Restart/shutdown controls (if exposed by engine)
-- Raw config viewer (read-only for diagnostics)
+Stat tiles read in-process from `GET api/admin/server/status`, refreshed every
+10 seconds while the page is open:
+
+- Readiness (`ServerReadiness`, the same answer as `/ready`) and what it waits on
+- Uptime, version and portal build
+- Players online and open connections
+- Queued jobs against `global_queue_limit` (the count `@ps/all` reports)
+- Message bus backlog and the fullest stream against its byte budget (`NatsMessagingMetrics`)
+- World data, file and map size, and disk free (`IStorageCapacityService`, as `@storage`)
+- Last backup (`IWorldBackupService`)
+
+No restart or shutdown controls: `@shutdown` (and `@shutdown/reboot`) covers them in-game.
 
 ## Design Principles
 

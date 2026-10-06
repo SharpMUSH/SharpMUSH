@@ -327,14 +327,6 @@
     <value>Состояние сервера</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Настройка сервера и метрики в реальном времени появятся позже.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Настройки сервера только для God</value>
-    <comment>MT — God kept English per glossary (privilege level and API enum value).</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Администрирование · сервер</value>
     <comment>MT — «Администрирование ·» per the fixed Admin-kicker decision.</comment>
@@ -3443,10 +3435,6 @@
   <data name="ServerConfiguration" xml:space="preserve">
     <value>Конфигурация сервера</value>
     <comment>MT — matches EnumPermConfigAdmin from the earlier batches.</comment>
-  </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Настройки сервера</value>
-    <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Сделать значком профиля</value>

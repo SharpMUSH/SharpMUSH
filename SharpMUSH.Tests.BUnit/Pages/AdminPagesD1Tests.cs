@@ -63,6 +63,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<AdminCharactersService>()
 			.AddSingleton<AdminAuditService>()
 			.AddSingleton<AdminBansService>()
+			.AddSingleton<AdminServerService>()
 			.AddSingleton<WikiAssetService>()
 			.AddSingleton<WikiService>()
 			.AddSingleton<ApplicationRegistryClient>()
@@ -102,7 +103,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	[Arguments(typeof(AdminCharacters), "Characters", null)]
 	[Arguments(typeof(AuditLog), "AdmAuditTitle", null)]
 	[Arguments(typeof(Moderation), "AdmModerationTitle", null)]
-	[Arguments(typeof(AdminServer), "ServerSettings", null)]
+	[Arguments(typeof(AdminServer), "AdmServerTitle", null, ".adm-stat, .mud-alert")]
 	[Arguments(typeof(AdminProfiles), "ProfileHandler", null, ".mud-alert")]
 	[Arguments(typeof(AdminMedia), "WkImageLibrary", null)]
 	[Arguments(typeof(AdminWiki), "WikiAdmin", null)]
@@ -277,27 +278,72 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// Every card opens a page with something on it. Characters, Moderation and Server were offered to
-	/// administrators and opened "coming soon".
+	/// Every card opens a page the portal has, so none is a dead link. The server card is offered to
+	/// whoever holds <c>server.admin</c>.
 	/// </summary>
 	[Test]
-	public async Task Dashboard_OffersNoPlaceholderPage()
+	public async Task Dashboard_EveryCardOpensARoutedPage()
 	{
 		Auth.SetPolicies("players.view", "players.moderate", "server.admin", "config.admin", "roles.admin",
 			"wiki.admin", "media.admin", "applications.admin", "packages.admin", "layout.admin", "queue.inspect");
 		Auth.SetRoles("God");
 		var cut = RenderPage(typeof(Dashboard));
-		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/players']"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/server']"), TimeSpan.FromSeconds(5));
 
-		var placeholders = Directory.EnumerateFiles(ClientSource.RazorRoot, "*.razor", SearchOption.AllDirectories)
+		var routes = Directory.EnumerateFiles(ClientSource.RazorRoot, "*.razor", SearchOption.AllDirectories)
 			.Select(File.ReadAllText)
-			.Where(source => source.Contains("<AdminComingSoon"))
 			.SelectMany(source => System.Text.RegularExpressions.Regex.Matches(source, "^@page \"([^\"]+)\"", System.Text.RegularExpressions.RegexOptions.Multiline))
 			.Select(match => match.Groups[1].Value)
-			.ToList();
-		await Assert.That(placeholders).IsNotEmpty().Because("the placeholder pages are found by their markup");
-		foreach (var route in placeholders)
-			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{route}']").Count).IsEqualTo(0).Because(route);
+			.ToHashSet(StringComparer.Ordinal);
+		var cards = cut.FindAll("a.adm-dash-card").Select(card => card.GetAttribute("href")!).ToList();
+		await Assert.That(cards.Count).IsGreaterThan(10);
+		foreach (var href in cards)
+			await Assert.That(routes).Contains(href).Because(href);
+	}
+
+	private static string ServerStatusJson(bool ready, int queued = 3) => System.Text.Json.JsonSerializer.Serialize(
+		new SharpMUSH.Library.API.AdminServerStatus("1.2.3.4", "abc123", DateTimeOffset.UtcNow.AddDays(-2).AddHours(-5),
+			Connections: 7, Players: 5, QueuedTasks: queued, QueueLimit: 10, Ready: ready,
+			Pending: ready ? [] : ["output-bridge"],
+			Streams: [new("SHARPMUSH-CS", 100, 1000)], BusBacklog: 4, BusReadAt: true,
+			Storage: new(2048, 4096, 1 << 20, 1 << 30), LastBackup: null, BackupSupported: true),
+		System.Text.Json.JsonSerializerOptions.Web);
+
+	private static string Stat(IRenderedComponent<MudHarness> cut, string key) =>
+		cut.Find($"[data-stat='{key}'] .adm-stat-value").TextContent.Trim();
+
+	[Test]
+	public async Task ServerPage_ShowsTheServersFigures()
+	{
+		_api.Bodies["api/admin/server/status"] = ServerStatusJson(ready: true);
+		var cut = RenderPage(typeof(AdminServer));
+		cut.WaitForAssertion(() => cut.Find("[data-stat='ready']"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(Stat(cut, "ready")).IsEqualTo("AdmServerReady");
+		await Assert.That(Stat(cut, "uptime")).IsEqualTo("AdmServerUptimeDays(2, 5)");
+		await Assert.That(Stat(cut, "players")).IsEqualTo("5");
+		await Assert.That(cut.Find("[data-stat='players'] .adm-stat-sub").TextContent).IsEqualTo("AdmServerConnections(7)");
+		await Assert.That(Stat(cut, "queue")).IsEqualTo("3");
+		await Assert.That(Stat(cut, "bus")).IsEqualTo("4");
+		await Assert.That(Stat(cut, "version")).IsEqualTo("1.2.3.4");
+		await Assert.That(Stat(cut, "backup")).IsEqualTo("AdmServerBackupNone");
+		await Assert.That(cut.FindAll("[data-stat='ready'].adm-stat--warn").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("[data-stat='backup'].adm-stat--warn").Count).IsEqualTo(1)
+			.Because("a provider that takes copies and has none on disk needs attention");
+	}
+
+	[Test]
+	public async Task ServerPage_FlagsWhatNeedsAttention()
+	{
+		_api.Bodies["api/admin/server/status"] = ServerStatusJson(ready: false, queued: 9);
+		var cut = RenderPage(typeof(AdminServer));
+		cut.WaitForAssertion(() => cut.Find("[data-stat='ready']"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(Stat(cut, "ready")).IsEqualTo("AdmServerNotReady");
+		await Assert.That(cut.Find("[data-stat='ready'] .adm-stat-sub").TextContent).IsEqualTo("AdmServerWaitingOn(output-bridge)");
+		await Assert.That(cut.FindAll("[data-stat='ready'].adm-stat--warn").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("[data-stat='queue'].adm-stat--warn").Count).IsEqualTo(1)
+			.Because("9 of a limit of 10 is past 80%");
 	}
 
 	[Test]

@@ -113,9 +113,6 @@
   </data>
 
   <!-- ConfigNavDrawer -->
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Paramètres du serveur</value>
-  </data>
   <data name="SearchSettings" xml:space="preserve">
     <value>Rechercher les paramètres...</value>
   </data>
@@ -1537,12 +1534,6 @@
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Serveur</value>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Paramètres du serveur réservés à God</value>
-  </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>La configuration du serveur et les métriques en direct arrivent bientôt.</value>
   </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Rechercher un nom d'utilisateur ou une adresse e-mail…</value>
