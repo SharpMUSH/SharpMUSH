@@ -2423,17 +2423,23 @@ public partial class Commands : ICommandRestrictionApplier
 		var dbref = targetObject.Object().DBRef;
 
 		var attributeArg = args.Count > 2 ? args["2"].Message?.ToPlainText() : null;
+		// An /override or /extend hook may leave the attribute out, and then tries every $-command on the
+		// object (do_hook, src/command.c:2624-2646; run_cmd_hook, src/command.c:2459-2465).
+		var wholeObject = string.IsNullOrWhiteSpace(attributeArg) && selectedHookType is "OVERRIDE" or "EXTEND";
 		var attributeName = !string.IsNullOrWhiteSpace(attributeArg)
 			? attributeArg.Trim()
-			: $"cmd.{selectedHookType.ToLower()}";
+			: wholeObject ? string.Empty : $"cmd.{selectedHookType.ToLower()}";
 
-		var attrResult = await AttributeService.GetAttributeAsync(executor, targetObject,
-			attributeName, IAttributeService.AttributeMode.Read);
-
-		if (attrResult.IsError)
+		if (!wholeObject)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookAttributeNotFoundFormat), executor, attributeName, dbref);
-			return new CallState(ErrorMessages.Returns.NoAttribute);
+			var attrResult = await AttributeService.GetAttributeAsync(executor, targetObject,
+				attributeName, IAttributeService.AttributeMode.Read);
+
+			if (attrResult.IsError)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookAttributeNotFoundFormat), executor, attributeName, dbref);
+				return new CallState(ErrorMessages.Returns.NoAttribute);
+			}
 		}
 
 		var inline = switches.Contains("INLINE");

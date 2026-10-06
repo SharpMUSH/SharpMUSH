@@ -64,51 +64,32 @@ public partial class PrivateListenerTests
 			.IsEqualTo($"world|#{child.Number}|#{actor.DbRef.Number}|#{actor.DbRef.Number}");
 	}
 
+	/// <summary>
+	/// The configured type ancestor contributes no ^-patterns, nor does its own @parent: atr_comm_match walks
+	/// with a NULL use_ancestor (<c>src/attrib.c:1923</c>), and <c>penntop.hlp:279</c> says ancestors are not
+	/// checked for ^-commands. Only an explicit @parent counts.
+	/// </summary>
 	[Test]
-	[Arguments("enabled", 1)]
+	[Arguments("enabled", 0)]
 	[Arguments("disabled", 0)]
 	[Arguments("ordinary-parent", 1)]
-	[Arguments("cycle", 1)]
-	[Arguments("plain-shadow", 0)]
-	[Arguments("private-local-shadow", 0)]
-	[Arguments("no-command", 0)]
-	[Arguments("private-ancestor", 0)]
-	public async Task ConfiguredAncestorUsesSharedVisibilityAndVisitedState(string mode, int expected)
+	[Arguments("cycle", 0)]
+	[Arguments("ancestor-parent", 0)]
+	public async Task ConfiguredAncestorIsNeverConsulted(string mode, int expected)
 	{
 		var actor = await Player();
 		var child = await ListenThing();
 		var ancestor = await ListenThing();
-		await Admin($"&TREE`ACTION {ancestor}=^hello *:ancestor");
+		if (mode == "ancestor-parent")
+		{
+			var ancestorParent = await ListenThing();
+			await Admin($"@parent {ancestor}={ancestorParent}");
+			await Admin($"&TREE`ACTION {ancestorParent}=^hello *:ancestor parent");
+		}
+		else await Admin($"&TREE`ACTION {ancestor}=^hello *:ancestor");
 		if (mode == "ordinary-parent") await Admin($"@parent {child}={ancestor}");
 		if (mode == "cycle") await Mediator.Send(new SetObjectParentCommand(await Node(ancestor), await Node(ancestor)));
-		if (mode is "plain-shadow" or "private-local-shadow") await Admin($"&TREE`ACTION {child}=plain");
-		if (mode == "private-local-shadow") await Admin($"@set {child}/TREE`ACTION=NO_INHERIT");
-		if (mode == "no-command")
-		{
-			await Admin($"&TREE {child}=block");
-			await Admin($"@set {child}/TREE=NO_COMMAND");
-		}
-		if (mode == "private-ancestor") await Admin($"@set {ancestor}/TREE=NO_INHERIT");
 		await Assert.That((await InheritedMatches(child, actor.DbRef, ancestor: ancestor, enabled: mode != "disabled")).Length).IsEqualTo(expected);
-	}
-
-	[Test]
-	public async Task AncestorParentEditsAndLinksRemainLiveAfterWarmSearch()
-	{
-		var actor = await Player();
-		var child = await ListenThing();
-		var ancestor = await ListenThing();
-		var parent = await ListenThing();
-		await Admin($"@parent {ancestor}={parent}");
-		await Assert.That(await InheritedMatches(child, actor.DbRef, ancestor: ancestor)).IsEmpty();
-		await Admin($"&ACTION {parent}=^hello *:parent");
-		await Assert.That(await InheritedMatches(child, actor.DbRef, ancestor: ancestor)).HasSingleItem();
-		await Admin($"@set {parent}/ACTION=NO_INHERIT");
-		await Assert.That(await InheritedMatches(child, actor.DbRef, ancestor: ancestor)).IsEmpty();
-		await Admin($"@set {parent}/ACTION=!NO_INHERIT");
-		await Assert.That(await InheritedMatches(child, actor.DbRef, ancestor: ancestor)).HasSingleItem();
-		await Mediator.Send(new UnsetObjectParentCommand(await Node(ancestor)));
-		await Assert.That(await InheritedMatches(child, actor.DbRef, ancestor: ancestor)).IsEmpty();
 	}
 
 	[Test]
@@ -128,7 +109,7 @@ public partial class PrivateListenerTests
 		mediator.Send(Arg.Any<GetListenAttributeSnapshotQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call => Mediator.Send(call.Arg<GetListenAttributeSnapshotQuery>(), call.Arg<CancellationToken>()));
 		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-			await new ListenAttributeSearch().ReadPhaseAsync(mediator, child, 10, false, cancellation.Token));
+			await new ListenAttributeSearch().ReadPhaseAsync(mediator, child, 10, cancellation.Token));
 	}
 
 	[Test]

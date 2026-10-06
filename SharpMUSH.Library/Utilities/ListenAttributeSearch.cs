@@ -48,9 +48,9 @@ public sealed class ListenAttributeSearch
 		return false;
 	}
 
-	/// <summary>Visits the root and at most maxParents parents; another phase shares visibility and cycle state.</summary>
+	/// <summary>Visits the root and at most maxParents parents, the root's own attributes as not inherited.</summary>
 	public async ValueTask<ListenAttributeCache[]> ReadPhaseAsync(IMediator mediator, DBRef root,
-		uint maxParents, bool inherited, CancellationToken cancellationToken)
+		uint maxParents, CancellationToken cancellationToken)
 	{
 		var result = new List<ListenAttributeCache>();
 		var reference = root;
@@ -61,7 +61,7 @@ public sealed class ListenAttributeSearch
 			if (await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken) is not AnySharpObject current
 				|| !_visited.Add(current.Object().DBRef)) break;
 			var attributes = await mediator.Send(new GetListenAttributeSnapshotQuery(current.Object().DBRef), cancellationToken);
-			CompileInto(result, Visible(attributes, inherited || depth != 0, cancellationToken), cancellationToken);
+			CompileInto(result, Visible(attributes, depth != 0, cancellationToken), cancellationToken);
 			if (depth == maxParents) break;
 			if (await current.Object().Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) break;
 			reference = parent.Object().DBRef;

@@ -235,14 +235,17 @@ public class ListenerRoutingService(
 		if (!flags.Has("MONITOR") || flags.Has("HALT"))
 			return;
 
-		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
-		// chain of awaited reads, not a field test, so the second one is worth not asking for.
-		if (!await lockService.Evaluate(LockType.Use, listener, speaker)
-				|| !await lockService.Evaluate(LockType.Listen, listener, speaker))
-			return;
-
 		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker,
 			checkParents: flags.Has("LISTEN_PARENT"));
+		if (matches.Length == 0)
+			return;
+
+		// atr_comm_match evaluates the locks once, on the listener, only after a pattern matched, and the
+		// listen lock before the use lock (src/attrib.c:2003-2018) — an eval lock's side effects happen
+		// only for an utterance some pattern wanted.
+		if (!await lockService.Evaluate(LockType.Listen, listener, speaker)
+				|| !await lockService.Evaluate(LockType.Use, listener, speaker))
+			return;
 
 		foreach (var match in matches)
 		{

@@ -104,10 +104,6 @@ public static class CacheKeys
 	/// <summary>The object's ^-listen attributes, with their patterns compiled.</summary>
 	public static string Listens(DBRef dbref) => $"listens:#{dbref.Number}";
 
-	// Keyed by dbref NUMBER only: an ancestor is named by number everywhere it is consulted.
-	public static string AncestorCommands(int number) => $"ancestor-commands:#{number}";
-	public static string AncestorListens(int number) => $"ancestor-listens:#{number}";
-
 	/// <summary>
 	/// Tag on the attribute reads that consult exactly one object — <see cref="Attribute"/> and
 	/// <see cref="LazyAttribute"/>. Per object, for the same reason <see cref="ContentsTag"/> is per
@@ -132,7 +128,7 @@ public static class CacheKeys
 	/// </summary>
 	public static string[] AttributesTouchedBy(DBRef dbref, string[] attribute)
 	{
-		var keys = new string[(attribute.Length * 6) + 4];
+		var keys = new string[(attribute.Length * 6) + 2];
 		var next = 0;
 
 		for (var length = 1; length <= attribute.Length; length++)
@@ -150,9 +146,7 @@ public static class CacheKeys
 		// write can change them — the attribute written is not necessarily the one carrying a pattern,
 		// since a flag change alone can add or remove one.
 		keys[next++] = Commands(dbref);
-		keys[next++] = Listens(dbref);
-		keys[next++] = AncestorCommands(dbref.Number);
-		keys[next] = AncestorListens(dbref.Number);
+		keys[next] = Listens(dbref);
 
 		// A player's aliases load with its node, which the provider rewrites in the same transaction as
 		// the ALIAS attribute (Services.PlayerAliases).

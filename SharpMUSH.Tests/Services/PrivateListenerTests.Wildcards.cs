@@ -32,12 +32,12 @@ public partial class PrivateListenerTests
 		if (surface == "command")
 		{
 			var discovery = Factory.Services.GetRequiredService<ICommandDiscoveryService>();
-			var matches = (await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), input))
+			var matches = (await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), input, await Node(actor.DbRef)))
 				.Expect<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>();
 			var capture = matches.Single().Arguments["0"].Message!;
 			await Assert.That(capture.ToPlainText()).IsEqualTo("one\ntwo");
 			await Assert.That(capture.Runs.Single().Markups.Single()).IsEqualTo(red);
-			var rejected = await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), MarkupText.Concat(input, MarkupText.Plain("\n")));
+			var rejected = await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), MarkupText.Concat(input, MarkupText.Plain("\n")), await Node(actor.DbRef));
 			await Assert.That(rejected is IEnumerable<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)> found && found.Any()).IsFalse();
 		}
 		else

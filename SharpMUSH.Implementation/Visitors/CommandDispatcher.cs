@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
@@ -368,6 +369,8 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			// Steps 9 and 11-15: $-commands nearby, then on the location's zone master room, the location
 			// itself, the executor's personal zone master room, and the master room and its contents.
 			// The first scope with a match runs it; a scope is only looked up once those before it failed.
+			// Objects whose @lock/command or @lock/use refused a match are process_command's errdblist.
+			var lockFailures = new List<AnySharpObject>();
 			for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 			{
 				if (await CandidatesIn(scope, executorObject, visitor.Configuration)
@@ -379,11 +382,31 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 				var userDefinedCommandMatches = await services.CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					PerceivedCandidates(candidates),
-					evaluatedCommandText);
+					evaluatedCommandText,
+					executorObject,
+					lockFailures);
 
 				if (userDefinedCommandMatches.TryGetValue(out var matches))
 				{
 					return PreserveCommandEvaluationErrors(await services.Commands.UserDefinedAsync(parser, matches, inPlace));
+				}
+			}
+
+			// process_command (src/game.c:1366-1372): a command nothing ran first gives each object whose lock
+			// refused it its COMMAND_LOCK`FAILURE triad (fail_commands, src/game.c:2777-2790), and is a Huh?
+			// only when none of them had one. errdb_grow stops the list at 50 (src/game.c:2794-2797).
+			if (lockFailures.Count > 0)
+			{
+				var didIt = services.Provider.GetRequiredService<IDidItService>();
+				var anyMessage = false;
+				foreach (var refused in lockFailures.Take(50))
+				{
+					anyMessage |= await didIt.FailLock(parser, executorObject, refused, LockType.Command);
+				}
+
+				if (anyMessage)
+				{
+					return PreserveCommandEvaluationErrors(CallState.Empty);
 				}
 			}
 

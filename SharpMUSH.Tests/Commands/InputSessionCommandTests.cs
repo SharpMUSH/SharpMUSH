@@ -140,7 +140,7 @@ public class InputSessionCommandTests
 			commands["SAY"].LibraryInformation.Attribute, _ => throw new InvalidOperationException("speech callback failed")), true);
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches = [];
 		var discovery = Substitute.For<ICommandDiscoveryService>();
-		discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())
+		discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>(), Arg.Any<AnySharpObject>(), Arg.Any<ICollection<AnySharpObject>?>())
 			.Returns(_ => ValueTask.FromResult(Option<IEnumerable<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>>.FromOption(matches)));
 		var provider = Substitute.For<IServiceProvider>();
 		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ICommandDiscoveryService) && mode.StartsWith("nested-", StringComparison.Ordinal)

@@ -11,8 +11,9 @@ namespace SharpMUSH.Library.Services;
 /// <summary>Matches visible listen patterns while retaining the original listener's self/other identity.</summary>
 /// <remarks>
 /// Callers opt into parent traversal; notification routing uses the original listener's LISTEN_PARENT.
-/// Each phase visits at most Limit.MaxParents parents. A separately configured type-ancestor phase is
-/// a SharpMUSH extension and shares shadow masks and visited identities with the ordinary parent phase.
+/// The walk visits at most Limit.MaxParents parents and never the type ancestor: atr_comm_match passes
+/// a NULL <c>use_ancestor</c> to <c>next_parent</c> (<c>src/attrib.c:1923</c>), and Penn's help says
+/// ancestors are not checked for ^-commands (<c>penntop.hlp:279</c>).
 /// </remarks>
 public class ListenPatternMatcher(
 	IMediator mediator,
@@ -34,11 +35,8 @@ public class ListenPatternMatcher(
 		var maxParents = checkParents ? configuration.CurrentValue.Limit.MaxParents : 0;
 		// Every pattern is matched against the same plain text; it is rendered once, not per attribute.
 		var plainMessage = message.ToPlainText();
-		CollectMatches(await search.ReadPhaseAsync(mediator, listener.Object().DBRef, maxParents, false, token),
+		CollectMatches(await search.ReadPhaseAsync(mediator, listener.Object().DBRef, maxParents, token),
 			listener, message, plainMessage, speaker, matches);
-		if (checkParents && await listener.Ancestor(configuration) is { } ancestor)
-			CollectMatches(await search.ReadPhaseAsync(mediator, ancestor, maxParents, true, token),
-				listener, message, plainMessage, speaker, matches);
 
 		return [.. matches];
 	}
