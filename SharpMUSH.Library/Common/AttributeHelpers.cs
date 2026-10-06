@@ -64,7 +64,12 @@ public static class AttributeHelpers
 	/// <param name="formatAttributeName">Name of the format attribute (e.g., "NAMEFORMAT", "DESCFORMAT", "CONFORMAT")</param>
 	/// <param name="formatArgs">Dictionary of arguments to pass to the format attribute (%0, %1, etc.)</param>
 	/// <param name="defaultValue">Default value to return if attribute doesn't exist or evaluation fails</param>
-	/// <param name="checkParents">Whether to check parent objects for the attribute (default: false)</param>
+	/// <param name="checkParents">Whether to look for the attribute on the target's parents and type
+	/// ancestor too (default: false)</param>
+	/// <param name="ignorePermissions">PennMUSH's <c>UFUN_IGNORE_PERMS</c>: the executor need not be able
+	/// to read or evaluate the attribute. The look formats (<c>@nameformat</c>, <c>@conformat</c>,
+	/// <c>@exitformat</c>) are fetched this way, so a mortal looker still sees a format inherited from a
+	/// wizard-owned parent or ancestor.</param>
 	/// <returns>The formatted result or default value</returns>
 	public static async ValueTask<MString> EvaluateFormatAttribute(
 		IAttributeService attributeService,
@@ -74,10 +79,21 @@ public static class AttributeHelpers
 		string formatAttributeName,
 		Dictionary<string, CallState> formatArgs,
 		MString defaultValue,
-		bool checkParents = false)
+		bool checkParents = false,
+		bool ignorePermissions = false)
 	{
 		try
 		{
+			if (ignorePermissions)
+			{
+				// The evaluator does the lookup itself as #1, and a missing attribute evaluates to nothing.
+				var formatted = await attributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, target, formatAttributeName, formatArgs,
+					evalParent: checkParents, ignorePermissions: true);
+
+				return formatted.Length > 0 ? formatted : defaultValue;
+			}
+
 			var attrResult = await attributeService.GetAttributeAsync(
 				executor,
 				target,

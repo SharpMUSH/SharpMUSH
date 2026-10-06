@@ -157,7 +157,8 @@ public class LookService(
 
 				formattedName = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "NAMEFORMAT",
-					nameFormatArgs, defaultFormattedName, checkParents: false);
+					nameFormatArgs, defaultFormattedName, checkParents: true,
+					ignorePermissions: true);
 			}
 		}
 
@@ -269,8 +270,11 @@ public class LookService(
 
 			var canSeeContent = await WorldVisibility.CreateScanAsync(
 				looker, realViewing, reality, connectionService, ExecutionBudget.CurrentToken);
+			var lookerRef = looker.Object().DBRef;
 			await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
+				// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
+				if (item.Object().DBRef == lookerRef) continue;
 				if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
 				if (item.IsExit) visibleExits.Add(item);
 				else visibleContents.Add(item);
@@ -303,7 +307,8 @@ public class LookService(
 
 				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "CONFORMAT",
-					conFormatArgs, defaultContents, checkParents: false);
+					conFormatArgs, defaultContents, checkParents: true,
+					ignorePermissions: true);
 
 				await notifyService.Notify(looker, formattedContents, looker);
 			}
@@ -351,7 +356,8 @@ public class LookService(
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "EXITFORMAT",
-					exitFormatArgs, defaultExits, checkParents: false);
+					exitFormatArgs, defaultExits, checkParents: true,
+					ignorePermissions: true);
 
 				if (formattedExits == defaultExits && isTransparent)
 				{
