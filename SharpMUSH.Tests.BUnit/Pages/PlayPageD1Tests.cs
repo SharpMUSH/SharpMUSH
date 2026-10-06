@@ -213,6 +213,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-scene-hint").Count).IsEqualTo(0)
+			.Because("a player who chose the terminal in this scene knows it is here");
 	}
 
 	/// <summary>The marker's close button hides it for that scene; the next scene is marked again.</summary>

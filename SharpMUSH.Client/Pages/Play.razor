@@ -831,10 +831,12 @@ else
 
     private void OnViewChanged(PlayView view) => ChooseView(view);
 
+    /// <summary>Choosing a view in a scene: the player knows of the scene now, so its marker stays hidden.</summary>
     private void ChooseView(PlayView view)
     {
         _chosenView = view;
         _chosenFor = SceneHere?.Id;
+        if (view == PlayView.Terminal && _chosenFor is { } scene) _hintHiddenFor = scene;
     }
 
     private void OnFocusChanged(bool focus) => _focus = focus;
