@@ -130,7 +130,7 @@ public class SetupService(
 			}
 
 			await passwordService.SetPassword(player,
-				passwordService.HashPassword($"#{player.Object.Key}:{player.Object.CreationTime}", password));
+				passwordService.HashPassword(password));
 		}
 		catch (OperationCanceledException)
 		{

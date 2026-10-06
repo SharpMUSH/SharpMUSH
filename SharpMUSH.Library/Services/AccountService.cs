@@ -13,8 +13,6 @@ public class AccountService(
 	IBanEnforcer? banEnforcer = null,
 	IAccountClaimsInvalidator? claimsInvalidator = null) : IAccountService
 {
-	// Account IDs are used as the "user" salt key for hashing
-	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
 
 	public async ValueTask<AccountSignIn> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
 	{
@@ -63,7 +61,7 @@ public class AccountService(
 		// character password stays a telnet-connect special case, and the pre-generated
 		// (unclaimed) admin account stays unlobbable until first-run setup claims it.
 		if (!string.IsNullOrEmpty(account.PasswordHash)
-			&& passwordService.PasswordIsValid(AccountKey(account), password, account.PasswordHash))
+			&& passwordService.PasswordIsValid(password, account.PasswordHash))
 			return true;
 
 		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
@@ -75,8 +73,7 @@ public class AccountService(
 		if (string.IsNullOrEmpty(character.PasswordHash))
 			return false;
 
-		var key = $"#{character.Object.Key}:{character.Object.CreationTime}";
-		if (!passwordService.PasswordIsValid(key, password, character.PasswordHash))
+		if (!passwordService.PasswordIsValid(password, character.PasswordHash))
 			return false;
 
 		if (passwordService.NeedsRehash(character.PasswordHash))
@@ -99,17 +96,7 @@ public class AccountService(
 		if (email is not null && await database.GetAccountByEmailAsync(email, ct) is not null)
 			return new Error<string>($"Email '{email}' is already registered.");
 
-		// Create with a temporary hash first to get the ID, then update with final hash
-		// (We need the ID to salt the password, but we need the password to create)
-		var tempHash = passwordService.HashPassword($"account:pending:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}", password);
-		var account = await database.CreateAccountAsync(username, email, tempHash, ct);
-
-		// Rehash with the proper key now that we have the ID
-		var realHash = passwordService.HashPassword(AccountKey(account), password);
-		await database.UpdateAccountPasswordAsync(account.Id!, realHash, ct);
-		account.PasswordHash = realHash;
-
-		return account;
+		return await database.CreateAccountAsync(username, email, passwordService.HashPassword(password), ct);
 	}
 
 	public async ValueTask<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
@@ -127,10 +114,10 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(AccountKey(account), oldPassword, account.PasswordHash))
+		if (!passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
-		var newHash = passwordService.HashPassword(AccountKey(account), newPassword);
+		var newHash = passwordService.HashPassword(newPassword);
 		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);
 		await database.UpdateAccountMustChangePasswordAsync(accountId, false, ct);
 		return new Success();
@@ -142,7 +129,7 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(AccountKey(account), currentPassword, account.PasswordHash))
+		if (!passwordService.PasswordIsValid(currentPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
 		if (newEmail is not null && await database.GetAccountByEmailAsync(newEmail, ct) is not null)
@@ -309,7 +296,7 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		var newHash = passwordService.HashPassword(AccountKey(account), newPassword);
+		var newHash = passwordService.HashPassword(newPassword);
 		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);
 		await database.UpdateAccountMustChangePasswordAsync(accountId, mustChangePassword, ct);
 		return new Success();

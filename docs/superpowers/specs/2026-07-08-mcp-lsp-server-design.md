@@ -161,7 +161,7 @@ command):
 2. Resolve the character by name via `GetPlayerQuery(name)` (mediator), matching
    the `connect` flow. Not found → `401`.
 3. Verify with
-   `IPasswordService.PasswordIsValid($"#{Key}:{CreationTime}", password, player.PasswordHash)`.
+   `IPasswordService.PasswordIsValid(password, player.PasswordHash)`.
    Invalid → `401`.
 4. On success, build a `ClaimsPrincipal` carrying the character's DBRef and name;
    this is the session identity.

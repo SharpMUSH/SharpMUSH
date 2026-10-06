@@ -66,12 +66,14 @@ public class AccountServiceTests
 		var created = MakeAccount(username: "Alice");
 		db.CreateAccountAsync(Arg.Any<string>(), Arg.Is<string?>(x => x == null), Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(created);
-		pw.HashPassword(Arg.Any<string>(), Arg.Any<string>()).Returns("real-hash");
+		pw.HashPassword(Arg.Any<string>()).Returns("real-hash");
 
 		var result = await svc.CreateAccountAsync("Alice", null, "password123");
 
 		await Assert.That(result.Expect<SharpAccount>().Username).IsEqualTo("Alice");
-		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "real-hash", Arg.Any<CancellationToken>());
+		await db.Received(1).CreateAccountAsync("Alice", null, "real-hash", Arg.Any<CancellationToken>());
+		await db.DidNotReceive().UpdateAccountPasswordAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+		pw.Received(1).HashPassword("password123");
 	}
 
 	[Test]
@@ -113,7 +115,7 @@ public class AccountServiceTests
 		var created = MakeAccount();
 		db.CreateAccountAsync(Arg.Any<string>(), Arg.Is<string?>(x => x == null), Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(created);
-		pw.HashPassword(Arg.Any<string>(), Arg.Any<string>()).Returns("hash");
+		pw.HashPassword(Arg.Any<string>()).Returns("hash");
 
 		var result = await svc.CreateAccountAsync("Bob", null, "pass");
 
@@ -128,7 +130,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "correct", "hash").Returns(true);
+		pw.PasswordIsValid("correct", "hash").Returns(true);
 
 		var result = (await svc.AuthenticateAsync("TestUser", "correct")).Expect<SharpAccount>();
 
@@ -142,7 +144,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount(email: "user@test.com");
 		db.GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "correct", "hash").Returns(true);
+		pw.PasswordIsValid("correct", "hash").Returns(true);
 
 		(await svc.AuthenticateAsync("user@test.com", "correct")).Expect<SharpAccount>();
 		await db.Received(1).GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>());
@@ -156,7 +158,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "wrong", "hash").Returns(false);
+		pw.PasswordIsValid("wrong", "hash").Returns(false);
 
 		(await svc.AuthenticateAsync("TestUser", "wrong")).Expect<NotFound>();
 	}
@@ -179,7 +181,7 @@ public class AccountServiceTests
 
 		var disabled = MakeAccount(status: AccountStatus.Disabled);
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		(await svc.AuthenticateAsync("TestUser", "correct")).Expect<AccountUnavailable>();
 	}
@@ -191,8 +193,8 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "oldpass", "hash").Returns(true);
-		pw.HashPassword(Arg.Any<string>(), "newpass").Returns("new-hash");
+		pw.PasswordIsValid("oldpass", "hash").Returns(true);
+		pw.HashPassword("newpass").Returns("new-hash");
 
 		var result = await svc.ChangePasswordAsync("accounts/1", "oldpass", "newpass");
 
@@ -207,7 +209,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "wrong", "hash").Returns(false);
+		pw.PasswordIsValid("wrong", "hash").Returns(false);
 
 		var result = await svc.ChangePasswordAsync("accounts/1", "wrong", "newpass");
 
@@ -234,7 +236,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "pass", "hash").Returns(true);
+		pw.PasswordIsValid("pass", "hash").Returns(true);
 		db.GetAccountByEmailAsync("new@test.com", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
@@ -251,7 +253,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "pass", "hash").Returns(true);
+		pw.PasswordIsValid("pass", "hash").Returns(true);
 		db.GetAccountByEmailAsync("taken@test.com", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(id: "accounts/99", email: "taken@test.com"));
 
@@ -267,7 +269,7 @@ public class AccountServiceTests
 
 		var account = MakeAccount(email: "old@test.com");
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
-		pw.PasswordIsValid(Arg.Any<string>(), "pass", "hash").Returns(true);
+		pw.PasswordIsValid("pass", "hash").Returns(true);
 
 		var result = await svc.ChangeEmailAsync("accounts/1", null, "pass");
 
@@ -487,7 +489,7 @@ public class AccountServiceTests
 		var (svc, db, pw, _) = Build();
 
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
-		pw.HashPassword(Arg.Any<string>(), "newpass").Returns("new-hash");
+		pw.HashPassword("newpass").Returns("new-hash");
 
 		var result = await svc.SetPasswordAsync("accounts/1", "newpass", true);
 

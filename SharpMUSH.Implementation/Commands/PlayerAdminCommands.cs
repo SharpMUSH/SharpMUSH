@@ -141,7 +141,7 @@ public partial class Commands
 
 			await Mediator.Send(
 				new SetPlayerPasswordCommand(asPlayer,
-					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
+					PasswordService.HashPassword(generatedPassword)));
 
 			await Audit.RecordAsync(executor, AuditActions.PlayerPassword, AuditTargets.Of(victim), "generated");
 			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
@@ -157,7 +157,7 @@ public partial class Commands
 		}
 
 		var arg1 = arg1CallState.Message!.ToPlainText();
-		var newHashedPassword = PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
+		var newHashedPassword = PasswordService.HashPassword(arg1);
 
 		await Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
 		await Audit.RecordAsync(executor, AuditActions.PlayerPassword, AuditTargets.Of(victim));
@@ -647,15 +647,14 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidObjectType);
 		}
 
-		var isValidPassword = PasswordService.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
-			player.PasswordHash);
+		var isValidPassword = PasswordService.PasswordIsValid(oldPassword, player.PasswordHash);
 		if (!isValidPassword)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordInvalid), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPassword);
 		}
 
-		var hashedPassword = PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
+		var hashedPassword = PasswordService.HashPassword(newPassword);
 		await PasswordService.SetPassword(player, hashedPassword);
 
 		return new CallState(string.Empty);

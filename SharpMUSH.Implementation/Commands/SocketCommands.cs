@@ -251,8 +251,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
-		var validPassword = PasswordService.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}",
-			password, foundDB.PasswordHash);
+		var validPassword = PasswordService.PasswordIsValid(password, foundDB.PasswordHash);
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{

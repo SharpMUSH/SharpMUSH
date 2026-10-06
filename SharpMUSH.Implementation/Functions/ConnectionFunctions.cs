@@ -1307,7 +1307,6 @@ public partial class Functions
 			parser, executor, executor, target,
 			player => ValueTask.FromResult<CallState>(
 				PasswordService.PasswordIsValid(
-					$"#{player.Object.Key}:{player.Object.CreationTime}",
 					parser.CurrentState.Arguments["1"].Message!.ToPlainText(),
 					player.PasswordHash)
 					? "1"

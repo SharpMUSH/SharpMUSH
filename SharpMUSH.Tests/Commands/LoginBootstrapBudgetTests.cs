@@ -42,7 +42,7 @@ public class LoginBootstrapBudgetTests
 		var data = Substitute.For<IExpandedObjectDataService>();
 		data.GetExpandedServerDataAsync<MotdData>().Returns(new MotdData("login-motd", "wizard-motd", null, null));
 		var passwords = Substitute.For<IPasswordService>();
-		passwords.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		passwords.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 		var timer = new ManualDeadline();
 		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), default, timer);
 		var hookReached = false;

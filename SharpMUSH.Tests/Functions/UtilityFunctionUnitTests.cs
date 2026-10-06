@@ -97,8 +97,8 @@ public class UtilityFunctionUnitTests
 		var a = HelperFunctions.ParseDbRef(result).Expect<DBRef>();
 		var player = (await Mediator.Send(new GetObjectNodeQuery(a))).Expect<SharpPlayer>();
 
-		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
-		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
+		await Assert.That(PasswordService.PasswordIsValid("SomePassword", player.PasswordHash)).IsTrue();
+		await Assert.That(PasswordService.PasswordIsValid("SomePassword2", player.PasswordHash)).IsFalse();
 	}
 
 	/// <summary>

@@ -132,8 +132,8 @@ public class AttributeTreeReadBenchmarks
 	/// <summary>The provider hashes a password only for a player it creates; these benchmarks create things.</summary>
 	private sealed class UnusedPasswordService : IPasswordService
 	{
-		public string HashPassword(string user, string pw) => throw new NotSupportedException();
-		public bool PasswordIsValid(string user, string pw, string hash) => throw new NotSupportedException();
+		public string HashPassword(string pw) => throw new NotSupportedException();
+		public bool PasswordIsValid(string pw, string hash) => throw new NotSupportedException();
 		public ValueTask SetPassword(SharpPlayer user, string hashedPassword) => throw new NotSupportedException();
 		public string GenerateRandomPassword() => throw new NotSupportedException();
 		public bool NeedsRehash(string hash) => throw new NotSupportedException();

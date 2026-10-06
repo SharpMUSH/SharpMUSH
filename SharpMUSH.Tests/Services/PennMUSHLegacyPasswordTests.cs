@@ -20,11 +20,10 @@ namespace SharpMUSH.Tests.Services;
 public class PennMUSHLegacyPasswordTests
 {
 	private const string Password = "hunter2";
-	private const string User = "#3:1789141638000";
 
 	private static readonly PasswordService Service = new(Substitute.For<IMediator>(), new PasswordHasher<string>());
 
-	private static bool Valid(string stored, string attempt = Password) => Service.PasswordIsValid(User, attempt, stored);
+	private static bool Valid(string stored, string attempt = Password) => Service.PasswordIsValid(attempt, stored);
 
 	// ---- the formatted string ---------------------------------------------------------------------
 
@@ -170,7 +169,7 @@ public class PennMUSHLegacyPasswordTests
 	[Test]
 	public async Task TypingAModernHashIsNotThePassword()
 	{
-		var stored = Service.HashPassword(User, Password);
+		var stored = Service.HashPassword(Password);
 
 		await Assert.That(Valid(stored)).IsTrue();
 		await Assert.That(Valid(stored, stored)).IsFalse();
