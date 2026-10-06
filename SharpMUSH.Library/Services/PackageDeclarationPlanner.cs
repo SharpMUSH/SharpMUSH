@@ -214,9 +214,8 @@ public static class PackageDeclarationPlanner
 
 		// ── What the package drops ──────────────────────────────────────────
 		var roleRemovals = new List<string>();
-		foreach (var baseline in owned.Roles.Where(b => declared.Roles.All(d => d.Slug != b.Slug)))
+		foreach (var baseline in owned.Roles.Where(b => declared.Roles.All(d => d.Slug != b.Slug) && live.Roles.Any(r => r.Slug == b.Slug)))
 		{
-			if (live.Roles.All(r => r.Slug != baseline.Slug)) continue;
 			if (live.HeldRoles.Contains(baseline.Slug))
 			{
 				changes.Add(new(PackageDeclarationKind.Role, baseline.Slug, PackageDeclarationAction.Release, "Someone holds it, so it stays, and is no longer the package's."));
@@ -236,9 +235,8 @@ public static class PackageDeclarationPlanner
 			.ToList();
 
 		var permissionRemovals = new List<string>();
-		foreach (var baseline in owned.Permissions.Where(b => declared.Permissions.All(d => d.Name != b.Name)))
+		foreach (var baseline in owned.Permissions.Where(b => declared.Permissions.All(d => d.Name != b.Name) && live.Permissions.Any(p => p.Scope == b.Name)))
 		{
-			if (live.Permissions.All(p => p.Scope != baseline.Name)) continue;
 			var setters = rolesAfter.Where(r => PermissionResolver.StateOf(r.Permissions, baseline.Name) != PermissionState.Inherit).Select(r => r.Slug).ToArray();
 			if (setters.Length > 0)
 			{
@@ -264,9 +262,12 @@ public static class PackageDeclarationPlanner
 		{
 			var liveList = kind == CategoryKind.Role ? live.RoleCategories : live.PermissionCategories;
 			var changeKind = kind == CategoryKind.Role ? PackageDeclarationKind.RoleCategory : PackageDeclarationKind.PermissionCategory;
-			foreach (var baseline in owned.Categories(kind).Where(b => declared.Categories(kind).All(d => !NoCase.Equals(d.Name, b.Name))))
+			var dropped = owned.Categories(kind)
+				.Where(b => declared.Categories(kind).All(d => !NoCase.Equals(d.Name, b.Name)))
+				.Select(b => liveList.FirstOrDefault(c => NoCase.Equals(c.Name, b.Name)))
+				.OfType<RoleCategory>();
+			foreach (var current in dropped)
 			{
-				if (liveList.FirstOrDefault(c => NoCase.Equals(c.Name, baseline.Name)) is not { } current) continue;
 				var members = kind == CategoryKind.Role
 					? rolesAfter.Where(r => NoCase.Equals(r.Category, current.Name)).Select(r => r.Slug).ToArray()
 					: permissionsAfter.Where(p => NoCase.Equals(p.Category, current.Name)).Select(p => p.Scope).ToArray();
@@ -295,10 +296,11 @@ public static class PackageDeclarationPlanner
 	private static PackageRoleSpec MergeRole(PackageRoleSpec spec, PackageRoleSpec baseline, SharpRole current)
 	{
 		var permissions = new Dictionary<string, PermissionState>(current.Permissions, StringComparer.Ordinal);
-		foreach (var scope in spec.Permissions.Keys.Union(baseline.Permissions.Keys))
+		var changed = spec.Permissions.Keys.Union(baseline.Permissions.Keys)
+			.Where(scope => spec.Permissions.GetValueOrDefault(scope, PermissionState.Inherit) != baseline.Permissions.GetValueOrDefault(scope, PermissionState.Inherit));
+		foreach (var scope in changed)
 		{
 			var incoming = spec.Permissions.GetValueOrDefault(scope, PermissionState.Inherit);
-			if (incoming == baseline.Permissions.GetValueOrDefault(scope, PermissionState.Inherit)) continue;
 			if (incoming == PermissionState.Inherit) permissions.Remove(scope);
 			else permissions[scope] = incoming;
 		}

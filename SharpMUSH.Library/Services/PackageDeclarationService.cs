@@ -101,11 +101,10 @@ public sealed class PackageDeclarationService(
 		string packageId, PackageDeclarations declared, PackageDeclarations? owned, CancellationToken cancellationToken)
 	{
 		var otherOwners = new Dictionary<(PackageDeclarationKind, string), string>();
-		foreach (var package in await packages.GetInstalledPackagesAsync())
+		foreach (var package in (await packages.GetInstalledPackagesAsync()).Where(p => p.Id != packageId))
 		{
-			if (package.Id == packageId || package.Owned is not { } theirs) continue;
-			foreach (var permission in theirs.Permissions) otherOwners[(PackageDeclarationKind.Permission, permission.Name)] = package.Id;
-			foreach (var role in theirs.Roles) otherOwners[(PackageDeclarationKind.Role, role.Slug)] = package.Id;
+			foreach (var permission in package.Owned?.Permissions ?? []) otherOwners[(PackageDeclarationKind.Permission, permission.Name)] = package.Id;
+			foreach (var role in package.Owned?.Roles ?? []) otherOwners[(PackageDeclarationKind.Role, role.Slug)] = package.Id;
 		}
 
 		var held = new HashSet<string>(StringComparer.Ordinal);
