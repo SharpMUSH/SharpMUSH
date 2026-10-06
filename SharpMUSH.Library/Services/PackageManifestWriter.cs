@@ -37,6 +37,7 @@ public static class PackageManifestWriter
 		WriteRelations(yaml, "depends", manifest.Dependencies, withSource: true);
 		WriteRelations(yaml, "conflicts", manifest.Conflicts, withSource: false);
 		WriteConfigure(yaml, manifest.Configure);
+		WriteDeclarations(yaml, manifest.Declared);
 
 		switch (manifest.Kind)
 		{
@@ -144,6 +145,66 @@ public static class PackageManifestWriter
 			yaml.Append("    label: ").AppendLine(Scalar(spec.Label));
 			yaml.Append("    type: ").AppendLine(spec.Type.ToString().ToLowerInvariant());
 			AppendOptional(yaml, "default", spec.Default, "    ");
+		}
+	}
+
+	private static void WriteDeclarations(StringBuilder yaml, PackageDeclarations declared)
+	{
+		if (declared.RoleCategories.Count > 0 || declared.PermissionCategories.Count > 0)
+		{
+			yaml.AppendLine();
+			yaml.AppendLine("categories:");
+			WriteCategories(yaml, "roles", declared.RoleCategories);
+			WriteCategories(yaml, "permissions", declared.PermissionCategories);
+		}
+
+		if (declared.Permissions.Count > 0)
+		{
+			yaml.AppendLine();
+			yaml.AppendLine("permissions:");
+			foreach (var permission in declared.Permissions)
+			{
+				yaml.Append("  - name: ").AppendLine(Scalar(permission.Name));
+				yaml.Append("    category: ").AppendLine(Scalar(permission.Category));
+				AppendOptional(yaml, "description", permission.Description, "    ");
+			}
+		}
+
+		if (declared.Roles.Count > 0)
+		{
+			yaml.AppendLine();
+			yaml.AppendLine("roles:");
+			foreach (var role in declared.Roles)
+			{
+				yaml.Append("  - slug: ").AppendLine(Scalar(role.Slug));
+				yaml.Append("    name: ").AppendLine(Scalar(role.Name));
+				yaml.Append("    category: ").AppendLine(Scalar(role.Category));
+				AppendOptional(yaml, "color", role.Color, "    ");
+				yaml.Append("    priority: ").AppendLine(role.Priority.ToString(CultureInfo.InvariantCulture));
+				if (role.Permissions.Count > 0)
+				{
+					yaml.AppendLine("    permissions:");
+					foreach (var (scope, state) in role.Permissions.OrderBy(p => p.Key, StringComparer.Ordinal))
+					{
+						yaml.Append("      ").Append(Scalar(scope)).Append(": ").AppendLine(state.ToString().ToLowerInvariant());
+					}
+				}
+			}
+		}
+	}
+
+	private static void WriteCategories(StringBuilder yaml, string list, IReadOnlyList<PackageCategorySpec> categories)
+	{
+		if (categories.Count == 0)
+		{
+			return;
+		}
+
+		yaml.Append("  ").Append(list).AppendLine(":");
+		foreach (var category in categories)
+		{
+			yaml.Append("    - name: ").AppendLine(Scalar(category.Name));
+			yaml.Append("      description: ").AppendLine(Scalar(category.Description));
 		}
 	}
 

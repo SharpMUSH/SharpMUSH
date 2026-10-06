@@ -273,6 +273,31 @@ public partial class LightningDatabase
 
 	private static RoleCategory MapCategory(RoleCategoryRecord r) => new(r.Name, r.Description, r.CreatedAt);
 
+	public Task<PermissionOverrideHolders> GetOverridesOfAsync(string scope, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return Task.FromResult(Store.Read(tx =>
+		{
+			var accounts = new Dictionary<string, PermissionState>(StringComparer.Ordinal);
+			foreach (var (key, value) in tx.Range(Tables.AccountPermission, []))
+			{
+				if (StateOf(value, scope) is { } state) accounts[$"node_accounts/{Keys.ReadStr(key)}"] = state;
+			}
+
+			var objects = new Dictionary<int, PermissionState>();
+			foreach (var (key, value) in tx.Range(Tables.ObjPermission, []))
+			{
+				if (StateOf(value, scope) is { } state) objects[(int)Keys.ReadDbref(key)] = state;
+			}
+
+			return new PermissionOverrideHolders(accounts, objects);
+		}));
+	}
+
+	private static PermissionState? StateOf(byte[] overrides, string scope)
+		=> new Dictionary<string, int>(Codec.Deserialize<Dictionary<string, int>>(overrides), StringComparer.OrdinalIgnoreCase)
+			.TryGetValue(scope, out var state) ? (PermissionState)state : null;
+
 	public async Task RemoveCustomPermissionAsync(string scope)
 		=> await Store.WriteAsync(tx =>
 		{

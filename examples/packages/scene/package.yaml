@@ -1,4 +1,4 @@
-format: 1
+format: 1.2
 package: scene
 version: 1.0.0
 authors: [SharpMUSH]
@@ -30,6 +30,18 @@ depends:
       branch: main
       # common-functions ships here, not in SharpMUSH.Packages, so this points
       # at the server repo where the other examples point at the package repo.
+
+# Staff finish a scene that is not theirs with the scene.close permission. The package defines it;
+# a game hands it out by allowing it on a role (@role/allow helper=scene.close) or a player
+# (@permission/allow <player>=scene.close).
+categories:
+  permissions:
+    - name: Staff
+      description: Permissions for the people who help run the game.
+permissions:
+  - name: scene.close
+    category: Staff
+    description: Finish any scene, not only your own.
 
 # Create mode: a single owned WIZARD thing carries the capture hooks and the
 # +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
@@ -72,9 +84,8 @@ objects:
       # ---- owner / wizard guard -------------------------------------------------
       FUN`OWNS: |-
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
-      # Finishing is the one owner verb staff may need on someone else's scene. A game hands it out by
-      # defining the scene.close permission (@permission/define scene.close=Staff) and allowing it on a role, such
-      # as helper. permission() answers #-1 while the permission is undefined, which or() reads as false.
+      # Finishing is the one owner verb staff may need on someone else's scene: the scene.close
+      # permission this package defines (see permissions: above), allowed on a role such as helper.
       FUN`CAN`CLOSE: |-
         or(u(%!/FUN`OWNS,%0,%1),permission(%0,scene.close))
 
@@ -731,8 +742,8 @@ objects:
         - `+scene/start` — resume a paused scene
         - `+scene/finish` — close it
         - `+scene/finish <id>` — close a scene by id. Its owner can, and so can anyone holding the
-          `scene.close` permission: a game defines it with `@permission/define scene.close=Staff` and allows it on
-          a role, such as helper, with `@role/allow helper=scene.close`
+          `scene.close` permission, which this package defines; allow it on a role, such as helper, with
+          `@role/allow helper=scene.close`
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.

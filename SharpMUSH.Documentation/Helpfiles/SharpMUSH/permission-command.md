@@ -64,7 +64,7 @@ Examples:
 
 ## Custom permissions
 
-A game can add permissions of its own for its softcode to check. `@permission/define scene.close=Staff/Finish any scene` defines `scene.close` in the `Staff` permission category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,scene.close)` or locks with `PERM^scene.close`, and `@command/restrict` and `@function/restrict` accept it.
+A game can add permissions of its own for its softcode to check. `@permission/define bbs.moderate=Staff/Moderate any board` defines `bbs.moderate` in the `Staff` permission category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,bbs.moderate)` or locks with `PERM^bbs.moderate`, and `@command/restrict` and `@function/restrict` accept it. A package can define the permissions it checks itself (see [roles packages]); the scene package defines `scene.close`.
 
 A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters; `valid(permission, <name>)` checks one. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its category and description; `@permission/category <permission>=<category>` changes only the category.
 
@@ -74,9 +74,9 @@ A new custom permission is held only by #1 and holders of `administrator` until 
 
 Examples:
 ```sharp
-@permission/define scene.close=Staff/Finish any scene
-@role/allow helper=scene.close
-think permission(*Ariel,scene.close)
+@permission/define bbs.moderate=Staff/Moderate any board
+@role/allow helper=bbs.moderate
+think permission(*Ariel,bbs.moderate)
 ```
 
 ## Permission categories
@@ -89,8 +89,8 @@ Custom permissions have a category list of their own, apart from the role catego
 
 Examples:
 ```sharp
-@permission/category/create Scenes=Permissions scene softcode checks
-@permission/define scene.close=Scenes/Finish any scene
+@permission/category/create Boards=Permissions the board softcode checks
+@permission/define bbs.moderate=Boards/Moderate any board
 ```
 
 ::: seealso

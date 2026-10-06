@@ -82,21 +82,33 @@ public partial class PackageInstallService
 		}
 
 		await using var writes = BeginWrites(await GetPackageManagerWizardAsync(cancellationToken));
-		await RetirePackageAsync(writes, packageId, ownObjects, cancellationToken);
-		return new Success();
+		return await RetirePackageAsync(writes, installed, ownObjects, cancellationToken) switch
+		{
+			Error<string> error => await writes.RevertAsync(error),
+			_ => new Success()
+		};
 	}
 
 	/// <summary>
 	/// The writes of an uninstall that has passed its guards. Removing the package's rows is the
 	/// last write and commits it: that also drops its revisions, so it cannot be reverted.
 	/// </summary>
-	private async Task RetirePackageAsync(
+	private async Task<Error<string>?> RetirePackageAsync(
 		PackageWriteTransaction writes,
-		string packageId,
+		InstalledPackageRecord installed,
 		IReadOnlyList<PackageObjectRecord> ownObjects,
 		CancellationToken cancellationToken)
 	{
+		var packageId = installed.Id;
 		var notes = new List<string>();
+
+		// Its roles, permissions and categories go unless the game relies on them.
+		if (installed.Owned is not null
+			&& await declarations.ApplyAsync(writes, packageId, PackageDeclarations.None, installed.Owned, notes, cancellationToken) is Error<string> error)
+		{
+			return error;
+		}
+
 		var ownObjids = ownObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
 
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
@@ -133,6 +145,7 @@ public partial class PackageInstallService
 
 		await registry.RemoveInstalledPackageAsync(packageId);
 		writes.Commit();
+		return null;
 	}
 
 	// ── Rollback ─────────────────────────────────────────────────────────────
@@ -349,6 +362,11 @@ public partial class PackageInstallService
 		foreach (var released in objects.Release)
 		{
 			await MarkGoingAsync(writes, released.Objid, notes, cancellationToken);
+		}
+
+		if (installed.Owned is not null)
+		{
+			notes.Add("Roles, permissions and categories are left as they are: a rollback restores objects and attributes only.");
 		}
 
 		var newRevision = installed.CurrentRevision + 1;

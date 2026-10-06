@@ -38,13 +38,15 @@ public partial class LightningDatabase
 		PinnedBranch = package.PinnedBranch,
 		InstalledAt = FormatPackageTimestamp(package.InstalledAt),
 		CurrentRevision = package.CurrentRevision,
-		DeployedFiles = package.DeployedFiles?.ToArray()
+		DeployedFiles = package.DeployedFiles?.ToArray(),
+		Owned = package.Owned is { IsEmpty: false } owned ? owned.ToJson() : null
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
 		r.PackageId, r.Version, r.SourceRepo, r.SourcePath, r.InstalledCommit, r.PinnedBranch,
 		ParsePackageTimestamp(r.InstalledAt), r.CurrentRevision,
-		r.DeployedFiles is { Length: > 0 } ? r.DeployedFiles : null);
+		r.DeployedFiles is { Length: > 0 } ? r.DeployedFiles : null,
+		r.Owned is { Length: > 0 } owned ? PackageDeclarations.FromJson(owned) : null);
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 		=> await Store.WriteAsync(tx =>
