@@ -362,7 +362,8 @@
             _pausing = false;
             _resumeDate = null;
             _resumeTime = null;
-            if (await SceneService.GetSceneAsync(scene.Id) is SceneSummary changed && _scene?.Id == changed.Id)
+            // The address may have moved on to another scene while the read was out.
+            if (await SceneService.GetSceneAsync(scene.Id) is SceneSummary changed && changed.Id == Id)
             {
                 _scene = changed;
             }

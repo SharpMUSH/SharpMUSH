@@ -656,6 +656,9 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo("2524608000000");
 		await Assert.That(await Eval($"scenewhere({room})")).StartsWith("#-1")
 			.Because("a paused scene is not the room's live scene, so nothing more is captured into it");
+		await RunAndCollectAs(unaHandle, $"+scene/pose {sceneId}=keeps talking.");
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("0")
+			.Because("the portal's compose path names the scene, and a paused one records nothing");
 
 		// Paused again, focused and with no time: the earlier time goes, so the schedule shows no stale one.
 		await RunAndCollectAs(unaHandle, "+scene/pause");
@@ -675,6 +678,8 @@ public class SceneRoleplayIntegrationTests
 		// A finished scene stays finished.
 		await RunAndCollectAs(unaHandle, $"+scene/finish {sceneId}");
 		await RunAndCollectAs(unaHandle, $"+scene/pause {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished");
+		await RunAndCollectAs(unaHandle, $"+scene/start {sceneId}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished");
 	}
 
