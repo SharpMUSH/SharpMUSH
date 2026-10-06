@@ -29,4 +29,7 @@ public sealed class SharpCommandAttribute : Attribute
 	/// - "case...|result..." for paired repeating parameters
 	/// </summary>
 	public string[] ParameterNames { get; set; } = [];
+
+	/// <summary>What the command leaves in <c>%></c>. See <see cref="CommandOutput"/>.</summary>
+	public CommandOutput Output { get; set; } = CommandOutput.None;
 }

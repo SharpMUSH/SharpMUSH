@@ -51,7 +51,7 @@ public partial class Commands
 		return (paramValue, remainingText);
 	}
 
-	[SharpCommand(Name = "@MAP", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
+	[SharpCommand(Name = "@MAP", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"], ParameterNames = ["object", "code"])]
 	public async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -213,7 +213,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
+	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -362,7 +362,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "@SWITCH",
+	[SharpCommand(Name = "@SWITCH", Output = CommandOutput.Runs,
 		Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -521,7 +521,7 @@ public partial class Commands
 		return result?.HadErrors == true;
 	}
 
-	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
+	[SharpCommand(Name = "@IFELSE", Output = CommandOutput.Runs, Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["condition", "true-command", "false-command"])]
 	public async ValueTask<Option<CallState>> IfElse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -542,7 +542,7 @@ public partial class Commands
 		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	[SharpCommand(Name = "@SELECT",
+	[SharpCommand(Name = "@SELECT", Output = CommandOutput.Runs,
 		Switches = ["NOTIFY", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public async ValueTask<Option<CallState>> Select(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -657,7 +657,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"],
+	[SharpCommand(Name = "@BREAK", Output = CommandOutput.Passthrough, Switches = ["INLINE", "QUEUED"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Break(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -711,7 +711,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],
+	[SharpCommand(Name = "@ASSERT", Output = CommandOutput.Passthrough, Switches = ["INLINE", "QUEUED"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = ["condition"])]
 	public async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -765,7 +765,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
+	[SharpCommand(Name = "@SKIP", Output = CommandOutput.Runs, Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
 		MinArgs = 1, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Skip(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -782,7 +782,7 @@ public partial class Commands
 		return new CallState(!falsey) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	[SharpCommand(Name = "@RETRY", Switches = [],
+	[SharpCommand(Name = "@RETRY", Output = CommandOutput.Runs, Switches = [],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -859,7 +859,7 @@ public partial class Commands
 		return new CallState(1000 - limit) { HadErrors = hadErrors };
 	}
 
-	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK", "CHAIN"],
+	[SharpCommand(Name = "@INCLUDE", Output = CommandOutput.Runs, Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK", "CHAIN"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31, ParameterNames = ["file"])]
 	public async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
