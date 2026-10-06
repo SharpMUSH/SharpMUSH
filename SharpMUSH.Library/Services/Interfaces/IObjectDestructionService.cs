@@ -31,7 +31,8 @@ public interface IObjectDestructionService
 	/// Performs no permission checking — the caller has already decided this object dies. Runs the
 	/// type-specific teardown (contents sent home, held exits destroyed, exits leading here relinked
 	/// to their own source, possessions and channels chowned to probate), rehomes anything that
-	/// called this object home, halts the object's queue, and then deletes it.
+	/// called this object home, takes it off every channel it is on, halts the object's queue, and
+	/// then deletes it.
 	/// <para>
 	/// A special object (see <see cref="IsSpecialObject"/>) is refused and left intact, matching
 	/// PennMUSH <c>purge()</c>, which undestroys one rather than freeing it.

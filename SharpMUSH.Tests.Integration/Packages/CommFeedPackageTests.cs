@@ -4,8 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
@@ -51,7 +54,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var dug = await factory.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
 		var room = DBRef.Parse(dug.Message!.ToPlainText().Trim());
-		var player = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreatePlayerCommand(
+		var player = await Mediator.Send(new CreatePlayerCommand(
 			name, "TestPassword123", room, room, (int)options.CurrentValue.Limit.StartingQuota));
 		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player, "websocket");
 
@@ -562,6 +565,34 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(Frames(left[mortal.Handle], "comm.who")).IsEmpty()
 			.Because("the mortal stopped listing them when they hid");
 		await Assert.That(Changes(Frames(left[seer.Handle], "comm.who"))).IsEquivalentTo(new[] { (objid, false) });
+	}
+
+	[Test]
+	public async Task DestroyingAThingOnAChannel_TakesItOffTheMemberList()
+	{
+		var watcher = await ViewerAsync("CommWhoDestroyWatcher");
+		var channel = await ChannelAsync("CommWhoDestroy", "player object open", watcher);
+		var created = await factory.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("CommWhoDoomed")}"));
+		var thing = DBRef.Parse(created.Message!.ToPlainText().Trim());
+		// @channel/on names only players; a thing joins itself, which is what this stands in for.
+		await Mediator.Send(new AddUserToChannelCommand(
+			(await Mediator.Send(new GetChannelQuery(channel)))!,
+			(await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>()));
+		var objid = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid(#{thing.Number})")))!
+			.Message!.ToPlainText();
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var destroyed = await watch.SentWhile(async () =>
+		{
+			await God($"@nuke #{thing.Number}");
+			await God($"@nuke #{thing.Number}");
+		}, Run, watcher);
+
+		var changes = Frames(destroyed[watcher.Handle], "comm.who")
+			.Select(f => (f["member"]!["objid"]!.GetValue<string>(), f["online"]!.GetValue<bool>()));
+		await Assert.That(changes).IsEquivalentTo(new[] { (objid, false) })
+			.Because("a destroyed member leaves its channels, so an open member list drops it");
 	}
 
 	[Test]

@@ -98,6 +98,7 @@ public class ObjectDestructionService(
 		// free_object() that walks db_top fixing every reference to the doomed dbref.
 		await RelinkEntrancesAsync(dbref, cancellationToken);
 		await RehomeDependentsAsync(dbref, cancellationToken);
+		await LeaveChannelsAsync(target, cancellationToken);
 
 		// Read while the object still exists; the event fires once it does not.
 		var eventArguments = await DescribeForDestroyEventAsync(target, cancellationToken);
@@ -113,6 +114,21 @@ public class ObjectDestructionService(
 		await eventService.TriggerEventAsync(ObjectDestroyEvent, null, eventArguments);
 
 		return true;
+	}
+
+	/// <summary>
+	/// Takes the object off every channel it is on, as PennMUSH's <c>remove_all_obj_chan</c> does. The
+	/// storage delete would drop the memberships anyway, but only a leave tells the channels' open member
+	/// lists that it is gone.
+	/// </summary>
+	private async ValueTask LeaveChannelsAsync(AnySharpObject target, CancellationToken cancellationToken)
+	{
+		var channels = await mediator.CreateStream(new GetOnChannelQuery(target), cancellationToken)
+			.ToListAsync(cancellationToken);
+		foreach (var channel in channels)
+		{
+			await mediator.Send(new RemoveUserFromChannelCommand(channel, target), cancellationToken);
+		}
 	}
 
 	/// <summary>
