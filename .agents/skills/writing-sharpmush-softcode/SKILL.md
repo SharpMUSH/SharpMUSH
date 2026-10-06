@@ -34,6 +34,8 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 Never build nested `@switch` ladders for validation. Guard with `@assert`/`@break`, one specific error per check, real work last:
 
 ```
+@permission/define guild.rank=Staff/Set guild ranks
+@role/allow <rank-manager role>=guild.rank
 &CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include me/INC`SETRANK=%q<who>,[lcstr(%1)]
 ```
 
