@@ -139,12 +139,13 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var mortal = Value(await (await As(viewer)).Who(channel, CancellationToken.None));
 		var staff = Value(await (await As(new DBRef(1))).Who(channel, CancellationToken.None));
 
-		var (onlineObjid, hiderObjid) = (await ObjidOf(online), await ObjidOf(hider));
+		var (onlineObjid, hiderObjid, godObjid) = (await ObjidOf(online), await ObjidOf(hider), await GodObjid());
 
+		// God made the channel, which put God on it, and is connected.
 		await Assert.That(mortal.Channel).IsEqualTo(channel);
-		await Assert.That(mortal.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { onlineObjid })
+		await Assert.That(mortal.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { godObjid, onlineObjid })
 			.Because("the viewer is not connected, the offline member is not, and the hider is hidden from a mortal");
-		await Assert.That(staff.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { onlineObjid, hiderObjid });
+		await Assert.That(staff.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { godObjid, onlineObjid, hiderObjid });
 	}
 
 	[Test]
