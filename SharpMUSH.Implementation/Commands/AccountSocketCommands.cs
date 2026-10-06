@@ -91,7 +91,8 @@ public partial class Commands
 		await NotifyService.Notify(handle,
 			$"Account '{account.Username}' created successfully.\n" +
 			"You have no characters yet.\n" +
-			"Use: make <character-name> <password>    to create your first character.");
+			"Use: make <character-name> <password>    to create your first character.\n" +
+			"Use: claim <character-name> <password>   to link a character you already have.");
 		return new CallState(account.Id!);
 	}
 
@@ -176,7 +177,8 @@ public partial class Commands
 		{
 			await NotifyService.Notify(handle,
 				$"Logged in as {account.Username}. You have no characters yet.\n" +
-				"Use: make <character-name> <password>    to create a character.");
+				"Use: make <character-name> <password>    to create a character.\n" +
+				"Use: claim <character-name> <password>   to link a character you already have.");
 		}
 		else
 		{
@@ -184,7 +186,8 @@ public partial class Commands
 			await NotifyService.Notify(handle,
 				$"Logged in as {account.Username}. Your characters:\n{charList}\n" +
 				"Use: play <name>    to connect as a character\n" +
-				"Use: make <name> <password>    to create a new character");
+				"Use: make <name> <password>    to create a new character\n" +
+				"Use: claim <name> <password>   to link a character you already have");
 		}
 
 		return new CallState(account.Id!);
@@ -331,7 +334,8 @@ public partial class Commands
 		{
 			await NotifyService.Notify(handle,
 				$"No character named '{charName}' is linked to your account.\n" +
-				"Use: make <name> <password>    to create a new character");
+				"Use: make <name> <password>    to create a new character\n" +
+				"Use: claim <name> <password>   to link a character you already have");
 			return new None();
 		}
 
@@ -344,6 +348,70 @@ public partial class Commands
 			accountId, character.Object.Name, character.Object.Key);
 
 		return new CallState(playerDbRef);
+	}
+
+	/// <summary>
+	/// Links an existing character to the current account, proven by the character's own password: a
+	/// character made with <c>create</c>, <c>@pcreate</c> or a database import, before the account existed.
+	/// Only available in AccountMode. The last word is the password, so a name may contain spaces.
+	/// <para>Syntax: <c>claim CharacterName Password</c></para>
+	/// </summary>
+	[SharpCommand(Name = "CLAIM", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 2, MaxArgs = 2, ParameterNames = ["name", "password"])]
+	public async ValueTask<Option<CallState>> ClaimCharacter(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var handle = parser.CurrentState.Handle!.Value;
+		var connectionData = ConnectionService.Get(handle);
+
+		if (await IsSitelockedAsync(handle, SitelockMatcher.ConnectFlag))
+		{
+			return new None();
+		}
+
+		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
+		{
+			await NotifyNotInAccountModeAsync(handle, connectionData?.State,
+				"Claiming a character happens from the account menu, before you enter the game.");
+			return new None();
+		}
+
+		if (!connectionData.Metadata.TryGetValue("AccountId", out var accountId))
+		{
+			await NotifyService.Notify(handle, "Session error: account ID not found.");
+			return new None();
+		}
+
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]; Arguments["0"] holds the
+		// rest of the line. The password is its last word, and everything before it is the name.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
+		var split = arg0?.LastIndexOfAny([' ', '\t']) ?? -1;
+		if (split <= 0)
+		{
+			await NotifyService.Notify(handle, "Usage: claim <character-name> <password>");
+			return new None();
+		}
+
+		var charName = arg0![..split].Trim();
+		var charPassword = arg0[(split + 1)..];
+
+		return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
+		{
+			SharpPlayer claimed => await ClaimedAsync(handle, accountId, claimed),
+			LinkedElsewhere => await RefusedAsync(handle, "That character is linked to another account. Ask staff if it is yours."),
+			NotFound => await RefusedAsync(handle, "No character has that name and password."),
+		};
+	}
+
+	/// <summary>Tells the socket the character is now on its account, and how to play it.</summary>
+	private async ValueTask<Option<CallState>> ClaimedAsync(long handle, string accountId, SharpPlayer character)
+	{
+		await NotifyService.Notify(handle,
+			$"{character.Object.Name} is now linked to your account.\n" +
+			$"Use: play {character.Object.Name}    to connect as that character");
+
+		Logger?.LogInformation("Account {AccountId}: claimed character {Name} (#{Key}) via CLAIM",
+			accountId, character.Object.Name, character.Object.Key);
+
+		return new CallState(character.Object.DBRef);
 	}
 
 	/// <summary>

@@ -167,6 +167,31 @@ public class AccountService(
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
 	}
 
+	public async ValueTask<CharacterClaim> ClaimCharacterAsync(string accountId, string characterName, string password,
+		CancellationToken ct = default)
+	{
+		var character = await objects.GetPlayerByNameOrAliasAsync(characterName, ct).FirstOrDefaultAsync(ct);
+		if (character is null || !await CharacterPasswordMatchesAsync(character, password))
+			return new NotFound();
+
+		return await AttachCharacterAsync(accountId, character, ct) switch
+		{
+			SharpPlayer linked => linked,
+			LinkedElsewhere elsewhere => elsewhere,
+		};
+	}
+
+	public async ValueTask<CharacterLink> AttachCharacterAsync(string accountId, SharpPlayer character, CancellationToken ct = default)
+	{
+		var holder = await database.GetAccountForCharacterAsync(character.Object.DBRef, ct);
+		if (holder is not null && holder.Id != accountId)
+			return new LinkedElsewhere(character, holder);
+
+		if (holder is null)
+			await LinkCharacterAsync(accountId, character.Object.DBRef, ct);
+		return character;
+	}
+
 	/// <remarks>
 	/// The security-relevant direction: unlinking the last character drops the account back to Guest,
 	/// and leaving Player scopes cached would keep granting them after the entitlement is gone.

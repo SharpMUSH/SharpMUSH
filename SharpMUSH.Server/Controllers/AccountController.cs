@@ -24,7 +24,6 @@ public class AccountController(
 	IMediator mediator,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	IPasswordService passwordService,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IValidateService validateService,
 	ILogger<AccountController> logger) : ControllerBase
@@ -166,9 +165,10 @@ public class AccountController(
 	public record LinkCharacterRequest(string CharacterName, string CharacterPassword);
 
 	/// <summary>
-	/// Link an EXISTING character to the authenticated account by verifying the
-	/// character's MUSH password. Counterpart to <see cref="CreateCharacter"/>,
-	/// which creates a brand-new character.
+	/// Claims an EXISTING character for the authenticated account: one made with <c>create</c>, <c>@pcreate</c>
+	/// or a database import, proven by the character's own password. Counterpart to
+	/// <see cref="CreateCharacter"/>, which creates a brand-new character. A character with no password
+	/// cannot be claimed; staff link those.
 	/// </summary>
 	[HttpPost("link-character")]
 	public async Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
@@ -179,45 +179,30 @@ public class AccountController(
 		if (string.IsNullOrWhiteSpace(request.CharacterName))
 			return BadRequest("CharacterName is required.");
 
-		var player = await mediator
-			.CreateStream(new GetPlayerQuery(request.CharacterName))
-			.FirstOrDefaultAsync();
-
-		if (player is null)
+		return await accountService.ClaimCharacterAsync(accountId!, request.CharacterName.Trim(), request.CharacterPassword ?? string.Empty) switch
 		{
-			logger.LogInformation("Account {AccountId}: link-character failed — character not found", LogSanitizer.Sanitize(accountId));
-			return Unauthorized("Invalid character credentials.");
-		}
+			SharpPlayer player => await ClaimedAsync(accountId!, player),
+			LinkedElsewhere => Conflict("Character is already linked to another account."),
+			Library.DiscriminatedUnions.NotFound => ClaimRefused(accountId!),
+		};
+	}
 
-		var valid = passwordService.PasswordIsValid(
-			request.CharacterPassword ?? string.Empty,
-			player.PasswordHash);
-
-		// Mirror the OTT login rule: a character with no stored password hash is
-		// linkable without one; a wrong password against a real hash is rejected.
-		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
-		{
-			logger.LogInformation("Account {AccountId}: link-character failed — bad password for #{Key}",
-				LogSanitizer.Sanitize(accountId), player.Object.Key);
-			return Unauthorized("Invalid character credentials.");
-		}
-
-		if (valid && passwordService.NeedsRehash(player.PasswordHash))
-		{
-			await passwordService.RehashPasswordAsync(player, request.CharacterPassword ?? string.Empty);
-			logger.LogInformation("Rehashed legacy password for player #{Key} via link-character", player.Object.Key);
-		}
-
-		var charRef = new DBRef(player.Object.Key, player.Object.CreationTime);
-
-		var existingOwner = await accountService.GetAccountForCharacterAsync(charRef);
-		if (existingOwner is not null && existingOwner.Id != accountId)
-			return Conflict("Character is already linked to another account.");
-
-		await accountService.LinkCharacterAsync(accountId!, charRef);
-
+	private async Task<IActionResult> ClaimedAsync(string accountId, SharpPlayer player)
+	{
 		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
-		return Ok(new { DbrefNumber = player.Object.Key, CreationTime = player.Object.CreationTime, player.Object.Name });
+		return Ok(new
+		{
+			DbrefNumber = player.Object.Key,
+			player.Object.CreationTime,
+			player.Object.Name,
+			Flags = await CreatedFlagsAsync(player.Object.DBRef)
+		});
+	}
+
+	private UnauthorizedObjectResult ClaimRefused(string accountId)
+	{
+		logger.LogInformation("Account {AccountId}: link-character refused — no character with that name and password", LogSanitizer.Sanitize(accountId));
+		return Unauthorized("Invalid character credentials.");
 	}
 
 	/// <summary>Unlink a character from the authenticated account.</summary>

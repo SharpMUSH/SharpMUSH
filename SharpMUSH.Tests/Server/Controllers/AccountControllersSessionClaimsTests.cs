@@ -43,7 +43,7 @@ public class AccountControllersSessionClaimsTests
 	}
 
 	private static AccountController Account(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user, string? bearer = null)
-		=> new(Substitute.For<IMediator>(), accounts, sessions, Substitute.For<IPasswordService>(),
+		=> new(Substitute.For<IMediator>(), accounts, sessions,
 			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IValidateService>(),
 			NullLogger<AccountController>.Instance)
 		{ ControllerContext = Context(user, bearer) };

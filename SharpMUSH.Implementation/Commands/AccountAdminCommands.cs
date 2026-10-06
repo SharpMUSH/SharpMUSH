@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
@@ -17,11 +18,12 @@ public partial class Commands
 	/// <c>@account/list [pattern]</c>;
 	/// <c>@account/newpassword &lt;name&gt;=&lt;password&gt;</c> — set + force change on next login;
 	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>;
-	/// <c>@account/close &lt;name&gt;</c> / <c>@account/delete &lt;name&gt;</c> — the account record is retained either way.</para>
+	/// <c>@account/close &lt;name&gt;</c> / <c>@account/delete &lt;name&gt;</c> — the account record is retained either way;
+	/// <c>@account/link &lt;name&gt;=&lt;player&gt;</c> / <c>@account/unlink &lt;name&gt;=&lt;player&gt;</c> — attach a character to the account or take it off.</para>
 	/// </summary>
-	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "CLOSE", "DELETE"],
+	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "CLOSE", "DELETE", "LINK", "UNLINK"],
 		Behavior = CommandBehavior.Default | CommandBehavior.EqSplit | CommandBehavior.RSNoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "password"])]
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "value"])]
 	public async ValueTask<Option<CallState>> AccountAdmin(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -45,7 +47,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(arg0))
 		{
-			await NotifyService.Notify(executor, "Usage: @account[/list|/newpassword|/disable|/enable|/close|/delete] <name>[=<password>]");
+			await NotifyService.Notify(executor, "Usage: @account[/list|/newpassword|/disable|/enable|/close|/delete] <name>[=<password>], or @account/link|/unlink <name>=<player>");
 			return CallState.Empty;
 		}
 
@@ -144,6 +146,24 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		if (switches.Contains("LINK") || switches.Contains("UNLINK"))
+		{
+			var unlink = switches.Contains("UNLINK");
+			if (string.IsNullOrWhiteSpace(arg1))
+			{
+				await NotifyService.Notify(executor, $"Usage: @account/{(unlink ? "unlink" : "link")} <name>=<player>");
+				return CallState.Empty;
+			}
+
+			return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1.Trim()) switch
+			{
+				AnySharpObject and SharpPlayer player when unlink => await UnlinkFromAccountAsync(executor, account, player),
+				AnySharpObject and SharpPlayer player => await LinkToAccountAsync(executor, account, player),
+				AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+				Error<CallState> error => error.Value
+			};
+		}
+
 		// No switch: show details.
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
 		var charList = characters.Count == 0
@@ -155,6 +175,62 @@ public partial class Commands
 			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
 			$"Characters:\n{charList}");
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// <c>@account/link</c>: attaches a character to an account without its password. Only God links God, and
+	/// only a wizard links a wizard, since the account takes on the character's roles.
+	/// </summary>
+	private async ValueTask<Option<CallState>> LinkToAccountAsync(AnySharpObject executor, SharpAccount account, SharpPlayer player)
+	{
+		if (await OutranksAsync(player, executor))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		return await AccountService.AttachCharacterAsync(account.Id!, player) switch
+		{
+			SharpPlayer => await LinkedToAccountAsync(executor, account, player),
+			LinkedElsewhere elsewhere => await RefusedLinkAsync(executor, player, elsewhere.Account),
+		};
+	}
+
+	private async ValueTask<Option<CallState>> LinkedToAccountAsync(AnySharpObject executor, SharpAccount account, SharpPlayer player)
+	{
+		await Audit.RecordAsync(executor, AuditActions.CharacterLink, AuditTargets.Of(player), account.Username);
+		await NotifyService.Notify(executor, $"{player.Object.Name} is now linked to account '{account.Username}'.");
+		return new CallState(player.Object.DBRef);
+	}
+
+	private async ValueTask<Option<CallState>> RefusedLinkAsync(AnySharpObject executor, SharpPlayer player, SharpAccount holder)
+	{
+		await NotifyService.Notify(executor,
+			$"{player.Object.Name} is linked to account '{holder.Username}'. " +
+			$"Use @account/unlink {holder.Username}={player.Object.Name} first.");
+		return CallState.Empty;
+	}
+
+	/// <summary><c>@account/unlink</c>: takes a character off an account, which keeps the character.</summary>
+	private async ValueTask<Option<CallState>> UnlinkFromAccountAsync(AnySharpObject executor, SharpAccount account, SharpPlayer player)
+	{
+		if (await AccountService.GetAccountForCharacterAsync(player.Object.DBRef) is not { } holder || holder.Id != account.Id)
+		{
+			await NotifyService.Notify(executor, $"{player.Object.Name} is not linked to account '{account.Username}'.");
+			return CallState.Empty;
+		}
+
+		await AccountService.UnlinkCharacterAsync(account.Id!, player.Object.DBRef);
+		await Audit.RecordAsync(executor, AuditActions.CharacterUnlink, AuditTargets.Of(player), account.Username);
+		await NotifyService.Notify(executor, $"{player.Object.Name} is no longer linked to account '{account.Username}'.");
+		return new CallState(player.Object.DBRef);
+	}
+
+	/// <summary>True when <paramref name="player"/> stands above <paramref name="executor"/>: God above everyone else, a wizard above non-wizards.</summary>
+	private static async ValueTask<bool> OutranksAsync(SharpPlayer player, AnySharpObject executor)
+	{
+		AnySharpObject target = player;
+		return target.IsGod() ? !executor.IsGod() : await target.IsWizard() && !await executor.IsWizard();
 	}
 
 	private string StatusLabel(AccountStatus status) => status switch

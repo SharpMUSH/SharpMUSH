@@ -85,6 +85,10 @@ public sealed record AdminBanRequest(string AccountKey, string Reason, DateTimeO
 /// <param name="Reason">Why; required, passed to the game's <c>PLAYER`WARN</c> handler and kept in the audit log.</param>
 public sealed record AdminWarnRequest(string Reason);
 
+/// <summary>Links a character to an account (<c>POST api/admin/characters/{dbref}/link</c>).</summary>
+/// <param name="Account">The account's username.</param>
+public sealed record AdminLinkCharacterRequest(string Account);
+
 /// <summary>The server page's figures (<c>GET api/admin/server/status</c>), read in-process.</summary>
 /// <param name="Version">The SharpMUSH version number, as the <c>INFO</c> command gives it.</param>
 /// <param name="BuildId">The portal build this server serves, as <c>api/server-info</c> reports it.</param>

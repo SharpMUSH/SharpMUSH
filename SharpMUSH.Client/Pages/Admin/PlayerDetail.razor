@@ -55,7 +55,21 @@
                     <dt>@Loc["AdmCharactersDbref"]</dt>
                     <dd>#@detail.Character.DbrefNumber:@detail.Character.CreationTime</dd>
                     <dt>@Loc["AdmCharactersAccount"]</dt>
-                    <dd>@(detail.Character.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</dd>
+                    <dd>
+                        @(detail.Character.AccountName ?? Loc["AdmCharactersNoAccount"].Value)
+                        @if (detail.Character.AccountKey is null)
+                        {
+                            <AuthorizeView Policy="players.moderate" Context="linker">
+                                <div class="adm-char-link">
+                                    <MudTextField T="string" @bind-Value="_linkAccount" Label="@Loc["AdmCharacterLinkAccount"]" id="character-link-account"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
+                                    <CapsuleButton Icon="@Icons.Material.Filled.Link" Class="adm-char-link-go"
+                                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_linkAccount))"
+                                                   OnClick="LinkAsync">@Loc["AdmCharacterLink"]</CapsuleButton>
+                                </div>
+                            </AuthorizeView>
+                        }
+                    </dd>
                     <dt>@Loc["AdmCharacterCreated"]</dt>
                     <dd>@detail.Created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</dd>
                     <dt>@Loc["AdmCharactersFlags"]</dt>
@@ -119,6 +133,7 @@
     private bool _loading = true;
     private bool _busy;
     private string? _error;
+    private string? _linkAccount;
 
     private string Title => _detail?.Character.Name ?? Loc["AdmPlayerNumber", Id].Value;
 
@@ -175,6 +190,16 @@
         await RunAsync(AccountsService.UnlinkCharacterAsync(account, character.DbrefNumber),
             Loc["AdmCharacterUnlinked", character.Name, character.AccountName ?? account].Value,
             Loc["AdmUnlinkFailed"].Value);
+    }
+
+    /// <summary>Links a character that has no account to the one named in the field.</summary>
+    private async Task LinkAsync()
+    {
+        if (_detail is not { Character: { AccountKey: null } character } || string.IsNullOrWhiteSpace(_linkAccount)) return;
+        var account = _linkAccount.Trim();
+        await RunAsync(CharactersService.LinkAsync(character.DbrefNumber, character.CreationTime, account),
+            Loc["AdmCharacterLinked", character.Name, account].Value, Loc["AdmLinkFailed"].Value);
+        if (_detail is { Character.AccountKey: not null }) _linkAccount = null;
     }
 
     private async Task RunAsync(Task<ApiResult<Success>> action, string succeeded, string failed)

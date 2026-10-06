@@ -40,6 +40,10 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	/// <param name="Flags">The new character's flags, as the roster carries them.</param>
 	public sealed record CreateCharacterResponse(int DbrefNumber, long? CreationTime, string? Flags = null);
 
+	/// <param name="Name">The character's name as the game spells it, whatever case it was typed in.</param>
+	/// <param name="Flags">The character's flags, as the roster carries them.</param>
+	public sealed record ClaimCharacterResponse(int DbrefNumber, long CreationTime, string Name, string? Flags = null);
+
 	public sealed record SetupStatusResponse(bool NeedsSetup);
 
 	private sealed record LoginRequest(string UsernameOrEmail, string Password);
@@ -48,6 +52,7 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	private sealed record MushTokenRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private sealed record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
 	private sealed record CreateCharacterRequest(string Name, string Password);
+	private sealed record LinkCharacterRequest(string CharacterName, string CharacterPassword);
 	private sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private sealed record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private sealed record ChangeUsernameRequest(string NewUsername);
@@ -130,6 +135,12 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 		Client.PostApiAsync<CreateCharacterRequest, CreateCharacterResponse>(
 			"api/account/characters", new CreateCharacterRequest(name, password),
 			"The character was created but the server described nothing.");
+
+	/// <summary>Claims an existing character for this account with the character's own password.</summary>
+	public Task<ApiResult<ClaimCharacterResponse>> ClaimCharacterAsync(string name, string password) =>
+		Client.PostApiAsync<LinkCharacterRequest, ClaimCharacterResponse>(
+			"api/account/link-character", new LinkCharacterRequest(name, password),
+			"The character was linked but the server described nothing.");
 
 	public Task<ApiResult<Success>> UnlinkCharacterAsync(int dbrefNumber) =>
 		Client.DeleteApiAsync($"api/account/characters/{dbrefNumber}");

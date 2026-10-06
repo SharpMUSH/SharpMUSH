@@ -31,6 +31,7 @@ public class CommandHistoryTests : BunitContext
 	[Arguments("ch Bob hunter2")]
 	[Arguments("connect\tBob hunter2")]
 	[Arguments("CONNECT Bob hunter2")]
+	[Arguments("claim Bob hunter2")]
 	public async Task EveryConnectForm_IsKeptOut(string line)
 	{
 		await Assert.That(CommandHistory.CarriesSecret(line)).IsTrue();

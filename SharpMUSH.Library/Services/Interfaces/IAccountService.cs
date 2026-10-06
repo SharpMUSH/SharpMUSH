@@ -54,6 +54,20 @@ public interface IAccountService
 
 	ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default);
 
+	/// <summary>
+	/// Links an existing character to the account once the holder proves they own it with the
+	/// character's own password. A character with no password cannot be claimed this way, since nothing
+	/// proves who owns it; staff link those with <see cref="AttachCharacterAsync"/>. Claiming a character
+	/// the account already holds succeeds and changes nothing. Legacy PennMUSH hashes are rehashed on success.
+	/// </summary>
+	ValueTask<CharacterClaim> ClaimCharacterAsync(string accountId, string characterName, string password, CancellationToken ct = default);
+
+	/// <summary>
+	/// Links <paramref name="character"/> to the account on staff's say-so, with no password. Refused
+	/// while another account holds the character; that account has to let it go first.
+	/// </summary>
+	ValueTask<CharacterLink> AttachCharacterAsync(string accountId, SharpPlayer character, CancellationToken ct = default);
+
 	ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default);
 
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default);

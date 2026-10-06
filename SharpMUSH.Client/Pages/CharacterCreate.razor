@@ -1,4 +1,5 @@
 @page "/characters/new"
+@page "/characters/claim"
 @layout CharactersLayout
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
@@ -7,7 +8,7 @@
 @inject ICharacterUpgradeService Upgrade
 @inject NavigationManager Nav
 
-<PageTitle>@Loc["NavCreateCharacter"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@(Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"]) — @Loc["AppTitle"]</PageTitle>
 
 <div class="charcreate-page">
     <MudPaper Elevation="0" Class="charcreate-card pa-6">
@@ -20,9 +21,9 @@
             </MudAlert>
         }
 
-        <MudText Typo="Typo.h5" GutterBottom="true">@Loc["NavCreateACharacter"]</MudText>
+        <MudText Typo="Typo.h5" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
         <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
-            @Loc["NavCreateCharacterBlurb"]
+            @(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])
         </MudText>
 
         <MudTextField @bind-Value="_name" Label="@Loc["NavCharacterName"]"
@@ -37,9 +38,22 @@
 
         <div class="charcreate-actions">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy"
-                       OnClick="CreateAsync">@Loc["NavCreateCharacter"]</MudButton>
+                       OnClick="CreateAsync">@(Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"])</MudButton>
             <MudButton Variant="Variant.Text" Href="/account">@Loc["Cancel"]</MudButton>
         </div>
+
+        @* A character made at the connect screen, by staff or by an import has no account until its
+           holder claims it, and the onboarding page is where a returning player lands. *@
+        <MudText Typo="Typo.body2" Class="charcreate-switch">
+            @if (Claiming)
+            {
+                <a href="/characters/new">@Loc["NavCreateInstead"]</a>
+            }
+            else
+            {
+                <a href="/characters/claim">@Loc["NavClaimInstead"]</a>
+            }
+        </MudText>
     </MudPaper>
 </div>
 
@@ -62,12 +76,20 @@
         _onboarding = await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 };
     }
 
+    /// <summary>Switching between creating and claiming keeps the page; the other form's refusal goes.</summary>
+    protected override void OnParametersSet() => _error = null;
+
+    /// <summary>True on <c>/characters/claim</c>: the form links a character that already exists.</summary>
+    private bool Claiming => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("characters/claim", StringComparison.OrdinalIgnoreCase);
+
     private async Task CreateAsync()
     {
         _error = null;
         _busy = true;
 
-        var result = await AccountAuth.CreateCharacterAsync(_name, _password);
+        var result = Claiming
+            ? await AccountAuth.ClaimCharacterAsync(_name, _password)
+            : await AccountAuth.CreateCharacterAsync(_name, _password);
 
         _busy = false;
         if (result is not AccountAuthService.CharacterSummary character)

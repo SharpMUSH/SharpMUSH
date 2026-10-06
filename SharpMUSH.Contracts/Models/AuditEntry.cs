@@ -117,6 +117,7 @@ public static class AuditActions
 {
 	public const string AccountStatus = "account.status";
 	public const string AccountPassword = "account.password";
+	public const string CharacterLink = "character.link";
 	public const string CharacterUnlink = "character.unlink";
 	public const string PlayerCreate = "player.create";
 	public const string PlayerDestroy = "player.destroy";
@@ -148,7 +149,7 @@ public static class AuditActions
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
 	[
-		AccountStatus, AccountPassword, CharacterUnlink, PlayerCreate, PlayerDestroy, PlayerPassword, PlayerBoot,
+		AccountStatus, AccountPassword, CharacterLink, CharacterUnlink, PlayerCreate, PlayerDestroy, PlayerPassword, PlayerBoot,
 		PlayerWarn, BanAdd, BanLift, BanExpired,
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,

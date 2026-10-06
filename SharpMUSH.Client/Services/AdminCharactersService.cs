@@ -35,4 +35,8 @@ public class AdminCharactersService(IHttpClientFactory httpClientFactory)
 	/// <summary>Fires the game's <c>PLAYER`WARN</c> event for the character, with the reason.</summary>
 	public Task<ApiResult<Success>> WarnAsync(int dbrefNumber, long created, string reason) =>
 		Client.PostApiAsync($"api/admin/characters/{dbrefNumber}/warn?created={created}", new AdminWarnRequest(reason));
+
+	/// <summary>Links the character to the account named <paramref name="account"/>, without its password.</summary>
+	public Task<ApiResult<Success>> LinkAsync(int dbrefNumber, long created, string account) =>
+		Client.PostApiAsync($"api/admin/characters/{dbrefNumber}/link?created={created}", new AdminLinkCharacterRequest(account));
 }
