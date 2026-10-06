@@ -97,4 +97,23 @@ public class BuildNavCatalogTests : BunitContext
 			await Assert.That(BuildNavCatalog.GroupLabelKey(group)).IsNotNull().Because(group.ToString());
 		await Assert.That(BuildNavCatalog.All.Select(e => e.Href).Distinct().Count()).IsEqualTo(BuildNavCatalog.All.Count);
 	}
+
+	/// <summary>
+	/// The overview page's own gate: typing /admin refuses a player and a builder with only Build tools,
+	/// the same viewers no link sends there.
+	/// </summary>
+	[Test]
+	public async Task TheOverviewPolicy_AdmitsExactlyThoseTheOverviewLinkIsOfferedTo()
+	{
+		static ClaimsPrincipal User(params Claim[] claims) => new(new ClaimsIdentity(claims, "test"));
+
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User())).IsFalse();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "softcode.use"), new Claim("perm", "jobs.manage.own")))).IsFalse();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "players.view")))).IsTrue();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim(ClaimTypes.Role, "Wizard")))).IsTrue();
+
+		var gate = typeof(SharpMUSH.Client.Pages.Admin.Dashboard).GetCustomAttributes(typeof(AuthorizeAttribute), true)
+			.Cast<AuthorizeAttribute>().Single();
+		await Assert.That(gate.Policy).IsEqualTo(BuildNavCatalog.OverviewPolicy);
+	}
 }

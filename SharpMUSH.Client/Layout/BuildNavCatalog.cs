@@ -54,6 +54,23 @@ public static class BuildNavCatalog
 		IReadOnlyList<string>? Roles = null,
 		bool ExactMatch = false);
 
+	/// <summary>
+	/// The policy the overview page sits behind: the viewer may open some staff page outside Build.
+	/// Registered in <c>Program</c> from <see cref="MayOpenOverview"/>, so typing <c>/admin</c> refuses
+	/// a player exactly when no link would have taken them there.
+	/// </summary>
+	public const string OverviewPolicy = "build.overview";
+
+	/// <summary>
+	/// Whether <paramref name="user"/> may see some entry outside Build. Read from claims, the way the
+	/// portal's permission policies are (<c>PermissionAuthorizationHandler</c>), so it can back a policy.
+	/// </summary>
+	public static bool MayOpenOverview(ClaimsPrincipal user) =>
+		All.Where(e => e.Group != Group.Build).Any(e =>
+			e.Policies.Any(p => user.HasClaim(SharpMUSH.Library.Authorization.PortalPermission.ClaimType, p))
+			|| e.PermClaims?.Any(c => user.HasClaim(SharpMUSH.Library.Authorization.PortalPermission.ClaimType, c)) == true
+			|| e.Roles?.Any(user.IsInRole) == true);
+
 	/// <summary>The overview: every other staff page as a card, grouped as the sidebar groups them.</summary>
 	public static Entry Overview { get; } =
 		new("/admin", Icons.Material.Filled.SpaceDashboard, "AdmOverview", "AdmOverviewDescription", Group.Overview, [], ExactMatch: true);
