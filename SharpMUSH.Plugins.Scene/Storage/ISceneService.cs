@@ -49,9 +49,10 @@ public interface ISceneService
 
 	/// <summary>
 	/// Lists scenes by <paramref name="filter"/> (<c>active</c> | <c>recent</c> |
-	/// <c>scheduled</c> | <c>mine</c>), recent-first; <c>scheduled</c> is sorted by
-	/// <see cref="Scene.ScheduledFor"/> ascending and windowed by the optional
-	/// UTC-millis bounds. <paramref name="viewerDbref"/> scopes <c>mine</c> and
+	/// <c>scheduled</c> | <c>mine</c>), recent-first. <c>scheduled</c> is every scene waiting to run: one
+	/// with a <see cref="Scene.ScheduledFor"/> that is neither <c>active</c> nor <c>finished</c>, and every
+	/// <c>paused</c> one. It is sorted by time ascending, paused scenes with no time last, and windowed by
+	/// the optional UTC-millis bounds (a window leaves out the scenes with no time). <paramref name="viewerDbref"/> scopes <c>mine</c> and
 	/// visibility filtering.
 	/// </summary>
 	Task<IReadOnlyList<Contracts.Scene>> ListScenesAsync(string filter, string? viewerDbref = null,

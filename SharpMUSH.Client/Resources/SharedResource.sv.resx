@@ -5623,4 +5623,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Varje kategoris egen sida.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSAD</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pausa scenen</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Återuppta scenen</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Starta nu</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Ny tid (valfritt)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Tid</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>En pausad scen slutar logga och flyttas från Live till schemat tills den återupptas.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scenen pausades inte.</value>
+  </data>
 </root>

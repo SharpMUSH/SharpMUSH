@@ -5623,4 +5623,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Собствената страница на всяка категория.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>НА ПАУЗА</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Пауза на сцената</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Продължи сцената</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Започни сега</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Нов час (по желание)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Час</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Сцена на пауза спира записа и минава от „На живо“ към графика, докато не бъде продължена.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Сцената не беше поставена на пауза.</value>
+  </data>
 </root>

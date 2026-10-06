@@ -4,11 +4,13 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 @inject IAccountAuthState AccountAuth
+@inject GameCommandService Commands
 @implements IDisposable
 
 @* A scene's log in the D1 kit: the plain header (the room as kicker, the title, LIVE and the meta
    line, Watch Live and Back), the tag chips, the log in a card, and an aside with the scene's details
-   and the characters who posed in it. *@
+   and the characters who posed in it. The scene's owner, acting as its owner, can pause a running
+   scene (with a new time if it has one) and start or resume one that waits on the schedule. *@
 <div class="scene-detail-page">
     @if (_loading)
     {
@@ -43,12 +45,34 @@
                     {
                         <Pill Tag="true" Dot="var(--accent)" Class="scene-detail-live">@Loc["RolLiveBadge"]</Pill>
                     }
+                    else if (scene.IsPaused)
+                    {
+                        <Pill Tag="true" Class="scene-detail-paused">@Loc["RolPausedBadge"]</Pill>
+                    }
                     <span>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
                     <span aria-hidden="true">·</span>
                     <span>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
                 </span>
             </DescriptionContent>
             <Actions>
+                @if (ActingOwner(scene) is not null)
+                {
+                    if (scene.IsLive)
+                    {
+                        <MudTooltip Text="@Loc["RolPauseScene"]">
+                            <CapsuleButton Class="scene-detail-pause" Icon="@Icons.Material.Outlined.Pause" AriaLabel="@Loc["RolPauseScene"]"
+                                           Expanded="@_pausing" Disabled="@_busy" OnClick="@(() => _pausing = !_pausing)" />
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        var start = scene.IsPaused ? Loc["RolResumeScene"] : Loc["RolStartSceneNow"];
+                        <MudTooltip Text="@start">
+                            <CapsuleButton Class="scene-detail-resume" Icon="@Icons.Material.Outlined.PlayArrow" AriaLabel="@start"
+                                           Disabled="@_busy" OnClick="StartAsync" />
+                        </MudTooltip>
+                    }
+                }
                 @if (scene.IsLive)
                 {
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Sensors" Href="@($"/scenes/{Uri.EscapeDataString(Id)}/live")">@Loc["RolWatchLive"]</CapsuleButton>
@@ -56,6 +80,32 @@
                 <CapsuleButton Icon="@Icons.Material.Outlined.ArrowBack" Href="/scenes">@Loc["RolBackToScenes"]</CapsuleButton>
             </Actions>
         </PlainPageHeader>
+
+        @if (_pausing && scene.IsLive)
+        {
+            <KitCard Class="scene-pause" Title="@Loc["RolPauseScene"]">
+                <div class="scene-pause-form">
+                    <p class="scene-pause-hint">@Loc["RolPauseHint"]</p>
+                    <div class="scene-pause-when">
+                        <MudDatePicker @bind-Date="_resumeDate" Label="@Loc["RolPauseNewTime"]" Clearable="true"
+                                       MinDate="@DateTime.Today" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       Class="scene-pause-date" />
+                        <MudTimePicker @bind-Time="_resumeTime" Label="@Loc["RolPauseTime"]" Disabled="@(_resumeDate is null)"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-pause-time" />
+                    </div>
+                    <div class="scene-pause-buttons">
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Pause" Class="scene-pause-submit"
+                                       Disabled="@_busy" OnClick="PauseAsync">@Loc["RolPauseScene"]</CapsuleButton>
+                        <CapsuleButton OnClick="@(() => _pausing = false)">@Loc["Cancel"]</CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+
+        @if (_actionError is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="scene-action-error">@_actionError</MudAlert>
+        }
 
         <div class="scene-detail-grid">
             <div class="scene-detail-main">
@@ -92,6 +142,11 @@
                     <dl class="scene-detail-facts">
                         <dt>@Loc["NavSceneStarted"]</dt>
                         <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                        @if (!scene.IsLive && scene.ScheduledForUtc is { } due)
+                        {
+                            <dt>@Loc["NavScenesScheduled"]</dt>
+                            <dd class="scene-detail-scheduled">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                        }
                         <dt>@Loc["NavSceneLastActivity"]</dt>
                         <dd>@Loc.Format(scene.LastActivityAtUtc)</dd>
                         @if (!string.IsNullOrWhiteSpace(scene.StarterName))
@@ -245,6 +300,80 @@
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>The pause form is open.</summary>
+    private bool _pausing;
+
+    /// <summary>A pause or start is on its way to the server.</summary>
+    private bool _busy;
+
+    private DateTime? _resumeDate;
+    private TimeSpan? _resumeTime;
+
+    /// <summary>Why the last pause or start did not take, from the command's own output.</summary>
+    private string? _actionError;
+
+    /// <summary>
+    /// The objid of the character this tab acts as, when that character owns <paramref name="scene"/> and the
+    /// scene is not finished; otherwise null. The commands check ownership again, and staff, who may pause any
+    /// scene, do it in-game.
+    /// </summary>
+    private string? ActingOwner(SceneSummary scene) =>
+        !scene.IsFinished && AccountAuth.ActiveCharacter is { } acting && scene.OwnerDbref == $"#{acting.DbrefNumber}"
+            ? $"#{acting.DbrefNumber}:{acting.CreationTime}"
+            : null;
+
+    /// <summary>
+    /// The new time as epoch seconds, read in the browser's own time zone, or null when none was chosen.
+    /// FUN`SCHED_WHEN takes a bare number as epoch seconds, so no date format crosses the wire.
+    /// </summary>
+    private long? ResumeAt() => _resumeDate is { } date
+        ? new DateTimeOffset(DateTime.SpecifyKind(date.Date + (_resumeTime ?? TimeSpan.Zero), DateTimeKind.Local)).ToUnixTimeSeconds()
+        : null;
+
+    private Task PauseAsync() => RunLifecycleAsync(id => ResumeAt() is { } at
+        ? $"+scene/pause {id}={at}"
+        : $"+scene/pause {id}", "paused", Loc["RolSceneNotPaused"]);
+
+    private Task StartAsync() => RunLifecycleAsync(id => $"+scene/start {id}", "active", Loc["RolSceneNotStarted"]);
+
+    /// <summary>
+    /// Runs a +scene lifecycle verb as the owner and asks the scene's status in the same queue entry: the verb
+    /// refuses in its output, so only the status says whether it took. The scene id is the server's, never the
+    /// address's, so nothing typed into the URL reaches the command line.
+    /// </summary>
+    private async Task RunLifecycleAsync(Func<string, string> command, string expected, string fallback)
+    {
+        if (_scene is not { } scene || ActingOwner(scene) is not { } character) return;
+
+        _busy = true;
+        _actionError = null;
+        try
+        {
+            _actionError = await Commands.RunAsync(command(scene.Id), $"scene({scene.Id},status)", character) switch
+            {
+                PortalCommandResponse { Result: { } status } when status == expected => null,
+                PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : fallback,
+                ApiFailure failure => failure.Message,
+            };
+            if (_actionError is not null) return;
+
+            _pausing = false;
+            _resumeDate = null;
+            _resumeTime = null;
+            if (await SceneService.GetSceneAsync(scene.Id) is SceneSummary changed && _scene?.Id == changed.Id)
+            {
+                _scene = changed;
+            }
+
+            // The section sidebar counts live scenes, and this scene just joined or left them.
+            SceneService.ReportChanged();
+        }
+        finally
+        {
+            _busy = false;
+        }
     }
 
     private void SetTag(string tag) => _activeTag = tag == AllTags ? null : tag;

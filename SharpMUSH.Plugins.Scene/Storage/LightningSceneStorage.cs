@@ -90,6 +90,11 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	private const string IdxPlotKind = "plot";
 	private const string PoseSeqCounter = "poseseq";
 
+	// The statuses the store itself reads. Status is a free string; these are the shipped package's.
+	private const string ActiveStatus = "active";
+	private const string PausedStatus = "paused";
+	private const string FinishedStatus = "finished";
+
 	private static readonly byte[] IdxAll = Keys.Composite(IdxAllKind, "");
 	private static readonly byte[] IdxScheduled = Keys.Composite(IdxScheduledKind, "");
 
@@ -339,11 +344,22 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			switch ((filter ?? "").Trim().ToLowerInvariant())
 			{
 				case "scheduled":
+					// The schedule is every scene waiting to run: one with a time, and a paused one with or
+					// without. A running or finished scene is not waiting, whatever time it was once given. A
+					// paused scene with no time has no place in a window, so only the unwindowed list shows it,
+					// after the timed ones.
+					var windowed = fromUtcMillis is not null || toUtcMillis is not null;
 					matches = ScenesByIndex(tx, IdxScheduled)
-						.Where(s => s.ScheduledFor is not null)
-						.Where(s => fromUtcMillis is null || s.ScheduledFor >= fromUtcMillis)
-						.Where(s => toUtcMillis is null || s.ScheduledFor <= toUtcMillis)
-						.OrderBy(s => s.ScheduledFor);
+						.Concat(ScenesByIndex(tx, StatusIndexKey(PausedStatus)))
+						.DistinctBy(s => s.Id)
+						.Where(s => !string.Equals(s.Status, ActiveStatus, StringComparison.Ordinal)
+							&& !string.Equals(s.Status, FinishedStatus, StringComparison.Ordinal))
+						.Where(s => s.ScheduledFor is { } due
+							? (fromUtcMillis is null || due >= fromUtcMillis) && (toUtcMillis is null || due <= toUtcMillis)
+							: !windowed)
+						.OrderBy(s => s.ScheduledFor is null)
+						.ThenBy(s => s.ScheduledFor)
+						.ThenByDescending(s => s.LastActivityAt);
 					break;
 				case "mine":
 					if (DbrefNumber(viewerDbref) is not { } viewer)
@@ -353,10 +369,10 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 					matches = ScenesByIndex(tx, MemberIndexKey(viewer)).OrderByDescending(s => s.LastActivityAt);
 					break;
 				case "active":
-					matches = ScenesByIndex(tx, StatusIndexKey("active")).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, StatusIndexKey(ActiveStatus)).OrderByDescending(s => s.LastActivityAt);
 					break;
 				case "finished":
-					matches = ScenesByIndex(tx, StatusIndexKey("finished")).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, StatusIndexKey(FinishedStatus)).OrderByDescending(s => s.LastActivityAt);
 					break;
 				default:
 					matches = ScenesByIndex(tx, IdxAll).OrderByDescending(s => s.LastActivityAt);
@@ -375,7 +391,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			var scene = ScenesByIndex(tx, RoomIndexKey(room))
-				.Where(s => string.Equals(s.Status, "active", StringComparison.Ordinal))
+				.Where(s => string.Equals(s.Status, ActiveStatus, StringComparison.Ordinal))
 				.OrderByDescending(s => s.LastActivityAt)
 				.FirstOrDefault();
 

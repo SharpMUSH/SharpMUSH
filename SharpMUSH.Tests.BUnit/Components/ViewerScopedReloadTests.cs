@@ -34,6 +34,7 @@ public class ViewerScopedReloadTests : TrackingBunitContext
 		IHttpClientFactory factory;
 		(_api, factory, _) = CharactersApiFake.Install(this);
 		Services.AddSingleton(sp => new WikiService(factory, NullLogger<WikiService>.Instance));
+		Services.AddSingleton(sp => new GameCommandService(factory));
 		_api.Extra["/api/wiki/recent?count=10"] = "[]";
 		_api.Extra[SceneJson.Active] = SceneJson.List(SceneJson.Scene("S1", "Salt Market at Dusk"));
 	}

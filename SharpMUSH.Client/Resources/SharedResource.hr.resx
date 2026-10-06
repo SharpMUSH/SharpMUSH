@@ -5623,4 +5623,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Vlastita stranica svake kategorije.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUZIRANO</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pauziraj scenu</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Nastavi scenu</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Započni sada</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Novo vrijeme (neobavezno)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Vrijeme</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Pauzirana scena prestaje bilježiti i prelazi iz prijenosa uživo u raspored dok se ne nastavi.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scena nije pauzirana.</value>
+  </data>
 </root>

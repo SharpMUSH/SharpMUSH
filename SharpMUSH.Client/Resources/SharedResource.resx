@@ -5774,4 +5774,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Each category's own page.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSED</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pause scene</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Resume scene</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Start now</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>New time (optional)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>A paused scene stops recording and moves from Live to the schedule until it is resumed.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>The scene was not paused.</value>
+  </data>
 </root>

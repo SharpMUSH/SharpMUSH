@@ -5623,4 +5623,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Minden kategória saját oldala.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>SZÜNETEL</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Jelenet szüneteltetése</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Jelenet folytatása</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Indítás most</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Új időpont (nem kötelező)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Időpont</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>A szüneteltetett jelenet nem rögzít, és az Élő listából a menetrendbe kerül, amíg folytatják.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>A jelenet nem lett szüneteltetve.</value>
+  </data>
 </root>

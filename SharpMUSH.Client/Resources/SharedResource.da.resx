@@ -5623,4 +5623,28 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Hver kategoris egen side.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSET</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Sæt scene på pause</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Genoptag scene</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Start nu</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Nyt tidspunkt (valgfrit)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Klokkeslæt</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>En scene på pause stopper optagelsen og flytter fra Live til planen, indtil den genoptages.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scenen blev ikke sat på pause.</value>
+  </data>
 </root>
