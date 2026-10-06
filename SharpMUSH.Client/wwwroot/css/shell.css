@@ -1080,13 +1080,6 @@ pre.ms-preformatted {
 }
 
 /* ── Hero mode (home page) ── */
-/* The page's lead image is the hero's banner. Images are display:block, so text-align can't
-   center them; auto margins do. */
-.WikiContent--hero .mud-card-content > p:first-child .wiki-img {
-    margin-left: auto;
-    margin-right: auto;
-}
-
 /* ── Centred blocks (`::: center`) ── */
 /* The author's way to centre part of a page; the terminal renderer centres the same block.
    Images and tables center by their margins; lists shrink-wrap and center as a unit, keeping

@@ -23,7 +23,7 @@ public static partial class WikiImages
 	[GeneratedRegex(@"^\s*</p>", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
 	private static partial Regex ClosingParagraphAfter();
 
-	[GeneratedRegex(@"^\s*(<p>\s*)?$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	[GeneratedRegex(@"^\s*(<div class=""center"">\s*)?(<p>\s*)?$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
 	private static partial Regex NothingBefore();
 
 	/// <summary>The URL of the first <c>&lt;img&gt;</c> in rendered HTML, entity-decoded, or null.</summary>
@@ -38,7 +38,7 @@ public static partial class WikiImages
 
 	/// <summary>
 	/// The URL of the page's lead image — its first <c>&lt;img&gt;</c> when nothing but whitespace and the
-	/// opening of its paragraph comes before it — entity-decoded, or null when the page opens with text.
+	/// opening of its paragraph comes before it, inside a <c>::: center</c> block or not — entity-decoded, or null when the page opens with text.
 	/// </summary>
 	public static string? LeadImageUrl(string? html)
 	{

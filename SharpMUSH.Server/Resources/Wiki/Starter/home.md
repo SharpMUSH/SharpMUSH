@@ -1,6 +1,6 @@
+::: center
 ![SharpMUSH logo](/assets/Logo.svg){width=20%}
 
-::: center
 # Welcome
 
 > **Fill in:** One or two sentences a stranger could read on a MUSH listing site:
