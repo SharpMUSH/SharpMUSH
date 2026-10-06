@@ -4212,7 +4212,7 @@
     <comment>MT — formal вы, lower case per locale sheet.</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Защитить</value>
+    <value>Запретить правку</value>
     <comment>MT — imperative button label.</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Снять защиту</value>
+    <value>Разрешить правку</value>
     <comment>MT — imperative button label.</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Удалить {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Только администраторы вики смогут редактировать или удалять выбранные страницы. Кто может их читать, не меняется.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Снимает собственные правила редактирования и удаления выбранных страниц, и снова действуют правила их пространства имён и категорий.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Пространство имён</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Страница</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Статьи игры.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Справочные страницы для игроков.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Биографии персонажей.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Страницы для персонала.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Собственная страница каждой категории.</value>
   </data>
 </root>

@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Védelem</value>
+    <value>Szerkesztés zárolása</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Védelem feloldása</value>
+    <value>Szerkesztés feloldása</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>{0} eltávolítása</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>A kijelölt oldalakat csak a wiki adminisztrátorai szerkeszthetik vagy törölhetik. Az, hogy ki olvashatja őket, nem változik.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Törli a kijelölt oldalak saját szerkesztési és törlési szabályait, így ismét a névtér és a kategóriák szabályai döntenek.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Névtér</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategória</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Oldal</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>A játék cikkei.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Súgóoldalak a játékosoknak.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Karakterek életrajzai.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Oldalak a stábnak.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Minden kategória saját oldala.</value>
   </data>
 </root>

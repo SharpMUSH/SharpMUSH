@@ -81,7 +81,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		cut.Find("button.wiki-req-edit").Click();
 		// The pickers are read, create, edit and delete, in that order.
 		var pickers = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>();
 		await cut.InvokeAsync(() => pickers[2].Instance.ValueChanged.InvokeAsync(new("media.admin", "Image Library · Manage", "")));
@@ -108,7 +108,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		cut.Find("button.wiki-req-edit").Click();
 		var read = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>()[0].Instance;
 		cut.WaitForAssertion(() =>
 		{
@@ -131,7 +131,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		cut.Find("button.wiki-req-edit").Click();
 		cut.Find(".wiki-req-chip button[aria-label$='lore.read']").Click();
 		cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).Click();
 		cut.WaitForAssertion(() =>
@@ -150,8 +150,24 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Editable, true));
 
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		cut.Find("button.wiki-req-edit").Click();
 		await Assert.That(cut.Find(".wiki-req-actions a.wiki-req-define").GetAttribute("href")).IsEqualTo("/admin/roles?tab=permissions");
+	}
+
+	/// <summary>Each target is a block of its own: what it is, its name, what it holds, and a labelled edit button.</summary>
+	[Test]
+	public async Task ATargetIsABlockWithItsNameAndPurpose()
+	{
+		var cut = Render<WikiRequirementsEditor>(p => p
+			.Add(x => x.Scope, "namespace").Add(x => x.Key, "help").Add(x => x.Editable, true)
+			.Add(x => x.Kicker, "Namespace").Add(x => x.Heading, "Help").Add(x => x.Sub, "Help pages for players."));
+
+		var block = cut.Find("section.wiki-req");
+		await Assert.That(block.QuerySelector(".wiki-req-kicker")!.TextContent).IsEqualTo("Namespace");
+		await Assert.That(block.QuerySelector("h3.wiki-req-title")!.TextContent).IsEqualTo("Help");
+		await Assert.That(block.QuerySelector(".wiki-req-sub")!.TextContent).IsEqualTo("Help pages for players.");
+		await Assert.That(block.QuerySelector("button.wiki-req-edit")!.GetAttribute("aria-label")).IsEqualTo("Change");
+		await Assert.That(block.QuerySelector(".wiki-req-none")).IsNotNull();
 	}
 
 	[Test]

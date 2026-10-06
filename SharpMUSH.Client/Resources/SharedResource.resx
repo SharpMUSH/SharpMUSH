@@ -1016,10 +1016,10 @@
     <value>Revision</value>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Protect</value>
+    <value>Lock editing</value>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Unprotect</value>
+    <value>Unlock editing</value>
   </data>
   <data name="WikiDelete" xml:space="preserve">
     <value>Delete</value>
@@ -5605,5 +5605,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Remove {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Only wiki admins can edit or delete the selected pages. Who can read them does not change.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Clears the selected pages' own edit and delete rules, so their namespace and category rules decide again.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>The game's articles.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Help pages for players.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Character biographies.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Pages kept for staff.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Each category's own page.</value>
   </data>
 </root>

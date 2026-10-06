@@ -6,16 +6,38 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-@* What one namespace, category or page requires for each action, and, for a wiki.admin holder, a form that
-   changes it. Every permission listed for an action is required; the server checks the names. *@
-<div class="wiki-req">
-    @if (Heading is not null)
+@* One block per namespace, category or page: what it requires for each action, and, for a wiki.admin holder,
+   a form that changes it. Every permission listed for an action is required; the server checks the names. *@
+<section class="wiki-req@(_editing ? " wiki-req--editing" : "")">
+    @if (Heading is not null || (Editable && !_editing))
     {
-        <SectionLabel>@Heading</SectionLabel>
+        <header class="wiki-req-head">
+            <div class="wiki-req-titles">
+                @if (Kicker is not null)
+                {
+                    <span class="wiki-req-kicker">@Kicker</span>
+                }
+                @if (Heading is not null)
+                {
+                    <h3 class="wiki-req-title">@Heading</h3>
+                }
+                @if (Sub is not null)
+                {
+                    <p class="wiki-req-sub">@Sub</p>
+                }
+            </div>
+            @if (Editable && !_editing)
+            {
+                <MudTooltip Text="@Loc["WikiRequirementsChange"]">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Class="wiki-req-edit"
+                                   aria-label="@Loc["WikiRequirementsChange"]" OnClick="StartEditing" />
+                </MudTooltip>
+            }
+        </header>
     }
     @if (_editing)
     {
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WikiRequirementsHelp"]</MudText>
+        <p class="wiki-req-help">@Loc["WikiRequirementsHelp"]</p>
         @foreach (var action in Actions)
         {
             var name = action;
@@ -68,33 +90,26 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving" OnClick="SaveAsync">@Loc["Save"]</MudButton>
         </div>
     }
+    else if (Set is null || Set.Required.Values.All(scopes => scopes.Count == 0))
+    {
+        <p class="wiki-req-none">@Loc["WikiRequirementsNone"]</p>
+    }
     else
     {
-        @if (Set is null || Set.Required.Count == 0)
-        {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiRequirementsNone"]</MudText>
-        }
-        else
-        {
-            <dl class="wiki-req-list">
-                @foreach (var (action, scopes) in Set.Required)
-                {
-                    <dt>@Loc[ActionLabelKey(action)]</dt>
-                    <dd>
-                        @foreach (var scope in scopes)
-                        {
-                            <Pill Tag="true">@scope</Pill>
-                        }
-                    </dd>
-                }
-            </dl>
-        }
-        @if (Editable)
-        {
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="StartEditing">@Loc["WikiRequirementsChange"]</MudButton>
-        }
+        <dl class="wiki-req-list">
+            @foreach (var (action, scopes) in Set.Required.Where(r => r.Value.Count > 0))
+            {
+                <dt>@Loc[ActionLabelKey(action)]</dt>
+                <dd>
+                    @foreach (var scope in scopes)
+                    {
+                        <Pill Tag="true">@scope</Pill>
+                    }
+                </dd>
+            }
+        </dl>
     }
-</div>
+</section>
 
 @code {
     private static readonly string[] Actions = ["read", "create", "edit", "delete"];
@@ -108,8 +123,14 @@
     /// <summary>What the target requires now; null for nothing.</summary>
     [Parameter] public WikiRequirementSetDto? Set { get; set; }
 
-    /// <summary>A label above the list; null for none.</summary>
+    /// <summary>The block's title; null for none.</summary>
     [Parameter] public string? Heading { get; set; }
+
+    /// <summary>A small label above the title, naming what kind of thing it is; null for none.</summary>
+    [Parameter] public string? Kicker { get; set; }
+
+    /// <summary>A line under the title saying what the target holds; null for none.</summary>
+    [Parameter] public string? Sub { get; set; }
 
     /// <summary>True for a wiki.admin holder, who may change it.</summary>
     [Parameter] public bool Editable { get; set; }

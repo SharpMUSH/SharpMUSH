@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Beveiligen</value>
+    <value>Bewerken vergrendelen</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Beveiliging opheffen</value>
+    <value>Bewerken ontgrendelen</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>{0} verwijderen</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Alleen wikibeheerders kunnen de geselecteerde pagina's bewerken of verwijderen. Wie ze kan lezen, verandert niet.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Verwijdert de eigen bewerk- en verwijderregels van de geselecteerde pagina's, zodat de regels van hun naamruimte en categorieën weer gelden.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Naamruimte</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Pagina</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>De artikelen van het spel.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Helppagina's voor spelers.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biografieën van personages.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Pagina's voor het team.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>De eigen pagina van elke categorie.</value>
   </data>
 </root>

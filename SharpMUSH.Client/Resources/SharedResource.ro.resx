@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Protejare</value>
+    <value>Blochează editarea</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Anulare protecție</value>
+    <value>Deblochează editarea</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Elimină {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Doar administratorii wikiului pot edita sau șterge paginile selectate. Cine le poate citi nu se schimbă.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Șterge regulile proprii de editare și ștergere ale paginilor selectate, astfel încât decid din nou regulile spațiului de nume și ale categoriilor.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Spațiu de nume</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Pagină</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Articolele jocului.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Pagini de ajutor pentru jucători.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biografiile personajelor.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Pagini pentru echipă.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Pagina proprie a fiecărei categorii.</value>
   </data>
 </root>

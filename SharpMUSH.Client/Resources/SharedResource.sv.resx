@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Skydda</value>
+    <value>Lås redigering</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Ta bort skydd</value>
+    <value>Lås upp redigering</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Ta bort {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Bara wikiadministratörer kan redigera eller ta bort de markerade sidorna. Vem som kan läsa dem ändras inte.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Tar bort de markerade sidornas egna regler för redigering och borttagning, så att namnrymdens och kategoriernas regler gäller igen.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Namnrymd</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Sida</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Spelets artiklar.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Hjälpsidor för spelare.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Karaktärsbiografier.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Sidor för personalen.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Varje kategoris egen sida.</value>
   </data>
 </root>

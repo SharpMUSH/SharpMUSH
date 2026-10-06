@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Zaštiti</value>
+    <value>Zaključaj uređivanje</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Ukloni zaštitu</value>
+    <value>Otključaj uređivanje</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Ukloni {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Samo administratori wikija mogu uređivati ili brisati odabrane stranice. Tko ih može čitati, ne mijenja se.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Uklanja vlastita pravila uređivanja i brisanja odabranih stranica, pa ponovno odlučuju pravila njihova imenskog prostora i kategorija.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Imenski prostor</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategorija</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Stranica</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Članci igre.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Stranice pomoći za igrače.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Životopisi likova.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Stranice za osoblje.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Vlastita stranica svake kategorije.</value>
   </data>
 </root>

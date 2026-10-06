@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Beskytt</value>
+    <value>Lås redigering</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Opphev beskyttelse</value>
+    <value>Lås opp redigering</value>
     <comment>MT — ~2x the English label; Norwegian has no single verb for 'unprotect'.</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Fjern {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Bare wiki-administratorer kan redigere eller slette de valgte sidene. Hvem som kan lese dem, endres ikke.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Fjerner de valgte sidenes egne regler for redigering og sletting, så navnerommets og kategorienes regler avgjør igjen.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Navnerom</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Side</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Spillets artikler.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Hjelpesider for spillere.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Karakterbiografier.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Sider for staben.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Hver kategoris egen side.</value>
   </data>
 </root>

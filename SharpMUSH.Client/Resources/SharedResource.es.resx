@@ -4212,7 +4212,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Proteger</value>
+    <value>Bloquear edición</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Desproteger</value>
+    <value>Desbloquear edición</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Quitar {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Solo los administradores de la wiki pueden editar o eliminar las páginas seleccionadas. Quién puede leerlas no cambia.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Quita las reglas propias de edición y eliminación de las páginas seleccionadas, para que vuelvan a decidir las de su espacio de nombres y sus categorías.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Espacio de nombres</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Página</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Los artículos del juego.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Páginas de ayuda para los jugadores.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biografías de personajes.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Páginas para el equipo.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>La página propia de cada categoría.</value>
   </data>
 </root>

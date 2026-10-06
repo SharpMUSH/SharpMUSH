@@ -4212,7 +4212,7 @@
     <comment>MT — polite Вие-form</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Защити</value>
+    <value>Заключи редактирането</value>
     <comment>MT — plain imperative, button</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4236,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Премахни защитата</value>
+    <value>Отключи редактирането</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -5604,5 +5604,35 @@
   </data>
   <data name="WikiRequirementsRemove" xml:space="preserve">
     <value>Премахване на {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Само администраторите на уикито могат да редактират или изтриват избраните страници. Кой може да ги чете, не се променя.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Изчиства собствените правила за редактиране и изтриване на избраните страници, така че отново решават правилата на пространството от имена и категорията.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Пространство от имена</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Страница</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Статиите на играта.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Помощни страници за играчите.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Биографии на персонажи.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Страници за екипа.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Собствената страница на всяка категория.</value>
   </data>
 </root>
