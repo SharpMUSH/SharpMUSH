@@ -658,7 +658,7 @@ public partial class Commands
 	private async ValueTask LookAfterLoginAsync(IMUSHCodeParser parser, long handle, SharpPlayer player)
 	{
 		using var budget = ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime,
-			ExecutionBudget.CurrentToken);
+			ExecutionBudget.Current?.CancelledBy ?? CancellationToken.None);
 		using (budget.Enter())
 		{
 			try
