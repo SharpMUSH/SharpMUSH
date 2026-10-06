@@ -76,6 +76,47 @@ public static class AttributeAncestry
 	}
 
 	/// <summary>
+	/// The targets PennMUSH's single-attribute reads visit, in order: the loop shared by
+	/// <c>atr_get_with_parent</c> (<c>src/attrib.c:1218-1270</c>) and <c>can_read_attr_internal</c>
+	/// (<c>:318-353</c>). <paramref name="origin"/>, then <c>Parent()</c> repeatedly; when the chain ends,
+	/// <paramref name="ancestor"/> and its own parents. Each leg holds at most
+	/// <paramref name="maxParents"/> objects counting the one it starts on, and a chain that long never
+	/// reaches the ancestor. An ancestor met in the explicit chain is not visited again
+	/// (<c>if (target == ancestor) ancestor = NOTHING</c>).
+	/// </summary>
+	/// <param name="origin">The object the lookup was made against.</param>
+	/// <param name="ancestor">Its type ancestor, or null when it has none (ORPHAN, disabled, missing).</param>
+	/// <param name="maxParents"><c>MAX_PARENTS</c>.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	public static async ValueTask<DBRef[]> TargetsAsync(
+		SharpObject origin, SharpObject? ancestor, int maxParents, CancellationToken cancellationToken = default)
+	{
+		var targets = new List<DBRef>();
+		var pendingAncestor = ancestor;
+		var target = origin;
+		var depth = 0;
+
+		while (depth < maxParents && target is not null)
+		{
+			if (pendingAncestor is not null && pendingAncestor.DBRef.Number == target.DBRef.Number)
+			{
+				pendingAncestor = null;
+			}
+
+			targets.Add(target.DBRef);
+			depth++;
+			target = await target.Parent.WithCancellation(cancellationToken) is AnySharpObject parent ? parent.Object() : null;
+			if (target is null)
+			{
+				depth = 0;
+				target = pendingAncestor;
+			}
+		}
+
+		return [.. targets];
+	}
+
+	/// <summary>
 	/// PennMUSH's <c>atr_iter_get_parent</c> (<c>src/attrib.c:1500-1622</c>): every attribute
 	/// matching a pattern on <paramref name="originRef"/>, then on each <c>@parent</c> outward,
 	/// each match paired with the object it was read from.

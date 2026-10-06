@@ -97,12 +97,15 @@ public class AttributeResultCoverageTests
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "AttrResult");
 		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
 		var god = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
-		if (kind == "pfun") await mediator.Send(new SetObjectParentCommand(actor, god));
+		// fun_pfun (funufun.c:244-292) takes a bare attribute name and reads it from the parent.
+		var parentId = kind == "pfun" ? await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "AttrResultParent") : id;
+		var bodyHolder = (await mediator.Send(new GetObjectNodeQuery(parentId))).Expect<AnySharpObject>();
+		if (kind == "pfun") await mediator.Send(new SetObjectParentCommand(actor, bodyHolder));
 		if (kind == "zfun") await mediator.Send(new SetObjectZoneCommand(actor, god));
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "ok" };
 		var selector = kind.EndsWith("-selector", StringComparison.Ordinal);
 		if (selector && mode == "success") value = $"{id}/TARGET";
-		await attributes.SetAttributeAsync(actor, actor, "BODY", MarkupText.Plain(value));
+		await attributes.SetAttributeAsync(bodyHolder, bodyHolder, "BODY", MarkupText.Plain(value));
 		await attributes.SetAttributeAsync(actor, actor, "TARGET", MarkupText.Plain("selected"));
 		var call = $"ufun({id}/BODY)";
 		var expression = kind switch
@@ -122,6 +125,7 @@ public class AttributeResultCoverageTests
 			"regedit-pattern" => $"regedit(x,{call},unused)",
 			_ when kind.EndsWith("-fallback", StringComparison.Ordinal) => $"{kind.Replace("-fallback", "")}({id}/MISSING,{call})",
 			_ when kind.StartsWith("regedit", StringComparison.Ordinal) => $"{kind}(x,x,{call})",
+			"pfun" => "pfun(BODY)",
 			_ => $"{kind}({id}/BODY)"
 		};
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(id));

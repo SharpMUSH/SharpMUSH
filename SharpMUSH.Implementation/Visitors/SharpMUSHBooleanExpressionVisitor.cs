@@ -328,7 +328,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			if (attrResult is not SharpAttribute[] { Length: > 0 } attributes)
 				return false;
 
-			var listValue = attributes.First().Value.ToPlainText();
+			var listValue = attributes.Last().Value.ToPlainText();
 			var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			var unlockerDbRef = unlockerObj.Object().DBRef;
 
@@ -385,7 +385,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				if (attrResult is not SharpAttribute[] { Length: > 0 } attributes)
 					return false;
 
-				var actual = attributes.First().Value.ToPlainText();
+				var actual = attributes.Last().Value.ToPlainText();
 
 				return SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(pattern), actual);
 			}
@@ -494,7 +494,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			if (attrResult is not SharpAttribute[] { Length: > 0 } attributes)
 				return false;
 
-			var actualValue = attributes.First().Value.ToPlainText();
+			var actualValue = attributes.Last().Value.ToPlainText();
 
 			if (expectedValue.StartsWith('>'))
 			{

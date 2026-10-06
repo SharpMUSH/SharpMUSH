@@ -452,11 +452,15 @@ public class PermissionService(
 		// PennMUSH controls() (predicat.c:416) reads the control lock raw and skips it when unset, rather
 		// than evaluating it: an unset lock passes everybody, so evaluating it here would grant control of
 		// every object without an explicit control lock to everyone. Only a lock that was actually set,
-		// and that `who` passes, grants control.
-		var controlLock = await lockService.LookupAsync(target, nameof(LockType.Control), token);
-
-		return controlLock is ResolvedLock resolved && await lockService.Evaluate(resolved.Data.LockString, target, who);
+		// and that `who` passes, grants control. It is getlock_noparent: the target's own lock, never one
+		// inherited from a parent or the type ancestor, even one set !no_inherit.
+		return target.Object().Locks.TryGetValue(LockNames.Canonical(nameof(LockType.Control)), out var controlLock)
+			&& await lockService.Evaluate(controlLock.LockString, target, who);
 	}
+
+	public async ValueTask<bool> PassesSetLock(AnySharpObject who, AnySharpObject target, LockType lockType)
+		=> await lockService.LookupAsync(target, lockType.ToString(), ExecutionBudget.CurrentToken) is ResolvedLock resolved
+			&& await lockService.Evaluate(resolved.Data.LockString, target, who);
 
 	public async ValueTask<bool> CanLinkToAsync(AnySharpObject executor, AnySharpObject destination)
 		=> (options.CurrentValue.Command.LinkToObject || destination.IsRoom)

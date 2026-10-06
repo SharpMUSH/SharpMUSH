@@ -19,8 +19,7 @@ namespace SharpMUSH.Tests.Services;
 /// <c>IAttributeService.GetAttributePatternAsync</c> with <c>checkParents: true</c> - the path
 /// <c>lattr()</c>-style callers use) used to walk that chain with an unconditional <c>while
 /// (true)</c>, so a cycle there hung the read forever. <see cref="GetCommandAttributesQueryHandler"/>
-/// and <see cref="GetAncestorCommandAttributesQueryHandler"/> had the identical unbounded walk for
-/// $-command inheritance.
+/// had the identical unbounded walk for $-command inheritance.
 /// </summary>
 /// <remarks>
 /// The cycle is built by sending <see cref="SetObjectParentCommand"/> directly in both directions -

@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -372,6 +373,15 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			}
 
+			// @function never checked the attribute was there (function.c:1687-1692); the call does, with
+			// atr_get, so a parent's or the ancestor's copy serves (parse.c:3048-3059).
+			if (await services.AttributeService.GetAttributeAsync(targetObject, targetObject, attributeName,
+					IAttributeService.AttributeMode.Read, parent: true) is None)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.UserFunctionMissingAttribute,
+					name.ToUpperInvariant(), $"#{targetObject.Object().DBRef.Number}", attributeName));
+			}
+
 			// The arguments pushed for this call become %0, %1, … inside the attribute.
 			var args = invokedParser.CurrentState.Arguments
 				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
@@ -387,7 +397,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				targetObject,
 				attributeName,
 				args,
-				evalParent: false);
+				evalParent: true);
 
 			return result;
 		});

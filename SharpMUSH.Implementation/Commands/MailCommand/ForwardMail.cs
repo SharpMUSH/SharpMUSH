@@ -171,7 +171,7 @@ public static class ForwardMail
 		// extmail.c:1292 — do_mail_fwd sends with silent=1, so no "You sent your message to" line per
 		// recipient, and its count is of attempts: a refused forward still counts.
 		return await MailDelivery.SendAsync(parser, delivery, executor, player,
-			new MailDelivery.Letter(subject, mail.Content, MarkupText.Empty, Urgent: false, Forwarded: true),
+			new MailDelivery.Letter(subject, mail.Content, Signed: false, Urgent: false, Forwarded: true),
 			silent: true);
 	}
 }

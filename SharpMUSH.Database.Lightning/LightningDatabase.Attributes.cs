@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DotNext.Threading;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -177,14 +178,14 @@ public partial class LightningDatabase
 	}
 
 	public IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
-		bool checkParent = true, CancellationToken cancellationToken = default)
+		bool checkParent = true, InheritanceWalk? walk = null, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<AttributeWithInheritance>(ct =>
-			GetAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, ct));
+			GetAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, walk ?? InheritanceWalk.ParentsOnly, ct));
 
 	private async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
-		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
+		bool checkParent, InheritanceWalk walk, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent) is { } hit
+		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit,
 				(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName)),
 				static a => a.Flags,
@@ -199,15 +200,15 @@ public partial class LightningDatabase
 	}
 
 	public IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
-		bool checkParent = true, CancellationToken cancellationToken = default)
+		bool checkParent = true, InheritanceWalk? walk = null, CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<LazyAttributeWithInheritance>(ct =>
-			GetLazyAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, ct));
+			GetLazyAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, walk ?? InheritanceWalk.ParentsOnly, ct));
 
 	/// <inheritdoc cref="GetAttributeWithInheritanceCoreAsync"/>
 	private async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
-		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
+		bool checkParent, InheritanceWalk walk, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent) is { } hit
+		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit, (readTx, owner, longName, meta) => HydrateLazyAttribute(readTx, owner, longName, meta),
 				static a => a.Flags,
 				static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags))
@@ -562,39 +563,58 @@ public partial class LightningDatabase
 
 	#region Attribute helpers
 
-	/// <summary>
-	/// loop counter.
-	/// </summary>
-	private const int InheritanceHopLimit = 100;
-
 	/// <summary>The candidate the inheritance walk settled on: the object it resolved against, that
 	/// object's root..leaf path as metadata (values not yet read), and how it was reached.</summary>
 	private sealed record InheritanceHit(long Owner, IReadOnlyList<(string LongName, AttrMetaRecord Meta)> Path, AttributeSource Source);
 
 	/// <summary>
-	/// The inheritance walk, inside a single snapshot and on metadata alone: the object itself, then its
-	/// parent chain, then the zone chain of every member of <c>[self, parent, grandparent, …]</c> in that
-	/// order (PennMUSH <c>atr_get_with_parent</c>). The object's own complete hit wins outright; otherwise
-	/// each candidate is tested in order, where <c>no_inherit</c> anywhere on the candidate's existing prefix
-	/// aborts the whole walk (<c>attrib.c:1232-1252</c> returns NULL rather than falling through to a more
-	/// distant ancestor) and only a prefix reaching the requested length is a match. A candidate with no
-	/// prefix at all is passed over.
+	/// PennMUSH's <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>), inside a single snapshot and
+	/// on metadata alone: <see cref="WalkInheritance"/> under the name as given, then, when that found
+	/// nothing anywhere, once more under the standard attribute the name means (<c>atr_match</c>, see
+	/// <see cref="AttributeNameMatch"/>). A <c>no_inherit</c> barrier ends the lookup before the retry
+	/// (<c>return NULL</c>, <c>attrib.c:1240-1252</c>). With <paramref name="checkParent"/> false this is
+	/// <c>atr_get_noparent</c> (<c>attrib.c:1293-1314</c>): the object alone, under the name and then its
+	/// match. No value is read here; <see cref="BuildInheritanceHit{T,TResult}"/> hydrates the winner alone.
+	/// </summary>
+	private InheritanceHit? ResolveInheritance(ITx tx, long dbref, string[] path, bool checkParent, InheritanceWalk walk)
+	{
+		var hit = WalkInheritance(tx, dbref, path, checkParent, walk, out var barrier);
+		if (hit is not null || barrier)
+		{
+			return hit;
+		}
+
+		var name = string.Join('`', path);
+		var match = AttributeNameMatch.Match(name,
+			candidate => ReadAttributeEntryRecord(tx, candidate)?.DefaultFlags,
+			prefix => tx.Range(Tables.AttrEntry, Keys.Upper(prefix))
+				.Select(entry => Codec.Deserialize<AttributeEntryRecord>(entry.Value).Name));
+
+		return match is null || match.Equals(name, StringComparison.OrdinalIgnoreCase)
+			? null
+			: WalkInheritance(tx, dbref, match.Split('`'), checkParent, walk, out _);
+	}
+
+	/// <summary>
+	/// One pass of <c>atr_get_with_parent</c>'s target loop (<c>attrib.c:1218-1270</c>). The object, then
+	/// <c>Parent()</c> repeatedly; when the chain ends, the type ancestor and its own parents. Each leg
+	/// visits at most <see cref="InheritanceWalk.MaxParents"/> objects counting where it starts, so a chain
+	/// that long never reaches the ancestor (the loop ends with <c>target</c> still good). An ancestor met
+	/// in the explicit chain is used there and not visited again (<c>attrib.c:1226</c>).
 	/// <para>
-	/// The walk stops at the first decisive candidate, so a hit on the nearest parent reads nothing from
-	/// further parents or from any zone, and zone chains are not even followed until the parent chain is
-	/// exhausted. An object reached a second time (a zone shared by several members, a parent that is
-	/// also a zone) is not read again: its first visit was not decisive, and inside one snapshot it would
-	/// answer the same way, so skipping it keeps the precedence order and the outcome. The object itself
-	/// is not in that set — reached again as somebody's zone, it is an inherited candidate like any other.
-	/// No value is read here; <see cref="BuildInheritanceHit{T,TResult}"/> hydrates the winner alone.
+	/// On every target but the object, <c>no_inherit</c> on any existing prefix of the path — or the leaf
+	/// — is a barrier: the lookup ends with nothing (<paramref name="barrier"/> set). A target holding only
+	/// part of the path is passed over (<c>goto continue_target</c>).
 	/// </para>
 	/// </summary>
-	private InheritanceHit? ResolveInheritance(ITx tx, long dbref, string[] path, bool checkParent)
+	private InheritanceHit? WalkInheritance(ITx tx, long obj, string[] path, bool checkParent, InheritanceWalk walk,
+		out bool barrier)
 	{
-		var self = ReadPathPrefixes(tx, dbref, path);
+		barrier = false;
+		var self = ReadPathPrefixes(tx, obj, path);
 		if (self.Count == path.Length)
 		{
-			return new InheritanceHit(dbref, self, AttributeSource.Self);
+			return new InheritanceHit(obj, self, AttributeSource.Self);
 		}
 
 		if (!checkParent)
@@ -602,55 +622,44 @@ public partial class LightningDatabase
 			return null;
 		}
 
-		var decided = new HashSet<long>();
-		InheritanceHit? hit = null;
-
-		// True when the candidate settles the walk: a match (hit set) or a no_inherit barrier (hit null).
-		bool Decides(long owner, AttributeSource source)
+		// An object that is its own type ancestor does not visit itself twice (attrib.c:1226).
+		var ancestor = walk.Ancestor is { } given && given.Number != obj ? (long?)given.Number : null;
+		var source = AttributeSource.Parent;
+		var depth = 1;
+		var target = GetSingleEdge(tx, Tables.Parent.Forward, obj);
+		if (target is null)
 		{
-			if (!decided.Add(owner))
-			{
-				return false;
-			}
-
-			var prefixes = ReadPathPrefixes(tx, owner, path);
-			if (prefixes.Count == 0)
-			{
-				return false;
-			}
-
-			if (prefixes.Any(entry => IsNoInheritMeta(tx, entry.Meta)))
-			{
-				return true;
-			}
-
-			if (prefixes.Count != path.Length)
-			{
-				return false;
-			}
-
-			hit = new InheritanceHit(owner, prefixes, source);
-			return true;
+			depth = 0;
+			target = ancestor;
+			source = AttributeSource.Ancestor;
 		}
 
-		var chain = EdgeChain(tx, Tables.Parent.Forward, dbref);
-
-		foreach (var parent in chain.Skip(1))
+		while (depth < walk.MaxParents && target is { } current)
 		{
-			if (Decides(parent, AttributeSource.Parent))
+			if (current == ancestor)
 			{
-				return hit;
+				ancestor = null;
 			}
-		}
 
-		foreach (var member in chain)
-		{
-			foreach (var zone in EdgeChain(tx, Tables.Zone.Forward, member).Skip(1))
+			var prefixes = current == obj ? self : ReadPathPrefixes(tx, current, path);
+			if (current != obj && prefixes.Any(entry => IsNoInheritMeta(tx, entry.Meta)))
 			{
-				if (Decides(zone, AttributeSource.Zone))
-				{
-					return hit;
-				}
+				barrier = true;
+				return null;
+			}
+
+			if (prefixes.Count == path.Length)
+			{
+				return new InheritanceHit(current, prefixes, current == obj ? AttributeSource.Self : source);
+			}
+
+			depth++;
+			target = GetSingleEdge(tx, Tables.Parent.Forward, current);
+			if (target is null)
+			{
+				depth = 0;
+				target = ancestor;
+				source = AttributeSource.Ancestor;
 			}
 		}
 
@@ -685,31 +694,6 @@ public partial class LightningDatabase
 		var definitions = AttributeFlagDefinitions(tx);
 		return meta.Flags.Any(name => definitions.ByName(name) is { } record
 			&& record.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase));
-	}
-
-	/// <summary>
-	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
-	/// A visited set and <see cref="InheritanceHopLimit"/> both bound it, so a parent (or zone) cycle
-	/// path uniqueness and its <c>1..100</c> depth.
-	/// </summary>
-	private static List<long> EdgeChain(ITx tx, TableDef forward, long start)
-	{
-		var chain = new List<long> { start };
-		var visited = new HashSet<long> { start };
-		var current = start;
-
-		for (var hop = 0; hop < InheritanceHopLimit; hop++)
-		{
-			if (GetSingleEdge(tx, forward, current) is not { } next || !visited.Add(next))
-			{
-				break;
-			}
-
-			chain.Add(next);
-			current = next;
-		}
-
-		return chain;
 	}
 
 	/// <summary>

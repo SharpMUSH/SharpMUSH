@@ -132,6 +132,11 @@ public class AttributeTreeParentSourcedReadTests
 	/// replaced - it needs the child to duplicate the branch name, flag it restrictively, and not
 	/// hold the leaf - but it is the same class of disclosure.
 	/// </para>
+	/// <para>
+	/// That walk is <c>get()</c>'s. A literal <c>lattrp()</c> tests the attribute against the object
+	/// holding it instead, <c>Can_Read_Attr(player, parent, ptr)</c> (<c>attrib.c:1527</c>), where both
+	/// levels are visual, so it lists the leaf.
+	/// </para>
 	/// </summary>
 	[Test]
 	public async ValueTask MortalDarkBranchOnChild_HidesLeafInheritedFromParent()
@@ -167,13 +172,17 @@ public class AttributeTreeParentSourcedReadTests
 		// Control: proves the walk still crosses the child's own shadowing branch and reaches the
 		// parent's leaf, so the miss below is the mortal_dark flag rather than a chain that
 		// simply stopped resolving once the child held a branch of the same name.
-		var control = await Eval(viewer.Handle, $"lattrp({child.DbRef}/SHO{uid}`PUB)");
-		await Assert.That(control).Contains($"SHO{uid}`PUB")
+		var control = await Eval(viewer.Handle, $"get({child.DbRef}/SHO{uid}`PUB)");
+		await Assert.That(control).IsEqualTo("openleaf")
 			.Because("a visual shadowing branch on the child must not stop the parent's leaf from resolving");
 
-		var result = await Eval(viewer.Handle, $"lattrp({child.DbRef}/SHD{uid}`PUB)");
-		await Assert.That(result).DoesNotContain($"SHD{uid}`PUB")
+		var result = await Eval(viewer.Handle, $"get({child.DbRef}/SHD{uid}`PUB)");
+		await Assert.That(result).DoesNotContain("quietleaf")
 			.Because("Penn denies on the first target where a prefix exists and fails - the child's own mortal_dark branch, not the parent's visual one");
+
+		var listed = await Eval(viewer.Handle, $"lattrp({child.DbRef}/SHD{uid}`PUB)");
+		await Assert.That(listed).IsEqualTo($"SHD{uid}`PUB")
+			.Because("a literal lattrp() reads the attribute against the parent that holds it");
 	}
 
 	/// <summary>

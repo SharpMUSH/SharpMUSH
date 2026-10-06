@@ -10,31 +10,26 @@ using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class CommandDiscoveryService(IMediator mediator) : ICommandDiscoveryService
+public partial class CommandDiscoveryService(IMediator mediator, ILockService locks) : ICommandDiscoveryService
 {
-	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Regex Regex, bool IsRegex)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
-	{
-		var cachedCommands = await mediator.Send(new GetCommandAttributesQuery(sharpObj));
-
-		foreach (var cached in cachedCommands)
-		{
-			yield return (sharpObj, cached.Attribute, cached.CompiledRegex, cached.IsRegexFlag);
-		}
-	}
-
 	/// <summary>
 	/// Matches user-defined commands with optimized caching.
 	/// Uses pre-compiled regex patterns via Mediator query pipeline.
 	/// </summary>
+	/// <remarks>
+	/// PennMUSH <c>atr_comm_match</c> with <c>check_locks</c> (<c>src/attrib.c:1879-1881, 2003-2018</c>): a
+	/// HALT or NO_COMMAND object answers nothing, and an object with a matching pattern must let
+	/// <paramref name="player"/> pass its @lock/command and then its @lock/use, read on that object (and
+	/// inherited as locks are) however far up its parent chain the attribute was found. An object that
+	/// refuses contributes no match and is added to <paramref name="lockFailures"/>, Penn's <c>errobj</c>.
+	/// </remarks>
 	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IAsyncEnumerable<AnySharpObject> objects,
-		MString commandString)
+		MString commandString,
+		AnySharpObject player,
+		ICollection<AnySharpObject>? lockFailures = null)
 	{
-		var commandPatternAttributes = objects
-			.Where(async (x, _) => !await x.HasFlag("NO_COMMAND"))
-			.SelectMany(MatchUserDefinedCommandSelectMany);
-
 		// Strip leading/trailing spaces before matching: the compiled $command patterns are anchored
 		// at both ends (^...$), so a command typed (or queued) with surrounding whitespace — e.g.
 		// " test" — would otherwise fail to match and produce a "Huh?". PennMUSH strips this whitespace
@@ -42,24 +37,49 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		// capture indices below stay aligned with the string the regex actually matched against.
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
-		// Each pattern runs once: the Match that admits it is the one its arguments are captured from.
-		var matchedCommandPatternAttributes = await commandPatternAttributes
-			.Select(x => (x.Obj, x.Attr, x.Regex, x.IsRegex, Match: SoftcodeRegex.Match(x.Regex, plainCommandString)))
-			.Where(x => x.Match is { Success: true })
-			.ToArrayAsync();
+		var matched = new List<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>();
+		await foreach (var obj in objects)
+		{
+			if (await obj.HasFlag("NO_COMMAND") || await obj.HasFlag("HALT"))
+			{
+				continue;
+			}
 
-		if (matchedCommandPatternAttributes.Length == 0)
+			var objectMatches = new List<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>();
+			foreach (var cached in await mediator.Send(new GetCommandAttributesQuery(obj)))
+			{
+				// Each pattern runs once: the Match that admits it is the one its arguments are captured from.
+				if (SoftcodeRegex.Match(cached.CompiledRegex, plainCommandString) is not { Success: true } match)
+				{
+					continue;
+				}
+
+				objectMatches.Add((obj, cached.Attribute,
+					PatternArguments.Capture(cached.CompiledRegex, match, cached.IsRegexFlag, trimmedCommandString)));
+			}
+
+			if (objectMatches.Count == 0)
+			{
+				continue;
+			}
+
+			// Locks are always checked on the child, once, however many of its patterns matched.
+			if (!await locks.Evaluate(LockType.Command, obj, player) || !await locks.Evaluate(LockType.Use, obj, player))
+			{
+				lockFailures?.Add(obj);
+				continue;
+			}
+
+			matched.AddRange(objectMatches);
+		}
+
+		if (matched.Count == 0)
 		{
 			return new None();
 		}
 
-		var res = matchedCommandPatternAttributes.Select(match =>
-			(match.Obj,
-			 match.Attr,
-			 Arguments: PatternArguments.Capture(match.Regex, match.Match!, match.IsRegex, trimmedCommandString)));
-
 		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
-			.FromOption(res);
+			.FromOption(matched);
 	}
 
 	/// <summary>

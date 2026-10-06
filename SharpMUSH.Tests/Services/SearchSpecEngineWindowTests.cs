@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
@@ -15,7 +16,7 @@ namespace SharpMUSH.Tests.Services;
 
 /// <summary>
 /// The per-object path of <see cref="SearchSpecEngine"/> (#1468): a search with both COMMAND and LISTEN
-/// reads each candidate's visible attributes once; a search carrying softcode (a lock or an EVAL)
+/// reads each candidate's $-command set once; a search carrying softcode (a lock or an EVAL)
 /// evaluates every candidate whatever page is asked for, one without stops once its page is full; and
 /// START/COUNT give the same page they gave when the whole match list was built first, keeping only it.
 /// </summary>
@@ -70,13 +71,13 @@ public class SearchSpecEngineWindowTests
 	/// $-command and the ^-listen. With <paramref name="lockEvaluations"/> set, the search also carries a
 	/// LOCK restriction every candidate passes, whose evaluations are counted there. Returns the matched
 	/// keys and the attribute service it counted on.</summary>
-	private static Task<(int[] Keys, IAttributeService Attributes)> Search(
+	private static Task<(int[] Keys, int Reads)> Search(
 		StrongBox<int>? lockEvaluations, params SearchSpecEngine.SearchPair[] extra)
 		=> Search(lockEvaluations, null, extra);
 
 	/// <summary>As above; with <paramref name="examinations"/> set, the searcher is a mortal, so every
 	/// candidate goes through the visibility check, which passes and is counted there.</summary>
-	private static async Task<(int[] Keys, IAttributeService Attributes)> Search(
+	private static async Task<(int[] Keys, int Reads)> Search(
 		StrongBox<int>? lockEvaluations, StrongBox<int>? examinations, params SearchSpecEngine.SearchPair[] extra)
 	{
 		var executor = examinations is null ? Thing(1, Wizard) : Thing(2);
@@ -89,11 +90,27 @@ public class SearchSpecEngineWindowTests
 			.Returns(call => new AnyOptionalSharpObject(
 				things.Single(thing => thing.Object().Key == call.Arg<GetObjectNodeQuery>().DBRef.Number).Expect<SharpThing>()));
 
+		// COMMAND is read first, through the candidate's $-command set; only a candidate it admits has its
+		// ^-patterns matched.
+		var reads = 0;
+		mediator.Send(Arg.Any<GetCommandAttributesQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				reads++;
+				return new ValueTask<CommandAttributeCache[]>(call.Arg<GetCommandAttributesQuery>().SharpObject.Object().Key % 2 == 1
+					? [new CommandAttributeCache(Attribute("CMD", "$hello:think x"), SoftcodeRegex.Wildcard("hello"), false)]
+					: []);
+			});
 		var attributes = Substitute.For<IAttributeService>();
-		attributes.GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>())
-			.Returns(call => new ValueTask<SharpAttributesOrError>(call.ArgAt<AnySharpObject>(1).Object().Key % 2 == 1
-				? new SharpAttributesOrError(new[] { Attribute("CMD", "$hello:think x"), Attribute("HEAR", "^hi:think y") })
-				: new SharpAttributesOrError(new[] { Attribute("OTHER", "nothing") })));
+		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LISTEN", Arg.Any<IAttributeService.AttributeMode>(), false)
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(new OptionalSharpAttributeOrError(new None())));
+		var listens = Substitute.For<IListenPatternMatcher>();
+		listens.MatchListenPatternsAsync(Arg.Any<AnySharpObject>(), "hi", Arg.Any<AnySharpObject>(), Arg.Any<bool>())
+			.Returns(call => new ValueTask<ListenMatch[]>(call.ArgAt<AnySharpObject>(0).Object().Key % 2 == 1
+				? [new ListenMatch(Attribute("HEAR", "^hi:think y"), [], ListenBehavior.AHear)]
+				: []));
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.GetService(typeof(IListenPatternMatcher)).Returns(listens);
 
 		var locks = Substitute.For<IBooleanExpressionParser>();
 		locks.Compile(Arg.Any<string>()).Returns((_, _) =>
@@ -112,7 +129,7 @@ public class SearchSpecEngineWindowTests
 		SearchSpecEngine.SearchPair[] lockPair = lockEvaluations is null ? [] : [new("LOCK", "FLAG^WIZARD|!FLAG^WIZARD")];
 
 		var result = await SearchSpecEngine.ExecuteResultAsync(
-			Substitute.For<IMUSHCodeParser>(),
+			parser,
 			mediator,
 			Substitute.For<ILocateService>(),
 			attributes,
@@ -123,19 +140,19 @@ public class SearchSpecEngineWindowTests
 			[new SearchSpecEngine.SearchPair("COMMAND", "hello"), new SearchSpecEngine.SearchPair("LISTEN", "hi"), .. lockPair, .. extra],
 			useRegex: false);
 
-		return ([.. result.Expect<SearchSpecEngine.SearchResult>().Matches.Select(o => o.Key)], attributes);
+		return ([.. result.Expect<SearchSpecEngine.SearchResult>().Matches.Select(o => o.Key)], reads);
 	}
 
-	private static Task<(int[] Keys, IAttributeService Attributes)> Search(params SearchSpecEngine.SearchPair[] extra)
+	private static Task<(int[] Keys, int Reads)> Search(params SearchSpecEngine.SearchPair[] extra)
 		=> Search(null, extra);
 
 	[Test]
-	public async Task CommandAndListenReadTheVisibleAttributesOncePerCandidate()
+	public async Task CommandIsReadOncePerCandidate()
 	{
-		var (keys, attributes) = await Search();
+		var (keys, reads) = await Search();
 
 		await Assert.That(keys).IsEquivalentTo(new[] { 101, 103, 105, 107, 109 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await attributes.Received(Candidates).GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>());
+		await Assert.That(reads).IsEqualTo(Candidates);
 	}
 
 	/// <summary>A lock is softcode that may have side effects, so every candidate is evaluated whatever
@@ -149,12 +166,12 @@ public class SearchSpecEngineWindowTests
 	public async Task WithALockEveryCandidateIsEvaluatedAndStartAndCountSelectThePage(string start, string count, int[] expected)
 	{
 		var lockEvaluations = new StrongBox<int>();
-		var (keys, attributes) = await Search(lockEvaluations,
+		var (keys, reads) = await Search(lockEvaluations,
 			new SearchSpecEngine.SearchPair("START", start), new SearchSpecEngine.SearchPair("COUNT", count));
 
 		await Assert.That(keys).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(lockEvaluations.Value).IsEqualTo(Candidates);
-		await attributes.Received(Candidates).GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>());
+		await Assert.That(reads).IsEqualTo(Candidates);
 	}
 
 	/// <summary>A mortal's search checks each candidate with Can_Examine, which can evaluate Control,
@@ -183,10 +200,10 @@ public class SearchSpecEngineWindowTests
 	[Arguments("1", "2", new[] { 101, 103 }, 4)]
 	public async Task WithoutSideEffectsTheScanStopsOnceThePageIsFull(string start, string count, int[] expected, int reads)
 	{
-		var (keys, attributes) = await Search(new SearchSpecEngine.SearchPair("START", start), new SearchSpecEngine.SearchPair("COUNT", count));
+		var (keys, actualReads) = await Search(new SearchSpecEngine.SearchPair("START", start), new SearchSpecEngine.SearchPair("COUNT", count));
 
 		await Assert.That(keys).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await attributes.Received(reads).GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>());
+		await Assert.That(actualReads).IsEqualTo(reads);
 	}
 
 	[Test]

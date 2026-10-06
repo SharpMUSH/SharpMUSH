@@ -46,7 +46,7 @@ public class HttpCompletionEventLifetimeTests
 				await Visit(stage, call.Arg<CancellationToken>());
 				return stage == "lookup" ? events : handler;
 			});
-			Attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), IAttributeService.AttributeMode.Execute, false)
+			Attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), IAttributeService.AttributeMode.Execute, Arg.Any<bool>())
 				.Returns(async ValueTask<OptionalSharpAttributeOrError> (call) =>
 				{
 					var name = call.Arg<string>();

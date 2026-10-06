@@ -84,7 +84,7 @@ public class InputHookFailureTests
 		// /inline, so the matched body runs on this parser's command table; a queued match would run on the server's.
 		if (mode is "branch-override" or "branch-extend")
 			hooks.GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), mode == "branch-override" ? "OVERRIDE" : "EXTEND")
-				.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(mode == "branch-override" ? "OVERRIDE" : "EXTEND", player.DbRef, "OVERRIDE", Inline: true)));
+				.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(mode == "branch-override" ? "OVERRIDE" : "EXTEND", player.DbRef, "", Inline: true)));
 		var plugin = Substitute.For<IPluginHookDispatcher>();
 		plugin.HasCommandInterceptors.Returns(true);
 		plugin.CommandBeforeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<string>()).Returns(ValueTask.FromResult(mode != "branch-veto"));
@@ -107,7 +107,7 @@ public class InputHookFailureTests
 			var actor = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			var matchAttribute = new SharpAttribute("override", "OVERRIDE", "OVERRIDE", [], 0, "OVERRIDE", null!, null!, null!)
 			{ Value = MarkupText.Plain(commandName + "override") };
-			discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())
+			discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>(), Arg.Any<AnySharpObject>(), Arg.Any<ICollection<AnySharpObject>?>())
 				.Returns(ValueTask.FromResult<Option<IEnumerable<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>>>(
 					new[] { (actor, matchAttribute, new Dictionary<string, CallState>()) }));
 			var hookText = mode switch { "syntax" => "[", "nested" => "ufun(me/NESTED)", "throw" => functionName + "()", "literal" => "#-1 EXCEPTION: ordinary text", _ => "1" };

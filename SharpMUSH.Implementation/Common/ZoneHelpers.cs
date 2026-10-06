@@ -155,7 +155,8 @@ public static class ZoneHelpers
 		AnySharpObject destination,
 		bool noisy)
 	{
-		if (!destination.Object().Locks.ContainsKey(nameof(LockType.Zone)))
+		// check_zone_lock reads the lock with getlock (src/lock.c:964), so an inherited zone lock counts.
+		if (await lockService.LookupAsync(destination, nameof(LockType.Zone), ExecutionBudget.CurrentToken) is not ResolvedLock)
 		{
 			// lock.c:965-967, written as GOD on purpose — the executor who most needs the lock installed is
 			// the one who reached this zone through a lock rather than through control, and so cannot write
