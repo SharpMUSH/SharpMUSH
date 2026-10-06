@@ -693,8 +693,8 @@ objects:
         - `+scene/start` — resume a paused scene
         - `+scene/finish` — close it
         - `+scene/finish <id>` — close a scene by id. Its owner can, and so can anyone holding the
-          `scene.close` permission: a game defines it with `@permission/define scene.close=Staff` and allows it on
-          a role, such as helper, with `@role/allow helper=scene.close`
+          `scene.close` permission, which this package defines; allow it on a role, such as helper, with
+          `@role/allow helper=scene.close`
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.
