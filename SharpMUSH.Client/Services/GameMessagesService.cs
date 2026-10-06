@@ -21,8 +21,8 @@ public class GameMessagesService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<GameMessagesResponse>> ResetAsync(GameMessage message) =>
 		Client.DeleteApiAsync<GameMessagesResponse>($"api/admin/messages/{message}", WhenEmpty);
 
-	/// <summary>Chooses where messages come from; null follows the Messages package again.</summary>
-	public Task<ApiResult<GameMessagesResponse>> SetSourceAsync(GameMessageSource? source) =>
+	/// <summary>Sets <c>messages_object</c>: the object to read messages from, or null for the stored texts.</summary>
+	public Task<ApiResult<GameMessagesResponse>> SetSourceAsync(int? objectDbref) =>
 		Client.PutApiAsync<GameMessageSourceRequest, GameMessagesResponse>(
-			"api/admin/messages/source", new GameMessageSourceRequest(source), WhenEmpty);
+			"api/admin/messages/source", new GameMessageSourceRequest(objectDbref), WhenEmpty);
 }

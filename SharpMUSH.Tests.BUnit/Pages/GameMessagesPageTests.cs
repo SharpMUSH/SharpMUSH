@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
 /// Fakes <c>api/admin/messages</c>: every message with a plain stored text, the connect screen's in colour, and
-/// whichever source the last <c>PUT source</c> chose.
+/// the Messages package installed as #7, and whichever object the last <c>PUT source</c> named.
 /// </summary>
 internal sealed class GameMessagesApiHandler : HttpMessageHandler
 {
@@ -27,7 +27,9 @@ internal sealed class GameMessagesApiHandler : HttpMessageHandler
 		? GreenConnect
 		: $"{m} text");
 
-	private GameMessageSource? _source;
+	public const int PackageObject = 7;
+
+	private int? _object;
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
@@ -43,7 +45,7 @@ internal sealed class GameMessagesApiHandler : HttpMessageHandler
 			Puts.Add((path, body));
 			if (path == "api/admin/messages/source")
 			{
-				_source = (await request.Content.ReadFromJsonAsync<GameMessageSourceRequest>(cancellationToken))!.Source;
+				_object = (await request.Content.ReadFromJsonAsync<GameMessageSourceRequest>(cancellationToken))!.ObjectDbref;
 			}
 			else
 			{
@@ -56,12 +58,12 @@ internal sealed class GameMessagesApiHandler : HttpMessageHandler
 	}
 
 	private GameMessagesResponse State() => new(
-		_source ?? GameMessageSource.Stored,
-		_source is not null,
-		PackageInstalled: false,
-		ObjectDbref: null,
-		ObjectName: null,
-		[.. GameMessages.All.Select(m => new GameMessageEntry(m, _texts[m], IsDefault: true, GameMessages.AttributeName(m),
+		_object is null ? GameMessageSource.Stored : GameMessageSource.Object,
+		PackageInstalled: true,
+		ObjectDbref: _object,
+		ObjectName: _object is null ? null : "Messages",
+		PackageObjectDbref: PackageObject,
+		Messages: [.. GameMessages.All.Select(m => new GameMessageEntry(m, _texts[m], IsDefault: true, GameMessages.AttributeName(m),
 			ObjectHasAttribute: false, _texts[m]))]);
 }
 
@@ -136,7 +138,7 @@ public class GameMessagesPageTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task ChoosingTheObjectSendsTheSource()
+	public async Task ChoosingTheObjectSetsTheMessagesObject()
 	{
 		var (cut, api) = RenderPage();
 
@@ -146,7 +148,11 @@ public class GameMessagesPageTests : TrackingBunitContext
 			if (api.Puts.Count == 0) throw new InvalidOperationException("not sent yet");
 		});
 
-		await Assert.That(api.Puts.Single().Path).IsEqualTo("api/admin/messages/source");
+		var (path, body) = api.Puts.Single();
+		await Assert.That(path).IsEqualTo("api/admin/messages/source");
+		await Assert.That(System.Text.Json.JsonSerializer.Deserialize<GameMessageSourceRequest>(body,
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!.ObjectDbref)
+			.IsEqualTo(GameMessagesApiHandler.PackageObject);
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Find("[data-source='Object']").GetAttribute("aria-checked") != "true")

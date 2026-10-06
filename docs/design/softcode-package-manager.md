@@ -125,6 +125,25 @@ permissions) and `roles:`. The reference is
   which case it is kept and released. Permission removal clears its overrides, so removals run last.
 - **Rollback** restores objects and attributes only.
 
+### Configuration options (format 1.3)
+
+`settings:` maps an option name, as `@config` lists it, to a value or, for a dbref option, one
+object ref. The reference is `examples/packages/README.md`; the implementation is
+`IPackageSettingService`, which writes through `IConfigOptionWriter` (the same parse, range check,
+validators and reload as `@config/set`). The decisions:
+
+- **Validity.** The manifest reader checks the option exists, is settable, and that a literal parses
+  for its type. The plan checks the value against the live configuration (`PreviewAsync`): a value
+  that would be clamped or that a validator refuses blocks it.
+- **Conflicts.** One option has one package setting it. An option another installed package
+  records in `InstalledPackageRecord.Settings` blocks the plan.
+- **Ownership.** The record keeps the value set and the value it replaced. An upgrade writes only a
+  value the version changed. A dropped option, and every option on uninstall, is put back only while
+  it still holds the package's value; an administrator's change is left alone.
+- **Confirmation.** The review screen shows each option's value now and after, and apply waits for
+  the installer to confirm when an option would change.
+- **Rollback** leaves options as they are.
+
 ## Repo Structure
 
 A package is a directory. A repo contains one or more packages.

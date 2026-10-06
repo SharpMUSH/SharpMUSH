@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application", "binaries", "categories", "permissions", "roles"
+		"kind", "application", "binaries", "categories", "permissions", "roles", "settings"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -165,8 +165,9 @@ public partial class PackageManifestService : IPackageManifestService
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
+		var settings = ReadSettings(doc, kind, issues);
 
-		ValidateRefs(objects, application, configure, dependencies, issues);
+		ValidateRefs(objects, application, configure, dependencies, settings, issues);
 
 		if (issues.Any(i => i.Severity == PackageManifestIssueSeverity.Error))
 		{
@@ -192,7 +193,8 @@ public partial class PackageManifestService : IPackageManifestService
 			kind,
 			application,
 			binary,
-			declarations.IsEmpty ? null : declarations);
+			declarations.IsEmpty ? null : declarations,
+			settings.Count == 0 ? null : settings);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
@@ -1340,6 +1342,7 @@ public partial class PackageManifestService : IPackageManifestService
 		PackageApplicationSpec? application,
 		IReadOnlyDictionary<string, PackageConfigureSpec> configure,
 		IReadOnlyList<PackageDependencySpec> dependencies,
+		IReadOnlyList<PackageSettingSpec> settings,
 		List<PackageManifestIssue> issues)
 	{
 		var definedRefs = objects.Select(o => o.Ref).ToHashSet(StringComparer.Ordinal);
@@ -1400,6 +1403,15 @@ public partial class PackageManifestService : IPackageManifestService
 				{
 					CheckRef(token.Ref, path, requiresDbref: false);
 				}
+			}
+		}
+
+		// A setting's value is one ref, to an object a dbref option points at (ReadSettings checks the rest).
+		foreach (var setting in settings)
+		{
+			if (PackageRefScanner.ParseSingle(setting.Value) is { } reference)
+			{
+				CheckRef(reference, $"settings.{setting.Option}", requiresDbref: true);
 			}
 		}
 

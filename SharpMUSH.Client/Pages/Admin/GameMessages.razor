@@ -35,29 +35,19 @@
                     @SourceChoice(GameMessageSource.Object, "AdmMessagesSourceObject", "AdmMessagesSourceObjectHint", Icons.Material.Outlined.Code)
                 </div>
                 <div class="adm-msg-source-status" id="messages-source-status">
-                    @if (_state.ObjectDbref is { } dbref)
+                    @if (_state.ObjectDbref is { } dbref && _state.ObjectName is { } name)
                     {
-                        <span>@Loc["AdmMessagesObjectIs", _state.ObjectName ?? string.Empty, dbref]</span>
+                        <span>@Loc["AdmMessagesObjectIs", name, dbref]</span>
                     }
-                    else
+                    else if (ObjectChoice is null)
                     {
                         <span>@Loc["AdmMessagesNoObject"]</span>
                         <MudLink Href="/admin/packages">@Loc["AdmMessagesInstallPackage"]</MudLink>
                     }
-                    @if (_state.SourceChosen)
-                    {
-                        <button type="button" class="adm-msg-link" disabled="@_busy" @onclick="() => SetSourceAsync(null)">
-                            @Loc["AdmMessagesFollowPackage"]
-                        </button>
-                    }
-                    else
-                    {
-                        <span class="adm-msg-faint">@Loc["AdmMessagesFollowingPackage"]</span>
-                    }
                 </div>
-                @if (_state.Source == GameMessageSource.Object && _state.ObjectDbref is null)
+                @if (_state.ObjectDbref is { } missing && _state.ObjectName is null)
                 {
-                    <MudAlert Severity="Severity.Warning" Dense="true">@Loc["AdmMessagesObjectMissing"]</MudAlert>
+                    <MudAlert Severity="Severity.Warning" Dense="true">@Loc["AdmMessagesObjectMissing", missing]</MudAlert>
                 }
             </div>
         </KitCard>
@@ -101,7 +91,7 @@
                                 <MudLink Href="/softcode" Class="ml-1">@Loc["AdmMessagesOpenSoftcode"]</MudLink>
                             </MudAlert>
                         }
-                        else if (_state.Source == GameMessageSource.Object && _state.ObjectDbref is not null)
+                        else if (_state.Source == GameMessageSource.Object && _state.ObjectName is not null)
                         {
                             <MudAlert Severity="Severity.Info" Dense="true">@Loc["AdmMessagesObjectLacks", selected.Attribute]</MudAlert>
                         }
@@ -211,7 +201,13 @@
     private static int Rows(GameMessage message) => message == GameMessage.Connect ? 20 : 8;
 
     private bool FromObject(GameMessageEntry entry) =>
-        _state is { Source: GameMessageSource.Object, ObjectDbref: not null } && entry.ObjectHasAttribute;
+        _state is { Source: GameMessageSource.Object, ObjectName: not null } && entry.ObjectHasAttribute;
+
+    /// <summary>
+    /// The object the Object choice points <c>messages_object</c> at: the one it names now, else the Messages
+    /// package's; null when there is neither.
+    /// </summary>
+    private int? ObjectChoice => _state?.ObjectDbref ?? _state?.PackageObjectDbref;
 
     /// <summary>The stored text as the editor would write it back, so an untouched draft never reads as changed.</summary>
     private static string Normalized(string ansi) => AnsiEscapeParser.Parse(ansi).Render(MarkupFormat.Ansi);
@@ -232,9 +228,10 @@
         await RunAsync(() => Messages.ResetAsync(message), message, Loc["AdmMessagesResetDone", Title(message)]);
     }
 
-    private async Task SetSourceAsync(GameMessageSource? source)
+    private async Task SetSourceAsync(GameMessageSource source)
     {
-        await RunAsync(() => Messages.SetSourceAsync(source), reload: null, Loc["AdmMessagesSourceSaved"]);
+        var dbref = source == GameMessageSource.Object ? ObjectChoice : null;
+        await RunAsync(() => Messages.SetSourceAsync(dbref), reload: null, Loc["AdmMessagesSourceSaved"]);
     }
 
     private async Task RunAsync(Func<Task<ApiResult<GameMessagesResponse>>> call, GameMessage? reload, string done)
@@ -259,7 +256,8 @@
     private RenderFragment SourceChoice(GameMessageSource source, string labelKey, string hintKey, string icon) => __builder =>
     {
         var on = _state!.Source == source;
-        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" disabled="@_busy"
+        var unavailable = source == GameMessageSource.Object && ObjectChoice is null;
+        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" disabled="@(_busy || unavailable)"
                 class="adm-msg-choice @(on ? "adm-msg-choice--on" : null)" data-source="@source"
                 @onclick="() => SetSourceAsync(source)">
             <MudIcon Icon="@icon" Size="Size.Small" />

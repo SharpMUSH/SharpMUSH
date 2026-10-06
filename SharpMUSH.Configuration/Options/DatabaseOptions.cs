@@ -163,7 +163,19 @@ public record DatabaseOptions(
 		Group = "Behavior",
 		Order = 3,
 		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser; gives up client AOT/trimming.")]
-	bool AllowBrowserCode
+	bool AllowBrowserCode,
+
+	[property: SharpConfig(
+		Name = "messages_object",
+		Dbref = true,
+		Category = "Database",
+		Description = "Object whose attributes hold the connect screen, the MOTDs and the other server messages",
+		ValidationPattern = @"^\d*$",
+		Group = "Handlers",
+		Order = 5,
+		Min = 0,
+		Tooltip = "Leave empty to show the stored texts from the Messages page. The bundled messages package sets this to its object.")]
+	uint? MessagesObject = null
 )
 {
 	/// <summary>

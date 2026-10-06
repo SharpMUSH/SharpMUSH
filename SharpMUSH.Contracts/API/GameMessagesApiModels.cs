@@ -37,7 +37,10 @@ public enum GameMessageSource
 	/// <summary>The text stored in the database, edited on the Messages page.</summary>
 	Stored,
 
-	/// <summary>An attribute on the Messages object, evaluated as softcode; the stored text where it has none.</summary>
+	/// <summary>
+	/// An attribute on the object the <c>messages_object</c> option names, evaluated as softcode; the stored text
+	/// where it has none.
+	/// </summary>
 	Object
 }
 
@@ -58,21 +61,18 @@ public static class GameMessages
 }
 
 /// <summary>The Messages page's state (<c>GET api/admin/messages</c>).</summary>
-/// <param name="Source">Where the game reads its messages from now.</param>
-/// <param name="SourceChosen">
-/// Whether an administrator chose <paramref name="Source"/>. Until one does, the game reads the Messages object
-/// exactly while the Messages package is installed.
-/// </param>
+/// <param name="Source">Where the game reads its messages from now: the object while <c>messages_object</c> names one.</param>
 /// <param name="PackageInstalled">Whether the Messages package is installed.</param>
-/// <param name="ObjectDbref">The Messages object's dbref number, or null when it does not exist.</param>
-/// <param name="ObjectName">The Messages object's name, or null when it does not exist.</param>
+/// <param name="ObjectDbref">The dbref number <c>messages_object</c> names, or null when it names none.</param>
+/// <param name="ObjectName">That object's name, or null when it names none or the object no longer exists.</param>
+/// <param name="PackageObjectDbref">The Messages package's object, or null when the package is not installed.</param>
 /// <param name="Messages">Each message, in <see cref="GameMessages.All"/> order.</param>
 public sealed record GameMessagesResponse(
 	GameMessageSource Source,
-	bool SourceChosen,
 	bool PackageInstalled,
 	int? ObjectDbref,
 	string? ObjectName,
+	int? PackageObjectDbref,
 	IReadOnlyList<GameMessageEntry> Messages);
 
 /// <summary>One message as the Messages page shows it.</summary>
@@ -94,6 +94,6 @@ public sealed record GameMessageEntry(
 /// <param name="Text">The text, with ANSI escapes for its colours.</param>
 public sealed record GameMessageTextRequest(string Text);
 
-/// <summary>Where to read messages from (<c>PUT api/admin/messages/source</c>).</summary>
-/// <param name="Source">The source, or null to follow the Messages package again.</param>
-public sealed record GameMessageSourceRequest(GameMessageSource? Source);
+/// <summary>Where to read messages from (<c>PUT api/admin/messages/source</c>), which sets <c>messages_object</c>.</summary>
+/// <param name="ObjectDbref">The object whose attributes hold the messages, or null for the stored texts.</param>
+public sealed record GameMessageSourceRequest(int? ObjectDbref);

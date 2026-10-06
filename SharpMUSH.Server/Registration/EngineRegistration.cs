@@ -193,6 +193,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IPackageOperationGate, PackageOperationGate>();
 		// A package's roles, permissions, categories and @job schedules (manifest format 1.2).
 		services.AddSingleton<IPackageDeclarationService, PackageDeclarationService>();
+		services.AddSingleton<IPackageSettingService, PackageSettingService>();
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
@@ -206,6 +207,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();
 		services.AddSingleton<IChannelBroadcastService, Implementation.Services.ChannelBroadcastService>();
 		services.AddSingleton<IGameMessageService, Implementation.Services.GameMessageService>();
+		services.AddSingleton<IConfigOptionWriter, ConfigOptionWriter>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ISortService, SortService>();

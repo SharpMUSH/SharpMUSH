@@ -7,7 +7,6 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -15,22 +14,18 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
-/// The stored messages and the source switch (expanded server data). A message with no entry in
-/// <see cref="Texts"/> has never been edited and shows the text SharpMUSH ships.
+/// The stored messages (expanded server data). A message with no entry in <see cref="Texts"/> has never been
+/// edited and shows the text SharpMUSH ships.
 /// </summary>
 public sealed class GameMessagesData
 {
 	/// <summary>Edited texts, keyed by <see cref="GameMessage"/> name, ANSI escapes and all.</summary>
 	public Dictionary<string, string> Texts { get; set; } = [];
-
-	/// <summary>The administrator's choice of source, or null to follow the Messages package.</summary>
-	public GameMessageSource? Source { get; set; }
 }
 
 /// <inheritdoc cref="IGameMessageService"/>
 public class GameMessageService(
 	IExpandedObjectDataService serverData,
-	IPackageRegistryService packages,
 	IMediator mediator,
 	IAttributeService attributeService,
 	Lazy<IMUSHCodeParser> parser,
@@ -45,9 +40,7 @@ public class GameMessageService(
 	/// <inheritdoc />
 	public async ValueTask<Option<MString>> RenderAsync(GameMessage message, long handle, AnySharpObject? viewer = null)
 	{
-		var (source, _) = await GetSourceAsync();
-		if (source == GameMessageSource.Object
-				&& await MessagesObjectAsync() is AnySharpObject holder
+		if (await MessagesObjectAsync() is AnySharpObject holder
 				&& await HasAttributeAsync(holder, message))
 		{
 			var evaluated = await EvaluateAsync(holder, message, handle, viewer);
@@ -75,26 +68,10 @@ public class GameMessageService(
 		});
 
 	/// <inheritdoc />
-	public async ValueTask<(GameMessageSource Source, bool Chosen)> GetSourceAsync()
-	{
-		if ((await LoadAsync()).Source is { } chosen) return (chosen, true);
-		return (await packages.GetInstalledPackageAsync(GameMessages.PackageId) is InstalledPackageRecord
-			? GameMessageSource.Object
-			: GameMessageSource.Stored, false);
-	}
-
-	/// <inheritdoc />
-	public async ValueTask SetSourceAsync(GameMessageSource? source)
-		=> await ChangeAsync(data => data.Source = source);
-
-	/// <inheritdoc />
 	public async ValueTask<AnyOptionalSharpObject> MessagesObjectAsync()
-	{
-		var record = (await packages.GetPackageObjectsAsync(GameMessages.PackageId))
-			.FirstOrDefault(o => o.Ref == GameMessages.ObjectRef);
-		if (record is null || HelperFunctions.ParseDbRef(record.Objid) is not DBRef dbref) return new None();
-		return await mediator.Send(new GetObjectNodeQuery(dbref));
-	}
+		=> options.CurrentValue.Database.MessagesObject is { } number
+			? await mediator.Send(new GetObjectNodeQuery(new DBRef((int)number)))
+			: new None();
 
 	/// <inheritdoc />
 	public string ShippedText(GameMessage message) => Shipped.GetOrAdd(message, static m =>

@@ -213,10 +213,9 @@ public partial class Commands
 
 	/// <summary>Where the connect screen and the MOTDs come from, for <c>@listmotd</c> and <c>@list motd</c>.</summary>
 	private async ValueTask<string> MessageSourceDescriptionAsync()
-		=> await MessageService.GetSourceAsync() is (GameMessageSource.Object, _)
-			&& await MessageService.MessagesObjectAsync() is AnySharpObject holder
-				? $"the Messages object ({holder.Object().Name}(#{holder.Object().DBRef.Number}))"
-				: "the stored messages (the Messages page)";
+		=> await MessageService.MessagesObjectAsync() is AnySharpObject holder
+			? $"{holder.Object().Name}(#{holder.Object().DBRef.Number}) (messages_object)"
+			: "the stored messages (the Messages page)";
 
 	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)

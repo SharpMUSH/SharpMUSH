@@ -1719,6 +1719,30 @@
   <data name="PkgObjectsCount" xml:space="preserve">
     <value>Objects ({0})</value>
   </data>
+  <data name="PkgSettingsCount" xml:space="preserve">
+    <value>Configuration changes ({0})</value>
+  </data>
+  <data name="PkgSettingsSub" xml:space="preserve">
+    <value>Applying this package changes these game options. Removing it puts each one back, unless it has been changed since.</value>
+  </data>
+  <data name="PkgSettingOption" xml:space="preserve">
+    <value>Option</value>
+  </data>
+  <data name="PkgSettingNow" xml:space="preserve">
+    <value>Now</value>
+  </data>
+  <data name="PkgSettingAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="PkgSettingNone" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="PkgSettingBlocked" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="PkgSettingsConfirm" xml:space="preserve">
+    <value>I understand this package changes the game options above.</value>
+  </data>
   <data name="PkgDeclarationsCount" xml:space="preserve">
     <value>Roles and permissions ({0})</value>
   </data>
@@ -5958,7 +5982,7 @@
     <value>Where messages come from</value>
   </data>
   <data name="AdmMessagesSourceSub" xml:space="preserve">
-    <value>The stored text edited below, or the Messages object's attributes evaluated as softcode.</value>
+    <value>The stored text edited below, or an object's attributes evaluated as softcode. This sets the messages_object option.</value>
   </data>
   <data name="AdmMessagesSourceStored" xml:space="preserve">
     <value>Stored text</value>
@@ -5973,22 +5997,16 @@
     <value>One attribute per message, evaluated as softcode. A message the object has no attribute for uses its stored text.</value>
   </data>
   <data name="AdmMessagesObjectIs" xml:space="preserve">
-    <value>Messages object: {0} (#{1}).</value>
+    <value>messages_object is {0} (#{1}).</value>
   </data>
   <data name="AdmMessagesNoObject" xml:space="preserve">
-    <value>The Messages package is not installed.</value>
+    <value>The Messages package is not installed, so there is no Messages object to choose.</value>
   </data>
   <data name="AdmMessagesInstallPackage" xml:space="preserve">
     <value>Install it from Packages</value>
   </data>
-  <data name="AdmMessagesFollowPackage" xml:space="preserve">
-    <value>Follow the Messages package</value>
-  </data>
-  <data name="AdmMessagesFollowingPackage" xml:space="preserve">
-    <value>Following the Messages package: the object is used while the package is installed.</value>
-  </data>
   <data name="AdmMessagesObjectMissing" xml:space="preserve">
-    <value>There is no Messages object, so the stored text is shown.</value>
+    <value>messages_object names #{0}, which no longer exists, so the stored text is shown.</value>
   </data>
   <data name="AdmMessagesUnsaved" xml:space="preserve">
     <value>Unsaved</value>
@@ -6003,7 +6021,7 @@
     <value>Open the Softcode Editor</value>
   </data>
   <data name="AdmMessagesObjectLacks" xml:space="preserve">
-    <value>The Messages object has no {0} attribute, so this stored text is shown.</value>
+    <value>The object has no {0} attribute, so this stored text is shown.</value>
   </data>
   <data name="AdmMessagesEditorHint" xml:space="preserve">
     <value>Select text and pick a colour from the palette. Ctrl+B bolds, Ctrl+U underlines.</value>

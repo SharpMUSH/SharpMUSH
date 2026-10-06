@@ -164,7 +164,8 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), d.Database.HttpHandler),
 				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), d.Database.PackageManager),
 				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), d.Database.HttpRequestsPerSecond),
-				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), d.Database.AllowBrowserCode)
+				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), d.Database.AllowBrowserCode),
+				DatabaseReference(Get(nameof(DatabaseOptions.MessagesObject)), d.Database.MessagesObject)
 			),
 			Dump = new DumpOptions(
 				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval)

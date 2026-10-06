@@ -19,9 +19,10 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// The connect screen, the MOTDs and the rest: the stored text and its shipped default, and the bundled Messages
-/// object when the game reads from it. Each test builds its own <see cref="GameMessageService"/> over an in-memory
-/// record and a Messages object of its own, so nothing here changes what the shared world's connections are shown.
+/// The connect screen, the MOTDs and the rest: the stored text and its shipped default, and the object
+/// <c>messages_object</c> names. Each test builds its own <see cref="GameMessageService"/> over an in-memory record,
+/// options of its own and a Messages object of its own, so nothing here changes what the shared world's connections
+/// are shown.
 /// </summary>
 public class GameMessageServiceTests
 {
@@ -37,7 +38,7 @@ public class GameMessageServiceTests
 	[Test]
 	public async Task TheShippedConnectScreenDrawsTheLogoInGreen()
 	{
-		var (service, _) = Build(installed: false);
+		var service = Build();
 
 		var html = AnsiEscapeParser.Parse(service.ShippedText(GameMessage.Connect)).Render(MarkupFormat.Html);
 
@@ -48,7 +49,7 @@ public class GameMessageServiceTests
 	[Test]
 	public async Task EveryMessageShipsAText()
 	{
-		var (service, _) = Build(installed: false);
+		var service = Build();
 
 		foreach (var message in GameMessages.All)
 		{
@@ -59,18 +60,18 @@ public class GameMessageServiceTests
 	[Test]
 	public async Task WithoutThePackageTheStoredTextIsShown()
 	{
-		var (service, _) = Build(installed: false);
+		var service = Build();
 
 		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
 		await Assert.That(shown.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
-		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Stored, false));
+		await Assert.That((await service.MessagesObjectAsync()).Value).IsTypeOf<None>();
 	}
 
 	[Test]
 	public async Task AnEditedTextIsShownUntilItIsReset()
 	{
-		var (service, _) = Build(installed: false);
+		var service = Build();
 		const string edited = "\u001b[1;31mClosed\u001b[0m for the night.";
 
 		await service.SetTextAsync(GameMessage.Down, edited);
@@ -90,7 +91,7 @@ public class GameMessageServiceTests
 	[Test]
 	public async Task AnEmptiedTextShowsNothing()
 	{
-		var (service, _) = Build(installed: false);
+		var service = Build();
 
 		await service.SetTextAsync(GameMessage.Guest, "");
 
@@ -105,7 +106,6 @@ public class GameMessageServiceTests
 
 		var shown = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>();
 
-		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Object, false));
 		await Assert.That(Lines(shown.ToPlainText())).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
 		await Assert.That(shown.Render(MarkupFormat.Html)).Contains(LogoGreen);
 	}
@@ -141,20 +141,16 @@ public class GameMessageServiceTests
 		await Assert.That((await service.RenderAsync(GameMessage.Guest, 0)).Value).IsTypeOf<None>();
 	}
 
+	/// <summary>An option naming an object that is gone shows the stored text, not nothing.</summary>
 	[Test]
-	public async Task ChoosingTheStoredTextOverridesThePackage()
+	public async Task AMissingObjectFallsBackToTheStoredText()
 	{
-		var (service, _) = await WithMessagesObjectAsync();
+		var service = Build(messagesObject: int.MaxValue - 7);
 
-		await service.SetSourceAsync(GameMessageSource.Stored);
 		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
-		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Stored, true));
+		await Assert.That((await service.MessagesObjectAsync()).Value).IsTypeOf<None>();
 		await Assert.That(shown.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
-
-		await service.SetSourceAsync(null);
-
-		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Object, false));
 	}
 
 	[Test]
@@ -170,28 +166,20 @@ public class GameMessageServiceTests
 		await Assert.That(shown.ToPlainText()).IsEqualTo($"Hello, {viewerObject.Object().Name}. 0");
 	}
 
-	private (GameMessageService Service, IPackageRegistryService Packages) Build(bool installed, string? objid = null)
+	/// <summary>A service over an in-memory record, with <c>messages_object</c> naming <paramref name="messagesObject"/>.</summary>
+	private GameMessageService Build(int? messagesObject = null)
 	{
-		var packages = Substitute.For<IPackageRegistryService>();
-		Found<InstalledPackageRecord> record = installed
-			? new InstalledPackageRecord(GameMessages.PackageId, "1.0.0", BundledPackages.SourceRepo, null,
-				BundledPackages.SourceCommit, null, DateTimeOffset.UtcNow, 1)
-			: new NotFound();
-		IReadOnlyList<PackageObjectRecord> objects = objid is null
-			? []
-			: [new PackageObjectRecord(GameMessages.PackageId, GameMessages.ObjectRef, objid, "thing")];
-		packages.GetInstalledPackageAsync(GameMessages.PackageId).Returns(Task.FromResult(record));
-		packages.GetPackageObjectsAsync(GameMessages.PackageId).Returns(Task.FromResult(objects));
+		var shared = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(shared with { Database = shared.Database with { MessagesObject = (uint?)messagesObject } });
 
-		var service = new GameMessageService(
+		return new GameMessageService(
 			new InMemoryServerData(),
-			packages,
 			Mediator,
 			AttributeService,
 			new Lazy<IMUSHCodeParser>(WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>),
-			WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			options,
 			NullLogger<GameMessageService>.Instance);
-		return (service, packages);
 	}
 
 	/// <summary>A thing carrying the bundled package's attributes, as the service's Messages object.</summary>
@@ -207,8 +195,7 @@ public class GameMessageServiceTests
 			await AttributeService.SetAttributeAsync(holder, holder, name, MarkupText.Plain(attribute.Value));
 		}
 
-		var (service, _) = Build(installed: true, objid: holder.Object().DBRef.ToString());
-		return (service, holder);
+		return (Build(holder.Object().DBRef.Number), holder);
 	}
 
 	private static string Plain(string ansi) => AnsiEscapeParser.Parse(ansi).ToPlainText();

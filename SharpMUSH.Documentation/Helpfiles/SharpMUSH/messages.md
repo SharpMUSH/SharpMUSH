@@ -34,7 +34,9 @@ An emptied text shows nothing. Reset puts back the text SharpMUSH ships. A messa
 
 ## The Messages object
 
-The bundled `messages` package creates a thing named Messages that holds each message in the attribute named above. The setup wizard offers it, and it can be installed later from the Packages page. While it is installed, the game reads each message from that object, evaluated as softcode; a message the object has no attribute for falls back to the stored text, and an attribute that evaluates to nothing shows nothing. The Messages page can choose either source regardless of the package.
+The `messages_object` configuration option names an object whose attributes hold the messages. While it is set, the game reads each message from that object's attribute named above, evaluated as softcode; a message the object has no attribute for falls back to the stored text, and an attribute that evaluates to nothing shows nothing. While it is empty, or names an object that no longer exists, the stored texts are shown.
+
+The bundled `messages` package creates a thing named Messages with the shipped messages, and sets `messages_object` to it. The setup wizard offers it, and it can be installed later from the Packages page. Uninstalling it puts `messages_object` back as it was, unless it has been changed since. The Messages page switches between the stored texts and the object, which sets the same option, as does `@config/set messages_object=<object>`.
 
 The object's attributes are evaluated with the object as executor. `%#` is the player who will see the message (the object itself at the login screen, where there is none), and `%0` is the connection's descriptor. The shipped `CONNECT` draws the logo from `LOGO` and the text beside it from `TEXT`, one line of each per row.
 

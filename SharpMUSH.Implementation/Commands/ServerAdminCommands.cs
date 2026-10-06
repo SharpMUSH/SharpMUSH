@@ -534,14 +534,14 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		if (ConfigPropertyFor(optionName) is not { } property || !CanViewConfigOption(executor, property))
+		if (ConfigWriter.PropertyFor(optionName) is not { } property || !CanViewConfigOption(executor, property))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
 		var name = ConfigGenerated.ConfigMetadata.PropertyMetadata[property].Name;
-		if (!IsConfigOptionSettable(property))
+		if (!ConfigWriter.IsSettable(property))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionNotSettableFormat), executor, name);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -553,7 +553,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidType);
 		}
 
-		return await StoreConfigValueAsync(parser, property, enable) switch
+		return await ConfigWriter.SetAsync(property, enable) switch
 		{
 			SharpMUSHOptions => await ConfigToggledAsync(executor, name, enable),
 			Error<string> error => await ConfigRefusedAsync(executor, name, enable ? "yes" : "no", error.Value)
@@ -583,25 +583,25 @@ public partial class Commands
 			return await SetCommandRestrictionAsync(executor, value, save);
 		}
 
-		if (ConfigPropertyFor(optionName) is not { } property || value is null)
+		if (ConfigWriter.PropertyFor(optionName) is not { } property || value is null)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCouldntSet), executor);
 			return new CallState(ErrorMessages.Returns.NoSuchConfigOption);
 		}
 
 		var name = ConfigGenerated.ConfigMetadata.PropertyMetadata[property].Name;
-		if (!IsConfigOptionSettable(property))
+		if (!ConfigWriter.IsSettable(property))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionNotSettableFormat), executor, name);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (!TryParseConfigValue(ConfigGenerated.ConfigAccessor.GetPropertyType(property)!, value, out var parsed))
+		if (!ConfigWriter.TryParse(property, value, out var parsed))
 		{
 			return await ConfigRefusedAsync(executor, name, value, reason: null);
 		}
 
-		return await StoreConfigValueAsync(parser, property, parsed) switch
+		return await ConfigWriter.SetAsync(property, parsed) switch
 		{
 			SharpMUSHOptions updated => await ConfigSetAsync(executor, name, AppliedText(updated, property, parsed, value),
 				save),
@@ -681,115 +681,8 @@ public partial class Commands
 			? given
 			: Convert.ToString(applied, System.Globalization.CultureInfo.InvariantCulture) ?? given;
 
-	/// <summary>
-	/// Writes one option into the stored configuration — the document every service reads its options
-	/// from, and the one the portal's configuration page edits — after the registered validators accept
-	/// the whole result, then signals the reload that makes it live.
-	/// </summary>
-	private async ValueTask<Result<SharpMUSHOptions>> StoreConfigValueAsync(IMUSHCodeParser parser, string property, object? value)
-	{
-		var corrections = new List<ConfigBoundCorrection>();
-		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value,
-			corrections.Add);
-
-		var failures = parser.ServiceProvider.GetServices<IValidateOptions<SharpMUSHOptions>>()
-			.Select(validator => validator.Validate(Options.DefaultName, updated))
-			.Where(result => result.Failed)
-			.SelectMany(result => result.Failures ?? [])
-			.ToArray();
-		if (failures.Length > 0)
-		{
-			return new Error<string>(string.Join(" ", failures));
-		}
-
-		await ObjectDataService.SetExpandedServerDataAsync(updated);
-		ConfigReloadService.SignalChange();
-		// Logged once stored: a correction the validators refused never took effect.
-		foreach (var correction in corrections)
-		{
-			Logger.LogWarning("Config option clamped to its declared range: {Correction}", correction.ToString());
-		}
-
-		return updated;
-	}
-
-	/// <summary>The option's property name, for an option named the way <c>@config</c> lists it.</summary>
-	private static string? ConfigPropertyFor(string optionName)
-		=> ConfigGenerated.ConfigMetadata.PropertyToAttributeName
-			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase)).Key;
-
-	/// <summary>
-	/// PennMUSH's CP_GODONLY options (<c>src/conf.c:153-158</c>): the SQL credentials, which
-	/// <c>can_view_config_option</c> hides from everyone but God.
-	/// </summary>
-	private static readonly HashSet<string> GodOnlyConfigOptions =
-		[nameof(NetOptions.SqlUsername), nameof(NetOptions.SqlPassword), nameof(NetOptions.SqlDatabase)];
-
 	private static bool CanViewConfigOption(AnySharpObject viewer, string property)
-		=> !GodOnlyConfigOptions.Contains(property) || viewer.IsGod();
-
-	/// <summary>
-	/// <c>config_set</c> lets a command reach every option except the <c>files</c> group — file paths, which
-	/// could be pointed anywhere — and the CP_GODONLY ones. The list-valued
-	/// options (banned names, sitelock rules, restrictions) have commands of their own.
-	/// </summary>
-	private static bool IsConfigOptionSettable(string property)
-		=> !GodOnlyConfigOptions.Contains(property)
-			 && ConfigGenerated.ConfigAccessor.GetCategoryForProperty(property) is not "File"
-			 && ConfigGenerated.ConfigAccessor.GetPropertyType(property) is { } type
-			 && (Nullable.GetUnderlyingType(type) ?? type) is var scalar
-			 && (scalar.IsEnum || scalar == typeof(bool) || scalar == typeof(uint) || scalar == typeof(int)
-					 || scalar == typeof(string) || scalar == typeof(char));
-
-	/// <summary>
-	/// A value as PennMUSH's handlers read it: <c>cf_bool</c> takes yes/true/1 and no/false/0 in any
-	/// case; <c>cf_int</c> and <c>cf_dbref</c> take a number with an optional leading <c>#</c>, and a
-	/// dbref option (<c>uint?</c> here) takes -1 for none; <c>cf_str</c> takes the text as it is.
-	/// </summary>
-	private static bool TryParseConfigValue(Type type, string text, out object? value)
-	{
-		value = null;
-		var number = text.StartsWith('#') ? text[1..] : text;
-
-		if (Nullable.GetUnderlyingType(type) is { } underlying)
-		{
-			if (number is "-1")
-			{
-				return true;
-			}
-
-			type = underlying;
-		}
-
-		switch (type)
-		{
-			case not null when type == typeof(bool):
-				value = text.ToLowerInvariant() switch
-				{
-					"yes" or "true" or "1" => true,
-					"no" or "false" or "0" => false,
-					_ => null
-				};
-				return value is not null;
-			case not null when type == typeof(uint):
-				value = uint.TryParse(number, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var unsigned) ? unsigned : null;
-				return value is not null;
-			case not null when type == typeof(int):
-				value = int.TryParse(number, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var signed) ? signed : null;
-				return value is not null;
-			case not null when type == typeof(char):
-				value = text.Length == 1 ? text[0] : null;
-				return value is not null;
-			case not null when type == typeof(string):
-				value = text;
-				return true;
-			case { IsEnum: true }:
-				value = Enum.TryParse(type, text, ignoreCase: true, out var member) && Enum.IsDefined(type, member!) && !char.IsDigit(text[0]) ? member : null;
-				return value is not null;
-			default:
-				return false;
-		}
-	}
+		=> !ConfigOptionWriter.GodOnlyOptions.Contains(property) || viewer.IsGod();
 
 	/// <remarks>
 	/// PennMUSH <c>cmd_restart</c> (<c>src/cmds.c:1355-1361</c>): <c>/all</c> is <c>do_allrestart</c>

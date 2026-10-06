@@ -149,7 +149,8 @@ public record SharpMUSHOptions
 			MasterRoom: 2,
 			PlayerStart: 0,
 			ZoneControlZmpOnly: true,
-			AllowBrowserCode: false
+			AllowBrowserCode: false,
+			MessagesObject: null
 		),
 		Debug = new DebugOptions(
 			DebugSharpParser: false,

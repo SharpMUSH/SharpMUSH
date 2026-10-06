@@ -17,8 +17,10 @@ Each attribute is evaluated as the object when its message is shown: `%#` is the
 object itself at the connect screen) and `%0` is the connection's descriptor. An attribute that evaluates to
 nothing shows nothing; a message the object has no attribute for shows its stored text instead.
 
-Installing the package switches the game to reading its messages from this object. **Admin > Messages** in the
-portal switches back to the stored text, and edits that text, without removing the package.
+Installing the package sets the `messages_object` option to this object, which switches the game to reading its
+messages from it; removing the package puts the option back as it was, unless it has been changed since.
+**Admin > Messages** in the portal switches back to the stored text, and edits that text, without removing the
+package.
 
 `CONNECT` lays `LOGO` beside `TEXT` line by line, in the logo's green. Both are read with `v()`, unevaluated, so
 their spacing and brackets reach the screen as written.

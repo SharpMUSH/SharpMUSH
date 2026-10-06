@@ -479,6 +479,39 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 	}
 
+	/// <summary>
+	/// A package that sets a configuration option lists it with its value now and after, and the apply waits for the
+	/// admin to confirm the change.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_ListsTheOptionsItSets_AndWaitsForTheirConfirmation()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("messages", null, "1.0.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Install, [], [], [], [], [], [],
+			Settings: [new("messages_object", SharpMUSH.Library.Models.Packages.PackageSettingAction.Set, null, "#12",
+				"The object this install creates.")]);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("messages", "1.0.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=messages");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-settings"), TimeSpan.FromSeconds(5));
+		var row = cut.Find(".pkg-settings tbody tr").TextContent;
+		await Assert.That(row).Contains("messages_object");
+		await Assert.That(row).Contains("PkgSettingNone");
+		await Assert.That(row).Contains("#12");
+		bool ApplyDisabled() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled");
+		await Assert.That(ApplyDisabled()).IsTrue();
+
+		cut.Find("input#pkg-settings-confirm, #pkg-settings-confirm input").Change(true);
+		cut.WaitForAssertion(() =>
+		{
+			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
+		}, TimeSpan.FromSeconds(5));
+	}
+
 	[Test]
 	public async Task Suggestions_EscapesTheWordWhenDeletingIt()
 	{

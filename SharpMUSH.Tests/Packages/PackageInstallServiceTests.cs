@@ -186,7 +186,8 @@ public class PackageInstallServiceTests
 			WebAppFactoryArg.Services.GetRequiredService<IMediator>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationGate>(),
 			WebAppFactoryArg.Services.GetRequiredService<ILockService>(),
-				WebAppFactoryArg.Services.GetRequiredService<IPackageDeclarationService>());
+				WebAppFactoryArg.Services.GetRequiredService<IPackageDeclarationService>(),
+				WebAppFactoryArg.Services.GetRequiredService<IPackageSettingService>());
 		var manifest = Parse("""
 			package: unset-package-manager-ref
 			version: "1.0"
@@ -1050,7 +1051,8 @@ public class PackageInstallServiceTests
 				WebAppFactoryArg.Services.GetRequiredService<IMediator>(),
 				WebAppFactoryArg.Services.GetRequiredService<IPackageOperationGate>(),
 				WebAppFactoryArg.Services.GetRequiredService<ILockService>(),
-				WebAppFactoryArg.Services.GetRequiredService<IPackageDeclarationService>());
+				WebAppFactoryArg.Services.GetRequiredService<IPackageDeclarationService>(),
+				WebAppFactoryArg.Services.GetRequiredService<IPackageSettingService>());
 
 			var refused = await installer.ApplyAsync(
 				manifest,

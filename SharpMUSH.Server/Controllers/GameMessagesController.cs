@@ -1,10 +1,14 @@
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 
@@ -12,7 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// The Messages page: the stored text of each <see cref="GameMessage"/>, and whether the game reads its messages
-/// from that text or from the Messages object.
+/// from that text or from an object (the <c>messages_object</c> option).
 /// </summary>
 [ApiController]
 [Route("api/admin/messages")]
@@ -20,6 +24,8 @@ namespace SharpMUSH.Server.Controllers;
 public class GameMessagesController(
 	IGameMessageService messages,
 	IPackageRegistryService packages,
+	IConfigOptionWriter config,
+	IMediator mediator,
 	IAuditLog audit)
 	: ControllerBase
 {
@@ -50,21 +56,30 @@ public class GameMessagesController(
 		return Ok(await StateAsync());
 	}
 
-	/// <summary>Chooses where messages are read from; null follows the Messages package again.</summary>
+	/// <summary>Sets <c>messages_object</c>: the object to read messages from, or none for the stored texts.</summary>
 	[HttpPut("source")]
 	public async Task<ActionResult<GameMessagesResponse>> PutSource([FromBody] GameMessageSourceRequest request)
 	{
-		if (request.Source is { } source && !Enum.IsDefined(source)) return BadRequest(new { error = "Unknown source." });
+		if (request.ObjectDbref is { } number
+			&& (number < 0 || await mediator.Send(new GetObjectNodeQuery(new DBRef(number))) is not AnySharpObject))
+		{
+			return BadRequest(new { error = $"#{number} is not an object." });
+		}
 
-		await messages.SetSourceAsync(request.Source);
-		await audit.RecordPortalAsync(User, AuditActions.ConfigSet, AuditTargets.Of(AuditTargetKinds.Setting, "message:source"),
-			request.Source?.ToString().ToLowerInvariant() ?? "package");
+		const string property = nameof(DatabaseOptions.MessagesObject);
+		if (await config.SetAsync(property, (uint?)request.ObjectDbref) is Error<string> refused)
+		{
+			return BadRequest(new { error = refused.Value });
+		}
+
+		await audit.RecordPortalAsync(User, AuditActions.ConfigSet, AuditTargets.Of(AuditTargetKinds.Setting, config.NameOf(property)),
+			request.ObjectDbref is { } set ? $"#{set}" : "none");
 		return Ok(await StateAsync());
 	}
 
 	private async Task<GameMessagesResponse> StateAsync()
 	{
-		var (source, chosen) = await messages.GetSourceAsync();
+		var configured = (await config.CurrentAsync()).Database.MessagesObject;
 		var holder = await messages.MessagesObjectAsync() is AnySharpObject found ? found : null;
 		var attributes = holder is null
 			? []
@@ -86,12 +101,18 @@ public class GameMessagesController(
 				preview is MString shown ? shown.Render(MarkupFormat.Ansi) : null));
 		}
 
+		var packageObject = (await packages.GetPackageObjectsAsync(GameMessages.PackageId))
+			.FirstOrDefault(o => o.Ref == GameMessages.ObjectRef) is { } record
+			&& HelperFunctions.ParseDbRef(record.Objid) is DBRef dbref
+				? dbref.Number
+				: (int?)null;
+
 		return new GameMessagesResponse(
-			source,
-			chosen,
+			configured is null ? GameMessageSource.Stored : GameMessageSource.Object,
 			await packages.GetInstalledPackageAsync(GameMessages.PackageId) is InstalledPackageRecord,
-			holder?.Object().DBRef.Number,
+			(int?)configured,
 			holder?.Object().Name,
+			packageObject,
 			entries);
 	}
 }
