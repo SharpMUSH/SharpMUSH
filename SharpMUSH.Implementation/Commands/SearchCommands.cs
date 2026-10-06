@@ -794,20 +794,13 @@ public partial class Commands
 
 		if (showAttribs)
 		{
-			SharpAttributesOrError atrs;
-			if (!string.IsNullOrEmpty(attributePattern))
-			{
-				atrs = await AttributeService.GetAttributePatternAsync(
-					executor,
-					targetKnown,
-					attributePattern,
-					false, // don't check parents for decompile
-					IAttributeService.AttributePatternMode.Wildcard);
-			}
-			else
-			{
-				atrs = await AttributeService.GetVisibleAttributesAsync(executor, targetKnown);
-			}
+			// Penn's do_decompile reads "**" when no pattern is given: the whole tree, not only its roots.
+			var atrs = await AttributeService.GetAttributePatternAsync(
+				executor,
+				targetKnown,
+				string.IsNullOrEmpty(attributePattern) ? "**" : attributePattern,
+				false, // don't check parents for decompile
+				IAttributeService.AttributePatternMode.Wildcard);
 
 			if (atrs is SharpAttribute[] decompiledAttributes)
 			{

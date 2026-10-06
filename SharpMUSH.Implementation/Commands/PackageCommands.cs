@@ -120,7 +120,8 @@ public partial class Commands
 			var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			if (knownByObjid.TryGetValue(obj.Objid, out var known))
 			{
-				var visible = await AttributeService.GetVisibleAttributesAsync(executor, known);
+				var visible = await AttributeService.GetAttributePatternAsync(executor, known, "**", false,
+					IAttributeService.AttributePatternMode.Wildcard);
 				if (visible is SharpAttribute[] visibleAttributes)
 				{
 					foreach (var attr in visibleAttributes)
