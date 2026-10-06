@@ -1,4 +1,4 @@
-@page "/admin/players/{Id:int}"
+@page "/admin/characters/{Id:int}"
 @attribute [Authorize(Policy = "players.view")]
 @using System.Globalization
 @using SharpMUSH.Library.DiscriminatedUnions
@@ -147,7 +147,7 @@
 
     /// <summary>The audit log, narrowed to entries naming this character's objid.</summary>
     private static string AuditHref(AdminCharacterDetail detail) =>
-        $"/admin/moderation/audit?text={Uri.EscapeDataString($"#{detail.Character.DbrefNumber}:{detail.Character.CreationTime}")}";
+        $"/admin/audit?text={Uri.EscapeDataString($"#{detail.Character.DbrefNumber}:{detail.Character.CreationTime}")}";
 
     private async Task BootAsync()
     {

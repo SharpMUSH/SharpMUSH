@@ -1,14 +1,14 @@
-@page "/admin/players"
+@page "/admin/guests"
 @attribute [Authorize(Policy = "players.view")]
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject AdminGuestsService Guests
 @inject ISnackbar Snackbar
 
-<PageTitle>@Loc["AdmPlayersTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AdmGuestsTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="page-stack page-stack--padded adm-players">
-    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmPlayersTitle"]" />
+    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmGuestsTitle"]" />
 
     <KitCard Title="@Loc["AdmGuestsSection"]" Sub="@Loc["AdmGuestsBlurb"]">
         <div class="adm-players-body">
@@ -20,7 +20,7 @@
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" id="guests-disabled-warning">
                     @Loc["AdmGuestsDisabledWarning"]
-                    <MudLink Href="/admin/config/network" Class="ml-1">@Loc["AdmGuestsDisabledWarningLink"]</MudLink>
+                    <MudLink Href="/admin/config/net" Class="ml-1">@Loc["AdmGuestsDisabledWarningLink"]</MudLink>
                 </MudAlert>
             }
 

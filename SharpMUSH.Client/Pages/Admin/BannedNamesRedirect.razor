@@ -1,9 +1,0 @@
-@page "/admin/bannednames"
-@inject NavigationManager NavigationManager
-
-@code {
-    protected override void OnInitialized()
-    {
-        NavigationManager.NavigateTo("/admin/config/bannednames", replace: true);
-    }
-}

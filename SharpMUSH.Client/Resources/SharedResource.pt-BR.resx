@@ -120,20 +120,12 @@
     <value>Desativada</value>
     <comment>MT — refers to a conta (feminine)</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Gerenciar contas</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Buscar nome de usuário ou e-mail…</value>
     <comment>MT</comment>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Contas</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Widgets personalizados</value>
     <comment>MT</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
@@ -151,26 +143,6 @@
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>{0} desvinculado de '{1}'.</value>
     <comment>MT — assumed {0} is a character name and {1} an account</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Ver personagens</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Configuração do site</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Painel de administração</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Importar banco de dados</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Importação do banco de dados</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
     <value>Desativar</value>
@@ -192,20 +164,8 @@
     <value>Navegue pelos tópicos, pesquise referências e leia o manual.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Administração</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Editor de layout</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Layout</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Arquivos de mídia</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>A operação falhou.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Pacotes de softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Pacotes</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Senha de '{0}' redefinida para: {1} — compartilhe com segurança; ela deverá ser trocada no próximo login.</value>
     <comment>MT</comment>
@@ -244,21 +196,9 @@
     <value>Jogador #{0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Ver jogadores</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Jogadores</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Presente</value>
     <comment>MT — assumed this labels an item that exists, paired with 'Missing'</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Perfis de personagem</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
     <value>Configurado</value>
@@ -315,16 +255,8 @@
     <value>Redefinindo…</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Funções e permissões</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Funções</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Status do servidor</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Sugestões de palavras</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4247,10 +4175,6 @@
     <value>{0} excluído.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP ou SVG — máx. 10 MB.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>{0} enviado.</value>
     <comment>MT</comment>
@@ -4601,10 +4525,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>Ver esta revisão</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Arquivos do wiki</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5123,9 +5043,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributos do manipulador</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Enviar uma imagem</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Este jogo não tem tópicos de ajuda instalados.</value>

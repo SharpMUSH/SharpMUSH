@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
@@ -36,6 +37,12 @@ public class AdminBansController(
 	IAuditLog audit,
 	TimeProvider time) : ControllerBase
 {
+	/// <summary>
+	/// The constructor the framework uses. Without the attribute, a container that can also supply a
+	/// <see cref="TimeProvider"/> finds two usable constructors and refuses to build the controller at
+	/// all, so every request to it failed with a 500.
+	/// </summary>
+	[ActivatorUtilitiesConstructor]
 	public AdminBansController(
 		IAccountService accounts,
 		IPermissionService permissions,

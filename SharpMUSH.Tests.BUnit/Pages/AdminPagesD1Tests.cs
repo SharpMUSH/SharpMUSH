@@ -98,7 +98,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	[Arguments(typeof(Players), "AdmPlayersTitle", null)]
+	[Arguments(typeof(AdminGuests), "AdmGuestsTitle", null)]
 	[Arguments(typeof(AdminAccounts), "AdmAccountsTitle", null)]
 	[Arguments(typeof(AdminCharacters), "Characters", null)]
 	[Arguments(typeof(AuditLog), "AdmAuditTitle", null)]
@@ -107,7 +107,6 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	[Arguments(typeof(AdminProfiles), "ProfileHandler", null, ".mud-alert")]
 	[Arguments(typeof(AdminMedia), "WkImageLibrary", null)]
 	[Arguments(typeof(AdminWiki), "WikiAdmin", null)]
-	[Arguments(typeof(AdminWikiAssets), "WkWikiAssets", null)]
 	[Arguments(typeof(AdminApplications), "LayApplications", "LayAppsNew")]
 	[Arguments(typeof(ImportDatabase), "ImportPennMUSHDatabase", null)]
 	[Arguments(typeof(AdminJobs), "JobsTitle", "JobsRefresh")]
@@ -250,14 +249,14 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		Auth.SetPolicies("players.view", "queue.inspect.own");
 		var cut = RenderPage(typeof(Dashboard));
 
-		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/players']"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".kit-page-head h1").TextContent.Trim()).IsEqualTo("AdmDashboardTitle");
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/guests']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-page-head h1").TextContent.Trim()).IsEqualTo("AdmOverview");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/diagnostics']").Count).IsEqualTo(1)
 			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
-		foreach (var gated in new[] { "/admin/accounts", "/admin/moderation/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
+		foreach (var gated in new[] { "/admin/accounts", "/admin/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
 			"/admin/suggestions", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
-			"/admin/server", "/admin/database/import" })
+			"/admin/server", "/admin/import" })
 		{
 			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{gated}']").Count).IsEqualTo(0).Because(gated);
 		}
@@ -272,7 +271,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/moderation']"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/moderation/audit']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/audit']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/config']").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/server']").Count).IsEqualTo(0);
 	}
@@ -357,6 +356,28 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// The overview's cards are the section sidebar's entries, under the same group headings in the
+	/// same order, so the two can never offer different pages.
+	/// </summary>
+	[Test]
+	public async Task Dashboard_GroupsItsCardsAsTheSidebarDoes()
+	{
+		Auth.SetPolicies("softcode.use", "players.view", "players.moderate", "wiki.admin", "config.admin", "server.admin");
+		var cut = RenderPage(typeof(Dashboard));
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/import']"), TimeSpan.FromSeconds(5));
+
+		var groups = cut.FindAll(".adm-dash-group").Select(g => g.GetAttribute("aria-label")).ToList();
+		await Assert.That(groups).IsEquivalentTo(new[] { "NavSectionBuild", "AdmGroupPeople", "AdmGroupModeration", "AdmGroupContent", "AdmGroupPortal", "AdmGroupServer" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var cards = cut.FindAll("a.adm-dash-card").Select(c => c.GetAttribute("href")).ToList();
+		await Assert.That(cards).IsEquivalentTo(new[]
+		{
+			"/softcode", "/admin/characters", "/admin/guests", "/admin/moderation", "/admin/audit",
+			"/admin/wiki", "/admin/suggestions", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
 	/// An administrator who left the first-run wizard after the claim is pointed back to it; nobody else
 	/// is, and nobody is once it is finished.
 	/// </summary>
@@ -379,8 +400,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	/// header. A bool query parameter threw on that "1" and took the page down.
 	/// </summary>
 	[Test]
-	[Arguments("/admin/database/import?setup=1", true)]
-	[Arguments("/admin/database/import", false)]
+	[Arguments("/admin/import?setup=1", true)]
+	[Arguments("/admin/import", false)]
 	public async Task ImportDatabase_FromTheWizard_OffersTheWayBack(string address, bool offered)
 	{
 		Auth.SetPolicies("server.admin");

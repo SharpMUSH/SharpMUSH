@@ -14,9 +14,9 @@
 @* The actions staff take, in one place: pick a character, give a reason, then warn, boot, ban or unlink.
    Reports are not taken here; each game takes them its own way. Every action lands in the audit log. *@
 <div class="page-stack page-stack--padded adm-mod">
-    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmModerationTitle"]" Description="@Loc["AdmModerationBlurb"]">
+    <PlainPageHeader Kicker="@Loc["AdmGroupModeration"]" Title="@Loc["AdmModerationTitle"]" Description="@Loc["AdmModerationBlurb"]">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.History" Href="/admin/moderation/audit">@Loc["AdmAuditTitle"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.History" Href="/admin/audit">@Loc["AdmAuditTitle"]</CapsuleButton>
         </Actions>
     </PlainPageHeader>
 
@@ -46,7 +46,7 @@
             {
                 <div class="adm-mod-picked">
                     <div class="adm-mod-who">
-                        <a class="adm-mod-link" href="/admin/players/@picked.DbrefNumber">@picked.Name</a>
+                        <a class="adm-mod-link" href="/admin/characters/@picked.DbrefNumber">@picked.Name</a>
                         <span class="adm-mod-dim">#@picked.DbrefNumber · @(picked.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</span>
                         <MudChip T="string" Size="Size.Small" Color="@(picked.Online ? Color.Success : Color.Default)">
                             @(picked.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])

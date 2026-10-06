@@ -145,7 +145,7 @@ public class BotDetectionMiddlewareTests
 		};
 		client.DefaultRequestHeaders.Add("User-Agent", "Googlebot/2.1");
 
-		var response = await client.GetAsync("/admin/players");
+		var response = await client.GetAsync("/admin/guests");
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(403);
 	}

@@ -85,7 +85,7 @@ file static class AdminGuestsTestServices
 }
 
 /// <summary>
-/// bUnit tests for /admin/players, which is now the guest-character panel. Replacing the
+/// bUnit tests for /admin/guests, the guest-character panel. Replacing the
 /// "coming soon" placeholder is the point: an operator has to be able to stock a game with guests
 /// without opening a MU* client, because until they do, every anonymous visitor who clicks Play is
 /// told there are no guest characters available.
@@ -103,12 +103,12 @@ public class AdminGuestsPageTests : TrackingBunitContext
 		this.AddAdminGuestsTestServices(new AdminGuestsApiHandler());
 	}
 
-	private Bunit.IRenderedComponent<SharpMUSH.Client.Pages.Admin.Players> RenderPage()
+	private Bunit.IRenderedComponent<SharpMUSH.Client.Pages.Admin.AdminGuests> RenderPage()
 	{
 		Auth.SetAuthorized("headwiz");
 		Auth.SetRoles("Wizard");
 		Auth.SetPolicies("players.view");
-		return Render<SharpMUSH.Client.Pages.Admin.Players>();
+		return Render<SharpMUSH.Client.Pages.Admin.AdminGuests>();
 	}
 
 	[TUnit.Core.Test]
@@ -183,6 +183,9 @@ public class AdminGuestsPageTests : TrackingBunitContext
 		});
 
 		await Assert.That(cut.FindAll("#guests-disabled-warning").Count).IsEqualTo(1);
+		// The link used to name /admin/config/network, which is no section: it opened "Category not found".
+		var href = cut.Find("#guests-disabled-warning a").GetAttribute("href")!;
+		await Assert.That(SharpMUSH.Client.Models.Configuration.ConfigSections.SectionForPath(href)?.SchemaCategory).IsEqualTo("Net");
 	}
 
 	[TUnit.Core.Test]

@@ -120,20 +120,12 @@
     <value>Letiltott</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Fiókok kezelése</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Keresés felhasználónév vagy e-mail alapján…</value>
     <comment>MT</comment>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Fiókok</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Egyéni widgetek</value>
     <comment>MT</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
@@ -150,26 +142,6 @@
   </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>{0} leválasztva a következőről: „{1}”.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Karakterek megtekintése</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Oldalbeállítások</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Adminisztrációs irányítópult</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Adatbázis importálása</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Adatbázis-importálás</value>
     <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
@@ -192,20 +164,8 @@
     <value>Témák böngészése, hivatkozások keresése és a kézikönyv olvasása.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Adminisztráció</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Elrendezésszerkesztő</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Elrendezés</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Médiafájlok</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>A művelet sikertelen.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Softcode csomagok</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Csomagok</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>A(z) „{0}” jelszava visszaállítva a következőre: {1} — ossza meg biztonságosan; a következő bejelentkezéskor meg kell változtatnia.</value>
     <comment>MT</comment>
@@ -244,20 +196,8 @@
     <value>#{0} játékos</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Játékosok megtekintése</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Játékosok</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Jelen van</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Karakterprofilok</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
@@ -315,16 +255,8 @@
     <value>Visszaállítás…</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Szerepkörök és jogosultságok</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Szerepkörök</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Szerver állapota</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Állapot</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Szójavaslatok</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4247,10 +4175,6 @@
     <value>{0} törölve.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP vagy SVG — legfeljebb 10 MB.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>{0} feltöltve.</value>
     <comment>MT</comment>
@@ -4601,10 +4525,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>A változat megtekintése</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Wiki-fájlok</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5123,9 +5043,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>A kezelő attribútumai</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Kép feltöltése</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Ehhez a játékhoz nincsenek súgótémák telepítve.</value>

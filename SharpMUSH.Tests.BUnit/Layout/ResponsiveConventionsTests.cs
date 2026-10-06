@@ -74,9 +74,6 @@ public class ResponsiveConventionsTests
 
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
-		"Pages/Admin/BannedNamesRedirect.razor",
-		"Pages/Admin/RestrictionsRedirect.razor",
-		"Pages/Admin/SitelockRedirect.razor",
 		"Pages/NotFound.razor",
 		"Pages/SettingsCharactersRedirect.razor",
 	};

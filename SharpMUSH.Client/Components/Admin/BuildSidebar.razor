@@ -9,9 +9,9 @@
 @inject IAuthorizationService Authorization
 @implements IDisposable
 
-@* D1 §3 Build & manage page sidebar: the Build and Manage destinations the viewer may use (the same
-   gates as the rail and the drawer, from BuildNavCatalog) and, under Apps, the applications placed
-   in either section. Collapsed keeps each row's icon. *@
+@* D1 §3 Build & manage page sidebar: the overview, then each group of destinations the viewer may
+   use (the same entries and gates as the rail, the drawer and the overview, from BuildNavCatalog) and,
+   under Apps, the applications placed in Build or Manage. Collapsed keeps each row's icon. *@
 <SidebarPanel Class="build-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
@@ -21,8 +21,8 @@
     }
     @foreach (var group in _entries.GroupBy(e => e.Group))
     {
-        var label = group.Key == BuildNavCatalog.Group.Build ? Loc["NavSectionBuild"] : Loc["NavSectionManage"];
-        @if (!Collapsed)
+        var label = BuildNavCatalog.GroupLabelKey(group.Key) is { } key ? Loc[key].Value : Loc["NavBuildManage"].Value;
+        @if (!Collapsed && BuildNavCatalog.GroupLabelKey(group.Key) is not null)
         {
             <SectionLabel>@label</SectionLabel>
         }
@@ -84,8 +84,8 @@
     }
 
     /// <summary>
-    /// The row for this page; on an admin page the sidebar does not list (players, accounts, the
-    /// server, reached from the dashboard's cards) the dashboard row stands for it.
+    /// The row for this page; on an admin page the sidebar does not list (the design kit) the
+    /// overview row stands for it.
     /// </summary>
     private bool IsCurrent(string href, bool exact) =>
         Matches(href, exact)

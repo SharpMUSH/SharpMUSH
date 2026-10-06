@@ -6,7 +6,7 @@
 <PageTitle>@Loc["Characters"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="page-stack page-stack--padded adm-chars">
-    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["Characters"]" />
+    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["Characters"]" />
 
     <KitCard>
         <div class="adm-chars-body">
@@ -55,7 +55,7 @@
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd data-label="@Loc["AdmCharactersName"]">
-                            <a class="adm-chars-link" href="/admin/players/@context.DbrefNumber">@context.Name</a>
+                            <a class="adm-chars-link" href="/admin/characters/@context.DbrefNumber">@context.Name</a>
                             <span class="adm-chars-dbref">#@context.DbrefNumber</span>
                         </MudTd>
                         <MudTd data-label="@Loc["AdmCharactersAccount"]">@(context.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</MudTd>

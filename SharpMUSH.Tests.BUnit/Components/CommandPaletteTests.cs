@@ -47,8 +47,8 @@ public class CommandPaletteTests : BunitContext
 		await Assert.That(cut.Find("input[role='combobox']").GetAttribute("aria-controls")).IsEqualTo("kit-palette-list");
 		var labels = Labels(cut);
 		await Assert.That(labels).Contains("Wiki");
-		await Assert.That(labels).Contains("Roles");
-		await Assert.That(labels).DoesNotContain("Config").Because("config.admin was not granted");
+		await Assert.That(labels).Contains("Roles & permissions");
+		await Assert.That(labels).DoesNotContain("Configuration").Because("config.admin was not granted");
 	}
 
 	[Test]
