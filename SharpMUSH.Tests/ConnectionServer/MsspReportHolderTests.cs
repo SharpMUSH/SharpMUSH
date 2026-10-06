@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.SocketServer.Services;
 
@@ -30,5 +33,36 @@ public class MsspReportHolderTests
 
 		holder.Replace([]);
 		await Assert.That(holder.Current.Name).IsEqualTo("SharpMUSH");
+	}
+
+	/// <summary>
+	/// The first request can be answered before this server's consumer exists, and an unchanged report is
+	/// not sent again, so the request is repeated until a report arrives, and then no more.
+	/// </summary>
+	[Test]
+	public async Task TheReportIsAskedForAgainUntilOneArrives()
+	{
+		var holder = new MsspReportHolder();
+		var bus = Substitute.For<IMessageBus>();
+		var asked = 0;
+		bus.Publish(Arg.Any<MSSPReportRequestMessage>(), Arg.Any<CancellationToken>())
+			.Returns(_ =>
+			{
+				if (Interlocked.Increment(ref asked) == 2)
+				{
+					holder.Replace([new MSSPVariable("NAME", ["Test Game"])]);
+				}
+
+				return Task.CompletedTask;
+			});
+		using var service = new MsspReportRequestService(bus, holder, NullLogger<MsspReportRequestService>.Instance);
+
+		await service.StartAsync(CancellationToken.None);
+		await holder.Received.WaitAsync(TimeSpan.FromSeconds(10));
+		await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
+		await service.StopAsync(CancellationToken.None);
+
+		await Assert.That(asked).IsEqualTo(2);
+		await Assert.That(holder.Current.Variables["NAME"]).IsEquivalentTo(new[] { "Test Game" });
 	}
 }

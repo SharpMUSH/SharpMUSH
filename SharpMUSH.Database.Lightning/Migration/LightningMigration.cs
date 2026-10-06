@@ -62,6 +62,7 @@ public partial class LightningDatabase
 			await RebuildReadIndexesAsync(cancellationToken);
 			await MoveWikiCategoriesIntoTextAsync(cancellationToken);
 			await MoveWikiProtectionIntoRequirementsAsync(cancellationToken);
+			await AddMsspOptionAsync(cancellationToken);
 			await Store.WriteAsync(tx => NumberMailFolders(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)

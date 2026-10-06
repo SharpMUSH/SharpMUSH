@@ -16,7 +16,12 @@ public sealed class MsspReportHolder
 
 	private volatile MSSPConfig _current = Fallback();
 
+	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
 	public MSSPConfig Current => _current;
+
+	/// <summary>Completes when the first report from the main process arrives.</summary>
+	public Task Received => _received.Task;
 
 	public void Replace(IEnumerable<MSSPVariable> variables)
 	{
@@ -30,6 +35,7 @@ public sealed class MsspReportHolder
 		}
 
 		_current = config.Variables.Count == 0 ? Fallback() : config;
+		_received.TrySetResult();
 	}
 }
 
