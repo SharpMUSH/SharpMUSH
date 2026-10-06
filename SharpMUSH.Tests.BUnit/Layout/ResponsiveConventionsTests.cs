@@ -74,8 +74,6 @@ public class ResponsiveConventionsTests
 
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
-		// The not-yet-built admin screens render only <AdminComingSoon>, which carries the tiers.
-		"Pages/Admin/AdminServer.razor",
 		"Pages/Admin/BannedNamesRedirect.razor",
 		"Pages/Admin/RestrictionsRedirect.razor",
 		"Pages/Admin/SitelockRedirect.razor",
@@ -89,6 +87,8 @@ public class ResponsiveConventionsTests
 	{
 		["Pages/Admin/BannedNames.razor.css"] =
 			"renders only the kit header and <AdminKeyValueList>, whose own stylesheet carries the tiers",
+		["Pages/Admin/AdminServer.razor.css"] =
+			"a row of <AdminStat> tiles in <AdminStats>, which reflows by track count; only the note under it is styled",
 		["Pages/Admin/Dashboard.razor.css"] =
 			"an auto-fill grid of <LinkCard>s, which reflows on its own; the card carries the narrow tier",
 		["Pages/Admin/Restrictions.razor.css"] =

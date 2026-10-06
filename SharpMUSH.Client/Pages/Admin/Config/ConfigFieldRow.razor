@@ -13,10 +13,18 @@
             {
                 <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", Property.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
             }
+            @if (Property.Unused is not null)
+            {
+                <span class="cfg-row-unused">@Loc["AdmCfgUnused"]</span>
+            }
         </div>
         @if (HelpId is not null)
         {
             <div class="cfg-row-help" id="@HelpId">@Property.Description</div>
+        }
+        @if (UnusedId is not null)
+        {
+            <div class="cfg-row-help cfg-row-unused-note" id="@UnusedId">@Property.Unused</div>
         }
         @if (ErrorId is not null)
         {
@@ -172,12 +180,15 @@
 
     private string? ErrorId => ErrorText is null ? null : "cfg-error-" + ConfigNaming.Slug(Property.Path);
 
-    /// <summary>The help and the refusal, by id, for the control's <c>aria-describedby</c>; null when it has neither.</summary>
+    /// <summary>What decides the option instead, when SharpMUSH does not act on it.</summary>
+    private string? UnusedId => Property.Unused is null ? null : "cfg-unused-" + ConfigNaming.Slug(Property.Path);
+
+    /// <summary>The help, the unused note and the refusal, by id, for the control's <c>aria-describedby</c>; null when it has none.</summary>
     private string? DescribedBy
     {
         get
         {
-            var ids = string.Join(' ', new[] { HelpId, ErrorId }.Where(id => id is not null));
+            var ids = string.Join(' ', new[] { HelpId, UnusedId, ErrorId }.Where(id => id is not null));
             return ids.Length == 0 ? null : ids;
         }
     }

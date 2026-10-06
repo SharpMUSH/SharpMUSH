@@ -327,14 +327,6 @@
     <value>Serverstatus</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Serverconfiguratie en live meetgegevens komen binnenkort.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Serverinstellingen alleen voor God</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Beheer · server</value>
     <comment>MT</comment>
@@ -3442,10 +3434,6 @@
   </data>
   <data name="ServerConfiguration" xml:space="preserve">
     <value>Serverconfiguratie</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Serverinstellingen</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">

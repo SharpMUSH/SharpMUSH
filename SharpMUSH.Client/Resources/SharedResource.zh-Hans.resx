@@ -327,14 +327,6 @@
     <value>服务器状态</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>服务器配置和实时指标即将推出。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>仅限 God 的服务器设置</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>管理 · 服务器</value>
     <comment>MT</comment>
@@ -3442,10 +3434,6 @@
   </data>
   <data name="ServerConfiguration" xml:space="preserve">
     <value>服务器配置</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>服务器设置</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">

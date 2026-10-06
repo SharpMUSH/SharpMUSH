@@ -63,6 +63,7 @@ builder.Services.AddSingleton<AdminGuestsService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();
 builder.Services.AddSingleton<AdminBansService>();
+builder.Services.AddSingleton<AdminServerService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
 builder.Services.AddTerminalServices();
 builder.Services.AddSingleton<MushQueryService>();

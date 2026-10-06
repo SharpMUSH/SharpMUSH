@@ -103,7 +103,8 @@ public static partial class SchemaBuilder
 				Required = !IsNullable(type),
 				Tooltip = attr.Tooltip,
 				ReadOnly = false,
-				Path = path
+				Path = path,
+				Unused = attr.Unused
 			});
 		}
 

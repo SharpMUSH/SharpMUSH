@@ -84,3 +84,50 @@ public sealed record AdminBanRequest(string AccountKey, string Reason, DateTimeO
 /// <summary>Warns a character (<c>POST api/admin/characters/{dbref}/warn</c>).</summary>
 /// <param name="Reason">Why; required, passed to the game's <c>PLAYER`WARN</c> handler and kept in the audit log.</param>
 public sealed record AdminWarnRequest(string Reason);
+
+/// <summary>The server page's figures (<c>GET api/admin/server/status</c>), read in-process.</summary>
+/// <param name="Version">The SharpMUSH version number, as the <c>INFO</c> command gives it.</param>
+/// <param name="BuildId">The portal build this server serves, as <c>api/server-info</c> reports it.</param>
+/// <param name="StartedAt">When the game started, or null before it has recorded it.</param>
+/// <param name="Connections">Open client connections, logged in or not.</param>
+/// <param name="Players">Characters logged in on at least one of them.</param>
+/// <param name="QueuedTasks">Jobs admitted to the queue, running ones included, as <c>@ps/all</c> counts them;
+/// null when the scheduler does not keep that count.</param>
+/// <param name="QueueLimit">The most it admits (<c>global_queue_limit</c>).</param>
+/// <param name="Ready">Whether the server can play the game now, as <c>/ready</c> answers.</param>
+/// <param name="Pending">What readiness is still waiting on; empty when ready.</param>
+/// <param name="Streams">The message bus streams: what each holds against its byte budget.</param>
+/// <param name="BusBacklog">Messages the bus's consumers have not been delivered yet, all together.</param>
+/// <param name="BusReadAt">Whether the bus has been read at all yet; it is read every 30 seconds.</param>
+/// <param name="Storage">The world's storage, as <c>@storage</c> reports it.</param>
+/// <param name="LastBackup">When the newest copy on disk was taken, or null when there is none.</param>
+/// <param name="BackupSupported">Whether this database provider takes copies at all.</param>
+public sealed record AdminServerStatus(
+	string Version,
+	string BuildId,
+	DateTimeOffset? StartedAt,
+	int Connections,
+	int Players,
+	int? QueuedTasks,
+	uint QueueLimit,
+	bool Ready,
+	IReadOnlyList<string> Pending,
+	IReadOnlyList<AdminBusStream> Streams,
+	long BusBacklog,
+	bool BusReadAt,
+	AdminStorageStatus Storage,
+	DateTimeOffset? LastBackup,
+	bool BackupSupported);
+
+/// <summary>One message bus stream.</summary>
+/// <param name="Name">The stream's name.</param>
+/// <param name="Bytes">What it holds.</param>
+/// <param name="MaxBytes">Its byte budget, or -1 for none.</param>
+public sealed record AdminBusStream(string Name, long Bytes, long MaxBytes);
+
+/// <summary>The world's storage, in the figures <c>@storage</c> leads with.</summary>
+/// <param name="LiveBytes">The live data.</param>
+/// <param name="FileBytes">The data file's length.</param>
+/// <param name="MapSizeBytes">The most the file may grow to.</param>
+/// <param name="DiskFreeBytes">Free space on the world's disk, or -1 when it cannot be read.</param>
+public sealed record AdminStorageStatus(long LiveBytes, long FileBytes, long MapSizeBytes, long DiskFreeBytes);

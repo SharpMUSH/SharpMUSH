@@ -1,0 +1,6 @@
+.adm-server-note {
+	margin: 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+}

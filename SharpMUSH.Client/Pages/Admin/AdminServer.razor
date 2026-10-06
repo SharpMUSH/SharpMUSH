@@ -1,7 +1,142 @@
 @page "/admin/server"
 @attribute [Authorize(Policy = "server.admin")]
+@implements IDisposable
+@using SharpMUSH.Client.Services
+@inject AdminServerService ServerService
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["ServerSettings"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AdmServerTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<AdminComingSoon Kicker="@Loc["AdmServerKicker"]" Title="@Loc["ServerSettings"]" Icon="@Icons.Material.Filled.Dns" Message="@Loc["AdmServerComingSoon"]" CardTitle="@Loc["AdmServerGodOnly"]" />
+@* The server's own figures, read in-process and refreshed every ten seconds while the page is open.
+   Restarting stays with @shutdown in the game; the page only reports. *@
+<div class="page-stack page-stack--padded adm-server">
+    <PlainPageHeader Kicker="@Loc["AdmServerKicker"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="adm-server-error">@_error</MudAlert>
+    }
+
+    @if (_status is { } status)
+    {
+        <AdminStats>
+            <AdminStat Key="ready" Icon="@(status.Ready ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HourglassTop)"
+                       Label="@Loc["AdmServerReadiness"]" Warn="@(!status.Ready)"
+                       Value="@Loc[status.Ready ? "AdmServerReady" : "AdmServerNotReady"]"
+                       Sub="@(status.Ready ? null : Loc["AdmServerWaitingOn", string.Join(", ", status.Pending)].Value)" />
+            <AdminStat Key="uptime" Icon="@Icons.Material.Filled.Timer" Label="@Loc["AdmServerUptime"]"
+                       Value="@(status.StartedAt is { } started ? Uptime(_readAt - started) : "—")"
+                       Sub="@(status.StartedAt is { } since ? Loc["AdmServerSince", Utc(since)].Value : null)" />
+            <AdminStat Key="players" Icon="@Icons.Material.Filled.Group" Label="@Loc["AdmServerPlayers"]"
+                       Value="@status.Players.ToString()" Sub="@Loc["AdmServerConnections", status.Connections]" />
+            <AdminStat Key="queue" Icon="@Icons.Material.Filled.PlaylistPlay" Label="@Loc["AdmServerQueue"]"
+                       Value="@(status.QueuedTasks?.ToString() ?? "—")" Sub="@Loc["AdmServerQueueLimit", status.QueueLimit]"
+                       Warn="@(status.QueuedTasks is { } queued && queued >= status.QueueLimit * 0.8)" />
+            <AdminStat Key="bus" Icon="@Icons.Material.Filled.SwapHoriz" Label="@Loc["AdmServerBusBacklog"]"
+                       Value="@(status.BusReadAt ? status.BusBacklog.ToString() : "—")"
+                       Sub="@BusLine(status)" Warn="@(FullestStream(status) is { } fullest && Share(fullest) >= 0.8)" />
+            <AdminStat Key="storage" Icon="@Icons.Material.Filled.Storage" Label="@Loc["AdmServerStorage"]"
+                       Value="@Loc.FormatBytes(status.Storage.LiveBytes)"
+                       Sub="@Loc["AdmServerStorageLine", Loc.FormatBytes(status.Storage.FileBytes), Loc.FormatBytes(status.Storage.MapSizeBytes)]"
+                       Warn="@(status.Storage.FileBytes >= status.Storage.MapSizeBytes * 0.9)" />
+            <AdminStat Key="disk" Icon="@Icons.Material.Filled.Album" Label="@Loc["AdmServerDiskFree"]"
+                       Value="@(status.Storage.DiskFreeBytes < 0 ? "—" : Loc.FormatBytes(status.Storage.DiskFreeBytes))" />
+            <AdminStat Key="backup" Icon="@Icons.Material.Filled.Backup" Label="@Loc["AdmServerLastBackup"]"
+                       Value="@BackupValue(status)" Sub="@(status.LastBackup is { } taken ? Utc(taken) : null)"
+                       Warn="@(status.BackupSupported && status.LastBackup is null)" />
+            <AdminStat Key="version" Icon="@Icons.Material.Filled.Info" Label="@Loc["AdmServerVersion"]"
+                       Value="@status.Version" Sub="@Loc["AdmServerBuild", status.BuildId]" />
+        </AdminStats>
+
+        <p class="adm-server-note">@Loc["AdmServerUpdated", _readAt.ToString("HH:mm:ss")]</p>
+    }
+    else if (_error is null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+</div>
+
+@code {
+    /// <summary>How often the figures are read again while the page is open.</summary>
+    public static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
+
+    private readonly CancellationTokenSource _closed = new();
+    private AdminServerStatus? _status;
+    private string? _error;
+    private DateTimeOffset _readAt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReadAsync();
+        _ = RefreshAsync(_closed.Token);
+    }
+
+    private async Task RefreshAsync(CancellationToken closed)
+    {
+        using var timer = new PeriodicTimer(RefreshInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(closed))
+            {
+                await ReadAsync();
+                if (closed.IsCancellationRequested) break;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The page closed.
+        }
+    }
+
+    private async Task ReadAsync()
+    {
+        switch (await ServerService.StatusAsync())
+        {
+            case AdminServerStatus status:
+                _status = status;
+                _error = null;
+                _readAt = DateTimeOffset.UtcNow;
+                break;
+            case ApiFailure failure:
+                // The last figures stay up under the error, so a blip does not blank the page.
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private static string Utc(DateTimeOffset when) => when.ToUniversalTime().ToString("yyyy-MM-dd HH:mm") + " UTC";
+
+    private string Uptime(TimeSpan elapsed) => elapsed switch
+    {
+        { TotalDays: >= 1 } => Loc["AdmServerUptimeDays", (int)elapsed.TotalDays, elapsed.Hours],
+        { TotalHours: >= 1 } => Loc["AdmServerUptimeHours", elapsed.Hours, elapsed.Minutes],
+        _ => Loc["AdmServerUptimeMinutes", Math.Max(0, elapsed.Minutes)],
+    };
+
+    private static AdminBusStream? FullestStream(AdminServerStatus status) =>
+        status.Streams.Where(stream => stream.MaxBytes > 0).MaxBy(Share);
+
+    private static double Share(AdminBusStream stream) => (double)stream.Bytes / stream.MaxBytes;
+
+    private string BusLine(AdminServerStatus status)
+    {
+        if (!status.BusReadAt) return Loc["AdmServerBusNotRead"];
+        return FullestStream(status) is { } fullest
+            ? Loc["AdmServerBusStream", fullest.Name, Loc.FormatBytes(fullest.Bytes), Loc.FormatBytes(fullest.MaxBytes)]
+            : Loc["AdmServerBusNoBudget"];
+    }
+
+    private string BackupValue(AdminServerStatus status) => status switch
+    {
+        { BackupSupported: false } => Loc["AdmServerBackupUnsupported"],
+        { LastBackup: { } taken } => Loc.Format(taken),
+        _ => Loc["AdmServerBackupNone"],
+    };
+
+    public void Dispose()
+    {
+        _closed.Cancel();
+        _closed.Dispose();
+    }
+}
