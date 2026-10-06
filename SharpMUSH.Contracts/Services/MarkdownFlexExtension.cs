@@ -304,7 +304,7 @@ public sealed class HtmlFlexItemRenderer : HtmlObjectRenderer<FlexItemBlock>
 		}
 
 		// md-gap-N is N × 0.5rem.
-		var gapRem = (flex.Options.Gap * gaps * 0.5m).ToString("0.##", CultureInfo.InvariantCulture);
+		var gapRem = (flex.Options.Gap * 0.5m * gaps).ToString("0.##", CultureInfo.InvariantCulture);
 		return $"calc((100% - {gapRem}rem) * {basis.Value.ToString(CultureInfo.InvariantCulture)} / 100)";
 	}
 }
