@@ -95,19 +95,21 @@ else
                 <MudSelectItem Value="@("say")">@Loc["RolModeSay"]</MudSelectItem>
                 <MudSelectItem Value="@("semipose")">@Loc["RolModeSemipose"]</MudSelectItem>
             </MudSelect>
-            @* Immediate: the button below is gated on this field being non-empty, and MudTextField
-               otherwise binds on blur — so the value stayed empty through an entire typed pose and
-               Send could never be clicked. Enter is deliberately NOT wired to send: a pose is prose,
-               composed over several lines and edited before it goes out. *@
-            <MudTextField @bind-Value="_composeText" Placeholder="@Loc["RolComposePlaceholder"]"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Immediate="true"
-                          Lines="2" MaxLines="4"
-                          Style="flex:1;background:var(--surface-2);" />
-            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
+            @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
+               selection) and sent as decompose() writes it, or as softcode with the menu's switch. Enter is
+               deliberately NOT wired to send: a pose is prose, composed over several lines and edited before
+               it goes out. *@
+            <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="2"
+                            Placeholder="@Loc["RolComposePlaceholder"]" AriaLabel="@Loc["RolComposePlaceholder"]"
+                            OnRawRequested="() => _draft.SetRaw(true)" />
+            @if (_field is not null)
+            {
+                <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
+            }
+            <MudIconButton Class="scene-live-send" Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
                            Size="Size.Medium" Variant="Variant.Filled"
                            OnClick="SendPoseAsync"
-                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Terminal.IsConnected || _liveUnavailable)" />
+                           Disabled="@(_draft.IsEmpty || !Terminal.IsConnected || _liveUnavailable)" />
         </div>
     </div>
 }
@@ -131,7 +133,31 @@ else
     /// <summary>Why the scene could not be read, for any failure but 404 — which is <see cref="_notFound"/>.</summary>
     private string? _error;
 
-    private string _composeText = string.Empty;
+    private readonly ComposerDraft _draft = new();
+    private FormattedInput? _field;
+    private FormattedInput? _menuFor;
+    private ComposerDraft? _watched;
+
+    /// <summary>Send's state follows the draft, which the field changes without this component rendering.</summary>
+    private void Watch(ComposerDraft draft)
+    {
+        if (ReferenceEquals(_watched, draft)) return;
+        if (_watched is not null) _watched.Changed -= OnDraftChanged;
+        _watched = draft;
+        draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged() => _ = InvokeAsync(StateHasChanged);
+
+    protected override void OnInitialized() => Watch(_draft);
+
+    /// <summary>The format menu needs the field, which exists only once it has rendered: render again for it.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_field == _menuFor) return;
+        _menuFor = _field;
+        if (_field is not null) StateHasChanged();
+    }
     // Emit by default: it renders the author's words verbatim, with no name glued to the front.
     // That is what a compose box on one scene's own page is for — the other three modes stay
     // available for the times a player wants the built-in framing.
@@ -174,7 +200,7 @@ else
     {
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
-        if (string.IsNullOrWhiteSpace(_composeText) || !Terminal.IsConnected || _liveUnavailable) return;
+        if (_draft.IsEmpty || !Terminal.IsConnected || _liveUnavailable) return;
 
         // The text itself is NOT trimmed. A pose that opens on an indent or a blank line means it,
         // and trimming here threw that away before the encoder could protect it — leading whitespace
@@ -183,12 +209,13 @@ else
         // The scene is named rather than inferred: the room-based verbs record through capture hooks
         // that only fire for the scene you are focused on, in the room you are standing in.
         //
-        // MushComposeEncoder spells the whitespace out as substitutions (%b/%t/%r) and neutralises the
-        // command separator; without it the parser compressed every run of spaces, dropped the ones at
-        // a line's edges, and cut the pose short at the first semicolon.
-        var command = $"+scene/{_mode} {Id}={MushComposeEncoder.Encode(_composeText)}";
+        // The draft's softcode spells the whitespace out as substitutions (%b/%t/%r) and neutralises the
+        // command separator; without that the parser compressed every run of spaces, dropped the ones at
+        // a line's edges, and cut the pose short at the first semicolon. Styled text also has its colours
+        // written as ansi() and every other special escaped, so it arrives as shown.
+        var command = $"+scene/{_mode} {Id}={_draft.ToSoftcode()[0]}";
 
-        _composeText = string.Empty;
+        _draft.Clear();
 
         // Down the terminal websocket, already open as this character; the hub is for RECEIVING the
         // pose back.

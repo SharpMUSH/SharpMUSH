@@ -359,11 +359,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsTrue();
 
 		cut.Find(".scene-live-compose textarea").Input("a raven settles on the well");
 
-		await Assert.That(cut.Find(".scene-live-compose button").HasAttribute("disabled")).IsFalse();
+		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsFalse();
 	}
 
 	/// <summary>Enter is a newline. A pose is prose; only the button sends it.</summary>
@@ -376,8 +376,9 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		var box = cut.Find(".scene-live-compose textarea");
 		box.Input("half a thought");
-		box.KeyDown(Key.Enter);
 
+		await Assert.That(box.HasAttribute("blazor:onkeydown")).IsFalse()
+			.Because("nothing listens for Enter on the field: only the button sends");
 		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
 	}
 
@@ -395,7 +396,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
 
 		cut.Find(".scene-live-compose textarea").Input("line one\nline two");
-		cut.Find(".scene-live-compose button").Click();
+		cut.Find(".scene-live-compose button.scene-live-send").Click();
 
 		await _terminal.Received().SendAsync("+scene/emit S1=line one%rline two");
 	}
@@ -537,7 +538,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(_hub.Joined).Contains("S1");
 
 		cut.Find(".scene-live-compose textarea").Input("waves hello");
-		cut.Find(".scene-live-compose button").Click();
+		cut.Find(".scene-live-compose button.scene-live-send").Click();
 
 		await _terminal.Received().SendAsync("+scene/emit S1=waves hello");
 

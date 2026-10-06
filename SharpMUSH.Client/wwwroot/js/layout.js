@@ -161,6 +161,110 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// FormattedInput: a textarea with a styled layer over it. The layer copies the textarea's box (font,
+	// padding, border widths, the scrollbar's width) and follows its scroll, so each rendered character sits
+	// over the transparent one it shows. Undo and redo go to the draft, which keeps the formatting the
+	// textarea's own history knows nothing of; Ctrl/Cmd+B, +U and +\ are the format shortcuts.
+	_formattedBoxProps: ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontStretch', 'lineHeight',
+		'letterSpacing', 'wordSpacing', 'tabSize', 'textIndent', 'textTransform', 'paddingTop', 'paddingLeft',
+		'paddingBottom', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+		'borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle', 'direction'],
+
+	formattedInput: function (textarea, dotnetRef) {
+		if (!textarea || textarea._sharpmushFormatted) return;
+		const state = { overlay: null, observer: null };
+		const call = (action) => {
+			const pending = dotnetRef.invokeMethodAsync('Shortcut', action, textarea.selectionStart, textarea.selectionEnd);
+			if (pending && typeof pending.catch === 'function') pending.catch(() => { });
+		};
+		state.keydown = event => {
+			if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing) return;
+			const key = (event.key || '').toLowerCase();
+			let action = null;
+			if (key === 'z') action = event.shiftKey ? 'redo' : 'undo';
+			else if (key === 'y' && !event.shiftKey) action = 'redo';
+			else if (key === 'b' && !event.shiftKey) action = 'bold';
+			else if (key === 'u' && !event.shiftKey) action = 'underline';
+			else if (key === '\\') action = 'clear';
+			if (!action) return;
+			event.preventDefault();
+			call(action);
+		};
+		state.beforeinput = event => {
+			if (event.inputType !== 'historyUndo' && event.inputType !== 'historyRedo') return;
+			event.preventDefault();
+			call(event.inputType === 'historyUndo' ? 'undo' : 'redo');
+		};
+		state.scroll = () => this._formattedScroll(textarea);
+		textarea.addEventListener('keydown', state.keydown);
+		textarea.addEventListener('beforeinput', state.beforeinput);
+		textarea.addEventListener('scroll', state.scroll);
+		textarea._sharpmushFormatted = state;
+	},
+
+	formattedOverlay: function (textarea, overlay) {
+		const state = textarea && textarea._sharpmushFormatted;
+		if (!state || !overlay) return;
+		state.overlay = overlay;
+		if (state.observer) state.observer.disconnect();
+		if (typeof ResizeObserver === 'function') {
+			state.observer = new ResizeObserver(() => this.formattedSync(textarea));
+			state.observer.observe(textarea);
+		}
+		this.formattedSync(textarea);
+	},
+
+	formattedSync: function (textarea) {
+		const state = textarea && textarea._sharpmushFormatted;
+		const overlay = state && state.overlay;
+		if (!overlay || !overlay.isConnected) return;
+		const style = getComputedStyle(textarea);
+		for (const prop of this._formattedBoxProps) overlay.style[prop] = style[prop];
+		overlay.style.borderColor = 'transparent';
+		// The layer is sized to the textarea's border box, whatever box-sizing the textarea itself uses.
+		overlay.style.boxSizing = 'border-box';
+		// The textarea's scrollbar narrows the text; the layer has none, so it pads that width instead.
+		const borders = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+		const scrollbar = Math.max(0, textarea.offsetWidth - textarea.clientWidth - borders);
+		overlay.style.paddingRight = (parseFloat(style.paddingRight) + scrollbar) + 'px';
+		overlay.style.left = textarea.offsetLeft + 'px';
+		overlay.style.top = textarea.offsetTop + 'px';
+		overlay.style.width = textarea.offsetWidth + 'px';
+		overlay.style.height = textarea.offsetHeight + 'px';
+		this._formattedScroll(textarea);
+	},
+
+	_formattedScroll: function (textarea) {
+		const state = textarea._sharpmushFormatted;
+		const overlay = state && state.overlay;
+		if (!overlay || !overlay.isConnected) return;
+		overlay.scrollTop = textarea.scrollTop;
+		overlay.scrollLeft = textarea.scrollLeft;
+	},
+
+	unformattedInput: function (textarea) {
+		const state = textarea && textarea._sharpmushFormatted;
+		if (!state) return;
+		textarea.removeEventListener('keydown', state.keydown);
+		textarea.removeEventListener('beforeinput', state.beforeinput);
+		textarea.removeEventListener('scroll', state.scroll);
+		if (state.observer) state.observer.disconnect();
+		textarea._sharpmushFormatted = null;
+	},
+
+	// The textarea's selection, read synchronously by FormattedInput so an input is applied before the next.
+	fieldSelection: function (textarea) {
+		if (!textarea || typeof textarea.selectionStart !== 'number') return null;
+		return [textarea.selectionStart, textarea.selectionEnd];
+	},
+
+	fieldSelect: function (textarea, start, end) {
+		if (!textarea) return;
+		textarea.focus();
+		textarea.setSelectionRange(start, end);
+		this.formattedSync(textarea);
+	},
+
 	// Play's composer: Enter sends and Shift+Enter is a new line. Decided here, per key, because Blazor
 	// decides preventDefault when it renders and would swallow the key after the one that sent. An Enter
 	// that ends an IME composition belongs to the composition; Safari sends that Enter after compositionend,
