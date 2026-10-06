@@ -18,7 +18,7 @@
 -->
 # gs moving
 
-To see the room you're in, type 'look'. You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
+To see the room you're in, type `look` (see [look]). You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
 
     Example Room<br>
     This is an example room. It has a rather boring description.<br>
@@ -30,7 +30,7 @@ To see the room you're in, type 'look'. You'll probably see something similar to
 
 The first line is the name of the room you're in, followed by the room's description, a list of other people (and objects) in the room, and finally a list of exits to other rooms.
 
-To move through one of the exits, you can simply type its name (Out), or you can use the "goto" command (goto Out).
+To move through one of the exits, you can simply type its name (Out), or you can use the "goto" command (goto Out). See [go] and [EXITS].
 
 ## Home and navigation
 
@@ -41,6 +41,7 @@ There may be some objects on the game that you can go inside (wagons or cars, fo
 It's also sometimes possible to teleport from one room to another, using the '`@teleport`' command. However, most new players on a game probably won't be able to do that - it's mentioned here only for completeness.
 
 ::: seealso
+- [look]
 - [go]
 - [HOMES]
 - [enter]

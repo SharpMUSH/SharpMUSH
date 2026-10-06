@@ -1,16 +1,16 @@
 # COMMANDS
 Help is available for the following MUSH commands:
 
-|              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [@chat]          | [:]          | ["]          | [:]          | [@emit]          |
-| [ahelp]      | [ahelp]      | [brief]      | [who]      | [drop]       |
-| [enter]      | [EVENTS]     | [examine]    | [follow]     | [get]        |
-| [give]       | [go]         | [index]      | [leave]      | [look]       |
-| [LOGOUT]     | [go]       | [news]       | [page]       | [:]       |
-| [QUIT]       | [look]       | [rules]      | ["]        | [score]      |
-| [teach]      | [think]      | [unfollow]   | [use]        | [whisper]    |
-| [who]        | [with]       |              |              |              |
+|            |            |            |            |            |
+|------------|------------|------------|------------|------------|
+| [ahelp]    | [anews]    | [brief]    | [DOING]    | [drop]     |
+| [enter]    | [events]   | [examine]  | [follow]   | [get]      |
+| [give]     | [go]       | [leave]    | [LOGOUT]   | [look]     |
+| [move]     | [news]     | [page]     | [pose]     | [QUIT]     |
+| [read]     | [say]      | [score]    | [teach]    | [think]    |
+| [unfollow] | [use]      | [whisper]  | [WHO]      | [with]     |
+| ["]        | [:]        | [;]        | [+]        | [&]        |
+| [~]        | [}]        |            |            |            |
 
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
@@ -21,31 +21,32 @@ In addition to these, there are several types of '@' commands. @-commands are us
 - [@-WIZARD]
 
 
-Commands that can only be used by connected players are listed in HELP SOCKET COMMANDS.
+At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, and [make] and [play] create and connect its characters.
+
+Commands that act on your connection rather than your character are listed in [socket commands].
 
 # @-ATTRIBUTES
 These '@' commands set standard message/action sets on objects. Each comes in 3 versions: `@<whatever>`, `@o<whatever>`, and `@a<whatever>`. Only the `@<whatever>` version is listed below, but help is available for each:
 
 |              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [@describe]  | [@adrop]      | [@aefail]     | [@aenter]     | [@afailure]   |
+|--------------|--------------|--------------|--------------|--------------|
+| [@describe]  | [@drop]      | [@efail]     | [@enter]     | [@failure]   |
 | [@follow]    | [@give]      | [@idescribe] | [@leave]     | [@lfail]     |
-| [@move]      | [@apayment]   | [@receive]   | [@asuccess]   | [@atport]     |
-| [@aufail]     | [@unfollow]  | [@ause]       | [@zenter]    | [@zleave]    |
+| [@move]      | [@payment]   | [@receive]   | [@success]   | [@tport]     |
+| [@ufail]     | [@unfollow]  | [@use]       | [@zenter]    | [@zleave]    |
 
 
 These '@' command set other standard attributes on objects that don't follow the pattern above:
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [@ahear]        | [@aclone]        | [@aconnect]      | [@adisconnect]   |
-| [@amail]         | [@ahear]        | [@away]          | [@charges]       |
-| [@conformat]     | [@cost]          | [@descformat]    | [@ealias]        |
-| [@exitformat]    | [@filter]        | [@forwardlist]   | [@haven]         |
-| [@idescformat]   | [@idle]          | [@infilter]      | [@inprefix]      |
-| [@ealias]        | [@listen]        | [@nameformat]    | [@aenter]       |
-| [@leave]       | [@move]        | [@atport]       | [@prefix]        |
-| [@charges]        | [@sex]           | [@startup]       |                  |
+|                |                |                |                |                |
+|----------------|----------------|----------------|----------------|----------------|
+| [@aahear]      | [@aclone]      | [@aconnect]    | [@adisconnect] | [@amail]       |
+| [@amhear]      | [@away]        | [@charges]     | [@chatformat]  | [@conformat]   |
+| [@cost]        | [@descformat]  | [@ealias]      | [@exitformat]  | [@filter]      |
+| [@forwardlist] | [@haven]       | [@idescformat] | [@idle]        | [@infilter]    |
+| [@inprefix]    | [@lalias]      | [@listen]      | [@nameformat]  | [@oxenter]     |
+| [@oxleave]     | [@oxmove]      | [@oxtport]     | [@pageformat]  | [@prefix]      |
+| [@runout]      | [@sex]         | [@startup]     |                |                |
 
 
 ::: seealso
@@ -57,47 +58,47 @@ These '@' command set other standard attributes on objects that don't follow the
 These '@' commands are building-related (they create or modify objects):
 
 |              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
+|--------------|--------------|--------------|--------------|--------------|
 | [@atrchown]  | [@atrlock]   | [@chown]     | [@chzone]    | [@clone]     |
 | [@cpattr]    | [@create]    | [@destroy]   | [@dig]       | [@elock]     |
-| [@elock]   | [@firstexit] | [@link]      | [LOCKING]      | [@moniker]   |
-| [@cpattr]    | [@name]      | [@destroy]      | [@open]      | [@parent]    |
-| [@destroy]   | [@set]       | [@undestroy] | [@ulock]     | [@unlink]    |
-| [@unlock]    | [@ulock]   | [@wipe]      |              |              |
+| [@eunlock]   | [@firstexit] | [@link]      | [@lock]      | [@moniker]   |
+| [@mvattr]    | [@name]      | [@nuke]      | [@open]      | [@parent]    |
+| [@recycle]   | [@set]       | [@ulock]     | [@undestroy] | [@unlink]    |
+| [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
 
 # @-GENERAL
 These '@' commands are general utility and programming commands:
 
 |              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [@@]         | [@alias]     | [@break]     | [@CEMIT]     | [@channel]   |
+|--------------|--------------|--------------|--------------|--------------|
+| [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
 | [@chat]      | [@command]   | [@config]    | [@decompile] | [@doing]     |
 | [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@entrances] |
-| [@find]      | [@force]     | [@function]  | [@edit]     | [@grep]      |
-| [@halt]      | [@if]        | [@lemit]     | [@motd]  | [MAIL]      |
-| [@notify]    | [@nspemit]    | [@nspemit]   | [@nspemit]   | [@nspemit]   |
-| [@nspemit]  | [@nspemit]   | [@nspemit]   | [@oemit]     | [@password]  |
-| [@profile]   |              |              |              |              |
-| [@pemit]     | [@prompt]    | [@ps]        | [@remit]     | [@restart]   |
-| [@scan]      | [@search]    | [@switch]    | [@stats]     | [@sweep]     |
-| [@switch]    | [@teleport]  | [@trigger]   | [@verb]      | [@version]   |
-| [@wait]      | [@whereis]   | [wiki]      | [@zemit]     | [@input]     |
+| [@find]      | [@force]     | [@function]  | [@gedit]     | [@grep]      |
+| [@halt]      | [@if]        | [@input]     | [@job]       | [@lemit]     |
+| [@listmotd]  | [@locale]    | [@mail]      | [@map]       | [@notify]    |
+| [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  |
+| [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     |
+| [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
+| [@restart]   | [@scan]      | [@search]    | [@select]    | [@stats]     |
+| [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      |
+| [@version]   | [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |
 
 # @-WIZARD
 These '@' commands are only usable by wizards or privileged players:
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [@halt]       | [@quota administrative quota changes]      | [@boot]          | [@chownall]      |
-| [@chzoneall]     | [@comment]       | [@dbck]          | [@enable]       |
-| [@dump]          | [@enable]        | [@flag]          | [@hide]          |
-| [@hook]          | [@HTTP]          | [@kick]          | [@log]           |
-| [@motd]          | [@newpassword]   | [@pcreate]       | [@poll]          |
-| [@poor]          | [@power]         | [@purge]         | [@quota]         |
-| [@readcache]     | [@motd]    | [@respond]       | [@shutdown]      |
-| [@sitelock]      | [@sql]           | [@quota administrative quota changes]        | [@SUGGEST]       |
-| [@uptime]        | [@wall]          | [@motd]       | [@wall]       |
-| [cd]             | [cd]             | [cd]             |                  |
+|                |                |                |                |                |
+|----------------|----------------|----------------|----------------|----------------|
+| [@account]     | [@allhalt]     | [@allquota]    | [@backup]      | [@boot]        |
+| [cd]           | [ch]           | [@chownall]    | [@chzoneall]   | [@comment]     |
+| [cv]           | [@dbck]        | [@disable]     | [@dump]        | [@enable]      |
+| [@flag]        | [@hide]        | [@hook]        | [@http]        | [@kick]        |
+| [@log]         | [@motd]        | [@newpassword] | [@package]     | [@pcreate]     |
+| [@permission]  | [@poll]        | [@poor]        | [@power]       | [@purge]       |
+| [@quota]       | [@readcache]   | [@reality]     | [@rejectmotd]  | [@respond]     |
+| [@role]        | [@shutdown]    | [@sitelock]    | [@snapshot]    | [@sql]         |
+| [@squota]      | [@storage]     | [@suggest]     | [@uptime]      | [@wall]        |
+| [@wizmotd]     | [@wizwall]     |                |                |                |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
@@ -995,7 +996,7 @@ Your exit has been created.
 ::: seealso
 - [give]
 - [MONEY]
-- [@pay]
+- [@payment]
 - [MONEY()]
 - [buy]
 :::
@@ -1708,7 +1709,7 @@ LINK_OK objects can also be used as semaphores, and any object can be @parented 
 - [EXITS]
 - [@open]
 - [@dig]
-- [DROP-TO]
+- [DROP-TOS]
 - [HOMES]
 :::
 # @destination
@@ -2023,7 +2024,6 @@ This single-step export only succeeds when the selection is **self-contained** â
 
 ::: seealso
 - [@decompile]
-- [PACKAGES]
 :::
 # @password
 `@password <old password>=<new password>`
@@ -2626,7 +2626,7 @@ The second form removes the DROP-TO on the room.
 
 ::: seealso
 - [@link]
-- [DROP-TO]
+- [DROP-TOS]
 :::
 # @unlock
 `@unlock[/<switch>] <object>`
@@ -2690,7 +2690,7 @@ This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [M
 - [@dolist]
 - [@include]
 - [MAP()]
-- [QUEUE CONTROL]
+- [@queue]
 :::
 # @version
 `@version`
@@ -2882,7 +2882,7 @@ In order to drop an object, you must pass it's Drop lock and your location's Dro
 - [empty]
 - [get]
 - [STICKY]
-- [DROP-TO]
+- [DROP-TOS]
 :::
 # enter
 `enter <object>`
@@ -3083,7 +3083,7 @@ The last two forms of this command give an `<object>` from your inventory to `<r
 
 
 ::: seealso
-- [@pay]
+- [@payment]
 - [@cost]
 - [LOCKING]
 - [inventory]
@@ -3271,7 +3271,7 @@ See [cd] and [cd] to connect with your `DARK` flag forced on or off.
 
 Creates a web-portal account from the login screen and puts your connection into account mode, where [make] and [play] work. Characters are then linked to the account rather than carrying their own login.
 
-The game may refuse the command from your address; see [SITELOCK].
+The game may refuse the command from your address; see [@sitelock].
 
 This is a SharpMUSH command; PennMUSH's `register` mails a password for a new character instead.
 

@@ -45,7 +45,7 @@ If the `<message>` starts with a ':' or ';' it will be posed or semiposed, respe
 
 Some games customize the appearance of channels a little (for instance, adding color or using '[]' square brackets instead of angle brackets), so it may look a little different.
 
-There's much more you can do with the channel system - see [@channel] for the other commands.
+There's much more you can do with the channel system - see [@channel] for the other commands, and [@channel joining] for joining and leaving.
 
 ::: seealso
 - [gs talking]

@@ -20,33 +20,38 @@
 
 Help is available on the following topics:
 
-|                    |              |                        |
-|--------------------|--------------|------------------------|
-| [ACTION LISTS]     | [ANCESTORS]  | [ANONYMOUS ATTRIBUTES] |
-| [ATTRIB-OWNERSHIP] | [ATTRIBUTES] | [BOOLEAN VALUES]       |
-| [CHAT]             | [CLIENTS]    | [CONTROL]              |
-| [COPYRIGHT]        | [COSTS]      | [CREDITS]              |
-| [DBREFS]           | [DROP-TOS]   | [ENACTOR]              |
-| [EVALUATION ORDER] | [EXECUTOR]   | [EXITS]                |
-| [FAILURE]          | [FLAGS]      | [FUNCTIONS]            |
-| [GENDER]           | [GLOBALS]    | [HERE]                 |
-| [HOMES]            | [INTERIORS]  | [LINKING]              |
-| [LISTENING]        | [LISTS]      | [LOOPING]              |
-| [MASTER ROOM]      | [MATCHING]   | [ME]                   |
+|                               |                               |                               |
+|-------------------------------|-------------------------------|-------------------------------|
+| [ACTION LISTS]                | [ADMINISTRATIVE CAPABILITIES] | [ANCESTORS]                   |
+| [ANONYMOUS ATTRIBUTES]        | [ATTRIB-OWNERSHIP]            | [ATTRIBUTES]                  |
+| [BOOLEAN VALUES]              | [CHAT]                        | [CLIENTS]                     |
+| [COMMAND OUTPUT]              | [CONTROL]                     | [COPYRIGHT]                   |
+| [COSTS]                       | [CREDITS]                     | [DBREFS]                      |
+| [DROP-TOS]                    | [ENACTOR]                     | [EVALUATION ORDER]            |
+| [EVENTS]                      | [EXECUTION BUDGET]            | [EXECUTOR]                    |
+| [EXITS]                       | [FAILURE]                     | [FLAGS]                       |
+| [FUNCTIONS]                   | [GENDER]                      | [GLOBALS]                     |
+| [HERE]                        | [HOMES]                       | [HTTP]                        |
+| [IMAGE ATTRIBUTES]            | [INTERIORS]                   | [LINKING]                     |
+| [LISTENING]                   | [LISTS]                       | [LOOPING]                     |
+| [MASTER ROOM]                 | [MATCHING]                    | [ME]                          |
 
 ## Additional topics
 
-|                         |                      |                           |
-|-------------------------|----------------------|---------------------------|
-| [MONEY]                 | [MUSHCODE]           | [NON-STANDARD ATTRIBUTES] |
-| [PARENTS]               | [@POWER]             | [PUPPETS]                 |
-| [QUEUE]                 | [REGEXPS]            | [REGISTERS]               |
-| [SEMAPHORES]            | [SETTING-ATTRIBUTES] | [SPOOFING]                |
-| [STACK]                 | [STRINGS]            | [SUBSTITUTIONS]           |
-| [SUCCESS]               | [SWITCHES]           | [TYPES OF OBJECTS]        |
-| [USER-DEFINED COMMANDS] | [VERBS]              | [WARNINGS]                |
-| [WILDCARDS]             | [ZONE MASTER ROOMS]  | [ZONE MASTERS]            |
-| [ZONES]                 |                      |                           |
+|                           |                           |                           |
+|---------------------------|---------------------------|---------------------------|
+| [MONEY]                   | [MUSHCODE]                | [NON-STANDARD ATTRIBUTES] |
+| [OBJECT SNAPSHOTS]        | [PARENTS]                 | [PENNMUSH COMPATIBILITY]  |
+| [PIPING]                  | [@POWER]                  | [PUPPETS]                 |
+| [QUEUE]                   | [QUEUE BUDGETS]           | [RECURRING JOBS]          |
+| [REGEXPS]                 | [REGISTERS]               | [ROLES]                   |
+| [SECURITY]                | [SEMAPHORES]              | [SETTING-ATTRIBUTES]      |
+| [SHARPMUSH FEATURES]      | [SPOOFING]                | [STACK]                   |
+| [STRINGS]                 | [SUBSTITUTIONS]           | [SUCCESS]                 |
+| [SWITCHES]                | [TIMEZONES]               | [TYPES OF OBJECTS]        |
+| [USER-DEFINED COMMANDS]   | [VERBS]                   | [WARNINGS]                |
+| [WIKI]                    | [WILDCARDS]               | [ZONE MASTER ROOMS]       |
+| [ZONE MASTERS]            | [ZONES]                   |                           |
 
 Type 'help `<topic name>`' for help.<br>
-For a list of all topics, see [help search].
+For a list of all topics, see [help search]. For what SharpMUSH adds to PennMUSH, see [sharpmush features].
