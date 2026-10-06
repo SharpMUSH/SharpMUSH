@@ -112,7 +112,7 @@ public class PredictionLookaheadTests
 	public async Task GeneratedGrammarIsUpToDate()
 	{
 		var start = new ProcessStartInfo("python3") { RedirectStandardError = true };
-		start.ArgumentList.Add(Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Parser.Generated", "generate-parser.py"));
+		start.ArgumentList.Add(Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Parser.Generated", "generate-parser.py"));
 		start.ArgumentList.Add("--check");
 		Process generator;
 		try
