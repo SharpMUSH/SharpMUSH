@@ -89,6 +89,19 @@ public class WikiRequirementsControllerTests
 	}
 
 	[Test]
+	public async Task APageUnderACategoryRequirementSaysPermissionsApply()
+	{
+		var (wiki, _) = await SeedAsync();
+		var reader = As(wiki);
+		var dto = (WikiPageDto)((OkObjectResult)await reader.Pages.GetPage("main", "dragons")).Value!;
+		await Assert.That(dto.IsRestricted).IsFalse();
+
+		await As(wiki, Admin).Requirements.Put("category", "lore", Require("edit", PortalPermission.MediaAdmin));
+		dto = (WikiPageDto)((OkObjectResult)await reader.Pages.GetPage("main", "dragons")).Value!;
+		await Assert.That(dto.IsRestricted).IsTrue().Because("the page inherits its category's edit requirement");
+	}
+
+	[Test]
 	public async Task ACategoryPageClosedToTheReaderKeepsItsNameFromThem()
 	{
 		var (wiki, _) = await SeedAsync();

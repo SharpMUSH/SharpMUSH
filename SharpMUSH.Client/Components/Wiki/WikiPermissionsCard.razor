@@ -49,9 +49,14 @@
 
     private async Task ReloadAsync()
     {
-        _loadedFor = (Slug, Namespace, Category);
-        _page = Slug is not null && await Wiki.GetPageRequirementsAsync(Slug, Namespace) is WikiPageRequirementsDto page ? page : null;
-        _category = Category is not null && await Wiki.GetRequirementsAsync("category", Category) is WikiRequirementSetDto category ? category : null;
+        var target = (Slug, Namespace, Category);
+        _loadedFor = target;
+        var loadedPage = target.Slug is not null && await Wiki.GetPageRequirementsAsync(target.Slug, target.Namespace) is WikiPageRequirementsDto page ? page : null;
+        var loadedCategory = target.Category is not null && await Wiki.GetRequirementsAsync("category", target.Category) is WikiRequirementSetDto category ? category : null;
+        // The reader may have moved to another page while these were in flight; a later load owns the card then.
+        if (_loadedFor != target) return;
+        _page = loadedPage;
+        _category = loadedCategory;
         _loaded = true;
     }
 

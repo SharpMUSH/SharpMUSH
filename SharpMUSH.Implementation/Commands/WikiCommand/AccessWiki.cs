@@ -96,7 +96,8 @@ public static class AccessWiki
 		var targetText = targetArg.ToPlainText().Trim();
 
 		var target = await ResolveAsync(wikiService, targetText);
-		if (target is PageTarget hidden && !(await access.DecideAsync(me, hidden.Page, WikiAction.Read)).Allowed)
+		// A draft the reader may not see answers as a missing page, as everywhere else.
+		if (target is PageTarget hidden && !await access.CanSeeAsync(me, hidden.Page))
 			target = null;
 		if (target is null)
 		{

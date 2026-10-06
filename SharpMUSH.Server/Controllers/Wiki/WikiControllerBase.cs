@@ -158,8 +158,15 @@ public abstract class WikiControllerBase(
 			Access = await AccessDtoAsync(p.Page),
 		};
 
-	/// <summary>True when the page carries requirements of its own.</summary>
-	protected async Task<bool> IsRestrictedAsync(WikiPage page) => (await Access.RequirementsAsync()).HasPageRules(page.Id);
+	/// <summary>
+	/// True when any requirement applies to the page, its own or one it inherits, so the page never claims
+	/// anyone may edit it while its namespace or a category says otherwise.
+	/// </summary>
+	protected async Task<bool> IsRestrictedAsync(WikiPage page)
+	{
+		var requirements = await Access.RequirementsAsync();
+		return requirements.HasPageRules(page.Id) || requirements.Required(page, WikiAction.Delete).Count > 0;
+	}
 
 	private async Task<WikiAccessDto> AccessDtoAsync(WikiPage page)
 	{

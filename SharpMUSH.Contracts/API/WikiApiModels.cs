@@ -11,7 +11,8 @@ namespace SharpMUSH.Library.API;
 /// into the WASM bundle. Mapping from <c>WikiPage</c> lives on the server side of the boundary.
 /// </remarks>
 /// <param name="MarkdownSource">The page body, so the editor can round-trip an edit without a second fetch.</param>
-/// <param name="IsRestricted">The page carries requirements of its own (<c>@wiki/require</c>, or protection).</param>
+/// <param name="IsRestricted">Some requirement applies to the page: its own (<c>@wiki/require</c>, or protection), or
+/// one its namespace or a category puts on reading, editing or deleting it.</param>
 public record WikiPageDto(
 	string Id,
 	string Slug,

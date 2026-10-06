@@ -52,8 +52,10 @@ public class WikiRequirementsController(
 	{
 		if (ParseTarget(scope, key) is not { } target)
 			return NotFound();
+		// A page answers to whoever may see it; a namespace or category to whoever may read the wiki at all.
 		if (target.Scope == WikiRuleScope.Page
-			&& (await Wiki.GetByIdAsync(target.Key) is not WikiPage page || !await CanSeeAsync(page)))
+			? await Wiki.GetByIdAsync(target.Key) is not WikiPage page || !await CanSeeAsync(page)
+			: !(await ReaderAsync()).Has(PortalPermission.WikiRead))
 			return NotFound();
 
 		return Ok(await ToDtoAsync(target, (await Access.RequirementsAsync()).For(target)));

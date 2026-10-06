@@ -1323,6 +1323,20 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiAccess_ADraftAnswersAsAMissingPage()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftAsker");
+		var title = TestIsolationHelpers.GenerateUniqueName("DraftAccess");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/create {title}=body"));
+		var slug = WikiHelpers.Slugify(title);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/unpublish {slug}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/access {slug}"));
+		await ExpectNotify(player.DbRef, $"WIKI: No such page, namespace or category: {slug}");
+	}
+
+	[Test]
 	public async ValueTask WikiRequire_NeedsWikiAdminAndAKnownPermission()
 	{
 		var god = WebAppFactoryArg.ExecutorDBRef;

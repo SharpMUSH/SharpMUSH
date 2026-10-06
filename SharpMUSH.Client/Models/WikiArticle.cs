@@ -44,7 +44,7 @@ public class WikiArticle
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
 
-	/// <summary>When true, the page carries permission requirements of its own.</summary>
+	/// <summary>When true, some requirement applies to the page, its own or one its namespace or a category sets.</summary>
 	public bool IsRestricted { get; set; }
 
 	/// <summary>

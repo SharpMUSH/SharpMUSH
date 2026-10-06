@@ -77,6 +77,21 @@
     private bool _editing;
     private bool _saving;
     private readonly Dictionary<string, string> _draft = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _loaded = new(StringComparer.OrdinalIgnoreCase);
+    private (string, string)? _target;
+
+    protected override void OnParametersSet()
+    {
+        // A draft belongs to the target it was started on; a reused instance must not carry it to another.
+        if (_target is { } target && target != (Scope, Key))
+        {
+            _editing = false;
+            _draft.Clear();
+            _loaded.Clear();
+        }
+
+        _target = (Scope, Key);
+    }
 
     private static string ActionLabelKey(string action) => action.ToLowerInvariant() switch
     {
@@ -90,18 +105,27 @@
     {
         foreach (var action in Actions)
         {
-            _draft[action] = Set?.Required.TryGetValue(action, out var scopes) == true ? string.Join(' ', scopes) : string.Empty;
+            _draft[action] = _loaded[action] = Set?.Required.TryGetValue(action, out var scopes) == true ? string.Join(' ', scopes) : string.Empty;
         }
 
         _editing = true;
     }
 
+    private static string[] Permissions(string text) => text.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+
     private async Task SaveAsync()
     {
+        // Only the actions changed here are sent: the server leaves the others alone, so a save does not undo
+        // another admin's change to an action this form never touched.
+        var required = Actions.Where(action => !Permissions(_draft[action]).SequenceEqual(Permissions(_loaded[action])))
+            .ToDictionary(action => action, action => (IReadOnlyList<string>)Permissions(_draft[action]));
+        if (required.Count == 0)
+        {
+            _editing = false;
+            return;
+        }
+
         _saving = true;
-        var required = Actions.ToDictionary(
-            action => action,
-            action => (IReadOnlyList<string>)_draft[action].Split([' ', ','], StringSplitOptions.RemoveEmptyEntries));
         var result = await Wiki.SetRequirementsAsync(Scope, Key, required);
         _saving = false;
         switch (result)

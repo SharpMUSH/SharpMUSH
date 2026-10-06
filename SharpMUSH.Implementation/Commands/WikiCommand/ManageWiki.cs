@@ -72,11 +72,20 @@ public static class ManageWiki
 					var changes = protect
 						? WikiRequirementSet.Protection
 						: new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Edit] = [], [WikiAction.Delete] = [] };
-					await WikiCommandHelper.Access(parser).SetRequirementsAsync(reader,
-						WikiCommandHelper.EditorDbref(executor), WikiRuleTarget.ForPage(page.Id), changes);
-					await notifyService.Notify(executor,
-						$"WIKI: '{page.Title}' is now {(protect ? "protected (editing and deleting need wiki.admin)" : "unprotected")}.", executor);
-					return MarkupText.Plain(page.Slug);
+					switch (await WikiCommandHelper.Access(parser).SetRequirementsAsync(reader,
+						WikiCommandHelper.EditorDbref(executor), WikiRuleTarget.ForPage(page.Id), changes))
+					{
+						case WikiRequirements:
+							await notifyService.Notify(executor,
+								$"WIKI: '{page.Title}' is now {(protect ? "protected (editing and deleting need wiki.admin)" : "unprotected")}.", executor);
+							return MarkupText.Plain(page.Slug);
+						case Error<string> error:
+							await notifyService.Notify(executor, $"WIKI: {error.Value}", executor);
+							return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+						default:
+							await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+							return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+					}
 				}
 
 			case Operation.Publish or Operation.Unpublish:
