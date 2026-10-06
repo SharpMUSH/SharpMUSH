@@ -66,3 +66,8 @@ packages:
     package: wiki-reader
     version: 1.0.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit
+  - path: messages/
+    name: Messages
+    package: messages
+    version: 1.0.0
+    description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
