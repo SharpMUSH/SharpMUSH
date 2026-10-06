@@ -3001,10 +3001,6 @@
     <value>Färg</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Posa, säg eller berätta…</value>
-    <comment>MT — 'posa' is how Swedish MU* players verb 'pose'.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Ta bort '{0}' ({1})? Den tas då bort från alla konton som har den.</value>
     <comment>MT</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Sök upp</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — compose mode named after the game command 'pose'; kept English, as de.resx does.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — compose mode named after the game command 'say'; kept English, as de.resx does.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MU* term of art, kept English like Pose/Say.</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Namn</value>
@@ -5667,5 +5647,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pausade, utan tid</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Posta som</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter för att skicka</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Den här scenen är pausad. Den tar inte emot poser förrän ägaren återupptar den.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Den här scenen pågår inte, så den tar inte emot poser.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

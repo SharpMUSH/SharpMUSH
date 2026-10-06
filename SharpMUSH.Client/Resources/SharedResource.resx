@@ -3222,21 +3222,6 @@
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-  </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, say, or narrate…</value>
-  </data>
   <data name="RolEditPose" xml:space="preserve">
     <value>Edit</value>
   </data>
@@ -5902,5 +5887,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Paused, no time set</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Post as</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter to send</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>This scene is paused. It takes no poses until its owner resumes it.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>This scene is not running, so it takes no poses.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

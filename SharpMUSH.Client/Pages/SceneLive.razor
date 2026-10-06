@@ -1,5 +1,6 @@
 @page "/scenes/{Id}/live"
 @attribute [Authorize]
+@using System.Text.Json
 @using SharpMUSH.Client.Components.Scenes
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Library.Models.Portal
@@ -8,6 +9,8 @@
 @inject SceneService SceneService
 @inject IConnectionStateService Hub
 @inject ITerminalService Terminal
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
 
@@ -41,28 +44,35 @@ else if (_notFound)
 }
 else
 {
-    <div class="scene-live-page full-height" style="display:flex;flex-direction:column;height:100%;">
+    var scene = _scene!;
+    <div class="scene-live-page full-height">
 
-        <div class="scene-live-header">
-            <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">@Loc["RolLiveBadge"]</MudChip>
-            <MudText Style="font-size:0.9375rem;font-weight:600;">@SceneTitle(_scene!)</MudText>
-            <MudText Style="font-size:0.75rem;color:var(--text-dim);margin-left:0.25rem;">
-                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;" />
-                @_scene!.RoomName
-            </MudText>
-            <MudSpacer />
-            <MudButton Variant="Variant.Text" Size="Size.Small"
-                       Color="Color.Default" Href="@($"/scenes/{Id}")">
-                @Loc["RolViewArchive"]
-            </MudButton>
-        </div>
+        <header class="scene-live-header">
+            <div class="scene-live-heading">
+                <div class="scene-live-kicker">
+                    @if (scene.IsLive)
+                    {
+                        <Pill Tag="true" Dot="var(--accent)" Class="scene-live-status">@Loc["RolLiveBadge"]</Pill>
+                    }
+                    else if (scene.IsPaused)
+                    {
+                        <Pill Tag="true" Class="scene-live-status">@Loc["RolPausedBadge"]</Pill>
+                    }
+                    <span class="scene-live-room">
+                        <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:15px;" />@scene.RoomName
+                    </span>
+                    <span class="scene-live-dot" aria-hidden="true">·</span>
+                    <span class="scene-live-count" data-count="@scene.PoseCount">@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
+                </div>
+                <h1 class="scene-live-title">@SceneTitle(scene)</h1>
+            </div>
+            <CapsuleButton Class="scene-live-archive" Icon="@Icons.Material.Outlined.MenuBook" Href="@($"/scenes/{Uri.EscapeDataString(Id)}")"
+                           AriaLabel="@Loc["RolViewArchive"]"><span class="scene-live-archive-label">@Loc["RolViewArchive"]</span></CapsuleButton>
+        </header>
 
         @if (_liveUnavailable)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["RolSceneLiveUnavailable"]
-            </MudAlert>
+            <div class="scene-live-banner" role="status">@Loc["RolSceneLiveUnavailable"]</div>
         }
         else if (!Terminal.IsConnected)
         {
@@ -72,45 +82,52 @@ else
                that works whenever the live feed alone is down. What was wrong was the wording: this
                message says you cannot post, and it was shown for a hub outage, which does not stop
                posting at all. *@
-            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["RolNotConnected"]
-            </MudAlert>
+            <div class="scene-live-banner" role="status">@Loc["RolNotConnected"]</div>
         }
         else if (!Hub.IsConnected)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["RolSceneLiveFeedDown"]
-            </MudAlert>
+            <div class="scene-live-banner" role="status">@Loc["RolSceneLiveFeedDown"]</div>
         }
 
-        <div class="scene-log scene-log--live">
-            <SceneStory SceneId="@Id" LiveUnavailableChanged="OnLiveUnavailable" />
+        @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
+        <div class="scene-live-scroll">
+            <div class="scene-live-story">
+                <SceneStory SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" LiveUnavailableChanged="OnLiveUnavailable"
+                            OnEditPose="EditPoseAsync" OnPoseAdded="OnPoseAdded" />
+            </div>
         </div>
 
-        <div class="scene-live-compose">
-            <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
-                       Variant="Variant.Outlined" Style="max-width:130px;">
-                <MudSelectItem Value="@("emit")">@Loc["RolModeEmit"]</MudSelectItem>
-                <MudSelectItem Value="@("pose")">@Loc["RolModePose"]</MudSelectItem>
-                <MudSelectItem Value="@("say")">@Loc["RolModeSay"]</MudSelectItem>
-                <MudSelectItem Value="@("semipose")">@Loc["RolModeSemipose"]</MudSelectItem>
-            </MudSelect>
-            @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
-               selection) and sent as decompose() writes it, or as softcode with the menu's switch. Enter is
-               deliberately NOT wired to send: a pose is prose, composed over several lines and edited before
-               it goes out. *@
-            <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="2"
-                            Placeholder="@Loc["RolComposePlaceholder"]" AriaLabel="@Loc["RolComposePlaceholder"]"
-                            OnRawRequested="() => _draft.SetRaw(true)" />
-            @if (_field is not null)
-            {
-                <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
-            }
-            <MudIconButton Class="scene-live-send" Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
-                           Size="Size.Medium" Variant="Variant.Filled"
-                           OnClick="SendPoseAsync"
-                           Disabled="@(_draft.IsEmpty || !Terminal.IsConnected || _liveUnavailable)" />
-        </div>
+        @if (scene.IsLive)
+        {
+            <div class="scene-live-compose @(_mode == Ooc ? "scene-live-compose--ooc" : null)">
+                <div class="scene-live-card">
+                    <div class="scene-live-bar">
+                        <TypeChips Items="_modes" Selected="@_mode" SelectedChanged="OnModeChanged" AriaLabel="@Loc["RolComposeMode"]" />
+                        @if (_field is not null)
+                        {
+                            <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
+                        }
+                    </div>
+                    @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
+                       selection) and sent as decompose() writes it, or as softcode with the menu's switch. Plain
+                       Enter is a new line, not Send: a pose is prose, composed over several lines and edited before
+                       it goes out. Ctrl/⌘+Enter sends, which inserts nothing in a textarea. *@
+                    <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="3"
+                                    Placeholder="@Placeholder" AriaLabel="@($"{Loc["RolComposeMode"]}: {Label(_mode)}")"
+                                    OnKeyDown="OnKeyDownAsync" OnRawRequested="() => _draft.SetRaw(true)" />
+                    <div class="scene-live-foot">
+                        <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
+                        <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendPoseAsync">
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:16px;" /><span>@Loc["Send"]</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="scene-live-closed" role="status">@(scene.IsPaused ? Loc["RolComposePaused"] : Loc["RolComposeNotRunning"])</div>
+        }
     </div>
 }
 </ChildContent>
@@ -147,21 +164,141 @@ else
         draft.Changed += OnDraftChanged;
     }
 
-    private void OnDraftChanged() => _ = InvokeAsync(StateHasChanged);
-
-    protected override void OnInitialized() => Watch(_draft);
-
-    /// <summary>The format menu needs the field, which exists only once it has rendered: render again for it.</summary>
-    protected override void OnAfterRender(bool firstRender)
+    private void OnDraftChanged()
     {
+        _ = SaveDraftAsync();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnInitialized()
+    {
+        _modes = [(Ic, Label(Ic)), (Ooc, Label(Ooc))];
+        Watch(_draft);
+    }
+
+    /// <summary>
+    /// The format menu needs the field, which exists only once it has rendered: render again for it. The kept
+    /// draft is read once the field is there to show it.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_field is not null) await LoadDraftAsync();
         if (_field == _menuFor) return;
         _menuFor = _field;
         if (_field is not null) StateHasChanged();
     }
-    // Emit by default: it renders the author's words verbatim, with no name glued to the front.
-    // That is what a compose box on one scene's own page is for — the other three modes stay
-    // available for the times a player wants the built-in framing.
-    private string _mode = "emit";
+    // In character is free-written: the words go out as +scene/emit, verbatim with no name glued to the
+    // front, so a player writes the whole pose themselves. Out of character is +scene/ooc. The key is the
+    // verb the mode sends.
+    private const string Ic = "emit";
+    private const string Ooc = "ooc";
+
+    private string _mode = Ic;
+
+    private IReadOnlyList<(string Key, string Label)> _modes = [];
+
+    private bool CanSend => !_draft.IsEmpty && Terminal.IsConnected && !_liveUnavailable;
+
+    private string Label(string mode) => mode == Ooc ? Loc["NavPlayTypeOoc"] : Loc["RolModeIc"];
+
+    private string Placeholder => _mode == Ooc ? Loc["NavPlayPlaceholderOoc"] : Loc["NavPlayPlaceholderEmit"];
+
+    private Task OnModeChanged(string mode)
+    {
+        _mode = mode;
+        return SaveDraftAsync();
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey)) await SendPoseAsync();
+    }
+
+    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit, as Play sends it.</summary>
+    private Task EditPoseAsync((string PoseId, string Text) edit) =>
+        Terminal.SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
+
+    /// <summary>
+    /// Where this character's unsent pose and mode for this scene are kept, so a reload or a wander away loses
+    /// neither, and another character in the same browser never sees or sends it.
+    /// </summary>
+    private string DraftKey => $"scene.draft.{Terminal.ConnectedPlayerName}.{Id}";
+
+    /// <summary>A kept draft: the mode, the text, and when it was styled, the styled text (a serialized MString).</summary>
+    private sealed record Draft(string Mode, string Text, string? Markup = null);
+
+    private string? _loadedKey;
+    private bool _reading;
+
+    private async Task SaveDraftAsync()
+    {
+        if (_reading || _loadedKey != DraftKey) return;
+        if (_draft.Value.Length == 0 && _mode == Ic)
+        {
+            await JS.RemoveItemAsync(BrowserStore.Local, DraftKey);
+            return;
+        }
+        var markup = !_draft.Raw && !_draft.Text.Runs.IsDefaultOrEmpty ? MarkupTextSerializer.Serialize(_draft.Text) : null;
+        await JS.SetItemAsync(BrowserStore.Local, DraftKey, JsonSerializer.Serialize(new Draft(_mode, _draft.Value, markup)));
+    }
+
+    /// <summary>Reads this scene's kept draft once, unless something was typed before it could be.</summary>
+    private async Task LoadDraftAsync()
+    {
+        if (_loadedKey == DraftKey) return;
+        // Another scene's page in the same component: its draft is already kept under its own key.
+        var switched = _loadedKey is not null;
+        _loadedKey = DraftKey;
+        if (switched)
+        {
+            _reading = true;
+            _mode = Ic;
+            _draft.Clear();
+            _reading = false;
+            StateHasChanged();
+        }
+        else if (_draft.Value.Length > 0)
+        {
+            return;
+        }
+        if (await JS.GetItemAsync(BrowserStore.Local, DraftKey) is not { Length: > 0 } json) return;
+        try
+        {
+            if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
+            _reading = true;
+            _mode = _modes.Any(m => m.Key == draft.Mode) ? draft.Mode : Ic;
+            _draft.Load(Styled(draft) ?? MarkupText.Plain(draft.Text ?? string.Empty), _draft.Raw);
+            StateHasChanged();
+        }
+        catch (JsonException)
+        {
+            // Not a draft this page wrote: start empty.
+        }
+        finally
+        {
+            _reading = false;
+        }
+    }
+
+    /// <summary>The kept styled text, when there is one and it still reads.</summary>
+    private static MarkupText? Styled(Draft draft)
+    {
+        if (draft.Markup is not { Length: > 0 } markup) return null;
+        try
+        {
+            var text = MarkupTextSerializer.Deserialize(markup);
+            return text.Text == draft.Text ? text : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_watched is not null) _watched.Changed -= OnDraftChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -196,11 +333,23 @@ else
 
     private void OnLiveUnavailable(bool unavailable) => _liveUnavailable = unavailable;
 
+    /// <summary>The header's count was read with the scene; each pose that arrives live adds one.</summary>
+    private void OnPoseAdded()
+    {
+        if (_scene is { } scene) _scene = scene with { PoseCount = scene.PoseCount + 1 };
+    }
+
     private async Task SendPoseAsync()
     {
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
-        if (_draft.IsEmpty || !Terminal.IsConnected || _liveUnavailable) return;
+        if (!CanSend) return;
+        // The character changed under a draft written as the last one: show this one's own instead of sending it.
+        if (_loadedKey != DraftKey)
+        {
+            await LoadDraftAsync();
+            return;
+        }
 
         // The text itself is NOT trimmed. A pose that opens on an indent or a blank line means it,
         // and trimming here threw that away before the encoder could protect it — leading whitespace
