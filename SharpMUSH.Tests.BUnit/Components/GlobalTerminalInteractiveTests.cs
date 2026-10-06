@@ -72,21 +72,28 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		{
 			if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not connected yet");
 		}, TimeSpan.FromSeconds(5));
-		var input = cut.Find(".term-input");
+		// The key handlers are async, and a loaded run can finish them after KeyDown returns: wait on each effect.
 		foreach (var command in new[] { "look", "say hi" })
 		{
-			input.Input(command);
-			input.KeyDown("Enter");
+			cut.Find(".term-input").Input(command);
+			cut.Find(".term-input").KeyDown("Enter");
+			cut.WaitForAssertion(() => terminal.Received(1).SendAsync(command), TimeSpan.FromSeconds(5));
 		}
-		await terminal.Received(1).SendAsync("look");
 
-		input.KeyDown("ArrowUp");
-		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("say hi");
 		cut.Find(".term-input").KeyDown("ArrowUp");
-		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("look");
+		cut.WaitForAssertion(() => InputIs(cut, "say hi"), TimeSpan.FromSeconds(5));
+		cut.Find(".term-input").KeyDown("ArrowUp");
+		cut.WaitForAssertion(() => InputIs(cut, "look"), TimeSpan.FromSeconds(5));
 		cut.Find(".term-input").KeyDown("ArrowDown");
 		cut.Find(".term-input").KeyDown("ArrowDown");
+		cut.WaitForAssertion(() => InputIs(cut, ""), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("").Because("past the newest is the empty line");
+	}
+
+	private static void InputIs(IRenderedComponent<GlobalTerminal> cut, string expected)
+	{
+		var value = cut.Find(".term-input").GetAttribute("value");
+		if (value != expected) throw new InvalidOperationException($"input is \"{value}\", expected \"{expected}\"");
 	}
 
 	[Test]
