@@ -27,6 +27,7 @@ internal sealed class EvaluationServices
 	private IUserDefinedFunctionService? _userFunctions;
 	private IPluginHookDispatcher? _pluginHooks;
 	private IRealityPolicy? _reality;
+	private IPipeOutputCapture? _pipeCapture;
 
 	/// <param name="provider">Where the optional services are located.</param>
 	/// <param name="locateOptional">
@@ -113,6 +114,10 @@ internal sealed class EvaluationServices
 	/// fails the first <c>$</c>-command lookup, as it always did.
 	/// </summary>
 	public IRealityPolicy Reality => _reality ??= Provider.GetRequiredService<IRealityPolicy>();
+
+	/// <summary>Takes a piped command's output for the next command's <c>%|</c>; absent in hosts that do not register it.</summary>
+	public IPipeOutputCapture? PipeCapture
+		=> _pipeCapture ??= LocatesOptional ? Provider.GetService<IPipeOutputCapture>() : null;
 
 	public EvaluationDiagnostics Diagnostics { get; }
 	public FunctionInvocationPipeline Functions { get; }

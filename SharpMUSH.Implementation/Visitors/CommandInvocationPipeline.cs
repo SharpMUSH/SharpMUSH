@@ -503,10 +503,11 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				Enactor = prs.CurrentState.Executor,
 				Caller = prs.CurrentState.Executor,
 				// No %c/%u yet: CommandListParse starts them, and treats the body as a queue entry's own
-				// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182). Its %> starts
-				// as a copy of the matching list's, as a queued body's does.
+				// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182). Its %>
+				// and %| start as copies of the matching list's, as a queued body's do.
 				CommandText = null,
-				QueuedOutput = prs.CurrentState.PipedOutput
+				QueuedOutput = prs.CurrentState.PipedOutput,
+				QueuedPrinted = prs.CurrentState.PrintedOutput
 			});
 
 			var result = await newParser.CommandListParse(body);

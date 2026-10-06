@@ -2146,6 +2146,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var creators = new Dictionary<int, SharpPlayer?>();
 		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new AttributeMentions());
 		var pipedOutput = new AttributeMentions();
+		var piping = new AttributeMentions();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2161,7 +2162,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2234,6 +2235,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
 		}
 
+		if (piping.Count > 0)
+		{
+			var more = piping.Count > piping.Shown.Count ? $" and {piping.Count - piping.Shown.Count} more" : string.Empty;
+			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which PennMUSH reads as a plain | and SharpMUSH as command piping; " +
+				$"softcode is not rewritten, so write | or ; | where those were meant: {string.Join(", ", piping.Shown)}{more}");
+		}
+
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
 	}
@@ -2260,14 +2268,25 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Records each of the object's attributes whose text uses <c>%&gt;</c>. PennMUSH has no such
-	/// substitution and evaluates it to <c>&gt;</c>; here it is the last command's output.
+	/// Records each of the object's attributes whose text uses <c>%&gt;</c>, and each that pipes with
+	/// <c>%|</c> or <c>;|</c>. PennMUSH has none of these: it evaluates <c>%&gt;</c> to <c>&gt;</c> and
+	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> as a <c>;</c> before a command starting with <c>|</c>.
+	/// Here they are the last command's output and command piping.
 	/// </summary>
-	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput)
+	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
+		AttributeMentions piping)
 	{
-		foreach (var pennAttr in pennObj.Attributes.Where(pennAttr => UsesPipedOutput(pennAttr.Value)))
+		foreach (var pennAttr in pennObj.Attributes)
 		{
-			pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '>'))
+			{
+				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (HasPair(pennAttr.Value, static (first, second) => first is '%' or ';' && second == '|'))
+			{
+				piping.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
 		}
 	}
 
@@ -2296,21 +2315,16 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private static partial Regex TextDbref();
 
 	/// <summary>
-	/// Whether the text has a <c>%&gt;</c> that evaluation reads as a substitution. A <c>\</c> escapes the
-	/// character after it and a <c>%</c> takes the one after it, so each pair is read as a unit.
+	/// Whether the text has two characters that evaluation reads together, such as the substitution
+	/// <c>%&gt;</c>. A <c>\</c> escapes the character after it and a <c>%</c> takes the one after it, so
+	/// each such pair is read as a unit.
 	/// </summary>
-	private static bool UsesPipedOutput(string text)
+	private static bool HasPair(string text, Func<char, char, bool> matches)
 	{
 		for (var i = 0; i < text.Length - 1; i++)
 		{
-			switch (text[i])
-			{
-				case '%' when text[i + 1] == '>':
-					return true;
-				case '%' or '\\':
-					i++;
-					break;
-			}
+			if (matches(text[i], text[i + 1])) return true;
+			if (text[i] is '%' or '\\') i++;
 		}
 
 		return false;

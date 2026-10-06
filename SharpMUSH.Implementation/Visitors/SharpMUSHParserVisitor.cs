@@ -976,7 +976,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			propagation!.PreserveNext = false;
 		}
 
-		var result = await VisitChildrenOrBreak(context, BreakTriggered);
+		var result = parser.CurrentState.ParseMode != ParseMode.NoParse && HasPipe(context)
+			? await VisitPipedCommandList(context)
+			: await VisitChildrenOrBreak(context, BreakTriggered);
 
 		if (BreakTriggered())
 		{
@@ -995,6 +997,103 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 
 		var text2 = GetContextText(context);
 		return new CallState(text2, context.Depth());
+	}
+
+	/// <summary>
+	/// Whether the command at <paramref name="index"/> of a list is piped into: TinyMUX's <c>;|</c>, a
+	/// <c>|</c> straight after the separator (<c>look ;| say %|</c>).
+	/// </summary>
+	private bool IsPipedInto(CommandListContext context, int index)
+		=> index > 0
+			&& index < context.ChildCount
+			&& context.GetChild(index) is CommandContext { Start: { } start }
+			&& context.GetChild(index - 1) is ITerminalNode { Symbol: { } separator }
+			&& separator.Type == SEMICOLON
+			&& start.StartIndex == separator.StopIndex + 1
+			&& start.StartIndex < source.Text.Length
+			&& source.Text[start.StartIndex] == '|';
+
+	private bool HasPipe(CommandListContext context)
+	{
+		for (var i = 2; i < context.ChildCount; i++)
+		{
+			if (IsPipedInto(context, i)) return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Runs a command list that pipes (help piping). What a command followed by <c>;|</c> tells its
+	/// executor is taken instead of shown, and the next command, run without its <c>|</c>, reads it as
+	/// <c>%|</c>. Otherwise the list runs as <see cref="VisitChildrenOrBreak"/> runs it.
+	/// </summary>
+	private async ValueTask<CallState?> VisitPipedCommandList(CommandListContext context)
+	{
+		List<CallState>? results = null;
+		MString? printed = null;
+
+		for (var i = 0; i < context.ChildCount; i++)
+		{
+			if (BreakTriggered()) break;
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var child = context.GetChild(i);
+			if (child is null) continue;
+
+			var pipesOn = child is CommandContext && IsPipedInto(context, i + 2);
+			var buffer = pipesOn && parser.CurrentState.Executor is { } executor && _services.PipeCapture is { } capture
+				? (Buffer: new PipeBuffer(parser.CurrentState.OutputLimit), Capture: capture, Executor: executor.Number)
+				: default;
+
+			CallState? childResult;
+			using (buffer.Buffer is not null ? buffer.Capture.BeginCapture(buffer.Executor, buffer.Buffer) : null)
+			{
+				childResult = child is CommandContext command && IsPipedInto(context, i)
+					? await RunPipedInto(command, printed ?? MarkupText.Empty)
+					: await child.Accept(this);
+			}
+
+			if (child is CommandContext)
+			{
+				printed = buffer.Buffer?.Text;
+			}
+
+			if (childResult is not null)
+			{
+				results ??= new List<CallState>(context.ChildCount);
+				results.Add(childResult);
+			}
+		}
+
+		return results switch
+		{
+			null or [] => null,
+			[var only] => only,
+			_ => BatchMergeResults(CollectionsMarshal.AsSpan(results))
+		};
+	}
+
+	/// <summary>
+	/// Runs a command after <c>;|</c> without its <c>|</c>, with <paramref name="printed"/> as its
+	/// <c>%|</c> and the list's own <c>%|</c> back afterwards.
+	/// </summary>
+	private async ValueTask<CallState?> RunPipedInto(CommandContext command, MString printed)
+	{
+		var start = command.Start.StartIndex + 1;
+		var text = source.Substring(start, command.Stop.StopIndex - start + 1);
+		if (text.Length == 0) return CallState.Empty;
+
+		var commandText = parser.CurrentState.CommandText;
+		var before = commandText?.Printed;
+		if (commandText is not null) commandText.Printed = printed;
+		try
+		{
+			return await parser.CommandParse(text);
+		}
+		finally
+		{
+			if (commandText is not null) commandText.Printed = before!;
+		}
 	}
 
 	public override async ValueTask<CallState?> VisitStartSingleCommandString(

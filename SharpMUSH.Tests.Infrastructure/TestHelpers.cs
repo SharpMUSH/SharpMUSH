@@ -245,8 +245,9 @@ public static class TestHelpers
 	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpOutputCapture"/> before delivering to
 	/// connections (inbound-HTTP output becomes the response body), and offers the same output to
 	/// <see cref="SharpMUSH.Library.Services.Interfaces.ICommandOutputCapture"/> (a portal command's
-	/// answer); tests replace INotifyService with a mock, so the mock must mirror both or HTTP and
-	/// portal-command integration tests would see empty bodies. Received()-style assertions are unaffected — When/Do does not change call
+	/// answer), after giving a piped command's output to <see cref="SharpMUSH.Library.Services.Interfaces.IPipeOutputCapture"/>;
+	/// tests replace INotifyService with a mock, so the mock must mirror all three or HTTP, portal-command
+	/// and piping integration tests would see empty bodies. Received()-style assertions are unaffected — When/Do does not change call
 	/// recording, and capture state lives in an AsyncLocal so non-HTTP test flows are no-ops.
 	/// </summary>
 	/// <param name="recorder">
@@ -258,6 +259,8 @@ public static class TestHelpers
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
 		// The portal command route's copy of a character's output (POST api/commands), also mirrored.
 		var commandCapture = new SharpMUSH.Library.Services.CommandOutputCapture();
+		// A piped command's output (`look ;| say %|`), taken for the next command and delivered to no one.
+		var pipeCapture = new SharpMUSH.Library.Services.PipeOutputCapture();
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
@@ -267,6 +270,7 @@ public static class TestHelpers
 			AnySharpObject? sender = null,
 			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
+			if (pipeCapture.TryCapture(recipient.Number, MString.Plain(message))) return;
 			commandCapture.Offer(recipient.Number, message);
 			capture.TryCapture(recipient.Number, message);
 			recorder?.Record(recipient, message);
@@ -281,6 +285,7 @@ public static class TestHelpers
 			AnySharpObject? sender,
 			INotifyService.NotificationType type)
 		{
+			if (pipeCapture.TryCapture(recipient.Number, message switch { MString markup => markup, string plain => MString.Plain(plain) })) return;
 			var text = PlainText(message);
 			commandCapture.Offer(recipient.Number, text);
 			capture.TryCapture(recipient.Number, text);

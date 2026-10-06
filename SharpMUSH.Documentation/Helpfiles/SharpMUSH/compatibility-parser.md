@@ -74,6 +74,11 @@
       "id": "is-the-last-command-s-output",
       "heading": "`%>` is the last command's output",
       "lookup": "compatibility parser is the last command s output"
+    },
+    {
+      "id": "and-pipe-a-command-s-output",
+      "heading": "`;|` and `%|` pipe a command's output",
+      "lookup": "compatibility parser and pipe a command s output"
     }
   ]
 }
@@ -351,4 +356,27 @@ PennMUSH answers `a>b` to the first line:
 ab
 > think a>b
 a>b
+```
+
+## `;|` and `%|` pipe a command's output
+
+**A choice.**
+
+**PennMUSH** has no command piping. It evaluates `%|` to a plain `|`, and runs `;|` as a `;`
+followed by a command that starts with `|`.<br>
+**SharpMUSH** pipes as TinyMUX does: in an action list, a command followed by `;|` has what it
+shows you passed to the next command, which reads it as `%|`. Everywhere else `%|` is empty. See
+`help piping`.<br>
+**Why.** It lets softcode use what a command shows, which has no function of its own (`look`),
+and TinyMUX code that pipes runs unchanged.<br>
+**Workaround.** Write a plain `|`, which means the same on both servers, and `; |` where a command
+really starts with `|`. Importing a PennMUSH database names every attribute that uses `%|` or `;|`.
+
+PennMUSH answers `a|b` to the first line:
+
+```sharp
+> think a%|b
+ab
+> think a|b
+a|b
 ```

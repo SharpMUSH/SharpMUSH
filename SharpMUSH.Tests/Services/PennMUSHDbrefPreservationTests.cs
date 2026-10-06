@@ -585,6 +585,38 @@ public class PennMUSHDbrefPreservationTests
 	}
 
 	/// <summary>
+	/// PennMUSH reads <c>%|</c> as a plain <c>|</c> and <c>;|</c> as a <c>;</c>; here they pipe. The
+	/// importer keeps the text and names the attributes that use either unescaped.
+	/// </summary>
+	[Test]
+	public async Task PipingInImportedSoftcodeIsNamed()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject
+			{
+				DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing,
+				Attributes =
+				[
+					new PennMUSHAttribute { Name = "SUB", Value = "think a%|b" },
+					new PennMUSHAttribute { Name = "PIPE", Value = "look ;| say %0" },
+					new PennMUSHAttribute { Name = "BAR", Value = "think a|b; think c" },
+					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\;| %%|" },
+					new PennMUSHAttribute { Name = "SEMI", Value = "think %;|" }
+				]
+			}));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(await AttributeAsync(world, 10, "PIPE")).IsEqualTo("look ;| say %0");
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) use %| or ;|")
+			&& w.EndsWith(": #10/SUB, #10/PIPE"))).IsTrue();
+	}
+
+	/// <summary>
 	/// A minimal PennMUSH world is #0-#2. With the seeds at #3-#9 gone, the next object is #3, one past
 	/// the highest imported object, not the 10 the seeds had pushed the counter to.
 	/// </summary>
