@@ -264,7 +264,7 @@
 | [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
 | [WRAP()]                 |                          |                          |                          |
 
-Boxes, titled rules, columns and pictures that the web portal draws as real layout are [LAYOUT FUNCTIONS].
+Boxes, titled rules, columns, labelled fields, trees and pictures that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
 ::: seealso
 - [STRINGS]

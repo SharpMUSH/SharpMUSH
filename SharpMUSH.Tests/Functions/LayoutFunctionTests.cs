@@ -103,6 +103,81 @@ public class LayoutFunctionTests
 	}
 
 	[Test]
+	public async Task Fields_LineTheValuesUp()
+		=> await Assert.That(TrimLines(await Eval("fields(width:40,Sex,Male,Species,Human,Origin,Super Robot Wars AG)")))
+			.IsEqualTo(Lines(
+				"Sex:     Male",
+				"Species: Human",
+				"Origin:  Super Robot Wars AG"));
+
+	[Test]
+	public async Task Fields_TakeALeaderAndRightAlignedLabels()
+	{
+		await Assert.That(TrimLines(await Eval("fields(width:40 leader:.,Sex,Male,Species,Human)")))
+			.IsEqualTo(Lines("Sex....: Male", "Species: Human"));
+		await Assert.That(TrimLines(await Eval("fields(width:40 align:right,Sex,Male,Species,Human)")))
+			.IsEqualTo(Lines("    Sex: Male", "Species: Human"));
+	}
+
+	/// <summary>The finger box the layout functions were made for, with its key/value pairs as fields.</summary>
+	[Test]
+	public async Task Fields_InsideABox_MakeAFingerSheet()
+	{
+		var result = await Eval("box(fields(cols:2,Sex,Male,Species,Human,Job,Dark Warrior,Online,1h)%r[rule(Quote)]%rHooooo?,Mannaz Byron,60)");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(Lines(
+			"+=====================< Mannaz Byron >=====================+",
+			"| Sex:     Male                 Job:    Dark Warrior       |",
+			"| Species: Human                Online: 1h                 |",
+			"+=========================< Quote >========================+",
+			"| Hooooo?                                                  |",
+			"+==========================================================+"));
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<dl class=\"ms-fields\"><div class=\"ms-field\"><dt>Sex:</dt>");
+	}
+
+	[Test]
+	public async Task Tree_DrawsNodesUnderTheirParents()
+	{
+		var result = await Eval("tree(width:30,node(Channels,node(Public,+chat,+ooc),node(Staff,+admin)))");
+
+		await Assert.That(TrimLines(result)).IsEqualTo(Lines(
+			"Channels",
+			"├─ Public",
+			"│  ├─ +chat",
+			"│  └─ +ooc",
+			"└─ Staff",
+			"   └─ +admin"));
+		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<div class=\"ms-layout\" style=\"max-width:30ch\"><ul class=\"ms-tree ms-guide-line\">");
+	}
+
+	[Test]
+	public async Task Tree_TakesAGuideAndItsOwnPieces()
+	{
+		await Assert.That(TrimLines(await Eval("tree(width:30 guide:ascii,node(Mail,Inbox,Sent))")))
+			.IsEqualTo(Lines("Mail", "|- Inbox", "`- Sent"));
+		await Assert.That(TrimLines(await Eval("tree(width:30 branch:\"+> \" last:\"*> \",node(Mail,Inbox,Sent))")))
+			.IsEqualTo(Lines("Mail", "+> Inbox", "*> Sent"));
+	}
+
+	/// <summary>Every <c>&gt; think</c> example in the layout help, with the lines under it as its output.</summary>
+	public static IEnumerable<Func<(string Code, string Expected)>> HelpExamples()
+	{
+		var lines = File.ReadAllLines(Path.Combine(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		for (var i = 0; i < lines.Length; i++)
+		{
+			if (!lines[i].StartsWith("> think ", StringComparison.Ordinal)) continue;
+			var code = lines[i]["> think ".Length..];
+			var output = lines.Skip(i + 1).TakeWhile(line => !line.StartsWith('>') && !line.StartsWith("```", StringComparison.Ordinal)).ToArray();
+			yield return () => (code, string.Join("\n", output));
+		}
+	}
+
+	[Test]
+	[MethodDataSource(nameof(HelpExamples))]
+	public async Task TheHelpExamplesShowWhatTheyDraw(string code, string expected)
+		=> await Assert.That(TrimLines(await Eval(code))).IsEqualTo(expected);
+
+	[Test]
 	[Arguments("box(x,,20,colour:red)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("box(x,,20,border:wavy)", "#-1 UNKNOWN BORDER STYLE")]
 	[Arguments("box(x,,20,title:middle)", ErrorMessages.Returns.InvalidArgument)]
@@ -112,6 +187,10 @@ public class LayoutFunctionTests
 	[Arguments("flex(gap:99,a,b)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("item(x,wide)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("figure(a.png,,,up)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("fields(,Sex,Male,Species)", "#-1 FUNCTION (FIELDS) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
+	[Arguments("fields(cols:0,Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("tree(guide:wavy,a)", "#-1 UNKNOWN GUIDE STYLE")]
+	[Arguments("tree(colour:red,a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	public async Task ABadArgumentIsRefused(string code, string error)
 		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(error);
 }

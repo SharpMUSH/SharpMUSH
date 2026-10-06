@@ -10,11 +10,11 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
-/// SharpMUSH's own layout functions: <c>box()</c>, <c>rule()</c>, <c>flex()</c>, <c>item()</c> and
-/// <c>figure()</c>. Each returns the text a terminal shows — the same box art <c>align()</c> and
-/// <c>repeat()</c> would draw — with the layout it was drawn from riding on it, so the portal draws a
-/// bordered card whose columns wrap on a phone, and a telnet client is sent the box again at its own
-/// width. <c>align()</c>, <c>center()</c> and the rest are unchanged.
+/// SharpMUSH's own layout functions: <c>box()</c>, <c>rule()</c>, <c>flex()</c>, <c>item()</c>,
+/// <c>figure()</c>, <c>fields()</c>, <c>tree()</c> and <c>node()</c>. Each returns the text a terminal
+/// shows — the same box art <c>align()</c> and <c>repeat()</c> would draw — with the layout it was
+/// drawn from riding on it, so the portal draws a bordered card whose columns wrap on a phone, and a
+/// telnet client is sent the box again at its own width. <c>align()</c>, <c>center()</c> and the rest are unchanged.
 /// </summary>
 public partial class Functions
 {
@@ -26,6 +26,12 @@ public partial class Functions
 
 	private static readonly IReadOnlySet<string> FlexKeys =
 		new HashSet<string>(["width", "gap", "sep", "justify", "align", "vertical"], StringComparer.OrdinalIgnoreCase);
+
+	private static readonly IReadOnlySet<string> FieldsKeys =
+		new HashSet<string>(["width", "align", "sep", "leader", "cols", "gap"], StringComparer.OrdinalIgnoreCase);
+
+	private static readonly IReadOnlySet<string> TreeKeys =
+		new HashSet<string>(["width", "guide", "branch", "last", "pipe", "blank"], StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The widest layout a function will draw.</summary>
 	private const int MaxLayoutWidth = 1000;
@@ -214,6 +220,147 @@ public partial class Functions
 		var node = new FigureNode(image, Arg(args, 2), floated, beside.Length == 0 ? null : Body(beside));
 		return new CallState(BlockLayout.Build(node, width, fluid));
 	}
+
+	/// <summary>
+	/// <c>fields([&lt;options&gt;], &lt;label1&gt;, &lt;value1&gt;[, ... &lt;labelN&gt;, &lt;valueN&gt;])</c> — labelled
+	/// values with the values lined up in one column, a long value wrapping under itself.
+	/// </summary>
+	[SharpFunction(Name = "fields", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["options", "label...", "value..."])]
+	public ValueTask<CallState> Fields(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (args.Count % 2 == 0) return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FIELDS")));
+
+		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), FieldsKeys) switch
+		{
+			IReadOnlyList<(string Key, MString Value)> options => BuildFields(parser, args, options),
+			Error<string> error => new CallState(error.Value),
+		});
+	}
+
+	private CallState BuildFields(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
+	{
+		var settings = FieldsOptions.Default;
+		var widthArg = MarkupText.Empty;
+		foreach (var (key, value) in options)
+		{
+			var plain = value.ToPlainText().Trim().ToLowerInvariant();
+			switch (key)
+			{
+				case "width":
+					widthArg = value;
+					break;
+				case "align" when plain is "left" or "right":
+					settings = settings with { LabelAlignment = plain == "right" ? Alignment.Right : Alignment.Left };
+					break;
+				case "sep":
+					settings = settings with { Separator = value };
+					break;
+				case "leader":
+					settings = settings with { Leader = value.Length == 0 ? null : value };
+					break;
+				case "cols" when int.TryParse(plain, out var columns) && columns is >= 1 and <= 10:
+					settings = settings with { Columns = columns };
+					break;
+				case "gap" when int.TryParse(plain, out var gap) && gap is >= 0 and <= 20:
+					settings = settings with { Gap = gap };
+					break;
+				default:
+					return new CallState(ErrorMessages.Returns.InvalidArgument);
+			}
+		}
+
+		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
+
+		var fields = new List<Field>();
+		for (var i = 1; i + 1 < args.Count; i += 2)
+			fields.Add(new Field(Arg(args, i), Body(Arg(args, i + 1))));
+		return new CallState(BlockLayout.Build(new FieldsNode([.. fields], settings), width, fluid));
+	}
+
+	/// <summary>
+	/// <c>tree([&lt;options&gt;], &lt;item1&gt;[, ... &lt;itemN&gt;])</c> — items with the items under them,
+	/// joined by guide lines. An item is text, or a <c>node()</c> that has items of its own.
+	/// </summary>
+	[SharpFunction(Name = "tree", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["options", "item..."])]
+	public ValueTask<CallState> Tree(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), TreeKeys) switch
+		{
+			IReadOnlyList<(string Key, MString Value)> options => BuildTree(parser, args, options),
+			Error<string> error => new CallState(error.Value),
+		});
+	}
+
+	private CallState BuildTree(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
+	{
+		var guide = TreeGuide.Line;
+		var widthArg = MarkupText.Empty;
+		foreach (var (key, value) in options)
+		{
+			if (key == "width") widthArg = value;
+			else if (key == "guide")
+			{
+				if (TreeGuide.Preset(value.ToPlainText().Trim()) is not { } preset) return new CallState("#-1 UNKNOWN GUIDE STYLE");
+				guide = preset;
+			}
+		}
+
+		// Each piece replaces its part, padded or cut to the width of the branch so the levels line up.
+		foreach (var (key, value) in options)
+		{
+			guide = key switch
+			{
+				"branch" => guide with { Branch = value },
+				"last" => guide with { Last = value },
+				"pipe" => guide with { Pipe = value },
+				"blank" => guide with { Blank = value },
+				_ => guide,
+			};
+		}
+		var step = Math.Max(guide.Branch.DisplayWidth, guide.Last.DisplayWidth);
+		guide = guide with
+		{
+			Branch = Step(guide.Branch, step),
+			Last = Step(guide.Last, step),
+			Pipe = Step(guide.Pipe, step),
+			Blank = Step(guide.Blank, step),
+		};
+
+		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
+
+		var items = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
+			.SelectMany(i => TreeItemsOf(args[i.ToString()].Message!))
+			.ToArray();
+		return new CallState(BlockLayout.Build(new TreeNode([.. items], guide), width, fluid));
+	}
+
+	private static MString Step(MString piece, int width) =>
+		piece.DisplayWidth == width ? piece : piece.Pad(MarkupText.Space, width, PadType.Right, TruncationType.Truncate);
+
+	/// <summary>
+	/// <c>node(&lt;content&gt;[, &lt;child1&gt;[, ... &lt;childN&gt;]])</c> — one item of a <c>tree()</c> and the
+	/// items under it. On its own it draws as a tree of one.
+	/// </summary>
+	[SharpFunction(Name = "node", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["content", "child..."])]
+	public ValueTask<CallState> Node(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (LayoutWidth(parser, MarkupText.Empty) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
+
+		var children = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
+			.SelectMany(i => TreeItemsOf(args[i.ToString()].Message!))
+			.ToArray();
+		var item = new TreeItem(Body(Arg(args, 0)), [.. children]);
+		return ValueTask.FromResult(new CallState(BlockLayout.Build(new TreeNode([item], TreeGuide.Line), width, fluid)));
+	}
+
+	/// <summary>An argument as tree items: the items a <c>node()</c> or <c>tree()</c> made, or the content as a leaf.</summary>
+	private static IEnumerable<TreeItem> TreeItemsOf(MString content) =>
+		BlockLayout.AsNode(content) is TreeNode { Items.IsDefaultOrEmpty: false } tree
+			? tree.Items
+			: [new TreeItem(Body(content))];
 
 	/// <summary>Whether <c>image_hosts</c> and <c>image_host_list</c> let the game show <paramref name="address"/>.</summary>
 	private bool ImageAllowed(string address)
