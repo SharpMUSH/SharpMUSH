@@ -135,7 +135,6 @@ def _render(rec: StepRecord, canon: DbrefCanonicalizer, site_texts: list[str]) -
     text = normalize(rec.output)
     if rec.kind in ("login", "login-fail"):
         text = normalize(_strip_site_text(text, site_texts))
-        text = "\n".join(l for l in text.split("\n") if l != "Connected!")
         text = normalize(text.lstrip("\n"))
     parts = [canon.apply(text)]
     for name in sorted(rec.async_output):
