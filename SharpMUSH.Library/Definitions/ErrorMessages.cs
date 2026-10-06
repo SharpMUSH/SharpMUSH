@@ -877,7 +877,6 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string OpenedExit = "Opened exit {0}";
 
-		public const string Connected = "Connected!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WelcomeBackFormat = "Welcome back, {0}!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

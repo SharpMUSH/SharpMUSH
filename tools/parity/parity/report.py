@@ -89,7 +89,7 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors
     for rule in RULES:
         L.append(f"- `{rule.name}`: {rule.description}")
     L.append("- `site-text`: on login steps the connect screen, MOTD and wizard MOTD text of each server "
-             "(connect.txt, motd.txt, wizmotd.txt) and SharpMUSH's `Connected!` line are removed: they are "
+             "(connect.txt, motd.txt, wizmotd.txt) is removed: it is "
              "site content, not behaviour.")
     L.append("- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of "
              "objects created during scenarios become `#NEW<k>` in order of first appearance within each "

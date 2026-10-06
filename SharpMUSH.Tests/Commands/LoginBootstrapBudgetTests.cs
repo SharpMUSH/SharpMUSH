@@ -70,6 +70,57 @@ public class LoginBootstrapBudgetTests
 		finally { await connections.Disconnect(handle); }
 	}
 
+	/// <summary>
+	/// The look a login ends with has a <c>queue_entry_cpu_time</c> limit of its own: however long the
+	/// server's login work before it took, the player still sees the room and is not told
+	/// "CPU usage exceeded." for work that was not theirs.
+	/// </summary>
+	[Test]
+	public async Task LookAfterLoginIsNotChargedForTheLoginWorkBeforeIt()
+	{
+		var services = Factory.Services;
+		var connections = services.GetRequiredService<IConnectionService>();
+		var mediator = services.GetRequiredService<IMediator>();
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "LoginLook");
+		var roomName = TestIsolationHelpers.GenerateUniqueName("LoginLookRoom");
+		var room = await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@dig {roomName}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
+		// The teleport's own look shows the room too; only what the login says counts.
+		var heardBeforeLogin = Factory.Notifications.CountFor(playerRef);
+		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
+		var events = Substitute.For<IEventService>();
+		var notify = Substitute.For<INotifyService>();
+		var passwords = Substitute.For<IPasswordService>();
+		passwords.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		var timer = new ManualDeadline();
+		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), default, timer);
+		// The login work runs the line's own deadline out before the look starts.
+		events.TriggerEventAsync("PLAYER`CONNECT", Arg.Any<SharpMUSH.Library.Models.DBRef?>(), Arg.Any<string[]>())
+			.Returns(_ => { timer.Fire(); return ValueTask.CompletedTask; });
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(services,
+			events, Substitute.For<IMessageBus>(), notify, Substitute.For<IExpandedObjectDataService>(), passwords);
+		var parser = Factory.CommandParser.FromState(Factory.CommandParser.CurrentState with
+		{
+			Handle = handle,
+			Arguments = new Dictionary<string, CallState> { ["0"] = new CallState(player.Object.Name + " password") }
+		});
+		try
+		{
+			using (budget.Enter())
+			{
+				await commands.Connect(parser, new SharpCommandAttribute { Name = "CONNECT" });
+			}
+
+			await Assert.That(budget.IsExpired).IsTrue();
+			await Assert.That(Factory.Notifications.For(playerRef).Skip(heardBeforeLogin)
+				.Any(line => line.Contains(roomName, StringComparison.Ordinal))).IsTrue();
+			await notify.DidNotReceive().NotifyLocalized(Arg.Any<SharpMUSH.Library.Models.DBRef>(), "CpuUsageExceeded",
+				Arg.Any<AnySharpObject?>(), Arg.Any<object[]>());
+		}
+		finally { await connections.Disconnect(handle); }
+	}
+
 	private sealed class ManualDeadline : TimeProvider
 	{
 		private Action? _fire;

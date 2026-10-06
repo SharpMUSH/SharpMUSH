@@ -68,6 +68,37 @@ public interface IAccountStore
 	ValueTask<bool> LiftAccountBanAsync(string accountId, DateTimeOffset? expiredBy = null,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Stores a new passkey, unless its credential id is already registered (to this account or any other)
+	/// or the account already holds <paramref name="maxPerAccount"/>. Both are checked in the write itself,
+	/// so registrations finishing together cannot pass the limit between them.
+	/// </summary>
+	ValueTask<PasskeyAddOutcome> AddAccountPasskeyAsync(AccountPasskey passkey, int maxPerAccount,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>The passkey with this credential id, whichever account holds it, or null.</summary>
+	ValueTask<AccountPasskey?> GetAccountPasskeyAsync(byte[] credentialId, CancellationToken cancellationToken = default);
+
+	/// <summary>The account's passkeys, oldest first.</summary>
+	ValueTask<IReadOnlyList<AccountPasskey>> GetAccountPasskeysAsync(string accountId, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Records a sign-in with the passkey: its new signature counter, backup state and the time. False,
+	/// with nothing written, when the passkey has been removed in the meantime, or when the authenticator
+	/// counts signatures (either counter is nonzero) and <paramref name="signCount"/> is not past the stored
+	/// one: another sign-in recorded that count first, so this assertion is a replay or a cloned key.
+	/// Synced passkeys answer 0 every time and are always recorded.
+	/// </summary>
+	ValueTask<bool> RecordAccountPasskeyUseAsync(byte[] credentialId, uint signCount, bool isBackedUp, DateTimeOffset usedAt,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Renames one of the account's passkeys. False when the account holds no such passkey.</summary>
+	ValueTask<bool> RenameAccountPasskeyAsync(string accountId, byte[] credentialId, string name,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Removes one of the account's passkeys. False when the account holds no such passkey.</summary>
+	ValueTask<bool> RemoveAccountPasskeyAsync(string accountId, byte[] credentialId, CancellationToken cancellationToken = default);
+
 	/// <summary>The account's ban, or null when it is not banned.</summary>
 	ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default);
 

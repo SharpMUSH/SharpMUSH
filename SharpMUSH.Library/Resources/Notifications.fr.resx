@@ -15,9 +15,6 @@
   -->
 
   <!-- ── Connection / login ──────────────────────────────────────────── -->
-  <data name="Connected" xml:space="preserve">
-    <value>Connecté !</value>
-  </data>
   <data name="WelcomeBackFormat" xml:space="preserve">
     <value>Bienvenue, {0} !</value>
   </data>

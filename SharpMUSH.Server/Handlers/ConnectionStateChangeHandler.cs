@@ -52,14 +52,6 @@ public class ConnectionStateChangeHandler(
 						await messageBus.Publish(
 							new ClearPlayerOutputPreferencesMessage(notification.Handle), cancellationToken);
 					}
-
-					logger.LogInformation("[{ConnectionId}] Sending 'Connected!' message to handle {Handle}",
-						connectionId, notification.Handle);
-
-					await notifyService.NotifyLocalized(notification.Handle, nameof(ErrorMessages.Notifications.Connected));
-
-					logger.LogInformation("[{ConnectionId}] Successfully sent welcome message to handle {Handle}",
-						connectionId, notification.Handle);
 					break;
 
 				case IConnectionService.ConnectionState.LoggedIn:

@@ -23,7 +23,7 @@ file sealed class NotFoundHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// The home page is displayed as a centred hero — no back link, no title bar, no edit or history
+/// The home page is displayed as a hero — no back link, no title bar, no edit or history
 /// controls. That framing belongs to the widget that embeds it on the front page; on the
 /// <c>/wiki/...</c> route the home page is an article like any other and must carry the same chrome,
 /// or it is the one page in the wiki nobody can edit from the wiki.
