@@ -482,10 +482,12 @@ public class MarkdownFunctionUnitTests
 		var plainText = result!.ToPlainText();
 		var lines = plainText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-		await Assert.That(lines.Length).IsEqualTo(3);
+		// The headers do not fit their columns, so the header row wraps onto a second line.
+		await Assert.That(lines.Length).IsEqualTo(4);
 
 		foreach (var line in lines)
 		{
+			await Assert.That(line.Length).IsEqualTo(60);
 			await Assert.That(line.StartsWith("|")).IsTrue();
 			await Assert.That(line.EndsWith("|")).IsTrue();
 		}
@@ -533,6 +535,25 @@ public class MarkdownFunctionUnitTests
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# Main Title\n\nSome **bold** text here.\n\n| Col1 | Col2 |\n|---|---|\n| A | B |\n\n- List item 1\n- List item 2");
 
 		await AssertMarkupStringEquals(result!, expected);
+	}
+
+	[Test]
+	public async Task RenderMarkdown_SeeAlsoFooter_PrintsOneLine()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::)")))?.Message;
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.ToPlainText()).IsEqualTo("See Also: newbie, ZONES");
+	}
+
+	[Test]
+	public async Task RenderMarkdownCustom_ContainerTemplate_GetsTheSeeAlsoTopics()
+	{
+		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message!.ToString().Trim();
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`CONTAINER {testDbref}=%0 -> %2"));
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::,{testDbref})")))?.Message;
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.ToPlainText()).IsEqualTo("seealso -> newbie, ZONES");
 	}
 
 	[Test]

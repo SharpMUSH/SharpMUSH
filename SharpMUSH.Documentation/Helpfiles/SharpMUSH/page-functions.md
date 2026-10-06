@@ -53,7 +53,8 @@ Airwolf pages: hello!
 Airwolf pages: hello!
 ```
 
-**See Also:**
+::: seealso
 - [page]
 - [page log]
 - [crecall()]
+:::

@@ -81,8 +81,9 @@ Anything sent to the HTTP Handler player during evaluation of this code is inclu
 To modify the response headers, use the command `@respond`
 
 
-**See Also:**
+::: seealso
 - [http setup]
+:::
 
 ## Handler setup and lifetime
 
@@ -101,14 +102,16 @@ A missing method handler returns **404 NOT FOUND**. An executed handler defaults
 Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time limit, including asynchronous I/O. Zero disables this deadline. If the deadline expires, SharpMUSH returns **503 Service Unavailable** with `#-1 EXECUTION TIME LIMIT EXCEEDED`, discarding partial response output, headers, and status. World changes already performed are not rolled back. Request cancellation also cancels handler evaluation. The ``HTTP`COMMAND`` completion event is queued once the response is assembled, as in PennMUSH, and runs with its own time limit; the response does not wait for it. It is omitted after expiry.
 
 
-**See Also:**
+::: seealso
 - [http examples]
 - [http sitelock]
 - [EVENT HTTP]
+:::
 
 
-**See Also:**
+::: seealso
 - [http headers and limits]
+:::
 
 ## Headers and response limits
 
@@ -121,12 +124,13 @@ Multiple header lines will be added to the same q-register name, but %r-delimite
 HTTP responses are limited to 5,242,880 UTF-16 code units, the same ceiling used for function output. This is a character-buffer limit rather than a UTF-8 wire-byte limit. Anything sent to the HTTP Handler player, whether it uses `think` or `@pemit`, is added to the response buffer. Captured messages include a trailing newline. Exceeding the limit discards the partial body, status, content type, and custom headers and returns a complete plain-text 500 response.
 
 
-**See Also:**
+::: seealso
 - [@respond]
 - [FORMDECODE()]
 - [json_query()]
 - [URLENCODE()]
 - [URLDECODE()]
+:::
 
 ## Routing
 
@@ -139,7 +143,7 @@ GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=<body>
 ```
 
 Before dispatching, the router sets:
-- *%q<attrpath>* — the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (`api`users`)
+- *%q<attrpath>* — the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (``api`users``)
 - *%q<fields>* — the [FORMQ()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
 
 The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [FORMQ()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
@@ -162,16 +166,17 @@ think setq(fields,formq(after(%0,?)))
 
 SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely — seeded once, never overwritten):
 
-- `GET /http/characters` (`&GET`CHARACTERS`) — the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see `help IMAGE`), read with `get()` and blank when unset. It says who *exists*, not who is connected — for that see `/http/online`. Built with `json_array(iter(filter(me/FN`CHARVIS, lsearch(all,type,player)), u(me/FN`CHARROW,%i0), , %r), %r)`. `category` comes from `&FN`CHARCAT` — by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from `&FN`CHARVIS` (1 to list, 0 to hide) — the default hides the `Guest` category and the `package_manager` principal, which is seeded as a real player (it owns softcode-package objects) but is nobody's character. Both are MUSH-side policy: redefine them freely; the portal hard-codes nothing — it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
-- `GET /http/online` (`&GET`ONLINE`) — the **connection list**, same row shape as `/http/characters` (`{name, objid, created, category, image}`). Built on `lwho()`, the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from `&FN`ONLINEVIS`, which by default applies the `&FN`CHARVIS` rules plus hiding DARK players — note `lwho()` evaluates `CanSee()` against the *caller*, and the handler is wizard-flagged, so DARK players would otherwise be listed to anonymous web visitors. Redefine it to suit your game's policy.
+- `GET /http/characters` (``&GET`CHARACTERS``) — the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see `help IMAGE`), read with `get()` and blank when unset. It says who *exists*, not who is connected — for that see `/http/online`. Built with `json_array(iter(filter(me/FN`CHARVIS, lsearch(all,type,player)), u(me/FN`CHARROW,%i0), , %r), %r)`. `category` comes from ``&FN`CHARCAT`` — by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from ``&FN`CHARVIS`` (1 to list, 0 to hide) — the default hides the `Guest` category and the `package_manager` principal, which is seeded as a real player (it owns softcode-package objects) but is nobody's character. Both are MUSH-side policy: redefine them freely; the portal hard-codes nothing — it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
+- `GET /http/online` (``&GET`ONLINE``) — the **connection list**, same row shape as `/http/characters` (`{name, objid, created, category, image}`). Built on `lwho()`, the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FN`ONLINEVIS``, which by default applies the ``&FN`CHARVIS`` rules plus hiding DARK players — note `lwho()` evaluates `CanSee()` against the *caller*, and the handler is wizard-flagged, so DARK players would otherwise be listed to anonymous web visitors. Redefine it to suit your game's policy.
 
 Both routes pass `%r` as the `json_array()` separator rather than taking the default. `json_array()` splits its input *before* parsing each element, and rows embed player names, which routinely contain spaces — with the default separator a name like `Package Manager` is shredded into fragments that are no longer valid JSON. Keep the separator to something your rows cannot contain if you rewrite these.
-- `GET /http/profile/schema` (`&GET`PROFILE`SCHEMA`) — the profile field/section schema.
-- `GET /http/profile?objid=#1:123` (`&GET`PROFILE`) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in `PROFILE`<key>` attributes on the character. `fields` always carries `created` and `objid` (the two the shipped schema declares) plus three the portal reads directly without a schema entry: `image` (`IMAGE`), `banner` (`IMAGE`BANNER`, falling back to `IMAGE`) and `color` (`PROFILE`COLOR`, the game-defined name colour, accepted only as `#rrggbb` because the page puts it in a CSS custom property) — each `{value, visible}`, blank when the character has set nothing or set something that does not pass.
+- `GET /http/profile/schema` (``&GET`PROFILE`SCHEMA``) — the profile field/section schema.
+- `GET /http/profile?objid=#1:123` (``&GET`PROFILE``) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in ``PROFILE`<key>`` attributes on the character. `fields` always carries `created` and `objid` (the two the shipped schema declares) plus three the portal reads directly without a schema entry: `image` (`IMAGE`), `banner` (``IMAGE`BANNER``, falling back to `IMAGE`) and `color` (``PROFILE`COLOR``, the game-defined name colour, accepted only as `#rrggbb` because the page puts it in a CSS custom property) — each `{value, visible}`, blank when the character has set nothing or set something that does not pass.
 
-**See Also:**
+::: seealso
 - [http]
 - [FORMQ()]
+:::
 
 ## Example handler setup
 
@@ -187,10 +192,11 @@ Examples all assume the following dedicated handler:
 ```
 
 
-**See Also:**
+::: seealso
 - [http simple]
 - [http get]
 - [http post]
+:::
 
 ## Simple handlers
 

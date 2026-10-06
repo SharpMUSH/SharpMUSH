@@ -50,15 +50,16 @@ For example, to make a 'wave' command, you could do the following:
     Rhyanna waves to Guest.
 ```
 
-If a command would match, but the enactor can't pass the lock, the object may define generic failure behavior by setting the COMMAND_LOCK`FAILURE, COMMAND_LOCK`OFAILURE, and/or COMMAND_LOCK`AFAILURE attributes. These are triggered on all objects with matching commands and failing locks, but only if no command successfully matched, and take the place of the usual "Huh?" message.
+If a command would match, but the enactor can't pass the lock, the object may define generic failure behavior by setting the ``COMMAND_LOCK`FAILURE``, ``COMMAND_LOCK`OFAILURE``, and/or ``COMMAND_LOCK`AFAILURE`` attributes. These are triggered on all objects with matching commands and failing locks, but only if no command successfully matched, and take the place of the usual "Huh?" message.
 
 *BE SURE TO `@LOCK`/USE ME==ME IF YOU SET `$-COMMANDS` ON YOURSELF!*
 
 
-**See Also:**
+::: seealso
 - [GLOBALS]
 - [evaluation order]
 - [STACK]
 - [%]
 - [WILDCARDS]
 - [LOCKING]
+:::

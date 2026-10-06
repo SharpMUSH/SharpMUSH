@@ -29,6 +29,8 @@
 
 @trigger queues an action list stored in an attribute. It can also pass values to that attribute on the stack, as %0 to %9 and `r(0,args)` to `r(29,args)`.
 
+Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
+
 Switches:
 - /spoof: If you control `<object>`, enactor is preserved.
 - /inline: Run @triggered attribute immediately, rather than queueing it.
@@ -67,10 +69,11 @@ Note that you have to pass %0 and %1 yourself. For some $-commands or listens, t
 Walker slaps himself around with a trout
 ```
 
-**See Also:**
+::: seealso
 - [@include]
 - [u()]
 - [verbs]
+:::
 
 ## Trigger examples
 

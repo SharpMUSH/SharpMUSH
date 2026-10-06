@@ -39,13 +39,14 @@ If `<register list>` is specified, there is a side-effect: any parenthesized sub
 An invalid `<regexp>` returns `#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION`. A match that exceeds its time budget returns `#-1 REGEXP TIMEOUT`. On a failed match, requested q-registers are cleared; a `-` destination discards a capture.
 
 
-**See Also:**
+::: seealso
 - [GRAB()]
 - [REGEDIT()]
 - [valid()]
 - [RESWITCH()]
 - [STRMATCH()]
 - [regexp syntax]
+:::
 
 ## Capture examples
 

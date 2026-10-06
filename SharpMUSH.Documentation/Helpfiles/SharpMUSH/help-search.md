@@ -54,8 +54,9 @@ help/query is a more advanced and complex way to search our helpfiles, see [help
 To add more categories and commands (like 'news'), read "game/txt/README"
 
 
-**See Also:**
+::: seealso
 - [TEXTFILE()] — `textfile()` reads an entry, `textentries()` lists matching topic names, and `textsearch()` searches entry content.
+:::
 
 ## Content search
 

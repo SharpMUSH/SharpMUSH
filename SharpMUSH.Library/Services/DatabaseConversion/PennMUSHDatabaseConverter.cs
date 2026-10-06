@@ -2144,7 +2144,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.ToArrayAsync(cancellationToken);
 		var creators = new Dictionary<int, SharpPlayer?>();
-		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new RelocatedMentions());
+		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new AttributeMentions());
+		var pipedOutput = new AttributeMentions();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2159,6 +2160,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
+
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2224,6 +2227,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				$"softcode is not rewritten, so check them by hand: {string.Join(", ", mentions.Shown)}{more}");
 		}
 
+		if (pipedOutput.Count > 0)
+		{
+			var more = pipedOutput.Count > pipedOutput.Shown.Count ? $" and {pipedOutput.Count - pipedOutput.Shown.Count} more" : string.Empty;
+			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which PennMUSH evaluates to > and SharpMUSH to the last command's output; " +
+				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
+		}
+
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
 	}
@@ -2234,7 +2244,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// rewrite, so it is reported instead, under the number the attribute's object was imported as.
 	/// </summary>
 	private static void NoteRelocatedReferences(PennMUSHObject pennObj, DBRef imported,
-		Dictionary<int, RelocatedMentions> relocated)
+		Dictionary<int, AttributeMentions> relocated)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
@@ -2250,9 +2260,21 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// The attributes that mention one relocated source dbref: how many, and the first few by name for the warning.
+	/// Records each of the object's attributes whose text uses <c>%&gt;</c>. PennMUSH has no such
+	/// substitution and evaluates it to <c>&gt;</c>; here it is the last command's output.
 	/// </summary>
-	private sealed class RelocatedMentions
+	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput)
+	{
+		foreach (var pennAttr in pennObj.Attributes.Where(pennAttr => UsesPipedOutput(pennAttr.Value)))
+		{
+			pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+		}
+	}
+
+	/// <summary>
+	/// Attributes a warning names: how many, and the first few by name.
+	/// </summary>
+	private sealed class AttributeMentions
 	{
 		private const int MaxShown = 20;
 
@@ -2272,6 +2294,27 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <summary>A <c>#N</c> in attribute text that is not part of a longer number.</summary>
 	[GeneratedRegex(@"(?<![\d#])#(?<number>\d+)(?!\d)")]
 	private static partial Regex TextDbref();
+
+	/// <summary>
+	/// Whether the text has a <c>%&gt;</c> that evaluation reads as a substitution. A <c>\</c> escapes the
+	/// character after it and a <c>%</c> takes the one after it, so each pair is read as a unit.
+	/// </summary>
+	private static bool UsesPipedOutput(string text)
+	{
+		for (var i = 0; i < text.Length - 1; i++)
+		{
+			switch (text[i])
+			{
+				case '%' when text[i + 1] == '>':
+					return true;
+				case '%' or '\\':
+					i++;
+					break;
+			}
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// The player who set an attribute in the source (PennMUSH's <c>AL_CREATOR</c>), or null when it names

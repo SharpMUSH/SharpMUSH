@@ -22,6 +22,8 @@
 
 This command creates a new room named `<room name>`. Creating a room consumes one building-quota slot when quotas are enabled; SharpMUSH has no penny balance and does not charge `room_cost`. If the `/teleport` switch is given, you will be teleported to the room after it's created, as per the @teleport command.
 
+Output: the new room's dbref, as `dig()` returns it.
+
 If `<exit to>` is given, the MUSH will automatically open an exit from your current location to the new room named `<exit to>`, if you have permission. You can also specify `<exit from>`, to create an exit from the new room back to your current location. Opening each exit consumes another quota slot when quotas are enabled; `exit_cost` does not charge pennies. A quota refusal partway through leaves the room and any exits already created in place. The exit names may contain multiple aliases, separated with semicolons, as per [@name].
 
 Wizards and objects with the pick_dbref power can also specify the dbrefs of garbage objects to use when creating the room and the to and from exits.
@@ -43,10 +45,11 @@ This will create the room as above, and also open an exit leading to it named `K
 This will do just the same as the above, except it will also create an exit named `Out \<S\>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
 
 
-**See Also:**
+::: seealso
 - [@open]
 - [@link]
 - [EXITS]
 - [@create]
 - [database]
 - [DIG()]
+:::

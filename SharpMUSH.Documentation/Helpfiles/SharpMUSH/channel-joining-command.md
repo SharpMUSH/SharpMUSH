@@ -73,10 +73,11 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 These are all your OWN settings on a channel. There is no command for muting or gagging somebody else; to stop a member speaking, lock the channel with `@clock/speak` (see [@CHANNEL CLOCK]).
 
-**See Also:**
+::: seealso
 - [@channel joining]
 - [cstatus()]
 - [cowner()]
 - [cflags()]
 - [channels()]
 - [@CHANNEL ADMIN]
+:::

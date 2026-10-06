@@ -42,9 +42,10 @@ Example:
   
 The dbref number is indicated by the number/pound sign (#). Cyclonus's dbref is #3. The letters following the dbref are the abbreviations of the flags set on the object. NOTE: the abbreviation of the OPAQUE flag is 'O' (o), which looks like '0' (zero) on some clients. Make sure you have the right number before using it in your code!
 
-**See Also:**
+::: seealso
 - [MYOPIC]
 - [OPAQUE]
 - [mushcode]
 - [MATCHING]
 - [OBJIDS]
+:::

@@ -39,8 +39,9 @@ Standard Lock Types:
 - `@lock/user:<name>` - User-defined. No built-in function of this lock, but users can test it with elock()
 
 
-**See Also:**
+::: seealso
 - [locktypes additional lock types]
+:::
 
 ## Additional lock types
 
@@ -71,8 +72,9 @@ More standard lock types:
 - `@lock/chown` - Who can @chown this CHOWN_OK object?
 
 
-**See Also:**
-- [- [LOCKING]
+::: seealso
+- [LOCKING]
 - [@lset]
 - [@CHANNEL CLOCK]
 - [failure]
+:::

@@ -44,9 +44,10 @@ This is the index to the MUSH online help files.
   Note that the choice of which ancestor to look up is based on the type of the *child* object, as is the check of the ORPHAN flag. Also note that ancestors are *not* checked for `$-commands` or ^-commands; you should use the master room for global commands, instead.
 
 
-**See Also:**
+::: seealso
 - [parent]
 - [ORPHAN]
+:::
 
 # ATTRIB-OWNERSHIP
   ATTRIBUTE OWNERSHIP
@@ -57,11 +58,12 @@ This is the index to the MUSH online help files.
 
   You must control an object in order to set attributes on it.
 
-**See Also:**
+::: seealso
 - [@atrlock]
 - [@atrchown]
 - [OWNER()]
 - [attributes]
+:::
 
 # CLIENTS
   Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
@@ -103,12 +105,13 @@ This is the index to the MUSH online help files.
   13. O does not control V
 
 
-**See Also:**
+::: seealso
 - [CONTROLS()]
 - [TRUST]
 - [MISTRUST]
 - [zones]
 - [zone masters]
+:::
 
 # COSTS
   Some things on the MUSH cost pennies. The default costs are shown below:
@@ -122,19 +125,21 @@ This is the index to the MUSH online help files.
   Type '`@config`/list costs' to get the costs for the MUSH you are on.
 
 
-**See Also:**
+::: seealso
 - [MONEY]
 - [MONEY()]
 - [score]
+:::
 
 # CREDITS
   Developers: Mercutio (Harry Cordewener)
 
   Big thanks to the developers of PennMUSH and all of the history it is derived from, as well as most of these helpfiles.
 
-**See Also:**
+::: seealso
 - [code]
 - [copyright]
+:::
 
 # OBJIDS
 # OBJECT IDS
@@ -145,10 +150,11 @@ This is the index to the MUSH online help files.
   The `objid()` function returns the object id of an object, and the %: substitution evaluates to the objid of the enactor.
 
 
-**See Also:**
+::: seealso
 - [OBJID()]
 - [@LOCK-SIMPLE]
 - [database]
+:::
 
 # DROP-TOS
 # DROPTOS
@@ -160,11 +166,12 @@ This is the index to the MUSH online help files.
 
   If the room has a `@lock/dropto` set on it, only objects that pass the lock will be transported (either immediately or when the last player leaves if the room is STICKY). This can be used to prevent the dropto from acting on, say, objects containing connected players.
 
-**See Also:**
+::: seealso
 - [@link]
 - [STICKY]
 - [LINK_OK]
 - [LOCKING]
+:::
 
 # %#
 # %n
@@ -184,11 +191,12 @@ This is the index to the MUSH online help files.
 
   If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
 
-**See Also:**
+::: seealso
 - [%!]
 - [%@]
 - [%]
 - [database]
+:::
 
 # %!
 # EXECUTOR
@@ -207,10 +215,11 @@ This is the index to the MUSH online help files.
 
   In the first case, Cyclonus directly entered the command and was therefore both the enactor and the executor. In the second, Cyclonus set off the command on the box, so Cyclonus was still the enactor, but the box was the object that was actually doing the `@emit`, and was thus the executor.
 
-**See Also:**
+::: seealso
 - [%#]
 - [%@]
 - [%]
+:::
 
 # %@
 # CALLER
@@ -228,9 +237,10 @@ This is the index to the MUSH online help files.
     > &wizfun Foo=if(hasflag(%@, Wizard), ufun(wizfun2), #-1 Sorry)
 ```
 
-**See Also:**
+::: seealso
 - [%#]
 - [%!]
+:::
 
 # GENDER
 # SEX
@@ -238,18 +248,20 @@ This is the index to the MUSH online help files.
 
   The `obj()`, `subj()`, `poss()` and `aposs()` functions return different pronouns for an object based on its `@sex`, and the %o, %s, %p and %a substitutions return the same pronouns for the enactor.
 
-**See Also:**
+::: seealso
 - [@sex]
 - [%]
+:::
 
 # GLOBALS
 # GLOBAL COMMANDS
   A command is "global" if it can be used anywhere in the world of the MUSH. The standard/built-in MUSH commands are all global, so this term is usually used to refer to user-defined commands on objects in the Master Room of the MUSH. Global commands very greatly from MUSH to MUSH, but you can usually find MUSH-specific help on them by typing "`+help`".
 
-**See Also:**
+::: seealso
 - [MASTER ROOM]
 - [$-commands]
 - [evaluation order]
+:::
 
 # HERE
   The word 'here' refers to the room you are in. For example, to rename the room you're in (if you control it), you could use:
@@ -258,12 +270,15 @@ This is the index to the MUSH online help files.
     > @name here=<new name>
 ```
 
-**See Also:**
+::: seealso
 - [MATCHING]
+:::
 
 # HOMES
 # HOME
   Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | `<object>`]=`<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
+
+  The 'home' command outputs the dbref of the room you arrive in (see [command output]).
 
   When a player types 'home', she is sent back to the home room. When a thing with the STICKY flag set on it is dropped, it also goes to its home location. Note that if the FIXED flag is set on a player, she cannot use the 'home' command.
 
@@ -278,7 +293,7 @@ This is the index to the MUSH online help files.
 
   The home of a room is its drop-to.
 
-**See Also:**
+::: seealso
 - [DROP-TOS]
 - [@link]
 - [STICKY]
@@ -287,6 +302,7 @@ This is the index to the MUSH online help files.
 - [EXITS]
 - [HOME()]
 - [LOC()]
+:::
 
 # LAST
 # LASTLOGOUT
@@ -294,8 +310,9 @@ This is the index to the MUSH online help files.
 
   These attributes show the last times you connected and disconnected from the MUSH.
 
-**See Also:**
+::: seealso
 - [LASTSITE]
+:::
 
 # LASTSITE
 # LASTIP
@@ -303,17 +320,19 @@ This is the index to the MUSH online help files.
 
   The LASTSITE attribute gives the name of the site you last connected from. The LASTIP attribute gives the IP address you last connected from. Mortals cannot set them.
 
-**See Also:**
+::: seealso
 - [LAST]
+:::
 
 # LINKING
 
   You can link to a room if you control it, or if it is set LINK_OK or ABODE. Being able to link means you can set the homes of objects or yourself to that room if it is set ABODE, and can set the destination of exits to that room if it is LINK_OK.
 
-**See Also:**
+::: seealso
 - [LINK_OK]
 - [ABODE]
 - [@link]
+:::
 
 # LISTS
   The word "list" is used in the help files to refer to a string that is a series of smaller strings separated by one or more spaces. A list can also have its elements separated by some other kind of character -- the separating character is called the "delimiter". For example, the following are all lists:
@@ -327,10 +346,11 @@ This is the index to the MUSH online help files.
   list is made up of similar items (so the fourth list in the example<br>
   is NOT a typical one).
 
-**See Also:**
+::: seealso
 - [STRINGS]
 - [List functions]
 - [action lists]
+:::
 
 # LOOPING
   Looping in an object can have its good parts and its bad parts. The good part is when you activate part of a program multiple times to exhaustively perform an operation. This can be done like this:
@@ -343,21 +363,23 @@ This is the index to the MUSH online help files.
 
   The `@retry` and `@include` commands, and %= substitution, can also be useful for building code which needs to loop.
 
-**See Also:**
+::: seealso
 - [@ps]
 - [HALT]
 - [COSTS]
 - [@trigger]
 - [@retry]
 - [% substitution reference]
+:::
 
 # MASTER ROOM
 
   The Master Room enables global commands and exits. Exits in the Master Room may be used from any location on the MUSH. All objects left in the Master Room are checked for user-defined `$-commands`. Those `$-commands` are considered global, meaning that they can be used anywhere on the MUSH. Normally, only wizards will have access to the Master Room; if you have a global command that you would like to see enabled for the MUSH, speak to a wizard.
 
-**See Also:**
+::: seealso
 - [evaluation order]
 - [GLOBALS]
+:::
 
 # ME
   The word 'me' refers to yourself. Some things to do when starting out:<br>
@@ -366,12 +388,13 @@ This is the index to the MUSH online help files.
   3) lock yourself:                     `@lock` me==me<br>
   4) set your gender:                   `@sex` me=`<male|female|neuter|plural>`
 
-**See Also:**
+::: seealso
 - [newbie]
 - [LOCKING]
 - [@describe]
 - [@sex]
 - [MATCHING]
+:::
 
 # MONEY
   The MUSH has a built-in money system, which gives a starting amount of money to new players and hands out a daily allowance thereafter. MUSH money (the default name is "pennies", but this may be different depending on the particular MUSH) is spent on some MUSH commands that are computationally expensive or alter the database. In addition, every time you "queue" a command, it costs you a certain amount of money -- this prevents looping from getting out of control, since when all your money is spent, you can't queue any more commands.
@@ -381,7 +404,7 @@ This is the index to the MUSH online help files.
   The "score" command tells you how many pennies you have.
 
 
-**See Also:**
+::: seealso
 - [COSTS]
 - [give]
 - [@cost]
@@ -391,6 +414,7 @@ This is the index to the MUSH online help files.
 - [@buy]
 - [score]
 - [MONEY()]
+:::
 
 # NON-STANDARD ATTRIBUTES
   While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. In the past, you were limited to attributes named VA-VZ, WA-WZ, XA-XZ; these are still available as standard attributes. However, it is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
@@ -403,12 +427,13 @@ This is the index to the MUSH online help files.
   You can get the value of attributes using the functions `v()`, `get()`, and `xget()`. You can evaluate attributes using `u()`, `eval()`, and `get_eval()`. All attributes can be used in attribute locks and can be 'owned' independent of object ownership.
 
 
-**See Also:**
+::: seealso
 - [attributes]
 - [ATTRIB-OWNERSHIP]
 - [Attribute functions]
 - [attribute trees]
 - [attribute flags]
+:::
 
 # QUOTAS
   The Quota system controls how many objects a player may own. It is only used of the 'use_quota' `@config` option is set to Yes.
@@ -420,11 +445,12 @@ This is the index to the MUSH online help files.
   You can view your current quota with the `@quota` command. Wizards can adjust a specific player's quota qith the `@squota` command, and God can see or alter all players' quotas with `@allquota`.
 
 
-**See Also:**
+::: seealso
 - [@quota]
 - [QUOTA()]
 - [@power]
 - [@power]
+:::
 
 # REGEXP EXAMPLES
   The regexp pattern '.' is equivalent to the wildcard '?'; it matches one and only one of an arbitrary character.
@@ -442,9 +468,10 @@ This is the index to the MUSH online help files.
   This attribute tracks remaining building quota if it is implemented. It is settable in-game only by a wizard, and is only visible to wizards.
 
 
-**See Also:**
+::: seealso
 - [@quota]
 - [@quota administrative quota changes]
+:::
 
 # SETTING-ATTRIBUTES
 # SETTING ATTRIBUTES
@@ -461,7 +488,7 @@ This is the index to the MUSH online help files.
   Empty attributes retain their flags and atrlock status. Wiped attributes are gone forever.
 
 
-**See Also:**
+::: seealso
 - [attributes]
 - [NON-STANDARD ATTRIBUTES]
 - [@set]
@@ -470,6 +497,7 @@ This is the index to the MUSH online help files.
 - [SET()]
 - [WIPE()]
 - [attribute flags]
+:::
 
 # SPOOFING
   Spoofing is the act of making other characters think that a person said or did something that they did not. This is very easy to accomplish, and has some good effects, which is why it is allowed. However, abusing it is very twinkish and will most likely get you in hot water with your wizards. Note that if you are being spoofed and want to know who is doing it, you can set yourself NOSPOOF and you will be notified who is making the `@emits`.
@@ -479,13 +507,14 @@ This is the index to the MUSH online help files.
   Some @*emit commands also take a /spoof switch, which causes nospoof information to show that sound originated from the enactor (%#) instead of the executor (%!). This switch allows staff to write global `$-commands` for speech which show more helpful nospoof tags.
 
 
-**See Also:**
+::: seealso
 - [@emit]
 - [@pemit]
 - [@remit]
 - [@oemit]
 - [NOSPOOF]
 - [PARANOID]
+:::
 
 # STACK
   For those unfamiliar with the term stack, it refers to a programming data structure that follows a LIFO (Last-In-First-Out) principle. The stack in MUSH holds the REGISTERS. The first ten registers can be accessed via the %0-%9 %-substitutions and v(0)-v(29), while all 30 registers can be accessed via the `r()` function (r(0, args) up to v(29,args)).
@@ -493,10 +522,11 @@ This is the index to the MUSH online help files.
   When using regexp `$-commands` with named subpatterns, the named arguments can be accessed via r(`<name>`, args).
 
 
-**See Also:**
+::: seealso
 - [registers]
 - [R()]
 - [V()]
+:::
 
 # STRINGS
   A string is simply a bunch of characters. A word is a string that begins and ends with the space character. A sentence is a string made up of smaller substrings that are words. Please note that a "word" or "sentence" in this technical sense does not have to make sense in English (or in any other language, for that matter). As far as mush functions and commands are concerned, this is a perfectly good sentence:
@@ -504,8 +534,9 @@ This is the index to the MUSH online help files.
         Foozle 09blert bar baz foo.
 
 
-**See Also:**
+::: seealso
 - [String functions]
+:::
 
 # SUCCESS
   A "success" normally occurs when you attempt to do something that is restricted by an `@lock` and you pass the `@lock`. (Note that if no lock is set, you automatically pass it.) For example, the "basic" lock restricts who can pick up a player/thing or who can go through an exit. Whenever you successfully do either of these things, you will set off the basic success messages on the object whose lock you have just successfully passed.
@@ -513,7 +544,7 @@ This is the index to the MUSH online help files.
   Many other actions can also be locked - see `@lock` and locktypes for more information. Many of these actions have standard attributes that you can set messages in for when someone succeeds.
 
 
-**See Also:**
+::: seealso
 - [failure]
 - [LOCKING]
 - [verbs]
@@ -521,6 +552,7 @@ This is the index to the MUSH online help files.
 - [@asuccess]
 - [@asuccess]
 - [@asuccess]
+:::
 
 # SWITCHES
 
@@ -551,9 +583,10 @@ This is the index to the MUSH online help files.
   The `@stats` command lists how many objects of each type currently exits in the database.
 
 
-**See Also:**
+::: seealso
 - [TYPE()]
 - [HASTYPE()]
+:::
 
 # PLAYERS
   Players can be created at the login screen (or with `@pcreate`) and connected to. They can also receive `@mail`, and have a number of attributes set on them by the MUSH automatically, including LAST, LASTSITE, etc. They can have multiple `@aliases`, and are checked for `$-commands` and ^-listens.
@@ -561,11 +594,12 @@ This is the index to the MUSH online help files.
   `@linking` a player sets their home.
 
 
-**See Also:**
+::: seealso
 - [TYPES OF OBJECTS]
 - [TYPE()]
 - [HASTYPE()]
 - [@pcreate]
+:::
 
 # ROOMS
   Rooms are outermost-containers: they cannot be moved. They are created with `@dig`. Rooms can contain exits. They are checked for `$-commands` and ^-listens. Rooms do not have aliases.
@@ -573,12 +607,13 @@ This is the index to the MUSH online help files.
   `@linking` a room creates a drop-to. Rooms have no location; `loc()` on a room returns its drop-to (as does `home()`).
 
 
-**See Also:**
+::: seealso
 - [TYPES OF OBJECTS]
 - [TYPE()]
 - [HASTYPE()]
 - [@dig]
 - [DROP-TOS]
+:::
 
 # THINGS
   Things are created with `@create`. They can move around the MUSH, be entered and carried. They are checked for `$-commands` and ^-listens. Things do not have aliases.
@@ -586,11 +621,12 @@ This is the index to the MUSH online help files.
   `@linking` a thing sets its home.
 
 
-**See Also:**
+::: seealso
 - [TYPES OF OBJECTS]
 - [TYPE()]
 - [HASTYPE()]
 - [@create]
+:::
 
 # EXITS
   Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [`@destination`] for more information.
@@ -602,7 +638,7 @@ This is the index to the MUSH online help files.
   Sound is propagated through exits which are set AUDIBLE, as long as their source room (home) is also set AUDIBLE.
 
 
-**See Also:**
+::: seealso
 - [TYPES OF OBJECTS]
 - [TYPE()]
 - [HASTYPE()]
@@ -610,6 +646,7 @@ This is the index to the MUSH online help files.
 - [@link]
 - [@destination]
 - [AUDIBLE]
+:::
 
 # GARBAGE
   Garbage objects previously existed as one of the four main types (player, thing, exit or room) but were destroyed with `@destroy`/`@nuke`. They exist only as placeholders in the database; you can do nothing with them. The dbrefs of garbage objects will be reused when new objects are created (but with a different creation time/object id).
@@ -617,9 +654,10 @@ This is the index to the MUSH online help files.
   The total number of garbage objects, and the next garbage object to be recycled, is shown in `@stats`. You can use lsearch(all,type,garbage) to get a list of all garbage dbrefs.
 
 
-**See Also:**
+::: seealso
 - [@destroy]
 - [@stats]
+:::
 
 # WARNINGS
 
@@ -662,11 +700,12 @@ This is the index to the MUSH online help files.
   It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
 
 
-**See Also:**
+::: seealso
 - [$-commands]
 - [regexp]
 - [STACK]
 - [registers]
+:::
 
 # ZONE MASTER ROOMS
 # ZMRs
@@ -676,10 +715,11 @@ This is the index to the MUSH online help files.
   Zone Master Rooms are useful either if you need global exits for the zone, or if the zone has a lot of `$-commands` which need to be restricted to different groups, as they can go on separate use-locked objects.
 
 
-**See Also:**
+::: seealso
 - [zones]
 - [MASTER ROOM]
 - [evaluation order]
+:::
 
 # MATCHING
   Matching is the process the MUSH uses to determine which object you mean when you try to do something with an object. Different commands and functions do matching in different ways, but most will allow you to specify an object as:
@@ -710,7 +750,7 @@ This is the AHELP index.
 
   Several commands and functions take a descriptor as an argument, or return the descriptor(s) associated with a player's connection.
 
-**See Also:**
+::: seealso
 - [who]
 - [%]
 - [LPORTS()]
@@ -718,6 +758,7 @@ This is the AHELP index.
 - [PLAYER()]
 - [@boot]
 - [Connection functions]
+:::
 
 # UNICODE
 

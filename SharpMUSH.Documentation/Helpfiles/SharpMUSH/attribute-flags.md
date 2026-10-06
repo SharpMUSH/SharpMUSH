@@ -90,9 +90,10 @@ Two functions are shown exactly as you stored them, however long they get and wh
 
 What sits between `{ ... }` braces is prose to the formatter: a `,` or `;` there is data, not a separator, so a braced branch stays on one line however long it is, and a function name written inside braces is left exactly as you typed it. The `{` itself can start a new line, and a `[ ... ]` inside the braces is laid out normally, since brackets are the one thing that make code out of a brace body again. A `@switch` whose branches are wrapped in `{}`, the most common style, therefore shows one line per branch, with any bracketed call inside a branch indented under it.
 
-**See Also:**
+::: seealso
 - [@set]
 - [@attribute]
 - [attribute trees]
 - [examine]
 - [@grep]
+:::

@@ -104,10 +104,11 @@ Normally, semaphores use the SEMAPHORE attribute. However, other attributes can 
 See the help on `@wait`, `@notify` and `@drain` for details, but, briefly, you can use named semaphores with `<object>`/`<attribute>` where you would normally just use `<object>` in those commands. This means you can't have an untimed semaphore on an attribute with a numeric name.
 
 
-**See Also:**
+::: seealso
 - [@wait]
 - [@drain]
 - [@notify]
+:::
 
 ## Named semaphore example
 

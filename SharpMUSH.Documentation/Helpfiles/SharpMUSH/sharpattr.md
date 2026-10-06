@@ -29,6 +29,7 @@ For players the portal's gallery will keep `IMAGE`, ``IMAGE`BANNER`` and ``IMAGE
 
 The default flags apply when an attribute is created. An `IMAGE` a game set before these entries existed keeps the flags it was created with -- clear it and set it again to pick up `visual` and `public`. The bundled room-contents and profile-handler packages publish an image attribute only while it is `visual`, so clearing that flag (`@set me/IMAGE=!visual`) keeps a picture off the portal.
 
-**See Also:**
+::: seealso
 - [attribute flags access and matching]
+:::
 

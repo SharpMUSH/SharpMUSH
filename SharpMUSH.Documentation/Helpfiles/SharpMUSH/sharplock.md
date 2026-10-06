@@ -159,10 +159,11 @@ For example:
 This locks *<object>* to players (and the objects of players) currently connected from the computer the MUSH is running on.
 
 
-**See Also:**
-- [- [IPADDR()]
+::: seealso
+- [IPADDR()]
 - [HOST()]
 - [LASTSITE]
+:::
 
 # @LOCK/BASIC
 # @LOCK/ENTER
@@ -175,43 +176,47 @@ For players and things, it controls who can "get" the object.<br>
 For rooms, it determines whether the @success or @failure verbs are triggered when someone "look"s at the room. However, even when the lock is failed, the "look" still occurs.
 
 
-**See Also:**
-- [- [@asuccess]
+::: seealso
+- [@asuccess]
 - [@afailure]
 - [go]
 - [get]
 - [look]
+:::
 
 ## Enter Lock
 For players and things, the Enter lock controls who can "enter" an ENTER_OK object, as well as who can "empty" it. It has no meaning for exits or rooms.
 
 
-**See Also:**
-- [- [@aenter]
+::: seealso
+- [@aenter]
 - [@aefail]
 - [ENTER_OK]
 - [enter]
 - [empty]
+:::
 
 ## Leave Lock
 For players, things and rooms, the Leave lock controls who can leave the object, via "leave", "@teleport" or "goto". It has no meaning for exits.
 
 
-**See Also:**
-- [- [@leave]
+::: seealso
+- [@leave]
 - [@lfail]
 - [leave]
+:::
 
 ## Teleport Lock
 For rooms, the Teleport lock controls who can "@teleport" into the room, if it has the JUMP_OK flag set. It has no meaning for players, things or exits.
 
 
-**See Also:**
-- [- [JUMP_OK]
+::: seealso
+- [JUMP_OK]
 - [@teleport]
 - [LOCKING]
 - [locktypes]
 - [lock keys]
+:::
 
 # @LOCK/FOLLOW
 # @LOCK/FORWARD
@@ -221,29 +226,32 @@ For rooms, the Teleport lock controls who can "@teleport" into the room, if it h
 For players and things, controls who may "follow" the object. Has no meaning for rooms or exits.
 
 
-**See Also:**
+::: seealso
 - [failure]
+:::
 
 ## Forward Lock
 For players, things and rooms, controls who can forward sound to an object, via @forwardlist or @debugforwardlist. Meaningless for exits.
 
 
-**See Also:**
-- [- [@forwardlist]
+::: seealso
+- [@forwardlist]
 - [@debugforwardlist]
 - [@LOCK/PAGE]
+:::
 
 ## Dropto Lock
 For rooms, only objects which pass this lock will be sent to the rooms Drop-To. Has no meaning for players, things or exits.
 
 
-**See Also:**
-- [- [DROP-TOS]
+::: seealso
+- [DROP-TOS]
 - [drop]
 - [empty]
 - [LOCKING]
 - [locktypes]
 - [lock keys]
+:::
 
 # @LOCK/USE
 # @LOCK/COMMAND
@@ -253,28 +261,31 @@ For rooms, only objects which pass this lock will be sent to the rooms Drop-To. 
 For players, things and rooms, this lock controls who may "use" the object. You must also pass an object's Use lock to trigger $-commands or ^-listens on it (as well as the Command/Listen lock; see below). When an object is used as a Channel Mogrifier, only players who pass the object's Use lock will have their speech on the channel mogrified. Has no meaning for exits.
 
 
-**See Also:**
-- [- [@ause]
+::: seealso
+- [@ause]
 - [@aufail]
 - [use]
 - [$-commands]
 - [listening listen patterns]
 - [@CHANNEL ADMIN]
+:::
 
 ## Command Lock
 For players, things and rooms, you must pass this lock (as well as the Use lock) to trigger $-commands on the object. Meaningless for exits.
 
 
-**See Also:**
-- [- [$-commands]
+::: seealso
+- [$-commands]
 - [failure]
+:::
 
 ## Listen Lock
 For players, things and rooms, you must pass this lock (as well as the Use lock) to trigger ^-listen patterns on the object when it's set MONITOR. Meaningless for exits.
 
 
-**See Also:**
+::: seealso
 - [listening listen patterns]
+:::
 
 # @LOCK/PAGE
 # @LOCK/SPEECH
@@ -286,33 +297,37 @@ For players, things and rooms, you must pass this lock (as well as the Use lock)
 For players, things and rooms, you must pass this lock to page or @pemit to the object, or @remit inside it. Meaningless for exits.
 
 
-**See Also:**
-- [- [failure]
+::: seealso
+- [failure]
 - [@haven]
+:::
 
 ## Speech Lock
 Controls who can speak (via say, pose, @*emit or teach) inside an object. Meaningless for exits.
 
 
-**See Also:**
+::: seealso
 - [failure]
+:::
 
 ## Mail Lock
 Controls who can send @mail to this object.
 
 
-**See Also:**
-- [- [MAIL]
+::: seealso
+- [MAIL]
 - [failure]
+:::
 
 ## Mailforward Lock
 Controls who can forward @mail to this object via @mailforward.
 
 
-**See Also:**
-- [- [MAIL]
+::: seealso
+- [MAIL]
 - [@mailforward]
 - [@LOCK/FOLLOW]
+:::
 
 ## Interact Lock
 Controls whose indirect speech you'll hear (from say, pose, channels, @emit, etc). Does not block sound directed specifically at you, such as page, whisper, @pemit, etc; use @lock/page for those. **Note**: if sound is blocked by the interact lock, the speaker will not be informed.
@@ -329,9 +344,10 @@ Controls whose indirect speech you'll hear (from say, pose, channels, @emit, etc
 For players and things, controls who can drop the object. Has no meaning for exits. On rooms, has the same meaning as @lock/dropin.
 
 
-**See Also:**
-- [- [drop]
+::: seealso
+- [drop]
 - [empty]
+:::
 
 ## Dropin Lock
 When set on a player, thing or room, controls who can drop objects into them. Has no meaning for exits.
@@ -352,11 +368,12 @@ Controls what may be given to this object.
 Controls who can take from this container.
 
 
-**See Also:**
-- [- [give]
+::: seealso
+- [give]
 - [buy]
 - [@LOCK/BASIC]
 - [@LOCK/BASIC]
+:::
 
 # @LOCK/FILTER
 # @LOCK/INFILTER
@@ -366,9 +383,10 @@ Controls who can take from this container.
 These are lock versions of @filter and @infilter, respectively. Anyone who fails to pass the lock will have their speech filtered. The sound being made is passed to evaluation locks as %0.
 
 
-**See Also:**
-- [- [@filter]
+::: seealso
+- [@filter]
 - [@infilter]
+:::
 
 # @LOCK/CONTROL
 # @LOCK/DESTROY
@@ -378,24 +396,27 @@ These are lock versions of @filter and @infilter, respectively. Anyone who fails
 Allows objects which would not normally control something to do so. Does not work for players.
 
 
-**See Also:**
+::: seealso
 - [CONTROL]
+:::
 
 ## Destroy Lock
 Limits who can @destroy a DESTROY_OK object.
 
 
-**See Also:**
-- [- [@destroy]
+::: seealso
+- [@destroy]
 - [DESTROY_OK]
+:::
 
 ## Examine Lock
 Limits who can examine a VISUAL object.
 
 
-**See Also:**
-- [- [examine]
+::: seealso
+- [examine]
 - [VISUAL]
+:::
 
 # @LOCK/ZONE
 # @LOCK/CHZONE
@@ -408,54 +429,60 @@ Limits who can examine a VISUAL object.
 Objects which pass a SHARED player's @lock/zone control all the objects the shared player owns. If the zone_control_zmp_only @config option is off, anything passing the @lock/zone of other objects will control everything @chzoned to the object.
 
 
-**See Also:**
-- [- [@chzone]
+::: seealso
+- [@chzone]
 - [SHARED]
 - [zones]
 - [ZMR]
+:::
 
 ## Chzone Lock
 If set, controls who can @chzone an object to this zone.
 
 
-**See Also:**
-- [- [@chzone]
+::: seealso
+- [@chzone]
 - [zones]
+:::
 
 ## Chown Lock
 If set, controls who can change the owner of this CHOWN_OK object via @chown.
 
 
-**See Also:**
-- [- [CHOWN_OK]
+::: seealso
+- [CHOWN_OK]
 - [@chown]
+:::
 
 ## Parent Lock
 Controls who can @parent something to this LINK_OK object.
 
 
-**See Also:**
-- [- [@parent]
+::: seealso
+- [@parent]
 - [LINK_OK]
+:::
 
 ## Link Lock
 Controls who can @link this unlinked exit, or who can @link an exit to this LINK_OK room/thing.
 
 
-**See Also:**
-- [- [@link]
+::: seealso
+- [@link]
 - [LINK_OK]
 - [LINK_ANYWHERE POWER]
+:::
 
 ## Open Lock
 Controls who can @open an exit from this OPEN_OK room.
 
 
-**See Also:**
-- [- [@open]
+::: seealso
+- [@open]
 - [@dig]
 - [OPEN_OK]
 - [OPEN_ANYWHERE POWER]
+:::
 
 # @LOCK/USER
 # @LOCK/USER:<NAME>
@@ -470,9 +497,10 @@ User-defined locks have no hardcoded meaning. They allow you to set locks for an
 and then test it with `elock(War Hammer/wield, %#)`.
 
 
-**See Also:**
-- [- [ELOCK()]
+::: seealso
+- [ELOCK()]
 - [valid()]
 - [LOCKING]
 - [locktypes]
 - [lock keys]
+:::

@@ -33,10 +33,11 @@ These functions return the equivilent of ## (itext) or #@ (inum) for iter() and 
 
 ilev() returns the current nesting depth, or -1 when used outside an iter() or @dolist. Thus, itext(ilev()) will return the outermost ##, equivilent to %iL.
 
-**See Also:**
+::: seealso
 - [iter()]
 - [IBREAK()]
 - [@dolist]
+:::
 
 ## Nested iteration examples
 
@@ -69,6 +70,7 @@ You say, "green:fish green:shoe"
 ```
 
 
-**See Also:**
+::: seealso
 - [iter()]
 - [@dolist]
+:::

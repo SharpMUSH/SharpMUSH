@@ -42,9 +42,10 @@ Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<
 As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
 
 
-**See Also:**
+::: seealso
 - [JUMP_OK]
 - `[NO_TEL]`
 - `[Z_TEL]`
 - [@atport]
 - [LOCKING]
+:::

@@ -103,10 +103,11 @@ A power made with `@power/add` is stored on the object as before.
 
 A PennMUSH database imported into SharpMUSH keeps every privilege: WIZARD and ROYALTY become role assignments and each power an override, on the same objects.
 
-**See Also:**
+::: seealso
 - [@role]
 - [@permission]
 - [ROLES()]
 - [HASROLE()]
 - [PERMISSION()]
 - [lock keys]
+:::

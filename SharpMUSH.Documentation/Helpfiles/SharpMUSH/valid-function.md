@@ -48,11 +48,12 @@ Note that, for "playername", valid() returns 0 if the name is valid but currentl
 
 For "ansicodes", when not using new-style color names or hex codes, valid() always returns 1, and invalid codes are simply ignored, the same as when used in the ansi() function.
 
-**See Also:**
+::: seealso
 - [colors()]
 - [ansi()]
 - [@role]
 - [@permission]
+:::
 
 ## Validation types
 

@@ -37,10 +37,11 @@ The standard powers are permissions (see [roles flags]): granting See_All sets a
 God can add, delete, and otherwise manipulate power definitions. See help @power registry syntax for these commands.
 
 
-**See Also:**
+::: seealso
 - [POWERS()]
 - [@flag]
 - [roles]
+:::
 
 ## Power registry syntax
 

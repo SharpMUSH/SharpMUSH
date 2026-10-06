@@ -28,6 +28,7 @@
         "%L",
         "%c",
         "%u",
+        "%>",
         "%?",
         "%=",
         "%+",
@@ -93,6 +94,7 @@ Other substitutions:<br>
     %d = the DESCRIPTOR (port) the command was entered from<br>
     %c = text of the last command, _before_ evaluation<br>
     %u = text of the last command, after evaluation, available to locks/hooks<br>
+    %> = the output of the last command, like a function's result: see [command output]<br>
     %? = The current function invocation and depth counts<br>
     %= = The dbref/attribute currently being evaluated<br>
     %+ = The number of arguments passed to the current ufun.<br>
@@ -101,13 +103,14 @@ Other substitutions:<br>
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
-**See Also:**
+::: seealso
 - [evaluation order]
 - [%#]
 - [%!]
 - [database]
 - [registers]
 - [V()]
+:::
 
 ## Substitution examples
 

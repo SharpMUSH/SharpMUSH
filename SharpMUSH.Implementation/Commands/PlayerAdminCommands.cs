@@ -29,7 +29,7 @@ public partial class Commands
 	/// requested dbref from <c>args_right[2]</c>, and <c>do_pcreate</c> (<c>src/wiz.c:108-146</c>) settles
 	/// that dbref through <c>make_first_free_wrapper</c> before it looks at the name or the password.
 	/// </remarks>
-	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+	[SharpCommand(Name = "@PCREATE", Output = CommandOutput.Value, Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password", "dbref"])]
 	public async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

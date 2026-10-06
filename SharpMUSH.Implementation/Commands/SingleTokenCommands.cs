@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
+	[SharpCommand(Name = "]", Output = CommandOutput.Runs, Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
 	public ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> RedispatchModifier(parser, noEval: true);
 
@@ -23,7 +23,7 @@ public partial class Commands
 	/// parenthesis or other grammar error surfaces as <c>#-1 PARSER FAILURE</c> and the command
 	/// is not executed.
 	/// </summary>
-	[SharpCommand(Name = "~", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
+	[SharpCommand(Name = "~", Output = CommandOutput.Runs, Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
 	public ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> RedispatchModifier(parser, noEval: false);
 

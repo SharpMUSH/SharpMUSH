@@ -77,6 +77,8 @@ public partial class Commands
 				var requestUri = uri;
 				var requestBody = dataArg?.Message?.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
+				// The callback's %> is the one at admission, like any queued entry's; the state below is built later.
+				var queuedOutput = parser.CurrentState.PipedOutput;
 
 				var admission = await Mediator.Send(new AdmitAttributeRequest(
 					async () =>
@@ -110,7 +112,8 @@ public partial class Commands
 						return parser.CurrentState with
 						{
 							Arguments = contentDict,
-							EnvironmentRegisters = contentDict
+							EnvironmentRegisters = contentDict,
+							QueuedOutput = queuedOutput
 						};
 					},
 					dbRefAttribute, parser.CurrentState.Executor, parser.CurrentState.Enactor), ExecutionBudget.CurrentToken);

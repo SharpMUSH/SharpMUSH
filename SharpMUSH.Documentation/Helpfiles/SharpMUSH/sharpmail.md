@@ -24,8 +24,8 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 * An alias name (see [@malias])
 
 
-**See Also:**
-- [- [MAIL-SENDING]
+::: seealso
+- [MAIL-SENDING]
 - [MAIL-READING]
 - [MAIL-FOLDERS]
 - [mail-forward]
@@ -34,6 +34,7 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 - [@malias]
 - [MAIL-REVIEWING]
 - [@MAILQUOTA]
+:::
 
 # MAIL-READING
 # @MAIL/READ
@@ -145,8 +146,9 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 * A name none of your folders has yet makes a new folder of that name, with the lowest folder number not in use.
 
 
-**See Also:**
+::: seealso
 - [@MAILFILTER]
+:::
 
 # MAIL-REVIEWING
 # @MAIL/REVIEW
@@ -192,8 +194,9 @@ Filter urgent messages into folder 1
 ```
 
 
-**See Also:**
+::: seealso
 - [MAIL-FOLDERS]
+:::
 
 # @MAILSIGNATURE
 # MAILSIGNATURE
@@ -208,9 +211,10 @@ When set, this attribute is evaluated and appended to any @mail messages sent by
 ```
 
 
-**See Also:**
+::: seealso
 - [MAIL]
 - [MAIL-SENDING]
+:::
 
 # MAIL-ADMIN
 
@@ -260,8 +264,9 @@ Available functions:
 folderstats() returns the number of read, unread, and cleared messages in a specific folder, or, if none is given, the player's current folder. Only Wizards may use forms which get other players' mail information.
 
 
-**See Also:**
+::: seealso
 - [mailstats]
+:::
 
 # MAIL()
 
@@ -281,9 +286,10 @@ When given numeric arguments, mail() returns the text of the corresponding messa
 ```
 
 
-**See Also:**
+::: seealso
 - [maillist]
 - [mailfrom]
+:::
 
 # MAILLIST()
 
@@ -302,9 +308,10 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 ```
 
 
-**See Also:**
+::: seealso
 - [MAIL]
 - [mailfrom]
+:::
 
 # MAILFROM()
 # MAILTIME()
@@ -322,9 +329,10 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 * mailstatus() returns the mail's status characters (as per @mail/list).
 
 
-**See Also:**
+::: seealso
 - [MAIL]
 - [maillist]
+:::
 
 # MAILSTATS()
 # MAILDSTATS()
@@ -346,8 +354,9 @@ The mail*stats() functions return data like @mail/*stats does. You either must u
 ```
 
 
-**See Also:**
+::: seealso
 - [folderstats]
+:::
 
 # MAILSEND()
 

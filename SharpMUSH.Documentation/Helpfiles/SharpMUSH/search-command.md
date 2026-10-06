@@ -40,6 +40,8 @@
 
 This command searches the database and lists objects which meet user specified search criteria. You can limit the scope of the search by specifying `<begin>` and `<end>` as the first and last dbrefs to search.
 
+Output: the dbrefs found, as `lsearch()` returns them.
+
 If a `<player>` argument is supplied, only objects owned by that player will be listed, or all objects if "all" is used. Mortals attempting to match other players (aside from ZMPs whose @lock/zone they pass) or "all" will only get objects which they can examine.
 
 `<class>` and `<restriction>` arguments can be given to filter the match results. Possible `<class>`es include TYPE, NAME, ZONE, PARENT, EXITS, THINGS (or OBJECTS), ROOMS, PLAYERS, FLAGS, LFLAGS, POWERS, ELOCK, COMMAND, LISTEN, EVAL, EPLAYER, EROOM, EEXIT, and ETHING (or EOBJECT).
@@ -84,9 +86,10 @@ If multiple `<class>` and `<restrictions>` are given, objects must meet all crit
 
 @search is only mildly computationally expensive for most of the search classes. Computationally expensive searches are the evaluating searches (EVAL, EPLAYER, ETHING, EROOM, EEXIT), the attribute pattern searches (COMMAND, LISTEN), and ELOCK searches which perform evaluation searches (attr/value) or indirect locks (@obj/lock). These searches all cost a number of pennies (the exact amount is configurable; see @config find_cost).
 
-**See Also:**
+::: seealso
 - [lsearch()]
 - [@find]
+:::
 
 ## Object search examples
 

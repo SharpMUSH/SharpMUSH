@@ -212,6 +212,22 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		return custom ?? MarkupText.Concat(ListMarker(index, isOrdered), content);
 	}
 
+	/// <summary>
+	/// A <c>::: seealso</c> block goes to <c>RENDERMARKUP`CONTAINER</c> like any other container, named
+	/// <c>seealso</c>. Its contents are the topics joined by <c>, </c> (each still a link) when it is a list
+	/// of bare names, and the block's contents rendered as written otherwise.
+	/// </summary>
+	protected override MString RenderSeeAlso(SeeAlsoBlock seeAlso)
+	{
+		if (!HasTemplate("CONTAINER")) return base.RenderSeeAlso(seeAlso);
+
+		var contents = seeAlso.Items is null
+			? MarkupText.Join(MarkupText.NewLine, seeAlso.Select(Render).Where(rendered => rendered.Length > 0))
+			: MarkupText.Join(MarkupText.Plain(", "), RenderSeeAlsoItems(seeAlso));
+		return Template("CONTAINER", Args(Text(HelpSeeAlsoExtension.Name), Text(string.Empty), contents))
+			?? base.RenderSeeAlso(seeAlso);
+	}
+
 	protected override MString RenderQuote(QuoteBlock quote)
 	{
 		var parts = quote

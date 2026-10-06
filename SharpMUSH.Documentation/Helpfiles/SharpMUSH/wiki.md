@@ -249,12 +249,13 @@ attached to it - softcode that renders a page is free to present its links
 however it likes, and `@wiki` is the only surface that already knows how to
 follow one.
 
-**See Also:**
+::: seealso
 - [wiki editing]
 - [wiki administration]
 - [wiki categories]
 - [wiki permissions]
 - [WIKI()]
+:::
 
 ## Editing wiki pages
 
@@ -316,9 +317,10 @@ WIKI: Wrote the fr translation of 'Combat Primer' (now rev 1).
 WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<text>
 ```
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki administration]
+:::
 
 ## Wiki administration
 
@@ -344,10 +346,11 @@ summary is prose about unpublished content, so a draft's revisions are withheld
 exactly as its body is: `@wiki/history/draft` shows them, to a `wiki.drafts`
 holder or the author.
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki editing]
 - [wiki permissions]
+:::
 
 ## Wiki permissions
 
@@ -400,10 +403,11 @@ WIKI: What Alice may do with 'Combat Primer':
 
 From softcode, `wikiaccess(<page>, <action>[, <player>])` returns 1 or 0.
 
-**See Also:**
+::: seealso
 - [wiki administration]
 - [WIKIACCESS()]
 - [roles]
+:::
 
 ## Wiki categories
 
@@ -444,6 +448,7 @@ WIKI: Category 'Rules' — 1 page(s), 0 subcategory(ies):
   main:combat_primer             Combat Primer (rev 2, 2026-10-05)
 ```
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki editing]
+:::

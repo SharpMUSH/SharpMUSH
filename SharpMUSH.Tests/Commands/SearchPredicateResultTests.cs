@@ -39,6 +39,7 @@ public class SearchPredicateResultTests
 			? await parser.CommandListParse(MarkupText.Plain($"@search all mindb={id.Number},maxdb={id.Number},eval=ufun({id}/BODY)"))
 			: await parser.FunctionParse(MarkupText.Plain(expression));
 		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
-		await Assert.That(result.Message!.Text).IsEqualTo(function == "@search" ? (mode == "true" ? "1" : "0") : mode == "true" ? $"#{id.Number}" : "");
+		// @search's output is the list lsearch() gives for the same search.
+		await Assert.That(result.Message!.Text).IsEqualTo(mode == "true" ? $"#{id.Number}" : "");
 	}
 }

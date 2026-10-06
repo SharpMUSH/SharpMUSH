@@ -36,13 +36,14 @@ object          zero or more pairs of arguments, the first a plain string (NOT a
 
 When `<type>` is "array" or "object", it's recommended that subsequent JSON arguments are created with nested calls to JSON().
 
-**See Also:**
+::: seealso
 - [OOB()]
 - [ISJSON()]
 - [json_array()]
 - [json_query()]
 - [json_map()]
 - [RENDER()]
+:::
 
 ## Value construction examples
 

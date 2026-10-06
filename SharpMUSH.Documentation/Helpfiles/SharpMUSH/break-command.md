@@ -26,16 +26,19 @@
 
 `@break` stops the execution of further commands in the current action list if `<boolean>` is a true value. It doesn't affect new queue entries made by previous commands in the action list. It can be useful for doing error checking without having to nest @switches.
 
+Output: `@break` and `@assert` leave the previous command's output unchanged.
+
 If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on SharpMUSH.
 
 `@assert` does the inverse: it stops execution if `<boolean>` evaluates to false.
 
-**See Also:**
+::: seealso
 - [action lists]
 - [queue]
 - [boolean values]
 - [@switch]
 - [@if]
+:::
 
 ## Conditional break examples
 

@@ -966,8 +966,13 @@ public partial class TaskScheduler(
 			: Admit(() => inputSessions.DeliverAsync(parser, session, MString.Empty, timeout: true),
 				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session), notifyOnRejection: false);
 
+	/// <summary>
+	/// Fixes what a queued entry starts with at the moment it is queued: its executor, and the <c>%></c>
+	/// the queuing list had then, since that list keeps running and changes it.
+	/// </summary>
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{
+		state = state.WithQueuedOutput();
 		if (state.Executor is not { } executor) return state;
 		return await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is AnySharpObject target
 			? state with { Executor = target.Object().DBRef }

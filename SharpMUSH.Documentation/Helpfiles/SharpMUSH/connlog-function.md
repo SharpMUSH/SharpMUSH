@@ -52,9 +52,10 @@ Source-based constraits:
 Others:
     * count - if given, instead of returning a list of connections, returns the total number of matching connections.
 
-**See Also:**
+::: seealso
 - [ADDRLOG()]
 - [CONNRECORD()]
+:::
 
 ## Connection search examples
 

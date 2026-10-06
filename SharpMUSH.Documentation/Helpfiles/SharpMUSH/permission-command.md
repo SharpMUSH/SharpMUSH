@@ -93,9 +93,10 @@ Examples:
 @permission/define scene.close=Scenes/Finish any scene
 ```
 
-**See Also:**
+::: seealso
 - [@role]
 - [roles]
 - [PERMISSION()]
 - [@power]
 - [lock keys]
+:::

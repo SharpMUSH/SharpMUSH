@@ -59,7 +59,7 @@ string
 A user-defined function may be as complex as you want it to be, subject to limits on recursion depth, number of function invocations, or cpu time that may be configured in the MUSH.
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [UDEFAULT()]
 - [GET()]
@@ -68,3 +68,4 @@ A user-defined function may be as complex as you want it to be, subject to limit
 - [pfun()]
 - [attribute flags]
 - [@include]
+:::

@@ -44,6 +44,7 @@ There are two types of functions, "built-in functions" and "global user function
 Built-in functions are written in the game hardcode, while @functions are written in softcode, and then made global with the "@function" command. Both are used in exactly the same manner. For more information on @functions, see [@function].
 
 
-**See Also:**
+::: seealso
 - [mushcode]
 - [FUNCTION LIST]
+:::

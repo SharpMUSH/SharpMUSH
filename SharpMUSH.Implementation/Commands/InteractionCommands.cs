@@ -917,7 +917,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "INVENTORY", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "INVENTORY", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Inventory(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -934,7 +934,8 @@ public partial class Commands
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var flagView = await FlagView.ForAsync(executor, ConnectionService);
-		var items = await contents
+		var carried = await contents.ToListAsync(ExecutionBudget.CurrentToken);
+		var items = await carried.ToAsyncEnumerable()
 			.Select((AnySharpContent item, CancellationToken _) => MessageFormatting.FormatObjectWithDbref(item.Object(), flagView))
 			.ToListAsync(ExecutionBudget.CurrentToken);
 
@@ -951,7 +952,8 @@ public partial class Commands
 			}
 		}
 
-		return CallState.Empty;
+		// What it carries, as lcon(me) lists it.
+		return new CallState(string.Join(" ", carried.Select(item => $"#{item.Object().DBRef.Number}")));
 	}
 
 	[SharpCommand(Name = "SCORE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
@@ -965,7 +967,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player", "attribute"])]
+	[SharpCommand(Name = "TEACH", Output = CommandOutput.Runs, Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player", "attribute"])]
 	public async ValueTask<Option<CallState>> Teach(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1123,7 +1125,7 @@ public partial class Commands
 			: 0;
 	}
 
-	[SharpCommand(Name = "WITH", Switches = ["NOEVAL", "ROOM"], Behavior = CB.Player | CB.Thing | CB.EqSplit, MinArgs = 0,
+	[SharpCommand(Name = "WITH", Output = CommandOutput.Runs, Switches = ["NOEVAL", "ROOM"], Behavior = CB.Player | CB.Thing | CB.EqSplit, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> With(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

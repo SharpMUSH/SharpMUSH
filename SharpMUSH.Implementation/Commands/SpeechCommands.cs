@@ -19,12 +19,12 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
+	[SharpCommand(Name = "@@", Output = CommandOutput.Passthrough, Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
 	// PennMUSH src/command.c: {"THINK", "NOEVAL", cmd_think, CMD_T_ANY | CMD_T_NOGAGGED, 0, 0}.
-	[SharpCommand(Name = "THINK", Switches = ["NOEVAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1,
+	[SharpCommand(Name = "THINK", Output = CommandOutput.Value, Switches = ["NOEVAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1,
 		ParameterNames = ["expression"])]
 	public async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

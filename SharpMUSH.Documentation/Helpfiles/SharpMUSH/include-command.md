@@ -31,6 +31,8 @@
 
 @include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
 
+Output: the output of the last command run. See [command output].
+
 ### Example
 ```sharp
 &CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
@@ -56,11 +58,12 @@ In-place action lists — those run by @include, @trigger, @force, @switch/inpla
 - /clearregs: Clears all q-registers before including the attribute.
 
 
-**See Also:**
+::: seealso
 - [@include attribute pipelines]
 - [@trigger]
 - [u()]
 - [@break]
+:::
 
 ## Attribute pipelines
 
@@ -89,9 +92,10 @@ A `+set <number>` command that validates its input through a three-step chain:
 `+set high` stops at the first link: VALIDATE's @assert fails, so it @pemits the error and @breaks — RANGE and APPLY never run.
 
 
-**See Also:**
+::: seealso
 - [@include]
 - [@include switches]
 - [@break]
 - [@dolist]
 - [@trigger]
+:::

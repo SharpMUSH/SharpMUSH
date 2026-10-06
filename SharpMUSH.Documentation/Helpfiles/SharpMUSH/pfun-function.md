@@ -57,12 +57,13 @@ as the attribute is inherited (and evaluated by you, not the parent) - you don't
 This function is particularly useful when you want to inherit an attribute tree from a parent, but add further branches.
 
 
-**See Also:**
+::: seealso
 - [u()]
 - [GET()]
 - [PARENT()]
 - [ZFUN()]
 - [parent]
+:::
 
 ## Branch inheritance examples
 
@@ -78,7 +79,7 @@ ParentRoot / ParentRoot`foo
  / ParentRoot`foo
 ```
 
-Setting a ROOT`FOO attribute on the child automatically creates an empty ROOT attribute, which blocks the inherited ROOT attribute. The pfun() function allows you to get around this:
+Setting a ``ROOT`FOO`` attribute on the child automatically creates an empty ROOT attribute, which blocks the inherited ROOT attribute. The pfun() function allows you to get around this:
 
 ```sharp
 > &root me=pfun(root)
@@ -86,4 +87,4 @@ Setting a ROOT`FOO attribute on the child automatically creates an empty ROOT at
 ParentRoot / ParentRoot`foo / ChildRoot`bar
 ```
 
-Good for inherited @chatformats which use CHATFORMAT``<channel>` leaf attrs to store channel-specific formats and the like.
+Good for inherited @chatformats which use ``CHATFORMAT`<channel>`` leaf attrs to store channel-specific formats and the like.

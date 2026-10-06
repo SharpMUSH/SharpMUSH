@@ -306,7 +306,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
+	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -466,7 +466,7 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "ENTER", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "ENTER", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Enter(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -565,10 +565,10 @@ public partial class Commands
 			await FollowerCommand(parser, executor, currentLocation, "ENTER", objectToEnter.Object().DBRef);
 		}
 
-		return CallState.Empty;
+		return new CallState(newLocation.Object().DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "LEAVE", Output = CommandOutput.Value, Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Leave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -621,7 +621,7 @@ public partial class Commands
 		return new CallState(destinationLocation.Object().DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "HOME", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "HOME", Output = CommandOutput.Value, Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Home(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

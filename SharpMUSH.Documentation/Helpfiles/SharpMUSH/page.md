@@ -36,7 +36,7 @@ This command sends a message to a player or list of players. If the player's nam
 
 '`page <message>`' or '`page =<message>`'
 
-will send the message to the last person paged. You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's PAGE_LOCK`FAILURE, PAGE_LOCK`OFAILURE, and PAGE_LOCK`AFAILURE attributes will be activated if set.
+will send the message to the last person paged. You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's ``PAGE_LOCK`FAILURE``, ``PAGE_LOCK`OFAILURE``, and ``PAGE_LOCK`AFAILURE`` attributes will be activated if set.
 
 ### Examples
 ```sharp
@@ -111,7 +111,7 @@ PAGE: End of list
 ```
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [@alias]
 - [@pageformat]
@@ -121,3 +121,4 @@ PAGE: End of list
 - [flags]
 - [pagerecall()]
 - [pageconversations()]
+:::

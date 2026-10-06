@@ -426,7 +426,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
 			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
-			CommandText = CurrentState.CommandText ?? new CommandText(),
+			CommandText = CurrentState.CommandText ?? new CommandText(CurrentState.QueuedOutput),
 			InplaceDepth = depth
 		});
 		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
@@ -485,7 +485,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var parserForList = State.IsEmpty ? this : Push(CurrentState with
 		{
 			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
-			CommandText = CurrentState.CommandText ?? new CommandText(),
+			CommandText = CurrentState.CommandText ?? new CommandText(CurrentState.QueuedOutput),
 			InplaceDepth = depth
 		});
 
@@ -565,7 +565,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var parserToUse = State.IsEmpty ? this : Push(CurrentState with
 		{
 			Flags = derivedFlags,
-			CommandText = CurrentState.CommandText ?? new CommandText()
+			CommandText = CurrentState.CommandText ?? new CommandText(CurrentState.QueuedOutput)
 		});
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), parserToUse);
 		return result ?? CallState.Empty;

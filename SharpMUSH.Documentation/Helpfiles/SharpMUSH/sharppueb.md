@@ -9,10 +9,11 @@ HTML tags are stripped when sent to any other client.
 Pueblo and MXP are different dialects, not one extending the other. Most formatting tags are spelled alike, but a command link is not: Pueblo writes `<a xch_cmd="...">` and MXP writes `<send href="...">`, and each client prints the other's as text. Use [CMDLINK()] for a command link, and each client gets its own.
 
 
-**See Also:**
+::: seealso
 - [HTML FUNCTIONS]
 - [pueblo]
 - [HTML()]
+:::
 
 # PUEBLO()
 
@@ -25,14 +26,16 @@ If used on a player/descriptor which is not connected, pueblo() returns #-1 NOT 
 When used with a *<player>* argument, the most recently active connection is used if the *<player>* is logged in more than once.
 
 
-**See Also:**
+::: seealso
 - [TERMINFO()]
 - [HTML()]
 - [pueblo]
+:::
 
-**See Also:**
+::: seealso
 - [HTML]
 - [pueblo]
+:::
 
 # HTML FUNCTIONS
 
@@ -62,10 +65,11 @@ Mortals are restricted in the tags they may use. Most standard HTML tags are ok;
 In PennMUSH this wizard-only function outputs *<string>* as a single HTML tag. SharpMUSH's markup is a span over the text it applies to, so it has no single tag to write, and html() returns `#-1 USE TAGWRAP INSTEAD`. Use [TAGWRAP()].
 
 
-**See Also:**
+::: seealso
 - [pueblo]
 - [HTML]
 - [HTML FUNCTIONS]
+:::
 
 # TAG()
 
@@ -74,10 +78,11 @@ In PennMUSH this wizard-only function outputs *<string>* as a single HTML tag. S
 In PennMUSH this outputs an opening HTML/Pueblo tag. SharpMUSH's markup is a span over the text it applies to, so it has no tag without an end, and tag() returns `#-1 USE TAGWRAP INSTEAD`. Use [TAGWRAP()].
 
 
-**See Also:**
+::: seealso
 - [ENDTAG()]
 - [TAGWRAP()]
 - [HTML()]
+:::
 
 # ENDTAG()
 
@@ -86,10 +91,11 @@ In PennMUSH this outputs an opening HTML/Pueblo tag. SharpMUSH's markup is a spa
 In PennMUSH this outputs a closing HTML/Pueblo tag. As with [TAG()], SharpMUSH returns `#-1 USE TAGWRAP INSTEAD`. Use [TAGWRAP()].
 
 
-**See Also:**
+::: seealso
 - [TAG()]
 - [TAGWRAP()]
 - [HTML()]
+:::
 
 # TAGWRAP()
 
@@ -116,11 +122,12 @@ Without Send_OOB, *<name>* must be one of PennMUSH's allowed tags (A, B, I, U, F
 A particularly important use of this function is `tagwrap(pre, <string>)`. Because Pueblo works like an html browser, spaces and tabs are compressed to a single space. If you have code (a +who function, for example) that relies on exact spacing, surround its output with a tagwrap(pre,...) so that Pueblo will render it as "preformatted" text.
 
 
-**See Also:**
+::: seealso
 - [CMDLINK()]
 - [TAG()]
 - [ENDTAG()]
 - [HTML()]
+:::
 
 # CMDLINK()
 
@@ -137,9 +144,10 @@ cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennM
 > think cmdlink(Who is online?,+who,List the connected players)
 ```
 
-**See Also:**
+::: seealso
 - [TAGWRAP()]
 - [HTML FUNCTIONS]
+:::
 
 # MEDIA FUNCTIONS
 
@@ -159,8 +167,9 @@ None of them leaves anything in the plain text, so `strlen()` and listen pattern
 
 All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone.
 
-**See Also:**
+::: seealso
 - [HTML FUNCTIONS]
+:::
 
 # SOUND()
 
@@ -175,10 +184,11 @@ MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` elemen
 > @pemit %#=[sound(door.wav,80)]The door creaks open.
 ```
 
-**See Also:**
+::: seealso
 - [MUSIC()]
 - [STOPSOUND()]
 - [MEDIA FUNCTIONS]
+:::
 
 # MUSIC()
 
@@ -186,9 +196,10 @@ MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` elemen
 
 As [SOUND()], for background music: one piece plays at a time, and MXP has a channel of its own for it. `music(theme.mid,,-1)` plays until something stops it.
 
-**See Also:**
+::: seealso
 - [SOUND()]
 - [STOPSOUND()]
+:::
 
 # STOPSOUND()
 
@@ -196,9 +207,10 @@ As [SOUND()], for background music: one piece plays at a time, and MXP has a cha
 
 Silences what is playing. *<channel>* is `effects` or `music`; with none, both stop.
 
-**See Also:**
+::: seealso
 - [SOUND()]
 - [MUSIC()]
+:::
 
 # IMAGE()
 
@@ -244,10 +256,11 @@ A client reading the stream as HTML — a Pueblo client, the portal — collapse
 > &cmd`who Globals=$+who: @nspemit %#=preformat(u(fun`who))
 ```
 
-**See Also:**
+::: seealso
 - [align()]
 - [TABLE()]
 - [pueblo client enhancements]
+:::
 
 # CLEARSCREEN()
 
@@ -267,8 +280,9 @@ Asks the client to fetch something now that it will want soon, so it is already 
 
 Makes links already on the player's screen stop working: those in *<group>*, or every one when no group is named. MXP acts on it, the portal is told, and a client with neither leaves its old links working.
 
-**See Also:**
+::: seealso
 - [CMDLINK()]
+:::
 
 # WEBSOCKETS
 
@@ -298,12 +312,13 @@ See [OOB()] for sending a JSON object to a WebSocket client as a JavaScript obje
 See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
 
 
-**See Also:**
+::: seealso
 - [HTML FUNCTIONS]
 - [json()]
 - [pueblo]
 - [WSHTML()]
 - [OOB()]
+:::
 
 # WSHTML()
 
@@ -325,8 +340,9 @@ See [@prompt] for information about sending telnet GOAHEAD prompts. Support for 
 
   A player on the web portal or a Pueblo/MXP client sees a link reading SharpMUSH; a telnet player, and any listening object, sees `SharpMUSH`.
 
-**See Also:**
+::: seealso
 - [WEBSOCKETS]
 - [pueblo]
 - [HTML FUNCTIONS]
 - [JSON FUNCTIONS]
+:::

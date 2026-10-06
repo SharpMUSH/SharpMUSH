@@ -38,9 +38,10 @@ get          For arrays and objects, returns the json element found by following
 extract      Like get, but takes a single combined path arg as described in [JSON PATHS]. Some caveats: Returns 0 for false, 1 for true, and strings are unquoted.<br>
 unescape     Only valid for JSON strings; returns the unescaped form of `<json>`.
 
-**See Also:**
+::: seealso
 - [json()]
 - [json_map()]
+:::
 
 ## Types and array queries
 

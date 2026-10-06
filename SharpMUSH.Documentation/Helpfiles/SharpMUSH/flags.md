@@ -37,7 +37,7 @@ You can see the list of flags set on an object in several ways:
 Note: The object type (player, thing, room, exit or garbage) is not actually a flag. See [TYPES OF OBJECTS] for more information.
 
 
-**See Also:**
+::: seealso
 - [examine]
 - [FLAGS()]
 - [HASFLAG()]
@@ -51,3 +51,4 @@ Note: The object type (player, thing, room, exit or garbage) is not actually a f
 - [@set]
 - [SET()]
 - [attribute flags]
+:::

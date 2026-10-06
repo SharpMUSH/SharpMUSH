@@ -34,12 +34,13 @@
 %4 will be set to the default message.
 
 
-**See Also:**
+::: seealso
 - [page]
 - [speak()]
 - [@chatformat]
 - [@SPEECHMOD]
 - [@message]
+:::
 
 ## Page format examples
 
