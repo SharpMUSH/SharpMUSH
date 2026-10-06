@@ -310,7 +310,11 @@ public record SharpMUSHOptions
 			}
 		),
 		Mssp = new MsspOptions(
-			Variables: new Dictionary<string, string[]>()
+			Variables: new Dictionary<string, string[]>
+			{
+				// The SharpMUSH test server, so a crawler that finds a new game also finds it.
+				{ "REFERRAL", ["mush.sharpmush.com 4201"] }
+			}
 		),
 		Warning = new WarningOptions(
 			WarnInterval: "1h"

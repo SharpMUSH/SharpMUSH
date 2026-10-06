@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -7,7 +8,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// Adds the <c>Mssp</c> category, empty, to a stored configuration written before it existed, once.
+/// Adds the default <c>Mssp</c> category to a stored configuration written before it existed, once.
 /// <c>SharpMUSHOptions.Mssp</c> is <c>required</c>, so the document cannot be read without it.
 /// </summary>
 public partial class LightningDatabase
@@ -28,7 +29,7 @@ public partial class LightningDatabase
 				&& JsonNode.Parse(bytes) is JsonObject options
 				&& !options.ContainsKey("Mssp"))
 			{
-				options["Mssp"] = new JsonObject { ["Variables"] = new JsonObject() };
+				options["Mssp"] = JsonSerializer.SerializeToNode(SharpMUSHOptions.Default().Mssp);
 				tx.Put(Tables.ExpandedSrv, key, JsonSerializer.SerializeToUtf8Bytes(options));
 			}
 

@@ -297,7 +297,7 @@
                         break;
                     case MsspValueKind.List:
                         @Chips(_draft.Values(name), index => _draft.RemoveAt(name, index))
-                        <input class="cfg-text" placeholder="@Loc["AdmMsspAddValue"]" aria-label="@title" aria-describedby="@HelpId(variable)"
+                        <input class="cfg-text" placeholder="@(variable.Example ?? Loc["AdmMsspAddValue"].Value)" aria-label="@title" aria-describedby="@HelpId(variable)"
                                list="@(variable.Choices.Count > 0 ? ListId(name) : null)"
                                value="@_draft.ListDraft(name)"
                                @oninput="@(e => _draft.SetListDraft(name, e.Value?.ToString() ?? string.Empty))"

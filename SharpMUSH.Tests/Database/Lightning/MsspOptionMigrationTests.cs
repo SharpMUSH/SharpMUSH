@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 public class MsspOptionMigrationTests : LightningDatabaseFixture
 {
 	[Test]
-	public async Task MigrationAddsAnEmptyMsspCategoryToAStoredConfiguration()
+	public async Task MigrationAddsTheDefaultMsspCategoryToAStoredConfiguration()
 	{
 		await Db.SetExpandedServerData(nameof(SharpMUSHOptions), SharpMUSHOptions.Default());
 		var key = Keys.Str(nameof(SharpMUSHOptions));
@@ -33,7 +33,7 @@ public class MsspOptionMigrationTests : LightningDatabaseFixture
 		await ReopenAsync();
 
 		var options = await Db.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
-		await Assert.That(options!.Mssp.Variables).IsEmpty();
+		await Assert.That(options!.Mssp.Variables["REFERRAL"]).IsEquivalentTo(SharpMUSHOptions.Default().Mssp.Variables["REFERRAL"]);
 		await Assert.That(options.Net.MudName).IsEqualTo(SharpMUSHOptions.Default().Net.MudName);
 	}
 

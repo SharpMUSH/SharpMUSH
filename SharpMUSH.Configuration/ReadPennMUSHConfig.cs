@@ -308,7 +308,7 @@ public static partial class ReadPennMushConfig
 				Rules: new Dictionary<string, string[]>()
 			),
 			Mssp = new MsspOptions(
-				Variables: Mssp(text, skipped)
+				Variables: Mssp(text, skipped, d.Mssp.Variables)
 			),
 			Warning = new WarningOptions(
 				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), d.Warning.WarnInterval)
@@ -460,9 +460,11 @@ public static partial class ReadPennMushConfig
 	/// carries each line's value, in order, which is MSSP's own array form with the last value the
 	/// default. A variable the server reports itself is not carried over: PennMUSH would report it twice.
 	/// One the server already reports as the line says, like the shipped <c>mssp ansi/1</c>, goes
-	/// without a note, since nothing is lost.
+	/// without a note, since nothing is lost. A default variable the file does not name is kept, as every
+	/// other option the file leaves out is.
 	/// </summary>
-	private static Dictionary<string, string[]> Mssp(IEnumerable<string> lines, List<string> skipped)
+	private static Dictionary<string, string[]> Mssp(IEnumerable<string> lines, List<string> skipped,
+		IReadOnlyDictionary<string, string[]> defaults)
 	{
 		var variables = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 		foreach (var line in lines.Where(line => "mssp".Equals(DirectiveName(line), StringComparison.OrdinalIgnoreCase)))
@@ -503,7 +505,15 @@ public static partial class ReadPennMushConfig
 			}
 		}
 
-		return variables.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray());
+		var result = defaults
+			.Where(entry => !variables.ContainsKey(entry.Key))
+			.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+		foreach (var (name, values) in variables)
+		{
+			result[name] = [.. values];
+		}
+
+		return result;
 	}
 
 	/// <summary>

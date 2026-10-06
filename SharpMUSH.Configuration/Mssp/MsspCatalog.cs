@@ -52,6 +52,18 @@ public enum MsspSource
 	Server
 }
 
+/// <summary>A shape every value of a variable must have, past its kind.</summary>
+public enum MsspValueFormat
+{
+	Any,
+
+	/// <summary>
+	/// A telnet address as the specification writes REFERRAL: host, one space, port. Not a colon,
+	/// because an IPv6 address holds colons.
+	/// </summary>
+	HostPort
+}
+
 /// <summary>One MSSP variable as the specification defines it, and where SharpMUSH takes its value from.</summary>
 /// <param name="Name">The variable's canonical name: upper case, words separated by one space.</param>
 /// <param name="Description">The specification's description, shortened.</param>
@@ -60,6 +72,7 @@ public enum MsspSource
 /// the editor offers only these, though a value outside them is still accepted.
 /// </param>
 /// <param name="Option">The configuration option the value comes from, for <see cref="MsspSource.Option"/>.</param>
+/// <param name="Example">A value of the right shape, shown in the editor and in a refusal.</param>
 public sealed record MsspVariable(
 	string Name,
 	MsspGroup Group,
@@ -68,7 +81,9 @@ public sealed record MsspVariable(
 	MsspSource Source = MsspSource.Setting,
 	string? Option = null,
 	IReadOnlyList<string>? Choices = null,
-	bool OpenEnded = false)
+	bool OpenEnded = false,
+	MsspValueFormat Format = MsspValueFormat.Any,
+	string? Example = null)
 {
 	public IReadOnlyList<string> Choices { get; init; } = Choices ?? [];
 
@@ -148,7 +163,8 @@ public static class MsspCatalog
 		new("IP", MsspGroup.Generic, MsspValueKind.Text, "IPv4 address players connect to."),
 		new("IPV6", MsspGroup.Generic, MsspValueKind.Text, "IPv6 address players connect to."),
 		new("CRAWL DELAY", MsspGroup.Generic, MsspValueKind.Number, "Fewest hours between crawls; -1 leaves it to the crawler.", Choices: CrawlDelays, OpenEnded: true),
-		new("REFERRAL", MsspGroup.Generic, MsspValueKind.List, "Other MSSP games for crawlers to check, as \"host port\" with a space."),
+		new("REFERRAL", MsspGroup.Generic, MsspValueKind.List, "Other MSSP games for crawlers to check, as \"host port\" with a space.",
+			Format: MsspValueFormat.HostPort, Example: "mush.example.com 4201"),
 
 		new("FAMILY", MsspGroup.Categorization, MsspValueKind.List, "The codebase family.", MsspSource.Server),
 		new("GENRE", MsspGroup.Categorization, MsspValueKind.Choice, "The game's genre.", Choices: Genres),
@@ -320,6 +336,11 @@ public static class MsspCatalog
 				case MsspValueKind.Flag when value is not ("0" or "1"):
 					return $"{canonical} is 1 or 0, not \"{value}\".";
 			}
+
+			if (Find(canonical) is { Format: MsspValueFormat.HostPort } address && !IsHostPort(value))
+			{
+				return $"{canonical}: \"{value}\" is not a host and port with a space between, such as \"{address.Example}\".";
+			}
 		}
 
 		var kind = Find(canonical)?.Kind;
@@ -329,5 +350,18 @@ public static class MsspCatalog
 		}
 
 		return null;
+	}
+
+	/// <summary>
+	/// True for <c>host port</c>: a DNS name or IP address, one space, and a port from 1 to 65535.
+	/// </summary>
+	public static bool IsHostPort(string value)
+	{
+		var parts = value.Split(' ');
+		return parts is [var host, var port]
+			&& Uri.CheckHostName(host) is UriHostNameType.Dns or UriHostNameType.IPv4 or UriHostNameType.IPv6
+			&& port.All(char.IsAsciiDigit)
+			&& int.TryParse(port, out var number)
+			&& number is >= 1 and <= 65535;
 	}
 }

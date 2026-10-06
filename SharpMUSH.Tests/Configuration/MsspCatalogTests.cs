@@ -85,4 +85,28 @@ public class MsspCatalogTests
 		await Assert.That(settings).IsEmpty();
 		await Assert.That(problems).IsEquivalentTo(new[] { "CONTACT is given twice." });
 	}
+
+	[Test]
+	[Arguments("mush.example.com 4201")]
+	[Arguments("203.0.113.5 23")]
+	[Arguments("2001:db8::1 4201")]
+	[Arguments("localhost 65535")]
+	public async Task AReferralIsAHostAndAPort(string value)
+	{
+		await Assert.That(MsspCatalog.Validate("REFERRAL", [value])).IsNull();
+	}
+
+	[Test]
+	[Arguments("mush.example.com:4201")]
+	[Arguments("mush.example.com")]
+	[Arguments("mush.example.com 0")]
+	[Arguments("mush.example.com 70000")]
+	[Arguments("mush.example.com 42a")]
+	[Arguments("mush.example.com  4201")]
+	[Arguments("not_a host 4201")]
+	[Arguments("mush.example.com 4201 extra")]
+	public async Task AReferralThatIsNotAHostAndAPortIsRefused(string value)
+	{
+		await Assert.That(MsspCatalog.Validate("REFERRAL", [value])).Contains("host and port");
+	}
 }

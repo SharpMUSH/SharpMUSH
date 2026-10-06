@@ -1,4 +1,5 @@
 using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -59,7 +60,7 @@ public class ReadPennMushConfigMsspTests
 	{
 		var import = Import("mssp ansi/1", "mssp XTERM 256 COLORS/1", "mssp website/https://example.com", "mssp utf-8/0");
 
-		await Assert.That(import.Options.Mssp.Variables).IsEmpty();
+		await Assert.That(import.Options.Mssp.Variables.Keys.ToArray()).IsEquivalentTo(new[] { "REFERRAL" });
 		await Assert.That(import.Skipped).Count().IsEqualTo(2);
 		await Assert.That(import.Skipped.Any(line => line.Contains("WEBSITE from mud_url"))).IsTrue();
 		await Assert.That(import.Skipped.Any(line => line.Contains("UTF-8 itself"))).IsTrue();
@@ -70,7 +71,18 @@ public class ReadPennMushConfigMsspTests
 	{
 		var import = Import("mssp no value here", "mssp created/long ago");
 
-		await Assert.That(import.Options.Mssp.Variables).IsEmpty();
+		await Assert.That(import.Options.Mssp.Variables.Keys.ToArray()).IsEquivalentTo(new[] { "REFERRAL" });
 		await Assert.That(import.Skipped).Count().IsEqualTo(2);
+	}
+
+	/// <summary>The default referral stays unless the file names its own, like any option the file leaves out.</summary>
+	[Test]
+	public async Task TheDefaultReferralStaysUnlessTheFileNamesOne()
+	{
+		var without = Import("mssp genre/Fantasy");
+		var with = Import("mssp referral/other.example.com 4000");
+
+		await Assert.That(without.Options.Mssp.Variables["REFERRAL"]).IsEquivalentTo(SharpMUSHOptions.Default().Mssp.Variables["REFERRAL"]);
+		await Assert.That(with.Options.Mssp.Variables["REFERRAL"]).IsEquivalentTo(new[] { "other.example.com 4000" });
 	}
 }
