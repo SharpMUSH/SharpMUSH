@@ -22,3 +22,16 @@ public sealed record AccountPasskey(
 	bool IsBackedUp,
 	DateTimeOffset CreatedAt,
 	DateTimeOffset? LastUsedAt);
+
+/// <summary>What <see cref="IAccountStore.AddAccountPasskeyAsync"/> did with a new passkey.</summary>
+public enum PasskeyAddOutcome
+{
+	/// <summary>Stored.</summary>
+	Added,
+
+	/// <summary>Not stored: a passkey with the same credential id is already registered, to this account or another.</summary>
+	AlreadyRegistered,
+
+	/// <summary>Not stored: the account already holds as many passkeys as it may.</summary>
+	AccountFull
+}

@@ -380,7 +380,6 @@ public class AccountController(
 			|| !await passkeys.RemoveAsync(accountId!, credentialId))
 			return NotFound("No such passkey on this account.");
 
-		logger.LogInformation("Account {AccountId}: removed a passkey", LogSanitizer.Sanitize(accountId));
 		return NoContent();
 	}
 

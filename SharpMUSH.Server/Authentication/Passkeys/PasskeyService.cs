@@ -39,6 +39,7 @@ public sealed class PasskeyService(
 
 	private const string NotVerified = "That passkey could not be verified.";
 	private const string CeremonyGone = "The passkey prompt expired. Try again.";
+	private static readonly string Full = $"An account can hold at most {MaxPerAccount} passkeys. Remove one first.";
 	private const string Busy = "The server is handling too many passkey requests. Try again shortly.";
 
 	/// <summary>The options a browser passes to <c>navigator.credentials</c>, and the id it answers with.</summary>
@@ -71,7 +72,7 @@ public sealed class PasskeyService(
 
 		var existing = await accounts.GetAccountPasskeysAsync(account.Id!, ct);
 		if (existing.Count >= MaxPerAccount)
-			return new Error<string>($"An account can hold at most {MaxPerAccount} passkeys. Remove one first.");
+			return new Error<string>(Full);
 
 		var options = new Fido2(config, null).RequestNewCredential(new RequestNewCredentialParams
 		{
@@ -124,18 +125,24 @@ public sealed class PasskeyService(
 		{
 			// The answer is the browser's to make up: malformed CBOR or keys surface as whatever the
 			// parser throws, not only as Fido2VerificationException, and each is a refusal.
-			logger.LogInformation("Passkey registration for {AccountId} failed verification: {Message}",
-				LogSanitizer.Sanitize(accountId), ex.Message);
+			logger.LogInformation("Passkey registration failed verification: {Message}", ex.Message);
 			return new Error<string>(NotVerified);
 		}
 
 		var passkey = new AccountPasskey(accountId, registered.Id, registered.PublicKey, registered.SignCount, label,
 			registered.Transports?.Select(TransportName).ToList() ?? [], registered.IsBackedUp, time.GetUtcNow(), null);
 
-		if (!await accounts.AddAccountPasskeyAsync(passkey, ct))
-			return new Error<string>("That passkey is already registered.");
+		return await accounts.AddAccountPasskeyAsync(passkey, MaxPerAccount, ct) switch
+		{
+			PasskeyAddOutcome.Added => Registered(passkey),
+			PasskeyAddOutcome.AccountFull => new Error<string>(Full),
+			_ => new Error<string>("That passkey is already registered.")
+		};
+	}
 
-		logger.LogInformation("Account {AccountId} registered a passkey", LogSanitizer.Sanitize(accountId));
+	private Result<AccountPasskey> Registered(AccountPasskey passkey)
+	{
+		logger.LogInformation("A passkey was registered");
 		return passkey;
 	}
 
@@ -195,8 +202,15 @@ public sealed class PasskeyService(
 			return new Error<string>(NotVerified);
 		}
 
-		await accounts.RecordAccountPasskeyUseAsync(passkey.CredentialId, verified.SignCount, verified.IsBackedUp,
-			time.GetUtcNow(), ct);
+		// The counter was checked against the passkey as read above; recording it checks again in the
+		// write, so of two sign-ins verified against the same stored count only the first gets through.
+		if (!await accounts.RecordAccountPasskeyUseAsync(passkey.CredentialId, verified.SignCount, verified.IsBackedUp,
+			time.GetUtcNow(), ct))
+		{
+			logger.LogWarning("Passkey sign-in for {AccountId} refused: its signature counter did not advance",
+				LogSanitizer.Sanitize(passkey.AccountId));
+			return new Error<string>(NotVerified);
+		}
 
 		return await accounts.GetAccountByIdAsync(passkey.AccountId, ct) is { } account
 			? account

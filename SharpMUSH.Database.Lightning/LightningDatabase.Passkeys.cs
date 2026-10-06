@@ -33,7 +33,8 @@ public partial class LightningDatabase
 				? record
 				: null;
 
-	public async ValueTask<bool> AddAccountPasskeyAsync(AccountPasskey passkey, CancellationToken cancellationToken = default)
+	public async ValueTask<PasskeyAddOutcome> AddAccountPasskeyAsync(AccountPasskey passkey, int maxPerAccount,
+		CancellationToken cancellationToken = default)
 	{
 		var accountKey = ParseAccountId(passkey.AccountId);
 		var key = PasskeyKey(passkey.CredentialId);
@@ -52,10 +53,12 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync(tx =>
 		{
-			if (tx.TryGet(Tables.AccountPasskey, key, out _)) return false;
+			if (tx.TryGet(Tables.AccountPasskey, key, out _)) return PasskeyAddOutcome.AlreadyRegistered;
+			if (tx.Dups(Tables.AccountPasskeyByAccount, Keys.Str(accountKey)).Count() >= maxPerAccount)
+				return PasskeyAddOutcome.AccountFull;
 			tx.Put(Tables.AccountPasskey, key, Codec.Serialize(record));
 			tx.Put(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
-			return true;
+			return PasskeyAddOutcome.Added;
 		}, cancellationToken);
 	}
 
@@ -79,20 +82,22 @@ public partial class LightningDatabase
 		return ValueTask.FromResult<IReadOnlyList<AccountPasskey>>(result);
 	}
 
-	public async ValueTask RecordAccountPasskeyUseAsync(byte[] credentialId, uint signCount, bool isBackedUp, DateTimeOffset usedAt,
-		CancellationToken cancellationToken = default)
+	public async ValueTask<bool> RecordAccountPasskeyUseAsync(byte[] credentialId, uint signCount, bool isBackedUp,
+		DateTimeOffset usedAt, CancellationToken cancellationToken = default)
 	{
 		var key = PasskeyKey(credentialId);
-		await Store.WriteAsync(tx =>
+		return await Store.WriteAsync(tx =>
 		{
-			if (!tx.TryGet(Tables.AccountPasskey, key, out var bytes)) return;
+			if (!tx.TryGet(Tables.AccountPasskey, key, out var bytes)) return false;
 			var record = Codec.Deserialize<AccountPasskeyRecord>(bytes);
+			if ((signCount != 0 || record.SignCount != 0) && signCount <= record.SignCount) return false;
 			tx.Put(Tables.AccountPasskey, key, Codec.Serialize(record with
 			{
 				SignCount = signCount,
 				IsBackedUp = isBackedUp,
 				LastUsedAtMs = usedAt.ToUnixTimeMilliseconds()
 			}));
+			return true;
 		}, cancellationToken);
 	}
 

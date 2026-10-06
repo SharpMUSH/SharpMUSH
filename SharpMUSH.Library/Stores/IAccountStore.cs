@@ -65,10 +65,12 @@ public interface IAccountStore
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Stores a new passkey. False, with nothing written, when a passkey with the same credential id is
-	/// already registered (to this account or any other).
+	/// Stores a new passkey, unless its credential id is already registered (to this account or any other)
+	/// or the account already holds <paramref name="maxPerAccount"/>. Both are checked in the write itself,
+	/// so registrations finishing together cannot pass the limit between them.
 	/// </summary>
-	ValueTask<bool> AddAccountPasskeyAsync(AccountPasskey passkey, CancellationToken cancellationToken = default);
+	ValueTask<PasskeyAddOutcome> AddAccountPasskeyAsync(AccountPasskey passkey, int maxPerAccount,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>The passkey with this credential id, whichever account holds it, or null.</summary>
 	ValueTask<AccountPasskey?> GetAccountPasskeyAsync(byte[] credentialId, CancellationToken cancellationToken = default);
@@ -77,10 +79,13 @@ public interface IAccountStore
 	ValueTask<IReadOnlyList<AccountPasskey>> GetAccountPasskeysAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Records a sign-in with the passkey: its new signature counter, backup state and the time. Does
-	/// nothing when the passkey has been removed in the meantime.
+	/// Records a sign-in with the passkey: its new signature counter, backup state and the time. False,
+	/// with nothing written, when the passkey has been removed in the meantime, or when the authenticator
+	/// counts signatures (either counter is nonzero) and <paramref name="signCount"/> is not past the stored
+	/// one: another sign-in recorded that count first, so this assertion is a replay or a cloned key.
+	/// Synced passkeys answer 0 every time and are always recorded.
 	/// </summary>
-	ValueTask RecordAccountPasskeyUseAsync(byte[] credentialId, uint signCount, bool isBackedUp, DateTimeOffset usedAt,
+	ValueTask<bool> RecordAccountPasskeyUseAsync(byte[] credentialId, uint signCount, bool isBackedUp, DateTimeOffset usedAt,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>Renames one of the account's passkeys. False when the account holds no such passkey.</summary>

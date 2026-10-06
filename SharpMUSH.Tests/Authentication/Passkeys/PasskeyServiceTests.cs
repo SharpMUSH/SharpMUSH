@@ -219,6 +219,57 @@ public class PasskeyServiceTests
 	}
 
 	[Test]
+	public async Task Registrations_finishing_together_cannot_pass_the_limit()
+	{
+		for (var i = 0; i < PasskeyService.MaxPerAccount - 1; i++)
+		{
+			await _db.AddAccountPasskeyAsync(new AccountPasskey(_alice.Id!, System.Security.Cryptography.RandomNumberGenerator.GetBytes(32),
+				[1], 0, $"Key {i}", [], false, _time.Now, null), PasskeyService.MaxPerAccount);
+		}
+
+		using var phone = Authenticator(_alice);
+		using var laptop = Authenticator(_alice);
+		var first = (await _passkeys.BeginRegistrationAsync(_alice, Request())).Expect<PasskeyService.Challenge>();
+		var second = (await _passkeys.BeginRegistrationAsync(_alice, Request())).Expect<PasskeyService.Challenge>();
+
+		var phoneAdded = await _passkeys.CompleteRegistrationAsync(_alice.Id!, first.CeremonyId, "Phone", phone.Create(first.Options));
+		var laptopAdded = await _passkeys.CompleteRegistrationAsync(_alice.Id!, second.CeremonyId, "Laptop", laptop.Create(second.Options));
+
+		await Assert.That(phoneAdded is AccountPasskey).IsTrue();
+		await Assert.That(laptopAdded is Error<string>).IsTrue();
+		await Assert.That((await _db.GetAccountPasskeysAsync(_alice.Id!)).Count).IsEqualTo(PasskeyService.MaxPerAccount);
+	}
+
+	[Test]
+	public async Task A_counting_passkeys_counter_only_moves_forward()
+	{
+		using var phone = Authenticator(_alice);
+		var registered = await RegisterAsync(_alice, phone);
+		await Assert.That(await SignInAsync(phone) is SharpAccount).IsTrue();
+		var later = _time.Now + TimeSpan.FromMinutes(1);
+
+		// A second sign-in verified against the same stored count as the first, recorded after it.
+		await Assert.That(await _db.RecordAccountPasskeyUseAsync(registered.CredentialId, 1, false, later)).IsFalse();
+		await Assert.That(await _db.RecordAccountPasskeyUseAsync(registered.CredentialId, 0, false, later)).IsFalse();
+
+		var stored = (await _db.GetAccountPasskeysAsync(_alice.Id!)).Single();
+		await Assert.That(stored.SignCount).IsEqualTo(1u);
+		await Assert.That(stored.LastUsedAt).IsEqualTo(_time.Now);
+		await Assert.That(await _db.RecordAccountPasskeyUseAsync(registered.CredentialId, 2, true, later)).IsTrue();
+	}
+
+	[Test]
+	public async Task A_synced_passkey_answering_zero_is_always_recorded()
+	{
+		var credentialId = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+		await _db.AddAccountPasskeyAsync(new AccountPasskey(_alice.Id!, credentialId, [1], 0, "Synced", [], true, _time.Now, null),
+			PasskeyService.MaxPerAccount);
+
+		await Assert.That(await _db.RecordAccountPasskeyUseAsync(credentialId, 0, true, _time.Now)).IsTrue();
+		await Assert.That(await _db.RecordAccountPasskeyUseAsync(credentialId, 0, true, _time.Now + TimeSpan.FromMinutes(1))).IsTrue();
+	}
+
+	[Test]
 	public async Task Renaming_and_removing_touch_only_the_holders_passkeys()
 	{
 		using var phone = Authenticator(_alice);
