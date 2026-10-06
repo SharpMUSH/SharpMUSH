@@ -102,7 +102,7 @@ public sealed class PackageWriteTransaction(
 
 	/// <summary>
 	/// Records a write made outside this class with its inverse, for a store it does not cover: the
-	/// role registry and the job scheduler (<see cref="IPackageDeclarationService"/>).
+	/// role registry (<see cref="IPackageDeclarationService"/>).
 	/// </summary>
 	public void Track(string what, Func<Task> revert) => OnRevert(what, revert);
 

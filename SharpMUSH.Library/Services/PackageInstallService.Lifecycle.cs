@@ -102,9 +102,9 @@ public partial class PackageInstallService
 		var packageId = installed.Id;
 		var notes = new List<string>();
 
-		// Its roles, permissions and categories go unless the game relies on them; its jobs always go.
+		// Its roles, permissions and categories go unless the game relies on them.
 		if (installed.Owned is not null
-			&& await declarations.ApplyAsync(writes, packageId, PackageDeclarations.None, installed.Owned, _ => null, notes, cancellationToken) is Error<string> error)
+			&& await declarations.ApplyAsync(writes, packageId, PackageDeclarations.None, installed.Owned, notes, cancellationToken) is Error<string> error)
 		{
 			return error;
 		}
@@ -366,7 +366,7 @@ public partial class PackageInstallService
 
 		if (installed.Owned is not null)
 		{
-			notes.Add("Roles, permissions, categories and jobs are left as they are: a rollback restores objects and attributes only.");
+			notes.Add("Roles, permissions and categories are left as they are: a rollback restores objects and attributes only.");
 		}
 
 		var newRevision = installed.CurrentRevision + 1;

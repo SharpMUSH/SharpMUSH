@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="DependencyIssues">Unmet dependencies and conflict violations; any entry blocks apply.</param>
 /// <param name="CommandCollisions">$command patterns that collide with other installed packages (warnings, decision 20.20).</param>
 /// <param name="Notes">Free-form reviewer notes (recreated objects, contents warnings, unresolved-at-apply values).</param>
-/// <param name="Declarations">What happens to the roles, permissions, categories and jobs the package declares or owned; a blocked one blocks the apply.</param>
+/// <param name="Declarations">What happens to the roles, permissions and categories the package declares or owned; a blocked one blocks the apply.</param>
 public sealed record PackageChangeset(
 	string PackageId,
 	string? FromVersion,

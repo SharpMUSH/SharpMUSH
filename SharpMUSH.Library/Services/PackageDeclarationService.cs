@@ -3,16 +3,13 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Services.RecurringJobs;
 
 namespace SharpMUSH.Library.Services;
 
 /// <inheritdoc />
 public sealed class PackageDeclarationService(
 	IRoleRegistryService roles,
-	IRecurringJobService jobs,
 	IPackageRegistryService packages,
 	IAccountClaimsInvalidator claims,
 	IMediator mediator,
@@ -29,7 +26,6 @@ public sealed class PackageDeclarationService(
 		string packageId,
 		PackageDeclarations declared,
 		PackageDeclarations? owned,
-		Func<PackageRef, string?> resolve,
 		List<string> notes,
 		CancellationToken cancellationToken = default)
 	{
@@ -39,17 +35,6 @@ public sealed class PackageDeclarationService(
 			return new Error<string>(string.Join(" ", plan.Changes
 				.Where(c => c.Action == PackageDeclarationAction.Blocked)
 				.Select(c => $"{c.Kind.Noun()} {c.Name}: {c.Detail}")));
-		}
-
-		var definitions = new List<PackageJobDefinition>();
-		foreach (var job in plan.Jobs)
-		{
-			if (resolve(job.Target) is not { } target)
-			{
-				return new Error<string>($"Job {job.Ref}: its target {job.Target} does not resolve to an object.");
-			}
-
-			definitions.Add(new PackageJobDefinition(job.Ref, target, job.Attribute, job.Schedule, job.TimeZone, job.Description));
 		}
 
 		// Pushed first so that it runs last when the operation is undone: the cached grants must not keep
@@ -81,16 +66,6 @@ public sealed class PackageDeclarationService(
 			await roles.UpsertRoleAsync(role);
 			writes.Track($"role {role.Slug}", () => previous is null ? roles.RemoveRoleAsync(role.Slug) : roles.UpsertRoleAsync(previous));
 			holders.UnionWith(await roles.GetAccountIdsForRoleAsync(role.Slug));
-		}
-
-		try
-		{
-			var previous = await jobs.SetPackageJobsAsync(packageId, definitions, cancellationToken);
-			writes.Track($"{packageId} jobs", () => jobs.RestorePackageJobsAsync(packageId, previous, CancellationToken.None));
-		}
-		catch (RecurringJobException ex)
-		{
-			return new Error<string>($"Jobs: {ex.Message}");
 		}
 
 		// Removals last: a removed permission takes every override of it along, which no undo brings back.
@@ -149,8 +124,7 @@ public sealed class PackageDeclarationService(
 			await roles.GetCustomPermissionsAsync(cancellationToken),
 			await roles.GetRolesAsync(cancellationToken),
 			held,
-			otherOwners,
-			await jobs.GetPackageJobsAsync(packageId, cancellationToken));
+			otherOwners);
 		return PackageDeclarationPlanner.Plan(declared, owned, live, _clock.GetUtcNow().ToUnixTimeMilliseconds());
 	}
 

@@ -1,12 +1,11 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Packages;
 
-/// <summary>What a package's roles, permissions, categories and jobs do on install, upgrade and removal.</summary>
+/// <summary>What a package's roles, permissions and categories do on install, upgrade and removal.</summary>
 public class PackageDeclarationPlannerTests
 {
 	private static readonly PackageCategorySpec Requests = new("Requests", "The request queue.");
@@ -15,27 +14,22 @@ public class PackageDeclarationPlannerTests
 	private static PackageRoleSpec Handler(int priority = 11, PermissionState state = PermissionState.Allow, string name = "Handler")
 		=> new("handler", name, "Requests", null, priority, new Dictionary<string, PermissionState> { ["requests.handle"] = state });
 
-	private static readonly PackageJobSpec Sweep = new("sweep", new PackageRef(PackageRefKind.Internal, "desk"), "JOB`SWEEP", "0 4 * * *", "UTC", "Sweep.");
-
-	private static PackageDeclarations Declared(
-		IReadOnlyList<PackageRoleSpec>? roles = null, IReadOnlyList<PackagePermissionSpec>? permissions = null, IReadOnlyList<PackageJobSpec>? jobs = null)
-		=> new([Requests], [Requests], permissions ?? [Handle], roles ?? [Handler()], jobs ?? []);
+	private static PackageDeclarations Declared(IReadOnlyList<PackageRoleSpec>? roles = null, IReadOnlyList<PackagePermissionSpec>? permissions = null)
+		=> new([Requests], [Requests], permissions ?? [Handle], roles ?? [Handler()]);
 
 	private static PackageDeclarationLiveState Live(
 		IReadOnlyList<SharpRole>? roles = null,
 		IReadOnlyList<CustomPermission>? permissions = null,
 		IReadOnlyList<RoleCategory>? categories = null,
 		IReadOnlySet<string>? held = null,
-		IReadOnlyDictionary<(PackageDeclarationKind, string), string>? others = null,
-		IReadOnlyList<RecurringJob>? jobs = null)
+		IReadOnlyDictionary<(PackageDeclarationKind, string), string>? others = null)
 		=> new(
 			[.. Categories.RoleSeeds, .. categories ?? []],
 			[.. Categories.PermissionSeeds, .. categories ?? []],
 			permissions ?? [],
 			roles ?? [],
 			held ?? new HashSet<string>(),
-			others ?? new Dictionary<(PackageDeclarationKind, string), string>(),
-			jobs ?? []);
+			others ?? new Dictionary<(PackageDeclarationKind, string), string>());
 
 	private static SharpRole Role(PackageRoleSpec spec) => new()
 	{
@@ -53,18 +47,16 @@ public class PackageDeclarationPlannerTests
 	[Test]
 	public async Task AFreshInstallCreatesAndOwnsEverything()
 	{
-		var plan = PackageDeclarationPlanner.Plan(Declared(jobs: [Sweep]), null, Live(), 5);
+		var plan = PackageDeclarationPlanner.Plan(Declared(), null, Live(), 5);
 
 		await Assert.That(plan.IsBlocked).IsFalse();
 		await Assert.That(plan.Changes.All(c => c.Action == PackageDeclarationAction.Create)).IsTrue();
 		await Assert.That(plan.CategoryWrites.Count).IsEqualTo(2);
 		await Assert.That(plan.PermissionWrites.Single().Scope).IsEqualTo("requests.handle");
 		await Assert.That(plan.RoleWrites.Single().Permissions["requests.handle"]).IsEqualTo(PermissionState.Allow);
-		await Assert.That(plan.Jobs.Single()).IsEqualTo(Sweep);
 		await Assert.That(plan.Owned.Roles.Single().Slug).IsEqualTo("handler");
 		await Assert.That(plan.Owned.Permissions.Single()).IsEqualTo(Handle);
 		await Assert.That(plan.Owned.RoleCategories.Single()).IsEqualTo(Requests);
-		await Assert.That(plan.Owned.Jobs.Single()).IsEqualTo(Sweep);
 	}
 
 	[Test]
@@ -97,7 +89,7 @@ public class PackageDeclarationPlannerTests
 	public async Task ARoleNamingACategoryNobodyHasBlocks()
 	{
 		var plan = PackageDeclarationPlanner.Plan(
-			new PackageDeclarations([], [], [], [Handler() with { Category = "Nowhere", Permissions = new Dictionary<string, PermissionState>() }], []),
+			new PackageDeclarations([], [], [], [Handler() with { Category = "Nowhere", Permissions = new Dictionary<string, PermissionState>() }]),
 			null, Live(), 5);
 
 		await Assert.That(ActionOf(plan, PackageDeclarationKind.Role, "handler")).IsEqualTo(PackageDeclarationAction.Blocked);
@@ -182,20 +174,5 @@ public class PackageDeclarationPlannerTests
 		await Assert.That(ActionOf(plan, PackageDeclarationKind.Permission, "requests.handle")).IsEqualTo(PackageDeclarationAction.Release);
 		await Assert.That(plan.Changes.Single(c => c.Kind == PackageDeclarationKind.Permission).Detail!).Contains("staff");
 		await Assert.That(plan.RoleRemovals).IsEquivalentTo(["handler"]);
-	}
-
-	[Test]
-	public async Task AJobKeepsAnAdministratorsScheduleUntilThePackageChangesIt()
-	{
-		var live = new RecurringJob("id", "", "#9:1", "#9:1", "JOB`SWEEP", "30 6 * * 1", "Europe/Oslo", "Sweep.", false, 3, null, null, null, "disabled", null, "pkg", "sweep");
-
-		var kept = PackageDeclarationPlanner.Plan(Declared(jobs: [Sweep]), Declared(jobs: [Sweep]), Live(jobs: [live]), 5);
-		await Assert.That(kept.Jobs.Single().Schedule).IsEqualTo("30 6 * * 1");
-		await Assert.That(kept.Jobs.Single().TimeZone).IsEqualTo("Europe/Oslo");
-		await Assert.That(kept.Owned.Jobs.Single()).IsEqualTo(Sweep);
-
-		var moved = PackageDeclarationPlanner.Plan(Declared(jobs: [Sweep with { Schedule = "0 5 * * *" }]), Declared(jobs: [Sweep]), Live(jobs: [live]), 5);
-		await Assert.That(moved.Jobs.Single().Schedule).IsEqualTo("0 5 * * *");
-		await Assert.That(moved.Jobs.Single().TimeZone).IsEqualTo("UTC");
 	}
 }

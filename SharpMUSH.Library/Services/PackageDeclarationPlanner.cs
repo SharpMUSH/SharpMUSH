@@ -1,26 +1,23 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Models.RecurringJobs;
 
 namespace SharpMUSH.Library.Services;
 
-/// <summary>The game's roles, permissions, categories and the package's jobs, as a declaration plan reads them.</summary>
+/// <summary>The game's roles, permissions and categories, as a declaration plan reads them.</summary>
 /// <param name="RoleCategories">Every role category.</param>
 /// <param name="PermissionCategories">Every permission category.</param>
 /// <param name="Permissions">Every custom permission.</param>
 /// <param name="Roles">Every role.</param>
 /// <param name="HeldRoles">The slugs, among the roles the package owns, that an account or object holds.</param>
 /// <param name="OtherOwners">Items other installed packages own, keyed by kind and lowercase name, to the owning package.</param>
-/// <param name="Jobs">The package's own jobs.</param>
 public sealed record PackageDeclarationLiveState(
 	IReadOnlyList<RoleCategory> RoleCategories,
 	IReadOnlyList<RoleCategory> PermissionCategories,
 	IReadOnlyList<CustomPermission> Permissions,
 	IReadOnlyList<SharpRole> Roles,
 	IReadOnlySet<string> HeldRoles,
-	IReadOnlyDictionary<(PackageDeclarationKind Kind, string Name), string> OtherOwners,
-	IReadOnlyList<RecurringJob> Jobs);
+	IReadOnlyDictionary<(PackageDeclarationKind Kind, string Name), string> OtherOwners);
 
 /// <summary>A declaration plan: what is shown, what is written, and what the package owns afterwards.</summary>
 public sealed record PackageDeclarationPlan(
@@ -28,7 +25,6 @@ public sealed record PackageDeclarationPlan(
 	IReadOnlyList<(CategoryKind Kind, RoleCategory Category)> CategoryWrites,
 	IReadOnlyList<CustomPermission> PermissionWrites,
 	IReadOnlyList<SharpRole> RoleWrites,
-	IReadOnlyList<PackageJobSpec> Jobs,
 	IReadOnlyList<string> RoleRemovals,
 	IReadOnlyList<string> PermissionRemovals,
 	IReadOnlyList<(CategoryKind Kind, string Name)> CategoryRemovals,
@@ -216,33 +212,6 @@ public static class PackageDeclarationPlanner
 			}
 		}
 
-		// ── Jobs ────────────────────────────────────────────────────────────
-		var jobs = new List<PackageJobSpec>();
-		foreach (var spec in declared.Jobs)
-		{
-			var current = live.Jobs.FirstOrDefault(j => j.PackageRef == spec.Ref);
-			var baseline = owned.Jobs.FirstOrDefault(j => j.Ref == spec.Ref);
-			if (current is null)
-			{
-				jobs.Add(spec);
-				changes.Add(new(PackageDeclarationKind.Job, spec.Ref, PackageDeclarationAction.Create, $"Runs {spec.Attribute} on {spec.Target} at '{spec.Schedule}' {spec.TimeZone}."));
-				continue;
-			}
-
-			// Schedule and time zone go together: an administrator's @job/schedule survives an upgrade that leaves them be.
-			var keepLive = baseline is not null && baseline.Schedule == spec.Schedule && baseline.TimeZone == spec.TimeZone;
-			var effective = keepLive ? spec with { Schedule = current.Schedule, TimeZone = current.TimeZone } : spec;
-			jobs.Add(effective);
-			var changed = current.Attribute != effective.Attribute || current.Schedule != effective.Schedule
-				|| current.TimeZone != effective.TimeZone || current.Description != effective.Description;
-			changes.Add(new(PackageDeclarationKind.Job, spec.Ref, changed ? PackageDeclarationAction.Update : PackageDeclarationAction.NoChange));
-		}
-
-		foreach (var gone in live.Jobs.Where(j => declared.Jobs.All(d => d.Ref != j.PackageRef)))
-		{
-			changes.Add(new(PackageDeclarationKind.Job, gone.PackageRef ?? gone.Id, PackageDeclarationAction.Remove));
-		}
-
 		// ── What the package drops ──────────────────────────────────────────
 		var roleRemovals = new List<string>();
 		foreach (var baseline in owned.Roles.Where(b => declared.Roles.All(d => d.Slug != b.Slug)))
@@ -315,8 +284,8 @@ public static class PackageDeclarationPlanner
 		}
 
 		return new PackageDeclarationPlan(
-			changes, categoryWrites, permissionWrites, roleWrites, jobs, roleRemovals, permissionRemovals, categoryRemovals,
-			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles, declared.Jobs));
+			changes, categoryWrites, permissionWrites, roleWrites, roleRemovals, permissionRemovals, categoryRemovals,
+			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles));
 	}
 
 	/// <summary>The three-way merge of one field: the package's new value when it changed it, else the game's.</summary>

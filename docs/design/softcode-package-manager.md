@@ -105,10 +105,10 @@ objects:
 - External references: `$well-known` (master room) or `?configure` (installer provides)
 - Convention prefix is advisory (helps avoid collisions, not enforced)
 
-### Roles, permissions and jobs (format 1.2)
+### Roles and permissions (format 1.2)
 
 A manifest may also declare `categories:` (role and permission), `permissions:` (custom
-permissions), `roles:` and `jobs:` (`@job` schedules). The reference is
+permissions) and `roles:`. The reference is
 `examples/packages/README.md`; the implementation is `IPackageDeclarationService` with the pure
 `PackageDeclarationPlanner`. The decisions:
 
@@ -119,13 +119,10 @@ permissions), `roles:` and `jobs:` (`@job` schedules). The reference is
   wizard role. Installing is a `packages.admin` act, and a role assigned later by a `roles.admin`
   holder must not carry powers that holder could not grant.
 - **Upgrade** is a field-wise three-way merge against `Owned`: the new value where the version
-  changed a field, the live value otherwise. A role's permissions merge per scope. A job keeps its
-  enabled state, and its live schedule while the declared schedule is unchanged.
-- **Removal** (a dropped item, or uninstall) deletes jobs, and deletes a role, permission or
+  changed a field, the live value otherwise. A role's permissions merge per scope.
+- **Removal** (a dropped item, or uninstall) deletes a role, permission or
   category unless something remaining relies on it (a holder, a role setting it, a member), in
   which case it is kept and released. Permission removal clears its overrides, so removals run last.
-- **Jobs** have no owning account: they run as their target object and are not deletable with
-  `@job/delete`.
 - **Rollback** restores objects and attributes only.
 
 ## Repo Structure

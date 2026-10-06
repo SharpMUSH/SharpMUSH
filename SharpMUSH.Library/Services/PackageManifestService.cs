@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application", "binaries", "categories", "permissions", "roles", "jobs"
+		"kind", "application", "binaries", "categories", "permissions", "roles"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -166,7 +166,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
 
-		ValidateRefs(objects, application, configure, dependencies, declarations.Jobs, issues);
+		ValidateRefs(objects, application, configure, dependencies, issues);
 
 		if (issues.Any(i => i.Severity == PackageManifestIssueSeverity.Error))
 		{
@@ -1340,7 +1340,6 @@ public partial class PackageManifestService : IPackageManifestService
 		PackageApplicationSpec? application,
 		IReadOnlyDictionary<string, PackageConfigureSpec> configure,
 		IReadOnlyList<PackageDependencySpec> dependencies,
-		IReadOnlyList<PackageJobSpec> jobs,
 		List<PackageManifestIssue> issues)
 	{
 		var definedRefs = objects.Select(o => o.Ref).ToHashSet(StringComparer.Ordinal);
@@ -1460,11 +1459,6 @@ public partial class PackageManifestService : IPackageManifestService
 			{
 				ScanText(zone, "application.zones");
 			}
-		}
-
-		for (var i = 0; i < jobs.Count; i++)
-		{
-			CheckRef(jobs[i].Target, $"jobs[{i}].target", requiresDbref: true);
 		}
 
 		foreach (var unused in configure.Keys.Where(k => !usedConfigureKeys.Contains(k)))

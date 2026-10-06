@@ -35,7 +35,7 @@ public partial class Commands
 			if (operation[0] == "LIST")
 			{
 				var jobs = await service.ListAsync(actor, switches.Contains("ALL"), ct);
-				output = jobs.Length == 0 ? "No recurring jobs." : string.Join('\n', jobs.Select(j => $"{j.Id}{(j.Package is null ? "" : $" [{j.Package}/{j.PackageRef}]")} {j.Target}/{j.Attribute} | {j.Schedule} {j.TimeZone} | {j.Status} | next={j.NextRun} last={j.LastRun} error={j.LastError}"));
+				output = jobs.Length == 0 ? "No recurring jobs." : string.Join('\n', jobs.Select(j => $"{j.Id} {j.Target}/{j.Attribute} | {j.Schedule} {j.TimeZone} | {j.Status} | next={j.NextRun} last={j.LastRun} error={j.LastError}"));
 			}
 			else if (operation[0] == "CREATE")
 			{

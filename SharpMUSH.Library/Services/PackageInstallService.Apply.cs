@@ -364,8 +364,8 @@ public partial class PackageInstallService
 	}
 
 	/// <summary>
-	/// Pass 4b: the roles, permissions, categories and jobs the package declares, once every object a job
-	/// may run on has its objid. Skipped when the package declares none and owns none.
+	/// Pass 4b: the roles, permissions and categories the package declares. Skipped when the package
+	/// declares none and owns none.
 	/// </summary>
 	private async Task<Error<string>?> ApplyDeclarationsAsync(ApplyRun run, CancellationToken cancellationToken)
 	{
@@ -375,7 +375,7 @@ public partial class PackageInstallService
 			return null;
 		}
 
-		var applied = await declarations.ApplyAsync(run.Writes, run.Manifest.Name, run.Manifest.Declared, owned, run.Resolve, run.Notes, cancellationToken);
+		var applied = await declarations.ApplyAsync(run.Writes, run.Manifest.Name, run.Manifest.Declared, owned, run.Notes, cancellationToken);
 		if (applied is Error<string> error)
 		{
 			return error;

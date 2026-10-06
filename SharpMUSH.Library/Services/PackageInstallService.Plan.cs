@@ -31,7 +31,7 @@ public partial class PackageInstallService
 		};
 	}
 
-	/// <summary>What the package's roles, permissions, categories and jobs would do; nothing when it declares none and owns none.</summary>
+	/// <summary>What the package's roles, permissions and categories would do; nothing when it declares none and owns none.</summary>
 	private async Task<IReadOnlyList<PackageDeclarationChange>> PlanDeclarationsAsync(
 		PackageManifest manifest, InstalledPackageRecord? installed, CancellationToken cancellationToken)
 		=> manifest.Declared.IsEmpty && installed?.Owned is null

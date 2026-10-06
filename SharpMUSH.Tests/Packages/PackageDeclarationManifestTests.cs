@@ -5,7 +5,7 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Packages;
 
-/// <summary>The <c>categories:</c>, <c>permissions:</c>, <c>roles:</c> and <c>jobs:</c> blocks of a manifest (format 1.2).</summary>
+/// <summary>The <c>categories:</c>, <c>permissions:</c> and <c>roles:</c> blocks of a manifest (format 1.2).</summary>
 public class PackageDeclarationManifestTests
 {
 	private readonly PackageManifestService _service = new();
@@ -18,8 +18,6 @@ public class PackageDeclarationManifestTests
 		  - ref: desk
 		    type: thing
 		    name: Request Desk
-		    attributes:
-		      JOB`SWEEP: "@pemit me=sweep"
 		""";
 
 	private PackageManifestResult<ParsedPackageManifest> Parse(string body) => _service.ParseManifest(Header + "\n" + body);
@@ -50,13 +48,6 @@ public class PackageDeclarationManifestTests
 			    priority: 11
 			    permissions:
 			      requests.handle: allow
-			jobs:
-			  - ref: sweep
-			    target: "{{desk}}"
-			    attribute: job`sweep
-			    schedule: "0 4 * * *"
-			    timezone: UTC
-			    description: Closes stale requests.
 			""").Expect<ParsedPackageManifest>().Manifest.Declared;
 
 		await Assert.That(declared.RoleCategories.Single()).IsEqualTo(new PackageCategorySpec("Requests", "Roles for working the request queue."));
@@ -67,10 +58,6 @@ public class PackageDeclarationManifestTests
 		await Assert.That(role.Name).IsEqualTo("Request Handler");
 		await Assert.That(role.Priority).IsEqualTo(11);
 		await Assert.That(role.Permissions["requests.handle"]).IsEqualTo(PermissionState.Allow);
-		var job = declared.Jobs.Single();
-		await Assert.That(job.Target).IsEqualTo(new PackageRef(PackageRefKind.Internal, "desk"));
-		await Assert.That(job.Attribute).IsEqualTo("JOB`SWEEP");
-		await Assert.That(job.TimeZone).IsEqualTo("UTC");
 	}
 
 	[Test]
@@ -130,35 +117,6 @@ public class PackageDeclarationManifestTests
 			    category: Staff
 			"""));
 		await Assert.That(errors.Single().Path).IsEqualTo("permissions[0].name");
-	}
-
-	[Test]
-	[Arguments("0 4 * *", "UTC")]
-	[Arguments("0 4 * * *", "Mars/Olympus")]
-	public async Task AJobScheduleIsChecked(string schedule, string zone)
-	{
-		var errors = Errors(Parse($$$"""
-			jobs:
-			  - ref: sweep
-			    target: "{{desk}}"
-			    attribute: JOB`SWEEP
-			    schedule: "{{{schedule}}}"
-			    timezone: {{{zone}}}
-			"""));
-		await Assert.That(errors.Single().Path).IsEqualTo("jobs[0].schedule");
-	}
-
-	[Test]
-	public async Task AJobTargetMustNameAnObject()
-	{
-		var errors = Errors(Parse("""
-			jobs:
-			  - ref: sweep
-			    target: "{{nowhere}}"
-			    attribute: JOB`SWEEP
-			    schedule: "0 4 * * *"
-			"""));
-		await Assert.That(errors.Single().Path).IsEqualTo("jobs[0].target");
 	}
 
 	[Test]

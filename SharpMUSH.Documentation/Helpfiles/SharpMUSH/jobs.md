@@ -41,11 +41,6 @@
       "id": "status-reporting",
       "heading": "Status reporting",
       "lookup": "recurring jobs status reporting"
-    },
-    {
-      "id": "package-jobs",
-      "heading": "Package jobs",
-      "lookup": "recurring jobs packages"
     }
   ]
 }
@@ -130,13 +125,3 @@ budget failures are recorded without exposing provider internals. Pre-dispatch
 authority and attribute reads share the firing's execution budget. Final status
 persistence gets one separate, bounded attempt; an unacknowledged firing is never
 replayed just because its status update failed.
-
-## Package jobs
-
-A package can declare jobs in its manifest. Such a job belongs to the package, not to an
-account: it runs its attribute as the object holding it, as @trigger would, and counts
-toward the 256 per world but toward no account's 32. `@job/list/all` shows it with
-`[package/ref]` after its ID. jobs.manage lets you disable, enable or reschedule it, and an
-upgrade keeps that: it stays disabled, and keeps your schedule until the package changes its
-own. It cannot be deleted with `@job/delete`; uninstalling the package, or a version that no
-longer declares it, deletes it.

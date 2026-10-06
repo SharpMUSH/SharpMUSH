@@ -1720,7 +1720,7 @@
     <value>Objects ({0})</value>
   </data>
   <data name="PkgDeclarationsCount" xml:space="preserve">
-    <value>Roles, permissions and jobs ({0})</value>
+    <value>Roles and permissions ({0})</value>
   </data>
   <data name="PkgRef" xml:space="preserve">
     <value>Ref</value>

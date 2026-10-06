@@ -20,7 +20,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// string list on the existing record — no separate collection.
 /// </param>
 /// <param name="Owned">
-/// The categories, permissions, roles and jobs this package created and still owns, each as it was
+/// The categories, permissions and roles this package created and still owns, each as it was
 /// last applied: the baseline an upgrade merges against and the list an uninstall removes from.
 /// Null when it owns none.
 /// </param>

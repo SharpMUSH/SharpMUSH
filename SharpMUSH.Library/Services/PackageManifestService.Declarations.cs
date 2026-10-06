@@ -2,19 +2,12 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Services.RecurringJobs;
 
 namespace SharpMUSH.Library.Services;
 
-/// <summary>Reads the <c>categories:</c>, <c>permissions:</c>, <c>roles:</c> and <c>jobs:</c> blocks (format 1.2).</summary>
+/// <summary>Reads the <c>categories:</c>, <c>permissions:</c>, and <c>roles:</c> blocks (format 1.2).</summary>
 public partial class PackageManifestService
 {
-	/// <summary>The most jobs one package may declare.</summary>
-	public const int MaxPackageJobs = 16;
-
-	/// <summary>The longest job description, as <c>@job/create</c> allows.</summary>
-	private const int MaxJobDescriptionLength = 500;
-
 	private static readonly IReadOnlySet<string> KnownCategoryKeys = new HashSet<string>(StringComparer.Ordinal) { "name", "description" };
 
 	private static readonly IReadOnlySet<string> KnownPermissionKeys = new HashSet<string>(StringComparer.Ordinal) { "name", "category", "description" };
@@ -22,11 +15,6 @@ public partial class PackageManifestService
 	private static readonly IReadOnlySet<string> KnownRoleKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"slug", "name", "category", "color", "priority", "permissions"
-	};
-
-	private static readonly IReadOnlySet<string> KnownJobKeys = new HashSet<string>(StringComparer.Ordinal)
-	{
-		"ref", "target", "attribute", "schedule", "timezone", "description"
 	};
 
 	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
@@ -40,7 +28,7 @@ public partial class PackageManifestService
 	{
 		if (kind == PackageKind.Managed)
 		{
-			foreach (var key in new[] { "categories", "permissions", "roles", "jobs" }.Where(doc.ContainsKey))
+			foreach (var key in new[] { "categories", "permissions", "roles" }.Where(doc.ContainsKey))
 			{
 				issues.Add(PackageManifestIssue.Error(key,
 					$"A managed package cannot declare '{key}'; declare them in a softcode package it depends on."));
@@ -52,8 +40,7 @@ public partial class PackageManifestService
 		var (roleCategories, permissionCategories) = ReadCategories(doc, issues);
 		var permissions = ReadPermissions(doc, issues);
 		var roles = ReadRoles(doc, issues);
-		var jobs = ReadJobs(doc, issues);
-		return new PackageDeclarations(roleCategories, permissionCategories, permissions, roles, jobs);
+		return new PackageDeclarations(roleCategories, permissionCategories, permissions, roles);
 	}
 
 	private static (IReadOnlyList<PackageCategorySpec> Roles, IReadOnlyList<PackageCategorySpec> Permissions) ReadCategories(
@@ -268,74 +255,6 @@ public partial class PackageManifestService
 		}
 
 		return ok ? result : null;
-	}
-
-	private static IReadOnlyList<PackageJobSpec> ReadJobs(
-		Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
-	{
-		var result = new List<PackageJobSpec>();
-		var seen = new HashSet<string>(StringComparer.Ordinal);
-		var entries = Entries(doc, "jobs", "jobs", KnownJobKeys, issues).ToList();
-		if (entries.Count > MaxPackageJobs)
-		{
-			issues.Add(PackageManifestIssue.Error("jobs", $"A package declares at most {MaxPackageJobs} jobs."));
-			return result;
-		}
-
-		foreach (var (entry, path) in entries)
-		{
-			var refName = (entry.GetValueOrDefault("ref") as string)?.Trim().ToLowerInvariant() ?? "";
-			if (!RefNameRegex().IsMatch(refName))
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.ref", $"'{refName}' is not a valid ref name (lowercase letters, digits, underscores)."));
-				continue;
-			}
-
-			if (!seen.Add(refName))
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.ref", $"Duplicate job ref '{refName}'."));
-				continue;
-			}
-
-			var target = PackageRefScanner.ParseSingle(entry.GetValueOrDefault("target") as string ?? "");
-			if (target is null)
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.target",
-					"'target' must be a single object ref ({{name}}, {{$well_known}}, {{?configure}}, or {{pkg/ref}})."));
-				continue;
-			}
-
-			var attribute = (entry.GetValueOrDefault("attribute") as string)?.Trim().ToUpperInvariant() ?? "";
-			if (!AttributeNameRegex().IsMatch(attribute) || attribute.Length > 1024 || attribute.StartsWith('`') || attribute.EndsWith('`'))
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.attribute", "A job needs the name of the attribute it runs."));
-				continue;
-			}
-
-			var schedule = (entry.GetValueOrDefault("schedule") as string)?.Trim() ?? "";
-			var timeZone = (entry.GetValueOrDefault("timezone") as string)?.Trim() ?? "UTC";
-			try
-			{
-				_ = new FiveFieldSchedule(schedule, timeZone);
-			}
-			catch (Exception ex) when (ex is ArgumentException or FormatException or TimeZoneNotFoundException or InvalidTimeZoneException)
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.schedule",
-					$"'{schedule}' in {timeZone} is not a schedule: five fields (minute hour day-of-month month day-of-week) and a known time zone."));
-				continue;
-			}
-
-			var description = (entry.GetValueOrDefault("description") as string)?.Trim() ?? "";
-			if (description.Length > MaxJobDescriptionLength)
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.description", $"A job description is at most {MaxJobDescriptionLength} characters."));
-				continue;
-			}
-
-			result.Add(new PackageJobSpec(refName, target, attribute, schedule, timeZone, description));
-		}
-
-		return result;
 	}
 
 	/// <summary>The mappings in the list <paramref name="key"/> of <paramref name="doc"/>, each with its document path; anything else is reported.</summary>
