@@ -2647,9 +2647,12 @@ Removes the lock on `<object>`. It can take as many switches as @lock can.
 `@account/close <name>`<br>
 `@account/delete <name>`<br>
 `@account/link <name>=<player>`<br>
-`@account/unlink <name>=<player>`
+`@account/unlink <name>=<player>`<br>
+`@account/claim <character>=<password>`
 
-Administers the web-portal accounts that characters are linked to. Wizard-only.
+Administers the web-portal accounts that characters are linked to. Wizard-only, except `/claim`.
+
+`/claim` is for anyone playing a character that is on an account: it links `<character>` to that same account. The password is `<character>`'s own, or, for a character on another account of yours, that account's password, which moves the character over. See [accounts claiming].
 
 With no switch, shows one account's details. `/list` lists every account, or those whose username contains `<pattern>`. `/newpassword` sets a password and requires the holder to change it at their next login. `/disable` and `/enable` suspend and restore access, and `/close` and `/delete` retire the account — the record is kept either way, so the characters linked to it are never orphaned.
 
@@ -3331,9 +3334,9 @@ This is a SharpMUSH command; PennMUSH has no account layer.
 # claim
 `claim <character> <password>`
 
-Links a character you already have to the account you are logged in to: one made at the connect screen with `create`, made by staff with [@pcreate], or brought over from a PennMUSH database. The character's own password proves it is yours. The last word is the password, so a name with spaces needs no quotes. Then [play] connects to it. Only works in account mode, which [login] and [register] put you in.
+Links a character you already have to the account you are logged in to: one made at the connect screen with `create`, made by staff with [@pcreate], or brought over from a PennMUSH database. The character's own password proves it is yours; for a character on another account of yours, that account's password moves it over. The last word is the password, so a name with spaces needs no quotes. Then [play] connects to it. Only works in account mode, which [login] and [register] put you in.
 
-A character on another account, or one with no password, cannot be claimed; staff can link it for you. The portal does the same from Account, Claim an existing character. See [accounts claiming].
+A character with no password cannot be claimed; staff can link it for you. Once you are playing, [@account] `/claim` does the same in the game, and the portal does it from Account, Claim an existing character. See [accounts claiming].
 
 This is a SharpMUSH command; PennMUSH has no account layer.
 

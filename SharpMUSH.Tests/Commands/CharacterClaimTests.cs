@@ -95,7 +95,7 @@ public class CharacterClaimTests : ServerTestBase
 				MString.Plain($"claim {character.Object.Name} {TestIsolationHelpers.TestPassword}"));
 
 			await Assert.That(await HolderAsync(character)).IsEqualTo(holder.Id);
-			await Assert.That(Saw(handle, "linked to another account")).IsTrue();
+			await Assert.That(Saw(handle, "That character is on another account.")).IsTrue();
 		}
 		finally
 		{
@@ -178,5 +178,116 @@ public class CharacterClaimTests : ServerTestBase
 		await Assert.That(await HolderAsync(character)).IsNull();
 		await Assert.That(Notifications.For(WebAppFactoryArg.ExecutorDBRef))
 			.Contains($"{character.Object.Name} is no longer linked to account '{account.Username}'.");
+	}
+
+	/// <summary>A connected character on <paramref name="account"/>, for running <c>@account/claim</c> as.</summary>
+	private async Task<TestIsolationHelpers.TestPlayer> PlayingOnAsync(SharpAccount account)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "Claimer");
+		await Accounts.LinkCharacterAsync(account.Id!, player.DbRef);
+		return player;
+	}
+
+	[Test]
+	public async Task AccountClaim_InGame_LinksACharacterToTheExecutorsAccount()
+	{
+		var account = await NewAccountAsync();
+		var me = await PlayingOnAsync(account);
+		var character = await NewCharacterAsync();
+		try
+		{
+			await CmdAs(me.DbRef, me.Handle, $"@account/claim {character.Object.Name}={TestIsolationHelpers.TestPassword}");
+
+			await Assert.That(await HolderAsync(character)).IsEqualTo(account.Id);
+			await Assert.That(Notifications.For(me.DbRef))
+				.Contains($"{character.Object.Name} is now linked to your account '{account.Username}'.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(me.Handle);
+		}
+	}
+
+	[Test]
+	public async Task AccountClaim_WithTheHoldingAccountsPassword_MovesTheCharacter()
+	{
+		var account = await NewAccountAsync();
+		var other = await NewAccountAsync();
+		var me = await PlayingOnAsync(account);
+		var character = await NewCharacterAsync();
+		await Accounts.LinkCharacterAsync(other.Id!, character.Object.DBRef);
+		try
+		{
+			await CmdAs(me.DbRef, me.Handle, $"@account/claim {character.Object.Name}=claim-password-1");
+
+			await Assert.That(await HolderAsync(character)).IsEqualTo(account.Id);
+			await Assert.That((await Accounts.GetCharactersAsync(other.Id!)).Select(c => c.Object.Key))
+				.DoesNotContain(character.Object.Key);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(me.Handle);
+		}
+	}
+
+	/// <summary>The character's own password does not take it off another account; that account's does.</summary>
+	[Test]
+	public async Task AccountClaim_WithOnlyTheCharactersPassword_LeavesItOnItsAccount()
+	{
+		var account = await NewAccountAsync();
+		var other = await NewAccountAsync();
+		var me = await PlayingOnAsync(account);
+		var character = await NewCharacterAsync();
+		await Accounts.LinkCharacterAsync(other.Id!, character.Object.DBRef);
+		try
+		{
+			await CmdAs(me.DbRef, me.Handle, $"@account/claim {character.Object.Name}={TestIsolationHelpers.TestPassword}");
+
+			await Assert.That(await HolderAsync(character)).IsEqualTo(other.Id);
+			await Assert.That(Notifications.For(me.DbRef).Any(m => m.StartsWith("That character is on another account.", StringComparison.Ordinal))).IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(me.Handle);
+		}
+	}
+
+	[Test]
+	public async Task AccountClaim_FromACharacterOnNoAccount_IsRefused()
+	{
+		var me = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "Loose");
+		var character = await NewCharacterAsync();
+		try
+		{
+			await CmdAs(me.DbRef, me.Handle, $"@account/claim {character.Object.Name}={TestIsolationHelpers.TestPassword}");
+
+			await Assert.That(await HolderAsync(character)).IsNull();
+			await Assert.That(Notifications.For(me.DbRef).Any(m => m.StartsWith("You are not playing a character on an account.", StringComparison.Ordinal))).IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(me.Handle);
+		}
+	}
+
+	/// <summary>Opening /claim to everyone left the administrative switches to wizards.</summary>
+	[Test]
+	public async Task AccountAdministration_StaysWizardOnly()
+	{
+		var account = await NewAccountAsync();
+		var me = await PlayingOnAsync(account);
+		var character = await NewCharacterAsync();
+		try
+		{
+			await CmdAs(me.DbRef, me.Handle, $"@account/link {account.Username}={character.Object.Name}");
+
+			await Assert.That(await HolderAsync(character)).IsNull();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(me.Handle);
+		}
 	}
 }

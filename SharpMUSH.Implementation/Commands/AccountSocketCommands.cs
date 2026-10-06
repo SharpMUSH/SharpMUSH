@@ -384,32 +384,31 @@ public partial class Commands
 		// rest of the line. The password is its last word, and everything before it is the name.
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
 		var split = arg0?.LastIndexOfAny([' ', '\t']) ?? -1;
-		if (split <= 0)
+		if (arg0 is null || split <= 0)
 		{
 			await NotifyService.Notify(handle, "Usage: claim <character-name> <password>");
 			return new None();
 		}
 
-		var charName = arg0![..split].Trim();
+		var charName = arg0[..split].Trim();
 		var charPassword = arg0[(split + 1)..];
 
 		return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
 		{
-			SharpPlayer claimed => await ClaimedAsync(handle, accountId, claimed),
-			LinkedElsewhere => await RefusedAsync(handle, "That character is linked to another account. Ask staff if it is yours."),
+			SharpPlayer claimed => await ClaimedAsync(handle, claimed),
+			LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
 			NotFound => await RefusedAsync(handle, "No character has that name and password."),
 		};
 	}
 
 	/// <summary>Tells the socket the character is now on its account, and how to play it.</summary>
-	private async ValueTask<Option<CallState>> ClaimedAsync(long handle, string accountId, SharpPlayer character)
+	private async ValueTask<Option<CallState>> ClaimedAsync(long handle, SharpPlayer character)
 	{
 		await NotifyService.Notify(handle,
 			$"{character.Object.Name} is now linked to your account.\n" +
 			$"Use: play {character.Object.Name}    to connect as that character");
 
-		Logger?.LogInformation("Account {AccountId}: claimed character {Name} (#{Key}) via CLAIM",
-			accountId, character.Object.Name, character.Object.Key);
+		Logger?.LogInformation("Claimed character {Name} (#{Key}) via CLAIM", character.Object.Name, character.Object.Key);
 
 		return new CallState(character.Object.DBRef);
 	}

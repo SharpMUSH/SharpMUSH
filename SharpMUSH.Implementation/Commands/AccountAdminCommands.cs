@@ -20,10 +20,12 @@ public partial class Commands
 	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>;
 	/// <c>@account/close &lt;name&gt;</c> / <c>@account/delete &lt;name&gt;</c> — the account record is retained either way;
 	/// <c>@account/link &lt;name&gt;=&lt;player&gt;</c> / <c>@account/unlink &lt;name&gt;=&lt;player&gt;</c> — attach a character to the account or take it off.</para>
+	/// <para><c>@account/claim &lt;character&gt;=&lt;password&gt;</c> is for anyone playing a character on an account: it
+	/// links another character to that account, as the account menu's <c>claim</c> does.</para>
 	/// </summary>
-	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "CLOSE", "DELETE", "LINK", "UNLINK"],
+	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "CLOSE", "DELETE", "LINK", "UNLINK", "CLAIM"],
 		Behavior = CommandBehavior.Default | CommandBehavior.EqSplit | CommandBehavior.RSNoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "value"])]
+		MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "value"])]
 	public async ValueTask<Option<CallState>> AccountAdmin(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -31,6 +33,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
 		var arg1 = args.TryGetValue("1", out var a1) ? a1.Message?.ToPlainText() : null;
+
+		if (switches.Contains("CLAIM"))
+		{
+			return await ClaimForOwnAccountAsync(executor, arg0, arg1);
+		}
+
+		// Everything but /claim administers other people's accounts.
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		if (switches.Contains("LIST"))
 		{
@@ -174,6 +188,45 @@ public partial class Commands
 			$"Email: {account.Email ?? "(none)"}\n" +
 			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
 			$"Characters:\n{charList}");
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// <c>@account/claim</c>: links <paramref name="name"/> to the account the executor's own character is on, proven
+	/// by that character's password or by the password of the account that holds it now.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ClaimForOwnAccountAsync(AnySharpObject executor, string? name, string? password)
+	{
+		if (string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(password))
+		{
+			await NotifyService.Notify(executor, "Usage: @account/claim <character>=<password>");
+			return CallState.Empty;
+		}
+
+		if (executor is not SharpPlayer player
+			|| await AccountService.GetAccountForCharacterAsync(player.Object.DBRef) is not { } account)
+		{
+			await NotifyService.Notify(executor, "You are not playing a character on an account. Log in to one, or ask staff to link you.");
+			return CallState.Empty;
+		}
+
+		return await AccountService.ClaimCharacterAsync(account.Id!, name, password) switch
+		{
+			SharpPlayer claimed => await ClaimedForOwnAccountAsync(executor, account, claimed),
+			LinkedElsewhere => await NotifiedAsync(executor, "That character is on another account. Give that account's password to move it here."),
+			NotFound => await NotifiedAsync(executor, "No character has that name and password."),
+		};
+	}
+
+	private async ValueTask<Option<CallState>> ClaimedForOwnAccountAsync(AnySharpObject executor, SharpAccount account, SharpPlayer claimed)
+	{
+		await NotifyService.Notify(executor, $"{claimed.Object.Name} is now linked to your account '{account.Username}'.");
+		return new CallState(claimed.Object.DBRef);
+	}
+
+	private async ValueTask<Option<CallState>> NotifiedAsync(AnySharpObject executor, string message)
+	{
+		await NotifyService.Notify(executor, message);
 		return CallState.Empty;
 	}
 

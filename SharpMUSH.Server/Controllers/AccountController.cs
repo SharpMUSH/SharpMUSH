@@ -181,15 +181,15 @@ public class AccountController(
 
 		return await accountService.ClaimCharacterAsync(accountId!, request.CharacterName.Trim(), request.CharacterPassword ?? string.Empty) switch
 		{
-			SharpPlayer player => await ClaimedAsync(accountId!, player),
+			SharpPlayer player => await ClaimedAsync(player),
 			LinkedElsewhere => Conflict("Character is already linked to another account."),
-			Library.DiscriminatedUnions.NotFound => ClaimRefused(accountId!),
+			Library.DiscriminatedUnions.NotFound => ClaimRefused(),
 		};
 	}
 
-	private async Task<IActionResult> ClaimedAsync(string accountId, SharpPlayer player)
+	private async Task<IActionResult> ClaimedAsync(SharpPlayer player)
 	{
-		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
+		logger.LogInformation("Linked existing character #{Key} to the requesting account", player.Object.Key);
 		return Ok(new
 		{
 			DbrefNumber = player.Object.Key,
@@ -199,9 +199,9 @@ public class AccountController(
 		});
 	}
 
-	private UnauthorizedObjectResult ClaimRefused(string accountId)
+	private UnauthorizedObjectResult ClaimRefused()
 	{
-		logger.LogInformation("Account {AccountId}: link-character refused — no character with that name and password", LogSanitizer.Sanitize(accountId));
+		logger.LogInformation("link-character refused: no character with that name and password");
 		return Unauthorized("Invalid character credentials.");
 	}
 

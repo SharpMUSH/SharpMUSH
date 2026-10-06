@@ -171,9 +171,30 @@ public class AccountService(
 		CancellationToken ct = default)
 	{
 		var character = await objects.GetPlayerByNameOrAliasAsync(characterName, ct).FirstOrDefaultAsync(ct);
-		if (character is null || !await CharacterPasswordMatchesAsync(character, password))
+		if (character is null)
 			return new NotFound();
 
+		if (await CharacterPasswordMatchesAsync(character, password))
+			return await AttachCharacterAsync(accountId, character, ct) switch
+			{
+				SharpPlayer linked => linked,
+				LinkedElsewhere elsewhere => elsewhere,
+			};
+
+		// The password of the account that holds the character moves it here: whoever holds that account
+		// already holds the character.
+		return await database.GetAccountForCharacterAsync(character.Object.DBRef, ct) is { } holder
+			&& holder.Id != accountId
+			&& !string.IsNullOrEmpty(holder.PasswordHash)
+			&& passwordService.PasswordIsValid(password, holder.PasswordHash)
+				? await MoveCharacterAsync(holder, accountId, character, ct)
+				: new NotFound();
+	}
+
+	private async ValueTask<CharacterClaim> MoveCharacterAsync(SharpAccount holder, string accountId, SharpPlayer character,
+		CancellationToken ct)
+	{
+		await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct);
 		return await AttachCharacterAsync(accountId, character, ct) switch
 		{
 			SharpPlayer linked => linked,
@@ -183,12 +204,13 @@ public class AccountService(
 
 	public async ValueTask<CharacterLink> AttachCharacterAsync(string accountId, SharpPlayer character, CancellationToken ct = default)
 	{
-		var holder = await database.GetAccountForCharacterAsync(character.Object.DBRef, ct);
-		if (holder is not null && holder.Id != accountId)
+		// The store checks for another holder inside the write, so two claims racing for one character
+		// cannot both land.
+		if (await database.LinkCharacterToAccountAsync(accountId, character.Object.DBRef, ct) is { } holder)
 			return new LinkedElsewhere(character, holder);
 
-		if (holder is null)
-			await LinkCharacterAsync(accountId, character.Object.DBRef, ct);
+		if (claimsInvalidator is not null)
+			await claimsInvalidator.InvalidateAsync(accountId, ct);
 		return character;
 	}
 
