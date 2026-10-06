@@ -62,7 +62,20 @@ public sealed class PackageSettingService(
 				return new Error<string>($"Setting {change.Option} to {Shown(change.Value)} was refused: {refused.Value}");
 			}
 
-			writes.Track($"config {change.Option}", async () => await config.SetAsync(step.Property, before));
+			var written = ConfigOptionWriter.FormatValue(step.Property, step.Target);
+			writes.Track($"config {change.Option}", async () =>
+			{
+				// Something else set the option since: its value stands.
+				if (await config.CurrentTextAsync(step.Property) != written)
+				{
+					return;
+				}
+
+				if (await config.SetAsync(step.Property, before) is Error<string> refused)
+				{
+					throw new InvalidOperationException($"{change.Option} could not be put back to {Shown(change.Current)}: {refused.Value}");
+				}
+			});
 			notes.Add(change.Action == PackageSettingAction.Restore
 				? $"Put {change.Option} back to {Shown(change.Value)}."
 				: $"Set {change.Option} to {Shown(change.Value)} (was {Shown(change.Current)}).");

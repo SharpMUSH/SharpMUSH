@@ -6093,7 +6093,7 @@
     <value>Goodbye</value>
   </data>
   <data name="AdmMsgQuitDesc" xml:space="preserve">
-    <value>Shown after GOODBYE. on QUIT and LOGOUT.</value>
+    <value>Shown after "GOODBYE." on QUIT and LOGOUT.</value>
   </data>
   <data name="AdmSetupPkgMessagesTitle" xml:space="preserve">
     <value>Messages object</value>

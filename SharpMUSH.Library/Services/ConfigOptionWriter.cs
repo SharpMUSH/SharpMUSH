@@ -103,7 +103,8 @@ public sealed class ConfigOptionWriter(
 				value = text;
 				return true;
 			case { IsEnum: true }:
-				value = Enum.TryParse(type, text, ignoreCase: true, out var member) && Enum.IsDefined(type, member!) && !char.IsDigit(text[0]) ? member : null;
+				value = text.Length > 0 && !char.IsDigit(text[0])
+					&& Enum.TryParse(type, text, ignoreCase: true, out var member) && Enum.IsDefined(type, member!) ? member : null;
 				return value is not null;
 			default:
 				return false;
