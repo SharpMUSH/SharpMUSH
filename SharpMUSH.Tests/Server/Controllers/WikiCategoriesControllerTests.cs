@@ -69,6 +69,34 @@ public class WikiCategoriesControllerTests
 	}
 
 	[Test]
+	public async Task A_draft_category_page_the_caller_may_see_names_its_category()
+	{
+		var storage = InMemoryWikiStore.CreateService();
+		await storage.CreateAsync("Harbour", "x", "#1", categories: ["Magic Items"]);
+		var draft = (await storage.CreateAsync("Magic Items", "x", "#1", WikiNamespace.Category)).Expect<WikiPage>();
+		await storage.SetMetadataAsync(draft.Id, draft.Categories, published: false);
+
+		var categories = await CategoriesAsync(WikiControllerTestHarness.Build(storage, authenticated: true, "#42", PortalPermission.WikiDrafts).Wiki);
+
+		await Assert.That(categories).IsEquivalentTo(new[] { new WikiCategorySummaryDto("magic_items", "Magic Items", 1, HasPage: true) })
+			.Because("a caller who sees drafts sees the draft category page, so the category is not offered as new");
+	}
+
+	[Test]
+	public async Task A_session_acting_as_no_character_files_the_page_without_naming_the_category()
+	{
+		var storage = InMemoryWikiStore.CreateService();
+		var page = (await storage.CreateAsync("Harbour", "x", "#1")).Expect<WikiPage>();
+		var wiki = WikiControllerTestHarness.Build(storage, authenticated: true, "", PortalPermission.WikiEdit, PortalPermission.WikiCreate).Wiki;
+
+		await wiki.Admin.SetMetadata(page.Slug, new SetMetadataRequest(["Magic Items"], true));
+
+		await Assert.That((await storage.GetBySlugAsync("harbour")).Expect<WikiPage>().Categories).IsEquivalentTo(new[] { "magic_items" });
+		await Assert.That(await storage.GetBySlugAsync("magic_items", WikiNamespace.Category) is NotFound).IsTrue()
+			.Because("a category page needs an author");
+	}
+
+	[Test]
 	public async Task Creating_a_page_in_a_new_category_titles_its_page_as_typed()
 	{
 		var (wiki, storage) = WikiControllerTestHarness.BuildWithClaims(PortalPermission.WikiCreate);

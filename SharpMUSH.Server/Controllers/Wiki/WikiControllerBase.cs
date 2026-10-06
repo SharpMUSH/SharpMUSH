@@ -118,10 +118,11 @@ public abstract class WikiControllerBase(
 	/// (<see cref="IWikiService.NameCategoriesAsync"/>), when the caller may create pages in the category
 	/// namespace. Otherwise the categories still hold the page and show the name their key spells.
 	/// </summary>
-	protected async Task NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled, string authorDbref)
+	protected async Task NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled, string? authorDbref)
 	{
 		var typed = names.ToList();
-		if (typed.Count == 0
+		// A page needs an author; a session acting as no character files the page but names nothing.
+		if (typed.Count == 0 || string.IsNullOrEmpty(authorDbref)
 				|| !(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(WikiNamespace.Category), [])).Allowed)
 			return;
 		await Wiki.NameCategoriesAsync(typed, alreadyFiled, authorDbref, Localization.DefaultLocale);

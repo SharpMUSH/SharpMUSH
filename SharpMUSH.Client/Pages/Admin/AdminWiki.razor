@@ -593,6 +593,7 @@
             var result = await Wiki.BatchDeleteAsync(_selected.Select(RefFor));
             ReportBatchResult(result);
             _showDeleteConfirm = false;
+            await LoadCategoriesAsync();
             await ReloadAsync();
         }
         finally { _busy = false; }

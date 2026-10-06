@@ -140,10 +140,18 @@ public class WikiBrowseController(
 	{
 		var visibility = await VisibilityAsync();
 		var counts = await Wiki.CountPagesByCategoryAsync(visibility);
+		// Names come from published category pages; a draft one the caller may see still has its page, and
+		// shows its own title.
 		var names = await Localization.GetCategoryNamesAsync(lang, visibility);
-		return Ok(counts.Keys.Union(names.Keys)
-			.Select(key => new WikiCategorySummaryDto(key, WikiHelpers.CategoryLabel(key, names), counts.GetValueOrDefault(key),
-				names.ContainsKey(key)))
+		var pages = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var page in await FilterVisibleAsync(await Wiki.GetByNamespaceAsync(WikiNamespace.Category, 0, int.MaxValue, visibility)))
+			pages.TryAdd(WikiHelpers.CategoryKey(page.Slug), page.Title);
+		return Ok(counts.Keys.Union(names.Keys).Union(pages.Keys)
+			.Select(key => new WikiCategorySummaryDto(key,
+				names.TryGetValue(key, out var name) && name.Length > 0 ? name
+				: pages.TryGetValue(key, out var title) && title.Length > 0 ? title
+				: WikiHelpers.CategoryLabel(key),
+				counts.GetValueOrDefault(key), names.ContainsKey(key) || pages.ContainsKey(key)))
 			.OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
 			.ToList());
 	}
