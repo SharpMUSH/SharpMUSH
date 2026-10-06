@@ -43,7 +43,7 @@ public class GameMessageService(
 	private readonly SemaphoreSlim _writeLock = new(1, 1);
 
 	/// <inheritdoc />
-	public async ValueTask<MString?> RenderAsync(GameMessage message, long handle, AnySharpObject? viewer = null)
+	public async ValueTask<Option<MString>> RenderAsync(GameMessage message, long handle, AnySharpObject? viewer = null)
 	{
 		var (source, _) = await GetSourceAsync();
 		if (source == GameMessageSource.Object
@@ -51,11 +51,11 @@ public class GameMessageService(
 				&& await HasAttributeAsync(holder, message))
 		{
 			var evaluated = await EvaluateAsync(holder, message, handle, viewer);
-			return evaluated is null || string.IsNullOrWhiteSpace(evaluated.Text) ? null : evaluated;
+			return evaluated is null || string.IsNullOrWhiteSpace(evaluated.Text) ? new None() : evaluated;
 		}
 
 		var text = await GetTextAsync(message);
-		return string.IsNullOrWhiteSpace(text) ? null : AnsiEscapeParser.Parse(text);
+		return string.IsNullOrWhiteSpace(text) ? new None() : AnsiEscapeParser.Parse(text);
 	}
 
 	/// <inheritdoc />

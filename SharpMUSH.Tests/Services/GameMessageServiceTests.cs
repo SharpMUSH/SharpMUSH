@@ -61,9 +61,9 @@ public class GameMessageServiceTests
 	{
 		var (service, _) = Build(installed: false);
 
-		var shown = await service.RenderAsync(GameMessage.Quit, 0);
+		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
-		await Assert.That(shown!.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
+		await Assert.That(shown.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
 		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Stored, false));
 	}
 
@@ -74,11 +74,11 @@ public class GameMessageServiceTests
 		const string edited = "\u001b[1;31mClosed\u001b[0m for the night.";
 
 		await service.SetTextAsync(GameMessage.Down, edited);
-		var shown = await service.RenderAsync(GameMessage.Down, 0);
+		var shown = (await service.RenderAsync(GameMessage.Down, 0)).Expect<MString>();
 
 		await Assert.That(await service.IsDefaultAsync(GameMessage.Down)).IsFalse();
 		await Assert.That(await service.GetTextAsync(GameMessage.Down)).IsEqualTo(edited);
-		await Assert.That(shown!.ToPlainText()).IsEqualTo("Closed for the night.");
+		await Assert.That(shown.ToPlainText()).IsEqualTo("Closed for the night.");
 		await Assert.That(shown.Render(MarkupFormat.Ansi)).Contains("\u001b[");
 
 		await service.SetTextAsync(GameMessage.Down, null);
@@ -94,7 +94,7 @@ public class GameMessageServiceTests
 
 		await service.SetTextAsync(GameMessage.Guest, "");
 
-		await Assert.That(await service.RenderAsync(GameMessage.Guest, 0)).IsNull();
+		await Assert.That((await service.RenderAsync(GameMessage.Guest, 0)).Value).IsTypeOf<None>();
 	}
 
 	/// <summary>The bundled object's connect screen is the shipped one, line for line, with the logo still green.</summary>
@@ -103,10 +103,10 @@ public class GameMessageServiceTests
 	{
 		var (service, _) = await WithMessagesObjectAsync();
 
-		var shown = await service.RenderAsync(GameMessage.Connect, 0);
+		var shown = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>();
 
 		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Object, false));
-		await Assert.That(Lines(shown!.ToPlainText())).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
+		await Assert.That(Lines(shown.ToPlainText())).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
 		await Assert.That(shown.Render(MarkupFormat.Html)).Contains(LogoGreen);
 	}
 
@@ -116,9 +116,9 @@ public class GameMessageServiceTests
 		var (service, _) = await WithMessagesObjectAsync();
 		var mudName = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Net.MudName;
 
-		var shown = await service.RenderAsync(GameMessage.Quit, 0);
+		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
-		await Assert.That(shown!.ToPlainText()).IsEqualTo($"\nGoodbye from {mudName}!");
+		await Assert.That(shown.ToPlainText()).IsEqualTo($"\nGoodbye from {mudName}!");
 	}
 
 	[Test]
@@ -127,9 +127,9 @@ public class GameMessageServiceTests
 		var (service, holder) = await WithMessagesObjectAsync();
 		await AttributeService.ClearAttributeAsync(holder, holder, "DOWN", IAttributeService.AttributePatternMode.Exact);
 
-		var shown = await service.RenderAsync(GameMessage.Down, 0);
+		var shown = (await service.RenderAsync(GameMessage.Down, 0)).Expect<MString>();
 
-		await Assert.That(shown!.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Down)));
+		await Assert.That(shown.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Down)));
 	}
 
 	[Test]
@@ -138,7 +138,7 @@ public class GameMessageServiceTests
 		var (service, holder) = await WithMessagesObjectAsync();
 		await AttributeService.SetAttributeAsync(holder, holder, "GUEST", MarkupText.Plain("[null(quiet)]"));
 
-		await Assert.That(await service.RenderAsync(GameMessage.Guest, 0)).IsNull();
+		await Assert.That((await service.RenderAsync(GameMessage.Guest, 0)).Value).IsTypeOf<None>();
 	}
 
 	[Test]
@@ -147,10 +147,10 @@ public class GameMessageServiceTests
 		var (service, _) = await WithMessagesObjectAsync();
 
 		await service.SetSourceAsync(GameMessageSource.Stored);
-		var shown = await service.RenderAsync(GameMessage.Quit, 0);
+		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
 		await Assert.That(await service.GetSourceAsync()).IsEqualTo((GameMessageSource.Stored, true));
-		await Assert.That(shown!.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
+		await Assert.That(shown.ToPlainText()).IsEqualTo(Plain(service.ShippedText(GameMessage.Quit)));
 
 		await service.SetSourceAsync(null);
 
@@ -165,9 +165,9 @@ public class GameMessageServiceTests
 		var viewerObject = (await Mediator.Send(new GetObjectNodeQuery(viewer))).Expect<AnySharpObject>();
 		await AttributeService.SetAttributeAsync(holder, holder, "MOTD", MarkupText.Plain("Hello, [name(%#)]. [lt(%0,0)]"));
 
-		var shown = await service.RenderAsync(GameMessage.Motd, 7, viewerObject);
+		var shown = (await service.RenderAsync(GameMessage.Motd, 7, viewerObject)).Expect<MString>();
 
-		await Assert.That(shown!.ToPlainText()).IsEqualTo($"Hello, {viewerObject.Object().Name}. 0");
+		await Assert.That(shown.ToPlainText()).IsEqualTo($"Hello, {viewerObject.Object().Name}. 0");
 	}
 
 	private (GameMessageService Service, IPackageRegistryService Packages) Build(bool installed, string? objid = null)

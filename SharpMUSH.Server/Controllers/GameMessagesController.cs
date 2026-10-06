@@ -83,7 +83,7 @@ public class GameMessagesController(
 				await messages.IsDefaultAsync(message),
 				attribute,
 				attributes.Contains(attribute),
-				preview?.Render(MarkupFormat.Ansi)));
+				preview is MString shown ? shown.Render(MarkupFormat.Ansi) : null));
 		}
 
 		return new GameMessagesResponse(

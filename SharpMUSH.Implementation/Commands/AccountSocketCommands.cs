@@ -93,7 +93,7 @@ public partial class Commands
 		await ConnectionService.BindAccount(handle, account.Id!);
 
 		await NotifyService.Notify(handle, $"Account '{account.Username}' created successfully.");
-		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is { } newUserText
+		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is MString newUserText
 			? newUserText
 			: MarkupText.Plain("You have no characters yet.\nUse: make <character-name> <password>    to create your first character."));
 		return new CallState(account.Id!);
@@ -401,7 +401,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask NotifyPlayerCreationDisabledAsync(long handle)
 	{
-		if (await MessageService.RenderAsync(GameMessage.Register, handle) is { } registerText)
+		if (await MessageService.RenderAsync(GameMessage.Register, handle) is MString registerText)
 		{
 			await NotifyService.Notify(handle, registerText);
 			return;

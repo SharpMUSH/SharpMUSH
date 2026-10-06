@@ -47,7 +47,7 @@ public class ConnectionStateEventHandler(
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				if (await gameMessages.RenderAsync(GameMessage.Connect, notification.Handle) is { } connectText)
+				if (await gameMessages.RenderAsync(GameMessage.Connect, notification.Handle) is MString connectText)
 				{
 					await notifyService.Notify(notification.Handle, connectText);
 				}

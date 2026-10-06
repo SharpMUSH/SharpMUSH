@@ -269,7 +269,7 @@ public partial class Commands
 
 		// disconnect_player dumps the quit file for a logout exactly as it does for a quit.
 		var leaving = await Mediator.Send(new GetObjectNodeQuery(connection.Ref.Value)) is AnySharpObject who ? who : null;
-		if (await MessageService.RenderAsync(GameMessage.Quit, handle, leaving) is { } quitText)
+		if (await MessageService.RenderAsync(GameMessage.Quit, handle, leaving) is MString quitText)
 		{
 			await NotifyService.Notify(handle, quitText);
 		}

@@ -288,7 +288,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundDB).IsWizard())
 		{
-			await NotifyLoginsDisabledAsync(handle);
+			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(foundDB));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -367,7 +367,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundPlayer).IsWizard())
 		{
-			await NotifyLoginsDisabledAsync(handle);
+			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(foundPlayer));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -539,7 +539,7 @@ public partial class Commands
 
 		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
 
-		if (await MessageService.RenderAsync(GameMessage.Quit, handle, executor) is { } quitText)
+		if (await MessageService.RenderAsync(GameMessage.Quit, handle, executor) is MString quitText)
 		{
 			await NotifyQuitAsync(quitText);
 		}
@@ -594,11 +594,11 @@ public partial class Commands
 
 	/// <summary>
 	/// PennMUSH's refusal while logins are off (<c>check_connect</c>): the down message, then <c>@motd/down</c>'s,
-	/// then the line that says why.
+	/// then the line that says why. <paramref name="player"/> is who was refused, when a password named one.
 	/// </summary>
-	private async ValueTask NotifyLoginsDisabledAsync(long handle)
+	private async ValueTask NotifyLoginsDisabledAsync(long handle, AnySharpObject? player = null)
 	{
-		if (await MessageService.RenderAsync(GameMessage.Down, handle) is { } downText)
+		if (await MessageService.RenderAsync(GameMessage.Down, handle, player) is MString downText)
 		{
 			await NotifyService.Notify(handle, downText);
 		}
@@ -754,7 +754,7 @@ public partial class Commands
 			{
 				await NotifyService.Notify(handle, temporary);
 			}
-			else if (await MessageService.RenderAsync(message, handle, player) is { } text)
+			else if (await MessageService.RenderAsync(message, handle, player) is MString text)
 			{
 				await NotifyService.Notify(handle, text);
 			}

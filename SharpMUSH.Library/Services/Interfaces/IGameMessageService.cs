@@ -18,11 +18,11 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IGameMessageService
 {
 	/// <summary>
-	/// What <paramref name="message"/> shows now, or null when it shows nothing. An attribute is evaluated as the
+	/// What <paramref name="message"/> shows now, or <see cref="None"/> when it shows nothing. An attribute is evaluated as the
 	/// Messages object, with <paramref name="viewer"/> (or the object, at the connect screen) as the enactor and the
 	/// connection's descriptor as <c>%0</c>.
 	/// </summary>
-	ValueTask<MString?> RenderAsync(GameMessage message, long handle, AnySharpObject? viewer = null);
+	ValueTask<Option<MString>> RenderAsync(GameMessage message, long handle, AnySharpObject? viewer = null);
 
 	/// <summary>The stored text of <paramref name="message"/>, ANSI escapes and all.</summary>
 	ValueTask<string> GetTextAsync(GameMessage message);
