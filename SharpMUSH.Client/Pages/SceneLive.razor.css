@@ -1,60 +1,154 @@
+.scene-live-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+/* The scene's name leads; the room, the state and the pose count sit above it as the kicker. */
 .scene-live-header {
-    padding: 0.75rem var(--cpad);
+    padding: 14px var(--cpad);
     border-bottom: 1px solid var(--border);
-    background: var(--surface-3);
+    background: var(--surface);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 16px;
     flex-shrink: 0;
 }
 
-.scene-log--live {
+.scene-live-heading {
+    min-width: 0;
+    flex: 1;
+}
+
+.scene-live-kicker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.scene-live-room {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.scene-live-title {
+    margin: 4px 0 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.scene-live-header ::deep .scene-live-archive {
+    flex-shrink: 0;
+}
+
+/* One line under the header for whichever connection is down; it does not push the story about. */
+.scene-live-banner {
+    flex-shrink: 0;
+    padding: 8px var(--cpad);
+    background: var(--warn-tint);
+    border-bottom: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+    color: var(--text);
+    font-size: 13px;
+}
+
+/* column-reverse anchors the story at its newest pose, so a pose that arrives is a pose in view. */
+.scene-live-scroll {
     flex: 1;
     min-height: 0;
-    padding: 1rem var(--cpad);
     overflow-y: auto;
     overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+/* The story and the composer share one column: wide enough on a desktop for well over 80 characters a
+   line, as a telnet client shows them, but not stretched across a 2560px monitor. */
+.scene-live-story,
+.scene-live-card {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.scene-live-story {
+    padding: 16px var(--cpad) 24px;
+    font-family: var(--font-ui);
 }
 
 .scene-live-compose {
-    padding: 0.625rem var(--cpad);
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    align-items: flex-end;
-    gap: 0.5rem;
     flex-shrink: 0;
+    padding: 0 var(--cpad) 14px;
 }
 
-/* The field (FormattedInput) renders the textarea, so the rules reach it through ::deep. Two lines tall to
-   start, growing to about four before it scrolls. */
+.scene-live-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 10px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-2);
+    transition: border-color var(--motion-pop), background var(--motion-pop);
+}
+
+.scene-live-card:focus-within {
+    border-color: var(--accent);
+}
+
+/* OOC is said where everyone can see it is OOC: the composer takes the OOC band's colours. */
+.scene-live-compose--ooc .scene-live-card {
+    background: var(--ooc-band-bg);
+    border-color: var(--ooc-band-border);
+}
+
+.scene-live-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.scene-live-compose--ooc ::deep .kit-chip--on {
+    background: var(--ooc-icon-bg);
+    color: var(--ooc-icon-fg);
+}
+
+/* The field (FormattedInput) renders the textarea, so the rules reach it through ::deep. Three lines
+   tall to start, growing to about eight before it scrolls. */
 .scene-live-compose ::deep .scene-live-field {
-    flex: 1;
+    width: 100%;
 }
 
 .scene-live-compose ::deep .scene-live-input {
-    min-height: calc(2lh + 18px);
-    max-height: calc(4lh + 18px);
+    width: 100%;
+    box-sizing: border-box;
+    min-height: calc(3lh + 4px);
+    max-height: calc(8lh + 4px);
     field-sizing: content;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface-2);
+    padding: 2px 2px;
+    border: 0;
+    background: transparent;
     color: var(--text);
     font: inherit;
+    font-family: var(--font-ui);
     font-size: 15px;
-    line-height: 1.45;
+    line-height: 1.6;
     resize: none;
     outline: none;
 }
 
-.scene-live-compose ::deep .scene-live-input:focus-visible {
-    border-color: var(--accent);
-}
-
 .scene-live-compose ::deep .scene-live-tool {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: grid;
     place-items: center;
     padding: 0;
@@ -71,18 +165,97 @@
     color: var(--text);
 }
 
-/* Mobile: let the live header wrap, and trim the generous --cpad horizontal
-   padding on the header / pose-log / compose bar so content isn't cramped. */
+.scene-live-compose ::deep .scene-live-tool:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.scene-live-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.scene-live-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.scene-live-send {
+    height: 34px;
+    padding: 0 16px 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 17px;
+    background: var(--accent);
+    color: var(--accent-on);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.scene-live-send:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.scene-live-send:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* A paused or finished scene takes no poses: say so where the composer would be. */
+.scene-live-closed {
+    flex-shrink: 0;
+    margin: 0 auto 14px;
+    width: calc(100% - 2 * var(--cpad));
+    max-width: 72rem;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+    color: var(--text-dim);
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Phone: tighter edges, the archive as an icon, and no keyboard hint where there is no keyboard. */
 @container page (max-width: 48rem) {
     .scene-live-header {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        padding: 0.625rem 0.875rem;
+        padding: 10px 14px;
+        gap: 10px;
     }
-    .scene-log--live {
-        padding: 0.75rem 0.875rem;
+    .scene-live-title {
+        font-size: 17px;
+    }
+    .scene-live-archive-label,
+    .scene-live-hint {
+        display: none;
+    }
+    .scene-live-header ::deep .scene-live-archive {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+    }
+    .scene-live-banner {
+        padding: 8px 14px;
+    }
+    .scene-live-story {
+        padding: 12px 14px 16px;
     }
     .scene-live-compose {
-        padding: 0.625rem 0.875rem;
+        padding: 0 8px 8px;
+    }
+    .scene-live-compose ::deep .scene-live-input {
+        min-height: calc(2lh + 4px);
+        max-height: calc(6lh + 4px);
+    }
+    .scene-live-closed {
+        width: calc(100% - 16px);
+        margin-bottom: 8px;
     }
 }

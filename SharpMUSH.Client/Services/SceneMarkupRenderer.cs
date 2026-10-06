@@ -29,6 +29,24 @@ public static class SceneMarkupRenderer
 	}
 
 	/// <summary>
+	/// An OOC line as its band shows it: without the <c>Name: </c> the <c>ooc</c> command writes in front of
+	/// what was said, since the band already names the speaker. A posed or semiposed line keeps its name, which
+	/// is part of the sentence, and so does a line that does not start with one of <paramref name="names"/>.
+	/// </summary>
+	public static string OocToHtml(string? markup, string content, params ReadOnlySpan<string> names)
+	{
+		var text = ToMarkupText(markup, content);
+		foreach (var name in names)
+		{
+			var prefix = name + ": ";
+			if (name.Length > 0 && text.Text.StartsWith(prefix, StringComparison.Ordinal))
+				return text.Substring(prefix.Length).Render(MarkupFormat.Html);
+		}
+
+		return ToHtml(markup);
+	}
+
+	/// <summary>
 	/// A pose as styled text, what the Edit box starts from: the serialized MString in <paramref name="markup"/>,
 	/// or <paramref name="content"/>, the plain text, when that is not one.
 	/// </summary>
