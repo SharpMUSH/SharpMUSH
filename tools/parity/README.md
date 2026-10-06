@@ -95,7 +95,7 @@ Only genuinely non-deterministic or purely presentational output is normalized.
 | `ansi` | ANSI escape sequences removed | SharpMUSH colours names/headers where PennMUSH sends plain text; colour negotiation is not what is compared (a colour-preserving mode is a follow-up) |
 | `timestamp` | `Thu Sep 24 16:59:11 2026` → `<TIMESTAMP>` | wall clock |
 | `trailing-ws` | trailing spaces/tabs and trailing blank lines dropped | |
-| `site-text` | on login steps, each server's `connect.txt`, `motd.txt`, `wizmotd.txt` text (and SharpMUSH's `Connected!` line) removed | site content, not behaviour |
+| `site-text` | on login steps, each server's `connect.txt`, `motd.txt`, `wizmotd.txt` text removed | site content, not behaviour |
 | `dbref` | fixture objects mapped to PennMUSH's dbrefs (anchors in `world/setup.mush`); dbrefs of objects created during a scenario become `#NEW<k>` by order of first appearance, numbered afresh in each scenario file (so a dbref shown on only one side cannot shift the numbering of later scenarios); an object first shown in an earlier file keeps its label as `#NEW<k>@<scenario>`; `#12:1790269900000` objids keep their form, the creation time becomes `<CTIME>`; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>` | dbref allocation and creation time are not behaviour. The import offset is visible in the report's anchor table, not hidden |
 
 Not normalized, on purpose: flag letter order, whether a dbref is shown, error wording, message

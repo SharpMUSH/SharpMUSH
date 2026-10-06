@@ -646,7 +646,33 @@ public partial class Commands
 			connectRoomContainer.Object().DBRef.ToString(),
 			"connect");
 
-		await parser.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
+		await LookAfterLoginAsync(parser, handle, player);
+	}
+
+	/// <summary>
+	/// The look a login ends with, the one evaluation it does (the room's and player's formats), under a
+	/// <c>queue_entry_cpu_time</c> limit of its own: the login line itself is not timed (see
+	/// <c>TaskScheduler.RunsSoftcode</c>), so the server's login work before it cannot spend the player's
+	/// limit. Running out tells the player "CPU usage exceeded.", unless QUIET, as a queue entry's would.
+	/// </summary>
+	private async ValueTask LookAfterLoginAsync(IMUSHCodeParser parser, long handle, SharpPlayer player)
+	{
+		using var budget = ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime,
+			ExecutionBudget.CurrentToken);
+		using (budget.Enter())
+		{
+			try
+			{
+				await parser.FromState(parser.CurrentState with { ExecutionBudget = budget })
+					.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
+			}
+			catch (OperationCanceledException) when (budget.IsExpired) { }
+		}
+
+		if (budget.IsExpired && !await player.Object.HasFlag("QUIET"))
+		{
+			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.CpuUsageExceeded), null);
+		}
 	}
 
 	/// <summary>
