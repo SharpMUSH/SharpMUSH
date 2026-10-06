@@ -49,7 +49,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SAY");
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SEMI");
 		await Assert.That(attrs).Contains("CMD`CREATE");
-		await Assert.That(attrs).Contains("CMD`INFO");
+		await Assert.That(attrs).Contains("CMD`SHOW");
 		await Assert.That(attrs).Contains("FUN`OWNS");
 		await Assert.That(attrs).Contains("FUN`IS`APPROVED");
 		await Assert.That(attrs).Contains("DATA`DENY_APPROVAL");

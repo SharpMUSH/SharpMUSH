@@ -79,10 +79,9 @@ public partial class Commands
 			}
 			else
 			{
-				// No executor at the connect screen: read DOING as the listed player reads it on
-				// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
-				// listing exists to show.
-				var doingText = await GetDoingText(executor ?? known, known);
+				// @doing is read without permission checks (get_doing, bsd.c:6251), so the connect
+				// screen, which has no executor, shows the same column a logged-in viewer sees.
+				var doingText = await GetDoingText(parser, executor ?? known, known);
 				line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
 			}
 

@@ -609,6 +609,126 @@ public class SceneRoleplayIntegrationTests
 		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + table);
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
 		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
+
+		// Every line fits the player's width: the columns and the spaces align() puts between them add up to it.
+		var width = int.Parse(await Eval($"width({sam})"));
+		var tooWide = table.Split('\n').Where(l => l.Length > width).ToList();
+		await Assert.That(tooWide).IsEmpty().Because($"no line of the schedule may be wider than {width}");
+		var row = table.Split('\n').Single(l => l.Contains($"Gala_{Tag}"));
+		await Assert.That(row).Contains(await Eval("timefmt($a $b $d $H:$M,2524608000)"))
+			.Because("the When column is the scene's date and time");
+		await Assert.That(row).Contains("scheduled").Because("the Status column is wide enough for its longest word, so it does not wrap");
+
+		// +scenes and +events are the names other games use for the same list.
+		foreach (var alias in new[] { "+scenes", "+events", "+scenes/upcoming", "+events/upcoming" })
+		{
+			var aliased = string.Join("\n", (await RunAndCollectAs(samHandle, alias)).SelectMany(m => m.Split('\n')));
+			await Assert.That(aliased).Contains($"Gala_{Tag}").Because($"{alias} lists the schedule");
+		}
+	}
+
+	/// <summary>
+	/// +scene/pause takes a running scene off the live list (scenewhere stops answering it, so nothing more is
+	/// captured) and onto the schedule, with a new time when one is given and none when not;
+	/// +scene/start &lt;id&gt; resumes it; +scene/reschedule of a running scene pauses it too.
+	/// </summary>
+	[Test]
+	public async Task ScenePause_TakesARunningSceneOffTheLiveList_UntilItIsStarted()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
+		await God1($"@teleport {loggerDbref}=#2");
+
+		var room = (await God1($"@dig PauseRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var (una, unaHandle) = await CreatePlayerAsync($"Una_{Tag}", "pw_una_123");
+		await God1($"@tel {una}={room}");
+
+		await RunAndCollectAs(unaHandle, $"+scene/create PauseTest_{Tag}");
+		var sceneId = await Eval($"get({una}/MY.SID)");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
+
+		// Paused by id with a new time (epoch seconds, as the portal sends it).
+		await RunAndCollectAs(unaHandle, $"+scene/pause {sceneId}=2524608000");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("paused");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo("2524608000000");
+		await Assert.That(await Eval($"scenewhere({room})")).StartsWith("#-1")
+			.Because("a paused scene is not the room's live scene, so nothing more is captured into it");
+		await RunAndCollectAs(unaHandle, $"+scene/pose {sceneId}=keeps talking.");
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("0")
+			.Because("the portal's compose path names the scene, and a paused one records nothing");
+
+		// Paused again, focused and with no time: the earlier time goes, so the schedule shows no stale one.
+		await RunAndCollectAs(unaHandle, "+scene/pause");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("paused");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo(string.Empty);
+
+		await RunAndCollectAs(unaHandle, $"+scene/start {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
+		await Assert.That(await Eval($"scenewhere({room})")).IsEqualTo(sceneId)
+			.Because("a resumed scene keeps its room and is live there again");
+
+		// Rescheduling a running scene pauses it: a scene with a time to come is not live.
+		await RunAndCollectAs(unaHandle, $"+scene/reschedule {sceneId}=2524608000");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("paused");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo("2524608000000");
+
+		// A finished scene stays finished.
+		await RunAndCollectAs(unaHandle, $"+scene/finish {sceneId}");
+		await RunAndCollectAs(unaHandle, $"+scene/pause {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished");
+		await RunAndCollectAs(unaHandle, $"+scene/start {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished");
+	}
+
+	/// <summary>
+	/// The names other scene systems use: +scene/list, +event &lt;id&gt;, +scene/rsvp and /unrsvp,
+	/// +scene/cancel (which, like +scene/unschedule, takes a scene that has not started off the schedule);
+	/// and +scene/title, which renames the focused scene.
+	/// </summary>
+	[Test]
+	public async Task SceneAliases_AndTitle()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
+		await God1($"@teleport {loggerDbref}=#2");
+
+		var room = (await God1($"@dig AliasRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var (vic, vicHandle) = await CreatePlayerAsync($"Vic_{Tag}", "pw_vic_123");
+		var (wes, wesHandle) = await CreatePlayerAsync($"Wes_{Tag}", "pw_wes_123");
+		await God1($"@tel {vic}={room}");
+
+		await RunAndCollectAs(vicHandle, $"+scene/create AliasTest_{Tag}");
+		var sceneId = await Eval($"get({vic}/MY.SID)");
+
+		await RunAndCollectAs(vicHandle, $"+scene/title Renamed_{Tag}");
+		await Assert.That(await Eval($"scene({sceneId}, title)")).IsEqualTo($"Renamed_{Tag}");
+
+		var listed = string.Join("\n", await RunAndCollectAs(vicHandle, "+scene/list"));
+		await Assert.That(listed).Contains($"Renamed_{Tag}").Because("+scene/list is +scene");
+
+		var card = string.Join("\n", await RunAndCollectAs(vicHandle, $"+event {sceneId}"));
+		await Assert.That(card).Contains("Pitch").Because("+event <id> shows the scene's card");
+
+		await RunAndCollectAs(wesHandle, $"+scene/rsvp {sceneId}");
+		await Assert.That(await Eval($"scenemember({sceneId}, {wes}, role)")).IsEqualTo("attending");
+		await RunAndCollectAs(wesHandle, $"+scene/unrsvp {sceneId}");
+		await Assert.That(await Eval($"scenemember({sceneId}, {wes}, role)")).StartsWith("#-1");
+
+		// A running scene is finished, not cancelled.
+		await RunAndCollectAs(vicHandle, $"+scene/cancel {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
+
+		await RunAndCollectAs(vicHandle, $"+scene/pause {sceneId}=2524608000");
+		await RunAndCollectAs(vicHandle, $"+scene/cancel {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("cancelled");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo(string.Empty)
+			.Because("a cancelled scene leaves the schedule");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.

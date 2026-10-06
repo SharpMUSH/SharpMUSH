@@ -1616,7 +1616,8 @@ public partial class Functions
 		var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,
 			uniqueObjects,
-			command);
+			command,
+			looker);
 
 		if (!matchResult.TryGetValue(out var matches))
 		{

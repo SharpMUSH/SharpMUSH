@@ -92,8 +92,9 @@ public static class SceneCommandModule
 				=> await SceneRead.Get(parser, sceneService, notifyService, executor, arg0!),
 			"CREATE"
 				=> await SceneWrite.Create(parser, sceneService, notifyService, executor, arg0),
-			"SET" when hasArg0 && hasArg1
-				=> await SceneWrite.Set(parser, sceneService, notifyService, executor, arg0!, arg1!),
+			// An empty value clears the key (scheduledfor, a meta key), as an empty &attr clears an attribute.
+			"SET" when hasArg0
+				=> await SceneWrite.Set(parser, sceneService, notifyService, executor, arg0!, arg1 ?? MarkupText.Empty),
 			"ADDPOSE" when hasArg0 && hasArg1
 				=> await ScenePoseHandlers.AddPose(parser, sceneService, notifyService, executor, arg0!, arg1!),
 			"SETPOSE" when hasArg0 && hasArg1

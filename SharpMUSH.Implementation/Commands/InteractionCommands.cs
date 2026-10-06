@@ -1207,7 +1207,7 @@ public partial class Commands
 
 		// Only $-commands are tried, with the player as the matcher and QUEUE_DEFAULT: each match is a
 		// new queue entry, even for a line typed at a connection.
-		var matches = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, command);
+		var matches = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, command, executor);
 
 		if (!matches.TryGetValue(out var matched))
 		{

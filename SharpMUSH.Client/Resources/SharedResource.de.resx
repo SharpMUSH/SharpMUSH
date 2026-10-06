@@ -5147,6 +5147,18 @@
     <value>Deine Posen gehen an eine andere Szene. Tritt dieser bei, um hier zu posen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Hier läuft eine Szene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Geschichte öffnen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Hinweis ausblenden</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Szene beitreten</value>
     <comment>MT</comment>
@@ -5622,5 +5634,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Die eigene Seite jeder Kategorie.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSIERT</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Szene pausieren</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Szene fortsetzen</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Jetzt starten</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Neuer Zeitpunkt (optional)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Uhrzeit</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Eine pausierte Szene zeichnet nichts mehr auf und wandert von Live in den Zeitplan, bis sie fortgesetzt wird.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Die Szene wurde nicht pausiert.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Noch kein Raum</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Gastgeber: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Pausiert, ohne Zeitpunkt</value>
   </data>
 </root>

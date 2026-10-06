@@ -83,6 +83,9 @@ public class SocketCommandTests
 		await Assert.That(reply).Contains("PLAYERS\t");
 		await Assert.That(reply).Contains("CODEBASE\tSharpMUSH");
 		await Assert.That(reply).Contains("FAMILY\tTinyMUD");
+		// The same report as the telnet option: a value per line, the preferred charset last.
+		await Assert.That(reply).Contains("CHARSET\tISO-8859-1\nCHARSET\tUTF-8");
+		await Assert.That(reply).Contains("GMCP\t1");
 	}
 
 	// --- VERSION -----------------------------------------------------------------------------

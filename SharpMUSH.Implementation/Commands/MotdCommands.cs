@@ -10,6 +10,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
@@ -258,12 +259,12 @@ public partial class Commands
 				continue;
 			}
 
-			if (!string.IsNullOrWhiteSpace(pattern) && !MatchesPattern(playerName, pattern))
+			if (!string.IsNullOrWhiteSpace(pattern) && !await MatchesPattern(obj, pattern))
 			{
 				continue;
 			}
 
-			var doingText = await GetDoingText(executor, obj);
+			var doingText = await GetDoingText(parser, executor, obj);
 
 			playerList.Add(string.Format(
 				fmt,
@@ -281,29 +282,36 @@ public partial class Commands
 		return new None();
 	}
 
-	private bool MatchesPattern(string playerName, string pattern)
+	/// <summary>
+	/// PennMUSH's <c>who_check_name</c> (<c>src/bsd.c:5602-5633</c>): a pattern without wildcards is a
+	/// prefix of the name; one with wildcards matches the name or any of the player's aliases, read with
+	/// <c>atr_get</c> - inherited, and with no permission check.
+	/// </summary>
+	private async ValueTask<bool> MatchesPattern(AnySharpObject player, string pattern)
 	{
-		if (pattern.Contains('*') || pattern.Contains('?'))
+		var playerName = player.Object().Name;
+		if (!(pattern.Contains('*') || pattern.Contains('?')))
 		{
-			return MushText.IsWildcardMatch(MarkupText.Plain(playerName), pattern);
+			return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
 		}
 
-		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-	}
-
-	private async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
-	{
-		var doingAttr = await AttributeService.GetAttributeAsync(
-			executor,
-			player,
-			"DOING",
-			mode: IAttributeService.AttributeMode.Read,
-			parent: false);
-
-		return doingAttr switch
+		if (MushText.IsWildcardMatch(MarkupText.Plain(playerName), pattern))
 		{
-			SharpAttribute[] chain => chain.Last().Value.ToPlainText(),
-			None or Error<string> => string.Empty
-		};
+			return true;
+		}
+
+		return await AttributeService.GetAttributeAsync(await HelperFunctions.GetGod(Mediator), player,
+				PlayerAliases.AttributeName, IAttributeService.AttributeMode.Read, parent: true) is SharpAttribute[] chain
+			&& PlayerAliases.Split(chain.Last().Value.ToPlainText())
+				.Any(alias => MushText.IsWildcardMatch(MarkupText.Plain(alias), pattern));
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>get_doing</c> (<c>src/bsd.c:6237-6255</c>): <c>@doing</c> is fetched with
+	/// <c>UFUN_IGNORE_PERMS</c> and run, so it is inherited, evaluated, and shown whoever is looking -
+	/// the same read <c>doing()</c> makes.
+	/// </summary>
+	private async ValueTask<string> GetDoingText(IMUSHCodeParser parser, AnySharpObject viewer, AnySharpObject player)
+		=> (await AttributeHelpers.EvaluateFormatAttribute(AttributeService, parser, viewer, player, "DOING",
+			new Dictionary<string, CallState>(), MarkupText.Empty)).ToPlainText();
 }

@@ -30,6 +30,7 @@ public static class ConfigSections
 		[
 			new("/admin/config/net", "Net", Icons.Material.Outlined.NetworkCheck, "Network"),
 			new("/admin/config/database", "Database", Icons.Material.Outlined.Storage, "Database"),
+			new("/admin/config/mssp", "Mssp", Icons.Material.Outlined.Radar, "AdmMssp"),
 		]),
 		new("Performance", "Performance", "PerformanceCategoryDescription", Icons.Material.Outlined.Speed, false,
 		[

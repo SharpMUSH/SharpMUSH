@@ -23,7 +23,7 @@ public class HttpHandlerBudgetTests
 		if (handlerMediator is null) mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(handler);
 		var attributes = attributeService ?? Substitute.For<IAttributeService>();
 		if (attributeService is null) attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
-			IAttributeService.AttributeMode.Execute, false).Returns((OptionalSharpAttributeOrError)new[]
+			IAttributeService.AttributeMode.Execute, true).Returns((OptionalSharpAttributeOrError)new[]
 			{ new SharpAttribute("", "", "GET", [], null, "GET", null!, null!, null!) { Value = MarkupText.Plain("think handler") } });
 		var parser = Substitute.For<IMUSHCodeParser>();
 		ParserState? state = null;
@@ -86,7 +86,7 @@ public class HttpHandlerBudgetTests
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
 		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
-			IAttributeService.AttributeMode.Execute, false).Returns(async ValueTask<OptionalSharpAttributeOrError> (_) =>
+			IAttributeService.AttributeMode.Execute, true).Returns(async ValueTask<OptionalSharpAttributeOrError> (_) =>
 		{
 			entered.TrySetResult();
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, release.Token);

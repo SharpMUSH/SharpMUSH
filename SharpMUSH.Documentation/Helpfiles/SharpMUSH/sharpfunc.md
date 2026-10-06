@@ -15,6 +15,7 @@
   [List functions]: manipulate lists (REVWORDS, FIRST) <br>
   [Mail Functions]: manipulate @mail (MAIL, FOLDERSTATS) <br>
   [Math functions]: number manipulation, generic or integers only (ADD, DIV) <br>
+  [MEDIA FUNCTIONS]: sounds, pictures and panes, written once for every client (SOUND, IMAGE) <br>
   [Regular expression functions]: Regular expressions (REGMATCH, REGEDIT) <br>
   [SQL functions]: access SQL databases (SQL, SQLESCAPE) <br>
   [String functions]: string manipulation (ESCAPE, FLIP) <br>
@@ -28,18 +29,18 @@
 # Attribute functions
   These functions can access or alter information stored in attributes on objects.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [APOSS()]        | [ATTRIB_SET()]   | [DEFAULT()]      | [EDEFAULT()]     |
-| [EVAL()]         | [FLAGS()]        | [GET()]          | [GREP()]         |
-| [GREP()]        | [HASATTR()]      | [HASATTR()]     | [HASATTR()]   |
-| [HASFLAG()]      | [LATTR()]        | [LFLAGS()]       | [NATTR()]        |
-| [OBJ()]          | [OWNER()]        | [pfun()]         | [POSS()]         |
-| [LATTR()]     | [GREP()]       | [GREP()]      | [XATTR()]     |
-| [SET()]          | [SUBJ()]         | [UDEFAULT()]     | [u()]         |
-| [u()]      | [UDEFAULT()]    | [ulocal()]       | [V()]            |
-| [GREP()]     | [GREP()]    | [XATTR()]        | [GET()]         |
-| [ZFUN()]         |                  |                  |                  |
+|                |                |                |                |
+|----------------|----------------|----------------|----------------|
+| [APOSS()]      | [ATTRIB_SET()] | [DEFAULT()]    | [EDEFAULT()]   |
+| [EVAL()]       | [FLAGS()]      | [GET()]        | [GREP()]       |
+| [GREPI()]      | [HASATTR()]    | [HASATTRP()]   | [HASATTRVAL()] |
+| [HASFLAG()]    | [LATTR()]      | [LFLAGS()]     | [NATTR()]      |
+| [OBJ()]        | [OWNER()]      | [PFUN()]       | [POSS()]       |
+| [REGLATTR()]   | [REGREP()]     | [REGREPI()]    | [REGXATTR()]   |
+| [SET()]        | [SUBJ()]       | [U()]          | [UDEFAULT()]   |
+| [UFUN()]       | [ULAMBDA()]    | [ULDEFAULT()]  | [ULOCAL()]     |
+| [V()]          | [WILDGREP()]   | [WILDGREPI()]  | [XATTR()]      |
+| [XGET()]       | [ZFUN()]       |                |                |
 
 ::: seealso
 - [attributes]
@@ -50,21 +51,22 @@
 
   For example, 2 is represented as '0010' and 4 as '0100'. If these two numbers are bitwise-or'ed together with BOR(), the result is 6, or (in binary) '0110'. These functions are useful for storing small lists of toggle (Yes/No) options efficiently.
 
-|              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [BAND()]     | [BASECONV()] | [BNAND()]    | [BNOT()]     | [BOR()]      |
-| [BXOR()]     | [SHL()]      | [SHR()]      |              |              |
+|              |              |              |              |
+|--------------|--------------|--------------|--------------|
+| [BAND()]     | [BASECONV()] | [BNAND()]    | [BNOT()]     |
+| [BOR()]      | [BXOR()]     | [SHL()]      | [SHR()]      |
 
 # Boolean functions
   Boolean functions all return 0 or 1 as an answer.
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [AND()]      | [AND()]     | [OR()]      | [EQ()]       | [GT()]       |
-| [GTE()]      | [LT()]       | [LTE()]      | [NAND()]     | [NEQ()]      |
-| [NOR()]      | [NOT()]      | [OR()]       | [T()]        | [XOR()]      |
+|          |          |          |          |
+|----------|----------|----------|----------|
+| [AND()]  | [CAND()] | [COR()]  | [EQ()]   |
+| [GT()]   | [GTE()]  | [LT()]   | [LTE()]  |
+| [NAND()] | [NEQ()]  | [NOR()]  | [NOT()]  |
+| [OR()]   | [T()]    | [XOR()]  |          |
 
 ::: seealso
 - [boolean values]
@@ -75,9 +77,11 @@
 
 |                       |                       |                       |                       |
 |-----------------------|-----------------------|-----------------------|-----------------------|
-| [@CEMIT]              | [EMIT()]              | [MESSAGE()]           | [NSLEMIT()]           |
-| [OEMIT()]             | [PEMIT()]             | [REMIT()]             | [ZEMIT()]             |
-| [PAGERECALL()]        | [PAGECONVERSATIONS()] |                       |                       |
+| [CEMIT()]             | [EMIT()]              | [LEMIT()]             | [MESSAGE()]           |
+| [NSEMIT()]            | [NSLEMIT()]           | [NSOEMIT()]           | [NSPEMIT()]           |
+| [NSPROMPT()]          | [NSREMIT()]           | [NSZEMIT()]           | [OEMIT()]             |
+| [PAGECONVERSATIONS()] | [PAGERECALL()]        | [PEMIT()]             | [PROMPT()]            |
+| [REMIT()]             | [ZEMIT()]             |                       |                       |
 
 ::: seealso
 - [channel functions]
@@ -87,30 +91,30 @@
 # Connection functions
   Connection functions return information about the connections open on a game, or about specific connections.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [ADDRLOG()]      | [CMDS()]         | [CONN()]         | [connlog()]      |
-| [CONNRECORD()]   | [DOING()]        | [WIDTH()]       | [HIDDEN()]       |
-| [HOST()]         | [IDLE()]         | [IPADDR()]       | [LPORTS()]       |
-| [LWHO()]         | [LWHO()]       | [MWHO()]         | [MWHO()]       |
-| [NMWHO()]        | [NMWHO()]         | [PLAYER()]       | [LPORTS()]        |
-| [PUEBLO()]       | [RECV()]         | [SENT()]         | [SSL()]          |
-| [TERMINFO()]     | [WIDTH()]        | [XWHO()]        | [XWHO()]      |
-| [XWHO()]         | [XWHO()]       | [ZWHO()]        | [ZWHO()]         |
+|                |                |                |                |
+|----------------|----------------|----------------|----------------|
+| [ADDRLOG()]    | [CMDS()]       | [CONN()]       | [CONNLOG()]    |
+| [CONNRECORD()] | [DOING()]      | [HEIGHT()]     | [HIDDEN()]     |
+| [HOST()]       | [IDLE()]       | [IPADDR()]     | [LPORTS()]     |
+| [LWHO()]       | [LWHOID()]     | [MWHO()]       | [MWHOID()]     |
+| [NMWHO()]      | [NWHO()]       | [PLAYER()]     | [PORTS()]      |
+| [PUEBLO()]     | [RECV()]       | [SENT()]       | [SSL()]        |
+| [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      | [XMWHOID()]    |
+| [XWHO()]       | [XWHOID()]     | [ZMWHO()]      | [ZWHO()]       |
 
 # Dbref functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [lsearch()]     | [CON()]          | [ENTRANCES()]    | [EXIT()]         |
-| [FOLLOWERS()]    | [FOLLOWING()]    | [HOME()]         | [LCON()]         |
-| [LEXITS()]       | [LOC()]          | [locate()]       | [LPARENT()]      |
-| [LPLAYERS()]     | [lsearch()]      | [LVCON()]        | [LVEXITS()]      |
-| [LVPLAYERS()]    | [NAMELIST()]     | [NEXT()]         | [NEXTDBREF()]    |
-| [NUM()]          | [OWNER()]        | [PARENT()]       | [PMATCH()]       |
-| [RLOC()]         | [RNUM()]         | [ROOM()]         | [WHERE()]        |
-| [ZONE()]         |                  |                  |                  |
+|               |               |               |               |
+|---------------|---------------|---------------|---------------|
+| [CHILDREN()]  | [CON()]       | [ENTRANCES()] | [EXIT()]      |
+| [FOLLOWERS()] | [FOLLOWING()] | [HOME()]      | [LCON()]      |
+| [LEXITS()]    | [LOC()]       | [LOCATE()]    | [LPARENT()]   |
+| [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   | [LVCON()]     |
+| [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  | [NAMELIST()]  |
+| [NEXT()]      | [NEXTDBREF()] | [NUM()]       | [OWNER()]     |
+| [PARENT()]    | [PMATCH()]    | [RLOC()]      | [RNUM()]      |
+| [ROOM()]      | [WHERE()]     | [ZFIND()]     | [ZONE()]      |
 
 ::: seealso
 - [database]
@@ -119,22 +123,23 @@
 # Information functions
   Information functions return values related to objects or the game.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [ACCNAME()]      | [ALIAS()]        | [ANDFLAGS()]     | [ANDFLAGS()]    |
-| [ANDLPOWERS()]   | [CONFIG()]       | [CONTROLS()]     | [CTIME()]        |
-| [CTIME()]        | [ELOCK()]        | [FINDABLE()]     | [FLAGS()]        |
-| [ALIAS()]    | [FULLNAME()]     | [GETPIDS()]      | [HASATTR()]      |
-| [HASATTR()]     | [HASFLAG()]      | [HASPOWER()]     | [HASTYPE()]      |
-| [HASROLE()]      | [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       |
-| [LOCK()]         | [PERMISSION()]   | [ROLES()]        |                  |
-| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LLOCKS()]        | [LPIDS()]        |
-| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MTIME()]        |
-| [MTIME()]        | [MUDNAME()]      | [MUDNAME()]       | [NAME()]         |
-| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
-| [ORFLAGS()]      | [ORFLAGS()]     | [ORLPOWERS()]    | [PIDINFO()]      |
-| [PLAYERMEM()]    | [POLL()]         | [POWERS()]       | [QUOTA()]        |
-| [RESTARTS()]     | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
+|                |                |                |                |
+|----------------|----------------|----------------|----------------|
+| [ACCNAME()]    | [ALIAS()]      | [ANDFLAGS()]   | [ANDLFLAGS()]  |
+| [ANDLPOWERS()] | [CONFIG()]     | [CONTROLS()]   | [CSECS()]      |
+| [CTIME()]      | [DOWNMOTD()]   | [ELOCK()]      | [FINDABLE()]   |
+| [FLAGS()]      | [FULLALIAS()]  | [FULLMOTD()]   | [FULLNAME()]   |
+| [GETPIDS()]    | [HASATTR()]    | [HASATTRP()]   | [HASFLAG()]    |
+| [HASPOWER()]   | [HASROLE()]    | [HASTYPE()]    | [INAME()]      |
+| [ISAPPROVED()] | [LFLAGS()]     | [LOCK()]       | [LOCKFLAGS()]  |
+| [LOCKOWNER()]  | [LOCKS()]      | [LPIDS()]      | [LSTATS()]     |
+| [MONEY()]      | [MONIKER()]    | [MOTD()]       | [MSECS()]      |
+| [MTIME()]      | [MUDNAME()]    | [MUDURL()]     | [NAME()]       |
+| [NATTR()]      | [NEARBY()]     | [OBJID()]      | [OBJMEM()]     |
+| [ORFLAGS()]    | [ORLFLAGS()]   | [ORLPOWERS()]  | [PERMISSION()] |
+| [PIDINFO()]    | [PLAYERMEM()]  | [POLL()]       | [POWERS()]     |
+| [QUOTA()]      | [RESTARTS()]   | [ROLES()]      | [TYPE()]       |
+| [VERSION()]    | [VISIBLE()]    | [WIZMOTD()]    |                |
 
 ::: seealso
 - [Dbref functions]
@@ -143,20 +148,21 @@
 # List functions
   List functions take at least one list of elements and return transformed lists or one or more members of those lists. Most of these functions can take an arbitrary `<delimiter>` argument to specify what delimits list elements; if none is provided, a space is used by default.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [CHAIN()]        | [ELEMENTS()]     | [E()]        | [EXTRACT()]      |
-| [FILTER()]       | [FILTER()]   | [FILTERQ()]      | [FIRST()]        |
-| [fold()]         | [GRAB()]         | [GRABALL()]      | [INDEX()]        |
-| [ITEMIZE()]      | [ITEMS()]        | [iter()]         | [JITER()]        |
-| [LAST()]         | [LDELETE()]      | [INSERT()]      | [LOCKFILTER()]   |
-| [LREPLACE()]     | [MAP()]          | [element()]        | [element()]     |
-| [MEMBER()]       | [mix()]          | [munge()]        | [NAMEGRAB()]     |
-| [NAMEGRAB()]  | [RANDWORD()]     | [REMOVE()]       | [REST()]         |
-| [REVWORDS()]     | [SETDIFF()]      | [SETINTER()]     | [SETSYMDIFF()]   |
-| [SETUNION()]     | [SHUFFLE()]      | [E()]         | [SORT()]         |
-| [SORTBY()]       | [SORTKEY()]      | [SPLICE()]       | [STEP()]         |
-| [TABLE()]        | [UNIQUE()]       | [WORDPOS()]      | [WORDS()]        |
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [CHAIN()]       | [ELEMENTS()]    | [EVERY()]       | [EXTRACT()]     |
+| [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     | [FIRST()]       |
+| [FOLD()]        | [GRAB()]        | [GRABALL()]     | [INDEX()]       |
+| [ITEMIZE()]     | [ITEMS()]       | [ITER()]        | [JITER()]       |
+| [LAST()]        | [LDELETE()]     | [LINSERT()]     | [LISTSET()]     |
+| [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         | [MATCH()]       |
+| [MATCHALL()]    | [MEMBER()]      | [MIX()]         | [MUNGE()]       |
+| [NAMEGRAB()]    | [NAMEGRABALL()] | [RANDWORD()]    | [REMOVE()]      |
+| [REST()]        | [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    |
+| [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        |
+| [SORT()]        | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      |
+| [STEP()]        | [TABLE()]       | [UNIQUE()]      | [WORDPOS()]     |
+| [WORDS()]       |                 |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -165,25 +171,25 @@
 # Math functions
   Math functions take one or more floating point numbers and return a numeric value.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [ABS()]          | [ACOS()]         | [ADD()]          | [ASIN()]         |
-| [ATAN()]         | [ATAN()]        | [BOUND()]        | [ROUND()]         |
-| [COS()]          | [CTU()]          | [DIST2D()]       | [DIST3D()]       |
-| [E()]            | [EXP()]          | [DIV()]         | [ROUND()]        |
-| [FMOD()]         | [FRACTION()]     | [LN()]           | [LMATH()]        |
-| [LOG()]          | [MAX()]          | [AVG()]         | [MEDIAN()]       |
-| [MIN()]          | [MUL()]          | [PI()]           | [POWER()]        |
-| [ROOT()]         | [ROUND()]        | [SIGN()]         | [SIN()]          |
-| [SQRT()]         | [STDDEV()]       | [SUB()]          | [TAN()]          |
-| [TRUNC()]        | [TRUNC()]          |                  |                  |
+|              |              |              |              |
+|--------------|--------------|--------------|--------------|
+| [ABS()]      | [ACOS()]     | [ADD()]      | [ASIN()]     |
+| [ATAN()]     | [ATAN2()]    | [BOUND()]    | [CEIL()]     |
+| [COS()]      | [CTU()]      | [DIST2D()]   | [DIST3D()]   |
+| [E()]        | [EXP()]      | [FDIV()]     | [FLOOR()]    |
+| [FMOD()]     | [FRACTION()] | [LMATH()]    | [LN()]       |
+| [LOG()]      | [MAX()]      | [MEAN()]     | [MEDIAN()]   |
+| [MIN()]      | [MUL()]      | [PI()]       | [POWER()]    |
+| [ROOT()]     | [ROUND()]    | [SIGN()]     | [SIN()]      |
+| [SQRT()]     | [STDDEV()]   | [SUB()]      | [TAN()]      |
+| [TRUNC()]    | [VAL()]      |              |              |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [DEC()]          | [DIV()]          | [DIV()]     | [INC()]          |
-| [MOD()]          | [MOD()]    |                  |                  |
+|               |               |               |               |
+|---------------|---------------|---------------|---------------|
+| [DEC()]       | [DIV()]       | [FLOORDIV()]  | [INC()]       |
+| [MOD()]       | [REMAINDER()] |               |               |
 
 
   Math functions are affected by a number of @config options, including the TinyMUSH compatability options null_eq_zero and tiny_math.
@@ -195,10 +201,11 @@
 # Vector functions
   These functions operate on n-dimensional vectors. A vector is a delimiter-separated list of numbers (space-separated, by default):
 
-|              |              |              |              |              |
-|--------------|--------------|--------------|--------------|--------------|  
-| [VADD()]     | [VCROSS()]   | [VDIM()]     | [VDOT()]     | [VMAG()]     |
-| [VMAX()]     | [VMIN()]     | [VMUL()]     | [VSUB()]     | [VUNIT()]    |
+|            |            |            |            |
+|------------|------------|------------|------------|
+| [VADD()]   | [VCROSS()] | [VDIM()]   | [VDOT()]   |
+| [VMAG()]   | [VMAX()]   | [VMIN()]   | [VMUL()]   |
+| [VSUB()]   | [VUNIT()]  |            |            |
 
 
 
@@ -211,12 +218,12 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [REGEDIT()]      | [REGEDIT()]   | [REGEDIT()]  | [REGEDIT()]     |
-| [LATTR()]     | [LATTR()]    | [regmatch()]     | [regmatch()]    |
-| [NATTR()]     | [NATTR()]    | [GRAB()]       | [GRABALL()]    |
-| [GRABALL()]   | [GRAB()]      | [GREP()]       | [GREP()]      |
-| [RESWITCH()]     | [RESWITCH()]  | [RESWITCH()] | [RESWITCH()]    |
-| [XATTR()]     | [XATTR()]    |                  |                  |
+| [REGEDIT()]      | [REGEDITALL()]   | [REGEDITALLI()]  | [REGEDITI()]     |
+| [REGLATTR()]     | [REGLATTRP()]    | [REGMATCH()]     | [REGMATCHI()]    |
+| [REGNATTR()]     | [REGNATTRP()]    | [REGRAB()]       | [REGRABALL()]    |
+| [REGRABALLI()]   | [REGRABI()]      | [REGREP()]       | [REGREPI()]      |
+| [REGREPLACE()]   | [REGXATTR()]     | [REGXATTRP()]    | [RESWITCH()]     |
+| [RESWITCHALL()]  | [RESWITCHALLI()] | [RESWITCHI()]    |                  |
 
 ::: seealso
 - [String functions]
@@ -226,35 +233,36 @@
 # SQL functions
   These functions perform queries or other operations on an SQL database to which the MUSH is connected, if SQL support is available and enabled.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [MAPSQL()]       | [SQL()]          | [SQLESCAPE()]    |                  |
+|               |               |               |               |
+|---------------|---------------|---------------|---------------|
+| [MAPSQL()]    | [SQL()]       | [SQLESCAPE()] |               |
 
 
 # String functions
   String functions take at least one string and return a transformed string, parts of a string, or a value related to the string(s).
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [accent()]       | [AFTER()]        | [align()]        | [ALPHAMAX()]     |
-| [ALPHAMIN()]     | [ART()]          | [BEFORE()]       | [BRACKETS()]     |
-| [CAPSTR()]       | [switch()]         | [switch()]      | [CAT()]          |
-| [CENTER()]       | [CHR()]          | [COMP()]         | [COND()]         |
-| [COND()]      | [ENCODE64()]     | [DECOMPOSE()]    | [ENCRYPT()]      |
-| [DIGEST()]       | [EDIT()]         | [ENCODE64()]     | [ENCRYPT()]      |
-| [ESCAPE()]       | [FLIP()]         | [foreach()]      | [FORMDECODE()]   |
-| [FORMQ()]        | [HMAC()]         | [IF()]           | [IF()]       |
-| [LCSTR()]        | [LEFT()]         | [LIT()]          | [LJUST()]        |
-| [LPOS()]         | [MERGE()]        | [MID()]          | [CHR()]          |
-| [ORDINAL()]      | [POS()]          | [REGEDIT()]      | [regmatch()]     |
-| [REPEAT()]       | [RIGHT()]        | [RJUST()]        | [SCRAMBLE()]     |
-| [SECURE()]       | [SPACE()]        | [SPELLNUM()]     | [SQUISH()]       |
-| [STRFIRSTOF()]     | [CAT()]       | [STRDELETE()]    | [STRFIRSTOF()]   |
-| [STRINSERT()]    | [STRIPACCENTS()] | [STRIPANSI()]    | [STRLEN()]       |
-| [STRMATCH()]     | [STRREPLACE()]   | [switch()]       | [TR()]           |
-| [TRIM()]         | [UCSTR()]        | [URLDECODE()]    | [URLENCODE()]    |
-| [WRAP()]         | [DISPLAYWIDTH()] | [GRAPHEMECOUNT()] | [GRAPHEMES()]     |
-| [PRINTF()]       | [STRDISTANCE()]  |                  |                  |
+|                          |                          |                          |                          |
+|--------------------------|--------------------------|--------------------------|--------------------------|
+| [ACCENT()]               | [AFTER()]                | [ALIGN()]                | [ALPHAMAX()]             |
+| [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
+| [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
+| [CENTER()]               | [CHR()]                  | [COMP()]                 | [COND()]                 |
+| [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         |
+| [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 |
+| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [FLIP()]                 |
+| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
+| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
+| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
+| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
+| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
+| [REGMATCH()]             | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
+| [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               |
+| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
+| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
+| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
+| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
+| [WRAP()]                 |                          |                          |                          |
 
 ::: seealso
 - [STRINGS]
@@ -262,13 +270,13 @@
 # Time functions
   These functions return times or format times.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [CONVSECS()]     | [CONVTIME()]     | [CONVSECS()]  | [CONVTIME()]  |
-| [CTIME()]        | [ETIME()]        | [etimefmt()]     | [ISDAYLIGHT()]   |
-| [MTIME()]        | [STARTTIME()]  | [SECS()]         | [STARTTIME()]    |
-| [STRINGSECS()]   | [time()]         | [timecalc()]     | [timefmt()]      |
-| [TIMESTRING()]   | [UPTIME()]       | [time()]      |                  |
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [CONVSECS()]    | [CONVTIME()]    | [CONVUTCSECS()] | [CONVUTCTIME()] |
+| [CTIME()]       | [ETIME()]       | [ETIMEFMT()]    | [ISDAYLIGHT()]  |
+| [MTIME()]       | [RESTARTTIME()] | [SECS()]        | [STARTTIME()]   |
+| [STRINGSECS()]  | [TIME()]        | [TIMECALC()]    | [TIMEFMT()]     |
+| [TIMESTRING()]  | [UPTIME()]      | [UTCTIME()]     |                 |
 
 ::: seealso
 - [timezones]
@@ -276,24 +284,24 @@
 # Utility functions
   These functions don't quite fit into any other category.
 
-|                  |                  |                  |                  |
-|------------------|------------------|------------------|------------------|
-| [@@()]           | [ALLOF()]        | [ansi()]         | [ATRLOCK()]      |
-| [BEEP()]         | [BENCHMARK()]    | [CHECKPASS()]    | [CLONE()]        |
-| [CMDLINK()]      | [CREATE()]       | [DIE()]          | [DIG()]          |
-| [ENDTAG()]       | [FIRSTOF()]      | [fn()]           | [FUNCTIONS()]    |
-| [HTML()]         | [IBREAK()]       | [ilev()]         | [ilev()]         |
-| [ISDBREF()]      | [ISINT()]        | [ISNUM()]        | [ISDBREF()]      |
-| [ISREGEXP()]     | [ISWORD()]       | [ilev()]        | [LETQ()]         |
-| [LINK()]         | [LIST()]         | [LISTQ()]        | [LNUM()]         |
-| [LOCALIZE()]     | [LSET()]         | [@@()]         | [VERSION()]   |
-| [OBJEVAL()]      | [OPEN()]         | [PCREATE()]      | [R()]            |
-| [RAND()]         | [S()]            | [SCAN()]         | [SET()]          |
-| [setq()]         | [setq()]         | [STEXT()]         | [soundex()]      |
-| [SOUNDLIKE()]   | [speak()]        | [STEXT()]        | [SUGGEST()]      |
-| [TAG()]          | [TAGWRAP()]      | [TEL()]          | [TESTLOCK()]     |
-| [TEXTFILE()]  | [TEXTFILE()]     | [LISTQ()]       | [UPTIME()]       |
-| [valid()]        | [WIPE()]         |                  |                  |
+|                    |                    |                    |                    |
+|--------------------|--------------------|--------------------|--------------------|
+| [@@()]             | [ALLOF()]          | [ANSI()]           | [ATRLOCK()]        |
+| [BEEP()]           | [BENCHMARK()]      | [CHECKPASS()]      | [CLONE()]          |
+| [CMDLINK()]        | [CREATE()]         | [DIE()]            | [DIG()]            |
+| [ENDTAG()]         | [FIRSTOF()]        | [FN()]             | [FUNCTIONS()]      |
+| [HTML()]           | [IBREAK()]         | [ILEV()]           | [INUM()]           |
+| [ISDBREF()]        | [ISINT()]          | [ISNUM()]          | [ISOBJID()]        |
+| [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
+| [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
+| [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
+| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
+| [RAND()]           | [RESTRICTEDEXPR()] | [S()]              | [SCAN()]           |
+| [SET()]            | [SETQ()]           | [SETR()]           | [SLEV()]           |
+| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
+| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
+| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
+| [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
 
 # Wiki functions
   Wiki functions read the shared wiki — the same pages the web portal serves.

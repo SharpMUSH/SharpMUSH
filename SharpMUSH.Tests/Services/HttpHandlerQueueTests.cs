@@ -81,6 +81,35 @@ public class HttpHandlerQueueTests
 	}
 
 	/// <summary>
+	/// <c>run_http_command</c> queues <c>@include #&lt;handler&gt;/&lt;METHOD&gt;</c> (<c>src/cque.c:1097</c>), and
+	/// <c>queue_include_attribute</c> reads with <c>noparent = 0</c> (<c>cque.c:712-717</c>), so the entry
+	/// point may live on the handler's parent.
+	/// </summary>
+	[Test]
+	public async Task AHandlerEntryPointIsInheritedFromItsParent()
+	{
+		var handler = await Evaluate($"create(HttpChildHandler{Guid.NewGuid():N})");
+		var code = await Evaluate($"create(HttpParentCode{Guid.NewGuid():N})");
+		var marker = TestIsolationHelpers.GenerateUniqueName("HttpInherited");
+		await Evaluate($"attrib_set({code}/GET,lit(think {marker}))");
+		await Evaluate($"parent({handler},{code})");
+
+		var dispatcher = WebAppFactoryArg.Services.GetRequiredService<IHttpHandlerCommandDispatcher>();
+		Task<Found<HttpHandlerResult>> request;
+		using (TestOptionsOverride.Scope(o => o with
+		{
+			Database = o.Database with { HttpHandler = (uint)DBRef.Parse(handler).Number, HttpRequestsPerSecond = 30 }
+		}))
+		{
+			request = dispatcher.DispatchAsync("GET", "/inherited", "", []).AsTask();
+		}
+
+		var result = (await request.WaitAsync(TimeSpan.FromSeconds(10))).Expect<HttpHandlerResult>();
+		await Assert.That(result.Status).IsEqualTo(200);
+		await Assert.That(result.Body.TrimEnd()).IsEqualTo(marker);
+	}
+
+	/// <summary>
 	/// An entry that leaves the queue without running — halted with <c>@halt/pid</c>, or dropped at
 	/// shutdown — still answers the request rather than leaving it waiting on a token that may never fire.
 	/// </summary>

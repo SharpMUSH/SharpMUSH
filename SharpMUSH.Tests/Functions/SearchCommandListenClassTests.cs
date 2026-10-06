@@ -81,12 +81,13 @@ public class SearchCommandListenClassTests
 	}
 
 	/// <summary>
-	/// A pattern the searcher may not read never makes its object a match: COMMAND and LISTEN test
-	/// only the attributes the searcher can see, so an examinable object whose $-command and ^-listen
-	/// are <c>mortal_dark</c> drops out for a mortal, while its readable twin is found.
+	/// COMMAND and LISTEN ask whether the object would respond, not whether the searcher may read its
+	/// pattern: raw_search calls atr_comm_match with no attribute permission check
+	/// (<c>src/wiz.c:2568-2586</c>), so an examinable object whose $-command and ^-listen are
+	/// <c>mortal_dark</c> is found by a mortal just as its readable twin is.
 	/// </summary>
 	[Test]
-	public async Task CommandAndListen_NeverMatchAPatternTheSearcherCannotRead()
+	public async Task CommandAndListen_MatchWhetherOrNotTheSearcherCanReadThePattern()
 	{
 		var token = UniqueToken("dark");
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
@@ -109,7 +110,7 @@ public class SearchCommandListenClassTests
 			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi)")))!.Message!.ToPlainText());
 
 		await Assert.That(found).Contains(readable.Number);
-		await Assert.That(found).DoesNotContain(hidden.Number);
+		await Assert.That(found).Contains(hidden.Number);
 	}
 
 	/// <summary>Letters and hex digits only, so it is a literal inside a glob.</summary>

@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -316,48 +317,23 @@ public static class SearchSpecEngine
 				}
 			}
 
-			// LISTEN and COMMAND both test the object's visible attributes; read them at most once, and
-			// only when an earlier restriction has not already ruled the object out.
-			SharpAttributesOrError? visibleAttributes = null;
+			// raw_search (src/wiz.c:2568-2586) tests both with atr_comm_match, locks unchecked: $-commands
+			// through the @parent chain, ^-patterns through it only for a LISTEN_PARENT object, never the
+			// type ancestor. COMMAND is tested first, as Penn tests it.
+			if (matches && hasCommandCriteria)
+			{
+				var commands = await mediator.Send(new GetCommandAttributesQuery(typedObj));
+				matches = commands.Any(command => SoftcodeRegex.Match(command.CompiledRegex, commandPattern!) is { Success: true });
+			}
 
 			if (matches && hasListenCriteria)
 			{
-				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
-				if (attributesResult is SharpAttribute[] attributes)
-				{
-					var hasMatchingListen = attributes.Any(attr =>
-						(attr.LongName.Equals("LISTEN", StringComparison.OrdinalIgnoreCase)
-							&& PatternAccepts(attr, attr.Value.ToPlainText(), listenPattern!))
-						|| StoredPatternAccepts(attr, CommandDiscoveryService.ListenPatternRegex(), listenPattern!));
-
-					if (!hasMatchingListen)
-					{
-						matches = false;
-					}
-				}
-				else
-				{
-					matches = false;
-				}
-			}
-
-			if (matches && hasCommandCriteria)
-			{
-				var attributesResult = visibleAttributes ??= await attributeService.GetVisibleAttributesAsync(executor, typedObj);
-				if (attributesResult is SharpAttribute[] attributes)
-				{
-					var hasMatchingCommand = attributes.Any(attr =>
-						StoredPatternAccepts(attr, CommandDiscoveryService.CommandPatternRegex(), commandPattern!));
-
-					if (!hasMatchingCommand)
-					{
-						matches = false;
-					}
-				}
-				else
-				{
-					matches = false;
-				}
+				// @listen itself is atr_get_noparent (src/wiz.c:2575).
+				var listen = await attributeService.GetAttributeAsync(typedObj, typedObj, "LISTEN",
+					IAttributeService.AttributeMode.Read, parent: false);
+				matches = (listen is SharpAttribute[] { Length: > 0 } chain && PatternAccepts(chain[^1], chain[^1].Value.ToPlainText(), listenPattern!))
+					|| (await parser.ServiceProvider.GetRequiredService<IListenPatternMatcher>().MatchListenPatternsAsync(
+						typedObj, listenPattern!, executor, checkParents: await typedObj.HasFlag("LISTEN_PARENT"))).Length > 0;
 			}
 
 			if (matches)
@@ -423,21 +399,6 @@ public static class SearchSpecEngine
 				Results.Add(match);
 			}
 		}
-	}
-
-	/// <summary>
-	/// Whether the <c>$</c>- or <c>^</c>-pattern stored in <paramref name="attribute"/> accepts
-	/// <paramref name="text"/>. The object's pattern is the glob and the search restriction is the
-	/// subject, as in PennMUSH's <c>raw_search</c> (<c>src/wiz.c</c>), which hands the restriction to
-	/// <c>atr_comm_match</c> as the text a player typed or said. A <c>no_command</c> attribute is
-	/// skipped, as <c>atr_comm_match</c> skips <c>AF_NOPROG</c>.
-	/// </summary>
-	private static bool StoredPatternAccepts(SharpAttribute attribute, Regex patternRegex, string text)
-	{
-		if (attribute.IsNoprog()) return false;
-		var match = patternRegex.Match(attribute.Value.ToPlainText());
-		return match.Success && PatternAccepts(attribute,
-			CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value), text);
 	}
 
 	/// <summary>

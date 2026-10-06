@@ -1,7 +1,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
-   a LIVE tag while it runs, "room · N poses · when", Read, and — for a running scene — the live view
+   a LIVE tag while it runs (PAUSED while it waits to resume), "room · N poses · when", Read, and — for a running scene — the live view
    as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. *@
 <article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
     <div class="scene-card-main">
@@ -10,6 +10,10 @@
             @if (Scene.IsLive)
             {
                 <Pill Tag="true" Dot="var(--accent)" Class="scene-card-live">@Loc["RolLiveBadge"]</Pill>
+            }
+            else if (Scene.IsPaused)
+            {
+                <Pill Tag="true" Class="scene-card-paused">@Loc["RolPausedBadge"]</Pill>
             }
             @if (!Scene.IsPublic)
             {

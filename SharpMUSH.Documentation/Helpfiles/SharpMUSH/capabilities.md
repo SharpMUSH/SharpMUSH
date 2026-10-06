@@ -1,6 +1,6 @@
 <!-- help-article
 {
-  "corpus": "ahelp",
+  "corpus": "help",
   "id": "administrative-capabilities",
   "lookup": "administrative capabilities",
   "aliases": [],

@@ -45,4 +45,6 @@ You can do other, slightly more complex things with the mail system, too, like f
 
 ::: seealso
 - [MAIL]
+- [@mail]
+- [gs chat]
 :::

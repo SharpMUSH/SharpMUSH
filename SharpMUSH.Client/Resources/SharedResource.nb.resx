@@ -5147,6 +5147,18 @@
     <value>Dine poser går til en annen scene. Bli med i denne for å posere her.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>En scene pågår her</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Åpne historien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Skjul denne meldingen</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Bli med i scenen</value>
     <comment>MT</comment>
@@ -5622,5 +5634,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Hver kategoris egen side.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSET</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Sett scenen på pause</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Gjenoppta scenen</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Start nå</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Nytt tidspunkt (valgfritt)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Klokkeslett</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>En scene på pause slutter å loggføre og flyttes fra Direkte til planen til den gjenopptas.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scenen ble ikke satt på pause.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Ikke noe rom ennå</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Vert: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>På pause, uten tidspunkt</value>
   </data>
 </root>

@@ -1,0 +1,83 @@
+@using System.Globalization
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The schedule as an agenda: the scenes waiting to run grouped under their day, each with its start
+   time, its title into the scene's page, where it is and who hosts it. The list arrives in time order
+   (the server's scheduled filter), with the paused scenes that have no time last; those close the
+   agenda under a heading of their own rather than a date. Days and times are the reader's own. *@
+<div class="schedule-agenda">
+    @foreach (var day in Days())
+    {
+        <section class="schedule-day">
+            <h2 class="schedule-day-head">@day.Heading</h2>
+            <KitCard>
+                <ol class="schedule-rows">
+                    @foreach (var scene in day.Scenes)
+                    {
+                        <li @key="scene.Id" class="schedule-row">
+                            <span class="schedule-time">@(scene.ScheduledForUtc is { } due ? due.ToLocalTime().ToString("t", CultureInfo.CurrentCulture) : "—")</span>
+                            <div class="schedule-main">
+                                <div class="schedule-top">
+                                    <a class="schedule-title" href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}")">@Loc.Title(scene)</a>
+                                    @if (scene.IsPaused)
+                                    {
+                                        <Pill Tag="true" Class="schedule-paused">@Loc["RolPausedBadge"]</Pill>
+                                    }
+                                    @if (!scene.IsPublic)
+                                    {
+                                        <Pill Tag="true" Class="schedule-private">@Loc["NavScenePrivate"]</Pill>
+                                    }
+                                </div>
+                                <div class="schedule-meta">
+                                    <span>@(string.IsNullOrWhiteSpace(scene.RoomName) ? Loc["RolScheduleNoRoom"] : scene.RoomName)</span>
+                                    @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
+                                    {
+                                        <span aria-hidden="true">·</span>
+                                        <span>@string.Format(Loc["RolScheduleHostedBy"], scene.OwnerName)</span>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ol>
+            </KitCard>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<SceneSummary> Scenes { get; set; }
+
+    private sealed record Day(string Heading, List<SceneSummary> Scenes);
+
+    /// <summary>The scenes by local day, in the order they came; the untimed ones last, under their own heading.</summary>
+    private IEnumerable<Day> Days()
+    {
+        var days = new List<Day>();
+        var untimed = new List<SceneSummary>();
+        DateOnly? current = null;
+        foreach (var scene in Scenes)
+        {
+            if (scene.ScheduledForUtc is not { } due)
+            {
+                untimed.Add(scene);
+                continue;
+            }
+
+            var local = due.ToLocalTime();
+            var date = DateOnly.FromDateTime(local.DateTime);
+            if (date != current)
+            {
+                days.Add(new Day(local.ToString("D", CultureInfo.CurrentCulture), []));
+                current = date;
+            }
+            days[^1].Scenes.Add(scene);
+        }
+
+        if (untimed.Count > 0)
+        {
+            days.Add(new Day(Loc["RolScheduleNoTime"], untimed));
+        }
+        return days;
+    }
+}
