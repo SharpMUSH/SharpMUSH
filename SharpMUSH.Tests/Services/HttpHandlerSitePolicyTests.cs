@@ -99,7 +99,7 @@ public class HttpHandlerSitePolicyTests
 	{
 		var fixture = new Fixture(new Dictionary<string, string[]> { ["203.0.113.9"] = ["!connect"] });
 
-		var result = (await fixture.Service.DispatchAsync("GET", "/open", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
+		var result = (await fixture.Service.DispatchAsync("GET", "/open", "", [], "198.51.100.4", null)).Expect<HttpHandlerResult>();
 
 		await Assert.That(result.Status).IsEqualTo(200);
 		await Assert.That(fixture.Executed).Contains("GET");
@@ -117,7 +117,7 @@ public class HttpHandlerSitePolicyTests
 		// opaque 403.
 		var fixture = new Fixture(new Dictionary<string, string[]> { ["*"] = ["!connect"] });
 
-		var result = (await fixture.Service.DispatchAsync("GET", "/chargen/schema", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
+		var result = (await fixture.Service.DispatchAsync("GET", "/chargen/schema", "", [], "198.51.100.4", null)).Expect<HttpHandlerResult>();
 
 		await Assert.That(result.Status).IsEqualTo(200);
 		await Assert.That(fixture.Executed).Contains("GET");

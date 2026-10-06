@@ -92,7 +92,7 @@ The verb routers (`&GET`, `&POST`, …) are pre-installed on `#8`. URLs live und
 &GET`GUILDROSTER #8=@respond/type application/json; think json_array(iter(lattr(#300/DATA`*`NAME), json(string, get(#300/%i0))))
 ```
 
-- In a **sub-handler**: `%0` = request BODY (raw); query params arrive pre-decoded as `%q<form.name>`; headers as `%q<hdr.host>` etc.
+- In a **sub-handler**: `%0` = request BODY (raw); query params arrive pre-decoded as `%q<form.name>`; headers as `%q<hdr.host>` etc. (`Authorization`, `Proxy-Authorization` and `Cookie` are withheld); the signed-in caller's objid as `%q<viewer>` (empty when anonymous).
 - Everything `think`/`@pemit`-ed to the handler during the run IS the response body; queued work (`@wait`, $-commands) never reaches the client — write inline.
 - `@respond <code> <text>`, `@respond/type <ctype>`, `@respond/header <name>=<value>` control the response; default is 404 for unmatched routes.
 - Build JSON with `json()`, `json_array()`, `json_group_by()`, `json_query()` — never hand-concatenate escaped brackets.

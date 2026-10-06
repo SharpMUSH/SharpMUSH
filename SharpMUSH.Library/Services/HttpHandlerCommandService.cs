@@ -30,7 +30,7 @@ public class HttpHandlerCommandService(
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
 		CancellationToken ct = default)
-		=> DispatchAsync(method, path, body, headers, IHttpHandlerCommandDispatcher.UnknownAddress, ct);
+		=> DispatchAsync(method, path, body, headers, IHttpHandlerCommandDispatcher.UnknownAddress, null, ct);
 
 	/// <inheritdoc />
 	public async ValueTask<Found<HttpHandlerResult>> DispatchAsync(
@@ -39,9 +39,11 @@ public class HttpHandlerCommandService(
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
 		string clientIp,
+		DBRef? viewer,
 		CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
+		path = WithoutCredentialParameters(path);
 		var configuration = options.CurrentValue.Database;
 		var handlerDbRef = configuration.HttpHandler;
 		if (handlerDbRef is null or 0)
@@ -76,7 +78,7 @@ public class HttpHandlerCommandService(
 			// A request that gave up while waiting its turn (or whose token has since been disposed) has
 			// nothing left to answer.
 			if (Volatile.Read(ref abandoned)) return null;
-			var execution = ExecuteAsync(method, path, body, headers, clientIp, handler, parentBudget, ct).AsTask();
+			var execution = ExecuteAsync(method, path, body, headers, clientIp, viewer, handler, parentBudget, ct).AsTask();
 			// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
 			await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			completion.TrySetFromTask(execution);
@@ -103,6 +105,7 @@ public class HttpHandlerCommandService(
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
 		string clientIp,
+		DBRef? viewer,
 		long handlerDbRefValue,
 		ExecutionBudget? parentBudget,
 		CancellationToken ct)
@@ -153,7 +156,7 @@ public class HttpHandlerCommandService(
 				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
 				var evalParser = parser.Push(ParserState.RootFor(handlerRef.Value) with
 				{
-					Registers = new([BuildHeaderRegisters(headers)]),
+					Registers = new([BuildRequestRegisters(headers, viewer)]),
 					EnvironmentRegisters = new Dictionary<string, CallState>
 					{
 						["0"] = new CallState(path),
@@ -206,11 +209,50 @@ public class HttpHandlerCommandService(
 	}
 
 	/// <summary>
+	/// Request headers that carry a credential. The portal's account-session bearer, a client's MUSH
+	/// password (Basic) and any cookie a proxy in front of the game set all arrive this way, and none
+	/// of them is the handler's to read: every route's softcode sees the same registers, and anything
+	/// it can read it can log or send elsewhere. They never become <c>%q&lt;hdr.*&gt;</c> registers.
+	/// Who is calling reaches softcode as <c>%q&lt;viewer&gt;</c> instead, already verified.
+	/// Names are compared after register normalization, so a client cannot respell one past this.
+	/// </summary>
+	public static readonly IReadOnlySet<string> CredentialHeaders =
+		new HashSet<string>(["AUTHORIZATION", "PROXY-AUTHORIZATION", "COOKIE"], StringComparer.Ordinal);
+
+	/// <summary>
+	/// Query parameters that carry a credential: <c>access_token</c> is the account-session token's
+	/// query-string form, which the server honours on every route (SignalR transports cannot send a
+	/// header). It is removed from <c>%0</c> for the same reason as <see cref="CredentialHeaders"/>.
+	/// </summary>
+	public const string AccessTokenParameter = "access_token";
+
+	/// <summary>
+	/// <paramref name="path"/> with every <see cref="AccessTokenParameter"/> removed from its query
+	/// string. The rest of the query is left exactly as the client wrote it.
+	/// </summary>
+	public static string WithoutCredentialParameters(string path)
+	{
+		var question = path.IndexOf('?');
+		if (question < 0)
+		{
+			return path;
+		}
+
+		var kept = path[(question + 1)..].Split('&')
+			.Where(pair => !Uri.UnescapeDataString(pair.Split('=', 2)[0].Replace('+', ' '))
+				.Equals(AccessTokenParameter, StringComparison.OrdinalIgnoreCase))
+			.ToArray();
+		return kept.Length == 0 ? path[..question] : $"{path[..question]}?{string.Join('&', kept)}";
+	}
+
+	/// <summary>
 	/// Seeds the q-registers Penn provides to HTTP handler code: one <c>HDR.&lt;NAME&gt;</c> register
 	/// per header (duplicate headers joined with a newline, i.e. <c>%r</c>), plus <c>HEADERS</c>
-	/// holding the space-separated list of header names.
+	/// holding the space-separated list of header names. <see cref="CredentialHeaders"/> are left
+	/// out of both. <c>VIEWER</c> holds the objid of the character the request authenticated as, or
+	/// nothing for an anonymous one.
 	/// </summary>
-	private static Dictionary<string, MString> BuildHeaderRegisters(IEnumerable<(string Name, string Value)> headers)
+	private static Dictionary<string, MString> BuildRequestRegisters(IEnumerable<(string Name, string Value)> headers, DBRef? viewer)
 	{
 		var registers = new Dictionary<string, MString>();
 		var names = new List<string>();
@@ -218,7 +260,7 @@ public class HttpHandlerCommandService(
 		foreach (var (name, value) in headers)
 		{
 			var normalized = Utilities.RegisterNames.NormalizeSegment(name);
-			if (normalized.Length == 0)
+			if (normalized.Length == 0 || CredentialHeaders.Contains(normalized))
 			{
 				continue;
 			}
@@ -236,6 +278,7 @@ public class HttpHandlerCommandService(
 		}
 
 		registers["HEADERS"] = MarkupText.Plain(string.Join(' ', names));
+		registers["VIEWER"] = MarkupText.Plain(viewer?.ToString() ?? string.Empty);
 		return registers;
 	}
 

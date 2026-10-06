@@ -72,7 +72,7 @@ To change the Content Type:
 Add Headers:
 ```sharp
 > @respond/header X-Powered-By=MUSHCode
-> @respond/header {Set-Cookie: name=Bob; Max-Age=3600; Version=1}
+> @respond/header Cache-Control=no-store
 ```
 
 Adding a Content-Length header is not allowed - SharpMUSH calculates it from the output before sending.
