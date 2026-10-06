@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
@@ -35,8 +36,9 @@ public static partial class MailDelivery
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
 	/// <param name="Body">The text as the sender wrote it, which is what the <c>clear</c> check reads.</param>
-	/// <param name="Signature">Appended to <paramref name="Body"/> when stored; empty for a forward.</param>
-	public sealed record Letter(MString Subject, MString Body, MString Signature, bool Urgent, bool Forwarded);
+	/// <param name="Signed">Whether the sender's <c>MAILSIGNATURE</c> is appended to <paramref name="Body"/>
+	/// when stored: not for <c>/nosig</c>, and never for a forward.</param>
+	public sealed record Letter(MString Subject, MString Body, bool Signed, bool Urgent, bool Forwarded);
 
 	private const string Inbox = "INBOX";
 
@@ -197,8 +199,8 @@ public static partial class MailDelivery
 			Cleared = false,
 			Forwarded = letter.Forwarded,
 			Folder = Inbox,
-			Content = letter.Signature.Length > 0
-				? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
+			Content = letter.Signed
+				? MarkupText.Concat([letter.Body, await SignatureAsync(parser, services, sender)])
 				: letter.Body,
 			Subject = letter.Subject,
 			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
@@ -250,8 +252,11 @@ public static partial class MailDelivery
 				break;
 		}
 
-		// extmail.c:1700 — a privileged recipient's AMAIL, never for mail to oneself, queued by did_it.
+		// extmail.c:1700 — a privileged recipient's own AMAIL (atr_get_noparent: a parent's does not count),
+		// never for mail to oneself, queued by did_it.
 		if (services.Configuration.CurrentValue.Attribute.AMail
+				&& await services.Mediator.CreateStream(new GetAttributeQuery(target.Object.DBRef, ["AMAIL"]))
+					.FirstOrDefaultAsync() is not null
 				&& sender.Object().DBRef != target.Object.DBRef
 				&& await recipient.IsPriv())
 		{
@@ -260,6 +265,22 @@ public static partial class MailDelivery
 
 		return true;
 	}
+
+	/// <summary>
+	/// <c>call_attrib(player, "MAILSIGNATURE", buff, player, ...)</c> (<c>extmail.c:1644</c>): the sender's
+	/// signature, inherited and evaluated with the sender as enactor, appended to the message as it stands -
+	/// with no separator, so a signature that wants a line of its own starts with <c>%r</c>.
+	/// </summary>
+	private static ValueTask<MString> SignatureAsync(IMUSHCodeParser parser, Services services, AnySharpObject sender)
+		=> parser.With(
+			state => state with
+			{
+				Executor = sender.Object().DBRef,
+				Caller = sender.Object().DBRef,
+				Enactor = sender.Object().DBRef
+			},
+			signatureParser => AttributeHelpers.EvaluateFormatAttribute(services.Attributes, signatureParser, sender,
+				sender, "MAILSIGNATURE", new(), MarkupText.Empty));
 
 	/// <summary><c>extmail.c:1547</c> — the hard cap a MAILQUOTA cannot exceed.</summary>
 	private const int QuotaCeiling = 50000;

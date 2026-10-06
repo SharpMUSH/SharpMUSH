@@ -1008,8 +1008,10 @@ public partial class Commands
 		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text)> ReadTargetAttribute(
 			AnySharpObject targetObject, string attributeName)
 		{
+			// queue_include_attribute reads with noparent 0 (cque.c:712-717): parents and the type
+			// ancestor count.
 			var attributeResult = await AttributeService.GetAttributeAsync(
-				executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+				executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, parent: true);
 
 			if (attributeResult is Error<string> attributeError)
 			{

@@ -333,7 +333,7 @@ public partial class Functions
 		// (parents and ANCESTOR_PLAYER) and evaluated, whoever asks.
 		return new CallState(await AttributeHelpers.EvaluateFormatAttribute(
 			AttributeService, parser, executor, player, "DOING",
-			new Dictionary<string, CallState>(), MarkupText.Empty, checkParents: true, ignorePermissions: true));
+			new Dictionary<string, CallState>(), MarkupText.Empty));
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

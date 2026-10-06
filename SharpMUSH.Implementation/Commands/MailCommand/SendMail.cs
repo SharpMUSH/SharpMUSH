@@ -103,15 +103,7 @@ public static class SendMail
 
 		var (subject, message) = SplitSubject(subjectAndMessage);
 
-		var signature = MarkupText.Empty;
-		if (!noSignature
-				&& await mediator.CreateStream(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]))
-					.FirstOrDefaultAsync() is { } signatureAttribute)
-		{
-			signature = signatureAttribute.Value;
-		}
-
-		var letter = new MailDelivery.Letter(subject, message, signature, urgent, Forwarded: false);
+		var letter = new MailDelivery.Letter(subject, message, Signed: !noSignature, urgent, Forwarded: false);
 
 		var delivered = new List<SharpPlayer>();
 		foreach (var (player, quiet) in knownPlayerList)

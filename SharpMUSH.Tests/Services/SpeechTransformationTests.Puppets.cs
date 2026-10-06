@@ -36,6 +36,27 @@ public partial class SpeechTransformationTests
 		await Assert.That(string.Join("|", Output(pipeline.Bus))).IsEqualTo($"{node.Object().Name}> {header}hello");
 	}
 
+	/// <summary>
+	/// A puppet's relay always starts "Name> " (PennMUSH <c>notify.c:1405-1420</c>); <c>@prefix</c> is
+	/// only for AUDIBLE propagation (<c>make_prefix_str</c>, <c>notify.c:604-625</c>).
+	/// </summary>
+	[Test]
+	public async Task PuppetRelayIgnoresThePuppetsPrefix()
+	{
+		var owner = await Player();
+		var speaker = await Player();
+		var puppet = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "PrefixPuppet");
+		await Admin($"@chown {puppet}={owner.DbRef}");
+		await Flag(puppet, "PUPPET");
+		await Admin($"@prefix {puppet}=Ears:");
+		var pipeline = await NotificationPipeline(owner.DbRef);
+		var routing = ActivatorUtilities.CreateInstance<ListenerRoutingService>(Factory.Services, pipeline.Connections, pipeline.Bus);
+		var node = await Node(puppet);
+		await routing.ProcessNotificationAsync(new NotificationContext(puppet, (await node.Where()).Object().DBRef, []),
+			"hello", await Node(speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(string.Join("|", Output(pipeline.Bus))).IsEqualTo($"{node.Object().Name}> hello");
+	}
+
 	[Test]
 	public async Task ParanoidHeaderNamesTheActualOwnerOfAThingSpeaker()
 	{

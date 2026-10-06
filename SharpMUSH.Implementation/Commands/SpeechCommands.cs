@@ -347,7 +347,7 @@ public partial class Commands
 				},
 				pageParser => AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
-					outPageFormatArgs, outgoingDefault, checkParents: true));
+					outPageFormatArgs, outgoingDefault));
 			await NotifyService.Notify(executor, outgoing, executor);
 
 			foreach (var recipient in successfulRecipients)
@@ -363,7 +363,7 @@ public partial class Commands
 					},
 					pageParser => AttributeHelpers.EvaluateFormatAttribute(
 						AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
-						pageFormatArgs, incomingDefault, checkParents: true));
+						pageFormatArgs, incomingDefault));
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
 

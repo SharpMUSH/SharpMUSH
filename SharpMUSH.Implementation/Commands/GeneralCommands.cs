@@ -442,10 +442,18 @@ public partial class Commands
 		var checkParents = switches.Contains("PARENT");
 		var named = !string.IsNullOrEmpty(attributePattern);
 
-		var atrs = named
-			? await AttributeService.GetAttributePatternAsync(executor, viewing, attributePattern!, checkParents,
-				IAttributeService.AttributePatternMode.Wildcard)
-			: await AttributeService.GetVisibleAttributesAsync(executor, viewing);
+		// Each attribute with the object it was read from: /parent shows an inherited one as
+		// #<parent>/NAME (examine_helper, look.c:353-358).
+		var atrs = checkParents
+			? await InheritedExamineAttributesAsync(executor, viewing, named ? attributePattern! : "*")
+			: (named
+				? await AttributeService.GetAttributePatternAsync(executor, viewing, attributePattern!, false,
+					IAttributeService.AttributePatternMode.Wildcard)
+				: await AttributeService.GetVisibleAttributesAsync(executor, viewing)) switch
+			{
+				SharpAttribute[] own => [.. own.Select(attr => (Attribute: attr, Source: viewing.Object().DBRef))],
+				_ => []
+			};
 
 		// examine_helper and examine_helper_veiled both drop DESCRIBE from a whole-object listing when
 		// ex_public_attribs is on (look.c:310-312, :346-348) -- the description line above already is it.
@@ -454,14 +462,14 @@ public partial class Commands
 
 		var shown = 0;
 
-		if (atrs is SharpAttribute[] visibleAttributes)
+		if (atrs.Length > 0)
 		{
 			var showAll = switches.Contains("ALL");
 
 			// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
 			int? width = null;
 
-			foreach (var attr in visibleAttributes)
+			foreach (var (attr, readFrom) in atrs)
 			{
 				if (skipDescribe && attr.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
 				{
@@ -484,7 +492,8 @@ public partial class Commands
 
 				shown++;
 
-				var header = MarkupText.Plain($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
+				var inheritedFrom = readFrom.Number == viewing.Object().DBRef.Number ? "" : $"#{readFrom.Number}/";
+				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
 				var parseType = attr.SyntaxParseType();
 
 				if (parseType is null)
@@ -529,6 +538,53 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(enactor,
 				nameof(ErrorMessages.Notifications.ExamineNoMatchingAttributes), enactor);
 		}
+	}
+
+	/// <summary>
+	/// <c>atr_iter_get_parent</c> (<c>src/attrib.c:1501-1530</c>) for <c>examine/parent</c>: a name without
+	/// wildcards is looked up as <c>atr_get</c> would, parents and type ancestor included; a pattern walks
+	/// the object and its <c>@parent</c> chain, nearest first. Each match carries the object it is on.
+	/// </summary>
+	private async ValueTask<(SharpAttribute Attribute, DBRef Source)[]> InheritedExamineAttributesAsync(
+		AnySharpObject executor, AnySharpObject viewing, string pattern)
+	{
+		var viewingRef = viewing.Object().DBRef;
+
+		if (!pattern.Contains('*') && !pattern.Contains('?') && !pattern.EndsWith('`'))
+		{
+			if (await AttributeService.GetAttributeAsync(executor, viewing, pattern, IAttributeService.AttributeMode.Read,
+					parent: true) is not SharpAttribute[] chain)
+			{
+				return [];
+			}
+
+			var path = chain.Last().LongName.Split('`');
+			var source = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(viewingRef, path))
+				.FirstOrDefaultAsync() is { } hit
+				? hit.SourceObject
+				: await viewing.Ancestor(Configuration) is { } ancestor
+					&& await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(ancestor, path))
+						.FirstOrDefaultAsync() is { } fromAncestor
+					? fromAncestor.SourceObject
+					: viewingRef;
+
+			return [(chain.Last(), source)];
+		}
+
+		if (await AttributeService.GetAttributePatternAsync(executor, viewing, pattern, true,
+				IAttributeService.AttributePatternMode.Wildcard) is not SharpAttribute[] permitted)
+		{
+			return [];
+		}
+
+		var sources = new Dictionary<string, DBRef>(StringComparer.OrdinalIgnoreCase);
+		await foreach (var match in Mediator.CreateStream(new GetAttributesQuery(viewingRef, pattern.ToUpper(), true,
+				IAttributeService.AttributePatternMode.Wildcard)))
+		{
+			sources.TryAdd(match.Attribute.LongName, match.SourceObject);
+		}
+
+		return [.. permitted.Select(attr => (attr, sources.GetValueOrDefault(attr.LongName, viewingRef)))];
 	}
 
 	private async ValueTask<string> FormatLockLineAsync(AnySharpObject viewer, string name, SharpLockData data)

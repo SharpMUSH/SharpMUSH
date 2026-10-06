@@ -293,14 +293,9 @@ public class ListenerRoutingService(
 				return;
 		}
 
-		var prefixAttr = await AttributeService.GetAttributeAsync(
-			puppet, puppet, "PREFIX",
-			IAttributeService.AttributeMode.Read,
-			parent: false);
-
-		var prefix = prefixAttr is SharpAttribute[] prefixChain
-			? prefixChain.Last().Value.ToPlainText()
-			: $"{puppet.Object().Name}> ";
+		// Always "Name> " (notify.c:1405-1420). @prefix belongs to AUDIBLE propagation only
+		// (make_prefix_str, notify.c:604-625), never to a puppet's relay.
+		var prefix = $"{puppet.Object().Name}> ";
 
 		// The relay stays an MString all the way to the ConnectionServer, which owns the wire format
 		// — the same contract NotifyService publishes under. This used to render ANSI here and push
