@@ -5648,6 +5648,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pe pauză, fără oră</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Editează scena</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Prezentare</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>Despre ce este scena, ca oamenii să decidă dacă vin.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Oricine poate urmări</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Dată</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Scena nu a fost modificată.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Adaugă în calendar</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Calendar</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Alte calendare (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Postează ca</value>
   </data>

@@ -5648,6 +5648,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>已暂停，未定时间</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>编辑场景</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>场景的内容，方便大家决定是否参加。</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>任何人都可以观看</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>场景未更改。</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>添加到日历</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google 日历</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>其他日历 (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>发送方式</value>
   </data>

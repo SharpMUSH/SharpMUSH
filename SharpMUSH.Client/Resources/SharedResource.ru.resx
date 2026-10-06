@@ -5648,6 +5648,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>На паузе, без времени</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Изменить сцену</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Анонс</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>О чём сцена, чтобы люди решили, придут ли они.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Смотреть может любой</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Дата</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Сцена не изменена.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Добавить в календарь</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Календарь</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Другие календари (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Отправить как</value>
   </data>

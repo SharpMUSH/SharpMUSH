@@ -5,12 +5,14 @@
 @inject SceneService SceneService
 @inject IAccountAuthState AccountAuth
 @inject GameCommandService Commands
+@inject NavigationManager Navigation
 @implements IDisposable
 
 @* A scene's log in the D1 kit: the plain header (the room as kicker, the title, LIVE and the meta
    line, Watch Live and Back), the tag chips, the log in a card, and an aside with the scene's details
    and the characters who posed in it. The scene's owner, acting as its owner, can pause a running
-   scene (with a new time if it has one) and start or resume one that waits on the schedule. *@
+   scene (with a new time if it has one), start or resume one that waits on the schedule, and edit its
+   title, pitch, visibility and time. A scene with a time to come can be added to a calendar. *@
 <div class="scene-detail-page">
     @if (_loading)
     {
@@ -57,6 +59,10 @@
             <Actions>
                 @if (ActingOwner(scene) is not null)
                 {
+                    <MudTooltip Text="@Loc["RolEditScene"]">
+                        <CapsuleButton Class="scene-detail-edit" Icon="@Icons.Material.Outlined.Edit" AriaLabel="@Loc["RolEditScene"]"
+                                       Expanded="@_editing" Disabled="@_busy" OnClick="ToggleEdit" />
+                    </MudTooltip>
                     if (scene.IsLive)
                     {
                         <MudTooltip Text="@Loc["RolPauseScene"]">
@@ -80,6 +86,38 @@
                 <CapsuleButton Icon="@Icons.Material.Outlined.ArrowBack" Href="/scenes">@Loc["RolBackToScenes"]</CapsuleButton>
             </Actions>
         </PlainPageHeader>
+
+        @if (Pitch(scene) is { } pitch)
+        {
+            <p class="scene-detail-pitch">@pitch</p>
+        }
+
+        @if (_editing)
+        {
+            <KitCard Class="scene-edit" Title="@Loc["RolEditScene"]">
+                <div class="scene-edit-form">
+                    <MudTextField @bind-Value="_editTitle" Label="@Loc["RolSceneTitleLabel"]" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Class="scene-edit-title" />
+                    <MudTextField @bind-Value="_editPitch" Label="@Loc["RolScenePitchLabel"]" HelperText="@Loc["RolScenePitchHint"]"
+                                  Lines="3" Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-pitch" />
+                    <MudSwitch @bind-Value="_editPublic" Label="@Loc["RolScenePublicLabel"]" Color="Color.Primary" Class="scene-edit-public" />
+                    @if (!scene.IsLive)
+                    {
+                        <div class="scene-pause-when">
+                            <MudDatePicker @bind-Date="_editDate" Label="@Loc["RolSceneDate"]" Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" Class="scene-edit-date" />
+                            <MudTimePicker @bind-Time="_editTime" Label="@Loc["RolPauseTime"]" Disabled="@(_editDate is null)"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-time" />
+                        </div>
+                    }
+                    <div class="scene-pause-buttons">
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Check" Class="scene-edit-submit"
+                                       Disabled="@_busy" OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
+                        <CapsuleButton OnClick="@(() => _editing = false)">@Loc["Cancel"]</CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
 
         @if (_pausing && scene.IsLive)
         {
@@ -157,6 +195,23 @@
                         <dt>@Loc["NavSceneLength"]</dt>
                         <dd>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</dd>
                     </dl>
+                    @if (CalendarStart(scene) is { } start)
+                    {
+                        var title = Loc.Title(scene);
+                        var details = CalendarDetails(scene);
+                        var location = string.IsNullOrWhiteSpace(scene.RoomName) ? Loc["AppTitle"].Value : scene.RoomName;
+                        <div class="scene-calendar">
+                            <span class="scene-calendar-label">@Loc["RolAddToCalendar"]</span>
+                            <a class="scene-calendar-google" href="@SceneCalendar.GoogleUrl(title, details, location, start)"
+                               target="_blank" rel="noopener">
+                                <MudIcon Icon="@Icons.Material.Outlined.Event" Size="Size.Small" />@Loc["RolGoogleCalendar"]
+                            </a>
+                            <a class="scene-calendar-ics" download="@($"scene-{scene.Id}.ics")"
+                               href="@SceneCalendar.DataUri(SceneCalendar.Ics($"scene-{scene.Id}@{new Uri(Navigation.BaseUri).Host}", title, details, location, SceneUrl(scene), start, DateTimeOffset.UtcNow))">
+                                <MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" />@Loc["RolIcsDownload"]
+                            </a>
+                        </div>
+                    }
                 </KitCard>
                 @if (_cast.Count > 0)
                 {
@@ -235,6 +290,11 @@
         _cast = [];
         _activeTag = null;
         _scene = null;
+        // A form open on the scene this page showed before holds that scene's values; saving them here would
+        // write them onto this one.
+        _editing = false;
+        _pausing = false;
+        _actionError = null;
 
         var found = await SceneService.GetSceneAsync(Id);
         if (!_reload.IsCurrent(ticket)) return;
@@ -376,6 +436,102 @@
             _busy = false;
         }
     }
+
+    /// <summary>The edit form is open.</summary>
+    private bool _editing;
+    private string _editTitle = "";
+    private string _editPitch = "";
+    private bool _editPublic;
+    private DateTime? _editDate;
+    private TimeSpan? _editTime;
+
+    /// <summary>The pitch the owner set with +scene/pitch, or null when there is none.</summary>
+    private static string? Pitch(SceneSummary scene) =>
+        scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch : null;
+
+    /// <summary>Opens the form on the scene as it is now.</summary>
+    private void ToggleEdit()
+    {
+        _editing = !_editing;
+        if (!_editing || _scene is not { } scene) return;
+
+        _editTitle = scene.Meta.TryGetValue("title", out var title) ? title : "";
+        _editPitch = Pitch(scene) ?? "";
+        _editPublic = scene.IsPublic;
+        var due = scene.ScheduledForUtc?.ToLocalTime();
+        _editDate = due?.Date;
+        _editTime = due?.TimeOfDay;
+    }
+
+    /// <summary>The time chosen in the form as epoch seconds, read in the browser's time zone, or null for none.</summary>
+    private long? EditedTime() => _editDate is { } date
+        ? new DateTimeOffset(DateTime.SpecifyKind(date.Date + (_editTime ?? TimeSpan.Zero), DateTimeKind.Local)).ToUnixTimeSeconds()
+        : null;
+
+    /// <summary>
+    /// Saves what changed, one +scene verb per field, each naming the scene and asking it back in the same
+    /// queue entry: a verb refuses in its output, so only the value read back says whether it took. The text
+    /// goes through the compose encoder, as a pose does, so its spaces, line breaks and semicolons arrive.
+    /// </summary>
+    private async Task SaveAsync()
+    {
+        if (_scene is not { } scene || ActingOwner(scene) is not { } character) return;
+
+        var id = scene.Id;
+        var changes = new List<(string Command, string Result, string Expected)>();
+        var title = _editTitle.Trim();
+        if (title.Length > 0 && title != (scene.Meta.TryGetValue("title", out var oldTitle) ? oldTitle : ""))
+            changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(title)}", $"scene({id},title)", title));
+        var pitch = _editPitch.Trim();
+        if (pitch != (Pitch(scene) ?? ""))
+            changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(pitch)}", $"scene({id},summary)", pitch));
+        if (_editPublic != scene.IsPublic)
+            changes.Add((_editPublic ? $"+scene/public {id}" : $"+scene/private {id}", $"scene({id},public)", _editPublic ? "1" : "0"));
+        if (!scene.IsLive && EditedTime() is { } at && at * 1000 != scene.ScheduledFor)
+            changes.Add(($"+scene/reschedule {id}={at}", $"scene({id},scheduledfor)", (at * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        _busy = true;
+        _actionError = null;
+        try
+        {
+            foreach (var (command, result, expected) in changes)
+            {
+                _actionError = await Commands.RunAsync(command, result, character) switch
+                {
+                    PortalCommandResponse { Result: { } value } when Same(value, expected) => null,
+                    PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotSaved"],
+                    ApiFailure failure => failure.Message,
+                };
+                if (_actionError is not null) break;
+            }
+
+            if (changes.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
+            {
+                _scene = changed;
+            }
+
+            if (_actionError is null) _editing = false;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>A value read back is the one sent, give or take line endings and the edges' whitespace.</summary>
+    private static bool Same(string value, string expected) =>
+        string.Equals(value.Replace("\r\n", "\n").Trim(), expected.Replace("\r\n", "\n").Trim(), StringComparison.Ordinal);
+
+    /// <summary>When the scene starts, for a scene that is waiting on a time: not one that runs now or has ended.</summary>
+    private static DateTimeOffset? CalendarStart(SceneSummary scene) =>
+        !scene.IsLive && !scene.IsFinished && !string.Equals(scene.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
+            ? scene.ScheduledForUtc
+            : null;
+
+    private string SceneUrl(SceneSummary scene) => Navigation.ToAbsoluteUri($"scenes/{Uri.EscapeDataString(scene.Id)}").ToString();
+
+    private string CalendarDetails(SceneSummary scene) =>
+        Pitch(scene) is { } pitch ? pitch + "\n\n" + SceneUrl(scene) : SceneUrl(scene);
 
     private void SetTag(string tag) => _activeTag = tag == AllTags ? null : tag;
 
