@@ -81,7 +81,7 @@ public class PuppetRelayOutputTests
 		await Assert.That(rendered).StartsWith(MxpSecureLineFramer.SecureLine);
 		await Assert.That(rendered).Contains("&lt;color red&gt;");
 		await Assert.That(rendered).DoesNotContain("<color red>");
-		// The puppet's default @prefix, which the relay is also responsible for carrying.
+		// The "<name>> " every puppet relay starts with (notify.c:1405-1420).
 		await Assert.That(rendered).Contains("Fido&gt; ");
 	}
 
@@ -123,31 +123,35 @@ public class PuppetRelayOutputTests
 			Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
-		// No PREFIX and no LISTEN: the relay falls back to "<name>> " and the LISTEN pass returns early.
+		// No LISTEN: the LISTEN pass returns early, and the relay prefixes "<name>> ".
 		var attributes = Substitute.For<IAttributeService>();
-		var current = Connection();
 		attributes.GetAttributeAsync(
 			Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
 			Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
-			.Returns(call =>
-			{
-				if (call.Arg<string>() == "PREFIX" && change is not null)
-					current = change switch
-					{
-						"character" => current with { Ref = Speaker.Object().DBRef },
-						"stamp" => current with { Ref = new DBRef(OwnerRef.Number, 999) },
-						"session" => current with { Metadata = new(new[] { KeyValuePair.Create("SessionId", "new-session") }) },
-						"logout" => current with { State = IConnectionService.ConnectionState.Connected, Ref = null },
-						_ => current
-					};
-				return new OptionalSharpAttributeOrError(new None());
-			});
+			.Returns(new OptionalSharpAttributeOrError(new None()));
 
 		var services = Substitute.For<IServiceProvider>();
 		services.GetService(typeof(IAttributeService)).Returns(attributes);
 
+		// The binding changes once the relay has snapshotted the owner's connections, so the publish
+		// has to look at the handle again.
+		var current = Connection();
+		async IAsyncEnumerable<IConnectionService.ConnectionData> SnapshotThenChange()
+		{
+			yield return Connection();
+			await Task.CompletedTask;
+			current = change switch
+			{
+				"character" => current with { Ref = Speaker.Object().DBRef },
+				"stamp" => current with { Ref = new DBRef(OwnerRef.Number, 999) },
+				"session" => current with { Metadata = new(new[] { KeyValuePair.Create("SessionId", "new-session") }) },
+				"logout" => current with { State = IConnectionService.ConnectionState.Connected, Ref = null },
+				_ => current
+			};
+		}
+
 		var connections = Substitute.For<IConnectionService>();
-		connections.Get(OwnerRef).Returns(_ => Connected());
+		connections.Get(OwnerRef).Returns(_ => SnapshotThenChange());
 		connections.Get(OwnerHandle).Returns(_ => current);
 
 		var bus = Substitute.For<IMessageBus>();
@@ -169,19 +173,13 @@ public class PuppetRelayOutputTests
 		_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
 		new ConcurrentDictionary<string, string>(new[] { KeyValuePair.Create("SessionId", "original") }));
 
-	private static async IAsyncEnumerable<IConnectionService.ConnectionData> Connected()
-	{
-		yield return Connection();
-		await Task.CompletedTask;
-	}
-
 	[Test]
 	[Arguments("character")]
 	[Arguments("stamp")]
 	[Arguments("session")]
 	[Arguments("logout")]
 	[Arguments("unchanged")]
-	public async Task PuppetRelayRechecksBindingAfterPrefixRead(string change)
+	public async Task PuppetRelayRechecksBindingAfterSnapshot(string change)
 	{
 		var (service, bus) = BuildRelay(change);
 		await service.ProcessNotificationAsync(

@@ -61,8 +61,9 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr, bool move)
 	{
+		// do_cpattr copies only the source's own attribute (set.c:723, atr_get_noparent).
 		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
-				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
+				IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] sourceAttribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
@@ -195,8 +196,10 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> ChangeAttributeOwnerAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject targetObject, CallState ownerArg, string attrName)
 	{
+		// do_atrchown changes only an attribute the object has itself (attrib.c:2597, atr_get_noparent);
+		// an inherited one is "No such attribute.", never copied down.
 		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read) is not SharpAttribute[] attribute)
+				IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] attribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);

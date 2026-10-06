@@ -1275,15 +1275,9 @@ public partial class Commands : ICommandRestrictionApplier
 						return new CallState(ErrorMessages.Returns.PermissionDenied);
 					}
 
-					if (await AttributeService.GetAttributeAsync(
-							executor, targetObject, attribSpec, IAttributeService.AttributeMode.Read, false)
-						is not SharpAttribute[] attributeChain)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, attribSpec);
-						return new CallState(ErrorMessages.Returns.NoSuchAttribute);
-					}
-
-					var attributeLongName = attributeChain.Last().LongName!.ToUpper();
+					// do_function does not look for the attribute (function.c:1687-1692): it is read, parents
+					// and ancestor included, each time the function is called (parse.c:3048).
+					var attributeLongName = attribSpec.ToUpperInvariant();
 
 					userFunctionService.Define(new UserDefinedFunction(
 						Name: functionName,

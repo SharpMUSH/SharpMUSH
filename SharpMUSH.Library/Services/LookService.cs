@@ -157,8 +157,7 @@ public class LookService(
 
 				formattedName = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "NAMEFORMAT",
-					nameFormatArgs, defaultFormattedName, checkParents: true,
-					ignorePermissions: true);
+					nameFormatArgs, defaultFormattedName);
 			}
 		}
 
@@ -307,8 +306,7 @@ public class LookService(
 
 				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "CONFORMAT",
-					conFormatArgs, defaultContents, checkParents: true,
-					ignorePermissions: true);
+					conFormatArgs, defaultContents);
 
 				await notifyService.Notify(looker, formattedContents, looker);
 			}
@@ -356,8 +354,7 @@ public class LookService(
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
 					attributeService, parser, looker, realViewing, "EXITFORMAT",
-					exitFormatArgs, defaultExits, checkParents: true,
-					ignorePermissions: true);
+					exitFormatArgs, defaultExits);
 
 				if (formattedExits == defaultExits && isTransparent)
 				{

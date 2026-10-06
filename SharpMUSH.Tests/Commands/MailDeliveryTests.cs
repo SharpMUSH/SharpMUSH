@@ -400,6 +400,61 @@ public class MailDeliveryTests
 	}
 
 	/// <summary>
+	/// <c>extmail.c:1700</c> gates AMAIL on <c>atr_get_noparent(target, "AMAIL")</c>: one the recipient only
+	/// inherits never runs. Once it has its own, that one does.
+	/// </summary>
+	[Test]
+	public async ValueTask AmailRunsOnlyWhenTheRecipientHasItsOwn()
+	{
+		using var _ = TestOptionsOverride.Scope(options => options with
+		{
+			Attribute = options.Attribute with { AMail = true }
+		});
+
+		var sender = await Player("MdAmailInh");
+		var royal = await Player("MdAmailInhRoyal");
+		var parentName = TestIsolationHelpers.GenerateUniqueName("MdAmailParent");
+		var parent = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {parentName}"))).Message!.ToPlainText().Trim());
+		await God($"@set #{royal.DbRef.Number}=ROYALTY");
+		await God($"&AMAIL #{parent.Number}=&INHERITEDAMAIL me=%#");
+		await God($"@parent #{royal.DbRef.Number}=#{parent.Number}");
+
+		await Run(sender, $"@mail #{royal.DbRef.Number}=Hello/Body.");
+		await Scheduler.SettleForTestsAsync();
+		await Assert.That(await Get(royal.DbRef, "INHERITEDAMAIL")).IsEqualTo(string.Empty);
+
+		await God($"&AMAIL #{royal.DbRef.Number}=&OWNAMAIL me=%#");
+		await Run(sender, $"@mail #{royal.DbRef.Number}=Again/Body.");
+		await Scheduler.SettleForTestsAsync();
+		await Assert.That(await Get(royal.DbRef, "OWNAMAIL")).StartsWith($"#{sender.DbRef.Number}");
+		await Assert.That(await Get(royal.DbRef, "INHERITEDAMAIL")).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
+	/// <c>extmail.c:1644</c> appends <c>call_attrib(player, "MAILSIGNATURE", ...)</c>: inherited, evaluated
+	/// with the sender as enactor, and written straight after the body with no separator.
+	/// </summary>
+	[Test]
+	public async ValueTask TheSignatureIsInheritedEvaluatedAndAppendedAsIs()
+	{
+		var sender = await Player("MdSigInh");
+		var parentName = TestIsolationHelpers.GenerateUniqueName("MdSigParent");
+		var parent = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {parentName}"))).Message!.ToPlainText().Trim());
+		await God($"&MAILSIGNATURE #{parent.Number}=-- [name(%#)] [add(1,1)]");
+		await God($"@parent #{sender.DbRef.Number}=#{parent.Number}");
+
+		await Run(sender, "@mail me=Signed/Body.");
+		await Run(sender, "@mail/nosig me=Unsigned/Plain.");
+
+		var mailbox = await Mailbox(sender);
+		await Assert.That(mailbox.Select(mail => mail.Content.ToPlainText()))
+			.Contains($"Body.-- {sender.Name} 2");
+		await Assert.That(mailbox.Select(mail => mail.Content.ToPlainText())).Contains("Plain.");
+	}
+
+	/// <summary>
 	/// <c>send_mail</c> (<c>extmail.c:1483</c>): a recipient with a <c>MAILFORWARDLIST</c> is not
 	/// delivered to; each listed player that passes <c>Can_MailForward</c> is, and the sender is told the
 	/// message went to the recipient they named. Captured: B locked <c>@lock/mailforward me=*A</c>, A set
