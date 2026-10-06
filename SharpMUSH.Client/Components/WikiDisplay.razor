@@ -348,7 +348,7 @@ else
     private RenderFragment HeaderActions => __builder =>
     {
         <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@HistoryHref">@Loc["ResHistory"]</CapsuleButton>
-        <AuthorizeView Policy="wiki.edit">
+        <AuthorizeView Policy="@(Article?.EditPolicy ?? "wiki.edit")">
             <Authorized>
                 <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiEdit"]</CapsuleButton>
             </Authorized>

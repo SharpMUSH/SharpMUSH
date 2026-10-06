@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
@@ -30,6 +31,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 				"/api/wiki/ns/character/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
 				"/api/wiki/ns/main/rules" => Page("rules", "House Rules", "main"),
 				"/api/wiki/ns/character/Home" => Page("home", "Home", "character"),
+				"/api/wiki/ns/character/Ada%20Locke" => Page("ada_locke", "Ada Locke", "character", isProtected: true),
 				"/api/wiki/exists" => "{}",
 				_ => null,
 			};
@@ -38,14 +40,16 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 				: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
 		}
 
-		private static string Page(string slug, string title, string ns) => $$"""
+		private static string Page(string slug, string title, string ns, bool isProtected = false) => $$"""
 			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","categories":[],
 			 "markdownSource":"Lean and quiet.","renderedHtml":"<p>Lean and quiet.</p>","plainText":"Lean and quiet.",
 			 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"{{DateTimeOffset.UtcNow.AddDays(-3):O}}",
-			 "isProtected":false,"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
+			 "isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
 			 "locale":"en","requestedLocale":"en","availableLocales":["en"]}
 			""";
 	}
+
+	private BunitAuthorizationContext Auth { get; }
 
 	public WikiBodyBiographyTests()
 	{
@@ -58,7 +62,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			.AddSingleton<WikiMarkdigPipeline>()
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddLocalization();
-		AddAuthorization();
+		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -95,6 +99,53 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		var cut = Render<WikiBodyWidget>(p => p.Add(x => x.Config, config));
 		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".wiki-body-card .kit-card-title").TextContent).IsEqualTo("House Rules");
+	}
+
+	[Test]
+	public async Task WithoutWikiEdit_ThereIsNoEditButton()
+	{
+		var cut = RenderProfile();
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task WithWikiEdit_EditOpensTheEditorInTheCard_AndDiscardReturns()
+	{
+		Auth.SetAuthorized("Tomas Reyes");
+		Auth.SetPolicies("wiki.edit");
+		var cut = RenderProfile();
+
+		cut.Find(".wiki-body-card .wiki-body-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-edit-textarea"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wiki-body-card .wiki-edit-textarea").GetAttribute("value")).IsEqualTo("Lean and quiet.");
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
+			.Because("the editor is open; a second click would throw the draft away");
+
+		cut.Find(".wiki-body-card .wiki-edit-cancel").Click();
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-body-edit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-edit-textarea").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task AProtectedBiography_OffersEditOnlyToWikiAdmin()
+	{
+		Auth.SetAuthorized("Tomas Reyes");
+		Auth.SetPolicies("wiki.edit");
+		var cut = RenderProfile("Ada Locke");
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
+			.Because("the server refuses a wiki.edit holder's save of a protected page");
+
+		Auth.SetPolicies("wiki.edit", "wiki.admin");
+		var admin = RenderProfile("Ada Locke");
+		await Assert.That(admin.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(1);
+	}
+
+	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")
+	{
+		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
+			.Add(x => x.Context, new ProfilePageContext(character, false)));
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
+		return cut;
 	}
 
 	/// <summary>Supplies the profile page context the way CharacterProfile does.</summary>

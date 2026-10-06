@@ -22,7 +22,9 @@ public class CommViewTests : TrackingBunitContext
 		Services.AddSingleton<ICommFeed>(_feed);
 	}
 
-	private static readonly DateTimeOffset Now = DateTimeOffset.Now;
+	// Noon today, not the clock: lines minutes before "now" must fall on today however soon after
+	// midnight the suite runs, or the day dividers read Yesterday where the test expects Today.
+	private static readonly DateTimeOffset Now = new(DateTime.Today.AddHours(12));
 
 	private static CommMessage Line(string from, string text, DateTimeOffset at, string? objid = null) =>
 		new("channel", "Public", [], from, objid, text, at);

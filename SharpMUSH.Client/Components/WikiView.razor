@@ -63,6 +63,12 @@ else
     [Parameter] public required string Slug { get; init; }
     [Parameter] public required WikiMode Mode { get; set; } = WikiMode.View;
 
+    /// <summary>
+    /// Raised when the view switches itself between reading and editing, so a host that binds
+    /// <see cref="Mode"/> does not hand the old mode back on its next render.
+    /// </summary>
+    [Parameter] public EventCallback<WikiMode> ModeChanged { get; init; }
+
     /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
     [Parameter] public string? Namespace { get; init; }
 
@@ -118,8 +124,14 @@ else
         _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
         _editDraft = BuildEditDraft();
         _saveError = null;
-        Mode = WikiMode.Edit;
+        await SetModeAsync(WikiMode.Edit);
         StateHasChanged();
+    }
+
+    private async Task SetModeAsync(WikiMode mode)
+    {
+        Mode = mode;
+        await ModeChanged.InvokeAsync(mode);
     }
 
     private WikiArticle BuildEditDraft() =>
@@ -214,7 +226,10 @@ else
             case WikiArticle updated:
                 _article = updated;
                 _editDraft = null;
-                Mode = WikiMode.View;
+                await SetModeAsync(WikiMode.View);
+                // A host framing the page (the profile's Biography card) titles and dates it from these.
+                await OnLoaded.InvokeAsync(true);
+                await OnArticle.InvokeAsync(updated);
                 break;
             case ApiFailure failure:
                 _saveError = failure.Message;
@@ -224,11 +239,11 @@ else
 
     /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
 
-    private void HandleCancel()
+    private async Task HandleCancel()
     {
         _editDraft = null;
         _saveError = null;
-        Mode = WikiMode.View;
+        await SetModeAsync(WikiMode.View);
     }
 
     /// <summary>Set while the last read failed for want of an answer; cleared by one that succeeds.</summary>

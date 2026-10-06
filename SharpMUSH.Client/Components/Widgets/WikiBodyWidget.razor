@@ -26,11 +26,11 @@
        History at the right; a page placed by config is titled with its own title. The home page's
        hero keeps its own presentation and gets no header. *@
     <div class="wiki-body-widget">
-        <KitCard Class="wiki-body-card" Title="@CardTitle" Sub="@CardSub" Controls="@(IsHero || _article is null ? null : HistoryLink)">
+        <KitCard Class="wiki-body-card" Title="@CardTitle" Sub="@CardSub" Controls="@(IsHero || _article is null ? null : CardControls)">
             @* Keyed on the address: WikiView fetches once, on init, so a reconfigured widget has to
                remount to go and read the page it now points at. *@
-            <WikiView @key="address" Slug="@_slug" Namespace="@_namespace" Locale="@_locale"
-                      Mode="WikiView.WikiMode.View" Embedded="true" ShowTitle="@IsHero"
+            <WikiView @key="address" @ref="_view" Slug="@_slug" Namespace="@_namespace" Locale="@_locale"
+                      @bind-Mode="_mode" Embedded="true" ShowTitle="@IsHero"
                       OnLoaded="@(found => HandleLoaded(address, found))"
                       OnArticle="@(article => HandleArticle(address, article))" />
         </KitCard>
@@ -60,6 +60,14 @@
 
     /// <summary>The page on screen, once loaded: its title, editor and when name the card.</summary>
     private WikiArticle? _article;
+
+    private WikiView? _view;
+
+    /// <summary>
+    /// Bound to the view rather than passed as a constant: every render of this widget hands the view
+    /// its mode again, so a constant would throw the reader out of the editor the moment the card re-rendered.
+    /// </summary>
+    private WikiView.WikiMode _mode = WikiView.WikiMode.View;
 
     /// <summary>True when the viewer holds <c>wiki.create</c>, so a missing page is worth showing them.</summary>
     private bool _mayCreate;
@@ -110,6 +118,7 @@
             _address = address;
             _missing = false;
             _article = null;
+            _mode = WikiView.WikiMode.View;
         }
 
         (_slug, _namespace, _locale) = (slug, ns, locale);
@@ -150,13 +159,32 @@
     private string HistoryHref =>
         WikiRoutes.WikiPathFor(_namespace, _article?.Slug ?? _slug ?? string.Empty) + "/history";
 
-    private RenderFragment HistoryLink => __builder =>
+    /// <summary>
+    /// History, and Edit for whoever may edit. Embedded, the page has no header of its own to carry
+    /// the wiki route's Edit button, and a biography's wiki route redirects to the profile, so this is
+    /// the only place to start editing a page that already exists. Edit opens the editor in the card,
+    /// as "Write a biography" does for one that does not.
+    /// </summary>
+    private RenderFragment CardControls => __builder =>
     {
         <a class="wiki-body-history" href="@HistoryHref">
             <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />
             <span>@Loc["ResHistory"]</span>
         </a>
+        @if (_mode == WikiView.WikiMode.View && _article is not null)
+        {
+            <AuthorizeView Policy="@_article.EditPolicy">
+                <Authorized>
+                    <button type="button" class="wiki-body-history wiki-body-edit" @onclick="EditAsync">
+                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
+                        <span>@Loc["WikiEdit"]</span>
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        }
     };
+
+    private Task EditAsync() => _view?.ActivateEditMode() ?? Task.CompletedTask;
 
     /// <summary>
     /// True when the only thing left to frame is the wiki's "no such page" notice: honest wording on

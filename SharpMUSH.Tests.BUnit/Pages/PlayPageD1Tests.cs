@@ -597,8 +597,13 @@ public class PlayPageD1Tests : TrackingBunitContext
 				.Select(w => w.Instance.WidgetName).ToList())
 			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
 		cut.Find("button.play-room-btn").Click();
-		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
-			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		// The sheet's tabs can land on a later render than the click on a loaded runner; wait for them.
+		string[] expected = ["Here · 1", "Exits · 1", "Weather"];
+		cut.WaitForAssertion(() =>
+		{
+			var tabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToArray();
+			if (!tabs.SequenceEqual(expected)) throw new InvalidOperationException($"tabs: [{string.Join(", ", tabs)}]");
+		}, TimeSpan.FromSeconds(5));
 	}
 
 	/// <summary>
@@ -630,8 +635,13 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		await Assert.That(AsideApps(cut)).DoesNotContain("staffboard");
 		cut.Find("button.play-room-btn").Click();
-		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
-			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		// The sheet's tabs can land on a later render than the click on a loaded runner; wait for them.
+		string[] expected = ["Here · 1", "Exits · 1"];
+		cut.WaitForAssertion(() =>
+		{
+			var tabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToArray();
+			if (!tabs.SequenceEqual(expected)) throw new InvalidOperationException($"tabs: [{string.Join(", ", tabs)}]");
+		}, TimeSpan.FromSeconds(5));
 	}
 
 	[Test]

@@ -41,6 +41,12 @@ public class WikiArticle
 	/// <summary>The categories the page is in, as keys. Set in the editor and saved as page metadata, not text.</summary>
 	public List<string> Categories { get; set; } = [];
 
+	/// <summary>When true, only <c>wiki.admin</c> may edit the page; the server refuses anyone else's save.</summary>
+	public bool IsProtected { get; set; }
+
+	/// <summary>The policy that may edit this page: <c>wiki.admin</c> when it is protected, <c>wiki.edit</c> otherwise.</summary>
+	public string EditPolicy => IsProtected ? "wiki.admin" : "wiki.edit";
+
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
 
