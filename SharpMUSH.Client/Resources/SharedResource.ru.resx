@@ -5147,6 +5147,18 @@
     <value>Ваши позы уходят в другую сцену. Присоединитесь к этой, чтобы позировать здесь.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Здесь идёт сцена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Открыть историю</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Скрыть это уведомление</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присоединиться</value>
     <comment>MT</comment>

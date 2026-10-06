@@ -5147,6 +5147,18 @@
     <value>Deine Posen gehen an eine andere Szene. Tritt dieser bei, um hier zu posen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Hier läuft eine Szene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Geschichte öffnen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Hinweis ausblenden</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Szene beitreten</value>
     <comment>MT</comment>

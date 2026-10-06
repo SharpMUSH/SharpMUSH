@@ -5147,6 +5147,18 @@
     <value>A pózaid egy másik jelenetbe kerülnek. Csatlakozz ehhez, hogy itt pózolhass.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Itt egy jelenet zajlik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Történet megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Értesítés elrejtése</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Csatlakozás</value>
     <comment>MT</comment>

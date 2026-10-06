@@ -5147,6 +5147,18 @@
     <value>Dina poser hamnar i en annan scen. Gå med i den här för att posera här.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>En scen pågår här</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Öppna berättelsen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Dölj det här meddelandet</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Gå med i scenen</value>
     <comment>MT</comment>
