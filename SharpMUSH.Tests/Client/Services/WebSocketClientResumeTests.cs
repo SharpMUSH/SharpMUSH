@@ -179,9 +179,9 @@ public class WebSocketClientResumeTests
 	private static string[] ServerTexts(TerminalService terminal) =>
 		terminal.Lines.Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.Server).Select(l => l.Text).ToArray();
 
-	private static TerminalService NewTerminal(FakeResumeJs js) => new(
+	private static TerminalService NewTerminal(FakeResumeJs js, ITerminalLoginTokens? tokens = null) => new(
 		new WebSocketClientService(NullLogger<WebSocketClientService>.Instance, new TerminalResumeStore(js)),
-		NullLogger<TerminalService>.Instance);
+		NullLogger<TerminalService>.Instance, tokens);
 
 	private static string[] StoredTexts(FakeResumeJs js) =>
 		js.StoredValue(AliceLinesKey) is { } stored
@@ -216,8 +216,9 @@ public class WebSocketClientResumeTests
 
 		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("six"))).IsTrue();
 		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "old two", "six"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		var lines = terminal.Lines.Select(l => l.Text).ToList();
-		await Assert.That(lines.IndexOf("old two")).IsLessThan(lines.FindIndex(l => l.StartsWith("Session resumed", StringComparison.Ordinal)));
+		// A resume is silent: no connection notices join the screen.
+		await Assert.That(terminal.Lines.Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System
+			&& !l.Text.StartsWith("Connected to ", StringComparison.Ordinal))).IsEmpty();
 
 		await Assert.That(await StoredTextsBecomeAsync(js, "old one", "old two", "six")).IsTrue();
 
@@ -343,6 +344,153 @@ public class WebSocketClientResumeTests
 
 		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("marker"))).IsTrue();
 		await Assert.That(server.LaterFrames.Contains("connect token the-ott")).IsEqualTo(!resumable);
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// Alice's server: the first connection is a fresh session that drops when it is sent <c>drop</c>; the
+	/// next answers her resume, or refuses it and starts a fresh session.
+	/// </summary>
+	private static Task<ScriptedTerminalServer> DropsAfterLoginAsync(bool resumed) =>
+		ScriptedTerminalServer.StartAsync(
+			(first, connection) => connection == 1 || !IsResume(first)
+				? [Token("tok-1"), Seq(1, "welcome")]
+				: resumed ? [Reattached, Token("tok-2")] : [Token("tok-fresh"), Seq(1, "banner")],
+			(frame, connection) => connection == 1 && frame == "drop");
+
+	/// <summary>
+	/// Connects Alice and drops her connection once the first session's frames (its resume token among them)
+	/// have arrived: a drop before that would leave the client nothing to resume with.
+	/// </summary>
+	private static async Task ConnectAndDropAsync(TerminalService terminal, ScriptedTerminalServer server)
+	{
+		await terminal.ConnectWithOttAsync(server.Uri, "the-ott", Alice);
+		await Assert.That(await Eventually.TrueAsync(() => ServerTexts(terminal).Contains("welcome"))).IsTrue();
+		await terminal.SendAsync("drop");
+		await Assert.That(await Eventually.TrueAsync(() => !terminal.IsConnected)).IsTrue();
+	}
+
+	/// <summary>
+	/// A reconnect the server could not resume lands at the login screen: the terminal logs the same
+	/// character in with a fresh token, before anything typed while it was away, and says nothing about it.
+	/// </summary>
+	[Test]
+	public async Task A_reconnect_that_cannot_resume_logs_in_again_before_the_buffered_commands()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("fresh-ott");
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		var before = terminal.Lines.Count;
+
+		await terminal.SendAsync("look");
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"))).IsTrue();
+		var frames = server.LaterFrames.ToList();
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsGreaterThan(-1);
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsLessThan(frames.IndexOf("look"));
+		await Assert.That(IsResume(server.FirstFrames.Last())).IsTrue();
+		await Assert.That(tokens.Asked).IsEquivalentTo([Alice]);
+		await Assert.That(terminal.Lines.Skip(before).Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System)).IsEmpty();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// What is typed after the reconnect opened but before its login went out still follows the login: the
+	/// socket is open, and a send straight to it would reach the login screen first.
+	/// </summary>
+	[Test]
+	public async Task A_command_typed_while_logging_in_again_waits_for_the_login()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("fresh-ott") { Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		await Assert.That(await Eventually.TrueAsync(() => !tokens.Asked.IsEmpty && terminal.IsConnected)).IsTrue();
+
+		await terminal.SendAsync("look");
+		tokens.Hold.SetResult();
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"))).IsTrue();
+		var frames = server.LaterFrames.ToList();
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsGreaterThan(-1);
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsLessThan(frames.IndexOf("look"));
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>A reconnect the server resumed is still logged in: no login goes to it, only what was typed.</summary>
+	[Test]
+	public async Task A_reconnect_that_resumes_sends_no_login()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("fresh-ott");
+		await using var server = await DropsAfterLoginAsync(resumed: true);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		var before = terminal.Lines.Count;
+
+		await terminal.SendAsync("look");
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"))).IsTrue();
+		await Assert.That(server.LaterFrames.Contains("connect token fresh-ott")).IsFalse();
+		await Assert.That(tokens.Asked).IsEmpty();
+		await Assert.That(terminal.Lines.Skip(before).Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System)).IsEmpty();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// When no token can be had (the tab signed out), the terminal says so and stays at the login screen;
+	/// what was typed meanwhile is not sent there as login-screen commands.
+	/// </summary>
+	[Test]
+	public async Task A_reconnect_without_a_token_asks_the_reader_to_log_in()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, new FakeLoginTokens());
+		await ConnectAndDropAsync(terminal, server);
+
+		await terminal.SendAsync("look");
+
+		await Assert.That(await Eventually.TrueAsync(() => terminal.Lines.Any(l => l.Text.StartsWith("Reconnected, but could not log back in", StringComparison.Ordinal)))).IsTrue();
+		await Assert.That(server.LaterFrames.Contains("look")).IsFalse();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// What is typed while a reconnect fails to log back in was meant for the lost session and is dropped;
+	/// what is typed at the login screen afterwards goes out, so the reader can log in themselves.
+	/// </summary>
+	[Test]
+	public async Task A_failed_relogin_drops_what_was_typed_meanwhile_but_not_what_follows()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens { Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		await Assert.That(await Eventually.TrueAsync(() => !tokens.Asked.IsEmpty && terminal.IsConnected)).IsTrue();
+
+		await terminal.SendAsync("look");
+		tokens.Hold.SetResult();
+		await Assert.That(await Eventually.TrueAsync(() => terminal.Lines.Any(l => l.Text.StartsWith("Reconnected, but could not log back in", StringComparison.Ordinal)))).IsTrue();
+		// The notice goes up a moment before the socket is ready, and a line begun in that moment is still
+		// dropped; a reader takes longer than that, so the test retries the way one would.
+		for (var tries = 0; tries < 50 && !server.LaterFrames.Contains("connect Alice secret"); tries++)
+		{
+			await terminal.SendAsync("connect Alice secret");
+			await Eventually.TrueAsync(() => server.LaterFrames.Contains("connect Alice secret"), timeoutMs: 100);
+		}
+
+		await Assert.That(server.LaterFrames.Contains("connect Alice secret")).IsTrue();
+		await Assert.That(server.LaterFrames.Contains("look")).IsFalse();
 
 		await terminal.DisposeAsync();
 	}
