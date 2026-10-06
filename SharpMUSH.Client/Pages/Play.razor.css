@@ -152,6 +152,7 @@
     background: rgba(var(--glow), 0.08);
     color: var(--text);
     font-size: 13px;
+    container-type: inline-size;
 }
 
 .play-scene-hint-open {
@@ -188,6 +189,17 @@
 .play-scene-hint-title {
     margin-inline-start: 6px;
     font-weight: 600;
+}
+
+/* Narrow: the scene's title alone says it; the label gives way first. */
+@container (max-width: 26rem) {
+    .play-scene-hint-label {
+        display: none;
+    }
+
+    .play-scene-hint-title {
+        margin-inline-start: 0;
+    }
 }
 
 .play-scene-hint-action {
