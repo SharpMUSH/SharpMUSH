@@ -510,6 +510,42 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>
+	/// Removes, as <c>@command/delete</c> would, each command among <paramref name="commandNames"/> that
+	/// <c>@command/add</c> made (or was cloned from one) and that no name of it has a hook on any more:
+	/// such a command only answers "not implemented". A built-in command, and an added one still hooked,
+	/// stay.
+	/// </summary>
+	/// <returns>The names of the commands removed (their aliases went with them).</returns>
+	internal async ValueTask<IReadOnlyList<string>> ForgetUnhookedAddedCommandsAsync(IEnumerable<string> commandNames)
+	{
+		var forgotten = new List<string>();
+		foreach (var name in commandNames.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			if (FindCommand(name) is not { } command || !IsAddedCommand(command.LibraryInformation))
+			{
+				continue;
+			}
+
+			var names = NamesOf(command.LibraryInformation.Attribute);
+			var hooked = false;
+			foreach (var commandName in names)
+			{
+				hooked |= (await HookService.GetAllHooksAsync(commandName)).Count > 0;
+			}
+
+			if (hooked)
+			{
+				continue;
+			}
+
+			await ForgetCommandNamesAsync(names);
+			forgotten.Add(command.LibraryInformation.Attribute.Name);
+		}
+
+		return forgotten;
+	}
+
+	/// <summary>
 	/// Takes <paramref name="definition"/> out of the table under every name it has, keeping them for
 	/// <see cref="EnableCommand"/>. <c>@command</c> itself stays: "@command is ALWAYS enabled."
 	/// </summary>

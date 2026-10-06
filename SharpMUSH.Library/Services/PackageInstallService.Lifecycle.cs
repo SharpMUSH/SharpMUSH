@@ -152,7 +152,39 @@ public partial class PackageInstallService
 
 		await registry.RemoveInstalledPackageAsync(packageId);
 		writes.Commit();
+
+		// What its STARTUP registered in memory goes with its objects: a hook, a global function or an
+		// @command/add command left pointing at one would keep running its code until a restart.
+		await ForgetRegistrationsAsync(ownObjects, notes);
 		return null;
+	}
+
+	/// <summary>
+	/// Forgets the hooks, global functions and hook-less added commands that target
+	/// <paramref name="objects"/>. They live only in memory, so this runs once the uninstall has
+	/// committed: there is nothing to put back if it is reverted.
+	/// </summary>
+	private async Task ForgetRegistrationsAsync(IReadOnlyList<PackageObjectRecord> objects, List<string> notes)
+	{
+		var numbers = new HashSet<int>();
+		foreach (var record in objects)
+		{
+			if (HelperFunctions.ParseDbRef(record.Objid) is DBRef dbref)
+			{
+				numbers.Add(dbref.Number);
+			}
+		}
+
+		if (numbers.Count == 0)
+		{
+			return;
+		}
+
+		var forgotten = await registrations.Value.ForgetRegistrationsOnAsync(numbers);
+		if (!forgotten.IsEmpty)
+		{
+			notes.Add(forgotten.Describe());
+		}
 	}
 
 	// ── Rollback ─────────────────────────────────────────────────────────────

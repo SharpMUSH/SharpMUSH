@@ -33,7 +33,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IPackageRegistryService? _packageRegistry;
 	private readonly IPackageInstallService? _packageInstaller;
 	private readonly IBundledPackageBootstrap? _bundledPackages;
-	private readonly IHookService? _hooks;
+	private readonly Lazy<IRuntimeRegistrationService>? _registrations;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
@@ -44,7 +44,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IPackageRegistryService? packageRegistry = null,
 		IPackageInstallService? packageInstaller = null,
 		IBundledPackageBootstrap? bundledPackages = null,
-		IHookService? hooks = null)
+		Lazy<IRuntimeRegistrationService>? registrations = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
@@ -54,7 +54,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_packageRegistry = packageRegistry;
 		_packageInstaller = packageInstaller;
 		_bundledPackages = bundledPackages;
-		_hooks = hooks;
+		_registrations = registrations;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)

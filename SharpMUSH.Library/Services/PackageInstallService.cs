@@ -40,7 +40,8 @@ public partial class PackageInstallService(
 	IPackageOperationGate gate,
 	ILockService locks,
 	IPackageDeclarationService declarations,
-	IPackageSettingService settings) : IPackageInstallService
+	IPackageSettingService settings,
+	Lazy<IRuntimeRegistrationService> registrations) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
