@@ -467,8 +467,10 @@ otherwise). Without an object the character's own permissions apply.
 **Rationale:** the old Eval button sent `u(#dbref/ATTR)` over the terminal
 WebSocket as typed input. It ran only the saved value, took no arguments and
 kept no history. Each console run now lands in the open tab's scrollback, and
-the input line keeps its own Up/Down history (`CommandHistory` under
-`softcode.history`, apart from the terminal's).
+the input line keeps its own Up/Down history. That history lives in memory for
+as long as the page is open and is never written to `localStorage`: an
+expression can carry a secret anywhere in it (`checkpass()`, `decrypt()`),
+which the terminal's leading-verb rule cannot catch.
 
 **Object creation** invokes the registered `@CREATE` / `@DIG` / `@OPEN` through
 `IEngineCommandInvoker` with pre-split arguments, so quota, zone inheritance, the

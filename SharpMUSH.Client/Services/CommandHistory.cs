@@ -6,19 +6,14 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// The commands this browser has sent, newest last, for Up and Down to recall as a telnet client's input line
 /// does. Shared by the terminal and the composer's Command mode, and kept in <c>localStorage</c> so it survives
-/// a reload. A line that carries a password is never kept. The Softcode Editor's console keeps a history of its
-/// own, under another <paramref name="storageKey"/>, so expressions and commands do not crowd each other.
+/// a reload. A line that carries a password is never kept.
 /// </summary>
-public sealed class CommandHistory(IJSRuntime js, string storageKey = CommandHistory.PlayStorageKey)
+public sealed class CommandHistory(IJSRuntime js)
 {
 	/// <summary>How many commands are kept; the oldest go first.</summary>
 	public const int Capacity = 200;
 
-	/// <summary>Where the terminal's and composer's history is kept.</summary>
-	public const string PlayStorageKey = "play.history";
-
-	/// <summary>Where the Softcode Editor console's history is kept.</summary>
-	public const string SoftcodeStorageKey = "softcode.history";
+	private const string StorageKey = "play.history";
 
 	private readonly List<string> _entries = [];
 	private Task? _load;
@@ -41,7 +36,7 @@ public sealed class CommandHistory(IJSRuntime js, string storageKey = CommandHis
 		if (_entries.Count > 0 && _entries[^1] == line) return;
 		_entries.Add(line);
 		if (_entries.Count > Capacity) _entries.RemoveRange(0, _entries.Count - Capacity);
-		await js.SetItemAsync(BrowserStore.Local, storageKey, JsonSerializer.Serialize(_entries));
+		await js.SetItemAsync(BrowserStore.Local, StorageKey, JsonSerializer.Serialize(_entries));
 	}
 
 	/// <summary>
@@ -58,7 +53,7 @@ public sealed class CommandHistory(IJSRuntime js, string storageKey = CommandHis
 
 	private async Task LoadCoreAsync()
 	{
-		if (await js.GetItemAsync(BrowserStore.Local, storageKey) is not { Length: > 0 } json) return;
+		if (await js.GetItemAsync(BrowserStore.Local, StorageKey) is not { Length: > 0 } json) return;
 		try
 		{
 			if (JsonSerializer.Deserialize<List<string>>(json) is { } kept)

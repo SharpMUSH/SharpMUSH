@@ -553,11 +553,18 @@
     private string _consoleInput = string.Empty;
     private const string ConsoleLogId = "sc-console-log";
 
-    // Typed expressions are not commands, so they keep a history of their own rather than crowding the
-    // terminal's. Created with the page; it reads what was kept the first time Up is pressed.
-    private CommandHistory? _consoleHistory;
-    private CommandHistory ConsoleHistory => _consoleHistory ??= new CommandHistory(JsRuntime, CommandHistory.SoftcodeStorageKey);
+    // Typed expressions, oldest first, for Up and Down. Kept in memory only, for as long as the page is
+    // open: an expression can carry a secret anywhere in it (checkpass(me,...), decrypt(...,key)), which
+    // no rule about a leading verb catches, so none of it goes to localStorage as the terminal's does.
+    private readonly List<string> _consoleHistory = [];
     private readonly HistoryWalk _consoleWalk = new();
+
+    private void RememberExpression(string line)
+    {
+        if (_consoleHistory.Count > 0 && _consoleHistory[^1] == line) return;
+        _consoleHistory.Add(line);
+        if (_consoleHistory.Count > CommandHistory.Capacity) _consoleHistory.RemoveAt(0);
+    }
 
     // With no tab open, typed expressions still run; their scrollback lives here until one is.
     private readonly SoftcodeConsole _looseRepl = new();
@@ -992,11 +999,10 @@
                 await EvaluateInputAsync();
                 break;
             case "ArrowUp":
-                await ConsoleHistory.LoadAsync();
-                if (_consoleWalk.Older(ConsoleHistory.Entries, _consoleInput) is { } older) _consoleInput = older;
+                if (_consoleWalk.Older(_consoleHistory, _consoleInput) is { } older) _consoleInput = older;
                 break;
             case "ArrowDown":
-                if (_consoleWalk.Newer(ConsoleHistory.Entries) is { } newer) _consoleInput = newer;
+                if (_consoleWalk.Newer(_consoleHistory) is { } newer) _consoleInput = newer;
                 break;
         }
     }
@@ -1009,7 +1015,7 @@
 
         _consoleInput = string.Empty;
         _consoleWalk.Reset();
-        await ConsoleHistory.AddAsync(line);
+        RememberExpression(line);
         await EvaluateAsync(Repl, line, isBuffer: false, unsaved: false, line, objectDbref: null);
     }
 

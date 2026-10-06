@@ -77,6 +77,7 @@ public sealed class PortalCommandService(
 	ITaskScheduler scheduler,
 	ICommandOutputCapture outputCapture,
 	IMediator mediator,
+	IPermissionService permissions,
 	IOptionsWrapper<SharpMUSHOptions> gameOptions,
 	IOptions<PortalCommandOptions> options,
 	ILogger<PortalCommandService> logger) : IPortalCommandService
@@ -229,6 +230,11 @@ public sealed class PortalCommandService(
 	private async ValueTask<Result<PortalCommandResponse>> EvaluateCoreAsync(DBRef actor, DBRef self, PortalEvalRequest request)
 	{
 		var transcript = new CommandTranscript(FunctionLimits.MaxOutputCodeUnits);
+		// The caller checked control when the request arrived, but the entry runs later, after whatever was
+		// queued ahead of it: a @chown or a lost power in between must stop the code running as the object.
+		if (!self.Equals(actor) && !await StillControlsAsync(actor, self))
+			return new PortalCommandResponse(transcript.Lines, ErrorMessages.Returns.PermissionDenied, false);
+
 		var result = string.Empty;
 		try
 		{
@@ -265,6 +271,11 @@ public sealed class PortalCommandService(
 			? new Error<string>(ExecutionBudget.Error)
 			: new PortalCommandResponse(transcript.Lines, result, transcript.Truncated);
 	}
+
+	private async ValueTask<bool> StillControlsAsync(DBRef actor, DBRef self) =>
+		await mediator.Send(new GetObjectNodeQuery(actor)) is AnySharpObject character
+		&& await mediator.Send(new GetObjectNodeQuery(self)) is AnySharpObject target
+		&& await permissions.Controls(character, target);
 
 	private async ValueTask<int> OutputLimitAsync(DBRef actor) =>
 		await FunctionLimits.OutputLimitForAsync(
