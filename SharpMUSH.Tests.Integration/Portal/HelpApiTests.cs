@@ -229,7 +229,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>A line only the <c>ahelp</c> index carries.</summary>
-	private const string AdminIndexText = "The administrator help files, readable by wizards and royalty.";
+	private const string AdminIndexText = "The administrator help files, readable by wizards.";
 
 	[Test]
 	public async Task AdminCorpus_RefusedToAnonymous()

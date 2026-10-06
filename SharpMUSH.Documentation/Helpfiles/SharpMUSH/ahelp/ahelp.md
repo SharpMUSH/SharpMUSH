@@ -1,6 +1,6 @@
 # ahelp
 
-The administrator help files, readable by wizards and royalty.
+The administrator help files, readable by wizards.
 
 SharpMUSH ships its own documentation, administrator topics included, in the regular help files
 (see `help roles` and `help administrative capabilities`). The ahelp files are for a game's own
