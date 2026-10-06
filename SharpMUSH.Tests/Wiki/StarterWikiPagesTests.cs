@@ -32,7 +32,18 @@ public class StarterWikiPagesTests
 			await Assert.That(html).Contains($">{hub}</a>");
 		}
 
-		await Assert.That(html).Contains("data-directive=\"recent\"");
+		// The front page lists recent changes in its own panel below Home.
+		await Assert.That(html).DoesNotContain("data-directive=\"recent\"");
+	}
+
+	/// <summary>Home opens with the logo, so the front page and the wiki route show it as the banner.</summary>
+	[Test]
+	public async Task Home_OpensWithTheBannerImage()
+	{
+		var html = new WikiMarkdigPipeline().RenderToHtml(StarterWikiPages.Home);
+
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/Logo.svg");
+		await Assert.That(html).Contains("<div class=\"center\">");
 	}
 
 	[Test]

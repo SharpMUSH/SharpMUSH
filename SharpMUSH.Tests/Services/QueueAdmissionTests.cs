@@ -2808,6 +2808,44 @@ public class QueueAdmissionTests
 		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
 	}
 
+	/// <summary>
+	/// A line typed at the login screen runs the server's own login work, not softcode, so
+	/// <c>queue_entry_cpu_time</c> does not time it: a login slower than the limit (disk writes, bus
+	/// publishes, a cold start) must not end in "CPU usage exceeded." for a player who ran nothing. Once
+	/// the connection is bound to a player, its lines are timed as before.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task OnlyALoggedInConnectionsTypedLineIsTimed(bool loggedIn)
+	{
+		var connections = Substitute.For<IConnectionService>();
+		var connection = Incarnation(20);
+		connections.Get(20).Returns(loggedIn
+			? connection with { Ref = new DBRef(10), State = IConnectionService.ConnectionState.LoggedIn }
+			: connection);
+		var cutOff = false;
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		async ValueTask<CallState> SlowLogin()
+		{
+			try { await Task.Delay(TimeSpan.FromMilliseconds(200), ExecutionBudget.CurrentToken); }
+			catch (OperationCanceledException) { cutOff = true; throw; }
+			return CallState.Empty;
+		}
+		parser.CommandParse(20, Arg.Any<IConnectionService>(), Arg.Any<MString>()).Returns(_ => SlowLogin());
+		var notifications = Substitute.For<INotifyService>();
+		await using var queue = Create(milliseconds: 20, parser: parser, connections: connections, notifications: notifications);
+
+		await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("connect Someone pw"), ParserState.Empty)).Accepted).IsTrue();
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(5));
+
+		var told = notifications.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(INotifyService.NotifyLocalized)
+			&& call.GetArguments()[1] as string == "CpuUsageExceeded");
+		await Assert.That(cutOff).IsEqualTo(loggedIn);
+		await Assert.That(told).IsEqualTo(loggedIn ? 1 : 0);
+	}
+
 	private static IConnectionService.ConnectionData Incarnation(long handle) => new(handle, null,
 		IConnectionService.ConnectionState.Connected, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
 		() => Encoding.UTF8, new ConcurrentDictionary<string, string>());

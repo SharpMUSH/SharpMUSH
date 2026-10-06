@@ -774,7 +774,9 @@ public partial class TaskScheduler(
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
-					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
+					var milliseconds = RunsSoftcode(entry)
+						? configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime
+						: 0;
 					lock (_admissionLock)
 					{
 						if (_stopping || entry.Cts.IsCancellationRequested) continue;
@@ -800,6 +802,18 @@ public partial class TaskScheduler(
 		}
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested) { }
 	}
+
+	/// <summary>
+	/// Whether <c>queue_entry_cpu_time</c> times <paramref name="entry"/>. A line typed at the login
+	/// screen does not: what runs there is the server's own login work (password check, MOTD, LAST
+	/// bookkeeping, announcements), which PennMUSH does in microseconds of CPU and which a wall-clock
+	/// deadline would charge with every disk write, bus publish and cold JIT along the way. The one
+	/// evaluation a login does, its look, takes a limit of its own (<c>SocketCommands.LookAfterLoginAsync</c>).
+	/// Decided when the entry starts, so a line queued at the login screen that runs after the login
+	/// is timed as the player's.
+	/// </summary>
+	private bool RunsSoftcode(QueueEntry entry)
+		=> entry.PendingInput is not { } input || connectionService.Get(input.Handle)?.Ref is not null;
 
 	/// <summary>
 	/// PennMUSH's notice for a queue entry that ran out of <c>queue_entry_cpu_time</c>: once per entry,

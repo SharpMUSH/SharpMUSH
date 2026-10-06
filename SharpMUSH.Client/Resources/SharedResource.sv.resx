@@ -5610,4 +5610,88 @@
   <data name="WidConfirm" xml:space="preserve">
     <value>Bekräfta</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Lösennycklar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Logga in med fingeravtryck, ansikte eller enhetens pinkod i stället för att skriva ditt lösenord.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Inga lösennycklar ännu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Den här webbläsaren stöder inte lösennycklar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Lägg till en lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Namn på lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Skapa lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Lösennyckeln har lagts till.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Lösennyckeln har tagits bort.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Byt namn på lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Ta bort lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Ta bort {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Den här lösennyckeln kan inte längre logga in på ditt konto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Tillagd {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Senast använd {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Aldrig använd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Synkroniserad</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Logga in med en lösennyckel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Rad {0}: denna ::: har inget namn och öppnar därför ett tomt block. Om den skulle stänga ett block, ge blocket runt omkring fler kolon än blocken inuti.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Rad {0}: :::-blocket som öppnas här stängs aldrig och fortsätter till slutet av sidan eller av blocket runt omkring.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Rad {0}: detta står i en flex men utanför ett ::: item och blir därför en egen kolumn.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Rad {0}: ett ::: item läggs bara ut direkt inuti en flex.</value>
+  </data>
 </root>

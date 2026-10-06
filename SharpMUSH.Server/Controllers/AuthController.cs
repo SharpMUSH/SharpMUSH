@@ -1,6 +1,7 @@
 using SharpMUSH.Library;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using System.Text.Json;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Authentication.Passkeys;
 using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
@@ -35,6 +37,7 @@ public class AuthController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
 	SitelockGuard sitelockGuard,
+	PasskeyService passkeys,
 	ILogger<AuthController> logger) : ControllerBase
 {
 	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
@@ -245,6 +248,53 @@ public class AuthController(
 				logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
 				return Unauthorized("Invalid account credentials.");
 		}
+	}
+
+	/// <summary>
+	/// Starts a passkey sign-in: the options the browser hands to <c>navigator.credentials.get</c>, and
+	/// the ceremony id <see cref="PasskeyLogin"/> is answered with.
+	/// </summary>
+	[HttpPost("passkey-login/options")]
+	[EnableRateLimiting("public-api")]
+	public IActionResult PasskeyLoginOptions()
+	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		return passkeys.BeginSignIn(Request) switch
+		{
+			PasskeyService.Challenge challenge => Ok(challenge),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	/// <summary>Request body for a passkey sign-in: the ceremony id and the browser's credential, as its JSON.</summary>
+	public record PasskeyLoginRequest(string? CeremonyId, JsonElement Credential);
+
+	/// <summary>
+	/// Signs in with a passkey, answering as <see cref="AccountLogin"/> does. The passkey names the account.
+	/// </summary>
+	[HttpPost("passkey-login")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> PasskeyLogin([FromBody] PasskeyLoginRequest request)
+	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		return await passkeys.CompleteSignInAsync(request.CeremonyId, request.Credential, HttpContext.RequestAborted) switch
+		{
+			SharpAccount { Status: AccountStatus.Deleted } => Unauthorized("This passkey is not registered here. It may have been removed from the account."),
+			SharpAccount { IsActive: false } account => await PasskeyRefusedAsync(account),
+			SharpAccount account => await AccountLoggedInAsync(account),
+			Error<string> error => Unauthorized(error.Value),
+		};
+	}
+
+	private async Task<IActionResult> PasskeyRefusedAsync(SharpAccount account)
+	{
+		var unavailable = await accountService.UnavailableAsync(account);
+		logger.LogInformation("Passkey login refused for {Id}: account is {Status}", LogSanitizer.Sanitize(account.Id), account.Status);
+		return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
 	}
 
 	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account)

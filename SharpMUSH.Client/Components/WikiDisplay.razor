@@ -83,7 +83,7 @@ else if (Article is null)
 }
 else if (DisplayAsHero)
 {
-    <div class="WikiContent WikiContent--hero" style="text-align:center;">
+    <div class="WikiContent WikiContent--hero">
         @LocaleBanner
         <div class="mud-card-content">
             @RenderSegments
@@ -257,12 +257,6 @@ else
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    /// <summary>
-    /// One renderable chunk of the article body: either raw HTML, or a dynamic
-    /// directive placeholder (when <c>Directive</c> is non-null).
-    /// </summary>
-    private sealed record BodySegment(string Html, string? Directive = null, string Arg = "");
-
     private sealed record TocEntry(string Text, string Anchor);
 
     private static readonly Regex DirectivePlaceholder = new(
@@ -280,7 +274,7 @@ else
         "<a href=\"/character/([^\"#?/]+)\">",
         RegexOptions.Compiled);
 
-    private List<BodySegment> _segments = [];
+    private IReadOnlyList<WikiBodyNode> _segments = [];
     private List<TocEntry> _toc = [];
     private string _tocCurrent = TopAnchor;
     private bool _hasBody = true;
@@ -504,12 +498,12 @@ else
 
         var marking = _marking;
         // Unmarked until the redlink check answers; the lifecycle renders as soon as this awaits.
-        _segments = SplitOnDirectives(marking.IsCompletedSuccessfully ? MarkMentions(marking.Result) : html);
+        _segments = WikiBody.Split(marking.IsCompletedSuccessfully ? MarkMentions(marking.Result) : html);
 
         var marked = MarkMentions(await marking);
         if (marking == _marking && marked != html)
         {
-            _segments = SplitOnDirectives(marked);
+            _segments = WikiBody.Split(marked);
         }
 
         await LoadCategoryNamesAsync();
@@ -606,17 +600,25 @@ else
         }
     }
 
-    private RenderFragment RenderSegments => __builder =>
+    private RenderFragment RenderSegments => RenderNodes(_segments);
+
+    /// <summary>The body's pieces: HTML as it is, a component for each live listing, and an element for
+    /// each block that holds one (<see cref="WikiBody"/>).</summary>
+    private static RenderFragment RenderNodes(IReadOnlyList<WikiBodyNode> nodes) => __builder =>
     {
-        foreach (var segment in _segments)
+        foreach (var node in nodes)
         {
-            if (segment.Directive is not null)
+            switch (node)
             {
-                <WikiDirectiveBlock Directive="@segment.Directive" Arg="@segment.Arg" />
-            }
-            else
-            {
-                @((MarkupString)segment.Html)
+                case WikiBodyHtml html:
+                    @((MarkupString)html.Html)
+                    break;
+                case WikiBodyDirective directive:
+                    <WikiDirectiveBlock Directive="@directive.Directive" Arg="@directive.Arg" />
+                    break;
+                case WikiBodyElement element:
+                    <div @attributes="@element.Attributes">@RenderNodes(element.Children)</div>
+                    break;
             }
         }
     };
@@ -686,36 +688,9 @@ else
         return html;
     }
 
-    private static List<BodySegment> SplitOnDirectives(string html)
-    {
-        var segments = new List<BodySegment>();
-        var position = 0;
-
-        foreach (Match match in DirectivePlaceholder.Matches(html))
-        {
-            if (match.Index > position)
-            {
-                segments.Add(new BodySegment(html[position..match.Index]));
-            }
-
-            segments.Add(new BodySegment(
-                Html: string.Empty,
-                Directive: match.Groups[1].Value,
-                Arg: WebUtility.HtmlDecode(match.Groups[2].Value)));
-
-            position = match.Index + match.Length;
-        }
-
-        if (position < html.Length)
-        {
-            segments.Add(new BodySegment(html[position..]));
-        }
-
-        return segments;
-    }
-
     /// <summary>
-    /// True for the centred, chrome-free framing the home page gets inside the front-page widget.
+    /// True for the chrome-free framing the home page gets inside the front-page widget: its lead image
+    /// centred as the banner, and centred text only where the page asks for it with <c>::: center</c>.
     /// Only when <see cref="Embedded"/>: on the <c>/wiki/...</c> route the home page is an article
     /// like any other, and the hero would strip the very edit and history controls it needs there.
     /// </summary>

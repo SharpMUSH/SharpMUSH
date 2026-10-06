@@ -33,6 +33,8 @@
         @* The characters linked to the account are managed on the account page, in their own card. *@
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.People" Label="@Loc["Characters"]"
                     Href="/account#characters" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Key" Label="@Loc["AuthPasskeys"]"
+                    Href="/account#passkeys" Collapsed="@Collapsed" />
     </SidebarGroup>
     @if (!Collapsed)
     {

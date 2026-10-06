@@ -95,6 +95,17 @@
             </div>
         </div>
 
+        @if (MarkdownFenceCheck.Check(Article.Content) is { Count: > 0 } fenceIssues)
+        {
+            @* Markdown has no errors, so a ::: block that nests wrongly would otherwise just render wrongly. *@
+            <ul class="wiki-edit-fences" role="status">
+                @foreach (var issue in fenceIssues)
+                {
+                    <li>@Loc[FenceIssueKey(issue.Problem), issue.Line]</li>
+                }
+            </ul>
+        }
+
         <div class="wiki-edit-tags">
             @* Categories are held by the page, not written in its text; a translation inherits them. *@
             <span class="wiki-edit-taglabel">@Loc["NavWikiCategories"]</span>
@@ -276,6 +287,14 @@
     {
         if (args.Key == "Enter") AddCategory();
     }
+
+    private static string FenceIssueKey(MarkdownFenceProblem problem) => problem switch
+    {
+        MarkdownFenceProblem.Unnamed => "WkFenceUnnamed",
+        MarkdownFenceProblem.Unclosed => "WkFenceUnclosed",
+        MarkdownFenceProblem.OutsideItem => "WkFenceOutsideItem",
+        _ => "WkFenceItemOutsideFlex"
+    };
 
     private void InsertAssetMarkdown(string snippet)
     {

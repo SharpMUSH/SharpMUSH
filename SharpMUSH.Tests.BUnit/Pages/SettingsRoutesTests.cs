@@ -31,10 +31,10 @@ public class SettingsRoutesTests : BunitContext
 	{
 		var cut = Render<Settings>();
 
-		// Cards are Account / Characters / Theme, in markup order, and are real links.
+		// Cards are Account / Characters / Passkeys / Theme, in markup order, and are real links.
 		var hrefs = cut.FindAll("a.kit-link-card").Select(a => a.GetAttribute("href")).ToList();
 
-		await Assert.That(hrefs).IsEquivalentTo(["/account", "/account#characters", "/settings/theme"]);
+		await Assert.That(hrefs).IsEquivalentTo(["/account", "/account#characters", "/account#passkeys", "/settings/theme"]);
 	}
 
 	[Test]

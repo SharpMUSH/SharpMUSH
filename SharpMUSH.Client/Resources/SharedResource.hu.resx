@@ -5610,4 +5610,88 @@
   <data name="WidConfirm" xml:space="preserve">
     <value>Megerősítés</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Azonosítókulcsok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Jelentkezz be ujjlenyomattal, arccal vagy az eszköz PIN-kódjával a jelszó begépelése helyett.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Még nincs azonosítókulcs.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Ez a böngésző nem támogatja az azonosítókulcsokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Azonosítókulcs hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Az azonosítókulcs neve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Azonosítókulcs létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Azonosítókulcs hozzáadva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Azonosítókulcs eltávolítva.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Azonosítókulcs átnevezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Azonosítókulcs eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Eltávolítod: {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Ezzel az azonosítókulccsal többé nem lehet belépni a fiókodba.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Hozzáadva: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Utoljára használva: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Még nem használt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Szinkronizált</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Belépés azonosítókulccsal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>{0}. sor: ennek a :::-nak nincs neve, ezért üres blokkot nyit. Ha egy blokkot kellett volna lezárnia, adj a körülvevő blokknak több kettőspontot, mint a benne lévőknek.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>{0}. sor: az itt nyitott ::: blokk sosem záródik le, így az oldal vagy a körülvevő blokk végéig tart.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>{0}. sor: ez egy flexen belül, de ::: itemen kívül van, ezért külön oszlop lesz.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>{0}. sor: a ::: item csak közvetlenül egy flexen belül rendeződik.</value>
+  </data>
 </root>

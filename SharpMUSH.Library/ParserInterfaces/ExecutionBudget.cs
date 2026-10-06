@@ -9,6 +9,7 @@ public sealed class ExecutionBudget : IDisposable
 	private static readonly AsyncLocal<ExecutionBudget?> Ambient = new();
 	private readonly CancellationTokenSource _cancellation;
 	private readonly CancellationTokenSource _deadline;
+	private readonly CancellationToken _cancelledBy;
 	private readonly long _started = Stopwatch.GetTimestamp();
 	private readonly TimeSpan _duration;
 	public const string Error = "#-1 EXECUTION TIME LIMIT EXCEEDED";
@@ -22,6 +23,7 @@ public sealed class ExecutionBudget : IDisposable
 		if (duration != Timeout.InfiniteTimeSpan && (duration < TimeSpan.Zero || duration.TotalMilliseconds > uint.MaxValue - 1))
 			throw new ArgumentOutOfRangeException(nameof(duration));
 		_duration = duration;
+		_cancelledBy = cancellationToken;
 		_deadline = new CancellationTokenSource(duration, timerProvider);
 		if (duration == TimeSpan.Zero) _deadline.Cancel();
 		_cancellation = cancellationToken.CanBeCanceled
@@ -29,6 +31,9 @@ public sealed class ExecutionBudget : IDisposable
 			: _deadline;
 	}
 	public CancellationToken Token => _cancellation.Token;
+	/// <summary>What cancels this budget other than its own deadline: a budget that replaces it for
+	/// part of the work (a timer of its own, not the rest of this one) still stops with it.</summary>
+	public CancellationToken CancelledBy => _cancelledBy;
 	public static ExecutionBudget FromMilliseconds(uint milliseconds, CancellationToken token = default)
 		=> new(milliseconds == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(milliseconds), token);
 	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - Stopwatch.GetElapsedTime(_started)).Ticks));

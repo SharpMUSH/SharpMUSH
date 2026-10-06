@@ -5610,4 +5610,88 @@
   <data name="WidConfirm" xml:space="preserve">
     <value>Bekræft</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Adgangsnøgler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Log ind med fingeraftryk, ansigt eller enhedens pinkode i stedet for at skrive din adgangskode.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Ingen adgangsnøgler endnu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Denne browser understøtter ikke adgangsnøgler.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Tilføj en adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Navn på adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Opret adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Adgangsnøglen er tilføjet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Adgangsnøglen er fjernet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Omdøb adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Fjern adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Fjern {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Denne adgangsnøgle kan ikke længere logge ind på din konto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Tilføjet {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Sidst brugt {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Aldrig brugt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Synkroniseret</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Log ind med en adgangsnøgle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Linje {0}: denne ::: har intet navn og åbner derfor en tom blok. Hvis den skulle lukke en blok, så giv den omgivende blok flere koloner end blokkene i den.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Linje {0}: ::: -blokken, der åbnes her, lukkes aldrig og fortsætter til slutningen af siden eller af den omgivende blok.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Linje {0}: dette står i en flex, men uden for et ::: item, og bliver derfor sin egen kolonne.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Linje {0}: et ::: item lægges kun ud direkte inde i en flex.</value>
+  </data>
 </root>

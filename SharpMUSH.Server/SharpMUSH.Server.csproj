@@ -116,6 +116,7 @@
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.2.1" />
+    <PackageReference Include="Fido2" Version="4.2.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
