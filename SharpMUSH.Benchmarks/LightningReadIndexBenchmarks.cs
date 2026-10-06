@@ -133,7 +133,7 @@ public class LightningWikiReadBenchmarks : LightningStoreBenchmark
 		var at = DateTimeOffset.UtcNow;
 		for (var i = 0; i < PageCount; i++)
 		{
-			await wiki.CreatePageAsync(new WikiPage("", $"page_{i}", $"Page {i}", "main", body, body, body, "#1", "#1", at, at.AddSeconds(i), false, 1)
+			await wiki.CreatePageAsync(new WikiPage("", $"page_{i}", $"Page {i}", "main", body, body, body, "#1", "#1", at, at.AddSeconds(i), 1)
 			{
 				Categories = i % 10 == 0 ? ["lore", "bench"] : ["general", "bench"]
 			});

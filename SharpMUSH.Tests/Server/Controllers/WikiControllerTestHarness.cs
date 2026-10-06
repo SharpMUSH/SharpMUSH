@@ -9,12 +9,13 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Authentication;
 using System.Security.Claims;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
-/// The five <c>/api/wiki</c> controllers, built over one storage instance and one principal.
+/// The six <c>/api/wiki</c> controllers, built over one storage instance and one principal.
 /// They share <c>WikiControllerBase</c>'s visibility rules, so a test that seeds a draft and then
 /// asks a listing endpoint about it has to be asking the same caller.
 /// </summary>
@@ -23,7 +24,8 @@ internal sealed record WikiEndpoints(
 	WikiBrowseController Browse,
 	WikiRevisionsController Revisions,
 	WikiTranslationsController Translations,
-	WikiAdminController Admin);
+	WikiAdminController Admin,
+	WikiRequirementsController Requirements);
 
 /// <summary>
 /// Builds a <see cref="WikiEndpoints"/> set over in-memory storage.
@@ -56,18 +58,26 @@ internal static class WikiControllerTestHarness
 		names.NameOfAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
 			.Returns(call => Task.FromResult(call.Arg<string?>() is { Length: > 0 } dbref ? $"name of {dbref}" : null));
 
+		// The real access service over a role registry seeded as a new world is, so an anonymous caller holds
+		// what the everyone role grants (wiki.read) and nothing more.
+		var access = new WikiAccessService(storage, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
+
 		var endpoints = new WikiEndpoints(
-			new WikiController(storage, localization, cache, names, NullLogger<WikiController>.Instance),
-			new WikiBrowseController(storage, localization, names, NullLogger<WikiBrowseController>.Instance),
-			new WikiRevisionsController(storage, localization, cache, names, NullLogger<WikiRevisionsController>.Instance),
-			new WikiTranslationsController(storage, localization, cache, names, NullLogger<WikiTranslationsController>.Instance),
-			new WikiAdminController(storage, localization, cache, names, NullLogger<WikiAdminController>.Instance));
+			new WikiController(storage, localization, access, cache, names, NullLogger<WikiController>.Instance),
+			new WikiBrowseController(storage, localization, access, names, NullLogger<WikiBrowseController>.Instance),
+			new WikiRevisionsController(storage, localization, access, cache, names, NullLogger<WikiRevisionsController>.Instance),
+			new WikiTranslationsController(storage, localization, access, cache, names, NullLogger<WikiTranslationsController>.Instance),
+			new WikiAdminController(storage, localization, access, cache, names, NullLogger<WikiAdminController>.Instance),
+			new WikiRequirementsController(storage, localization, access, cache, names, NullLogger<WikiRequirementsController>.Instance));
 
 		// An identity without an authentication type reports IsAuthenticated == false.
 		var identity = authenticated
 			? new ClaimsIdentity(
 				new List<Claim> { new(GameHub.CharacterDbrefClaim, callerDbref) }
-					.Concat(scopes.Select(s => new Claim(PortalPermission.ClaimType, s))),
+					// Every account holds the everyone role, so its claims always carry wiki.read, as the real
+					// claims transformation's do.
+					.Concat(scopes.Append(PortalPermission.WikiRead).Distinct()
+						.Select(s => new Claim(PortalPermission.ClaimType, s))),
 				"test")
 			: new ClaimsIdentity();
 
@@ -86,7 +96,7 @@ internal static class WikiControllerTestHarness
 	}
 
 	private static IEnumerable<ControllerBase> Controllers(WikiEndpoints wiki) =>
-		[wiki.Pages, wiki.Browse, wiki.Revisions, wiki.Translations, wiki.Admin];
+		[wiki.Pages, wiki.Browse, wiki.Revisions, wiki.Translations, wiki.Admin, wiki.Requirements];
 
 	public static (WikiEndpoints Wiki, WikiStoreService Storage) BuildAnonymous() =>
 		Build(authenticated: false);

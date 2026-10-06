@@ -1,4 +1,5 @@
 .comm {
+	container: comm / inline-size;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -54,15 +55,44 @@
 	color: var(--text);
 }
 
+.comm-members-toggle {
+	height: 36px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.comm-members-toggle:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
 .comm-close:focus-visible,
+.comm-members-toggle:focus-visible,
 .comm-send:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
 
+.comm-main {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+}
+
 /* column-reverse keeps the newest line in view as lines arrive */
 .comm-scroll {
 	flex: 1;
+	min-width: 0;
 	min-height: 0;
 	overflow-y: auto;
 	display: flex;
@@ -206,4 +236,82 @@
 .comm-send:disabled {
 	opacity: 0.45;
 	cursor: default;
+}
+
+/* The member list: beside the lines where the view has room for both, over them where it does not (the view's
+   own width, so a sidebar beside it counts). The header's members button flips whichever it starts as. */
+.comm-members {
+	width: 220px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	border-left: 1px solid var(--border);
+	overflow-y: auto;
+}
+
+.comm--members-toggled .comm-members {
+	display: none;
+}
+
+@container comm (max-width: 44rem) {
+	.comm-members {
+		display: none;
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: min(260px, 80%);
+		background: var(--surface);
+		box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+		z-index: 1;
+	}
+
+	.comm--members-toggled .comm-members {
+		display: flex;
+	}
+}
+
+.comm-members-head {
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-dim);
+}
+
+.comm-members-empty {
+	font-size: 13px;
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+.comm-members-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.comm-member {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.comm-avatar--small {
+	width: 28px;
+	height: 28px;
+	font-size: 11px;
+}
+
+.comm-member-name {
+	font-size: 14px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

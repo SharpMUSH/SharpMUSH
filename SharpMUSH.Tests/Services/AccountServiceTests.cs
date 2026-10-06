@@ -132,10 +132,9 @@ public class AccountServiceTests
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid("correct", "hash").Returns(true);
 
-		var result = await svc.AuthenticateAsync("TestUser", "correct");
+		var result = (await svc.AuthenticateAsync("TestUser", "correct")).Expect<SharpAccount>();
 
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Username).IsEqualTo("TestUser");
+		await Assert.That(result.Username).IsEqualTo("TestUser");
 	}
 
 	[Test]
@@ -147,15 +146,13 @@ public class AccountServiceTests
 		db.GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid("correct", "hash").Returns(true);
 
-		var result = await svc.AuthenticateAsync("user@test.com", "correct");
-
-		await Assert.That(result).IsNotNull();
+		(await svc.AuthenticateAsync("user@test.com", "correct")).Expect<SharpAccount>();
 		await db.Received(1).GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>());
 		await db.DidNotReceive().GetAccountByUsernameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
-	public async ValueTask AuthenticateAsync_WrongPassword_ReturnsNull()
+	public async ValueTask AuthenticateAsync_WrongPassword_IsNotFound()
 	{
 		var (svc, db, pw, _) = Build();
 
@@ -163,26 +160,22 @@ public class AccountServiceTests
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid("wrong", "hash").Returns(false);
 
-		var result = await svc.AuthenticateAsync("TestUser", "wrong");
-
-		await Assert.That(result).IsNull();
+		(await svc.AuthenticateAsync("TestUser", "wrong")).Expect<NotFound>();
 	}
 
 	[Test]
-	public async ValueTask AuthenticateAsync_AccountNotFound_ReturnsNull()
+	public async ValueTask AuthenticateAsync_AccountNotFound_IsNotFound()
 	{
 		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
-		var result = await svc.AuthenticateAsync("Ghost", "pass");
-
-		await Assert.That(result).IsNull();
+		(await svc.AuthenticateAsync("Ghost", "pass")).Expect<NotFound>();
 	}
 
 	[Test]
-	public async ValueTask AuthenticateAsync_DisabledAccount_ReturnsNull()
+	public async ValueTask AuthenticateAsync_DisabledAccount_IsRefused()
 	{
 		var (svc, db, pw, _) = Build();
 
@@ -190,9 +183,7 @@ public class AccountServiceTests
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
 		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
-		var result = await svc.AuthenticateAsync("TestUser", "correct");
-
-		await Assert.That(result).IsNull();
+		(await svc.AuthenticateAsync("TestUser", "correct")).Expect<AccountUnavailable>();
 	}
 
 	[Test]

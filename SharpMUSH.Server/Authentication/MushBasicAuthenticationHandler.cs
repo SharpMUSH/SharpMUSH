@@ -123,7 +123,14 @@ public class MushBasicAuthenticationHandler(
 		// NameIdentifier is the ACCOUNT id on every principal. A character with no owning account
 		// still authenticates here — this is character-password basic auth — but carries no account
 		// id, so account-anchored writes reject it rather than acting as somebody.
-		if ((await accountService.GetAccountForCharacterAsync(player.Object.DBRef))?.Id is { } accountId)
+		var account = await accountService.GetAccountForCharacterAsync(player.Object.DBRef);
+		// A disabled, banned or closed account's characters do not sign in here either.
+		if (account is { IsActive: false })
+		{
+			return AuthenticateResult.Fail((await accountService.UnavailableAsync(account)).Message);
+		}
+
+		if (account?.Id is { } accountId)
 		{
 			claims.Add(new Claim(ClaimTypes.NameIdentifier, accountId));
 		}

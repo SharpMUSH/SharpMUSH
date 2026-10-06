@@ -64,6 +64,10 @@ public static class ChannelHelper
 	/// <para>The ORDER is part of the contract, not an accident of how it was typed: PennMUSH's
 	/// <c>privs_to_letters</c> and <c>privs_to_string</c> walk the table in order, so it is what
 	/// <c>cflags()</c>, <c>clflags()</c>, <c>@channel/what</c> and <c>@channel/decompile</c> print.</para>
+	///
+	/// <para><c>Announce</c> takes the place of PennMUSH's <c>Quiet</c> and means its opposite: a channel
+	/// carries connect and disconnect lines only when it has <c>Announce</c>, where PennMUSH carries them
+	/// unless it has <c>Quiet</c>.</para>
 	/// </summary>
 	private static readonly (string Name, char Letter)[] ChannelPrivilegeTable =
 	[
@@ -72,7 +76,7 @@ public static class ChannelHelper
 		("Admin", 'A'),
 		("Wizard", 'W'),
 		("Object", 'O'),
-		("Quiet", 'Q'),
+		("Announce", 'a'),
 		("Open", 'o'),
 		("Hide_Ok", 'H'),
 		("NoTitles", 'T'),

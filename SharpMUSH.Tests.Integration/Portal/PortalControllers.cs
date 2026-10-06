@@ -61,6 +61,7 @@ public static class PortalControllers
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
 			factory.Services.GetRequiredService<CommTextComposer>(),
 			ids ?? factory.Services.GetRequiredService<IChannelMessageIdSource>(),
+			factory.Services.GetRequiredService<IConnectionService>(),
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>())
 		{
 			ControllerContext = new ControllerContext

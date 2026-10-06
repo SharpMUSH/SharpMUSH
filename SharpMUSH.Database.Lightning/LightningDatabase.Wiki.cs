@@ -128,7 +128,6 @@ public partial class LightningDatabase : IWikiStore
 		Apply(Tables.WikiRecent, WikiRecentKey(pageKey, r));
 		Apply(Tables.WikiByNamespace, WikiNamespaceKey(pageKey, r));
 		foreach (var category in WikiIndexCategories(r)) Apply(Tables.WikiByCategory, WikiLabelKey(category, pageKey, r));
-		if (r.IsProtected) Apply(Tables.WikiProtected, WikiPageKey(pageKey));
 
 		void Apply(TableDef table, byte[] key)
 		{
@@ -173,17 +172,36 @@ public partial class LightningDatabase : IWikiStore
 				.ToList()
 				.SelectMany(prefix => tx.Range(Tables.WikiByNamespace, prefix));
 
-	/// <summary>The admitted entries of an ordered index, paged, each resolved to its page row.</summary>
+	/// <summary>
+	/// The admitted entries of an ordered index, paged, each resolved to its page row. The draft rule reads the
+	/// index value alone; namespace, category and page restrictions need the row, so only a reader who has some
+	/// pays for decoding the rows it skips.
+	/// </summary>
 	private static List<WikiPage> WikiPagesFromIndex(ITx tx, IEnumerable<(byte[] Key, byte[] Value)> entries,
 		WikiVisibility visibility, int skip, int take)
-		=> entries
-			.Where(entry => WikiVisibilityAdmits(visibility, entry.Value))
+		=> WikiAdmitted(tx, entries, visibility)
 			.Skip(skip)
 			.Take(take)
-			.Select(entry => WikiIndexPageKey(entry.Key))
-			.Select(key => TryReadWikiPage(tx, key) is { } record ? MapWikiPage(key, record) : null)
+			.Select(entry => entry.Page ?? ReadWikiPage(tx, entry.Key))
 			.OfType<WikiPage>()
 			.ToList();
+
+	/// <summary>The index entries <paramref name="visibility"/> admits, with the page row when it had to be read.</summary>
+	private static IEnumerable<(long Key, WikiPage? Page)> WikiAdmitted(ITx tx, IEnumerable<(byte[] Key, byte[] Value)> entries,
+		WikiVisibility visibility)
+	{
+		var admitted = entries
+			.Where(entry => WikiVisibilityAdmits(visibility, entry.Value))
+			.Select(entry => WikiIndexPageKey(entry.Key));
+		return visibility.Hidden is null
+			? admitted.Select(key => (key, (WikiPage?)null))
+			: admitted
+				.Select(key => (Key: key, Page: ReadWikiPage(tx, key)))
+				.Where(entry => entry.Page is { } page && visibility.Admits(page));
+	}
+
+	private static WikiPage? ReadWikiPage(ITx tx, long key)
+		=> TryReadWikiPage(tx, key) is { } record ? MapWikiPage(key, record) : null;
 
 	/// <summary>Reads and increments the <c>next_wiki</c> counter inside a write job, mirroring <see cref="AllocateDbref"/>.</summary>
 	private static long AllocateWikiId(ITx tx)
@@ -226,7 +244,6 @@ public partial class LightningDatabase : IWikiStore
 		LastEditorDbref: r.LastEditorDbref,
 		CreatedAt: ParseWikiTimestamp(r.CreatedAt),
 		UpdatedAt: ParseWikiTimestamp(r.UpdatedAt),
-		IsProtected: r.IsProtected,
 		RevisionNumber: r.RevisionNumber)
 	{
 		Categories = r.Categories ?? [],
@@ -324,22 +341,23 @@ public partial class LightningDatabase : IWikiStore
 
 	// `Published ?? true` rather than `== true`, so a row written before the field existed counts the
 	// same way it displays; the index value already carries it that way.
-	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
-		=> Task.FromResult(Store.Read(tx => WikiNamespaceEntries(tx, ns)
-			.Count(entry => includeDrafts || entry.Value[0] == 1)));
+	public Task<int> CountPagesAsync(string? ns, WikiVisibility visibility)
+		=> Task.FromResult(Store.Read(tx => WikiAdmitted(tx, WikiNamespaceEntries(tx, ns), visibility).Count()));
 
-	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
 		=> Task.FromResult(Store.Read(tx =>
 		{
 			int published = 0, drafts = 0;
-			foreach (var (_, value) in tx.Range(Tables.WikiByNamespace, []))
+			foreach (var (key, value) in tx.Range(Tables.WikiByNamespace, []))
 			{
+				if (!WikiVisibilityAdmits(visibility, value)) continue;
+				if (visibility.Hidden is not null && !(ReadWikiPage(tx, WikiIndexPageKey(key)) is { } page && visibility.Admits(page)))
+					continue;
 				if (value[0] == 1) published++;
-				else if (includeDrafts) drafts++;
+				else drafts++;
 			}
 
-			var isProtected = tx.Range(Tables.WikiProtected, []).Count(entry => includeDrafts || entry.Value[0] == 1);
-			return new WikiPageCounts(published, drafts, isProtected);
+			return new WikiPageCounts(published, drafts);
 		}));
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
@@ -360,7 +378,6 @@ public partial class LightningDatabase : IWikiStore
 			LastEditorDbref = page.LastEditorDbref,
 			CreatedAt = WikiTimestamp(page.CreatedAt),
 			UpdatedAt = WikiTimestamp(page.UpdatedAt),
-			IsProtected = page.IsProtected,
 			RevisionNumber = 1,
 			Categories = [.. page.Categories],
 			Published = page.Published,
@@ -426,15 +443,7 @@ public partial class LightningDatabase : IWikiStore
 			tx.Delete(Tables.WikiSlug, WikiSlugKey(found.Record.Namespace, found.Record.Slug));
 			WikiListIndexes(tx, found.Key, found.Record, add: false);
 			tx.Delete(Tables.WikiPage, WikiPageKey(found.Key));
-			return new None();
-		});
-
-	public async Task<Found<None>> SetPageProtectionAsync(string id, bool isProtected)
-		=> await Store.WriteAsync<Found<None>>(tx =>
-		{
-			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
-
-			PutWikiPage(tx, found.Key, found.Record, found.Record with { IsProtected = isProtected });
+			tx.Delete(Tables.WikiRequirement, WikiRequirementKey(WikiRuleScope.Page, pageId));
 			return new None();
 		});
 

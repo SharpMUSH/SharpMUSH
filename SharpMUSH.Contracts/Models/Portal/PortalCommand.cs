@@ -27,3 +27,23 @@ public record PortalCommandRequest(string Command, string? Result = null, string
 /// <param name="Result">The value of <see cref="PortalCommandRequest.Result"/>, or null when none was asked for.</param>
 /// <param name="Truncated">True when output past the length limit was left out of <see cref="Output"/>.</param>
 public record PortalCommandResponse(IReadOnlyList<string> Output, string? Result, bool Truncated);
+
+/// <summary>
+/// An expression the web portal evaluates as the account session's character (<c>POST api/commands/eval</c>),
+/// the Softcode Editor's console.
+/// </summary>
+/// <param name="Expression">
+/// The code to evaluate, as a function body: <c>u()</c> would evaluate it the same way were it stored in an
+/// attribute. It may span lines.
+/// </param>
+/// <param name="Arguments">
+/// Optional. <c>%0</c> to <c>%9</c>, in order. Each is evaluated as the character first, as <c>u()</c>
+/// evaluates its arguments in its caller.
+/// </param>
+/// <param name="Object">
+/// Optional. The dbref number of an object the character controls, to evaluate as: <c>%!</c> and <c>me</c>
+/// are that object, while <c>%#</c> and <c>%@</c> stay the character, as when the character calls
+/// <c>u()</c> on one of the object's attributes. Without it the expression runs as the character.
+/// </param>
+/// <param name="Character">Optional. The objid of the character the caller means to act as; see <see cref="PortalCommandRequest.Character"/>.</param>
+public record PortalEvalRequest(string Expression, IReadOnlyList<string>? Arguments = null, int? Object = null, string? Character = null);

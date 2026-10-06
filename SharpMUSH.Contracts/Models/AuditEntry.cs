@@ -10,7 +10,10 @@ public enum AuditSource
 	Game,
 
 	/// <summary>In the web portal, by a signed-in account.</summary>
-	Portal
+	Portal,
+
+	/// <summary>By the server itself, on a schedule: a ban that ran out, for one.</summary>
+	System
 }
 
 /// <summary>
@@ -119,6 +122,10 @@ public static class AuditActions
 	public const string PlayerDestroy = "player.destroy";
 	public const string PlayerPassword = "player.password";
 	public const string PlayerBoot = "player.boot";
+	public const string PlayerWarn = "player.warn";
+	public const string BanAdd = "ban.add";
+	public const string BanLift = "ban.lift";
+	public const string BanExpired = "ban.expired";
 	public const string RoleSave = "role.save";
 	public const string RoleDelete = "role.delete";
 	public const string RoleAssign = "role.assign";
@@ -142,6 +149,7 @@ public static class AuditActions
 	public static readonly IReadOnlyList<string> All =
 	[
 		AccountStatus, AccountPassword, CharacterUnlink, PlayerCreate, PlayerDestroy, PlayerPassword, PlayerBoot,
+		PlayerWarn, BanAdd, BanLift, BanExpired,
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear

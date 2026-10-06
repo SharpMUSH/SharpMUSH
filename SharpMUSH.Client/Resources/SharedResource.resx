@@ -1009,9 +1009,6 @@
   <data name="WikiPublished" xml:space="preserve">
     <value>Published</value>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Protected</value>
-  </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Updated</value>
   </data>
@@ -1924,13 +1921,34 @@
     <value>No attribute selected</value>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — run the saved attribute with u()</value>
+    <value>Run the buffer as the object, unsaved edits included</value>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Expressions run as you: %!, %# and me are your character.</value>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Expressions run as you. ▶ runs the buffer as {0}, as u() would: %! and me are {0}, %# is you.</value>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Evaluate an expression as you</value>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Evaluate</value>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Clear the console</value>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Add argument {0}</value>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Remove argument {0}</value>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Refresh attributes</value>
-  </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Eval result</value>
   </data>
   <data name="TermErrorLine" xml:space="preserve">
     <value>[Error] {0}</value>
@@ -2462,12 +2480,6 @@
   </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderation</value>
-  </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Reports &amp; Bans</value>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Bans and moderation actions coming soon.</value>
   </data>
   <data name="AdmSuggestionsAction" xml:space="preserve">
     <value>Word Suggestions</value>
@@ -3388,7 +3400,13 @@
     <value>Wiki · Read</value>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>View unpublished/draft wiki pages (published pages are public to everyone).</value>
+    <value>Read wiki pages. A namespace, category or page can require more.</value>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Drafts</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Read unpublished wiki pages written by others.</value>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
     <value>Wiki · Create</value>
@@ -3400,7 +3418,7 @@
     <value>Wiki · Edit</value>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Edit, rollback, and retag existing (unprotected) wiki pages.</value>
+    <value>Edit, roll back and recategorize wiki pages, where their requirements allow.</value>
   </data>
   <data name="EnumPermWikiDelete" xml:space="preserve">
     <value>Wiki · Delete</value>
@@ -3412,7 +3430,7 @@
     <value>Wiki · Moderate</value>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Protect/unprotect, edit protected pages, batch operations, and the wiki admin dashboard.</value>
+    <value>Set and skip namespace, category and page requirements, protect and publish pages, batch operations, and the wiki admin dashboard.</value>
   </data>
   <data name="EnumPermMediaUpload" xml:space="preserve">
     <value>Image Library · Upload</value>
@@ -4635,6 +4653,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Nothing here yet.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>On now ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Nobody is on right now.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>This game doesn't keep page history, so only pages from this visit are shown.</value>
   </data>
@@ -5393,5 +5420,152 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# page in this category} other {# pages in this category}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Restricted</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>permissions apply</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>What each namespace, category and page requires beyond the wiki permissions. wiki.admin skips these.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>This page</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>From {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Namespace {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Category {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Pages in this category</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Nothing beyond the wiki permissions.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Permission names, separated by spaces. Every one is required.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Permissions saved.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AdmAuditSourceSystem" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="AdmModerationCardAction" xml:space="preserve">
+    <value>Warn, boot, ban or unlink a character, with a reason</value>
+  </data>
+  <data name="AdmModerate" xml:space="preserve">
+    <value>Moderate</value>
+  </data>
+  <data name="AdmModerationBlurb" xml:space="preserve">
+    <value>Pick a character, give a reason, then act. Every action is kept in the audit log.</value>
+  </data>
+  <data name="AdmModerationActTitle" xml:space="preserve">
+    <value>Act on a character</value>
+  </data>
+  <data name="AdmModerationFind" xml:space="preserve">
+    <value>Find a character</value>
+  </data>
+  <data name="AdmModerationPickHint" xml:space="preserve">
+    <value>Search for a character by name to warn, boot, ban or unlink them.</value>
+  </data>
+  <data name="AdmModerationBanned" xml:space="preserve">
+    <value>Banned</value>
+  </data>
+  <data name="AdmModerationReason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="AdmModerationReasonHelp" xml:space="preserve">
+    <value>Required to warn or ban; kept with boot and unlink when given.</value>
+  </data>
+  <data name="AdmModerationBanLength" xml:space="preserve">
+    <value>Ban length</value>
+  </data>
+  <data name="AdmModerationDays" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="AdmModerationPermanent" xml:space="preserve">
+    <value>Until lifted</value>
+  </data>
+  <data name="AdmModerationWarn" xml:space="preserve">
+    <value>Warn</value>
+  </data>
+  <data name="AdmModerationBan" xml:space="preserve">
+    <value>Ban account</value>
+  </data>
+  <data name="AdmModerationLift" xml:space="preserve">
+    <value>Lift ban</value>
+  </data>
+  <data name="AdmModerationWarnNote" xml:space="preserve">
+    <value>A warning runs the game's PLAYER`WARN event; what it does is up to the game's event handler. A ban covers the whole account and every character on it.</value>
+  </data>
+  <data name="AdmModerationWarned" xml:space="preserve">
+    <value>{0} was warned.</value>
+  </data>
+  <data name="AdmModerationBanConfirmTitle" xml:space="preserve">
+    <value>Ban {0}?</value>
+  </data>
+  <data name="AdmModerationBanConfirm" xml:space="preserve">
+    <value>The account {0} and every character on it are signed out and cannot sign in. Length: {1}.</value>
+  </data>
+  <data name="AdmModerationBannedDone" xml:space="preserve">
+    <value>{0} is banned.</value>
+  </data>
+  <data name="AdmModerationLiftConfirmTitle" xml:space="preserve">
+    <value>Lift the ban on {0}?</value>
+  </data>
+  <data name="AdmModerationLiftConfirm" xml:space="preserve">
+    <value>The account {0} can sign in again straight away.</value>
+  </data>
+  <data name="AdmModerationLifted" xml:space="preserve">
+    <value>The ban on {0} is lifted.</value>
+  </data>
+  <data name="AdmModerationBansTitle" xml:space="preserve">
+    <value>Banned accounts</value>
+  </data>
+  <data name="AdmModerationNoBans" xml:space="preserve">
+    <value>No account is banned.</value>
+  </data>
+  <data name="AdmModerationBannedBy" xml:space="preserve">
+    <value>Banned by</value>
+  </data>
+  <data name="AdmModerationUntil" xml:space="preserve">
+    <value>Until</value>
+  </data>
+  <data name="AdmModerationHostsTitle" xml:space="preserve">
+    <value>Host bans</value>
+  </data>
+  <data name="AdmModerationHostsBlurb" xml:space="preserve">
+    <value>Sites are banned through the sitelock. Its rules are listed here for reference.</value>
+  </data>
+  <data name="AdmModerationManageSitelock" xml:space="preserve">
+    <value>Manage the sitelock</value>
+  </data>
+  <data name="AdmModerationNoHosts" xml:space="preserve">
+    <value>The sitelock has no rules.</value>
   </data>
 </root>

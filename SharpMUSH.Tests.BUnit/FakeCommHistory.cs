@@ -93,6 +93,24 @@ public sealed class FakeCommHistory : ICommHistory
 		return Task.FromResult<ApiResult<IReadOnlyList<ChannelRecallLine>>>(buffer.Skip(start).ToArray());
 	}
 
+	/// <summary>Each channel's member list, as the who endpoint answers it; a channel not here answers 404.</summary>
+	public Dictionary<string, List<ChannelWhoMember>> Who { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>The channels whose member list was read, in order.</summary>
+	public List<string> WhoRead { get; } = [];
+
+	/// <summary>When set, a who read waits on it, so a test can push while the read is under way.</summary>
+	public TaskCompletionSource? WhoGate { get; set; }
+
+	public async Task<ApiResult<ChannelWhoList>> WhoAsync(string channel)
+	{
+		WhoRead.Add(channel);
+		if (WhoGate is { } gate) await gate.Task;
+		return Who.TryGetValue(channel, out var members)
+			? new ChannelWhoList(channel, members.ToArray())
+			: new ApiFailure(ApiFailureKind.NotFound, "no such channel");
+	}
+
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>
 		Task.FromResult<ApiResult<CommReadMarkers>>(Markers is { } markers
 			? markers

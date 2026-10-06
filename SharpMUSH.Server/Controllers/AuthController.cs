@@ -233,13 +233,22 @@ public class AuthController(
 		if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("UsernameOrEmail and Password are required.");
 
-		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
-		if (account is null)
+		switch (await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password))
 		{
-			logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
-			return Unauthorized("Invalid account credentials.");
+			case SharpAccount account:
+				return await AccountLoggedInAsync(account);
+			case AccountUnavailable unavailable:
+				logger.LogInformation("Account login refused for {Identifier}: account is {Status}",
+					LogSanitizer.Sanitize(request.UsernameOrEmail), unavailable.Account.Status);
+				return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
+			default: // NotFound
+				logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
+				return Unauthorized("Invalid account credentials.");
 		}
+	}
 
+	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account)
+	{
 		var characters = await accountService.GetCharactersAsync(account.Id!);
 
 		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))

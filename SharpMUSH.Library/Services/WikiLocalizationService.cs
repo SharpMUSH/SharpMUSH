@@ -42,9 +42,11 @@ public sealed class WikiLocalizationService(
 	/// <summary>More category pages than any game will write; a name past it falls back to its key.</summary>
 	private const int MaxCategoryNames = 1000;
 
-	public async Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale)
+	public async Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale, WikiVisibility visibility)
 	{
-		var pages = await wikiService.GetAllPagesAsync(0, MaxCategoryNames, WikiNamespace.Category, WikiVisibility.PublishedOnly);
+		// Published category pages only, whoever asks: a draft's title is not a category's name yet.
+		var pages = await wikiService.GetAllPagesAsync(0, MaxCategoryNames, WikiNamespace.Category,
+			visibility with { IncludeDrafts = false, AuthorDbref = null });
 		var localized = await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false);
 		return localized
 			.Where(p => p.Title.Length > 0)

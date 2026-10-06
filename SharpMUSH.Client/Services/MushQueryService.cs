@@ -11,7 +11,7 @@ namespace SharpMUSH.Client.Services;
 /// so structured output never appears in the visible terminal (or on other sessions).
 ///
 /// What remains here is what genuinely IS softcode evaluation: free-form <c>lsearch</c>
-/// expressions and <c>u()</c>. Object info, attribute CRUD and object creation moved to
+/// expressions. The Softcode Editor's console evaluates through <see cref="GameCommandService"/>. Object info, attribute CRUD and object creation moved to
 /// <see cref="ObjectApiService"/>, because this channel is line-delimited and so could not carry
 /// an attribute value containing a newline without encoding it.
 /// </summary>
@@ -67,13 +67,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		var lines = await terminal.SendCommandAsync(expr);
 		return ParseSearchResults(lines);
 	}
-
-	/// <summary>
-	/// Evaluate the attribute on <paramref name="dbref"/> using <c>u()</c> so MUSH evaluates
-	/// the attribute in object context. The result is returned over the out-of-band channel.
-	/// </summary>
-	public Task<string[]> EvalAsync(string dbref, string attrName)
-		=> terminal.SendCommandAsync($"u({dbref}/{attrName})");
 
 	private static List<MushSearchResult> ParseSearchResults(string[] lines)
 	{

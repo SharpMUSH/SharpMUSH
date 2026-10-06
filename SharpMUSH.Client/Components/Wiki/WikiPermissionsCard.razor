@@ -1,0 +1,69 @@
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The aside card a wiki.admin holder sees on a page: what the page requires itself, which they may change,
+   and what its namespace and categories require of it. On a category's page, also what the category
+   requires of its members. *@
+@if (_loaded)
+{
+    <KitCard Aside="true" Class="wiki-permissions" Title="@Loc["WikiRequirementsTitle"]">
+        @if (Slug is not null && _page is not null)
+        {
+            <WikiRequirementsEditor Scope="page" Key="@_page.Page.Key" Set="@_page.Page" Editable="true"
+                                    Heading="@Loc["WikiRequirementsThisPage"]" SetChanged="@(_ => ReloadAsync())" />
+            @foreach (var set in _page.Inherited)
+            {
+                <WikiRequirementsEditor Scope="@set.Scope" Key="@set.Key" Set="@set"
+                                        Heading="@string.Format(Loc["WikiRequirementsFrom"], ScopeLabel(set))" />
+            }
+        }
+        @if (Category is not null)
+        {
+            <WikiRequirementsEditor Scope="category" Key="@Category" Set="@_category" Editable="true"
+                                    Heading="@Loc["WikiRequirementsCategoryMembers"]" SetChanged="@(_ => ReloadAsync())" />
+        }
+    </KitCard>
+}
+
+@code {
+    /// <summary>The page's slug; null on a category that has no page of its own.</summary>
+    [Parameter] public string? Slug { get; set; }
+
+    /// <summary>The page's namespace; null for Main.</summary>
+    [Parameter] public string? Namespace { get; set; }
+
+    /// <summary>The category key, on a category's page; null elsewhere.</summary>
+    [Parameter] public string? Category { get; set; }
+
+    private WikiPageRequirementsDto? _page;
+    private WikiRequirementSetDto? _category;
+    private bool _loaded;
+    private (string?, string?, string?) _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loaded && _loadedFor == (Slug, Namespace, Category)) return;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        var target = (Slug, Namespace, Category);
+        _loadedFor = target;
+        var loadedPage = target.Slug is not null && await Wiki.GetPageRequirementsAsync(target.Slug, target.Namespace) is WikiPageRequirementsDto page ? page : null;
+        var loadedCategory = target.Category is not null && await Wiki.GetRequirementsAsync("category", target.Category) is WikiRequirementSetDto category ? category : null;
+        // The reader may have moved to another page while these were in flight; a later load owns the card then.
+        if (_loadedFor != target) return;
+        _page = loadedPage;
+        _category = loadedCategory;
+        _loaded = true;
+    }
+
+    private string ScopeLabel(WikiRequirementSetDto set) => set.Scope switch
+    {
+        "namespace" => string.Format(Loc["WikiRequirementsNamespace"], set.Label),
+        "category" => string.Format(Loc["WikiRequirementsCategory"], WikiHelpers.CategoryLabel(set.Label)),
+        _ => set.Label,
+    };
+}

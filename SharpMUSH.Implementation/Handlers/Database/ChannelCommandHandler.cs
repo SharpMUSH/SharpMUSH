@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -95,11 +96,22 @@ public class RemoveUserFromChannelCommandHandler(IChannelStore database, IPublis
 {
 	public async ValueTask<Unit> Handle(RemoveUserFromChannelCommand request, CancellationToken cancellationToken)
 	{
+		var previous = await StatusOn(request.Channel, request.Object, cancellationToken);
 		await database.RemoveUserFromChannelAsync(request.Channel, request.Object, cancellationToken);
 		await publisher.Publish(
-			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "leave"),
+			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "leave", previous),
 			cancellationToken);
 		return Unit.Value;
+	}
+
+	/// <summary><paramref name="member"/>'s flags on <paramref name="channel"/> as stored now, or null when not on it.</summary>
+	internal static async ValueTask<SharpChannelStatus?> StatusOn(SharpChannel channel, AnySharpObject member,
+		CancellationToken cancellationToken)
+	{
+		var number = member.Object().DBRef.Number;
+		var membership = await channel.Members.Value
+			.FirstOrDefaultAsync(x => x.Member.Object().DBRef.Number == number, cancellationToken);
+		return membership?.Status;
 	}
 }
 
@@ -107,9 +119,10 @@ public class UpdateChannelUserStatusCommandHandler(IChannelStore database, IPubl
 {
 	public async ValueTask<Unit> Handle(UpdateChannelUserStatusCommand request, CancellationToken cancellationToken)
 	{
+		var previous = await RemoveUserFromChannelCommandHandler.StatusOn(request.Channel, request.Object, cancellationToken);
 		await database.UpdateChannelUserStatusAsync(request.Channel, request.Object, request.Status, cancellationToken);
 		await publisher.Publish(
-			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "status"),
+			new ChannelMembershipChangedNotification(request.Object, request.Channel.Name.ToPlainText(), "status", previous),
 			cancellationToken);
 		return Unit.Value;
 	}

@@ -17,10 +17,10 @@ namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 /// </summary>
 internal sealed class WikiApiFake : HttpMessageHandler
 {
-	public static string Page(string id, string slug, string title, string? category, string? image = null, string? editor = null, bool published = true, bool isProtected = false, string ns = "main") =>
+	public static string Page(string id, string slug, string title, string? category, string? image = null, string? editor = null, bool published = true, bool isRestricted = false, string ns = "main") =>
 		$$"""
 		{"id":"{{id}}","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","markdownSource":"","renderedHtml":"","plainText":"",
-		 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-0{{id}}T00:00:00+00:00","isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":1,
+		 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-0{{id}}T00:00:00+00:00","isRestricted":{{(isRestricted ? "true" : "false")}},"revisionNumber":1,"access":{"read":true,"edit":true,"delete":true,"manage":false},
 		 "categories":{{(category is null ? "[]" : $"[\"{category}\"]")}},"published":{{(published ? "true" : "false")}},
 		 "image":{{(image is null ? "null" : $"\"{image}\"")}},"lastEditedBy":{{(editor is null ? "null" : $"\"{editor}\"")}}}
 		""";
@@ -29,7 +29,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 	[
 		Page("1", "intro", "Getting Started", "guides", "/api/wiki-assets/a/intro.jpg", "Ilsa Varn"),
 		Page("2", "combat", "Combat Basics", "guides", null, "Tomas Reyes", published: false),
-		Page("3", "harbour", "Harbour Ward", "lore", "/api/wiki-assets/b/harbour.jpg", "Wren", isProtected: true),
+		Page("3", "harbour", "Harbour Ward", "lore", "/api/wiki-assets/b/harbour.jpg", "Wren", isRestricted: true),
 		Page("4", "notes", "Loose Notes", null, null, null),
 	];
 

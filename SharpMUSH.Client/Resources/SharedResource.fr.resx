@@ -1056,13 +1056,43 @@
     <value>Aucun attribut sélectionné</value>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — exécuter l'attribut enregistré avec u()</value>
+    <value>Exécuter le tampon en tant qu’objet, modifications non enregistrées comprises</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Les expressions s’exécutent en votre nom : %!, %# et me sont votre personnage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Les expressions s’exécutent en votre nom. ▶ exécute le tampon en tant que {0}, comme u() : %! et me sont {0}, %# c’est vous.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Évaluer une expression en votre nom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Évaluer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Vider la console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Ajouter l’argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Retirer l’argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>
-  </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Résultat de l'évaluation</value>
   </data>
   <data name="TermErrorLine" xml:space="preserve">
     <value>[Erreur] {0}</value>
@@ -1462,12 +1492,6 @@
   </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Modération</value>
-  </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Signalements et bannissements</value>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Les signalements, les bannissements et le journal d'audit arrivent bientôt.</value>
   </data>
   <data name="AdmSuggestionsAction" xml:space="preserve">
     <value>Suggestions de mots</value>
@@ -2429,7 +2453,13 @@
     <value>Wiki · Lecture</value>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Consulter les pages wiki non publiées ou en brouillon (les pages publiées sont visibles par tout le monde).</value>
+    <value>Lire les pages wiki. Un espace de noms, une catégorie ou une page peut exiger davantage.</value>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Brouillons</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Lire les pages wiki non publiées écrites par d'autres.</value>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
     <value>Wiki · Création</value>
@@ -2441,7 +2471,7 @@
     <value>Wiki · Modification</value>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Modifier, restaurer et réétiqueter les pages wiki existantes (non protégées).</value>
+    <value>Modifier, restaurer et recatégoriser les pages wiki, dans la limite de leurs exigences.</value>
   </data>
   <data name="EnumPermWikiDelete" xml:space="preserve">
     <value>Wiki · Suppression</value>
@@ -2453,7 +2483,7 @@
     <value>Wiki · Modération</value>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Protéger et déprotéger des pages, modifier les pages protégées, effectuer des opérations groupées et accéder au tableau de bord d'administration du wiki.</value>
+    <value>Définir les exigences des espaces de noms, catégories et pages et s'en affranchir, protéger et publier des pages, effectuer des opérations groupées et accéder au tableau de bord d'administration du wiki.</value>
   </data>
   <data name="EnumPermMediaUpload" xml:space="preserve">
     <value>Bibliothèque d'images · Téléversement</value>
@@ -3772,10 +3802,6 @@
     <value>Protéger</value>
     <comment>MT — matches EnumPermWikiAdminDesc</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Protégée</value>
-    <comment>MT — feminine: this is a status badge on a wiki page (« page »)</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Publiée</value>
     <comment>MT — feminine, agrees with « page » like WikiProtected</comment>
@@ -4581,6 +4607,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Rien pour l'instant.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Membres</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>En ligne ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Personne n'est en ligne pour le moment.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ce jeu ne conserve pas l'historique des messages privés : seuls ceux de cette visite sont affichés.</value>
   </data>
@@ -4747,5 +4782,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# page dans cette catégorie} other {# pages dans cette catégorie}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Restreinte</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>des permissions s'appliquent</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Ce que chaque espace de noms, catégorie et page exige en plus des permissions du wiki. wiki.admin n'y est pas soumis.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Cette page</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Hérité de {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Espace de noms {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Catégorie {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Pages de cette catégorie</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Rien de plus que les permissions du wiki.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Noms de permissions séparés par des espaces. Chacune est requise.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Permissions enregistrées.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Lire</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Supprimer</value>
   </data>
 </root>

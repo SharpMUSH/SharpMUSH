@@ -4,6 +4,7 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using SharpMUSH.Client.Components.Wiki
 @inject WikiService Wiki
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -19,7 +20,7 @@
             ("pages",        _totalPages, "ResWikiStatTotalPages", Icons.Material.Filled.Article,    false),
             ("published",    _published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
             ("drafts",       _drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
-            ("protected",    _protected_, "WikiProtected",         Icons.Material.Filled.Lock,       true),
+            ("restricted",   _restricted, "WikiRestricted",        Icons.Material.Filled.Lock,       true),
             ("translations", _coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Filled.Translate, false),
         })
         {
@@ -103,7 +104,7 @@
             <TemplateColumn Title="@Loc["WikiTitle"]" Sortable="false">
                 <CellTemplate>
                     <div style="display:flex;align-items:center;gap:0.5rem;">
-                        @if (context.Item.IsProtected)
+                        @if (context.Item.IsRestricted)
                         {
                             <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Style="font-size:0.8125rem;" />
                         }
@@ -176,6 +177,29 @@
         </PagerContent>
     </MudDataGrid>
     </div>
+    </KitCard>
+
+    @* What each namespace requires, editable here; categories and pages are edited on their own pages and
+       listed here so an admin can find every rule in one place. *@
+    <KitCard Title="@Loc["WikiRequirementsTitle"]" Sub="@Loc["WikiRequirementsAdminSub"]" Class="adminwiki-requirements">
+        @if (_requirements is not null)
+        {
+            <div class="adminwiki-requirements-grid">
+                @foreach (var key in RequirementNamespaces)
+                {
+                    <WikiRequirementsEditor @key="@("namespace/" + key)" Scope="namespace" Key="@key" Editable="true"
+                                            Heading="@string.Format(Loc["WikiRequirementsNamespace"], key)"
+                                            Set="@_requirements.FirstOrDefault(r => r.Scope == "namespace" && r.Key == key)"
+                                            SetChanged="@(_ => LoadRequirementsAsync())" />
+                }
+            </div>
+            @foreach (var rule in _requirements.Where(r => r.Scope != "namespace"))
+            {
+                <WikiRequirementsEditor @key="@(rule.Scope + "/" + rule.Key)" Scope="@rule.Scope" Key="@rule.Key" Set="@rule" Editable="true"
+                                        Heading="@(rule.Scope == "category" ? string.Format(Loc["WikiRequirementsCategory"], WikiHelpers.CategoryLabel(rule.Key, _categoryNames)) : rule.Label)"
+                                        SetChanged="@(_ => LoadRequirementsAsync())" />
+            }
+        }
     </KitCard>
 </div>
 
@@ -284,16 +308,29 @@
     private int _totalPages;
     private int _published;
     private int _drafts;
-    private int _protected_;
+    private int _restricted;
 
     /// <summary>Each category's name (its category page's title); a category with no page shows its key.</summary>
     private IReadOnlyDictionary<string, string>? _categoryNames;
 
+    private static readonly string[] RequirementNamespaces = ["main", "help", "character", "system", "category"];
+
+    /// <summary>Every requirement set; null until loaded.</summary>
+    private List<WikiRequirementSetDto>? _requirements;
+
     protected override async Task OnInitializedAsync()
     {
         var names = Wiki.GetCategoryNamesAsync().AsTask();
+        var requirements = LoadRequirementsAsync();
         await LoadStatsAsync();
         _categoryNames = await names;
+        await requirements;
+    }
+
+    private async Task LoadRequirementsAsync()
+    {
+        if (await Wiki.GetAllRequirementsAsync() is List<WikiRequirementSetDto> sets)
+            _requirements = sets;
     }
 
     private async Task LoadStatsAsync()
@@ -303,7 +340,7 @@
             _totalPages = counts.Total;
             _published = counts.Published;
             _drafts = counts.Drafts;
-            _protected_ = counts.Protected;
+            _restricted = counts.Restricted;
             _statsLoaded = true;
         }
     }
@@ -409,6 +446,7 @@
             var result = await Wiki.BatchProtectAsync(_selected.Select(RefFor), isProtected);
             ReportBatchResult(result);
             await ReloadAsync();
+            await LoadRequirementsAsync();
         }
         finally { _busy = false; }
     }

@@ -174,7 +174,7 @@ else
 
         if (!WikiHelpers.SameLanguage(_selectedLocale, _sourceLocale))
         {
-            // A translation owns Title, body and Published; categories and IsProtected are inherited
+            // A translation owns Title, body and Published; categories and requirements are inherited
             // structurally, so there is no metadata call to make here.
             var translationResult = await Wiki.UpsertTranslationAsync(
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,

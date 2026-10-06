@@ -265,6 +265,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		var controller = new WikiController(
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IWikiService>(),
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IWikiLocalizationService>(),
+			scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IWikiAccessService>(),
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Server.Services.IPrerenderCacheService>(),
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Server.Services.IWikiNameResolver>(),
 			scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<WikiController>>())

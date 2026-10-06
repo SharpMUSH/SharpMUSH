@@ -37,7 +37,7 @@ public class StarterWikiServiceTests
 
 	private static WikiPage Page(string title, WikiNamespace ns, string markdown)
 		=> new($"{ns}:{title}", title.ToLowerInvariant().Replace(' ', '_'), title, ns.ToString().ToLowerInvariant(),
-			markdown, string.Empty, string.Empty, "#1", "#1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false, 1);
+			markdown, string.Empty, string.Empty, "#1", "#1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1);
 
 	/// <summary>A wiki with the boot-seeded Home and, optionally, pages the game already has.</summary>
 	private static IWikiService Wiki(string homeMarkdown, params (string Title, WikiNamespace Ns)[] existing)
@@ -63,7 +63,7 @@ public class StarterWikiServiceTests
 				.Returns(Task.FromResult<Found<WikiPage>>(Page(title, ns, "the game's own")));
 		}
 
-		wiki.SetProtectionAsync(Arg.Any<string>(), Arg.Any<bool>()).Returns(Task.FromResult<Found<None>>(new None()));
+		wiki.SetRequirementsAsync(Arg.Any<WikiRuleTarget>(), Arg.Any<IReadOnlyDictionary<WikiAction, IReadOnlyList<string>>>(), Arg.Any<string>()).Returns(Task.FromResult<Found<None>>(new None()));
 		return wiki;
 	}
 
@@ -83,10 +83,10 @@ public class StarterWikiServiceTests
 				Arg.Is<IEnumerable<string>?>(c => c != null && c.SequenceEqual(page.Categories)));
 		}
 
-		await wiki.Received(1).SetProtectionAsync("Main:Theme", true);
-		await wiki.Received(1).SetProtectionAsync("Main:Setting", true);
-		await wiki.Received(1).SetProtectionAsync("Main:Policies", true);
-		await wiki.Received(3).SetProtectionAsync(Arg.Any<string>(), true);
+		await wiki.Received(1).SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Theme"), WikiRequirementSet.Protection, "#1");
+		await wiki.Received(1).SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Setting"), WikiRequirementSet.Protection, "#1");
+		await wiki.Received(1).SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Policies"), WikiRequirementSet.Protection, "#1");
+		await wiki.Received(3).SetRequirementsAsync(Arg.Any<WikiRuleTarget>(), WikiRequirementSet.Protection, "#1");
 		await wiki.Received(1).UpdateAsync("Main:Home", StarterWikiPages.Home, "#1", Arg.Any<string?>());
 		await Assert.That(await service.AppliedAsync()).IsTrue();
 	}
@@ -99,7 +99,7 @@ public class StarterWikiServiceTests
 		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
-		await wiki.DidNotReceive().SetProtectionAsync("Main:Theme", Arg.Any<bool>());
+		await wiki.DidNotReceive().SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Theme"), Arg.Any<IReadOnlyDictionary<WikiAction, IReadOnlyList<string>>>(), Arg.Any<string>());
 		await wiki.DidNotReceive().UpdateAsync("Main:Theme", Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>());
 	}
 

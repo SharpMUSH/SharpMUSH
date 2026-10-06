@@ -24,10 +24,13 @@ If part of the command (such as the text in an `@emit`, for example) contains a 
 
 Substitution will be performed on the contents of action lists before they are executed.
 
+Separating two commands with `;|` instead of `;` passes what the first one shows you to the second: see [piping].
+
 ::: seealso
 - [@-ATTRIBUTES]
 - [verbs]
 - [$-commands]
+- [piping]
 :::
 
 ## Action list examples

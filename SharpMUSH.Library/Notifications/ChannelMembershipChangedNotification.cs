@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Notifications;
 
@@ -10,7 +11,10 @@ namespace SharpMUSH.Library.Notifications;
 /// <param name="Member">The object whose channel list changed.</param>
 /// <param name="ChannelName">The channel's name, after a rename.</param>
 /// <param name="Cause"><c>join</c>, <c>leave</c>, <c>status</c>, <c>rename</c> or <c>delete</c>.</param>
+/// <param name="PreviousStatus">For <c>leave</c> and <c>status</c>, the member's flags on the channel before
+/// the write, read before it, so a reader can tell whether they were listed by <c>@channel/who</c>.</param>
 public record ChannelMembershipChangedNotification(
 	AnySharpObject Member,
 	string ChannelName,
-	string Cause) : INotification;
+	string Cause,
+	SharpChannelStatus? PreviousStatus = null) : INotification;

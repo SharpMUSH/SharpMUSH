@@ -44,8 +44,8 @@ public class StarterWikiService(
 
 	/// <summary>
 	/// Writes each starter page the game does not have, and replaces Home while it is still the page seeded at
-	/// boot. A page the game already has is left as it is. Theme, Setting and Policies are protected, so only
-	/// wiki administrators edit them. Records that the set was applied even when some pages failed, naming those.
+	/// boot. A page the game already has is left as it is. Theme, Setting and Policies are protected (a page requirement of
+	/// wiki.admin to edit and delete), so only wiki administrators edit them. Records that the set was applied even when some pages failed, naming those.
 	/// Once applied, it writes nothing again, so a starter page an administrator deleted stays deleted.
 	/// </summary>
 	public async Task<Result<Success>> ApplyAsync()
@@ -70,7 +70,7 @@ public class StarterWikiService(
 				categories: page.Categories))
 			{
 				case WikiPage created:
-					if (page.Protect && await wiki.SetProtectionAsync(created.Id, true) is NotFound)
+					if (page.Protect && await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(created.Id), WikiRequirementSet.Protection, Author) is NotFound)
 					{
 						failures.Add($"{page.Title} was written but could not be protected.");
 					}

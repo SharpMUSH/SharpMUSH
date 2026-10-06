@@ -1,0 +1,144 @@
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject WikiService Wiki
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* What one namespace, category or page requires for each action, and, for a wiki.admin holder, a form that
+   changes it. Every permission listed for an action is required; the server checks the names. *@
+<div class="wiki-req">
+    @if (Heading is not null)
+    {
+        <SectionLabel>@Heading</SectionLabel>
+    }
+    @if (_editing)
+    {
+        @foreach (var action in Actions)
+        {
+            var name = action;
+            <MudTextField T="string" Value="@_draft[name]" ValueChanged="@(v => _draft[name] = v ?? string.Empty)"
+                          Label="@Loc[ActionLabelKey(name)]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="@(name == Actions[0] ? Loc["WikiRequirementsHelp"].Value : null)"
+                          Class="wiki-req-field" />
+        }
+        <div class="wiki-req-actions">
+            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@_saving" OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving" OnClick="SaveAsync">@Loc["Save"]</MudButton>
+        </div>
+    }
+    else
+    {
+        @if (Set is null || Set.Required.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiRequirementsNone"]</MudText>
+        }
+        else
+        {
+            <dl class="wiki-req-list">
+                @foreach (var (action, scopes) in Set.Required)
+                {
+                    <dt>@Loc[ActionLabelKey(action)]</dt>
+                    <dd>
+                        @foreach (var scope in scopes)
+                        {
+                            <Pill Tag="true">@scope</Pill>
+                        }
+                    </dd>
+                }
+            </dl>
+        }
+        @if (Editable)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="StartEditing">@Loc["WikiRequirementsChange"]</MudButton>
+        }
+    }
+</div>
+
+@code {
+    private static readonly string[] Actions = ["read", "create", "edit", "delete"];
+
+    /// <summary><c>namespace</c>, <c>category</c> or <c>page</c>.</summary>
+    [Parameter, EditorRequired] public required string Scope { get; set; }
+
+    /// <summary>The namespace name, category key or page id.</summary>
+    [Parameter, EditorRequired] public required string Key { get; set; }
+
+    /// <summary>What the target requires now; null for nothing.</summary>
+    [Parameter] public WikiRequirementSetDto? Set { get; set; }
+
+    /// <summary>A label above the list; null for none.</summary>
+    [Parameter] public string? Heading { get; set; }
+
+    /// <summary>True for a wiki.admin holder, who may change it.</summary>
+    [Parameter] public bool Editable { get; set; }
+
+    /// <summary>Raised with the set the server kept after a save.</summary>
+    [Parameter] public EventCallback<WikiRequirementSetDto> SetChanged { get; set; }
+
+    private bool _editing;
+    private bool _saving;
+    private readonly Dictionary<string, string> _draft = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _loaded = new(StringComparer.OrdinalIgnoreCase);
+    private (string, string)? _target;
+
+    protected override void OnParametersSet()
+    {
+        // A draft belongs to the target it was started on; a reused instance must not carry it to another.
+        if (_target is { } target && target != (Scope, Key))
+        {
+            _editing = false;
+            _draft.Clear();
+            _loaded.Clear();
+        }
+
+        _target = (Scope, Key);
+    }
+
+    private static string ActionLabelKey(string action) => action.ToLowerInvariant() switch
+    {
+        "read" => "WikiActionRead",
+        "create" => "WikiActionCreate",
+        "edit" => "WikiActionEdit",
+        _ => "WikiActionDelete",
+    };
+
+    private void StartEditing()
+    {
+        foreach (var action in Actions)
+        {
+            _draft[action] = _loaded[action] = Set?.Required.TryGetValue(action, out var scopes) == true ? string.Join(' ', scopes) : string.Empty;
+        }
+
+        _editing = true;
+    }
+
+    private static string[] Permissions(string text) => text.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+
+    private async Task SaveAsync()
+    {
+        // Only the actions changed here are sent: the server leaves the others alone, so a save does not undo
+        // another admin's change to an action this form never touched.
+        var required = Actions.Where(action => !Permissions(_draft[action]).SequenceEqual(Permissions(_loaded[action])))
+            .ToDictionary(action => action, action => (IReadOnlyList<string>)Permissions(_draft[action]));
+        if (required.Count == 0)
+        {
+            _editing = false;
+            return;
+        }
+
+        _saving = true;
+        var result = await Wiki.SetRequirementsAsync(Scope, Key, required);
+        _saving = false;
+        switch (result)
+        {
+            case WikiRequirementSetDto saved:
+                Set = saved;
+                _editing = false;
+                Snackbar.Add(Loc["WikiRequirementsSaved"], Severity.Success);
+                await SetChanged.InvokeAsync(saved);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+    }
+}

@@ -28,6 +28,9 @@ public static class PortalPermission
 	public const string RealityAdmin = "reality.admin";
 
 	public const string WikiRead = "wiki.read";
+
+	/// <summary>Sees unpublished (draft) wiki pages besides one's own. Reading still needs <see cref="WikiRead"/>.</summary>
+	public const string WikiDrafts = "wiki.drafts";
 	public const string WikiCreate = "wiki.create";
 	public const string WikiEdit = "wiki.edit";
 	public const string WikiDelete = "wiki.delete";
@@ -117,6 +120,7 @@ public static class PortalPermission
 		new(DiagnosticsProfile, "EnumPermDiagnosticsProfile", GroupManage, "EnumPermDiagnosticsProfileDesc"),
 		new(RealityAdmin, "EnumPermRealityAdmin", GroupManage, "EnumPermRealityAdminDesc"),
 		new(WikiRead, "EnumPermWikiRead", GroupContent, "EnumPermWikiReadDesc"),
+		new(WikiDrafts, "EnumPermWikiDrafts", GroupContent, "EnumPermWikiDraftsDesc"),
 		new(WikiCreate, "EnumPermWikiCreate", GroupContent, "EnumPermWikiCreateDesc"),
 		new(WikiEdit, "EnumPermWikiEdit", GroupContent, "EnumPermWikiEditDesc"),
 		new(WikiDelete, "EnumPermWikiDelete", GroupContent, "EnumPermWikiDeleteDesc"),
@@ -157,7 +161,7 @@ public static class PortalPermission
 			[JobsManage] = [JobsManageOwn],
 			[QueueInspect] = [QueueInspectOwn],
 			[QueueControl] = [QueueControlOwn],
-			[WikiAdmin] = [WikiRead, WikiCreate, WikiEdit, WikiDelete],
+			[WikiAdmin] = [WikiRead, WikiDrafts, WikiCreate, WikiEdit, WikiDelete],
 			[MediaAdmin] = [MediaUpload],
 			[PlayersModerate] = [PlayersView],
 		};
@@ -186,7 +190,7 @@ public static class PortalPermission
 
 	/// <summary>
 	/// Expands a granted scope set to include every scope implied by a coarser one (e.g.
-	/// <c>wiki.admin</c> ⇒ <c>wiki.read/create/edit/delete</c>). Only for catalog-only expansion without role restrictions. Authorization must use
+	/// <c>wiki.admin</c> ⇒ <c>wiki.read/drafts/create/edit/delete</c>). Only for catalog-only expansion without role restrictions. Authorization must use
 	/// PermissionResolver so an explicit child Deny cannot be restored by expansion.
 	/// </summary>
 	public static IReadOnlySet<string> Expand(IEnumerable<string> scopes)

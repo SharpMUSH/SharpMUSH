@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,22 +18,21 @@ namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// Unit tests for the unpublished-page (draft) visibility rules on <see cref="WikiController"/>:
-/// anonymous callers (and accounts without the wiki.read scope) must receive 404 for unpublished
-/// pages and never see drafts in listings; callers holding wiki.read see everything; and a draft's
-/// own author always sees it, even without wiki.read.
+/// anonymous callers (and accounts without the wiki.drafts scope) must receive 404 for unpublished
+/// pages and never see drafts in listings; callers holding wiki.drafts see everything; and a draft's
+/// own author always sees it, even without wiki.drafts.
 /// </summary>
 public class WikiControllerVisibilityTests
 {
 	/// <summary>
-	/// Builds the wiki endpoints for a caller. <paramref name="canReadDrafts"/> grants the wiki.read
-	/// scope (any Player+ member by default); when false and <paramref name="callerDbref"/> is set,
-	/// the caller is authenticated but only sees drafts they authored. Pass authenticated: false for
-	/// an anonymous caller.
+	/// Builds the wiki endpoints for a caller, who holds wiki.read. <paramref name="canReadDrafts"/> adds
+	/// wiki.drafts; when false the caller sees only the drafts they authored. Pass authenticated: false for
+	/// an anonymous caller, who holds what the everyone role grants.
 	/// </summary>
 	private static WikiEndpoints MakeEndpoints(
 		WikiStoreService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42") =>
 		WikiControllerTestHarness.Build(wiki, authenticated, callerDbref,
-			canReadDrafts ? [PortalPermission.WikiRead] : []).Wiki;
+			canReadDrafts ? [PortalPermission.WikiRead, PortalPermission.WikiDrafts] : [PortalPermission.WikiRead]).Wiki;
 
 	private static async Task<(WikiStoreService Wiki, string Slug)> SeedUnpublishedPage()
 	{
@@ -168,17 +168,17 @@ public class WikiControllerVisibilityTests
 	{
 		var (wiki, _) = await SeedUnpublishedPage();
 		var published = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
-		await wiki.SetProtectionAsync(published.Id, true);
+		await wiki.ProtectAsync(published.Id, true);
 		var protectedDraft = (await wiki.CreateAsync("Locked Draft", "# draft", "#1")).Expect<WikiPage>();
 		await wiki.SetMetadataAsync(protectedDraft.Id, [], published: false);
-		await wiki.SetProtectionAsync(protectedDraft.Id, true);
+		await wiki.ProtectAsync(protectedDraft.Id, true);
 
 		static WikiPageCountsDto Counts(IActionResult result) => (WikiPageCountsDto)((OkObjectResult)result).Value!;
 
 		await Assert.That(Counts(await MakeEndpoints(wiki, authenticated: true).Browse.GetCounts()))
-			.IsEqualTo(new WikiPageCountsDto(Total: 3, Published: 1, Drafts: 2, Protected: 2));
+			.IsEqualTo(new WikiPageCountsDto(Total: 3, Published: 1, Drafts: 2, Restricted: 2));
 		await Assert.That(Counts(await MakeEndpoints(wiki, authenticated: false).Browse.GetCounts()))
-			.IsEqualTo(new WikiPageCountsDto(Total: 1, Published: 1, Drafts: 0, Protected: 1))
+			.IsEqualTo(new WikiPageCountsDto(Total: 1, Published: 1, Drafts: 0, Restricted: 1))
 			.Because("drafts the caller may not list are not counted for them either");
 	}
 
@@ -211,7 +211,7 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiRead()
+	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiDrafts()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
@@ -222,7 +222,7 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiRead_Returns404()
+	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiDrafts_Returns404()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");

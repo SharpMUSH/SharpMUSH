@@ -30,6 +30,8 @@ Kitchen created with room number #12.
 Dug Kitchen as #12.
 ```
 
+To use what a command shows instead, pipe it into the next command with `;|` and read `%|`: see [piping].
+
 A command that outputs something says what in its help, on a line starting `Output:`. Most commands that change something output nothing, and the next command replaces `%>`. To use a value after such a command, keep it in a q-register: `@dig Kitchen;@desc [setq(0,%>)]%q0=A small kitchen.;@link %q0=here`.
 
 A command that fails leaves the `#-1` error it failed with, the way its function would return it.

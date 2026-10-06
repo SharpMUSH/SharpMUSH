@@ -1,14 +1,14 @@
 format: 1
 package: comm-feed
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
-description: "Pushes comm.channels and comm.message OOB v2 updates — a player's channels, and each channel line or page to exactly the players who received it — the data source for the portal Play sidebar's Channels and Pages."
+description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — a player's channels, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [oob, portal, play, channels, pages]
 requires_server: ">=0.1"
 
-# Attach mode (decision 20.3): manages three event handlers and their helpers on
+# Attach mode (decision 20.3): manages four event handlers and their helpers on
 # the existing event_handler object ({{$event_handler}}, #9 by default). Every
 # helper is under FN`COMM` so it cannot collide with room-contents' FN`*.
 #
@@ -23,7 +23,10 @@ requires_server: ">=0.1"
 # show it to. PLAYER`CHANNELS fires for a connected player on connect, on resume
 # (a web session rebound to its socket, a reload above all), and when
 # their channel list changes (join, leave, a change to their own channel flags,
-# a rename or deletion of one of their channels).
+# a rename or deletion of one of their channels). CHANNEL`WHO fires when a
+# member comes onto or goes off a channel's member list (as @channel/who lists
+# it), naming only the members whose view of the list changed: a member hiding
+# on the channel comes and goes for those who may see hidden members alone.
 #
 # OOB v2 (docs/design/d1/README.md §7.1, §7.3): every payload carries "v": 2,
 # lists are sent whole, identity is the objid. There is no unread count: the
@@ -76,6 +79,11 @@ objects:
       FN`COMM`MESSAGE: |-
         json_mod(json(object,v,json(number,2),kind,json(string,%0),to,json_array(iter(%7,json(string,name(%i0)),,%r),%r),from,json(string,%3),text,json(string,u(me/FN`COMM`TEXT,%4,%3,%5)),style,json(string,%4),ts,json(number,%6)),patch,json(object,channel,if(strlen(%1),json(string,%1),null),fromObjid,if(strlen(%2),json(string,%2),null),toObjids,if(words(%7),json_array(iter(%7,json(string,%i0),,%r),%r),null),id,if(strlen(%8),json(number,%8),null)))
 
+      # comm.who. %0 channel name, %1 member objid, %2 member name, %3 on|off:
+      # the member came onto or went off the channel's member list.
+      FN`COMM`WHO: |-
+        json(object,v,json(number,2),channel,json(string,%0),member,json(object,name,json(string,%2),objid,json(string,%1)),online,if(strmatch(%3,on),true,false))
+
       # ── The handlers ─────────────────────────────────────────────────────
       # null() swallows oob()'s delivery count, which think would otherwise
       # show the handler object.
@@ -90,6 +98,11 @@ objects:
       # to one copy.
       PAGE`MESSAGE: |-
         think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
+      # %0 channel, %1 member objid, %2 member name, %3 on|off, %4 the members
+      # whose view of the list changed, %5 cause (connect, disconnect, join,
+      # leave, status).
+      CHANNEL`WHO: |-
+        think null(oob(u(me/FN`COMM`RECIPIENTS,%4),comm.who,u(me/FN`COMM`WHO,%0,%1,%2,%3)))
       # %0 player, %1 cause (connect, resume, join, leave, status, rename,
       # delete), %2 channel name (empty on connect and resume). The whole list, to that player.
       PLAYER`CHANNELS: |-

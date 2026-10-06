@@ -77,7 +77,6 @@ public class ResponsiveConventionsTests
 		// The not-yet-built admin screens render only <AdminComingSoon>, which carries the tiers.
 		"Pages/Admin/AdminServer.razor",
 		"Pages/Admin/BannedNamesRedirect.razor",
-		"Pages/Admin/Moderation.razor",
 		"Pages/Admin/RestrictionsRedirect.razor",
 		"Pages/Admin/SitelockRedirect.razor",
 		"Pages/NotFound.razor",

@@ -20,7 +20,7 @@ public class WikiApiContractTests
 		Id: "page/1", Slug: "welcome", Title: "Welcome", Namespace: "main",
 		MarkdownSource: "# Hi", RenderedHtml: "<h1>Hi</h1>", PlainText: "Hi",
 		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: false, RevisionNumber: 3, Categories: ["intro", "start"], Published: true)
+		IsRestricted: false, RevisionNumber: 3, Categories: ["intro", "start"], Published: true)
 	{
 		Locale = "fr",
 		RequestedLocale = "fr-CA",

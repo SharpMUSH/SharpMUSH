@@ -216,14 +216,6 @@
     <value>Nedostaje</value>
     <comment>MT — assumed a status label meaning the item is absent</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Prijave i zabrane</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Prijave, zabrane i zapisnik revizije uskoro dolaze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderiranje</value>
     <comment>MT</comment>
@@ -1080,7 +1072,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Zaštita/uklanjanje zaštite, uređivanje zaštićenih stranica, skupne operacije i administratorska nadzorna ploča wikija.</value>
+    <value>Postavljanje i zaobilaženje zahtjeva imenskih prostora, kategorija i stranica, zaštita i objava stranica, skupne radnje i administracijska ploča wikija.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1096,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Uređivanje, vraćanje i ponovno označavanje postojećih (nezaštićenih) wiki stranica.</value>
+    <value>Uređivanje, vraćanje i ponovno kategoriziranje wiki stranica, gdje to njihovi zahtjevi dopuštaju.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1104,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Pregled neobjavljenih wiki stranica i skica (objavljene stranice javno su dostupne svima).</value>
+    <value>Čitanje wiki stranica. Imenski prostor, kategorija ili stranica mogu zahtijevati više.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Skice</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Čitanje neobjavljenih wiki stranica koje su napisali drugi.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Instalacija</value>
@@ -3660,10 +3658,6 @@
     <value>Greška pri učitavanju objekta: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Rezultat evaluacije</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Proširi atribute</value>
     <comment>MT</comment>
@@ -3763,7 +3757,40 @@
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — pokreni spremljeni atribut s u()</value>
+    <value>Pokreni međuspremnik kao objekt, uključujući nespremljene izmjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konzola</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Izrazi se izvode kao vi: %!, %# i me su vaš lik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Izrazi se izvode kao vi. ▶ pokreće međuspremnik kao {0}, kao što bi u(): %! i me su {0}, %# ste vi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Izračunaj izraz kao vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Izračunaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Očisti konzolu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Dodaj argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Ukloni argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>
@@ -4187,10 +4214,6 @@
   <data name="WikiProtect" xml:space="preserve">
     <value>Zaštiti</value>
     <comment>MT</comment>
-  </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Zaštićeno</value>
-    <comment>MT — assumed a status label, hence the neuter form</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Objavljeno</value>
@@ -5317,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ovdje još nema ničega.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Članovi</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Trenutno prisutni ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Trenutno nitko nije prisutan.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ova igra ne čuva povijest poruka, pa se prikazuju samo poruke iz ovog posjeta.</value>
   </data>
@@ -5483,5 +5515,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# stranica u ovoj kategoriji} few {# stranice u ovoj kategoriji} other {# stranica u ovoj kategoriji}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Ograničena</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>primjenjuju se dozvole</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Dozvole</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Što svaki imenski prostor, kategorija i stranica zahtijeva uz dozvole wikija. wiki.admin je izuzet.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Ova stranica</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Iz {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Imenski prostor {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategorija {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Stranice u ovoj kategoriji</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Ništa osim dozvola wikija.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Promijeni</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Nazivi dozvola odvojeni razmacima. Potrebna je svaka.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Dozvole spremljene.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Čitanje</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Stvaranje</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Uređivanje</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Brisanje</value>
   </data>
 </root>

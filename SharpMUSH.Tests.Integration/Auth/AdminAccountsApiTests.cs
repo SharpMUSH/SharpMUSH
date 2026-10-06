@@ -282,8 +282,8 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(resetResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
-		var authenticated = await accountService.AuthenticateAsync(target.Username, "admin-reset-pass-1");
-		await Assert.That(authenticated!.MustChangePassword).IsTrue();
+		var authenticated = (await accountService.AuthenticateAsync(target.Username, "admin-reset-pass-1")).Expect<SharpAccount>();
+		await Assert.That(authenticated.MustChangePassword).IsTrue();
 	}
 
 	[Test]
@@ -314,7 +314,13 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 
 		using var blockedLogin = await CreateClient().PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest(target.Username, Password));
-		await Assert.That(blockedLogin.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+		await Assert.That(blockedLogin.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+		await Assert.That(await blockedLogin.Content.ReadAsStringAsync()).IsEqualTo("This account is disabled.");
+
+		using var wrongPassword = await CreateClient().PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, "not-the-password"));
+		await Assert.That(wrongPassword.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized)
+			.Because("only someone who knows the password learns the account is disabled");
 
 		using var enableRequest = AsGod(new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/enable"), godSessionToken);
 		using var enableResponse = await godHttp.SendAsync(enableRequest);
@@ -323,6 +329,27 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		using var restoredLogin = await CreateClient().PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest(target.Username, Password));
 		await Assert.That(restoredLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+	}
+
+	/// <summary>A banned account's sign-in is refused with the ban's end, and works again once it is lifted.</summary>
+	[Test]
+	public async Task AccountLogin_BannedAccount_IsRefusedWithTheExpiry()
+	{
+		var (_, target) = await RegisterAccountAsync();
+		var accounts = factory.Services.GetRequiredService<IAccountService>();
+		var until = new DateTimeOffset(2099, 1, 2, 3, 4, 0, TimeSpan.Zero);
+		(await accounts.BanAsync(new AccountBan(target.AccountId, "integration", null, DateTimeOffset.UtcNow, until)))
+			.Expect<SharpMUSH.Library.DiscriminatedUnions.Success>();
+
+		using var banned = await CreateClient().PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(banned.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+		await Assert.That(await banned.Content.ReadAsStringAsync()).IsEqualTo("This account is banned until 2099-01-02 03:04 UTC.");
+
+		await accounts.LiftBanAsync(target.AccountId);
+		using var lifted = await CreateClient().PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(lifted.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
 	[Test, NotInParallel("SetupFlow", Order = 6)]

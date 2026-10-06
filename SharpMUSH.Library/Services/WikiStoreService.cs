@@ -11,6 +11,12 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer) : IWikiService
 {
+	// Every requirement set, read once and kept until a write here changes one. Requirements are consulted on
+	// every page read, so they are not read from the store each time.
+	private readonly System.Threading.Lock _requirementsGate = new();
+	private WikiRequirements? _requirements;
+	private int _requirementsVersion;
+
 	public Task<Found<WikiPage>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
 		=> store.GetPageBySlugAsync(Namespace(ns), WikiHelpers.Slugify(slug));
 
@@ -25,11 +31,11 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null, WikiVisibility? visibility = null)
 		=> store.GetPagesAsync(ns is { } value ? Namespace(value) : null, skip, take, visibility ?? WikiVisibility.All);
 
-	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
-		=> store.CountPagesAsync(ns is { } value ? Namespace(value) : null, includeDrafts);
+	public Task<int> CountPagesAsync(WikiNamespace? ns, WikiVisibility visibility)
+		=> store.CountPagesAsync(ns is { } value ? Namespace(value) : null, visibility);
 
-	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
-		=> store.CountPagesByStateAsync(includeDrafts);
+	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
+		=> store.CountPagesByStateAsync(visibility);
 
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
 		=> store.GetPagesByCategoryAsync(WikiHelpers.CategoryKey(category), skip, take, visibility ?? WikiVisibility.All);
@@ -73,7 +79,6 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			LastEditorDbref: authorDbref,
 			CreatedAt: now,
 			UpdatedAt: now,
-			IsProtected: false,
 			RevisionNumber: 1)
 		{
 			Categories = categories,
@@ -84,10 +89,64 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<Found<WikiPage>> UpdateAsync(string id, string markdown, string editorDbref, string? editSummary = null)
 		=> store.UpdatePageBodyAsync(id, Render(markdown), editorDbref, editSummary, DateTimeOffset.UtcNow);
 
-	public Task<Found<None>> DeleteAsync(string id, string editorDbref) => store.DeletePageAsync(id);
+	public async Task<Found<None>> DeleteAsync(string id, string editorDbref)
+	{
+		var deleted = await store.DeletePageAsync(id);
+		ForgetRequirements();
+		return deleted;
+	}
 
-	public Task<Found<None>> SetProtectionAsync(string id, bool isProtected)
-		=> store.SetPageProtectionAsync(id, isProtected);
+	public async Task<WikiRequirements> GetRequirementsAsync()
+	{
+		int version;
+		lock (_requirementsGate)
+		{
+			if (_requirements is { } cached) return cached;
+			version = _requirementsVersion;
+		}
+
+		var loaded = new WikiRequirements(await store.GetRequirementsAsync());
+		lock (_requirementsGate)
+		{
+			// A write that landed while this read was out leaves the version moved; keep nothing then.
+			if (version == _requirementsVersion) _requirements = loaded;
+		}
+
+		return loaded;
+	}
+
+	private void ForgetRequirements()
+	{
+		lock (_requirementsGate)
+		{
+			_requirementsVersion++;
+			_requirements = null;
+		}
+	}
+
+	public async Task<Found<None>> SetRequirementsAsync(WikiRuleTarget target,
+		IReadOnlyDictionary<WikiAction, IReadOnlyList<string>> required, string editorDbref)
+	{
+		var key = target.Scope switch
+		{
+			WikiRuleScope.Namespace => target.Key.Trim().ToLowerInvariant(),
+			WikiRuleScope.Category => WikiHelpers.CategoryKey(target.Key),
+			_ => target.Key,
+		};
+		var normalized = required
+			.Select(pair => (pair.Key, Scopes: (IReadOnlyList<string>)pair.Value
+				.Select(scope => scope.Trim().ToLowerInvariant())
+				.Where(scope => scope.Length > 0)
+				.Distinct(StringComparer.Ordinal)
+				.Order(StringComparer.Ordinal)
+				.ToList()))
+			.Where(pair => pair.Scopes.Count > 0)
+			.ToDictionary(pair => pair.Key, pair => pair.Scopes);
+		var result = await store.SetRequirementsAsync(new WikiRequirementSet(target with { Key = key }, normalized, editorDbref,
+			DateTimeOffset.UtcNow));
+		ForgetRequirements();
+		return result;
+	}
 
 	public Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)
 		=> store.SetPageMetadataAsync(id, WikiHelpers.NormalizeCategories(categories), published);

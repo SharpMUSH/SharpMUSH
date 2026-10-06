@@ -18,8 +18,8 @@ file sealed class WikiListHandler : HttpMessageHandler
 {
 	private const string Pages = """
 	[
-	  {"id":"1","slug":"intro","title":"Getting Started","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"categories":["guides","house_rules"],"published":true},
-	  {"id":"2","slug":"lore","title":"World Lore","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isProtected":false,"revisionNumber":1,"categories":[],"published":true}
+	  {"id":"1","slug":"intro","title":"Getting Started","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isRestricted":false,"revisionNumber":1,"categories":["guides","house_rules"],"published":true},
+	  {"id":"2","slug":"lore","title":"World Lore","namespace":"wiki","markdownSource":"","renderedHtml":"","plainText":"","createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-02T00:00:00+00:00","isRestricted":false,"revisionNumber":1,"categories":[],"published":true}
 	]
 	""";
 

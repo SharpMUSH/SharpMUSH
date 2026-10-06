@@ -449,6 +449,29 @@ $greet *:@pemit %#=Hi;
 — the same service `&` calls — which enforces `Controls` and `CanSet` itself.
 There is no portal-role gate beyond holding a session with a character.
 
+### 4.6 Softcode Editor Console: Evaluation Over `api/commands/eval`
+
+**Decision:** The editor's console evaluates through `POST api/commands/eval`
+(`CommandsController` → `PortalCommandService.EvaluateAsync`), on the engine's
+queue like `POST api/commands`, and counted against the same per-account limit.
+A typed expression runs as the session's character. The play button sends the
+editor's buffer as it stands, unsaved edits included, with the object's dbref:
+it runs as `u()` would run it once saved, so `%!` and `me` are the object and
+`%#`/`%@` the character. Arguments become `%0`-`%9`, each evaluated as the
+character first, as `u()` evaluates its arguments in its caller.
+
+**Permissions:** running code as an object needs what writing that code onto it
+needs, so the endpoint requires the character to control the object (403
+otherwise). Without an object the character's own permissions apply.
+
+**Rationale:** the old Eval button sent `u(#dbref/ATTR)` over the terminal
+WebSocket as typed input. It ran only the saved value, took no arguments and
+kept no history. Each console run now lands in the open tab's scrollback, and
+the input line keeps its own Up/Down history. That history lives in memory for
+as long as the page is open and is never written to `localStorage`: an
+expression can carry a secret anywhere in it (`checkpass()`, `decrypt()`),
+which the terminal's leading-verb rule cannot catch.
+
 **Object creation** invokes the registered `@CREATE` / `@DIG` / `@OPEN` through
 `IEngineCommandInvoker` with pre-split arguments, so quota, zone inheritance, the
 `OBJECT`CREATE` event and plugin hooks all still fire. Names are never spliced

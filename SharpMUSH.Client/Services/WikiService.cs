@@ -132,7 +132,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>
-	/// Page counts by state (published, draft, protected), counted by the server without listing a page.
+	/// Page counts by state (published, draft, restricted), counted by the server without listing a page.
 	/// The server counts drafts only for a caller who may see them.
 	/// </summary>
 	public async ValueTask<ApiResult<WikiPageCountsDto>> GetCountsAsync() =>
@@ -396,7 +396,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>
-	/// Sets or clears the protection flag on multiple pages at once (Wizard only).
+	/// Protects or unprotects several pages at once: a page requirement of wiki.admin to edit and delete them.
 	/// Returns the per-slug outcome, or the <see cref="ApiFailure"/> that stopped the request.
 	/// </summary>
 	public async ValueTask<ApiResult<WikiBatchResult>> BatchProtectAsync(
@@ -422,6 +422,31 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	public async ValueTask<ApiResult<Success>> DeletePageAsync(string slug, string? ns = null) =>
 		Logged(await Http.DeleteApiAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns)}"),
 			"DeletePageAsync", slug);
+
+	/// <summary>Every namespace, category and page requirement set (wiki.admin).</summary>
+	public async ValueTask<ApiResult<List<WikiRequirementSetDto>>> GetAllRequirementsAsync() =>
+		await Http.GetApiAsync<List<WikiRequirementSetDto>>("api/wiki/requirements", EmptyResponse);
+
+	/// <summary>What one namespace, category or page requires; <paramref name="scope"/> is <c>namespace</c>, <c>category</c> or <c>page</c>.</summary>
+	public async ValueTask<ApiResult<WikiRequirementSetDto>> GetRequirementsAsync(string scope, string key) =>
+		await Http.GetApiAsync<WikiRequirementSetDto>(RequirementsUrl(scope, key), EmptyResponse);
+
+	/// <summary>A page's own requirements and those its namespace and categories add.</summary>
+	public async ValueTask<ApiResult<WikiPageRequirementsDto>> GetPageRequirementsAsync(string slug, string? ns = null) =>
+		await Http.GetApiAsync<WikiPageRequirementsDto>($"api/wiki/{Uri.EscapeDataString(slug)}/requirements{KeyQuery(ns)}", EmptyResponse);
+
+	/// <summary>
+	/// Replaces what the named actions require on a namespace, category or page (wiki.admin); an action with
+	/// an empty list requires nothing again, and actions left out keep what they had.
+	/// </summary>
+	public async ValueTask<ApiResult<WikiRequirementSetDto>> SetRequirementsAsync(
+		string scope, string key, IReadOnlyDictionary<string, IReadOnlyList<string>> required) =>
+		Logged(await Http.PutApiAsync<SetRequirementsRequest, WikiRequirementSetDto>(
+				RequirementsUrl(scope, key), new SetRequirementsRequest(required), EmptyResponse),
+			"SetRequirementsAsync", $"{scope} {key}");
+
+	private static string RequirementsUrl(string scope, string key) =>
+		$"api/wiki/requirements/{Uri.EscapeDataString(scope)}/{Uri.EscapeDataString(key)}";
 
 	private const string EmptyResponse = "Server returned an empty response.";
 
@@ -455,7 +480,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Slug = dto.Slug,
 			Categories = dto.Categories.ToList(),
 			Published = dto.Published,
-			IsProtected = dto.IsProtected,
+			IsRestricted = dto.IsRestricted,
+			Access = dto.Access,
 			Locale = dto.Locale,
 			RequestedLocale = dto.RequestedLocale,
 			IsFallback = dto.IsFallback,
@@ -492,7 +518,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			Categories = dto.Categories,
 			Published = dto.Published,
-			IsProtected = dto.IsProtected,
+			IsRestricted = dto.IsRestricted,
 			Locale = dto.Locale,
 			IsFallback = dto.IsFallback,
 			Image = dto.Image,

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Commands.WikiCommand;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -37,17 +38,18 @@ public partial class Functions
 		}
 
 		// An unpublished page is not reachable from softcode at all, which is the same rule wikilist(),
-		// wikisearch() and wikirecent() apply — there is no reader here to gate on. includeDrafts below
-		// only filters unpublished *translations*; on its own it left every draft page's body, title and
-		// metadata one wiki() call away from anybody who could guess a slug. The answer is the one an
-		// absent page gives, because "this page exists but you may not read it" is itself the disclosure.
-		if (!page.Published)
+		// wikisearch() and wikirecent() apply. includeDrafts below only filters unpublished *translations*;
+		// on its own it left every draft page's body, title and metadata one wiki() call away from anybody
+		// who could guess a slug. A page whose read requirements the executor does not meet is just as
+		// absent. The answer is the one an absent page gives, because "this page exists but you may not
+		// read it" is itself the disclosure.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!(await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor)).Admits(page))
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Third argument wins; otherwise the executor's LOCALE, exactly as @wiki does. An unparseable tag is
 		// treated as absent by the localization service — a bad locale must not turn a read into #-1.
@@ -103,9 +105,10 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		// Softcode has no reader to check drafts against, so — as in wiki() and wikisearch() — a draft is
-		// never discoverable from a function.
-		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns, WikiVisibility.PublishedOnly);
+		// As in wiki() and wikisearch(), a draft is never discoverable from a function, nor a page the
+		// executor may not read.
+		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
+		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns, visibility);
 
 		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
 	}
@@ -130,8 +133,9 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		// Same rule as wikilist(): softcode has no reader to gate drafts on, so none are listed.
-		var pages = await wikiService.GetByCategoryAsync(key, 0, 1000, WikiVisibility.PublishedOnly);
+		// Same rule as wikilist(): no drafts, and nothing the executor may not read.
+		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
+		var pages = await wikiService.GetByCategoryAsync(key, 0, 1000, visibility);
 
 		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
 	}
@@ -156,13 +160,14 @@ public partial class Functions
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
-		// Softcode has no reader to check drafts against — the same reason wiki() passes
-		// includeDrafts: false — so neither an unpublished page nor an unpublished translation is ever
-		// discoverable from a function. requestedLocale is null because the matched locale only breaks
+		// Neither an unpublished page nor an unpublished translation is ever discoverable from a function,
+		// nor a page the executor may not read. requestedLocale is null because the matched locale only breaks
 		// display ties and this function returns references, which have no locale dimension; reading the
 		// executor's LOCALE to compute a value that is then discarded would be a query for nothing.
 		var matches = await ListWiki.SearchPagesAsync(
-			wikiService, localization, needle, 100, includeDrafts: false, requestedLocale: null);
+			wikiService, localization, needle, 100,
+			await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator)),
+			requestedLocale: null);
 
 		return new CallState(string.Join(" ", matches.Select(m => WikiCommandHelper.DisplayReference(m.Page))));
 	}
@@ -188,10 +193,58 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		// Same rule as wikilist(): no drafts. The store filters before counting, so a run of recent draft
-		// edits neither shows nor shortens the answer. Softcode has no reader to gate on.
-		var pages = await wikiService.GetRecentChangesAsync(count, WikiVisibility.PublishedOnly);
+		// Same rule as wikilist(): no drafts, nothing the executor may not read. The store filters before
+		// counting, so a run of recent hidden edits neither shows nor shortens the answer.
+		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
+		var pages = await wikiService.GetRecentChangesAsync(count, visibility);
 
 		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+	}
+
+	/// <summary>
+	/// wikiaccess(&lt;page&gt;, &lt;action&gt;[, &lt;player&gt;])
+	/// 1 when the executor (or the player named) may read, edit or delete the page, by its wiki permissions
+	/// and what the page's namespace, categories and the page itself require; 0 when not. Asking about
+	/// another player needs the wiki.admin permission. A page the executor may not read is no page.
+	/// </summary>
+	[SharpFunction(Name = "wikiaccess", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["page", "action", "player"])]
+	public async ValueTask<CallState> wikiaccess(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!Enum.TryParse<WikiAction>(args["1"].Message!.ToPlainText().Trim(), ignoreCase: true, out var action)
+			|| action == WikiAction.Create
+			|| int.TryParse(args["1"].Message!.ToPlainText().Trim(), out _))
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKIACCESS"));
+		}
+
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var access = WikiCommandHelper.Access(parser);
+		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message!.ToPlainText());
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page
+			|| !(await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor)).Admits(page))
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var subject = executor;
+		if (args.TryGetValue("2", out var playerArg) && playerArg.Message!.ToPlainText().Trim() is { Length: > 0 } name)
+		{
+			if (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, name.TrimStart('*'))
+				is not AnySharpObject who)
+				return new CallState(ErrorMessages.Returns.NoSuchObject);
+			if (who.Object().Key != executor.Object().Key
+				&& !(await WikiCommandHelper.ReaderAsync(parser, executor)).Has(Library.Authorization.PortalPermission.WikiAdmin))
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			subject = who;
+		}
+
+		var reader = await access.ForObjectAsync(subject);
+		var allowed = (action != WikiAction.Read || access.MaySeeDraft(reader, page))
+			&& (await access.DecideAsync(reader, page, action)).Allowed;
+		return new CallState(allowed ? "1" : "0");
 	}
 }

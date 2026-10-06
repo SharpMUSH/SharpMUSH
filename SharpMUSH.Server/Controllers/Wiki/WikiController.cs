@@ -26,16 +26,17 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/wiki/character/{name} — character namespace alias
 ///   POST   /api/wiki                  — create page (authenticated)
 ///   PUT    /api/wiki/{slug}           — update page (authenticated)
-///   DELETE /api/wiki/{slug}           — delete page (Wizard+)
+///   DELETE /api/wiki/{slug}           — delete page (wiki.delete and what the page requires)
 /// </summary>
 [ApiController]
 [Route("api/wiki")]
 public class WikiController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IPrerenderCacheService prerenderCache,
 	IWikiNameResolver names,
-	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, names, logger)
+	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/ns/{namespace}/{slug}?lang=fr
@@ -47,7 +48,7 @@ public class WikiController(
 	[HttpGet("ns/{ns}/{slug}")]
 	public async Task<IActionResult> GetPage(string ns, string slug, [FromQuery] string? lang = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !await CanSeeAsync(page))
 			return NotFound();
 
 		return Ok(await LocalizedDtoAsync(page, lang));
@@ -62,7 +63,7 @@ public class WikiController(
 	public async Task<IActionResult> GetCharacterPage(string name, [FromQuery] string? lang = null)
 	{
 		if (await Wiki.GetBySlugAsync(name, WikiNamespace.Character) is not WikiPage page
-			|| !CanSee(page))
+			|| !await CanSeeAsync(page))
 			return NotFound();
 
 		return Ok(await LocalizedDtoAsync(page, lang));
@@ -80,6 +81,8 @@ public class WikiController(
 		if (string.IsNullOrEmpty(authorDbref))
 			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
+		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [])).Allowed)
+			return Forbid();
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.
 		var result = await Wiki.CreateAsync(
@@ -114,9 +117,8 @@ public class WikiController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)
 			return NotFound();
 
-		// Protected pages may only be edited by Wizard-level users.
-		if (existing.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
-			return Forbid();
+		if (await RefusalAsync(existing, WikiAction.Edit) is { } refused)
+			return refused;
 
 		if (await Wiki.UpdateAsync(existing.Id, request.Markdown, editorDbref, request.EditSummary)
 			is not WikiPage page)
@@ -140,6 +142,8 @@ public class WikiController(
 			return Unauthorized("Missing character identity.");
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
+		if (await RefusalAsync(page, WikiAction.Delete) is { } refused)
+			return refused;
 
 		if (await Wiki.DeleteAsync(page.Id, editorDbref) is not None)
 			return NotFound();

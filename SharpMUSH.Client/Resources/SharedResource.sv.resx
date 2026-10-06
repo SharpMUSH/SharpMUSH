@@ -216,14 +216,6 @@
     <value>Saknas</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Anmälningar och bannlysningar</value>
-    <comment>MT — ~2x the English; a card action label, worth checking for overflow.</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Anmälningar, bannlysningar och granskningslogg kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderering</value>
     <comment>MT</comment>
@@ -1080,7 +1072,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Skydda och ta bort skydd, redigera skyddade sidor, satsvisa åtgärder och wikins administrationspanel.</value>
+    <value>Ange och kringgå krav för namnrymder, kategorier och sidor, skydda och publicera sidor, massåtgärder och wikins adminpanel.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1096,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Redigera, återställa och tagga om befintliga (oskyddade) wikisidor.</value>
+    <value>Redigera, återställa och omkategorisera wikisidor där deras krav tillåter det.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1104,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Visa opublicerade wikisidor och utkast (publicerade sidor är offentliga för alla).</value>
+    <value>Läsa wikisidor. En namnrymd, kategori eller sida kan kräva mer.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Utkast</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Läsa opublicerade wikisidor skrivna av andra.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installation</value>
@@ -3660,10 +3658,6 @@
     <value>Fel vid inläsning av objektet: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Eval-resultat</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Expandera attribut</value>
     <comment>MT</comment>
@@ -3763,7 +3757,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — kör det sparade attributet med u()</value>
+    <value>Kör bufferten som objektet, osparade ändringar inräknade</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konsol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Uttryck körs som du: %!, %# och me är din karaktär.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Uttryck körs som du. ▶ kör bufferten som {0}, som u() skulle: %! och me är {0}, %# är du.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Utvärdera ett uttryck som du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Utvärdera</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Rensa konsolen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Lägg till argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Ta bort argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>osparat</value>
@@ -4186,10 +4213,6 @@
   </data>
   <data name="WikiProtect" xml:space="preserve">
     <value>Skydda</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Skyddad</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -5317,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Inget här än.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Medlemmar</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Online nu ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Ingen är online just nu.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Det här spelet sparar ingen historik över privata meddelanden, så bara meddelanden från det här besöket visas.</value>
   </data>
@@ -5483,5 +5515,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# sida i den här kategorin} other {# sidor i den här kategorin}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Begränsad</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>behörigheter gäller</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Behörigheter</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Vad varje namnrymd, kategori och sida kräver utöver wikibehörigheterna. wiki.admin är undantagen.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Den här sidan</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Från {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Namnrymd {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategori {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Sidor i den här kategorin</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Inget utöver wikibehörigheterna.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Ändra</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Behörighetsnamn åtskilda med mellanslag. Alla krävs.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Behörigheter sparade.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Läsa</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Skapa</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Redigera</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Ta bort</value>
   </data>
 </root>

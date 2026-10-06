@@ -346,24 +346,23 @@ public class WikiServiceIntegrationTests
 	}
 
 	[Test]
-	public async Task SetProtectionAsync_SetsIsProtectedFlag()
+	public async Task SetRequirementsAsync_SetsAPageRequirement()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var created = await CreatePageAsync($"Protect Me {uid}");
-		await Assert.That(created.IsProtected).IsFalse();
+		await Assert.That((await Wiki.GetRequirementsAsync()).HasPageRules(created.Id)).IsFalse();
 
-		var protResult = await Wiki.SetProtectionAsync(created.Id, true);
+		var protResult = await Wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(created.Id), WikiRequirementSet.Protection, "#1");
 
 		await Assert.That(protResult.Value).IsTypeOf<None>();
-		var fetchResult = await Wiki.GetByIdAsync(created.Id);
-		await Assert.That(fetchResult.Expect<WikiPage>().IsProtected).IsTrue();
+		await Assert.That((await Wiki.GetRequirementsAsync()).HasPageRules(created.Id)).IsTrue();
 	}
 
 	[Test]
-	public async Task SetProtectionAsync_MissingId_ReturnsNotFound()
+	public async Task SetRequirementsAsync_MissingPage_ReturnsNotFound()
 	{
-		var result = await Wiki.SetProtectionAsync(
-				$"node_wiki_pages/ghost_{Guid.NewGuid():N}", true);
+		var result = await Wiki.SetRequirementsAsync(
+				WikiRuleTarget.ForPage($"node_wiki_pages/ghost_{Guid.NewGuid():N}"), WikiRequirementSet.Protection, "#1");
 
 		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
@@ -416,7 +415,7 @@ public class WikiServiceIntegrationTests
 		// let a mortal difference it against the visible rows and learn how many drafts exist.
 		// The system namespace is written by nothing else, so these counts are exact — main and help are
 		// touched by test classes that may be running concurrently against the same store.
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(0);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.All)).IsEqualTo(0);
 
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var kept = await CreatePageAsync($"Count Published {uid}", WikiNamespace.System, wiki: wiki);
@@ -426,21 +425,21 @@ public class WikiServiceIntegrationTests
 		await Assert.That(kept.Published).IsTrue();
 		await Assert.That(unpublished.Expect<WikiPage>().Published).IsFalse();
 
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.PublishedOnly)).IsEqualTo(1);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.All)).IsEqualTo(2);
 
 		// A draft in another namespace must not move these. A query in which the published condition
 		// replaced the namespace condition rather than joining it would satisfy every assertion above.
 		var elsewhere = await CreatePageAsync($"Count Elsewhere {uid}", WikiNamespace.Character, wiki: wiki);
 		await wiki.SetMetadataAsync(elsewhere.Id, [], published: false);
 
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.PublishedOnly)).IsEqualTo(1);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, WikiVisibility.All)).IsEqualTo(2);
 
 		// Unfiltered, both drafts are still counted when asked for — which rules out a store that simply
 		// never persisted the unpublished flag, and an implementation that always excludes drafts.
-		var allPublished = await wiki.CountPagesAsync(null, includeDrafts: false);
-		var allTotal = await wiki.CountPagesAsync(null, includeDrafts: true);
+		var allPublished = await wiki.CountPagesAsync(null, WikiVisibility.PublishedOnly);
+		var allTotal = await wiki.CountPagesAsync(null, WikiVisibility.All);
 		await Assert.That(allTotal - allPublished).IsGreaterThanOrEqualTo(2);
 	}
 

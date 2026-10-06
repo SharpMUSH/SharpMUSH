@@ -94,8 +94,12 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 
 	private static WikiPageDto ToDto(WikiPage p) => new(
 			p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-			p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
-			p.Categories, p.Published);
+			p.CreatedAt, p.UpdatedAt, false, p.RevisionNumber,
+			p.Categories, p.Published)
+	{
+		// The server decides what a reader may do; these pages are open to the test's editor.
+		Access = new WikiAccessDto(Read: true, Edit: true, Delete: true, Manage: false),
+	};
 
 	private static WikiNamespace ParseNs(string? ns) =>
 			Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var r) ? r : WikiNamespace.Main;

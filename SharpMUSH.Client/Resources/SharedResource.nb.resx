@@ -216,14 +216,6 @@
     <value>Mangler</value>
     <comment>MT — paired with AdmPresent ('Finnes') as a handler-status value.</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Rapporter og blokkeringer</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Rapporter, blokkeringer og revisjonslogg kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderering</value>
     <comment>MT</comment>
@@ -1080,7 +1072,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Beskytt og opphev beskyttelse, rediger beskyttede sider, masseoperasjoner og wiki-administrasjonspanelet.</value>
+    <value>Angi og omgå krav for navnerom, kategorier og sider, beskytte og publisere sider, massehandlinger og wikiens administrasjonspanel.</value>
     <comment>MT — English 'Protect/unprotect' expanded to 'Beskytt og opphev beskyttelse'; slash form reads wrong in Norwegian.</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1096,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Rediger, rull tilbake og merk om eksisterende (ubeskyttede) wiki-sider.</value>
+    <value>Redigere, tilbakestille og omkategorisere wikisider der kravene deres tillater det.</value>
     <comment>MT — 'retag' as 'merke om' (change the tags).</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1104,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Se upubliserte wiki-sider og utkast (publiserte sider er offentlige for alle).</value>
+    <value>Lese wikisider. Et navnerom, en kategori eller en side kan kreve mer.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Utkast</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Lese upubliserte wikisider skrevet av andre.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installasjon</value>
@@ -3660,10 +3658,6 @@
     <value>Feil ved lasting av objekt: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Evalueringsresultat</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Vis attributter</value>
     <comment>MT</comment>
@@ -3763,7 +3757,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — kjør det lagrede attributtet med u()</value>
+    <value>Kjør bufferen som objektet, med ulagrede endringer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konsoll</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Uttrykk kjøres som deg: %!, %# og me er karakteren din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Uttrykk kjøres som deg. ▶ kjører bufferen som {0}, slik u() ville: %! og me er {0}, %# er deg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Evaluer et uttrykk som deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Evaluer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Tøm konsollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Legg til argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Fjern argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ulagret</value>
@@ -4186,10 +4213,6 @@
   </data>
   <data name="WikiProtect" xml:space="preserve">
     <value>Beskytt</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Beskyttet</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -5317,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ingenting her ennå.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Medlemmer</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Pålogget nå ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Ingen er pålogget nå.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dette spillet lagrer ikke historikk for private meldinger, så bare meldinger fra dette besøket vises.</value>
   </data>
@@ -5483,5 +5515,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# side i denne kategorien} other {# sider i denne kategorien}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Begrenset</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>tillatelser gjelder</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Tillatelser</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Hva hvert navnerom, hver kategori og hver side krever i tillegg til wiki-tillatelsene. wiki.admin er unntatt.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Denne siden</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Fra {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Navnerom {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategori {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Sider i denne kategorien</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Ingenting utover wiki-tillatelsene.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Endre</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Tillatelsesnavn atskilt med mellomrom. Alle kreves.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Tillatelser lagret.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Lese</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Opprette</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Redigere</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Slette</value>
   </data>
 </root>

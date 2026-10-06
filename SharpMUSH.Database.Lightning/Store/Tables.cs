@@ -54,6 +54,8 @@ public static class Tables
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
 	/// <summary>Account key → its per-account permission overrides (scope → state), one record per account.</summary>
 	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
+	/// <summary>Account key → its ban (reason, who, when, until when); absent when the account is not banned.</summary>
+	public static readonly TableDef AccountBan = TableDef.Node("acct.ban");
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
@@ -80,8 +82,8 @@ public static class Tables
 	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
 	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
-	/// <summary>Page key → visibility, for protected pages only, so the protected count reads no page row.</summary>
-	public static readonly TableDef WikiProtected = TableDef.Index("wiki.protected");
+	/// <summary>What a namespace, category or page requires, keyed by (scope, key). See <c>LightningDatabase.WikiRequirements.cs</c>.</summary>
+	public static readonly TableDef WikiRequirement = TableDef.Node("wiki.req");
 	public static readonly TableDef Layout = TableDef.Node("layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");

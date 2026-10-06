@@ -72,7 +72,12 @@
                             }
                             <MudChip T="string" Size="Size.Small" Class="adm-audit-source"
                                      Color="@(context.Source == AuditSource.Portal ? Color.Info : Color.Default)">
-                                @(context.Source == AuditSource.Portal ? Loc["AdmAuditSourcePortal"] : Loc["AdmAuditSourceGame"])
+                                @(context.Source switch
+                                {
+                                    AuditSource.Portal => Loc["AdmAuditSourcePortal"],
+                                    AuditSource.System => Loc["AdmAuditSourceSystem"],
+                                    _ => Loc["AdmAuditSourceGame"]
+                                })
                             </MudChip>
                         </MudTd>
                         <MudTd data-label="@Loc["AdmAuditAction"]" Class="adm-audit-mono">@context.Action</MudTd>

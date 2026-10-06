@@ -28,10 +28,10 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			var path = request.RequestUri!.AbsolutePath;
 			string? body = path switch
 			{
-				"/api/wiki/ns/character/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
-				"/api/wiki/ns/main/rules" => Page("rules", "House Rules", "main"),
-				"/api/wiki/ns/character/Home" => Page("home", "Home", "character"),
-				"/api/wiki/ns/character/Ada%20Locke" => Page("ada_locke", "Ada Locke", "character", isProtected: true),
+				"/api/wiki/ns/character/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character", Editable),
+				"/api/wiki/ns/main/rules" => Page("rules", "House Rules", "main", Editable),
+				"/api/wiki/ns/character/Home" => Page("home", "Home", "character", Editable),
+				"/api/wiki/ns/character/Ada%20Locke" => Page("ada_locke", "Ada Locke", "character", edit: false, restricted: true),
 				"/api/wiki/exists" => "{}",
 				_ => null,
 			};
@@ -40,20 +40,28 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 				: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
 		}
 
-		private static string Page(string slug, string title, string ns, bool isProtected = false) => $$"""
+		/// <summary>Whether the server tells this reader they may edit the unrestricted pages.</summary>
+		public bool Editable { get; set; }
+
+		private static string Json(bool value) => value ? "true" : "false";
+
+		private static string Page(string slug, string title, string ns, bool edit, bool restricted = false) => $$"""
 			{"id":"1","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","categories":[],
 			 "markdownSource":"Lean and quiet.","renderedHtml":"<p>Lean and quiet.</p>","plainText":"Lean and quiet.",
 			 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"{{DateTimeOffset.UtcNow.AddDays(-3):O}}",
-			 "isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
+			 "isRestricted":{{Json(restricted)}},"access":{"read":true,"edit":{{Json(edit)}},"delete":{{Json(edit)}},"manage":false},
+			 "revisionNumber":2,"published":true,"lastEditedBy":"Tomas Reyes",
 			 "locale":"en","requestedLocale":"en","availableLocales":["en"]}
 			""";
 	}
 
 	private BunitAuthorizationContext Auth { get; }
 
+	private Handler Server { get; } = new();
+
 	public WikiBodyBiographyTests()
 	{
-		var client = Track(new HttpClient(new Handler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var client = Track(new HttpClient(Server) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
 		Services.AddMudServices()
@@ -104,15 +112,17 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 	[Test]
 	public async Task WithoutWikiEdit_ThereIsNoEditButton()
 	{
+		Auth.SetAuthorized("Tomas Reyes");
 		var cut = RenderProfile();
-		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
+			.Because("the server says this reader may not edit the page");
 	}
 
 	[Test]
 	public async Task WithWikiEdit_EditOpensTheEditorInTheCard_AndDiscardReturns()
 	{
 		Auth.SetAuthorized("Tomas Reyes");
-		Auth.SetPolicies("wiki.edit");
+		Server.Editable = true;
 		var cut = RenderProfile();
 
 		cut.Find(".wiki-body-card .wiki-body-edit").Click();
@@ -127,17 +137,15 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AProtectedBiography_OffersEditOnlyToWikiAdmin()
+	public async Task ARestrictedBiography_OffersEditOnlyWhenTheServerAllowsIt()
 	{
+		// The client holds wiki.edit, but the page's own requirements are the server's call: it answers edit:false.
 		Auth.SetAuthorized("Tomas Reyes");
 		Auth.SetPolicies("wiki.edit");
+		Server.Editable = true;
 		var cut = RenderProfile("Ada Locke");
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
-			.Because("the server refuses a wiki.edit holder's save of a protected page");
-
-		Auth.SetPolicies("wiki.edit", "wiki.admin");
-		var admin = RenderProfile("Ada Locke");
-		await Assert.That(admin.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(1);
+			.Because("the server refuses this reader's save of the page");
 	}
 
 	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")

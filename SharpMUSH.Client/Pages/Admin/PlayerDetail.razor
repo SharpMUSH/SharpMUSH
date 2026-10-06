@@ -27,6 +27,8 @@
                         <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Disabled="_busy"
                                        Class="adm-char-unlink" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
                     }
+                    <CapsuleButton Icon="@Icons.Material.Filled.Gavel" Class="adm-char-moderate"
+                                   Href="@($"/admin/moderation?character={detail.Character.DbrefNumber}")">@Loc["AdmModerate"]</CapsuleButton>
                     <CapsuleButton Icon="@Icons.Material.Filled.History" Href="@AuditHref(detail)">@Loc["AdmAuditTitle"]</CapsuleButton>
                 </AuthorizeView>
             }

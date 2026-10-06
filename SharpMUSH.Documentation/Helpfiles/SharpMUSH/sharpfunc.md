@@ -301,7 +301,7 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
-| [WIKISEARCH()]   |                  |                  |                  |
+| [WIKISEARCH()]   | [WIKIACCESS()]   |                  |                  |
 
 ::: seealso
 - [wiki]

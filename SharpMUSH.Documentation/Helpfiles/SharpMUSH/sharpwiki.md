@@ -33,7 +33,10 @@ Unpublished pages and unpublished translations are never reachable from
 answers exactly as a missing one does — there is no field, not even `title`,
 that reveals it. Read a draft with `@wiki/view/draft` instead.
 
-Returns #-1 NO SUCH WIKI PAGE when the page does not exist, or is a draft.
+Pages you may not read (see [wiki permissions]) are treated the same way.
+
+Returns #-1 NO SUCH WIKI PAGE when the page does not exist, is a draft, or is
+one you may not read.
 
 ## Example
 
@@ -51,6 +54,7 @@ en
 - [WIKILIST()]
 - [WIKISEARCH()]
 - [WIKIRECENT()]
+- [WIKIACCESS()]
 :::
 
 # WIKICATEGORY()
@@ -142,3 +146,29 @@ newest first. *<count>* defaults to 10 and is clamped to 1-50.
 - [WIKILIST()]
 :::
 
+# WIKIACCESS()
+
+- `wikiaccess(<page>, <action>)`
+- `wikiaccess(<page>, <action>, <player>)`
+
+Returns 1 when you, or *<player>*, may take *<action>* on a wiki page, and 0
+when not. *<action>* is `read`, `edit` or `delete`. The answer weighs the
+global permission for the action and everything the page's namespace,
+categories and the page itself require; see [wiki permissions]. `@wiki/access`
+says why.
+
+Asking about another player needs `wiki.admin`. A page you may not read, or a
+draft, returns #-1 NO SUCH WIKI PAGE, as [WIKI()] does.
+
+## Example
+
+```sharp
+> think wikiaccess(combat_primer, edit)
+1
+> think wikiaccess(combat_primer, edit, *Alice)
+0
+```
+
+**See Also:**
+- [WIKI()]
+- [wiki permissions]

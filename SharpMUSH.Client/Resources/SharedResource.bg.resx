@@ -216,14 +216,6 @@
     <value>Липсва</value>
     <comment>MT — assumed a status chip meaning the item is absent; rendered as a verb so it needs no gender agreement</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Сигнали и блокирания</value>
-    <comment>MT — «reports» read as user-submitted moderation reports, not generated reports</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Сигналите, блокиранията и одит журналът предстоят.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Модерация</value>
     <comment>MT</comment>
@@ -1080,7 +1072,7 @@
     <comment>MT — `Wiki` kept untranslated, case copied from source</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Защитаване/премахване на защита, редактиране на защитени страници, групови операции и административното табло на wiki.</value>
+    <value>Задаване и заобикаляне на изисквания за именни пространства, категории и страници, защита и публикуване на страници, групови операции и административното табло на уикито.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1096,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Редактиране, връщане към предишна версия и повторно етикетиране на съществуващи (незащитени) wiki страници.</value>
+    <value>Редактиране, връщане и прекатегоризиране на уики страници, когато изискванията им позволяват.</value>
     <comment>MT — «rollback» rendered descriptively; runs longer than the English</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1104,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Преглед на непубликувани wiki страници и чернови (публикуваните страници са достъпни за всички).</value>
+    <value>Четене на уики страници. Именно пространство, категория или страница може да изисква повече.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Уики · Чернови</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Четене на непубликувани уики страници, написани от други.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Инсталиране</value>
@@ -3660,10 +3658,6 @@
     <value>Грешка при зареждане на обекта: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Резултат от изчислението</value>
-    <comment>MT — «eval» rendered descriptively; no established Bulgarian MUSH term</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Разгъни атрибутите</value>
     <comment>MT</comment>
@@ -3763,7 +3757,40 @@
     <comment>MT — `softcode` kept untranslated per glossary</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — изпълни запазения атрибут с u()</value>
+    <value>Изпълни буфера като обекта, включително незапазените промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Конзола</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Изразите се изпълняват като вас: %!, %# и me са вашият персонаж.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Изразите се изпълняват като вас. ▶ изпълнява буфера като {0}, както би го направил u(): %! и me са {0}, %# сте вие.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Изчисли израз като вас</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Изчисли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Изчисти конзолата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Добави аргумент {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Премахни аргумент {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>незапазено</value>
@@ -4187,10 +4214,6 @@
   <data name="WikiProtect" xml:space="preserve">
     <value>Защити</value>
     <comment>MT — plain imperative, button</comment>
-  </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Защитена</value>
-    <comment>MT — page status; feminine to agree with «страница»</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Публикувана</value>
@@ -5317,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Още няма нищо.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Членове</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Сега на линия ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>В момента никой не е на линия.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Тази игра не пази история на личните съобщения, затова се показват само съобщенията от това посещение.</value>
   </data>
@@ -5483,5 +5515,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# страница в тази категория} other {# страници в тази категория}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Ограничена</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>важат разрешения</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Разрешения</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Какво изисква всяко именно пространство, категория и страница освен разрешенията за уикито. wiki.admin не се подчинява на това.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Тази страница</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>От {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Именно пространство {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Категория {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Страници в тази категория</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Нищо освен разрешенията за уикито.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Промяна</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Имена на разрешения, разделени с интервали. Изисква се всяко от тях.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Разрешенията са запазени.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Четене</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Създаване</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Редактиране</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Изтриване</value>
   </data>
 </root>

@@ -49,6 +49,13 @@ else if (Article is null && IsCategoryPage)
             </PlainPageHeader>
             <WikiCategoryMembers Category="@Slug" />
         </div>
+        <aside class="wiki-page-aside">
+            <AuthorizeView Policy="wiki.admin">
+                <Authorized>
+                    <WikiPermissionsCard Category="@WikiHelpers.CategoryKey(Slug)" />
+                </Authorized>
+            </AuthorizeView>
+        </aside>
     </div>
 }
 else if (Article is null)
@@ -153,6 +160,11 @@ else
         @if (!Embedded)
         {
             <aside class="wiki-page-aside">
+                @if (Article.Access?.Manage == true)
+                {
+                    <WikiPermissionsCard Slug="@Slug" Namespace="@Namespace"
+                                         Category="@(IsCategoryPage ? WikiHelpers.CategoryKey(Slug) : null)" />
+                }
                 @if (_toc.Count > 0 || OtherLocales.Any())
                 {
                     <KitCard Aside="true" Title="@Loc["ResOnThisPage"]">
@@ -342,17 +354,17 @@ else
             }
             <span class="wiki-meta-sep"> · </span>
         }
-        <span class="wiki-meta-edit">@Loc["ResAnyoneCanEdit"]</span>
+        <span class="wiki-meta-edit">@(Article?.IsRestricted == true ? Loc["WikiRestrictedNote"] : Loc["ResAnyoneCanEdit"])</span>
     };
 
     private RenderFragment HeaderActions => __builder =>
     {
         <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@HistoryHref">@Loc["ResHistory"]</CapsuleButton>
-        <AuthorizeView Policy="@(Article?.EditPolicy ?? "wiki.edit")">
-            <Authorized>
-                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiEdit"]</CapsuleButton>
-            </Authorized>
-        </AuthorizeView>
+        @* The server decides, with the page's namespace, category and page requirements in hand. *@
+        @if (Article?.Access?.Edit == true)
+        {
+            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiEdit"]</CapsuleButton>
+        }
     };
 
     private static List<Mentioned> FindMentioned(string html) =>
@@ -425,14 +437,13 @@ else
                             PortalLocales.DisplayName(Article!.RequestedLocale),
                             PortalLocales.DisplayName(Article!.Locale))
                     </span>
-                    <AuthorizeView Policy="wiki.edit">
-                        <Authorized>
-                            <MudLink Href="@($"{PagePath}/edit?lang={Uri.EscapeDataString(TargetLocale)}")"
-                                     Typo="Typo.body2">
-                                @Loc["WikiFallbackCreateTranslation"]
-                            </MudLink>
-                        </Authorized>
-                    </AuthorizeView>
+                    @if (Article.Access?.Edit == true)
+                    {
+                        <MudLink Href="@($"{PagePath}/edit?lang={Uri.EscapeDataString(TargetLocale)}")"
+                                 Typo="Typo.body2">
+                            @Loc["WikiFallbackCreateTranslation"]
+                        </MudLink>
+                    }
                     <div style="flex:1;"></div>
                     <MudIconButton Class="wiki-fallback-dismiss"
                                    Icon="@Icons.Material.Filled.Close"

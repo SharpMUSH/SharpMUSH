@@ -12,8 +12,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
 /// <summary>
-/// Administrative @wiki subcommands: delete, protect/unprotect and publish/unpublish, all
-/// wizard-only. Categories are an edit, set by <c>@wiki/category page=list</c> (<see cref="EditWiki"/>).
+/// Administrative @wiki subcommands: delete (a page action, see <see cref="IWikiAccessService"/>), and
+/// protect/unprotect and publish/unpublish, which need wiki.admin. Categories are an edit, set by
+/// <c>@wiki/category page=list</c> (<see cref="EditWiki"/>).
 /// </summary>
 public static class ManageWiki
 {
@@ -36,10 +37,13 @@ public static class ManageWiki
 		Operation op)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
 
-		if (!await executor.Can(PortalPermission.WikiAdmin))
+		// Deleting is a page action like editing (wiki.delete plus what the page requires); the rest manage
+		// the wiki and need wiki.admin.
+		if (op != Operation.Delete && !reader.Has(PortalPermission.WikiAdmin))
 		{
-			await notifyService.Notify(executor, "WIKI: Permission denied. That operation is wizard-only.", executor);
+			await notifyService.Notify(executor, "WIKI: Permission denied. That needs the wiki.admin permission.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -53,17 +57,35 @@ public static class ManageWiki
 		switch (op)
 		{
 			case Operation.Delete:
+				if (await WikiCommandHelper.RefusalAsync(parser, notifyService, executor, page, WikiAction.Delete,
+					targetArg.ToPlainText()) is { } refused)
+					return refused;
 				await wikiService.DeleteAsync(page.Id, WikiCommandHelper.EditorDbref(executor));
 				await notifyService.Notify(executor, $"WIKI: Deleted '{page.Title}' and its revision history.", executor);
 				return MarkupText.Plain(page.Slug);
 
+			// Protection is a page requirement of wiki.admin to edit and delete, the shortcut for the
+			// common case of @wiki/require.
 			case Operation.Protect or Operation.Unprotect:
 				{
 					var protect = op == Operation.Protect;
-					await wikiService.SetProtectionAsync(page.Id, protect);
-					await notifyService.Notify(executor,
-						$"WIKI: '{page.Title}' is now {(protect ? "protected (wizard-only edits)" : "unprotected")}.", executor);
-					return MarkupText.Plain(page.Slug);
+					var changes = protect
+						? WikiRequirementSet.Protection
+						: new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Edit] = [], [WikiAction.Delete] = [] };
+					switch (await WikiCommandHelper.Access(parser).SetRequirementsAsync(reader,
+						WikiCommandHelper.EditorDbref(executor), WikiRuleTarget.ForPage(page.Id), changes))
+					{
+						case WikiRequirements:
+							await notifyService.Notify(executor,
+								$"WIKI: '{page.Title}' is now {(protect ? "protected (editing and deleting need wiki.admin)" : "unprotected")}.", executor);
+							return MarkupText.Plain(page.Slug);
+						case Error<string> error:
+							await notifyService.Notify(executor, $"WIKI: {error.Value}", executor);
+							return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+						default:
+							await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+							return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+					}
 				}
 
 			case Operation.Publish or Operation.Unpublish:

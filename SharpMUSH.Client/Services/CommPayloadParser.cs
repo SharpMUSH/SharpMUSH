@@ -4,7 +4,7 @@ using SharpMUSH.Client.Models;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Reads the <c>comm-feed</c> OOB payloads (<c>comm.channels</c>, <c>comm.message</c>). The contract is
+/// Reads the <c>comm-feed</c> OOB payloads (<c>comm.channels</c>, <c>comm.message</c>, <c>comm.who</c>). The contract is
 /// <c>docs/softcode/comm-feed-handler.md</c>.
 /// </summary>
 /// <remarks>
@@ -23,6 +23,9 @@ public static class CommPayloadParser
 
 	/// <summary>The package carrying one channel line or page.</summary>
 	public const string MessagePackage = "comm.message";
+
+	/// <summary>The package carrying one change to a channel's member list.</summary>
+	public const string WhoPackage = "comm.who";
 
 	/// <summary>The <see cref="CommMessage.Kind"/> of a channel line.</summary>
 	public const string ChannelKind = "channel";
@@ -99,6 +102,28 @@ public static class CommPayloadParser
 				Id(root));
 
 			return new CommEntry(message, recipients);
+		}
+	}
+
+	/// <summary>
+	/// Parses a <c>comm.who</c> payload, or null when it names no channel, no member with an objid, or no
+	/// <c>online</c> true or false: a member list is kept by objid, so a member without one cannot be placed.
+	/// </summary>
+	public static CommWhoChange? ParseWho(string? dataJson)
+	{
+		if (Open(dataJson) is not { } document) return null;
+
+		using (document)
+		{
+			var root = document.RootElement;
+			if (root.ValueKind != JsonValueKind.Object
+				|| Text(root, "channel") is not { } channel
+				|| Participant(root, "member") is not { ObjId: not null } member
+				|| !root.TryGetProperty("online", out var online)
+				|| online.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+				return null;
+
+			return new CommWhoChange(channel, member, online.ValueKind == JsonValueKind.True);
 		}
 	}
 

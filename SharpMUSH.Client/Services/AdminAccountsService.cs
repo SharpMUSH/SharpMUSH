@@ -38,6 +38,8 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<Success>> SetStatusAsync(string key, string status) =>
 		Client.PostApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/status", new { status });
 
-	public Task<ApiResult<Success>> UnlinkCharacterAsync(string key, int dbrefNumber) =>
-		Client.DeleteApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/characters/{dbrefNumber}");
+	/// <param name="reason">Why, when the staff member gave a reason; kept in the audit log.</param>
+	public Task<ApiResult<Success>> UnlinkCharacterAsync(string key, int dbrefNumber, string? reason = null) =>
+		Client.DeleteApiAsync(ApiQuery.Build($"api/admin/accounts/{Uri.EscapeDataString(key)}/characters/{dbrefNumber}",
+			("reason", reason)));
 }

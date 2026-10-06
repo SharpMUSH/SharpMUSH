@@ -216,14 +216,6 @@
     <value>Ontbreekt</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Meldingen en verbanningen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Meldingen, verbanningen en auditlog komen binnenkort.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderatie</value>
     <comment>MT</comment>
@@ -1080,7 +1072,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Pagina's beveiligen/vrijgeven, beveiligde pagina's bewerken, batchbewerkingen en het wikibeheerdashboard.</value>
+    <value>Vereisten voor naamruimten, categorieën en pagina's instellen en omzeilen, pagina's beveiligen en publiceren, bulkbewerkingen en het wikibeheerdashboard.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1096,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Bestaande (onbeveiligde) wikipagina's bewerken, terugdraaien en opnieuw taggen.</value>
+    <value>Wikipagina's bewerken, terugdraaien en hercategoriseren, voor zover hun vereisten dat toestaan.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1104,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Niet-gepubliceerde wikipagina's en concepten bekijken (gepubliceerde pagina's zijn voor iedereen zichtbaar).</value>
+    <value>Wikipagina's lezen. Een naamruimte, categorie of pagina kan meer vereisen.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Concepten</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Ongepubliceerde wikipagina's van anderen lezen.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installeren</value>
@@ -3660,10 +3658,6 @@
     <value>Fout bij het laden van object: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Evaluatieresultaat</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Attributen uitklappen</value>
     <comment>MT</comment>
@@ -3763,7 +3757,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — het opgeslagen attribuut uitvoeren met u()</value>
+    <value>Buffer uitvoeren als het object, niet-opgeslagen wijzigingen inbegrepen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Expressies draaien als jij: %!, %# en me zijn je personage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Expressies draaien als jij. ▶ voert de buffer uit als {0}, zoals u() dat zou doen: %! en me zijn {0}, %# ben jij.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Expressie evalueren als jij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Evalueren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Console wissen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Argument {0} toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Argument {0} verwijderen</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niet opgeslagen</value>
@@ -4186,10 +4213,6 @@
   </data>
   <data name="WikiProtect" xml:space="preserve">
     <value>Beveiligen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Beveiligd</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -5317,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Nog niets hier.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Leden</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Nu online ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Er is nu niemand online.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dit spel bewaart geen geschiedenis van privéberichten, dus alleen berichten van dit bezoek worden getoond.</value>
   </data>
@@ -5483,5 +5515,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# pagina in deze categorie} other {# pagina's in deze categorie}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Beperkt</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>rechten van toepassing</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Rechten</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Wat elke naamruimte, categorie en pagina vereist naast de wikirechten. wiki.admin is hiervan vrijgesteld.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Deze pagina</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Van {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Naamruimte {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Categorie {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Pagina's in deze categorie</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Niets naast de wikirechten.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Wijzigen</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Rechtnamen, gescheiden door spaties. Elk ervan is vereist.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Rechten opgeslagen.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Lezen</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Aanmaken</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Bewerken</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Verwijderen</value>
   </data>
 </root>

@@ -47,9 +47,10 @@ public static class ListWiki
 			ns = parsed;
 		}
 
-		var canSeeDrafts = await WikiCommandHelper.CanSeeDrafts(executor);
-		var pages = await wikiService.GetAllPagesAsync(0, MaxListed, ns, Visibility(canSeeDrafts));
-		var total = await wikiService.CountPagesAsync(ns, canSeeDrafts);
+		// The rows and the total are drawn from one visibility, so the header cannot disclose what the rows hide.
+		var visibility = await WikiCommandHelper.VisibilityAsync(parser, executor);
+		var pages = await wikiService.GetAllPagesAsync(0, MaxListed, ns, visibility);
+		var total = await wikiService.CountPagesAsync(ns, visibility);
 
 		var lines = new List<MString>
 		{
@@ -94,11 +95,13 @@ public static class ListWiki
 		}
 
 		var members = await wikiService.GetByCategoryAsync(key, 0, MaxListed,
-			Visibility(await WikiCommandHelper.CanSeeDrafts(executor)));
+			await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var subcategories = members.Where(p => p.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)).ToList();
 		var pages = members.Except(subcategories).ToList();
 
-		var names = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var names = forceSource
+			? null
+			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var lines = new List<MString>
 		{
 			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),
@@ -135,7 +138,7 @@ public static class ListWiki
 
 		var matches = await SearchPagesAsync(
 			wikiService, localization, needle, MaxSearchResults,
-			await WikiCommandHelper.CanSeeDrafts(executor), locale, forceSource);
+			await WikiCommandHelper.VisibilityAsync(parser, executor), locale, forceSource);
 
 		var lines = new List<MString>
 		{
@@ -182,7 +185,7 @@ public static class ListWiki
 		// No total is rendered beside these rows, and none should be: it would be the same disclosure
 		// @wiki/list's header was.
 		var pages = await wikiService.GetRecentChangesAsync(
-			count, Visibility(await WikiCommandHelper.CanSeeDrafts(executor)));
+			count, await WikiCommandHelper.VisibilityAsync(parser, executor));
 
 		var lines = new List<MString> { MarkupText.Plain("WIKI: Recently edited pages:") };
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
@@ -192,18 +195,6 @@ public static class ListWiki
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
-
-	/// <summary>
-	/// The pages this reader may see, for the store to apply before it pages: <c>GetAllPagesAsync</c> and
-	/// <c>GetRecentChangesAsync</c> return drafts unless told otherwise.
-	/// </summary>
-	/// <param name="canSeeDrafts">
-	/// <see cref="WikiCommandHelper.CanSeeDrafts"/> for this reader, passed in rather than resolved here so
-	/// that a surface which also renders a <em>count</em> gates both on the one value. Deriving the rows
-	/// from one rule and the total from another is how the header came to disclose what the rows hid.
-	/// </param>
-	private static WikiVisibility Visibility(bool canSeeDrafts) =>
-		canSeeDrafts ? WikiVisibility.All : WikiVisibility.PublishedOnly;
 
 	/// <summary>
 	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.
@@ -237,11 +228,11 @@ public static class ListWiki
 	/// reads roughly twice the rows. At in-game wiki sizes (hundreds of pages, capped at 100 results) that
 	/// is not worth an index; see <c>docs/todo/area-05-wiki.md</c> before assuming it stays that way.
 	/// </remarks>
-	/// <param name="includeDrafts">
-	/// True when this caller may see unpublished pages <em>and</em> unpublished translations — see
-	/// <see cref="WikiCommandHelper.CanSeeDrafts"/>. There is no default: both bulk accessors return drafts,
-	/// so every call site has to decide, and a safe-looking default is how the filter went missing here in
-	/// the first place.
+	/// <param name="visibility">
+	/// The pages this caller may see (<see cref="WikiCommandHelper.VisibilityAsync"/>); its
+	/// <see cref="WikiVisibility.IncludeDrafts"/> also decides unpublished translations. There is no default:
+	/// both bulk accessors return everything, so every call site has to decide, and a safe-looking default is
+	/// how the filter went missing here in the first place.
 	/// </param>
 	/// <param name="requestedLocale">
 	/// The reader's locale, used only to break ties: a page matching in several locales is reported under
@@ -254,7 +245,7 @@ public static class ListWiki
 		IWikiLocalizationService localization,
 		string needle,
 		int maxResults,
-		bool includeDrafts,
+		WikiVisibility visibility,
 		string? requestedLocale,
 		bool forceSource = false)
 	{
@@ -292,7 +283,7 @@ public static class ListWiki
 
 			foreach (var page in batch)
 			{
-				if ((includeDrafts || page.Published) && Hit(page.Title, page.PlainText))
+				if (visibility.Admits(page) && Hit(page.Title, page.PlainText))
 					Record(page, localization.SourceLocaleOf(page));
 			}
 
@@ -314,7 +305,7 @@ public static class ListWiki
 
 			foreach (var translation in batch)
 			{
-				if (!includeDrafts && !translation.Published) continue;
+				if (!visibility.IncludeDrafts && !translation.Published) continue;
 				if (!Hit(translation.Title, translation.PlainText)) continue;
 
 				if (byPage.TryGetValue(translation.PageId, out var already))
@@ -329,9 +320,9 @@ public static class ListWiki
 					pages[translation.PageId] = page;
 				}
 
-				// A page deleted between the two scans, or an unpublished page this reader may not see: a
-				// published translation does not make a draft page discoverable.
-				if (page is null || (!includeDrafts && !page.Published)) continue;
+				// A page deleted between the two scans, or a page this reader may not see: a published
+				// translation does not make a draft or restricted page discoverable.
+				if (page is null || !visibility.Admits(page)) continue;
 
 				Record(page, translation.Locale);
 			}

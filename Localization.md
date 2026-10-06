@@ -285,10 +285,9 @@ Configuration: `wiki_default_locale` (`Wiki.DefaultLocale`, default `en`) in
 - The on-disk helpfiles under `SharpMUSH.Documentation/Helpfiles/` served to the
   telnet `help` command. They never touch `IWikiService`.
 - `mush-defs.json`, the signature and help text the softcode editor's function
-  drawer reads. `ClientDataGenerator` (in `SharpMUSH.Tests/Documentation`) builds
-  it from the `[SharpFunction]`/`[SharpCommand]` attributes and the English
-  helpfiles above, and `ClientDataGenerationTests` fails when the checked-in copy
-  differs; regenerate with `SHARPMUSH_REGENERATE_CLIENT_DATA=1`.
+  drawer reads. The portal's build writes it with `tools/ClientData` from the
+  `[SharpFunction]`/`[SharpCommand]` attributes and the English helpfiles above;
+  it is not checked in.
 - Category *names*. Category is part of page identity, so a translation cannot
   carry its own; localized category display names are a separate concern.
 - Wiki search (`@wiki/search`, `wikisearch()`, the omnisearch box). It matches
