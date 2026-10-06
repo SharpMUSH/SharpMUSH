@@ -24,4 +24,5 @@ public sealed record ApplicationRecord
 	public string? ComponentTypeName { get; init; }
 	public string? Scope { get; init; }
 	public string? OobPackage { get; init; }
+	public string? Permission { get; init; }
 }

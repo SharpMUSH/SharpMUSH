@@ -223,6 +223,7 @@ public static class PackageManifestWriter
 		AppendOptional(yaml, "nav_placement", application.NavPlacement, "  ");
 		AppendOptional(yaml, "scope", application.Scope, "  ");
 		AppendOptional(yaml, "oob_package", application.OobPackage, "  ");
+		AppendOptional(yaml, "permission", application.Permission, "  ");
 
 		if (application.Zones.Count > 0)
 		{

@@ -98,13 +98,14 @@ public class RegistriesTests
 		var app = new RegisteredApplication(
 			"weather", "Weather", null, ApplicationKind.Widget, "http/weather/schema", null, null,
 			PortalRole.Player, null, [WidgetZone.RightSidebar], 30,
-			Scope: "play", OobPackage: "weather.now");
+			Scope: "play", OobPackage: "weather.now", Permission: "weather.staff");
 
 		await registry.UpsertApplicationAsync(app);
 		var fetched = (await registry.GetApplicationAsync("weather")).Expect<RegisteredApplication>();
 
 		await Assert.That(fetched.Scope).IsEqualTo("play");
 		await Assert.That(fetched.OobPackage).IsEqualTo("weather.now");
+		await Assert.That(fetched.Permission).IsEqualTo("weather.staff");
 	});
 
 	[Test]
@@ -126,6 +127,7 @@ public class RegistriesTests
 		await Assert.That(fetched.Order).IsEqualTo(4);
 		await Assert.That(fetched.Scope).IsNull();
 		await Assert.That(fetched.OobPackage).IsNull();
+		await Assert.That(fetched.Permission).IsNull();
 	});
 
 	[Test]

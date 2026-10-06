@@ -368,8 +368,14 @@ application:                      # required for kind: application; forbidden ot
   zones: [MainContent]            # optional layout zones (widget apps)
   scope: play                     # optional layout scope the widget belongs to (e.g. play)
   oob_package: chargen.status     # optional OOB package whose latest push is the widget's data
+  permission: chargen.review      # optional permission scope the viewer must also hold
   order: 50                       # optional sort order
 ```
+
+`permission` gates the application beyond `minimum_role`: the nav entry is
+hidden and `/apps/{slug}` shows the no-access card unless the viewer holds that
+scope (a built-in one or a custom permission from `@role`). It is portal-side
+only, like `minimum_role`; the softcode routes still decide for themselves.
 
 `scope` names the page a widget belongs to: the Play page lists the `play`
 apps for its right-hand zone and its sidebar. `oob_package` replaces
@@ -380,7 +386,7 @@ push. A missing or malformed payload shows the widget's empty state.
 
 The string fields (`display_name`, `icon`, `schema_url`, `data_url`,
 `submit_route`, `minimum_role`, `nav_placement`, `scope`, `oob_package`,
-`zones`) accept the same
+`permission`, `zones`) accept the same
 `{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
 values, resolved at apply — so one published application package adapts its
 role, placement, and endpoints to each game it is installed on. Applying the

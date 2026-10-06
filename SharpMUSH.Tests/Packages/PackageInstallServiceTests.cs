@@ -695,6 +695,10 @@ public class PackageInstallServiceTests
 			    label: "Minimum role"
 			    type: string
 			    default: player
+			  staff:
+			    label: "Permission"
+			    type: string
+			    default: appdep.staff
 			application:
 			  slug: appdep
 			  display_name: Appdep Application
@@ -706,10 +710,11 @@ public class PackageInstallServiceTests
 			  nav_placement: main
 			  scope: play
 			  oob_package: appdep.now
+			  permission: "{{?staff}}"
 			  order: 50
 			""");
 
-		var answers = new Dictionary<string, string> { ["access"] = "wizard" };
+		var answers = new Dictionary<string, string> { ["access"] = "wizard", ["staff"] = "appdep.staff" };
 
 		// The dependency must be present first — the plan blocks until then.
 		var blockedPlan = await Installer.PlanAsync(appPackage, answers);
@@ -735,6 +740,7 @@ public class PackageInstallServiceTests
 		await Assert.That(app.OwningPackage).IsEqualTo("appdep-app");
 		await Assert.That(app.Scope).IsEqualTo("play");
 		await Assert.That(app.OobPackage).IsEqualTo("appdep.now");
+		await Assert.That(app.Permission).IsEqualTo("appdep.staff");
 
 		// The dependency cannot be removed while the application depends on it.
 		var blockedUninstall = (await Installer.UninstallAsync("appdep-routes")).Expect<Error<string>>();
