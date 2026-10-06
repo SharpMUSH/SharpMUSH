@@ -1,7 +1,328 @@
 @page "/admin/moderation"
 @attribute [Authorize(Policy = "players.moderate")]
+@using System.Globalization
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject AdminCharactersService CharactersService
+@inject AdminAccountsService AccountsService
+@inject AdminBansService BansService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["AdmModerationTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<AdminComingSoon Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmModerationTitle"]" Icon="@Icons.Material.Filled.Gavel" Message="@Loc["AdmModerationComingSoon"]" />
+@* The actions staff take, in one place: pick a character, give a reason, then warn, boot, ban or unlink.
+   Reports are not taken here; each game takes them its own way. Every action lands in the audit log. *@
+<div class="page-stack page-stack--padded adm-mod">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmModerationTitle"]" Description="@Loc["AdmModerationBlurb"]">
+        <Actions>
+            <CapsuleButton Icon="@Icons.Material.Filled.History" Href="/admin/moderation/audit">@Loc["AdmAuditTitle"]</CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
+
+    <KitCard Title="@Loc["AdmModerationActTitle"]">
+        <div class="adm-mod-body">
+            <MudTextField T="string" @bind-Value="_search" Label="@Loc["AdmModerationFind"]" id="moderation-search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="SearchAsync" />
+
+            @if (_matches.Count > 0)
+            {
+                <ul class="adm-mod-matches">
+                    @foreach (var match in _matches)
+                    {
+                        <li>
+                            <button type="button" class="adm-mod-match" @onclick="() => Pick(match)">
+                                <span>@match.Name</span>
+                                <span class="adm-mod-dim">#@match.DbrefNumber · @(match.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (_picked is { } picked)
+            {
+                <div class="adm-mod-picked">
+                    <div class="adm-mod-who">
+                        <a class="adm-mod-link" href="/admin/players/@picked.DbrefNumber">@picked.Name</a>
+                        <span class="adm-mod-dim">#@picked.DbrefNumber · @(picked.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</span>
+                        <MudChip T="string" Size="Size.Small" Color="@(picked.Online ? Color.Success : Color.Default)">
+                            @(picked.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
+                        </MudChip>
+                        @if (BanOf(picked) is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">@Loc["AdmModerationBanned"]</MudChip>
+                        }
+                    </div>
+
+                    <MudTextField T="string" @bind-Value="_reason" Label="@Loc["AdmModerationReason"]" id="moderation-reason"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2"
+                                  MaxLength="500" Counter="500" Immediate="true" HelperText="@Loc["AdmModerationReasonHelp"]" />
+
+                    <div class="adm-mod-ban-length">
+                        <MudSelect T="int" @bind-Value="_banDays" Label="@Loc["AdmModerationBanLength"]"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                            @foreach (var days in BanLengths)
+                            {
+                                <MudSelectItem T="int" Value="days">@BanLengthLabel(days)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+
+                    <div class="adm-mod-actions">
+                        <CapsuleButton Icon="@Icons.Material.Filled.Campaign" Class="adm-mod-warn"
+                                       Disabled="@(_busy || !HasReason)" OnClick="WarnAsync">@Loc["AdmModerationWarn"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Filled.PowerSettingsNew" Class="adm-mod-boot"
+                                       Disabled="@(_busy || !picked.Online)" OnClick="BootAsync">@Loc["AdmCharacterBoot"]</CapsuleButton>
+                        @if (BanOf(picked) is { } ban)
+                        {
+                            <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
+                                           Disabled="_busy" OnClick="() => LiftAsync(ban)">@Loc["AdmModerationLift"]</CapsuleButton>
+                        }
+                        else
+                        {
+                            <CapsuleButton Icon="@Icons.Material.Filled.Block" Class="adm-mod-ban"
+                                           Disabled="@(_busy || picked.AccountKey is null || !HasReason)" OnClick="BanAsync">@Loc["AdmModerationBan"]</CapsuleButton>
+                        }
+                        <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Class="adm-mod-unlink"
+                                       Disabled="@(_busy || picked.AccountKey is null)" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
+                    </div>
+                    <p class="adm-mod-note">@Loc["AdmModerationWarnNote"]</p>
+                </div>
+            }
+            else if (_matches.Count == 0)
+            {
+                <p class="adm-mod-note">@Loc["AdmModerationPickHint"]</p>
+            }
+        </div>
+    </KitCard>
+
+    <KitCard Title="@Loc["AdmModerationBansTitle"]">
+        <div class="adm-mod-body">
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+            @if (_bans is null)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_bans.Bans.Count == 0)
+            {
+                <EmptyBox>@Loc["AdmModerationNoBans"]</EmptyBox>
+            }
+            else
+            {
+                <MudTable Items="_bans.Bans" Dense="true" Hover="true" Elevation="0" Class="adm-mod-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
+                        <MudTh>@Loc["AdmModerationReason"]</MudTh>
+                        <MudTh>@Loc["AdmModerationBannedBy"]</MudTh>
+                        <MudTh>@Loc["AdmModerationUntil"]</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["AdmCharactersAccount"]">
+                            <span>@context.AccountName</span>
+                            @if (context.Characters.Count > 0)
+                            {
+                                <span class="adm-mod-dim">@string.Join(", ", context.Characters)</span>
+                            }
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmModerationReason"]" Class="adm-mod-reason">@context.Reason</MudTd>
+                        <MudTd data-label="@Loc["AdmModerationBannedBy"]">
+                            <span>@(context.BannedBy ?? "—")</span>
+                            <span class="adm-mod-dim">@context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</span>
+                        </MudTd>
+                        <MudTd data-label="@Loc["AdmModerationUntil"]">
+                            @(context.ExpiresAt is { } until ? until.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) : Loc["AdmModerationPermanent"].Value)
+                        </MudTd>
+                        <MudTd>
+                            <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
+                                           Disabled="_busy" OnClick="() => LiftAsync(context)">@Loc["AdmModerationLift"]</CapsuleButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </div>
+    </KitCard>
+
+    <KitCard Title="@Loc["AdmModerationHostsTitle"]">
+        <div class="adm-mod-body">
+            <p class="adm-mod-note">
+                @Loc["AdmModerationHostsBlurb"]
+                <AuthorizeView Policy="config.admin" Context="configAdmin">
+                    <a class="adm-mod-link" href="/admin/config/sitelock">@Loc["AdmModerationManageSitelock"]</a>
+                </AuthorizeView>
+            </p>
+            @if (_bans is { Hosts.Count: > 0 } loaded)
+            {
+                <ul class="adm-mod-hosts">
+                    @foreach (var host in loaded.Hosts)
+                    {
+                        <li>
+                            <span class="adm-mod-mono">@host.Pattern</span>
+                            <span class="adm-mod-dim adm-mod-mono">@string.Join(" ", host.Rules)</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (_bans is not null)
+            {
+                <EmptyBox>@Loc["AdmModerationNoHosts"]</EmptyBox>
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>A character to open the page on, from its detail page's Moderate button.</summary>
+    [SupplyParameterFromQuery(Name = "character")] public int? CharacterQuery { get; set; }
+
+    /// <summary>Ban lengths offered, in days; 0 is a ban that stays until lifted.</summary>
+    private static readonly int[] BanLengths = [1, 3, 7, 30, 0];
+
+    private string? _search;
+    private IReadOnlyList<AdminCharacterRow> _matches = [];
+    private AdminCharacterRow? _picked;
+    private string? _reason;
+    private int _banDays = 7;
+    private AdminBansResponse? _bans;
+    private bool _busy;
+    private string? _error;
+
+    private bool HasReason => !string.IsNullOrWhiteSpace(_reason);
+    private string? Reason => HasReason ? _reason!.Trim() : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bans = LoadBansAsync();
+        if (CharacterQuery is { } dbref && await CharactersService.GetAsync(dbref) is AdminCharacterDetail detail)
+            _picked = detail.Character;
+        await bans;
+    }
+
+    private async Task LoadBansAsync()
+    {
+        switch (await BansService.ListAsync())
+        {
+            case AdminBansResponse bans:
+                _bans = bans;
+                _error = null;
+                break;
+            case ApiFailure failure:
+                _bans = new AdminBansResponse([], []);
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private async Task SearchAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _matches = [];
+            return;
+        }
+
+        _matches = await CharactersService.ListAsync(new AdminCharactersService.Filter(Search: text.Trim()), 1, 8) switch
+        {
+            AdminCharacterPage page => page.Characters,
+            ApiFailure => [],
+        };
+    }
+
+    private void Pick(AdminCharacterRow row)
+    {
+        _picked = row;
+        _matches = [];
+        _search = null;
+    }
+
+    private AdminBanRow? BanOf(AdminCharacterRow row) =>
+        row.AccountKey is { } key ? _bans?.Bans.FirstOrDefault(ban => ban.AccountKey == key) : null;
+
+    private string BanLengthLabel(int days) => days == 0
+        ? Loc["AdmModerationPermanent"].Value
+        : Loc["AdmModerationDays", days].Value;
+
+    private async Task WarnAsync()
+    {
+        if (_picked is not { } picked || Reason is not { } reason) return;
+        await RunAsync(CharactersService.WarnAsync(picked.DbrefNumber, picked.CreationTime, reason),
+            Loc["AdmModerationWarned", picked.Name].Value);
+    }
+
+    private async Task BootAsync()
+    {
+        if (_picked is not { } picked) return;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmCharacterBootConfirmTitle", picked.Name],
+            Loc["AdmCharacterBootConfirm", picked.Name],
+            yesText: Loc["AdmCharacterBoot"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        await RunAsync(CharactersService.BootAsync(picked.DbrefNumber, picked.CreationTime, Reason),
+            Loc["AdmCharacterBooted", picked.Name].Value);
+    }
+
+    private async Task BanAsync()
+    {
+        if (_picked is not { AccountKey: { } account } picked || Reason is not { } reason) return;
+        var accountName = picked.AccountName ?? account;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmModerationBanConfirmTitle", accountName],
+            Loc["AdmModerationBanConfirm", accountName, BanLengthLabel(_banDays)],
+            yesText: Loc["AdmModerationBan"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        DateTimeOffset? expires = _banDays == 0 ? null : DateTimeOffset.UtcNow.AddDays(_banDays);
+        await RunAsync(BansService.BanAsync(account, reason, expires), Loc["AdmModerationBannedDone", accountName].Value);
+    }
+
+    private async Task LiftAsync(AdminBanRow ban)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmModerationLiftConfirmTitle", ban.AccountName],
+            Loc["AdmModerationLiftConfirm", ban.AccountName],
+            yesText: Loc["AdmModerationLift"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        await RunAsync(BansService.LiftAsync(ban.AccountKey), Loc["AdmModerationLifted", ban.AccountName].Value);
+    }
+
+    private async Task UnlinkAsync()
+    {
+        if (_picked is not { AccountKey: { } account } picked) return;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmCharacterUnlinkConfirmTitle", picked.Name],
+            Loc["AdmCharacterUnlinkConfirm", picked.Name, picked.AccountName ?? account],
+            yesText: Loc["AdmCharacterUnlink"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        await RunAsync(AccountsService.UnlinkCharacterAsync(account, picked.DbrefNumber, Reason),
+            Loc["AdmCharacterUnlinked", picked.Name, picked.AccountName ?? account].Value);
+    }
+
+    private async Task RunAsync(Task<ApiResult<Success>> action, string succeeded)
+    {
+        _busy = true;
+        switch (await action)
+        {
+            case Success:
+                Snackbar.Add(succeeded, Severity.Success);
+                _reason = null;
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message is { Length: > 0 } message ? message : Loc["AdmOperationFailed"].Value, Severity.Error);
+                break;
+        }
+
+        if (_picked is { } picked && await CharactersService.GetAsync(picked.DbrefNumber) is AdminCharacterDetail detail)
+            _picked = detail.Character;
+        await LoadBansAsync();
+        _busy = false;
+    }
+}

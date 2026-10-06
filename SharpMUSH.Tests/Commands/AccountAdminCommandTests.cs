@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -50,9 +51,8 @@ public class AccountAdminCommandTests
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=temp-password-9"));
 
-		var authenticated = await accountService.AuthenticateAsync(_username, "temp-password-9");
-		await Assert.That(authenticated).IsNotNull();
-		await Assert.That(authenticated!.MustChangePassword).IsTrue();
+		var authenticated = (await accountService.AuthenticateAsync(_username, "temp-password-9")).Expect<SharpAccount>();
+		await Assert.That(authenticated.MustChangePassword).IsTrue();
 
 		// The old session must be revoked as part of the password reset.
 		await Assert.That(await accountSessionStore.ValidateAsync(sessionToken)).IsNull();
@@ -65,10 +65,11 @@ public class AccountAdminCommandTests
 		await accountService.CreateAccountAsync(_username, null, "some-password-1");
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/disable {_username}"));
-		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
+		var refused = (await accountService.AuthenticateAsync(_username, "some-password-1")).Expect<AccountUnavailable>();
+		await Assert.That(refused.Message).IsEqualTo("This account is disabled.");
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/enable {_username}"));
-		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNotNull();
+		(await accountService.AuthenticateAsync(_username, "some-password-1")).Expect<SharpAccount>();
 	}
 
 	[Test]
@@ -79,7 +80,8 @@ public class AccountAdminCommandTests
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/close {_username}"));
 
-		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
+		var refused = (await accountService.AuthenticateAsync(_username, "some-password-1")).Expect<AccountUnavailable>();
+		await Assert.That(refused.Message).IsEqualTo("This account is closed.");
 
 		var reloaded = await accountService.GetByUsernameAsync(_username);
 		await Assert.That(reloaded).IsNotNull();
@@ -96,7 +98,7 @@ public class AccountAdminCommandTests
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/delete {_username}"));
 
-		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
+		(await accountService.AuthenticateAsync(_username, "some-password-1")).Expect<NotFound>("a deleted account answers as if it were not there");
 
 		var reloaded = await accountService.GetByUsernameAsync(_username);
 		await Assert.That(reloaded).IsNotNull();
@@ -126,10 +128,9 @@ public class AccountAdminCommandTests
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=short"));
 
 		// The refusal must not change the password.
-		var authenticated = await accountService.AuthenticateAsync(_username, "old-password-1");
-		await Assert.That(authenticated).IsNotNull();
-		await Assert.That(authenticated!.MustChangePassword).IsFalse();
+		var authenticated = (await accountService.AuthenticateAsync(_username, "old-password-1")).Expect<SharpAccount>();
+		await Assert.That(authenticated.MustChangePassword).IsFalse();
 
-		await Assert.That(await accountService.AuthenticateAsync(_username, "short")).IsNull();
+		(await accountService.AuthenticateAsync(_username, "short")).Expect<NotFound>();
 	}
 }

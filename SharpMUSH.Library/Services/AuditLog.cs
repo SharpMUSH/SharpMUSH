@@ -24,7 +24,9 @@ public sealed class AuditLog(
 	{
 	}
 
-	private static readonly AsyncLocal<string?> PortalAccount = new();
+	private static readonly AsyncLocal<PortalScope?> Portal = new();
+
+	private sealed record PortalScope(string AccountId, string? Reason);
 
 	public async ValueTask RecordAsync(AnySharpObject executor, string action, AuditTarget? target,
 		string? details = null, CancellationToken ct = default)
@@ -32,7 +34,8 @@ public sealed class AuditLog(
 		try
 		{
 			var character = executor.Object().DBRef;
-			var portalAccount = PortalAccount.Value;
+			var portal = Portal.Value;
+			var portalAccount = portal?.AccountId;
 			var account = portalAccount is not null
 				? await accounts.Value.GetByIdAsync(portalAccount, ct)
 				: executor.IsPlayer
@@ -41,7 +44,7 @@ public sealed class AuditLog(
 			var actor = new AuditActor(account?.Id ?? portalAccount, account?.Username, character.ToString(),
 				executor.Object().Name);
 			await AppendAsync(action, portalAccount is null ? AuditSource.Game : AuditSource.Portal, actor, target,
-				details, ct);
+				WithReason(details, portal?.Reason), ct);
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
@@ -64,12 +67,33 @@ public sealed class AuditLog(
 		}
 	}
 
-	public IDisposable BeginPortal(string accountId)
+	public async ValueTask RecordSystemAsync(string action, AuditTarget? target, string? details = null,
+		CancellationToken ct = default)
 	{
-		var outer = PortalAccount.Value;
-		PortalAccount.Value = accountId;
+		try
+		{
+			await AppendAsync(action, AuditSource.System, new AuditActor(null, null, null, "System"), target, details, ct);
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			Dropped(ex, target);
+		}
+	}
+
+	public IDisposable BeginPortal(string accountId, string? reason = null)
+	{
+		var outer = Portal.Value;
+		Portal.Value = new PortalScope(accountId, string.IsNullOrWhiteSpace(reason) ? null : reason.Trim());
 		return new Scope(outer);
 	}
+
+	/// <summary><paramref name="details"/> with the staff member's reason after it.</summary>
+	public static string? WithReason(string? details, string? reason) => (details, reason) switch
+	{
+		(_, null or "") => details,
+		(null or "", _) => $"reason: {reason}",
+		_ => $"{details}; reason: {reason}"
+	};
 
 	private async ValueTask AppendAsync(string action, AuditSource source, AuditActor actor, AuditTarget? target,
 		string? details, CancellationToken ct)
@@ -84,8 +108,8 @@ public sealed class AuditLog(
 		=> logger.LogError(ex, "[Audit] Could not record an entry on a {TargetKind}",
 			LogSanitizer.Sanitize(target?.Kind ?? "(none)"));
 
-	private sealed class Scope(string? outer) : IDisposable
+	private sealed class Scope(PortalScope? outer) : IDisposable
 	{
-		public void Dispose() => PortalAccount.Value = outer;
+		public void Dispose() => Portal.Value = outer;
 	}
 }

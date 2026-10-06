@@ -216,14 +216,6 @@
     <value>Fehlt</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Meldungen &amp; Sperren</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Meldungen, Sperren und Prüfprotokoll folgen in Kürze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderation</value>
     <comment>MT</comment>

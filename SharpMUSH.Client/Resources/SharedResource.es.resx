@@ -216,14 +216,6 @@
     <value>Ausente</value>
     <comment>MT — assumed a status chip meaning 'not present / not found'</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Denuncias y prohibiciones</value>
-    <comment>MT — 'bans' rendered as prohibiciones for consistency with 'nombre prohibido'</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Denuncias, prohibiciones y registro de auditoría próximamente.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderación</value>
     <comment>MT</comment>

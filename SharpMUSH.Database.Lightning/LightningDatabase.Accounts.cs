@@ -211,8 +211,76 @@ public partial class LightningDatabase
 			var record = Codec.Deserialize<AccountRecord>(bytes);
 			var updated = record with { Status = status.ToString(), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
+			tx.Delete(Tables.AccountBan, Keys.Str(key));
 		}, cancellationToken);
 	}
+
+	public async ValueTask<bool> BanAccountAsync(AccountBan ban, CancellationToken cancellationToken = default)
+	{
+		var key = ParseAccountId(ban.AccountId);
+		return await Store.WriteAsync(tx =>
+		{
+			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return false;
+			var record = Codec.Deserialize<AccountRecord>(bytes);
+			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(record with
+			{
+				Status = nameof(AccountStatus.Disabled),
+				UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+			}));
+			tx.Put(Tables.AccountBan, Keys.Str(key), Codec.Serialize(new AccountBanRecord
+			{
+				Reason = ban.Reason,
+				BannedBy = ban.BannedBy,
+				AtMs = ban.At.ToUnixTimeMilliseconds(),
+				ExpiresAtMs = ban.ExpiresAt?.ToUnixTimeMilliseconds()
+			}));
+			return true;
+		}, cancellationToken);
+	}
+
+	public async ValueTask<bool> LiftAccountBanAsync(string accountId, DateTimeOffset? expiredBy = null,
+		CancellationToken cancellationToken = default)
+	{
+		var key = ParseAccountId(accountId);
+		return await Store.WriteAsync(tx =>
+		{
+			if (!tx.TryGet(Tables.AccountBan, Keys.Str(key), out var banBytes)) return false;
+			if (expiredBy is { } now && !MapToBan(key, Codec.Deserialize<AccountBanRecord>(banBytes)).HasExpired(now))
+				return false;
+
+			tx.Delete(Tables.AccountBan, Keys.Str(key));
+			if (tx.TryGet(Tables.Account, Keys.Str(key), out var bytes))
+			{
+				var record = Codec.Deserialize<AccountRecord>(bytes);
+				tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(record with
+				{
+					Status = nameof(AccountStatus.Active),
+					UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				}));
+			}
+			return true;
+		}, cancellationToken);
+	}
+
+	public ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default)
+	{
+		var key = ParseAccountId(accountId);
+		return ValueTask.FromResult(Store.Read(tx => tx.TryGet(Tables.AccountBan, Keys.Str(key), out var bytes)
+			? MapToBan(key, Codec.Deserialize<AccountBanRecord>(bytes))
+			: null));
+	}
+
+	public ValueTask<IReadOnlyList<AccountBan>> GetAccountBansAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult<IReadOnlyList<AccountBan>>(Store.Read(tx => tx.Range(Tables.AccountBan, [])
+			.Select(e => MapToBan(Keys.ReadStr(e.Key), Codec.Deserialize<AccountBanRecord>(e.Value)))
+			.ToList()));
+
+	private static AccountBan MapToBan(string key, AccountBanRecord record) => new(
+		$"node_accounts/{key}",
+		record.Reason,
+		record.BannedBy,
+		DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs),
+		record.ExpiresAtMs is { } expires ? DateTimeOffset.FromUnixTimeMilliseconds(expires) : null);
 
 	public ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
 	{

@@ -9,6 +9,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
@@ -197,17 +198,19 @@ public class AdminAccountsController(
 	}
 
 	[HttpDelete("{key}/characters/{dbrefNumber:int}")]
-	public async Task<IActionResult> UnlinkCharacter(string key, int dbrefNumber)
+	public async Task<IActionResult> UnlinkCharacter(string key, int dbrefNumber, [FromQuery] string? reason = null)
 	{
 		var (adminId, failure) = await RequireModeratorAsync();
 		if (failure is not null) return failure;
+		if (reason is { Length: > AdminBansController.MaxReasonLength })
+			return BadRequest($"Keep the reason to {AdminBansController.MaxReasonLength} characters.");
 		var character = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbrefNumber)));
 		await accountService.UnlinkCharacterAsync(FullId(key), new DBRef(dbrefNumber));
 		await audit.RecordPortalAsync(adminId!, AuditActions.CharacterUnlink,
 			character is AnySharpObject unlinked
 				? AuditTargets.Of(unlinked)
 				: new AuditTarget(AuditTargetKinds.Character, $"#{dbrefNumber}", $"#{dbrefNumber}"),
-			(await AccountTargetAsync(key)).Name);
+			AuditLog.WithReason((await AccountTargetAsync(key)).Name, reason?.Trim()));
 		logger.LogInformation("Admin {AdminId} unlinked #{Dbref} from account {Key}", LogSanitizer.Sanitize(adminId), dbrefNumber, LogSanitizer.Sanitize(key));
 		return NoContent();
 	}

@@ -1463,12 +1463,6 @@
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Modération</value>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Signalements et bannissements</value>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Les signalements, les bannissements et le journal d'audit arrivent bientôt.</value>
-  </data>
   <data name="AdmSuggestionsAction" xml:space="preserve">
     <value>Suggestions de mots</value>
   </data>

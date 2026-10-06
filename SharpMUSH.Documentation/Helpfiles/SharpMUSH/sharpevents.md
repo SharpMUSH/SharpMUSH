@@ -36,14 +36,14 @@ Event Types:
 - **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
-- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels
+- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail
 - **http**: http\`blocked http\`fail http\`command
 - **room**: room\`contents
 - **channel**: channel\`message
 - **page**: page\`message
 
-The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what.
+The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is SharpMUSH's own too: it is how a warning from the web portal reaches the game.
 
 # EVENT DB
 - **db\`dbck**: Run after the regular database consistency check.
@@ -138,6 +138,9 @@ To mimic old behaviour:
 
 - **player\`channels** (*objid*, *cause*, *channel*)
 - Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, resume, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect and resume. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection), and is sent the list again. Not triggered for a player who is not connected: they are sent their whole list when they connect.
+
+- **player\`warn** (*objid*, *reason*, *staff account*)
+- Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<staff account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
 
 # EVENT SOCKET
 - **socket\`connect** (*descriptor*, *ip*)

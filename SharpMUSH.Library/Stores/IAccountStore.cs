@@ -47,7 +47,28 @@ public interface IAccountStore
 	/// Sets the account's lifecycle status. Account documents are never removed, so this is the
 	/// only way an account leaves <see cref="AccountStatus.Active"/>.
 	/// </summary>
+	/// <remarks>Any ban the account held is removed with it: the new status is what holds now.</remarks>
 	ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Bans the account: sets it <see cref="AccountStatus.Disabled"/> and keeps <paramref name="ban"/>, in
+	/// one write, replacing any ban it held. False when there is no such account.
+	/// </summary>
+	ValueTask<bool> BanAccountAsync(AccountBan ban, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Lifts the account's ban: sets it <see cref="AccountStatus.Active"/> and removes the ban, in one
+	/// write. With <paramref name="expiredBy"/>, only a ban that had run out by then is lifted, so a ban
+	/// renewed after it was read is left alone. False when there was no ban to lift.
+	/// </summary>
+	ValueTask<bool> LiftAccountBanAsync(string accountId, DateTimeOffset? expiredBy = null,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>The account's ban, or null when it is not banned.</summary>
+	ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default);
+
+	/// <summary>Every ban. Admin tooling only — bans are few.</summary>
+	ValueTask<IReadOnlyList<AccountBan>> GetAccountBansAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>Returns all accounts. Admin tooling only — account counts are small.</summary>
 	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default);

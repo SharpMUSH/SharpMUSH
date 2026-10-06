@@ -278,6 +278,14 @@ public partial class Commands
 			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
+		if (await AccountRefusalAsync(foundDB.Object.DBRef) is { } refusal)
+		{
+			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL", null,
+				handle.ToString(), ipAddress, "1", "account not active", $"#{foundDB.Object.Key}", foundDB.Object.Name);
+			await NotifyService.Notify(handle, refusal);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundDB).IsWizard())
 		{
@@ -350,6 +358,13 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
+		// A login token outlives the session that minted it by up to its lifetime; a ban in between still holds.
+		if (await AccountRefusalAsync(foundPlayer.Object.DBRef) is { } refusal)
+		{
+			await NotifyService.Notify(handle, refusal);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundPlayer).IsWizard())
 		{
@@ -364,6 +379,15 @@ public partial class Commands
 			foundPlayer.Object.Name, foundPlayer.Object.Key, ipAddress);
 		return new CallState(playerDbRef.Value);
 	}
+
+	/// <summary>
+	/// What a character is told when its account may not sign in (disabled, banned or closed), or null when
+	/// it may. A character with no account is not refused here.
+	/// </summary>
+	private async ValueTask<string?> AccountRefusalAsync(DBRef player)
+		=> await AccountService.GetAccountForCharacterAsync(player) is { IsActive: false } account
+			? (await AccountService.UnavailableAsync(account)).Message
+			: null;
 
 	private async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress, string hostName)
 	{

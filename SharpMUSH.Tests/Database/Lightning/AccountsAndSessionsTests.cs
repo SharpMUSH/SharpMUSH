@@ -230,6 +230,47 @@ public class AccountsAndSessionsTests
 	}
 
 	[Test]
+	public async Task ABanDisablesTheAccountAndLiftingItRestoresIt()
+	{
+		var account = await _db.CreateAccountAsync("Banned", null, "hash");
+		var at = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+		var ban = new AccountBan(account.Id!, "spam", "node_accounts/99", at, at.AddDays(1));
+
+		await Assert.That(await _db.BanAccountAsync(ban)).IsTrue();
+
+		await Assert.That((await _db.GetAccountByIdAsync(account.Id!))!.Status).IsEqualTo(AccountStatus.Disabled);
+		await Assert.That(await _db.GetAccountBanAsync(account.Id!)).IsEqualTo(ban);
+		await Assert.That(await _db.GetAccountBansAsync()).IsEquivalentTo([ban]);
+
+		await Assert.That(await _db.LiftAccountBanAsync(account.Id!, expiredBy: at.AddHours(23))).IsFalse()
+			.Because("a sweep that reads the clock before the expiry leaves the ban alone");
+		await Assert.That(await _db.LiftAccountBanAsync(account.Id!, expiredBy: at.AddDays(1))).IsTrue();
+
+		await Assert.That((await _db.GetAccountByIdAsync(account.Id!))!.Status).IsEqualTo(AccountStatus.Active);
+		await Assert.That(await _db.GetAccountBanAsync(account.Id!)).IsNull();
+		await Assert.That(await _db.LiftAccountBanAsync(account.Id!)).IsFalse();
+	}
+
+	[Test]
+	public async Task AStatusChangeReplacesABan()
+	{
+		var account = await _db.CreateAccountAsync("Rebanned", null, "hash");
+		await _db.BanAccountAsync(new AccountBan(account.Id!, "spam", null, DateTimeOffset.UtcNow, null));
+
+		await _db.UpdateAccountStatusAsync(account.Id!, AccountStatus.Active);
+
+		await Assert.That(await _db.GetAccountBanAsync(account.Id!)).IsNull();
+	}
+
+	[Test]
+	public async Task BanningNoAccountDoesNothing()
+	{
+		await Assert.That(await _db.BanAccountAsync(new AccountBan("node_accounts/404", "spam", null, DateTimeOffset.UtcNow, null)))
+			.IsFalse();
+		await Assert.That(await _db.GetAccountBansAsync()).IsEmpty();
+	}
+
+	[Test]
 	public async Task UpdateAccountPasswordAsyncRoundTrips()
 	{
 		var account = await _db.CreateAccountAsync("Karl", null, "old-hash");

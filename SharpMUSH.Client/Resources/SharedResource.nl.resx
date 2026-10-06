@@ -216,14 +216,6 @@
     <value>Ontbreekt</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Meldingen en verbanningen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Meldingen, verbanningen en auditlog komen binnenkort.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderatie</value>
     <comment>MT</comment>

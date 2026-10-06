@@ -216,14 +216,6 @@
     <value>Mangler</value>
     <comment>MT — paired with AdmPresent ('Finnes') as a handler-status value.</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Rapporter og blokkeringer</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Rapporter, blokkeringer og revisjonslogg kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderering</value>
     <comment>MT</comment>

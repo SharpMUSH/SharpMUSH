@@ -216,14 +216,6 @@
     <value>Липсва</value>
     <comment>MT — assumed a status chip meaning the item is absent; rendered as a verb so it needs no gender agreement</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Сигнали и блокирания</value>
-    <comment>MT — «reports» read as user-submitted moderation reports, not generated reports</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Сигналите, блокиранията и одит журналът предстоят.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Модерация</value>
     <comment>MT</comment>

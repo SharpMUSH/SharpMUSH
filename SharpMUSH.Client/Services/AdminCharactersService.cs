@@ -27,6 +27,12 @@ public class AdminCharactersService(IHttpClientFactory httpClientFactory)
 			"The server returned no character.");
 
 	/// <param name="created">The creation time the page was showing, so a recycled number is refused.</param>
-	public Task<ApiResult<Success>> BootAsync(int dbrefNumber, long created) =>
-		Client.PostApiAsync($"api/admin/characters/{dbrefNumber}/boot?created={created}");
+	/// <param name="reason">Why, when the staff member gave a reason; kept in the audit log.</param>
+	public Task<ApiResult<Success>> BootAsync(int dbrefNumber, long created, string? reason = null) =>
+		Client.PostApiAsync(ApiQuery.Build($"api/admin/characters/{dbrefNumber}/boot",
+			("created", created.ToString(System.Globalization.CultureInfo.InvariantCulture)), ("reason", reason)));
+
+	/// <summary>Fires the game's <c>PLAYER`WARN</c> event for the character, with the reason.</summary>
+	public Task<ApiResult<Success>> WarnAsync(int dbrefNumber, long created, string reason) =>
+		Client.PostApiAsync($"api/admin/characters/{dbrefNumber}/warn?created={created}", new AdminWarnRequest(reason));
 }

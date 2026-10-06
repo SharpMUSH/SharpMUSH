@@ -16,7 +16,7 @@ public class AccountService(
 	// Account IDs are used as the "user" salt key for hashing
 	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
 
-	public async ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
+	public async ValueTask<AccountSignIn> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
 	{
 		var account = usernameOrEmail.Contains('@')
 			? await database.GetAccountByEmailAsync(usernameOrEmail, ct)
@@ -34,26 +34,40 @@ public class AccountService(
 					new DBRef(namedCharacter.Object.Key, namedCharacter.Object.CreationTime), ct);
 		}
 
-		if (account is null || !account.IsActive)
-			return null;
+		// A deleted account answers as if it were not there.
+		if (account is null || account.Status is AccountStatus.Deleted)
+			return new NotFound();
 
+		if (!await PasswordMatchesAsync(account, namedCharacter, password, ct))
+			return new NotFound();
+
+		// Only someone who knows the password learns that the account is banned, and until when.
+		return account.IsActive
+			? account
+			: await UnavailableAsync(account, ct);
+	}
+
+	public async ValueTask<AccountUnavailable> UnavailableAsync(SharpAccount account, CancellationToken ct = default)
+		=> new(account, await database.GetAccountBanAsync(account.Id!, ct));
+
+	private async ValueTask<bool> PasswordMatchesAsync(SharpAccount account, SharpPlayer? namedCharacter, string password,
+		CancellationToken ct)
+	{
 		// A character-name identifier authenticates only via that specific character's own
 		// password: the owning account's password (or any *other* linked character's password)
 		// must not be accepted through this identifier.
 		if (namedCharacter is not null)
-			return await CharacterPasswordMatchesAsync(namedCharacter, password) ? account : null;
+			return await CharacterPasswordMatchesAsync(namedCharacter, password);
 
 		// Empty stored hashes never match at the account level: God's PennMUSH-default empty
 		// character password stays a telnet-connect special case, and the pre-generated
 		// (unclaimed) admin account stays unlobbable until first-run setup claims it.
 		if (!string.IsNullOrEmpty(account.PasswordHash)
 			&& passwordService.PasswordIsValid(AccountKey(account), password, account.PasswordHash))
-			return account;
+			return true;
 
 		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
-		return await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await CharacterPasswordMatchesAsync(character, password))
-			? account
-			: null;
+		return await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await CharacterPasswordMatchesAsync(character, password));
 	}
 
 	private async ValueTask<bool> CharacterPasswordMatchesAsync(SharpPlayer character, string password)
@@ -199,12 +213,64 @@ public class AccountService(
 			return new Error<string>("The system account's status cannot be changed.");
 
 		await database.UpdateAccountStatusAsync(accountId, status, ct);
+		await StatusChangedAsync(accountId, status, ct);
+		return new Success();
+	}
+
+	public async ValueTask<Result<Success>> BanAsync(AccountBan ban, CancellationToken ct = default)
+	{
+		var account = await database.GetAccountByIdAsync(ban.AccountId, ct);
+		if (account is null)
+			return new Error<string>("Account not found.");
+
+		if (SystemAccount.IsReserved(account.Username))
+			return new Error<string>("The system account cannot be banned.");
+
+		if (!await database.BanAccountAsync(ban, ct))
+			return new Error<string>("Account not found.");
+
+		await StatusChangedAsync(ban.AccountId, AccountStatus.Disabled, ct);
+		return new Success();
+	}
+
+	public async ValueTask<Found<None>> LiftBanAsync(string accountId, CancellationToken ct = default)
+	{
+		if (!await database.LiftAccountBanAsync(accountId, cancellationToken: ct))
+			return new NotFound();
+
+		await StatusChangedAsync(accountId, AccountStatus.Active, ct);
+		return new None();
+	}
+
+	public async ValueTask<IReadOnlyList<AccountBan>> LiftExpiredBansAsync(DateTimeOffset now, CancellationToken ct = default)
+	{
+		var lifted = new List<AccountBan>();
+		foreach (var ban in await database.GetAccountBansAsync(ct))
+		{
+			// The store checks the expiry again inside its write, so a ban renewed since the read stays.
+			if (!ban.HasExpired(now) || !await database.LiftAccountBanAsync(ban.AccountId, now, ct)) continue;
+			await StatusChangedAsync(ban.AccountId, AccountStatus.Active, ct);
+			lifted.Add(ban);
+		}
+
+		return lifted;
+	}
+
+	public ValueTask<AccountBan?> GetBanAsync(string accountId, CancellationToken ct = default)
+		=> database.GetAccountBanAsync(accountId, ct);
+
+	public ValueTask<IReadOnlyList<AccountBan>> GetBansAsync(CancellationToken ct = default)
+		=> database.GetAccountBansAsync(ct);
+
+	/// <summary>What follows a status change that is already stored.</summary>
+	private async ValueTask StatusChangedAsync(string accountId, AccountStatus status, CancellationToken ct)
+	{
 		// Only an active account's roles reach its characters.
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
 
 		if (status is AccountStatus.Active)
-			return new Success();
+			return;
 
 		// Status is persisted first because it is the durable gate: every authenticated request
 		// re-reads the account and rejects a non-Active one, so a token stops working at its next
@@ -222,8 +288,6 @@ public class AccountService(
 				await banEnforcer.EnforceAccountBanAsync(accountId, ct);
 			}
 		}
-
-		return new Success();
 	}
 
 	public ValueTask<Result<Success>> DisableAccountAsync(string accountId, CancellationToken ct = default)

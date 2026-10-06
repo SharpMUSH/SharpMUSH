@@ -32,6 +32,7 @@ public class AdminCharactersControllerTests : ServerTestBase
 			authorization,
 			Substitute.For<IVisibleWorldProjection>(),
 			Substitute.For<IEngineCommandInvoker>(),
+			Substitute.For<IEventService>(),
 			Substitute.For<IAuditLog>())
 		{
 			ControllerContext = new ControllerContext

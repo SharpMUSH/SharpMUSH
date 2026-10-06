@@ -18,9 +18,9 @@ public static class PortalAuditExtensions
 	/// <see cref="IAuditLog.BeginPortal"/> for the request's account, around work done by running a
 	/// command: the command's own record then names the account and the portal.
 	/// </summary>
-	public static IDisposable BeginPortal(this IAuditLog audit, ClaimsPrincipal? user)
+	public static IDisposable BeginPortal(this IAuditLog audit, ClaimsPrincipal? user, string? reason = null)
 		=> user?.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } accountId
-			? audit.BeginPortal(accountId)
+			? audit.BeginPortal(accountId, reason)
 			: NoScope.Instance;
 
 	private sealed class NoScope : IDisposable

@@ -54,6 +54,8 @@ public static class Tables
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
 	/// <summary>Account key → its per-account permission overrides (scope → state), one record per account.</summary>
 	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
+	/// <summary>Account key → its ban (reason, who, when, until when); absent when the account is not banned.</summary>
+	public static readonly TableDef AccountBan = TableDef.Node("acct.ban");
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");

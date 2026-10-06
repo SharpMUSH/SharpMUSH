@@ -216,14 +216,6 @@
     <value>Hiányzik</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Bejelentések és kitiltások</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>A bejelentések, a kitiltások és az auditnapló hamarosan elérhetők.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderálás</value>
     <comment>MT</comment>

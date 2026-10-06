@@ -68,16 +68,51 @@ public class AccountStatusTests
 	}
 
 	[Test]
-	[Arguments(AccountStatus.Disabled)]
-	[Arguments(AccountStatus.Closed)]
-	[Arguments(AccountStatus.Deleted)]
-	public async ValueTask Authenticate_NonActiveStatus_ReturnsNull(AccountStatus status)
+	[Arguments(AccountStatus.Disabled, "This account is disabled.")]
+	[Arguments(AccountStatus.Closed, "This account is closed.")]
+	public async ValueTask Authenticate_NonActiveStatus_IsRefusedWithWhy(AccountStatus status, string message)
 	{
 		var (svc, db, pw, _) = Build();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(status));
 		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
-		await Assert.That(await svc.AuthenticateAsync("TestUser", "correct-password")).IsNull();
+		var refused = (await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<AccountUnavailable>();
+		await Assert.That(refused.Message).IsEqualTo(message);
+	}
+
+	[Test]
+	public async ValueTask Authenticate_NonActiveStatus_WrongPassword_SaysNothingOfTheStatus()
+	{
+		var (svc, db, pw, _) = Build();
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(AccountStatus.Disabled));
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+
+		(await svc.AuthenticateAsync("TestUser", "wrong-password")).Expect<NotFound>();
+	}
+
+	[Test]
+	public async ValueTask Authenticate_DeletedAccount_AnswersAsIfAbsent()
+	{
+		var (svc, db, pw, _) = Build();
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(AccountStatus.Deleted));
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+		(await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<NotFound>();
+	}
+
+	[Test]
+	public async ValueTask Authenticate_BannedAccount_NamesTheExpiry()
+	{
+		var (svc, db, pw, _) = Build();
+		var account = MakeAccount(AccountStatus.Disabled);
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountBanAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new AccountBan(account.Id!, "spam", null,
+			new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 8, 14, 30, 0, TimeSpan.Zero)));
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+		var refused = (await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<AccountUnavailable>();
+		await Assert.That(refused.Message).IsEqualTo("This account is banned until 2026-10-08 14:30 UTC.");
+		await Assert.That(refused.Message).DoesNotContain("spam").Because("the reason is for staff");
 	}
 
 	[Test]
@@ -87,10 +122,9 @@ public class AccountStatusTests
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount());
 		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
-		var result = await svc.AuthenticateAsync("TestUser", "correct-password");
+		var result = (await svc.AuthenticateAsync("TestUser", "correct-password")).Expect<SharpAccount>();
 
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Username).IsEqualTo("TestUser");
+		await Assert.That(result.Username).IsEqualTo("TestUser");
 	}
 
 	[Test]

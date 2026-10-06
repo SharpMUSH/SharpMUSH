@@ -216,14 +216,6 @@
     <value>Mangler</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Anmeldelser og udelukkelser</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Anmeldelser, udelukkelser og revisionslog kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderation</value>
     <comment>MT</comment>

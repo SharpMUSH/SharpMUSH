@@ -25,11 +25,16 @@ public interface IAuditLog
 	ValueTask RecordPortalAsync(string accountId, string action, AuditTarget? target, string? details = null,
 		CancellationToken ct = default);
 
+	/// <summary>Records an action the server took by itself, such as lifting a ban that ran out.</summary>
+	ValueTask RecordSystemAsync(string action, AuditTarget? target, string? details = null,
+		CancellationToken ct = default);
+
 	/// <summary>
 	/// Until disposed, actions recorded on this async flow through <see cref="RecordAsync"/> are the
-	/// portal's, taken by <paramref name="accountId"/>.
+	/// portal's, taken by <paramref name="accountId"/>. A <paramref name="reason"/> the staff member gave
+	/// is added to each one's details.
 	/// </summary>
-	IDisposable BeginPortal(string accountId);
+	IDisposable BeginPortal(string accountId, string? reason = null);
 }
 
 /// <summary>Builders for <see cref="AuditTarget"/>.</summary>
