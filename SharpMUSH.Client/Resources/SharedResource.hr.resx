@@ -5565,6 +5565,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pauzirano, bez vremena</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Uredi scenu</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Najava</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>O čemu je scena, kako bi ljudi odlučili hoće li doći.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Svatko može gledati</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Datum</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Scena nije promijenjena.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Dodaj u kalendar</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google kalendar</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Drugi kalendari (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Objavi kao</value>
   </data>

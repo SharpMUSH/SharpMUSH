@@ -5565,6 +5565,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Sat på pause, intet tidspunkt</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Rediger scene</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Pitch</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>Hvad scenen handler om, så folk kan beslutte, om de vil komme.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Alle kan se med</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Dato</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Scenen blev ikke ændret.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Føj til kalender</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Kalender</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Andre kalendere (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Send som</value>
   </data>

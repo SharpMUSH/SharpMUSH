@@ -404,18 +404,22 @@ objects:
         $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/move %0=%1
 
       # ---- visibility -----------------------------------------------------------
-      CMD`PUBLIC: |-
-        $+scene/public: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=1; @pemit %#=Scene is now public.
-
-      CMD`PRIVATE: |-
-        $+scene/private: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=0; @pemit %#=Scene is now private.
+      # +scene/public [<id>] and +scene/private [<id>]: the focused scene, or the one named.
+      CMD`PRIVACY:
+        value: |-
+          $(?is)^\+scene/(public|private)(?\: +(\d+))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=No such scene: %q<SceneID>; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/public=[strmatch(%1,public)]; @pemit %#=Scene %q<SceneID> is now [lcstr(%1)].
+        flags: [REGEXP]
 
       # ---- viewing --------------------------------------------------------------
       # One row of the Players table: what they are to the scene, who they are, how much they have
       # posed. Name carries the persona when there is one, which is where the separate Cast line of
       # personas went: one reading now gives both the character and the name they answer to.
+      # The table fills width(%#): Status 12, Poses 7 and the two gaps align() puts between columns leave
+      # Name <width> - 21.
+      FUN`CAST`COLS: |-
+        <12 <[sub(%0,21)] >7
       FUN`CAST`ROW: |-
-        [align(<12 <40 <8,[capstr(scenemember(%0,%1,role))],[u(%!/FUN`CAST`NAME,%0,%1)],[words(sceneposes(%0,%1))])]
+        [align(u(%!/FUN`CAST`COLS,%2),[capstr(scenemember(%0,%1,role))],[left(u(%!/FUN`CAST`NAME,%0,%1),sub(%2,21))],[words(sceneposes(%0,%1))])]
       FUN`CAST`NAME: |-
         [switch(setr(sa,scenemember(%0,%1,showas)),,[name(%1)],[name(%1)] as %q<sa>)]
 
@@ -482,14 +486,20 @@ objects:
         switch(setr(ms,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(sub(secs(),div(%q<ms>,1000))))
       FUN`POT_KEY: |-
         [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
+      # How long the member's last pose was, in words; "-" before their first.
+      FUN`POT_WORDS: |-
+        switch(setr(lp,sceneposes(%0,%1,1)),,-,#-1*,-,words(scenepose(%0,%q<lp>,content)))
+      # Fills width(%#): # 3, Idle 14, Words 5, the marker 9 and four gaps leave the name <width> - 35.
+      FUN`POT_COLS: |-
+        >3 <[sub(%0,35)] >14 >5 <9
       FUN`POT_ROW: |-
-        align(>3 <[sub(%3,30)] >14 <9,%2,[name(%1)][switch(scenemember(%0,%1,showas),,,%b\([scenemember(%0,%1,showas)]\))],u(%!/FUN`POT_IDLE,%0,%1),switch(%2,1,<- up,))
+        align(u(%!/FUN`POT_COLS,%3),%2,left([name(%1)][switch(scenemember(%0,%1,showas),,,%b\([scenemember(%0,%1,showas)]\))],sub(%3,35)),u(%!/FUN`POT_IDLE,%0,%1),u(%!/FUN`POT_WORDS,%0,%1),switch(%2,1,<- up,))
       # Control flow is guard-then-display: the @assert early-exits (no switch() for output) and leaves
       # %q<SceneID> set for the shared display tail, which is @included with that id. The guard is inline
       # for the same reason the approval guard is — an @assert behind an @include does not stop the caller,
       # so the guard used to print "you are not focused" and then render a tracker for scene "#-1 NOT FOUND".
       INC`DISPLAY`POT: |-
-        @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,%iL))),u(%!/FUN`POT_ROW,%0,after(%iL,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
+        @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[align(u(%!/FUN`HEAD,u(%!/FUN`POT_COLS,width(%#))),#,Name,Idle,Words,Turn)]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,%iL))),u(%!/FUN`POT_ROW,%0,after(%iL,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
       CMD`POT: |-
         $+pot: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.; @include %!/INC`DISPLAY`POT=%q<SceneID>
 
@@ -497,12 +507,28 @@ objects:
       # Volund-style listing: bare `+scene` = active scenes, `+scene/old` = finished, `+scene/mine` =
       # yours. FUN`LIST_RENDER(<filter>,<width>) builds the whole table; the Title column flexes to
       # the user's terminal width(%#). (Scene DETAILS are `+scene <id>`; scheduled scenes `+scene/upcoming`.)
+      #
+      # Every table here fills width(%#) exactly. align() puts one space between columns, so the title
+      # column is the width less the fixed columns and the gaps, and each cell is cut to its column: a
+      # cell wider than its column wraps onto a row of its own.
       FUN`LIST_TITLE: |-
         [switch(setr(ttl,scene(%0,title)),#-1*,\(untitled\),%q<ttl>)]
+      # A table's heading row is its column spec with every column underlined: align()'s (u) style
+      # draws the line under the whole column, so the headings read as a ruled row. The parentheses are
+      # escaped because a bare ) inside iter() would close it.
+      FUN`HEAD: |-
+        [iter(%0,%i0\(u\))]
+      # ID 6, Where 14, Cast 4, Status 9 ("scheduled") and four gaps leave the title <width> - 37.
+      FUN`LIST_COLS: |-
+        >6 <[sub(%0,37)] <14 >4 <9
+      # A scene's title in a table is a link to its card: a client that can click a command runs +scene <id>,
+      # and every other client sees the title. cmdlink() needs Send_OOB, which this WIZARD object has.
+      FUN`LIST_LINK: |-
+        [cmdlink(left(u(%!/FUN`LIST_TITLE,%0),%1),+scene %0,+scene %0)]
       FUN`LIST_ROW: |-
-        align(<10 <[sub(%2,41)] <14 >5 <8,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%2,42)),left(scene(%0,roomname),14),words(scenemembers(%0)),scene(%0,status),%1)
+        align(u(%!/FUN`LIST_COLS,%1),left(%0,6),u(%!/FUN`LIST_LINK,%0,sub(%1,37)),left(scene(%0,roomname),14),words(scenemembers(%0)),left(scene(%0,status),9))
       FUN`LIST_RENDER: |-
-        [setq(lst,scenelist(%0))][header(Scenes: %0,%1)]%r[align(<10 <[sub(%1,41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q<lst>,u(%!/FUN`LIST_ROW,%iL,%b,%1),,%r)]%r[footer([words(%q<lst>)] scenes,%1)]
+        [setq(lst,scenelist(%0))][header(Scenes: %0,%1)]%r[align(u(%!/FUN`HEAD,u(%!/FUN`LIST_COLS,%1)),ID,Title,Where,Cast,Status)]%r[if(words(%q<lst>),iter(%q<lst>,u(%!/FUN`LIST_ROW,%iL,%1),%b,%r),No scenes.)]%r[footer([words(%q<lst>)] [if(eq(words(%q<lst>),1),scene,scenes)],%1)]
       # +scene and +scene/list.
       CMD`BROWSE:
         value: |-
@@ -530,19 +556,36 @@ objects:
         value: |-
           $(?is)^\+scene/(?\:unschedule|cancel) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=No such scene: %1; @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @assert not(match(active finished,scene(%1,status)))=@pemit %#=Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.; @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @pemit %#=Cancelled scene %1.
         flags: [REGEXP]
-      # The schedule table fills width(%#) exactly: align() puts one space between columns, so the fixed
-      # columns (ID 6, When 16, Status 9 for "scheduled", RSVP 4) and the four gaps leave the title
-      # <width> - 39. A column narrower than its text wraps onto a line of its own, so each is cut to fit.
-      # The When column is timefmt's "Tue Oct 06 18:00", 16 wide; a paused scene with no time shows "-".
+      # The schedule reads like a calendar: scenes in time order, each day under its own rule, the
+      # scenes with no time last under theirs. A row carries the time of day, since its rule carries the
+      # date. ID 6, Time 5, Status 9 ("scheduled"), RSVP 4 and the four gaps leave the title <width> - 28.
       FUN`SCHED_COLS: |-
-        >6 <[sub(%0,39)] <16 <9 >4
+        >6 <[sub(%0,28)] <5 <9 >4
       FUN`SCHED_ROW: |-
-        align(u(%!/FUN`SCHED_COLS,%1),left(%0,6),left(u(%!/FUN`LIST_TITLE,%0),sub(%1,39)),switch(setr(sw,scene(%0,scheduledfor)),,-,timefmt($a $b $d $H:$M,div(%q<sw>,1000))),left(scene(%0,status),9),words(scenemembers(%0)))
-      # +scene/upcoming, and the names other games use for it: +scenes, +events, +scenes/upcoming,
-      # +events/upcoming. One regexp pattern, so the aliases and the command cannot drift.
+        align(u(%!/FUN`SCHED_COLS,%1),left(%0,6),u(%!/FUN`LIST_LINK,%0,sub(%1,28)),switch(setr(sw,scene(%0,scheduledfor)),,-,timefmt($H:$M,div(%q<sw>,1000))),left(scene(%0,status),9),words(scenemembers(%0)))
+      # The day a scene falls on, as its rule's title: "Saturday, December 12", with the year only
+      # when it is not this one.
+      FUN`SCHED_DAY: |-
+        [switch(setr(sw,scene(%0,scheduledfor)),,No time set,[timefmt($A,setr(ss,div(%q<sw>,1000)))][chr(44)] [timefmt($B,%q<ss>)] [add(timefmt($d,%q<ss>),0)][if(neq(timefmt($Y,%q<ss>),timefmt($Y,secs())),[chr(44)] [timefmt($Y,%q<ss>)])])]
+      # How far ahead +scene/upcoming looks unless asked for more. The portal's schedule shows them all.
+      DATA`SCHEDULE_DAYS: |-
+        30
+      DATA`DENY_BAD_DAYS: |-
+        How many days ahead? Give a whole number of 1 or more, or all.
+      # FUN`SCHED_RENDER(<days>|all,<width>). scenelist(scheduled) is already in time order, untimed
+      # scenes last. The window keeps every scene due before its end: one whose time has passed but
+      # that has not started yet is still waiting, and an untimed one has no time to be beyond it.
+      # %q<pday> is the day of the row before, so a rule is drawn only where the day changes.
+      FUN`SCHED_RENDER: |-
+        [setq(all,scenelist(scheduled))][setq(lim,if(isint(%0),mul(add(secs(),mul(%0,86400)),1000)))][setq(lst,if(strlen(%q<lim>),squish(iter(%q<all>,if(lt(firstof(scene(%i0,scheduledfor),0),%q<lim>),%i0))),%q<all>))][setq(pday,)][header(Scheduled Scenes,%1)]%r[align(u(%!/FUN`HEAD,u(%!/FUN`SCHED_COLS,%1)),ID,Title,Time,Status,RSVP)]%r[if(words(%q<lst>),iter(%q<lst>,[if(strmatch(setr(day,u(%!/FUN`SCHED_DAY,%i0)),%q<pday>),,[line(%q<day>,%1)]%r)][setq(pday,%q<day>)][u(%!/FUN`SCHED_ROW,%i0,%1)],%b,%r),Nothing is scheduled[if(isint(%0),%bin the next %0 days)].)]%r[footer(u(%!/FUN`SCHED_FOOT,%0,words(%q<lst>),sub(words(%q<all>),words(%q<lst>))),%1)]
+      # "2 in the next 30 days", and how to see the rest when the window hides some.
+      FUN`SCHED_FOOT: |-
+        [if(isint(%0),%1 in the next %0 days[if(%2,[chr(44)] %2 later: +scenes <days>)],%1 scheduled)]
+      # +scene/upcoming [<days>|all], and the names other games use for it: +scenes, +events,
+      # +scenes/upcoming, +events/upcoming. One regexp pattern, so the aliases and the command cannot drift.
       CMD`UPCOMING:
         value: |-
-          $(?is)^\+(?\:scene/upcoming|(?\:scenes|events)(?\:/upcoming)?)$: @pemit %#=[setq(lst,scenelist(scheduled))][header(Scheduled Scenes,width(%#))]%r[align(u(%!/FUN`SCHED_COLS,width(%#)),ID,Title,When,Status,RSVP)]%r[iter(%q<lst>,u(%!/FUN`SCHED_ROW,%iL,width(%#)),,%r)]%r[footer([words(%q<lst>)] scheduled,width(%#))]
+          $(?is)^\+(?\:scene/upcoming|(?\:scenes|events)(?\:/upcoming)?)(?\: +(.+))?$: @assert or(not(strlen(%1)),strmatch(%1,all),and(isint(%1),gt(%1,0)))=@pemit %#=[get(%!/DATA`DENY_BAD_DAYS)]; @pemit %#=[u(%!/FUN`SCHED_RENDER,firstof(%1,get(%!/DATA`SCHEDULE_DAYS)),width(%#))]
         flags: [REGEXP]
 
       # ---- participation (+scene/deactivate | /activate): pause/resume w/o leaving -
@@ -559,7 +602,7 @@ objects:
       # +scene <id> guards the id arg via @assert/@include, sets %q<SceneID>, then
       # @includes the shared display tail — no switch() picks the output.
       FUN`SCENE_FIELD: |-
-        switch(setr(val,scene(%0,%1)),#-1*,%2,%q<val>)
+        switch(setr(val,scene(%0,%1)),#-1*,%2,,%2,%q<val>)
       # A labelled line: the label right-aligned into a fixed gutter, then its value.
       FUN`INFO_LINE: |-
         [ansi(h,[rjust(%0:,14)])] %1
@@ -591,11 +634,17 @@ objects:
       FUN`NO_TRAILING_SLASH: |-
         [switch(right(%0,1),/,[left(%0,sub(strlen(%0),1))],%0)]
       INC`DISPLAY`INFO: |-
-        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[line(Pitch,width(%#))]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][header(Players,width(%#))]%r[ansi(h,[align(<12 <40 <8,Status,Name,Poses)])]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,%iL),%b,%r)]%r[footer(,width(%#))]
-      CMD`TITLE: |-
-        $+scene/title *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/title=%0; @pemit %#=Scene %q<SceneID> is now titled: %0
-      CMD`PITCH: |-
-        $+scene/pitch *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%0; @pemit %#=Pitch set for scene %q<SceneID>.
+        @pemit %#=[header(<< Scene %0: '[u(%!/FUN`LIST_TITLE,%0)]' >>,width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet))]%r[u(%!/FUN`INFO_LINE,Created,u(%!/FUN`WHEN,scene(%0,startedat)))]%r[u(%!/FUN`SCHEDULED_LINE,%0)][u(%!/FUN`INFO_LINE,Watchers,[switch(scene(%0,public),1,Anyone,Members only)])]%r[line(Pitch,width(%#))]%r[u(%!/FUN`SCENE_FIELD,%0,summary,-)]%r[u(%!/FUN`URL_LINE,%0)][header(Players,width(%#))]%r[align(u(%!/FUN`HEAD,u(%!/FUN`CAST`COLS,width(%#))),Status,Name,Poses)]%r[iter(scenemembers(%0),u(%!/FUN`CAST`ROW,%0,%iL,width(%#)),%b,%r)]%r[footer(,width(%#))]
+      # +scene/title [<id>=]<text> and +scene/pitch [<id>=]<text>: the focused scene, or the one named.
+      # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
+      CMD`TITLE:
+        value: |-
+          $(?is)^\+scene/title (?\:(\d+)=)?(.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=No such scene: %q<SceneID>; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/title=%2; @pemit %#=Scene %q<SceneID> is now titled: %2
+        flags: [REGEXP]
+      CMD`PITCH:
+        value: |-
+          $(?is)^\+scene/pitch (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(setr(SceneID,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=No such scene: %q<SceneID>; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[get(%!/DATA`DENY_NOT_OWNER)]; @scene/set %q<SceneID>/summary=%2; @pemit %#=Pitch set for scene %q<SceneID>.
+        flags: [REGEXP]
       # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two
       # ways, so they run the same renderer: naming an id has always meant "tell me about this one".
       #
@@ -676,8 +725,8 @@ objects:
         ## Running one
 
         - `+scene/create <title>` — start one here and focus it
-        - `+scene/title <text>` — rename it
-        - `+scene/pitch <text>` — say what it is about, so people can decide to come
+        - `+scene/title \[<id>=\]<text>` — rename it
+        - `+scene/pitch \[<id>=\]<text>` — say what it is about, so people can decide to come
         - `+scene/pause` — stop it for now; it leaves the live list for the schedule
         - `+scene/start` — resume a paused scene
         - `+scene/finish` — close it
@@ -712,15 +761,17 @@ objects:
           by a rule naming who posed it and its id, which is the id `+scene/edit` and `+scene/undo`
           take
       HELP`SCENE`PITCH: |-
-        `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
-        card. It is how someone browsing decides whether to come.
+        `+scene/pitch <text>` sets the summary shown on a scene's card and its page on the website. It is
+        how someone browsing decides whether to come. `+scene/pitch <id>=<text>` sets it on a scene you
+        own without focusing it, and `+scene/title \[<id>=\]<text>` renames one the same way.
 
         Only the scene's owner \(or staff\) can set it.
       HELP`SCENE`PRIVACY: |-
         Scenes are **public** by default: they appear in `+scene` and their log is readable.
 
-        - `+scene/private` — hide the focused scene and its log from everyone but its members
-        - `+scene/public` — put it back
+        - `+scene/private \[<id>\]` — hide the focused scene, or the one named, and its log from everyone
+          but its members
+        - `+scene/public \[<id>\]` — put it back
 
         Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may
         *pose* is decided by who has joined.
@@ -728,17 +779,19 @@ objects:
         A scene can be announced before it happens, so people can plan around it.
 
         - `+scene/schedule <title>=<when>` — announce one
-        - `+scene/upcoming` \(or `+scenes`, `+events`\) — what is scheduled, and how many have RSVP'd
+        - `+scene/upcoming` \(or `+scenes`, `+events`\) — what is scheduled in the next 30 days, by day,
+          and how many have RSVP'd
+        - `+scene/upcoming <days>` \(or `+scenes <days>`\) — look further ahead; `all` for everything
         - `+scene/tag <id>` \(or `+scene/rsvp <id>`\) — RSVP; `+scene/untag <id>` \(`+scene/unrsvp`\) withdraws it
         - `+scene/reschedule <id>=<when>` · `+scene/unschedule <id>` \(or `+scene/cancel <id>`\)
-        - `+scene/pause [<id>][=<when>]` — pause a running scene, and optionally give it a new time
-        - `+scene/start [<id>]` — start a scheduled scene here, or resume a paused one
+        - `+scene/pause \[<id>\]\[=<when>\]` — pause a running scene, and optionally give it a new time
+        - `+scene/start \[<id>\]` — start a scheduled scene here, or resume a paused one
 
         Rescheduling a running scene pauses it. A scheduled or paused scene records nothing and is not
         listed as live until its owner starts it.
       HELP`POT: |-
-        `+pot` — "pose tracker" — shows who is in your focused scene and how long since each of them
-        last posed, so a table can tell whose turn it is.
+        `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
+        last posed and how many words that pose was, so a table can tell whose turn it is.
 
         It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
 

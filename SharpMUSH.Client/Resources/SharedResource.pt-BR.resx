@@ -5565,6 +5565,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pausadas, sem horário</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Editar cena</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Chamada</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>Do que se trata a cena, para que as pessoas decidam se vêm.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Qualquer pessoa pode assistir</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>A cena não foi alterada.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Adicionar à agenda</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Agenda</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Outras agendas (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Publicar como</value>
   </data>

@@ -5565,6 +5565,33 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Szünetel, nincs időpont</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Jelenet szerkesztése</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Ajánló</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>Miről szól a jelenet, hogy mások eldönthessék, eljönnek-e.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Bárki nézheti</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Dátum</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>A jelenet nem változott.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Hozzáadás a naptárhoz</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Naptár</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Más naptárak (.ics)</value>
+  </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Küldés módja</value>
   </data>

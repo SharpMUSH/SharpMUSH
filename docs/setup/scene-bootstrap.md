@@ -95,16 +95,16 @@ edit their own poses.
 | `+scene/tag <id>` · `/untag <id>` (`/rsvp` · `/unrsvp`) | RSVP |
 | `+scene/activate <id>` · `/deactivate` | resume / pause recording without leaving |
 | `+scene/as <persona>` | display persona for your future poses |
-| `+scene/title <text>` · `/pitch <text>` | rename it · set the scene blurb |
-| `+scene/public` · `/private` | visibility |
+| `+scene/title [<id>=]<text>` · `/pitch [<id>=]<text>` | rename it · set the scene blurb (the focused scene, or the one named) |
+| `+scene/public [<id>]` · `/private [<id>]` | visibility |
 | `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it |
 | `+scene/recall [<n>]` | print the last `<n>` poses, each under a rule naming its poser and id; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size) |
 | `+scene/edit <id>=<before>^^^<after>` | fix a typo in your pose |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
 | `+scene/schedule <title>=<when>` | schedule a roomless future scene |
-| `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming` (`+scenes`, `+events`) | manage / list scheduled; rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
-| `+pot` | pose tracker (turn order for the focused scene) |
+| `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming [<days>\|all]` (`+scenes`, `+events`) | manage / list scheduled, grouped by day, 30 days ahead unless told (``DATA`SCHEDULE_DAYS``); rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
+| `+pot` | pose tracker (turn order for the focused scene, idle time and the length of each last pose) |
 
 **Reads are functions, writes are commands.** Reads use the `scene…()` functions
 (`scenewhere`, `scenefocus`, `scene`, `sceneposes`, `scenepose`, `scenemember`, `scenecast`, …);
