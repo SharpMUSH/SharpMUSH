@@ -4683,7 +4683,6 @@
     <value>Ahelp-ämnena. Endast för Trollkarlar och Gud, i portalen liksom i spelet.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuell åtkomst: {0}; prioritet {1}; roller {2}; beslut {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Konfigurationen kunde inte importeras: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5131,7 @@
     <value>Visa som</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Roller eller tilldelningar</value>
+    <value>Avsnitt för roller och behörigheter</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Hanterarens attribut</value>
@@ -5386,7 +5385,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Inga undantag</value>
+    <value>Inga undantag.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5566,5 +5565,32 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Ta bort</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Du</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Du har den här behörigheten</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Du har inte den här behörigheten</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Undantag för karaktären</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Undantag för kontot</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Ingen roll tillåter det</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Okänd behörighet</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Du äger det här spelet, så du har alla behörigheter oavsett vad dina roller säger.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>En av dina roller tillåter Administratör, så du har alla behörigheter.</value>
   </data>
 </root>

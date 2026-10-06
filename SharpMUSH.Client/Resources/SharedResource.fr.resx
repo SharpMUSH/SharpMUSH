@@ -3890,7 +3890,6 @@
     <value>Les sujets ahelp. Réservés aux Sorciers et à Dieu, dans le portail comme dans le jeu.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Accès actuel : {0} ; priorité {1} ; rôles {2} ; décision {3}.</value></data>
   <data name="DiagTitle" xml:space="preserve"><value>Diagnostic des files</value></data>
   <data name="DiagDescription" xml:space="preserve"><value>Consultez les tâches autorisées et leurs résultats récents. Historique de 15 minutes, effacé au redémarrage.</value></data>
   <data name="DiagPid" xml:space="preserve"><value>PID</value></data>
@@ -4399,7 +4398,7 @@
     <value>Afficher en</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Rôles ou attributions</value>
+    <value>Sections des rôles et permissions</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Attributs du gestionnaire</value>
@@ -4653,7 +4652,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Aucune exception</value>
+    <value>Aucune exception.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -4833,5 +4832,32 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Supprimer</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Vous</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Vous avez cette permission</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Vous n’avez pas cette permission</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Exception du personnage</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Exception du compte</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Aucun rôle ne l’autorise</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permission inconnue</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Ce jeu vous appartient : vous avez donc toutes les permissions, quels que soient vos rôles.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>L’un de vos rôles autorise Administrateur : vous avez donc toutes les permissions.</value>
   </data>
 </root>

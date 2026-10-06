@@ -109,7 +109,16 @@
                         </div>
                     </div>
 
-                    <p>@Loc["RolResolutionExplanation"]</p>
+                    <div class="ra-section ra-notes">
+                        @if (EveryPermissionReason is { } reason)
+                        {
+                            <div class="ra-note ra-note--access">
+                                <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Class="ra-ico ra-note-ico" />
+                                <span>@Loc[reason == "owner" ? "RolAccessOwnerNote" : "RolAccessAdministratorNote"]</span>
+                            </div>
+                        }
+                        @Note(Loc["RolResolutionExplanation"])
+                    </div>
                     @foreach (var group in PortalPermission.All.GroupBy(d => d.GroupKey))
                     {
                         <div class="ra-section">
@@ -153,35 +162,41 @@
     else if (_tab == Tab.Permissions)
     {
         <KitCard Class="roleadmin-assign">
-            <p class="ra-field-help">@Loc["RolCustomHelp"]</p>
-            <div class="ra-override-add">
-                <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@_newScope"
-                       @oninput="@(e => _newScope = e.Value?.ToString() ?? string.Empty)" />
-                @CategorySelect(CategoryKind.Permission, _newCategory, value => _newCategory = value)
-                <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@_newDescription"
-                       @oninput="@(e => _newDescription = e.Value?.ToString() ?? string.Empty)" />
-                <button type="button" class="ra-btn ra-btn--primary" @onclick="DefinePermission" disabled="@_saving">@Loc["RolCustomAdd"]</button>
+            <div class="ra-section">
+                @Note(Loc["RolCustomHelp"])
+                <div class="ra-override-add">
+                    <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@_newScope"
+                           @oninput="@(e => _newScope = e.Value?.ToString() ?? string.Empty)" />
+                    @CategorySelect(CategoryKind.Permission, _newCategory, value => _newCategory = value)
+                    <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@_newDescription"
+                           @oninput="@(e => _newDescription = e.Value?.ToString() ?? string.Empty)" />
+                    <button type="button" class="ra-btn ra-btn--primary" @onclick="DefinePermission" disabled="@_saving">
+                        <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCustomAdd"]
+                    </button>
+                </div>
             </div>
             @if (_custom.Count == 0)
             {
-                <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
+                <div class="ra-section">
+                    <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
+                </div>
             }
             @foreach (var category in CustomCategories)
             {
-                <div class="ra-section-label">@category.Key</div>
-                <div class="ra-perm-card">
-                    @foreach (var p in category)
-                    {
-                        <div class="ra-perm-row">
-                            <div class="ra-perm-label">
-                                <code class="ra-perm-scope">@p.Scope</code>
-                                <div class="ra-perm-desc">@p.Description</div>
+                <div class="ra-section">
+                    <div class="ra-section-label">@category.Key</div>
+                    <div class="ra-perm-card">
+                        @foreach (var p in category)
+                        {
+                            <div class="ra-perm-row">
+                                <div class="ra-perm-label">
+                                    <code class="ra-perm-scope">@p.Scope</code>
+                                    <div class="ra-perm-desc">@p.Description</div>
+                                </div>
+                                @IconAction(Icons.Material.Filled.Delete, Loc["Delete"], () => RemovePermission(p), danger: true)
                             </div>
-                            <button type="button" class="ra-btn ra-btn--danger" @onclick="@(() => RemovePermission(p))" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
-                            </button>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             }
         </KitCard>
@@ -189,7 +204,9 @@
     else if (_tab == Tab.Categories)
     {
         <KitCard Class="roleadmin-assign">
-            <p class="ra-field-help">@Loc["RolCategoriesHelp"]</p>
+            <div class="ra-section">
+                @Note(Loc["RolCategoriesHelp"])
+            </div>
             @CategoryList(CategoryKind.Role, Loc["RolRoleCategories"])
             @CategoryList(CategoryKind.Permission, Loc["RolPermissionCategories"])
         </KitCard>
@@ -583,17 +600,89 @@
         }
     }
 
+    /// <summary>
+    /// The resolutions that decide every scope at once (<c>owner</c>, <c>administrator</c>): stated once above the
+    /// matrix rather than on each row.
+    /// </summary>
+    private static bool IsGlobalReason(string reason) => reason is "owner" or "administrator";
+
+    /// <summary>The global resolution the viewer holds, when one decides every scope; null otherwise.</summary>
+    private string? EveryPermissionReason =>
+        _effective.Values.Select(d => d.Reason).FirstOrDefault(IsGlobalReason);
+
+    /// <summary>
+    /// The viewer's own access to one scope: allowed or refused, and what decided it: the deciding roles as chips,
+    /// or the override or default that applied.
+    /// </summary>
+    private RenderFragment AccessBadge(PermissionExplanation decision) =>
+        @<span class="ra-access @(decision.Allowed ? "ra-access--allow" : "ra-access--deny")"
+               title="@Loc[decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]">
+            <span class="ra-access-who">@Loc["RolAccessYou"]</span>
+            <MudIcon Icon="@(decision.Allowed ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Block)" Class="ra-ico" />
+            <span class="ra-sr">@Loc[decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]</span>
+            @if (DecidingRoles(decision) is { Count: > 0 } roles)
+            {
+                @foreach (var slug in roles)
+                {
+                    var role = List.Items.FirstOrDefault(r => r.Slug == slug);
+                    <span class="ra-access-role">
+                        <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(role?.Color ?? "")};")"></span>
+                        @(role?.Name ?? slug)
+                    </span>
+                }
+            }
+            else
+            {
+                <span>@Loc[ReasonKey(decision.Reason)]</span>
+            }
+        </span>;
+
+    /// <summary>The roles that decided a role resolution; the everyone role for <c>everyone-allow</c>.</summary>
+    private static IReadOnlyList<string> DecidingRoles(PermissionExplanation decision) => decision.Reason switch
+    {
+        "role-allow" or "role-deny" => decision.Roles,
+        "everyone-allow" => decision.Roles.Length > 0 ? decision.Roles : [BuiltInRoles.EveryoneSlug],
+        _ => []
+    };
+
+    private static string ReasonKey(string reason) => reason switch
+    {
+        "object-allow" or "object-deny" => "RolAccessCharacterOverride",
+        "account-allow" or "account-deny" => "RolAccessAccountOverride",
+        "unknown-scope" => "RolAccessUnknown",
+        _ => "RolAccessNoRole"
+    };
+
+    /// <summary>A help note: an info icon and a sentence or two.</summary>
+    private static RenderFragment Note(string text) =>
+        @<div class="ra-note">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Class="ra-ico ra-note-ico" />
+            <span>@text</span>
+        </div>;
+
+    /// <summary>A row action as an icon button, its name in the tooltip and the accessible label.</summary>
+    private RenderFragment IconAction(string icon, string label, Func<Task> action, bool danger = false) =>
+        @<MudTooltip Text="@label">
+            <MudIconButton Icon="@icon" Size="Size.Small" Color="@(danger ? Color.Error : Color.Default)"
+                           aria-label="@label" Disabled="@_saving" OnClick="@(() => action())" />
+        </MudTooltip>;
+
     /// <summary>One permission's row in the role editor: what it is, why the viewer holds it or not, and its three states.</summary>
     private RenderFragment PermissionRow(string scope, string label, string description) =>
         @<div class="ra-perm-row">
             <div class="ra-perm-label">
                 <div class="ra-perm-name">@label</div>
                 <div class="ra-perm-desc">@description</div>
-                <code class="ra-perm-scope">@scope</code>
-                @if (_effective.TryGetValue(scope, out var decision))
-                {
-                    <div>@Loc["RolEffectiveExplanation", Loc[decision.Allowed ? "RolAllow" : "RolDeny"], decision.Priority?.ToString() ?? "—", string.Join(", ", decision.Roles), decision.Reason]</div>
-                }
+                <div class="ra-perm-meta">
+                    @if (!string.Equals(label, scope, StringComparison.Ordinal))
+                    {
+                        <code class="ra-perm-scope">@scope</code>
+                    }
+                    @if (_effective.TryGetValue(scope, out var decision) && !IsGlobalReason(decision.Reason))
+                    {
+                        @AccessBadge(decision)
+                    }
+                </div>
             </div>
             <div class="ra-tristate">
                 @foreach (var option in new[] { "Inherit", "Allow", "Deny" })
@@ -678,7 +767,9 @@
                        maxlength="@Categories.MaxNameLength" @oninput="@(e => _newCategories[kind].Name = e.Value?.ToString() ?? string.Empty)" />
                 <input class="ra-input" type="text" placeholder="@Loc["RolCategoryDescriptionLabel"]" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@_newCategories[kind].Description"
                        maxlength="@Categories.MaxDescriptionLength" @oninput="@(e => _newCategories[kind].Description = e.Value?.ToString() ?? string.Empty)" />
-                <button type="button" class="ra-btn ra-btn--primary" @onclick="@(() => CreateCategory(kind))" disabled="@_saving">@Loc["RolCategoryAdd"]</button>
+                <button type="button" class="ra-btn ra-btn--primary" @onclick="@(() => CreateCategory(kind))" disabled="@_saving">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCategoryAdd"]
+                </button>
             </div>
             @if (_categories[kind].Count == 0)
             {
@@ -698,12 +789,10 @@
                                        @oninput="@(e => edit.Description = e.Value?.ToString() ?? string.Empty)" />
                                 <div class="ra-perm-desc">@(kind == CategoryKind.Role ? Loc.Plural("RolCategoryHoldsRoles", "count", RolesIn(c.Name)) : Loc.Plural("RolCategoryHoldsPermissions", "count", PermissionsIn(c.Name)))</div>
                             </div>
-                            <button type="button" class="ra-btn" @onclick="@(() => SaveCategory(kind, c))" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Save" Class="ra-ico" /> @Loc["Save"]
-                            </button>
-                            <button type="button" class="ra-btn ra-btn--danger" @onclick="@(() => DeleteCategory(kind, c))" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
-                            </button>
+                            <div class="ra-row-actions">
+                                @IconAction(Icons.Material.Filled.Save, Loc["Save"], () => SaveCategory(kind, c))
+                                @IconAction(Icons.Material.Filled.Delete, Loc["Delete"], () => DeleteCategory(kind, c), danger: true)
+                            </div>
                         </div>
                     }
                 </div>

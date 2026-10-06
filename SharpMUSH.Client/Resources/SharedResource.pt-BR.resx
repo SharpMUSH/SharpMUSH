@@ -4683,7 +4683,6 @@
     <value>Os tópicos do ahelp. Apenas para Magos e Deus, no portal como no jogo.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acesso atual: {0}; prioridade {1}; papéis {2}; resolução {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Não foi possível importar a configuração: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5131,7 @@
     <value>Mostrar como</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Funções ou atribuições</value>
+    <value>Seções de papéis e permissões</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributos do manipulador</value>
@@ -5386,7 +5385,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nenhuma exceção</value>
+    <value>Nenhuma exceção.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5566,5 +5565,32 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Excluir</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Você</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Você tem esta permissão</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Você não tem esta permissão</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Exceção do personagem</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Exceção da conta</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Nenhum papel permite</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permissão desconhecida</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Você é o dono deste jogo, então tem todas as permissões, independentemente dos seus papéis.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Um dos seus papéis permite Administrador, então você tem todas as permissões.</value>
   </data>
 </root>

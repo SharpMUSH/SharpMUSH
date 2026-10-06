@@ -4683,7 +4683,6 @@
     <value>Subiectele ahelp. Doar pentru Vrăjitori și Dumnezeu, atât în portal, cât și în joc.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acces curent: {0}; prioritate {1}; roluri {2}; decizie {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Configurația nu a putut fi importată: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5131,7 @@
     <value>Afișează ca</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Roluri sau atribuiri</value>
+    <value>Secțiuni pentru roluri și permisiuni</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributele handlerului</value>
@@ -5386,7 +5385,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nicio excepție</value>
+    <value>Nicio excepție.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5566,5 +5565,32 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Ștergere</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Tu</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Ai această permisiune</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Nu ai această permisiune</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Excepție pentru personaj</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Excepție pentru cont</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Niciun rol nu permite</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permisiune necunoscută</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Deții acest joc, așa că ai toate permisiunile, indiferent de roluri.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Unul dintre rolurile tale permite Administrator, așa că ai toate permisiunile.</value>
   </data>
 </root>

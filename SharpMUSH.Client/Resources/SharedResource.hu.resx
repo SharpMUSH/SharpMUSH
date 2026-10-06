@@ -4683,7 +4683,6 @@
     <value>Az ahelp témakörök. Csak Varázslóknak és Istennek, a portálon is, mint a játékban.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Jelenlegi hozzáférés: {0}; prioritás {1}; szerepek {2}; döntés {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>A konfigurációt nem sikerült importálni: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5131,7 @@
     <value>Megjelenítés</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Szerepkörök vagy hozzárendelések</value>
+    <value>Szerepkörök és engedélyek szakaszai</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>A kezelő attribútumai</value>
@@ -5386,7 +5385,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nincsenek kivételek</value>
+    <value>Nincsenek kivételek.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5566,5 +5565,32 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Törlés</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Ön</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Önnek megvan ez az engedélye</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Önnek nincs meg ez az engedélye</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Karakterre vonatkozó kivétel</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Fiókra vonatkozó kivétel</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Egyik szerepkör sem engedi</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Ismeretlen engedély</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Ön a játék tulajdonosa, ezért minden engedélye megvan, bármit mondanak is a szerepkörei.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Az egyik szerepköre engedi az Adminisztrátort, ezért minden engedélye megvan.</value>
   </data>
 </root>
