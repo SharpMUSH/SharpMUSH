@@ -46,7 +46,7 @@ internal sealed class EvaluationDiagnostics(EvaluationServices services)
 
 		var debugForwardAttr = await services.AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST",
-			IAttributeService.AttributeMode.Read, parent: false);
+			IAttributeService.AttributeMode.Read, parent: true);
 
 		if (debugForwardAttr is not SharpAttribute[] forwardChain)
 		{

@@ -387,7 +387,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				targetObject,
 				attributeName,
 				args,
-				evalParent: false);
+				evalParent: true);
 
 			return result;
 		});

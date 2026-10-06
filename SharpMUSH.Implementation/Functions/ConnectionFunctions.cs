@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -328,18 +329,11 @@ public partial class Functions
 			return new CallState(string.Empty);
 		}
 
-		var maybeAttr = await AttributeService.GetAttributeAsync(
-			executor,
-			player,
-			"DOING",
-			mode: IAttributeService.AttributeMode.Read,
-			parent: false);
-
-		return maybeAttr switch
-		{
-			SharpAttribute[] chain => new CallState(chain.Last().Value),
-			None or Error<string> => new CallState(string.Empty)
-		};
+		// get_doing (bsd.c:6237-6255): fetch_ufun_attrib with UFUN_IGNORE_PERMS, so @doing is inherited
+		// (parents and ANCESTOR_PLAYER) and evaluated, whoever asks.
+		return new CallState(await AttributeHelpers.EvaluateFormatAttribute(
+			AttributeService, parser, executor, player, "DOING",
+			new Dictionary<string, CallState>(), MarkupText.Empty, checkParents: true, ignorePermissions: true));
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
