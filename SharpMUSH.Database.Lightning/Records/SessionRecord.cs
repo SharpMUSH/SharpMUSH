@@ -9,4 +9,5 @@ public sealed record SessionRecord
 	public string OriginIp { get; init; } = "";
 	public int? CharacterKey { get; init; }
 	public long? CharacterCreationTime { get; init; }
+	public bool Remembered { get; init; }
 }

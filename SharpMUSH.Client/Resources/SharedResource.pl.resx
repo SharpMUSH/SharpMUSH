@@ -391,6 +391,10 @@
     <value>E-mail (opcjonalnie)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Zapamiętaj mnie</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Proszę podać dane logowania.</value>
     <comment>MT</comment>

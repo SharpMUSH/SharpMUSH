@@ -391,6 +391,10 @@
     <value>E-mail (optioneel)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Onthoud mij</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Voer je inloggegevens in.</value>
     <comment>MT</comment>

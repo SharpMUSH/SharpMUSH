@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Services;
 public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 {
 	private readonly record struct Entry(string AccountId, DateTimeOffset Expiry, TimeSpan Ttl, string OriginIp,
-		int? CharacterKey, long? CharacterCreationTime);
+		int? CharacterKey, long? CharacterCreationTime, bool Remembered = false);
 
 	private readonly ConcurrentDictionary<string, Entry> _tokens = new(StringComparer.Ordinal);
 
@@ -23,9 +23,22 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 		return Task.FromResult(token);
 	}
 
-	public Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default)
+	public Task<string> CreateRememberedLoginAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default)
 	{
-		if (!_tokens.TryGetValue(token, out var entry))
+		var token = Guid.NewGuid().ToString("N");
+		_tokens[token] = new Entry(accountId, DateTimeOffset.UtcNow.Add(ttl), ttl, originIp, null, null, Remembered: true);
+		return Task.FromResult(token);
+	}
+
+	public async Task<string?> RedeemRememberedLoginAsync(string token, CancellationToken ct = default)
+		=> await ValidateAsync(token, remembered: true) is { } identity ? identity.AccountId : null;
+
+	public Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default)
+		=> ValidateAsync(token, remembered: false);
+
+	private Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, bool remembered)
+	{
+		if (!_tokens.TryGetValue(token, out var entry) || entry.Remembered != remembered)
 			return Task.FromResult<IAccountSessionStore.SessionIdentity?>(null);
 
 		if (DateTimeOffset.UtcNow > entry.Expiry)

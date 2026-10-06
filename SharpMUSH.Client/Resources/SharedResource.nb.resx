@@ -391,6 +391,10 @@
     <value>E-post (valgfritt)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Husk meg</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Skriv inn påloggingsinformasjonen din.</value>
     <comment>MT</comment>

@@ -27,4 +27,11 @@ public class SharpSession
 	/// alone is ambiguous across a recycled object — the same pair the switch endpoint validates.
 	/// </summary>
 	public long? CharacterCreationTime { get; set; }
+
+	/// <summary>
+	/// A remembered login ("Remember me"): a long-lived credential kept in an HttpOnly cookie, which only
+	/// trades for a tab session and is never accepted as a bearer. Revoked with the account's other
+	/// sessions.
+	/// </summary>
+	public bool Remembered { get; set; }
 }

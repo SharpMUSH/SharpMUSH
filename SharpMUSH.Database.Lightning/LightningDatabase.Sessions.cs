@@ -35,7 +35,8 @@ public partial class LightningDatabase
 		TtlMs = record.TtlMs,
 		OriginIp = record.OriginIp,
 		CharacterKey = record.CharacterKey,
-		CharacterCreationTime = record.CharacterCreationTime
+		CharacterCreationTime = record.CharacterCreationTime,
+		Remembered = record.Remembered
 	};
 
 	public async ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default)
@@ -60,7 +61,8 @@ public partial class LightningDatabase
 				TtlMs = session.TtlMs,
 				OriginIp = session.OriginIp,
 				CharacterKey = session.CharacterKey,
-				CharacterCreationTime = session.CharacterCreationTime
+				CharacterCreationTime = session.CharacterCreationTime,
+				Remembered = session.Remembered
 			};
 			tx.Put(Tables.Session, key, Codec.Serialize(record));
 			tx.Put(Tables.SessionAccount, Keys.Str(session.AccountId), key);

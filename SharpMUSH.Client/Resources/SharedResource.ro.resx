@@ -391,6 +391,10 @@
     <value>E-mail (opțional)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Ține-mă minte</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Introduceți datele de autentificare.</value>
     <comment>MT</comment>

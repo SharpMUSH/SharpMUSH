@@ -32,6 +32,8 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
                                   Disabled="_busy" OnKeyDown="OnKeyDown" />
+                    <MudCheckBox id="login-remember" @bind-Value="_rememberMe" Label="@Loc["AuthRememberMe"]"
+                                 Color="Color.Primary" Dense="true" Class="mb-2" Disabled="_busy" />
 
                     @if (_error is not null)
                     {
@@ -72,6 +74,8 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
                                   Disabled="_busy" />
+                    <MudCheckBox id="register-remember" @bind-Value="_rememberMe" Label="@Loc["AuthRememberMe"]"
+                                 Color="Color.Primary" Dense="true" Class="mb-2" Disabled="_busy" />
 
                     @if (_error is not null)
                     {
@@ -120,6 +124,9 @@
     private string _regUsername = string.Empty;
     private string _regEmail = string.Empty;
     private string _regPassword = string.Empty;
+
+    /// <summary>Keep this browser signed in for tabs opened later (a remembered login, see AuthController).</summary>
+    private bool _rememberMe = true;
 
     private string? _returnUrl;
 
@@ -196,7 +203,7 @@
             return;
         }
         _busy = true;
-        var result = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
+        var result = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword, _rememberMe);
         _busy = false;
         SignedIn(result);
     }
@@ -205,7 +212,7 @@
     {
         _error = null;
         _busy = true;
-        var result = await AccountAuth.LoginWithPasskeyAsync();
+        var result = await AccountAuth.LoginWithPasskeyAsync(_rememberMe);
         _busy = false;
         switch (result)
         {
@@ -231,7 +238,7 @@
         }
         _busy = true;
         // A fresh account never has a character, so registration always continues into onboarding.
-        var result = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
+        var result = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword, _rememberMe);
         _busy = false;
         SignedIn(result);
     }

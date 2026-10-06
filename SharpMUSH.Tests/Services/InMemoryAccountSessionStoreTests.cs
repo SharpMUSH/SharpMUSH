@@ -241,4 +241,33 @@ public class InMemoryAccountSessionStoreTests
 		await Assert.That(identity!.Value.CharacterKey).IsNull();
 		await Assert.That(identity!.Value.CharacterCreationTime).IsNull();
 	}
+
+	/// <summary>
+	/// A remembered login and a tab session live in one table but are never each other: the bearer refuses
+	/// the one, the trade refuses the other, and neither refusal spends the token.
+	/// </summary>
+	[Test]
+	public async Task RememberedLogin_IsNeverABearer_AndATabSessionIsNeverARememberedLogin()
+	{
+		var store = CreateStore();
+		var remembered = await store.CreateRememberedLoginAsync("acct-1", TimeSpan.FromDays(90), "203.0.113.1");
+		var session = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "203.0.113.1");
+
+		await Assert.That(await store.ValidateAsync(remembered)).IsNull();
+		await Assert.That(await store.RedeemRememberedLoginAsync(session)).IsNull();
+
+		await Assert.That(await store.RedeemRememberedLoginAsync(remembered)).IsEqualTo("acct-1");
+		await Assert.That((await store.ValidateAsync(session))?.AccountId).IsEqualTo("acct-1");
+	}
+
+	[Test]
+	public async Task RememberedLogin_IsRevokedWithTheAccount()
+	{
+		var store = CreateStore();
+		var remembered = await store.CreateRememberedLoginAsync("acct-ban", TimeSpan.FromDays(90), "203.0.113.1");
+
+		await store.RevokeAllForAccountAsync("acct-ban");
+
+		await Assert.That(await store.RedeemRememberedLoginAsync(remembered)).IsNull();
+	}
 }

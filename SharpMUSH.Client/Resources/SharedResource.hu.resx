@@ -391,6 +391,10 @@
     <value>E-mail (nem kötelező)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Emlékezz rám</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Adja meg a bejelentkezési adatait.</value>
     <comment>MT</comment>

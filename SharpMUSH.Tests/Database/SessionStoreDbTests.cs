@@ -18,6 +18,25 @@ public class SessionStoreDbTests
 		TtlMs = (long)TimeSpan.FromMinutes(15).TotalMilliseconds
 	};
 
+	/// <summary>A remembered login stays one after a write and a renewal, or the bearer would accept it.</summary>
+	[Test, NotInParallel(nameof(SessionStoreDbTests))]
+	public async Task Remembered_SurvivesTheRoundTripAndARenewal()
+	{
+		var s = Make("tok-remember-1", "acctRemember", "203.0.113.41");
+		s.Remembered = true;
+		await Db.UpsertSessionAsync(s);
+		await Assert.That((await Db.GetSessionAsync("tok-remember-1"))!.Remembered).IsTrue();
+
+		await Db.TouchSessionExpiryAsync("tok-remember-1", s.ExpiryUnixMs + 60_000);
+		await Assert.That((await Db.GetSessionAsync("tok-remember-1"))!.Remembered).IsTrue();
+
+		await Db.UpsertSessionAsync(Make("tok-remember-2", "acctRemember", "203.0.113.41"));
+		await Assert.That((await Db.GetSessionAsync("tok-remember-2"))!.Remembered).IsFalse();
+
+		await Db.DeleteSessionAsync("tok-remember-1");
+		await Db.DeleteSessionAsync("tok-remember-2");
+	}
+
 	[Test, NotInParallel(nameof(SessionStoreDbTests))]
 	public async Task Upsert_Get_Delete_RoundTrip()
 	{

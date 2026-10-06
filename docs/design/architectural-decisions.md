@@ -100,6 +100,20 @@ telnet, WebSocket, or SignalR connection tied to the account the instant
 immediate revocation a stateless JWT cannot provide without reintroducing a
 server-side blocklist.
 
+**Remember me (2026-10-06).** The tab session lives in sessionStorage, so it
+ends with the tab, and the server ends it after 15 idle minutes. A sign-in
+with "Remember me" (on by default) also stores a *remembered login*: a session
+row flagged `Remembered`, sliding 90 days from its last use, handed to the
+browser as an HttpOnly, Secure, SameSite=Strict cookie scoped to `/api`
+(`RememberedLoginCookie`). It is never accepted as a bearer. A tab with no
+session, or one whose session the server refused, posts to
+`api/auth/account-resume`, which trades the cookie for a new tab session bound
+to the character the tab asks for (or the primary one), so tabs still play
+separate characters. Sign-out revokes it and deletes the cookie; bans, account
+disables and sitelocks revoke it with the account's other sessions. The token
+is not rotated on use: the cookie is unreadable by script, and rotation's
+reuse detection would sign out a browser that opened two tabs at once.
+
 ### 1.3 Account ↔ Character: Tab = Character, Characterless Mode
 
 **Decision:** Each browser tab represents one character (or no character).
