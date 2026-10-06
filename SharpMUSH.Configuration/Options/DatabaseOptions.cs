@@ -175,7 +175,7 @@ public record DatabaseOptions(
 		Order = 5,
 		Min = 0,
 		Tooltip = "Leave empty to show the stored texts from the Messages page. The bundled messages package sets this to its object.")]
-	uint? MessagesObject = null
+	uint? MessagesObject
 )
 {
 	/// <summary>
