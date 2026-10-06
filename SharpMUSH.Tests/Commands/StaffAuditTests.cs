@@ -6,8 +6,9 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// In-game staff actions land in the audit log (#1565), <c>@boot</c> of someone else's connection needs
-/// moderation, and a login records where it came from in <c>LAST</c>, <c>LASTSITE</c> and <c>LASTIP</c>.
+/// In-game staff actions land in the audit log (#1565), custom permissions among them; <c>@boot</c> of
+/// someone else's connection needs moderation; and a login records where it came from in <c>LAST</c>,
+/// <c>LASTSITE</c> and <c>LASTIP</c>.
 /// </summary>
 public class StaffAuditTests : ServerTestBase
 {
@@ -75,6 +76,28 @@ public class StaffAuditTests : ServerTestBase
 
 		var entry = (await AuditAbout(_victim.DbRef)).Single(e => e.Action == AuditActions.PlayerPassword);
 		await Assert.That(entry.Details ?? string.Empty).DoesNotContain("AuditFresh1");
+	}
+
+	[Test]
+	public async Task DefiningAndRemovingAPermissionIsRecorded()
+	{
+		var scope = $"test{Guid.NewGuid().ToString("N")[..10]}.audit";
+		try
+		{
+			await Assert.That(await Heard(_wizard, $"@permission/define {scope}=Staff/Audited")).Contains($"Permission {scope} defined");
+			await Heard(_wizard, $"@permission/undefine {scope}");
+
+			var entries = (await Mediator.Send(new GetAuditEntriesQuery(new AuditFilter(Text: scope)))).Entries;
+			await Assert.That(entries.Select(e => e.Action))
+				.IsEquivalentTo([AuditActions.PermissionRemove, AuditActions.PermissionDefine], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			await Assert.That(entries.All(e => e.Target is { Kind: AuditTargetKinds.Permission } target && target.Id == scope)).IsTrue();
+			await Assert.That(entries[1].Details).IsEqualTo("Staff: Audited");
+			await Assert.That(entries[1].Actor.Objid).IsEqualTo(await Objid(_wizard.DbRef));
+		}
+		finally
+		{
+			await Heard(_wizard, $"@permission/undefine {scope}");
+		}
 	}
 
 	[Test]
