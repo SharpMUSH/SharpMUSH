@@ -62,7 +62,7 @@ else
                         <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:15px;" />@scene.RoomName
                     </span>
                     <span class="scene-live-dot" aria-hidden="true">·</span>
-                    <span>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
+                    <span class="scene-live-count" data-count="@scene.PoseCount">@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
                 </div>
                 <h1 class="scene-live-title">@SceneTitle(scene)</h1>
             </div>
@@ -93,7 +93,7 @@ else
         <div class="scene-live-scroll">
             <div class="scene-live-story">
                 <SceneStory SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" LiveUnavailableChanged="OnLiveUnavailable"
-                            OnEditPose="EditPoseAsync" />
+                            OnEditPose="EditPoseAsync" OnPoseAdded="OnPoseAdded" />
             </div>
         </div>
 
@@ -218,8 +218,11 @@ else
     private Task EditPoseAsync((string PoseId, string Text) edit) =>
         Terminal.SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
 
-    /// <summary>Where this scene's unsent pose and mode are kept, so a reload or a wander away loses neither.</summary>
-    private string DraftKey => $"scene.draft.{Id}";
+    /// <summary>
+    /// Where this character's unsent pose and mode for this scene are kept, so a reload or a wander away loses
+    /// neither, and another character in the same browser never sees or sends it.
+    /// </summary>
+    private string DraftKey => $"scene.draft.{Terminal.ConnectedPlayerName}.{Id}";
 
     /// <summary>A kept draft: the mode, the text, and when it was styled, the styled text (a serialized MString).</summary>
     private sealed record Draft(string Mode, string Text, string? Markup = null);
@@ -330,11 +333,23 @@ else
 
     private void OnLiveUnavailable(bool unavailable) => _liveUnavailable = unavailable;
 
+    /// <summary>The header's count was read with the scene; each pose that arrives live adds one.</summary>
+    private void OnPoseAdded()
+    {
+        if (_scene is { } scene) _scene = scene with { PoseCount = scene.PoseCount + 1 };
+    }
+
     private async Task SendPoseAsync()
     {
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
         if (!CanSend) return;
+        // The character changed under a draft written as the last one: show this one's own instead of sending it.
+        if (_loadedKey != DraftKey)
+        {
+            await LoadDraftAsync();
+            return;
+        }
 
         // The text itself is NOT trimmed. A pose that opens on an indent or a blank line means it,
         // and trimming here threw that away before the encoder could protect it — leading whitespace

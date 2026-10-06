@@ -378,6 +378,29 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// <c>+scene/ooc</c> refuses what <c>ooc</c> refuses: a gagged player, and a <c>:</c> or <c>;</c> with
+	/// nothing after it. Neither records a pose.
+	/// </summary>
+	[Test]
+	[Arguments(true, "gagged")]
+	[Arguments(false, ":")]
+	[Arguments(false, "%;  ")]
+	public async Task WebOocVerb_RefusesWhatOocRefuses(bool gagged, string text)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var name = $"Elm{Tag}{(gagged ? "g" : text[0] == ':' ? "p" : "s")}";
+		var (who, handle) = await CreatePlayerAsync(name);
+
+		await RunAs(handle, $"+scene/create Elm Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		if (gagged) await God1($"@set {who}=GAGGED");
+
+		await RunAs(handle, $"+scene/ooc {sceneId}={text}");
+
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("0");
+	}
+
+	/// <summary>
 	/// The whole path a portal-composed pose takes, whitespace included: what the compose box puts on
 	/// the wire, through the verb, into the archive, and back out of <c>scenepose()</c> byte for byte.
 	///

@@ -661,6 +661,9 @@ public class SceneSurfaceTests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Markup).Contains("waves hello");
+		cut.WaitForAssertion(() => cut.Find(".scene-live-count[data-count='3']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-live-count").GetAttribute("data-count")).IsEqualTo("3")
+			.Because("the header's count was 2 when the scene was read, and a live pose adds one");
 	}
 
 	/// <summary>Signs the tab in with <paramref name="name"/> (#<paramref name="number"/>) as its acting character.</summary>

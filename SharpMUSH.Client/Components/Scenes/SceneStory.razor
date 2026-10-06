@@ -57,6 +57,9 @@
     /// <summary>Saves an edit to one of the viewer's own poses (its id and whole new text). Without it, no Edit.</summary>
     [Parameter] public EventCallback<(string PoseId, string Text)> OnEditPose { get; set; }
 
+    /// <summary>A new pose arrived live (not an edit, a delete or the backlog): a page counting poses adds one.</summary>
+    [Parameter] public EventCallback OnPoseAdded { get; set; }
+
     /// <summary>How many poses the backlog reads.</summary>
     [Parameter] public int Backlog { get; set; } = 100;
 
@@ -181,6 +184,7 @@
                 {
                     _poses.Add(FromEvent(msg, existing: null));
                     Remember(msg);
+                    if (OnPoseAdded.HasDelegate) _ = InvokeAsync(() => OnPoseAdded.InvokeAsync());
                 }
                 break;
 
